@@ -1,9 +1,10 @@
 {
-    "recommendations": [
-        "eamodio.gitlens",
-        "esbenp.prettier-vscode",
-        "prisma.vscode-graphql",
-        "TabNine.tabnine-vscode",
-        "vscodevim.vim",
-    ]
+  "recommendations": [
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "prisma.vscode-graphql",
+    "TabNine.tabnine-vscode",
+    "vscode.typescript-language-feature",
+    "vscodevim.vim"
+  ]
 }
