@@ -1,5 +1,5 @@
 import React from "react"
-import { Router } from "@reach/router"
+import { Link } from "@reach/router"
 import Loadable from "@loadable/component"
 
 const Flow = Loadable(() => import("../../components/studio/flow"))
@@ -14,6 +14,7 @@ const Studio = (props: { path: string }) => {
       {flows.map((flow, index) => {
         return <Flow key={index} flow={flow} />
       })}
+      <Link to="/studio/flow">New Flow</Link>
     </div>
   )
 }

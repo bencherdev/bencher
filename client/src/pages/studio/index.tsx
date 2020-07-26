@@ -12,6 +12,7 @@ const StudioPage = () => (
   <Layout>
     <SEO title="TableFlow Studio" />
     <Router basepath="/studio">
+      <Modeler path="/flow/:id" />
       <Modeler path="/flow" />
       <Studio path="/" />
     </Router>

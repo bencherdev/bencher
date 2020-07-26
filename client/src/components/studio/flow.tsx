@@ -4,7 +4,9 @@ import { Link } from "@reach/router"
 const Flow = (props: { flow: string }) => {
   return (
     <p>
-      <Link to="/studio/flow/">Flow {props.flow}</Link>
+      <Link to={"/studio/flow/" + props.flow.toLowerCase()}>
+        Flow {props.flow}
+      </Link>
     </p>
   )
 }
