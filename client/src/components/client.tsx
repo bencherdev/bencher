@@ -1,7 +1,7 @@
 import React from "react"
 
 const ClientSide = () => {
-  let date = Date(Date.now())
+  let date = Date()
   return <p>Client Side Only {date}</p>
 }
 
