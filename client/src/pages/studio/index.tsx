@@ -6,14 +6,15 @@ import Layout from "../../components/layout"
 import SEO from "../../components/seo"
 
 import Studio from "../../components/studio/studio"
+import New from "../../components/studio/modeler/new"
 import Modeler from "../../components/studio/modeler/modeler"
 
 const StudioPage = () => (
   <Layout>
     <SEO title="TableFlow Studio" />
     <Router basepath="/studio">
-      <Modeler path="/flow/:id" />
-      <Modeler path="/flow" />
+      <Modeler path="/flow/:id" id="" />
+      <New path="/flow" />
       <Studio path="/" />
     </Router>
   </Layout>
