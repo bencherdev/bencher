@@ -1,6 +1,6 @@
 # TableFlow
 
-Excel + Software Engineering = TableFlow
+Interactive Financial Modeling
 
 # License
 
