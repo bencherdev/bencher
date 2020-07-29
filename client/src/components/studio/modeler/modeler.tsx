@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react"
 
-import Table from "./statictable"
-import { number } from "prop-types"
+import Element from "./element"
 
 const flows = {
   // Flow UUID
@@ -19,11 +18,15 @@ const flows = {
           // Need a New for new inputs
           {
             type: "new",
+            position: { x: 75, y: 150 },
+            dimensions: { radius: 50 },
             value: {},
           },
           {
             // The type of the Element
             type: "table",
+            position: { x: 250, y: 10 },
+            dimensions: { width: 500, height: 500 },
             // Each type will have a different value
             // TODO make these in Typescript
             value: {
@@ -41,7 +44,7 @@ const flows = {
   c: null,
 }
 
-const Modeler = (props: { path: string; id: string; update: boolean }) => {
+const Modeler = (props: { path: string; id: string }) => {
   const [subflow, setSubflow] = useState({
     id: "",
     value: [],
@@ -52,7 +55,6 @@ const Modeler = (props: { path: string; id: string; update: boolean }) => {
 
   function handleSubflow(id: string) {
     setNav(id)
-    console.log(flows[props.id]?.subflows?.[id])
     setSubflow({ id: id, value: flows[props.id]?.subflows?.[id] })
   }
 
@@ -60,55 +62,34 @@ const Modeler = (props: { path: string; id: string; update: boolean }) => {
     handleSubflow(id)
   }
 
-  function elementSwitch(element: any) {
-    switch (element.type) {
-      case "new":
-        return <p>New Element</p>
-      case "parent":
-        return <p>Parent Flow</p>
-      case "table":
-        return <p>Table</p>
-      case "decision":
-        return <p>Decision Table</p>
-      case "function":
-        return <p>Function</p>
-      case "subflow":
-        return <p>Subflow</p>
-      case "return":
-        return <p>Return</p>
-      default:
-        return <p>Error: Unknown Element Type</p>
-    }
-  }
-
   useEffect(() => {
     if (subflow.id === "") {
       let main = flows[props.id]?.main
       handleSubflow(main)
-      console.log("Main")
     } else if (subflow.id !== nav) {
       handleNav(nav)
-      console.log("Updating")
     }
   }, [])
 
   return (
     <div>
-      {console.log(subflow)}
-      {subflow &&
-        subflow.value.map((line: any, lineIndex: number) => {
-          return line.map((element: any, elementIndex: number) => {
-            return (
-              <div key={lineIndex.toString() + ":" + elementIndex.toString()}>
-                {elementSwitch(element)}
-              </div>
-            )
-          })
-        })}
       <p>
         Modeler {props.path} {props.id} {date}
       </p>
-      <Table />
+      <svg width="100%" height="2000">
+        {subflow &&
+          subflow.value.map((line: any, lineIndex: number) => {
+            return line.map((element: any, elementIndex: number) => {
+              return (
+                <Element
+                  key={lineIndex.toString() + ":" + elementIndex.toString()}
+                  prior={elementIndex === 0 ? null : line[elementIndex - 1]}
+                  element={element}
+                />
+              )
+            })
+          })}
+      </svg>
     </div>
   )
 }

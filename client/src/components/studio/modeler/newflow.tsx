@@ -1,6 +1,6 @@
 import React from "react"
 
-const New = (props: { path: string }) => {
+const NewFlow = (props: { path: string }) => {
   let date = Date()
   return (
     <p>
@@ -10,4 +10,4 @@ const New = (props: { path: string }) => {
   )
 }
 
-export default New
+export default NewFlow
