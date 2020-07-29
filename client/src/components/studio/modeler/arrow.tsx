@@ -5,14 +5,17 @@ const Arrow = (props: { source: any; destination: any }) => {
     source: {},
     destination: {},
   })
-  const [points, setPoints] = useState("")
+  const [arrow, setArrow] = useState({
+    line: "",
+    head: "",
+  })
 
-  function handlePath() {
+  function handleArrow() {
     setPath({ source: props.source, destination: props.destination })
-    setPoints(positions())
+    setArrow(getArrow())
   }
 
-  function positions() {
+  function getArrow() {
     let start
     switch (props?.source?.type) {
       case "new":
@@ -54,7 +57,15 @@ const Arrow = (props: { source: any; destination: any }) => {
     let y = props?.source?.position?.y
     start.y = y
     end.y = y
-    return positionString(start) + " " + positionString(end)
+    return {
+      line: positionString(start) + " " + positionString(end),
+      head:
+        positionString(end) +
+        " " +
+        positionString({ x: end?.x - 25, y: end?.y + 15 }) +
+        " " +
+        positionString({ x: end?.x - 25, y: end?.y - 15 }),
+    }
   }
 
   function positionString(position: { x: number; y: number }) {
@@ -66,11 +77,16 @@ const Arrow = (props: { source: any; destination: any }) => {
       props?.source !== path.source ||
       props?.destination !== path.destination
     ) {
-      handlePath()
+      handleArrow()
     }
   }, [])
 
-  return <polyline points={points} stroke="black" />
+  return (
+    <g>
+      <polyline points={arrow?.line} stroke="black" strokeWidth="5" />
+      <polygon points={arrow?.head} stroke="black" fill="black" />
+    </g>
+  )
 }
 
 export default Arrow
