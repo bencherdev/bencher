@@ -58,7 +58,10 @@ const Arrow = (props: { source: any; destination: any }) => {
     start.y = y
     end.y = y
     return {
-      line: positionString(start) + " " + positionString(end),
+      line:
+        positionString(start) +
+        " " +
+        positionString({ x: end?.x - 15, y: end?.y }),
       head:
         positionString(end) +
         " " +
