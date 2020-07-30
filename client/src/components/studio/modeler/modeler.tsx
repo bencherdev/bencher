@@ -45,29 +45,28 @@ const flows = {
 }
 
 const Modeler = (props: { path: string; id: string }) => {
-  const [subflow, setSubflow] = useState({
+  const [flow, setFlow] = useState({
     id: "",
-    value: [],
+    main: "",
+    subflows: {},
   })
-  const [nav, setNav] = useState("")
+  const [subflow, setSubflow] = useState("")
 
   let date = Date()
 
-  function handleSubflow(id: string) {
-    setNav(id)
-    setSubflow({ id: id, value: flows?.[props.id]?.subflows?.[id] })
+  function handleFlow(id: string) {
+    setFlow(flows?.[id])
+    setSubflow(flows?.[id]?.main)
   }
 
-  function handleNav(id: string) {
-    handleSubflow(id)
+  function handleSubflow(id: string) {
+    setSubflow(id)
   }
 
   useEffect(() => {
-    if (subflow.id === "") {
-      let main = flows?.[props.id]?.main
-      handleSubflow(main)
-    } else if (subflow.id !== nav) {
-      handleNav(nav)
+    if (flow.id === "" || flow.id !== props.id) {
+      handleSubflow("")
+      handleFlow(props.id)
     }
   }, [])
 
@@ -77,8 +76,8 @@ const Modeler = (props: { path: string; id: string }) => {
         Modeler {props.path} {props.id} {date}
       </p>
       <svg width="100%" height="2000">
-        {subflow &&
-          subflow?.value?.map((line: any, lineIndex: number) => {
+        {flow?.subflows?.[subflow] &&
+          flow?.subflows?.[subflow]?.map((line: any, lineIndex: number) => {
             return line?.map((element: any, elementIndex: number) => {
               return (
                 <Element
