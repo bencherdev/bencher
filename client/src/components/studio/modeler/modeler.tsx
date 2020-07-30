@@ -26,13 +26,13 @@ const flows = {
             // The type of the Element
             type: "table",
             position: { x: 250, y: 10 },
-            dimensions: { width: 500, height: 500 },
+            dimensions: { width: 200, height: 250 },
             // Each type will have a different value
             // TODO make these in Typescript
             value: {
-              name: "Input",
+              title: "Input",
               var: "input",
-              columns: [{ name: "Input", var: "input", type: "int" }],
+              columns: [{ name: "Value", var: "value", type: "number" }],
               rows: [[5]],
             },
           },

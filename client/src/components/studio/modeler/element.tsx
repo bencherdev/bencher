@@ -23,19 +23,40 @@ const Element = (props: { prior: any; element: any }) => {
             position={element?.position}
             dimensions={element?.dimensions}
           >
-            <Table />
+            <Table data={element?.value} />
           </ForeignElement>
         )
       case "decision":
-        return <p>Decision Table</p>
+        return (
+          <ForeignElement
+            position={element?.position}
+            dimensions={element?.dimensions}
+          >
+            <p>Decision Table</p>
+          </ForeignElement>
+        )
       case "function":
-        return <p>Function</p>
+        return (
+          <ForeignElement
+            position={element?.position}
+            dimensions={element?.dimensions}
+          >
+            <p>Function</p>
+          </ForeignElement>
+        )
       case "subflow":
         return <p>Subflow</p>
       case "return":
         return <p>Return</p>
       default:
-        return <p>Error: Unknown Element Type</p>
+        return (
+          <ForeignElement
+            position={element?.position}
+            dimensions={element?.dimensions}
+          >
+            <p>Error: Unknown Element Type</p>
+          </ForeignElement>
+        )
     }
   }
 

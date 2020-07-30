@@ -29,33 +29,39 @@ const BorderedTd = styled.td`
   padding: 15px;
 `
 
-const Table = () => (
+const Table = (props: { data: any }) => (
   <BorderedTable>
     <thead>
-      <tr>
-        <TitleTh colSpan={3}>Title</TitleTh>
-      </tr>
-      <tr>
-        <BorderedTh>Lastname</BorderedTh>
-        <BorderedTh>Firstname</BorderedTh>
-        <BorderedTh>Age</BorderedTh>
-      </tr>
+      {props?.data?.title && (
+        <tr>
+          <TitleTh colSpan={props?.data?.columns?.length}>
+            {props?.data?.title}
+          </TitleTh>
+        </tr>
+      )}
+      {props?.data?.columns && (
+        <tr>
+          {props?.data?.columns.map((column: any, index: number) => {
+            return <BorderedTh key={index}>{column.name}</BorderedTh>
+          })}
+        </tr>
+      )}
     </thead>
     <tbody>
-      <HoverTr>
-        <BorderedTd rowSpan={2}>Smith</BorderedTd>
-        <BorderedTd>Jeff</BorderedTd>
-        <BorderedTd>50</BorderedTd>
-      </HoverTr>
-      <HoverTr>
-        <BorderedTd>Jill</BorderedTd>
-        <BorderedTd>50</BorderedTd>
-      </HoverTr>
-      <HoverTr>
-        <BorderedTd>Jackson</BorderedTd>
-        <BorderedTd>Eve</BorderedTd>
-        <BorderedTd>94</BorderedTd>
-      </HoverTr>
+      {props?.data?.rows &&
+        props?.data?.rows.map((row: any, rowIndex: number) => {
+          return (
+            <HoverTr key={rowIndex}>
+              {row.map((cell: any, cellIndex: number) => {
+                return (
+                  <BorderedTd key={rowIndex + ":" + cellIndex}>
+                    {cell}
+                  </BorderedTd>
+                )
+              })}
+            </HoverTr>
+          )
+        })}
     </tbody>
   </BorderedTable>
 )
