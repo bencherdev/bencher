@@ -63,6 +63,10 @@ const Modeler = (props: { path: string; id: string }) => {
     setSubflow(id)
   }
 
+  function handleElement(line: number, position: number, element: any) {
+    // TODO update the subflow/line/element
+  }
+
   useEffect(() => {
     if (flow.id === "" || flow.id !== props.id) {
       handleSubflow("")
@@ -84,6 +88,7 @@ const Modeler = (props: { path: string; id: string }) => {
                   key={lineIndex.toString() + ":" + elementIndex.toString()}
                   prior={elementIndex === 0 ? null : line[elementIndex - 1]}
                   element={element}
+                  handleElement={handleElement}
                 />
               )
             })

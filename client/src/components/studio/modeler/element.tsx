@@ -5,7 +5,11 @@ import ForeignElement from "./foreignelement"
 import Arrow from "./arrow"
 import Table from "./table"
 
-const Element = (props: { prior: any; element: any }) => {
+const Element = (props: {
+  prior: any
+  element: any
+  handleElement: Function
+}) => {
   function elementSwitch(element: any) {
     switch (element?.type) {
       case "new":
