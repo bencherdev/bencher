@@ -1,4 +1,4 @@
-import React from "react"
+import React, { ChangeEvent } from "react"
 import styled from "styled-components"
 
 const BorderedTable = styled.table`
@@ -33,52 +33,76 @@ const CellInput = styled.input`
   border: 0;
 `
 
-const Table = (props: { data: any }) => (
-  <BorderedTable>
-    <thead>
-      {props?.data?.title && (
-        <tr>
-          <TitleTh colSpan={props?.data?.columns?.length}>
-            {props?.data?.title}
-          </TitleTh>
-        </tr>
-      )}
-      {props?.data?.columns && (
-        <tr>
-          {props?.data?.columns.map((column: any, index: number) => {
+// TODO add table input type validation
+const Table = (props: {
+  location: { line: number; position: number }
+  data: any
+  handleElement: Function
+}) => {
+  function handleCell(
+    event: ChangeEvent<HTMLInputElement>,
+    row: number,
+    column: number
+  ) {
+    if (
+      props?.data?.rows?.[row]?.[column] ||
+      props?.data?.rows?.[row]?.[column] === ""
+    ) {
+      let table = JSON.parse(JSON.stringify(props.data))
+      table.rows[row][column] = event.target.value
+      props.handleElement(props.location, table)
+    }
+  }
+
+  return (
+    <BorderedTable>
+      <thead>
+        {props?.data?.title && (
+          <tr>
+            <TitleTh colSpan={props?.data?.columns?.length}>
+              {props?.data?.title}
+            </TitleTh>
+          </tr>
+        )}
+        {props?.data?.columns && (
+          <tr>
+            {props?.data?.columns.map((column: any, index: number) => {
+              return (
+                <BorderedTh key={index}>
+                  <b>{column?.name}</b>
+                  <br />
+                  <i>{column?.type}</i>
+                </BorderedTh>
+              )
+            })}
+          </tr>
+        )}
+      </thead>
+      <tbody>
+        {props?.data?.rows &&
+          props?.data?.rows.map((row: any, rowIndex: number) => {
             return (
-              <BorderedTh key={index}>
-                <b>{column?.name}</b>
-                <br />
-                <i>{column?.type}</i>
-              </BorderedTh>
+              <HoverTr key={rowIndex}>
+                {row.map((cell: any, columnIndex: number) => {
+                  let cellType = props?.data?.columns?.[columnIndex]
+                  return (
+                    <BorderedTd key={rowIndex + ":" + columnIndex}>
+                      <CellInput
+                        type={cellType?.toLowerCase}
+                        value={cell}
+                        onChange={event =>
+                          handleCell(event, rowIndex, columnIndex)
+                        }
+                      />
+                    </BorderedTd>
+                  )
+                })}
+              </HoverTr>
             )
           })}
-        </tr>
-      )}
-    </thead>
-    <tbody>
-      {props?.data?.rows &&
-        props?.data?.rows.map((row: any, rowIndex: number) => {
-          return (
-            <HoverTr key={rowIndex}>
-              {row.map((cell: any, cellIndex: number) => {
-                let cellType = props?.data?.columns?.[cellIndex]
-                return (
-                  <BorderedTd key={rowIndex + ":" + cellIndex}>
-                    <CellInput
-                      type={cellType?.toLowerCase}
-                      value={cell}
-                      onChange={() => {}}
-                    />
-                  </BorderedTd>
-                )
-              })}
-            </HoverTr>
-          )
-        })}
-    </tbody>
-  </BorderedTable>
-)
+      </tbody>
+    </BorderedTable>
+  )
+}
 
 export default Table

@@ -6,6 +6,7 @@ import Arrow from "./arrow"
 import Table from "./table"
 
 const Element = (props: {
+  location: { line: number; position: number }
   prior: any
   element: any
   handleElement: Function
@@ -27,7 +28,11 @@ const Element = (props: {
             position={element?.position}
             dimensions={element?.dimensions}
           >
-            <Table data={element?.value} />
+            <Table
+              data={element?.value}
+              location={props.location}
+              handleElement={props.handleElement}
+            />
           </ForeignElement>
         )
       case "decision":

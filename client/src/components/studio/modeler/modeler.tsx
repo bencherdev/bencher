@@ -63,8 +63,19 @@ const Modeler = (props: { path: string; id: string }) => {
     setSubflow(id)
   }
 
-  function handleElement(line: number, position: number, element: any) {
-    // TODO update the subflow/line/element
+  function handleElement(
+    location: { line: number; position: number },
+    element: any
+  ) {
+    if (
+      flow?.subflows?.[subflow]?.[location.line]?.[location.position]?.value
+    ) {
+      let newFlow = JSON.parse(JSON.stringify(flow))
+      newFlow.subflows[subflow][location.line][
+        location.position
+      ].value = element
+      setFlow(newFlow)
+    }
   }
 
   useEffect(() => {
@@ -82,11 +93,12 @@ const Modeler = (props: { path: string; id: string }) => {
       <svg width="100%" height="2000">
         {flow?.subflows?.[subflow] &&
           flow?.subflows?.[subflow]?.map((line: any, lineIndex: number) => {
-            return line?.map((element: any, elementIndex: number) => {
+            return line?.map((element: any, positionIndex: number) => {
               return (
                 <Element
-                  key={lineIndex.toString() + ":" + elementIndex.toString()}
-                  prior={elementIndex === 0 ? null : line[elementIndex - 1]}
+                  key={lineIndex.toString() + ":" + positionIndex.toString()}
+                  location={{ line: lineIndex, position: positionIndex }}
+                  prior={positionIndex === 0 ? null : line[positionIndex - 1]}
                   element={element}
                   handleElement={handleElement}
                 />

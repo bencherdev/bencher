@@ -6,7 +6,7 @@ const Arrow = (props: { source: any; destination: any }) => {
     destination: {},
   })
   const [arrow, setArrow] = useState({
-    line: "",
+    shaft: "",
     head: "",
   })
 
@@ -58,7 +58,7 @@ const Arrow = (props: { source: any; destination: any }) => {
     start.y = y
     end.y = y
     return {
-      line:
+      shaft:
         positionString(start) +
         " " +
         positionString({ x: end?.x - 15, y: end?.y }),
@@ -86,7 +86,7 @@ const Arrow = (props: { source: any; destination: any }) => {
 
   return (
     <g>
-      <polyline points={arrow?.line} stroke="black" strokeWidth="5" />
+      <polyline points={arrow?.shaft} stroke="black" strokeWidth="5" />
       <polygon points={arrow?.head} stroke="black" fill="black" />
     </g>
   )
