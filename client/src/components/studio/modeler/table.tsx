@@ -29,6 +29,10 @@ const BorderedTd = styled.td`
   padding: 15px;
 `
 
+const CellInput = styled.input`
+  border: 0;
+`
+
 const Table = (props: { data: any }) => (
   <BorderedTable>
     <thead>
@@ -42,7 +46,13 @@ const Table = (props: { data: any }) => (
       {props?.data?.columns && (
         <tr>
           {props?.data?.columns.map((column: any, index: number) => {
-            return <BorderedTh key={index}>{column.name}</BorderedTh>
+            return (
+              <BorderedTh key={index}>
+                <b>{column?.name}</b>
+                <br />
+                <i>{column?.type}</i>
+              </BorderedTh>
+            )
           })}
         </tr>
       )}
@@ -53,9 +63,14 @@ const Table = (props: { data: any }) => (
           return (
             <HoverTr key={rowIndex}>
               {row.map((cell: any, cellIndex: number) => {
+                let cellType = props?.data?.columns?.[cellIndex]
                 return (
                   <BorderedTd key={rowIndex + ":" + cellIndex}>
-                    {cell}
+                    <CellInput
+                      type={cellType?.toLowerCase}
+                      value={cell}
+                      onChange={() => {}}
+                    />
                   </BorderedTd>
                 )
               })}

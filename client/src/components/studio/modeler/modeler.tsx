@@ -18,7 +18,7 @@ const flows = {
           // Need a New for new inputs
           {
             type: "new",
-            position: { x: 75, y: 150 },
+            position: { x: 75, y: 125 },
             dimensions: { radius: 50 },
             value: {},
           },
@@ -32,7 +32,7 @@ const flows = {
             value: {
               title: "Input",
               var: "input",
-              columns: [{ name: "Value", var: "value", type: "number" }],
+              columns: [{ name: "Value", var: "value", type: "Number" }],
               rows: [[5]],
             },
           },
@@ -55,7 +55,7 @@ const Modeler = (props: { path: string; id: string }) => {
 
   function handleSubflow(id: string) {
     setNav(id)
-    setSubflow({ id: id, value: flows[props.id]?.subflows?.[id] })
+    setSubflow({ id: id, value: flows?.[props.id]?.subflows?.[id] })
   }
 
   function handleNav(id: string) {
@@ -64,7 +64,7 @@ const Modeler = (props: { path: string; id: string }) => {
 
   useEffect(() => {
     if (subflow.id === "") {
-      let main = flows[props.id]?.main
+      let main = flows?.[props.id]?.main
       handleSubflow(main)
     } else if (subflow.id !== nav) {
       handleNav(nav)
@@ -78,8 +78,8 @@ const Modeler = (props: { path: string; id: string }) => {
       </p>
       <svg width="100%" height="2000">
         {subflow &&
-          subflow.value.map((line: any, lineIndex: number) => {
-            return line.map((element: any, elementIndex: number) => {
+          subflow?.value?.map((line: any, lineIndex: number) => {
+            return line?.map((element: any, elementIndex: number) => {
               return (
                 <Element
                   key={lineIndex.toString() + ":" + elementIndex.toString()}
