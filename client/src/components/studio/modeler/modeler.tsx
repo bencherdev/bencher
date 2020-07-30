@@ -30,7 +30,21 @@ const flows = {
             // Each type will have a different value
             // TODO make these in Typescript
             value: {
-              title: "Input",
+              name: "Input",
+              var: "input",
+              columns: [{ name: "Value", var: "value", type: "Number" }],
+              rows: [[5]],
+            },
+          },
+          {
+            // The type of the Element
+            type: "function",
+            position: { x: 600, y: 30 },
+            dimensions: { width: 200, height: 250 },
+            // Each type will have a different value
+            // TODO make these in Typescript
+            value: {
+              name: "Input",
               var: "input",
               columns: [{ name: "Value", var: "value", type: "Number" }],
               rows: [[5]],

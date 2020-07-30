@@ -12,7 +12,7 @@ const HoverTr = styled.tr`
   }
 `
 
-const TitleTh = styled.th`
+const NameTh = styled.th`
   border: 1px solid black;
   text-align: center;
   padding: 15px;
@@ -57,11 +57,11 @@ const Table = (props: {
   return (
     <BorderedTable>
       <thead>
-        {props?.data?.title && (
+        {props?.data?.name && (
           <tr>
-            <TitleTh colSpan={props?.data?.columns?.length}>
-              {props?.data?.title}
-            </TitleTh>
+            <NameTh colSpan={props?.data?.columns?.length}>
+              {props?.data?.name}
+            </NameTh>
           </tr>
         )}
         {props?.data?.columns && (

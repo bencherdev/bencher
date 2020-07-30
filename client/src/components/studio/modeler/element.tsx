@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react"
 
-import NewElement from "./newelement"
+import NewLine from "./newline"
 import ForeignElement from "./foreignelement"
 import Arrow from "./arrow"
 import Table from "./table"
+import Function from "./function"
 
 const Element = (props: {
   location: { line: number; position: number }
@@ -15,7 +16,7 @@ const Element = (props: {
     switch (element?.type) {
       case "new":
         return (
-          <NewElement
+          <NewLine
             position={element?.position}
             dimensions={element?.dimensions}
           />
@@ -50,7 +51,11 @@ const Element = (props: {
             position={element?.position}
             dimensions={element?.dimensions}
           >
-            <p>Function</p>
+            <Function
+              data={element?.value}
+              location={props.location}
+              handleElement={props.handleElement}
+            />
           </ForeignElement>
         )
       case "subflow":

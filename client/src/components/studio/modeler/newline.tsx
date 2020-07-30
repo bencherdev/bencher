@@ -1,11 +1,9 @@
 import React from "react"
 
-const NewElement = (props: {
+const NewLine = (props: {
   position: { x: number; y: number }
   dimensions: { radius: number }
 }) => {
-  let radius = props?.dimensions?.radius
-  let outer = props?.dimensions?.radius?.toString()
   return (
     <g fill="white" stroke="black" strokeWidth="5">
       <circle
@@ -22,4 +20,4 @@ const NewElement = (props: {
   )
 }
 
-export default NewElement
+export default NewLine
