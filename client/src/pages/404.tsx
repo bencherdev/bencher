@@ -5,9 +5,11 @@ import { Link } from "gatsby"
 import SitePage from "../components/site/pages/sitepage"
 
 const NotFoundPage = () => {
+  let date = Date()
   return (
     <SitePage link={Link}>
       <h1>Page Not Found</h1>
+      <p>Rendered at: {date}</p>
     </SitePage>
   )
 }

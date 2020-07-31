@@ -10,6 +10,7 @@ const RootIndex = () => (
   <SitePage link={Link}>
     <h1>TableFlow</h1>
     <Link to="/studio/">Studio</Link> <br />
+    <Link to="/404">404</Link> <br />
   </SitePage>
 )
 
