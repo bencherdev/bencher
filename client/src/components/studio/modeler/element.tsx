@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react"
 
+import Parent from "./parent"
 import NewLine from "./newline"
 import ForeignElement from "./foreignelement"
 import Arrow from "./arrow"
 import Table from "./table"
 import Function from "./function"
+import Return from "./return"
 
 const Element = (props: {
   location: { line: number; position: number }
@@ -14,6 +16,13 @@ const Element = (props: {
 }) => {
   function elementSwitch(element: any) {
     switch (element?.type) {
+      case "parent":
+        return (
+          <Parent
+            position={element?.position}
+            dimensions={element?.dimensions}
+          />
+        )
       case "new":
         return (
           <NewLine
@@ -21,8 +30,6 @@ const Element = (props: {
             dimensions={element?.dimensions}
           />
         )
-      case "parent":
-        return <p>Parent Flow</p>
       case "table":
         return (
           <ForeignElement
@@ -61,7 +68,12 @@ const Element = (props: {
       case "subflow":
         return <p>Subflow</p>
       case "return":
-        return <p>Return</p>
+        return (
+          <Return
+            position={element?.position}
+            dimensions={element?.dimensions}
+          />
+        )
       default:
         return (
           <ForeignElement

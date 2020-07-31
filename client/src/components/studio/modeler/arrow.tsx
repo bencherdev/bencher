@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react"
 
+// TODO update the arrow so that the NewLine Element
+// is the verticle alignment point for all arrows
+// as well as for all elements' midpoints
 const Arrow = (props: { source: any; destination: any }) => {
   const [path, setPath] = useState({
     source: {},
@@ -22,7 +25,7 @@ const Arrow = (props: { source: any; destination: any }) => {
       case "subflow":
         start = {
           x: props?.source?.position?.x + props?.source?.dimensions?.radius,
-          y: 0,
+          y: props?.source?.position?.y,
         }
         break
       case "parent":
@@ -32,7 +35,7 @@ const Arrow = (props: { source: any; destination: any }) => {
       default:
         start = {
           x: props?.source?.position?.x + props?.source?.dimensions?.width,
-          y: 0,
+          y: props?.source?.position?.y + props?.source?.dimensions?.height / 2,
         }
     }
 
@@ -44,19 +47,16 @@ const Arrow = (props: { source: any; destination: any }) => {
           x:
             props?.destination?.position?.x -
             props?.destination?.dimensions?.radius,
-          y: 0,
+          y: start.y,
         }
         break
       case "table":
       case "decision":
       case "function":
       default:
-        end = { x: props?.destination?.position?.x, y: 0 }
+        end = { x: props?.destination?.position?.x, y: start.y }
     }
 
-    let y = props?.source?.position?.y
-    start.y = y
-    end.y = y
     return {
       shaft:
         positionString(start) +

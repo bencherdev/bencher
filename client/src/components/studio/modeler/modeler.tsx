@@ -9,20 +9,33 @@ const flows = {
     main: "a1",
     // A map of all of the Subflows within a Flow
     subflows: {
-      // A particular Subflow, may be the Main Flow
-      a1: [
-        // It is a list of lists
-        // Think lines in a file for each Subflow
-        [
-          // Each Element is its own object
+      // A map of all Elements
+      // and there order in lines within the flow
+      a1: {
+        lines: [
+          // It is a list of lists
+          // Think lines in a file for each Subflow
+          ["e1", "e2", "e3"],
+          ["e0"],
+        ],
+        // Each Element is its own object
+        elements: {
+          // There will always be a Return element
+          e0: {
+            type: "return",
+            position: { x: 75, y: 600 },
+            dimensions: { radius: 50 },
+            value: {},
+            args: [],
+          },
           // Need a New for new inputs
-          {
+          e1: {
             type: "new",
             position: { x: 75, y: 125 },
             dimensions: { radius: 50 },
             value: {},
           },
-          {
+          e2: {
             // The type of the Element
             type: "table",
             position: { x: 250, y: 10 },
@@ -30,28 +43,29 @@ const flows = {
             // Each type will have a different value
             // TODO make these in Typescript
             value: {
-              name: "Input",
-              var: "input",
+              name: "Input Table",
+              var: "input_table",
               columns: [{ name: "Value", var: "value", type: "Number" }],
               rows: [[5]],
             },
           },
-          {
+          e3: {
             // The type of the Element
             type: "function",
-            position: { x: 600, y: 30 },
+            position: { x: 600, y: 50 },
             dimensions: { width: 200, height: 250 },
             // Each type will have a different value
             // TODO make these in Typescript
             value: {
-              name: "Input",
-              var: "input",
-              columns: [{ name: "Value", var: "value", type: "Number" }],
-              rows: [[5]],
+              name: "Square",
+              var: "square(Number)",
+              input: [{ name: "n", type: "Number" }],
+              outputs: [{ type: "Number" }],
+              args: ["e2"],
             },
           },
-        ],
-      ],
+        },
+      },
     },
   },
   b: null,
@@ -81,13 +95,11 @@ const Modeler = (props: { path: string; id: string }) => {
     location: { line: number; position: number },
     element: any
   ) {
-    if (
-      flow?.subflows?.[subflow]?.[location.line]?.[location.position]?.value
-    ) {
+    let elementId =
+      flow?.subflows?.[subflow]?.lines?.[location.line]?.[location.position]
+    if (flow?.subflows?.[subflow]?.elements?.[elementId]?.value) {
       let newFlow = JSON.parse(JSON.stringify(flow))
-      newFlow.subflows[subflow][location.line][
-        location.position
-      ].value = element
+      newFlow.subflows[subflow].elements[elementId].value = element
       setFlow(newFlow)
     }
   }
@@ -105,20 +117,30 @@ const Modeler = (props: { path: string; id: string }) => {
         Modeler {props.path} {props.id} {date}
       </p>
       <svg width="100%" height="2000">
-        {flow?.subflows?.[subflow] &&
-          flow?.subflows?.[subflow]?.map((line: any, lineIndex: number) => {
-            return line?.map((element: any, positionIndex: number) => {
-              return (
-                <Element
-                  key={lineIndex.toString() + ":" + positionIndex.toString()}
-                  location={{ line: lineIndex, position: positionIndex }}
-                  prior={positionIndex === 0 ? null : line[positionIndex - 1]}
-                  element={element}
-                  handleElement={handleElement}
-                />
-              )
-            })
-          })}
+        {flow?.subflows?.[subflow]?.lines &&
+          flow?.subflows?.[subflow]?.lines?.map(
+            (line: any, lineIndex: number) => {
+              // TODO break this into its own Line component
+              // This component will keep state for the line
+              // such as the midpoints, include when "wrap text" occurs
+              return line?.map((elementId: any, positionIndex: number) => {
+                let elements = flow?.subflows?.[subflow]?.elements
+                return (
+                  <Element
+                    key={lineIndex.toString() + ":" + positionIndex.toString()}
+                    location={{ line: lineIndex, position: positionIndex }}
+                    prior={
+                      positionIndex === 0
+                        ? null
+                        : elements?.[line[positionIndex - 1]]
+                    }
+                    element={elements?.[elementId]}
+                    handleElement={handleElement}
+                  />
+                )
+              })
+            }
+          )}
       </svg>
     </div>
   )
