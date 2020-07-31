@@ -15,7 +15,7 @@ const flows = {
         lines: [
           // It is a list of lists
           // Think lines in a file for each Subflow
-          ["e1", "e2", "e3"],
+          ["e1", "e2", "e3", "e4"],
           ["e0"],
         ],
         // Each Element is its own object
@@ -51,18 +51,33 @@ const flows = {
             },
           },
           e3: {
-            // The type of the Element
             type: "function",
             position: { x: 600, y: 50 },
             dimensions: { width: 200, height: 250 },
-            // Each type will have a different value
-            // TODO make these in Typescript
             value: {
               name: "Square",
               var: "square(Number)",
               input: [{ name: "n", type: "Number" }],
-              outputs: [{ type: "Number" }],
               args: ["e2"],
+              outputs: [{ type: "Number" }],
+              returns: ["e4"],
+            },
+          },
+          e4: {
+            type: "table",
+            position: { x: 950, y: 10 },
+            dimensions: { width: 200, height: 250 },
+            value: {
+              name: "Output Table",
+              var: "output_table",
+              columns: [
+                {
+                  name: "Squared Value",
+                  var: "squared_value",
+                  type: "Number",
+                },
+              ],
+              rows: [[25]],
             },
           },
         },

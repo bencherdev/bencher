@@ -24,7 +24,7 @@ module.exports = {
     {
       resolve: `gatsby-plugin-manifest`,
       options: {
-        name: `gatsby-starter-default`,
+        name: `TabeFlow - Build. Reuse. Repeate.`,
         short_name: `starter`,
         start_url: `/`,
         background_color: `#663399`,
@@ -40,6 +40,14 @@ module.exports = {
     {
       resolve: `gatsby-plugin-styled-components`,
       options: {},
+    },
+    {
+      resolve: "gatsby-plugin-web-font-loader",
+      options: {
+        google: {
+          families: ["Abel"],
+        },
+      },
     },
     // this (optional) plugin enables Progressive Web App + Offline functionality
     // To learn more, visit: https://gatsby.dev/offline
