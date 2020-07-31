@@ -1,6 +1,6 @@
 import React from "react"
 
-const NewLine = (props: {
+const Input = (props: {
   position: { x: number; y: number }
   dimensions: { radius: number }
 }) => {
@@ -20,4 +20,4 @@ const NewLine = (props: {
   )
 }
 
-export default NewLine
+export default Input

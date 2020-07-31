@@ -21,6 +21,7 @@ const flows = {
         // Each Element is its own object
         elements: {
           // There will always be a Return element
+          // even if it is unused
           e0: {
             type: "return",
             position: { x: 75, y: 600 },
@@ -28,9 +29,9 @@ const flows = {
             value: {},
             args: [],
           },
-          // Need a New for new inputs
+          // Need a for Flow inputs
           e1: {
-            type: "new",
+            type: "input",
             position: { x: 75, y: 125 },
             dimensions: { radius: 50 },
             value: {},

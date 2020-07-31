@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 
 import Parent from "./parent"
-import NewLine from "./newline"
+import Input from "./input"
 import ForeignElement from "./foreignelement"
 import Arrow from "./arrow"
 import Table from "./table"
@@ -23,9 +23,9 @@ const Element = (props: {
             dimensions={element?.dimensions}
           />
         )
-      case "new":
+      case "input":
         return (
-          <NewLine
+          <Input
             position={element?.position}
             dimensions={element?.dimensions}
           />

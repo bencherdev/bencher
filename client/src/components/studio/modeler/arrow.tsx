@@ -21,7 +21,7 @@ const Arrow = (props: { source: any; destination: any }) => {
   function getArrow() {
     let start
     switch (props?.source?.type) {
-      case "new":
+      case "input":
       case "subflow":
         start = {
           x: props?.source?.position?.x + props?.source?.dimensions?.radius,
@@ -41,6 +41,7 @@ const Arrow = (props: { source: any; destination: any }) => {
 
     let end
     switch (props?.destination?.type) {
+      case "input":
       case "subflow":
       case "return":
         end = {
