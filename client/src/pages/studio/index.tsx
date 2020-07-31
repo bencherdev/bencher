@@ -1,8 +1,8 @@
 // If you don't want to use TypeScript you can delete this file!
 import React from "react"
-import { Router } from "@reach/router"
+import { Router, Link } from "@reach/router"
 
-import SEO from "../../components/seo"
+import SEO from "../../components/site/seo"
 
 import SiteNavbar from "../../components/site/navbar/sitenavbar"
 import SiteFooter from "../../components/site/footer/sitefooter"
@@ -13,7 +13,7 @@ import Modeler from "../../components/studio/modeler/modeler"
 
 const StudioPage = () => (
   <div>
-    <SiteNavbar user={{ isAuth: false }} />
+    <SiteNavbar link={Link} user={{ isAuth: false }} />
     <SEO title="TableFlow Studio" />
     <Router basepath="/studio">
       <Modeler path="/flow/:id" id="" />

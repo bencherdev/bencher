@@ -4,12 +4,12 @@ import { Link } from "gatsby"
 
 import SitePage from "../components/site/pages/sitepage"
 
-const NotFoundPage = () => {
+const LicensingPage = () => {
   return (
     <SitePage link={Link}>
-      <h1>Page Not Found</h1>
+      <p>TableFlow Licensing</p>
     </SitePage>
   )
 }
 
-export default NotFoundPage
+export default LicensingPage

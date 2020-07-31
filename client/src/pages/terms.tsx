@@ -1,14 +1,15 @@
 // If you don't want to use TypeScript you can delete this file!
 import React from "react"
+import { Link } from "gatsby"
 
-import Layout from "../components/layout"
-import SEO from "../components/seo"
+import SitePage from "../components/site/pages/sitepage"
 
-const TermsPage = () => (
-  <Layout>
-    <SEO title="TableFlow Terms of Use" />
-    <h1>TableFlow Terms of Use</h1>
-  </Layout>
-)
+const TermsPage = () => {
+  return (
+    <SitePage link={Link}>
+      <p>TableFlow Terms of Use</p>
+    </SitePage>
+  )
+}
 
 export default TermsPage

@@ -1,5 +1,4 @@
 import React from "react"
-import { Link } from "@reach/router"
 import { Navbar, Button } from "react-bulma-components"
 import styled from "styled-components"
 
@@ -12,10 +11,10 @@ const NavbarDiv = styled.div``
 
 import ExternalLink from "../../utils/externallink"
 
-const SiteNavbar = (props: any) => (
+const SiteNavbar = (props: { user: any; link: any }) => (
   <Navbar color="white">
     <Navbar.Brand>
-      <Navbar.Item renderAs={Link} to="/">
+      <Navbar.Item renderAs={props?.link} to="/">
         <BrandName> TableFlow</BrandName>
       </Navbar.Item>
 
@@ -31,16 +30,16 @@ const SiteNavbar = (props: any) => (
     </Navbar.Brand>
     <Navbar.Menu>
       <Navbar.Container position="start">
-        <Navbar.Item renderAs={Link} to="/about">
+        <Navbar.Item renderAs={props?.link} to="/about">
           About
         </Navbar.Item>
-        <Navbar.Item renderAs={Link} to="/studio">
+        <Navbar.Item renderAs={props?.link} to="/studio">
           Studio
         </Navbar.Item>
-        <Navbar.Item renderAs={Link} to="/docs">
+        <Navbar.Item renderAs={props?.link} to="/docs">
           Docs
         </Navbar.Item>
-        {/* <Navbar.Item renderAs={Link} to="/Hub">Hub</Navbar.Item> */}
+        {/* <Navbar.Item renderAs={props?.link} to="/Hub">Hub</Navbar.Item> */}
         <Navbar.Item renderAs={NavbarDiv}>
           <Navbar.Link
             renderAs={ExternalLink}
@@ -64,21 +63,21 @@ const SiteNavbar = (props: any) => (
 
             <Navbar.Dropdown>
               {props.hasPermission("ADMIN") && (
-                <Navbar.Item renderAs={Link} to="/admin">
+                <Navbar.Item renderAs={props?.link} to="/admin">
                   Admin
                 </Navbar.Item>
               )}
               {props.hasPermission("HUB") && (
-                <Navbar.Item renderAs={Link} to="/hub">
+                <Navbar.Item renderAs={props?.link} to="/hub">
                   Hub
                 </Navbar.Item>
               )}
               {props.hasPermission("SETTINGS") && (
-                <Navbar.Item renderAs={Link} to="/settings">
+                <Navbar.Item renderAs={props?.link} to="/settings">
                   Settings
                 </Navbar.Item>
               )}
-              <Navbar.Item renderAs={Link} to="/logout">
+              <Navbar.Item renderAs={props?.link} to="/logout">
                 <Button outlined={true} fullwidth={true}>
                   Log out
                 </Button>
@@ -88,7 +87,7 @@ const SiteNavbar = (props: any) => (
         )}
 
         {!props?.user?.isAuth && (
-          <Navbar.Item renderAs={Link} to="/auth/login">
+          <Navbar.Item renderAs={props?.link} to="/auth/login">
             <Button outlined={true} fullwidth={true}>
               Log in
             </Button>
@@ -96,7 +95,7 @@ const SiteNavbar = (props: any) => (
         )}
 
         {!props?.user?.isAuth && (
-          <Navbar.Item renderAs={Link} to="/auth/signup">
+          <Navbar.Item renderAs={props?.link} to="/auth/signup">
             <Button color="primary" fullwidth={true}>
               Sign up
             </Button>

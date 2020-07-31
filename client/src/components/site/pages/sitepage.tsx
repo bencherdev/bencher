@@ -9,10 +9,10 @@ import React from "react"
 import PropTypes from "prop-types"
 import { useStaticQuery, graphql } from "gatsby"
 
-import Header from "./header"
-import "./layout.css"
+import SiteNavbar from "../navbar/sitenavbar"
+import SiteFooter from "../footer/sitefooter"
 
-const Layout = ({ children }) => {
+const SitePage = ({ link, children }: any) => {
   const data = useStaticQuery(graphql`
     query SiteTitleQuery {
       site {
@@ -25,27 +25,17 @@ const Layout = ({ children }) => {
 
   return (
     <>
-      <Header siteTitle={data.site.siteMetadata.title} />
-      <div
-        style={{
-          margin: `0 auto`,
-          maxWidth: 960,
-          padding: `0 1.0875rem 1.45rem`,
-        }}
-      >
+      <SiteNavbar link={link} user={{ isAuth: false }} />
+      <div>
         <main>{children}</main>
-        <footer>
-          © {new Date().getFullYear()}, Built with
-          {` `}
-          <a href="https://www.gatsbyjs.org">Gatsby</a>
-        </footer>
+        <SiteFooter />
       </div>
     </>
   )
 }
 
-Layout.propTypes = {
+SitePage.propTypes = {
   children: PropTypes.node.isRequired,
 }
 
-export default Layout
+export default SitePage
