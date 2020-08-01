@@ -7,10 +7,15 @@ import {
   Container,
   Columns,
   Media,
-  Image,
   Content,
   Icon,
 } from "react-bulma-components"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import {
+  faTwitterSquare,
+  faGithubSquare,
+} from "@fortawesome/free-brands-svg-icons"
 
 import ExternalLink from "../../utils/externallink"
 
@@ -71,22 +76,26 @@ const SiteFooter = () => {
                 </ul>
               </Columns.Column> */}
             </Columns>
-
-            <Columns centered={true} breakpoint="mobile">
-              <Columns.Column size="half" offset="one-quarter">
-                <a href="https://github.com/tableflow/tableflow">
-                  <Icon size="medium">
-                    <span className="fab fa-github-square fa-2x" />
-                  </Icon>
-                </a>
-              </Columns.Column>
-            </Columns>
           </Columns.Column>
 
           <Columns.Column size="half">
             <Media>
               <Media.Item position="left">
                 <BrandName> TableFlow</BrandName>
+                <br />
+                <Content className="has-text-centered">
+                  <a href="https://github.com/tableflow/tableflow">
+                    <span className="icon has-text-primary">
+                      <FontAwesomeIcon icon={faGithubSquare} size="2x" />
+                    </span>
+                  </a>
+                  <>{"⠀".repeat(1)}</>
+                  <a href="https://twitter.com/tableflow">
+                    <span className="icon has-text-primary">
+                      <FontAwesomeIcon icon={faTwitterSquare} size="2x" />
+                    </span>
+                  </a>
+                </Content>
               </Media.Item>
               <Media.Item>
                 <Content>
