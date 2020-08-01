@@ -26,16 +26,17 @@ module.exports = {
       options: {
         name: `TabeFlow - Interactive Financial Modeling`,
         short_name: `TableFlow`,
-        start_url: `/`,
-        background_color: `#663399`,
-        theme_color: `#663399`,
+        start_url: `/about`,
+        background_color: `#FFFFFF`,
+        theme_color: `#4386FA`,
         display: `minimal-ui`,
-        icon: `src/images/gatsby-icon.png`, // This path is relative to the root of the site.
+        // This path is relative to the root of the site.
+        icon: `src/images/tableflow-icon-512.png`,
       },
     },
     {
       resolve: `gatsby-plugin-create-client-paths`,
-      options: { prefixes: [`/studio/*`] },
+      options: { prefixes: [`/studio/*`, `/auth/*`] },
     },
     {
       resolve: `gatsby-plugin-styled-components`,
@@ -49,8 +50,7 @@ module.exports = {
         },
       },
     },
-    // this (optional) plugin enables Progressive Web App + Offline functionality
     // To learn more, visit: https://gatsby.dev/offline
-    // `gatsby-plugin-offline`,
+    `gatsby-plugin-offline`,
   ],
 }

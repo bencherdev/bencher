@@ -2,6 +2,9 @@ import React from "react"
 import { Navbar, Button } from "react-bulma-components"
 import styled from "styled-components"
 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons"
+
 const BrandName = styled.h1`
   color: black;
   font-size: 300%;
@@ -47,6 +50,10 @@ const SiteNavbar = (props: { user: any; link: any }) => (
             black={true}
           >
             GitHub
+            {" ".repeat(1)}
+            <span className="icon has-text-primary">
+              <FontAwesomeIcon icon={faExternalLinkAlt} />
+            </span>
           </Navbar.Link>
         </Navbar.Item>
       </Navbar.Container>

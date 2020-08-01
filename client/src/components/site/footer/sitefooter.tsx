@@ -12,6 +12,7 @@ import {
 } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons"
 import {
   faTwitterSquare,
   faGithubSquare,
@@ -46,6 +47,10 @@ const SiteFooter = () => {
                   <li>
                     <ExternalLink to="https://github.com/tableflow/tableflow">
                       GitHub
+                      {" ".repeat(1)}
+                      <span className="icon has-text-primary">
+                        <FontAwesomeIcon icon={faExternalLinkAlt} />
+                      </span>
                     </ExternalLink>
                   </li>
                 </ul>
@@ -84,7 +89,7 @@ const SiteFooter = () => {
                 <BrandName> TableFlow</BrandName>
                 <br />
                 <Content className="has-text-centered">
-                  <a href="https://github.com/tableflow/tableflow">
+                  <a href="https://github.com/tableflow">
                     <span className="icon has-text-primary">
                       <FontAwesomeIcon icon={faGithubSquare} size="2x" />
                     </span>
