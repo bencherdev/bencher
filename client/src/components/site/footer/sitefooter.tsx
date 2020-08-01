@@ -54,7 +54,7 @@ const SiteFooter = () => {
                 TableFlow Docs
                 <ul>
                   <li>
-                    <Link to="/docs/getting-started">Getting Started</Link>
+                    <Link to="/docs/quick-start">Quick Start</Link>
                   </li>
                   <li>
                     <Link to="/docs/tutorial">Tutorial</Link>
@@ -63,7 +63,7 @@ const SiteFooter = () => {
                     <Link to="/docs/faq">FAQ</Link>
                   </li>
                   <li>
-                    <Link to="/docs/releases">Releases</Link>
+                    <Link to="/docs/changelog">Change Log</Link>
                   </li>
                 </ul>
               </Columns.Column>
