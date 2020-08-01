@@ -2,14 +2,24 @@
 import React from "react"
 import { Link } from "gatsby"
 
+import { Section, Container, Columns, Heading } from "react-bulma-components"
+
 import SitePage from "../components/site/pages/sitepage"
 
 const NotFoundPage = () => {
   let date = Date()
   return (
     <SitePage link={Link}>
-      <h1>Page Not Found</h1>
-      <p>Rendered at: {date}</p>
+      <Section>
+        <Container>
+          <Columns centered={true}>
+            <Columns.Column size="half">
+              <Heading>Page Not Found</Heading>
+              <p>Rendered at: {date}</p>
+            </Columns.Column>
+          </Columns>
+        </Container>
+      </Section>
     </SitePage>
   )
 }

@@ -13,7 +13,7 @@ const ContentPage = ({ children }: any) => {
     <Section>
       <Container>
         <Columns>
-          <Columns.Column>
+          <Columns.Column size="three-quarters">
             <Content>{children}</Content>
           </Columns.Column>
         </Columns>

@@ -1,6 +1,34 @@
 @charset "utf-8";
-// If need, change your variables before importing Bulma
-$title-color: #ff0000;
 
-$primary: #ff0000;
+// Variables
+$tfblue: #4386FA !default;
+$tflightblue: #43E2FA !default;
+$tfpurple: #5C43FA !default; 
+
+// Overrides
+$primary: $tfblue !default;
+
+$link: $tfblue !default;
+$link-visited: $tfpurple !default;
+$link-focus-border: $tfblue !default;
+
+$input-focus-border-color: $tfblue !default;
+$input-focus-box-shadow-color: $tfblue !default;
+
+$breadcrumb-item-color: $tfblue !default;
+
+$badge-z-index: 5 !default;
+
 @import "~bulma/bulma.sass";
+@import "~bulma/sass/utilities/_all.sass";
+@import "~bulma/sass/base/_all.sass";
+@import "~bulma/sass/form/_all.sass";
+@import "~bulma/sass/elements/button.sass";
+@import "~bulma/sass/elements/progress.sass";
+@import "~bulma/sass/layout/section.sass";
+@import "~bulma/sass/layout/hero.sass";
+@import "~bulma/sass/grid/columns.sass";
+@import "~bulma/sass/components/message.sass";
+@import "~bulma/sass/components/breadcrumb.sass";
+@import "~bulma/sass/components/menu.sass";
+@import "~bulma/sass/components/pagination.sass";

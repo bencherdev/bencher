@@ -2,12 +2,17 @@
 import React from "react"
 import { Link } from "gatsby"
 
+import { Heading } from "react-bulma-components"
+
 import SitePage from "../components/site/pages/sitepage"
+import ContentPage from "../components/site/pages/contentpage"
 
 const TermsPage = () => {
   return (
     <SitePage link={Link}>
-      <p>TableFlow Terms of Use</p>
+      <ContentPage>
+        <Heading>TableFlow Terms of Use</Heading>
+      </ContentPage>
     </SitePage>
   )
 }

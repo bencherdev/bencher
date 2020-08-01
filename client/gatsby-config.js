@@ -1,7 +1,7 @@
 module.exports = {
   siteMetadata: {
     title: `TableFlow - Interactive Financial Modeling`,
-    description: ``,
+    description: `Build reusable financial models and instantly see the results`,
     author: `@tableflow`,
   },
   plugins: [
@@ -24,8 +24,8 @@ module.exports = {
     {
       resolve: `gatsby-plugin-manifest`,
       options: {
-        name: `TabeFlow - Build. Reuse. Repeate.`,
-        short_name: `starter`,
+        name: `TabeFlow - Interactive Financial Modeling`,
+        short_name: `TableFlow`,
         start_url: `/`,
         background_color: `#663399`,
         theme_color: `#663399`,
