@@ -1,9 +1,13 @@
 import React from "react"
-import { navigate } from "gatsby"
+import Loadable from "@loadable/component"
 
 import "react-bulma-components/dist/react-bulma-components.min.css"
 import "../styles/_variables.sass"
 
-const RootIndex = () => <>{navigate("/studio/flow")}</>
+const ClientSideRedirect = Loadable(() =>
+  import("../components/utils/redirect")
+)
+
+const RootIndex = () => <ClientSideRedirect to={"/studio/flow"} />
 
 export default RootIndex

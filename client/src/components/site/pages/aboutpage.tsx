@@ -1,4 +1,7 @@
-import React from "react"
+import React, { useState } from "react"
+import Loadable from "@loadable/component"
+
+const ClientSideRedirect = Loadable(() => import("../../utils/redirect"))
 
 import {
   Section,
@@ -22,8 +25,10 @@ import {
 import { faObjectUngroup } from "@fortawesome/free-regular-svg-icons"
 
 const AboutPage = () => {
+  const [redirect, setRedirect] = useState(false)
   return (
     <Section size="medium">
+      {redirect && <ClientSideRedirect to="/studio/flow" />}
       <Container>
         <Content className="has-text-centered">
           <Heading size={2}>Build reusable financial models</Heading>
@@ -34,7 +39,13 @@ const AboutPage = () => {
         <Container>
           <Columns centered={true}>
             <Columns.Column size="half">
-              <Button fullwidth={true} color="primary" onClick={() => {}}>
+              <Button
+                fullwidth={true}
+                color="primary"
+                onClick={() => {
+                  setRedirect(true)
+                }}
+              >
                 Start Now
               </Button>
             </Columns.Column>
