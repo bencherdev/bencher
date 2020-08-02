@@ -7,12 +7,12 @@
 
 import React from "react"
 import PropTypes from "prop-types"
-import { useStaticQuery, graphql } from "gatsby"
+import { useStaticQuery, graphql, Link } from "gatsby"
 
-import SiteNavbar from "../navbar/sitenavbar"
-import SiteFooter from "../footer/sitefooter"
+import SiteNavbar from "../site/navbar/sitenavbar"
+import SiteFooter from "../site/footer/sitefooter"
 
-const SitePage = ({ link, children }: any) => {
+const Layout = ({ children }: any) => {
   const data = useStaticQuery(graphql`
     query SiteTitleQuery {
       site {
@@ -25,7 +25,7 @@ const SitePage = ({ link, children }: any) => {
 
   return (
     <>
-      <SiteNavbar link={link} user={{ isAuth: false }} />
+      <SiteNavbar link={Link} user={{ isAuth: false }} />
       <div>
         <main>{children}</main>
         <SiteFooter />
@@ -34,8 +34,8 @@ const SitePage = ({ link, children }: any) => {
   )
 }
 
-SitePage.propTypes = {
+Layout.propTypes = {
   children: PropTypes.node.isRequired,
 }
 
-export default SitePage
+export default Layout

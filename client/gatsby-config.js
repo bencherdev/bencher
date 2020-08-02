@@ -14,14 +14,6 @@ module.exports = {
       },
     },
     {
-      resolve: `gatsby-plugin-sass`,
-      options: {
-        includePaths: ["./src/styles"],
-      },
-    },
-    `gatsby-transformer-sharp`,
-    `gatsby-plugin-sharp`,
-    {
       resolve: `gatsby-plugin-manifest`,
       options: {
         name: `TabeFlow - Interactive Financial Modeling`,
@@ -35,12 +27,10 @@ module.exports = {
       },
     },
     {
-      resolve: `gatsby-plugin-create-client-paths`,
-      options: { prefixes: [`/studio/*`, `/auth/*`] },
-    },
-    {
-      resolve: `gatsby-plugin-styled-components`,
-      options: {},
+      resolve: `gatsby-plugin-sass`,
+      options: {
+        includePaths: ["./src/styles"],
+      },
     },
     {
       resolve: "gatsby-plugin-web-font-loader",
@@ -50,7 +40,20 @@ module.exports = {
         },
       },
     },
+    {
+      resolve: `gatsby-plugin-layout`,
+      options: {
+        component: require.resolve(`./src/components/utils/layout.tsx`),
+      },
+    },
+    {
+      resolve: `gatsby-plugin-create-client-paths`,
+      options: { prefixes: [`/studio/*`, `/auth/*`] },
+    },
+    `gatsby-transformer-sharp`,
+    `gatsby-plugin-sharp`,
+    `gatsby-plugin-styled-components`,
     // To learn more, visit: https://gatsby.dev/offline
-    `gatsby-plugin-offline`,
+    // `gatsby-plugin-offline`,
   ],
 }
