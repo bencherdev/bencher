@@ -31,7 +31,7 @@ const AboutPage = () => {
       {redirect && <ClientSideRedirect to="/studio/flow" />}
       <Container>
         <Content className="has-text-centered">
-          <Heading size={2}>Build reusable financial models</Heading>
+          <Heading size={2}>Build modular spreadsheets</Heading>
         </Content>
       </Container>
 

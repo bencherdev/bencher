@@ -10,6 +10,7 @@ const AuthPage = () => (
     <Auth path="/auth/signup" />
     <Auth path="/auth/login" />
     <Logout path="/auth/logout" />
+    <Auth path="/" />
   </Router>
 )
 

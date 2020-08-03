@@ -1,6 +1,6 @@
 # TableFlow
 
-Interactive Financial Modeling
+Build Modular Spreadsheets
 
 # License
 
