@@ -7,10 +7,10 @@ import Logout from "../../components/auth/logout"
 
 const AuthPage = () => (
   <Router basepath="/auth">
-    <Auth path="/auth/signup" />
-    <Auth path="/auth/login" />
-    <Logout path="/auth/logout" />
-    <Auth path="/" />
+    <Auth path="/signup" context="signup" />
+    <Auth path="/login" context="login" />
+    <Logout path="/logout" />
+    <Auth path="/" context="root" />
   </Router>
 )
 

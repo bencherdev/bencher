@@ -84,7 +84,7 @@ const SiteNavbar = (props: { user: any; link: any }) => (
                   Settings
                 </Navbar.Item>
               )}
-              <Navbar.Item renderAs={props?.link} to="/logout">
+              <Navbar.Item renderAs={props?.link} to="/auth/logout">
                 <Button outlined={true} fullwidth={true}>
                   Log out
                 </Button>

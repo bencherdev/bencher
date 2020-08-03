@@ -1,7 +1,7 @@
 import React from "react"
 
-const Auth = () => {
-  return <p>Auth</p>
+const Auth = (props: { context: string }) => {
+  return <p>Auth {props.context}</p>
 }
 
 export default Auth
