@@ -8,8 +8,8 @@ import Modeler from "../../components/studio/modeler/modeler"
 
 const StudioPage = () => (
   <Router basepath="/studio">
-    <Modeler path="/flow/:id" id="" />
-    <NewFlow path="/flow" />
+    <Modeler path="/flow" />
+    <NewFlow path="/flow/new" />
     <Studio path="/" />
   </Router>
 )

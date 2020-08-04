@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { navigate } from "@reach/router"
 
 import Element from "./element"
 
@@ -95,6 +96,7 @@ const Modeler = (props: { path: string; id: string }) => {
     subflows: {},
   })
   const [subflow, setSubflow] = useState("")
+  const [redirect, setRedirect] = useState(false)
 
   let date = Date()
 
@@ -121,16 +123,22 @@ const Modeler = (props: { path: string; id: string }) => {
   }
 
   useEffect(() => {
-    if (flow.id === "" || flow.id !== props.id) {
-      handleSubflow("")
-      handleFlow(props.id)
+    let hash = window.location.hash
+    if (!hash) {
+      setRedirect(true)
+    } else {
+      hash = hash.replace("#", "")
+      if (flow.id === "" || flow.id !== hash) {
+        handleFlow(hash)
+      }
     }
   }, [])
 
   return (
     <div>
+      {redirect && navigate("/studio/flow/new")}
       <p>
-        Modeler {props.path} {props.id} {date}
+        Modeler {props.path} {window.location.hash?.replace("#", "")} {date}
       </p>
       <svg width="100%" height="2000">
         {flow?.subflows?.[subflow]?.lines &&

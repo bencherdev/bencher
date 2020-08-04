@@ -5,6 +5,6 @@ const ClientSideRedirect = Loadable(() =>
   import("../components/utils/redirect")
 )
 
-const RootIndex = () => <ClientSideRedirect to={"/studio/flow"} />
+const RootIndex = () => <ClientSideRedirect to={"/studio/flow/new"} />
 
 export default RootIndex

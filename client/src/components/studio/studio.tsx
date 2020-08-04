@@ -15,7 +15,7 @@ const Studio = (props: { path: string }) => {
       {flows.map((flow, index) => {
         return <Flow key={index} flow={flow} />
       })}
-      <Link to="/studio/flow">New Flow</Link>
+      <Link to="/studio/flow/new">New Flow</Link>
     </div>
   )
 }
