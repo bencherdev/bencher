@@ -2,7 +2,7 @@
 import React from "react"
 import { Router } from "@reach/router"
 
-import Studio from "../../components/studio/studio"
+import Studio from "../../components/studio/workspace/studio"
 import NewFlow from "../../components/studio/modeler/newflow"
 import Modeler from "../../components/studio/modeler/modeler"
 
