@@ -9,8 +9,10 @@ import React from "react"
 import PropTypes from "prop-types"
 import { useStaticQuery, graphql, Link } from "gatsby"
 
+import "react-bulma-components/dist/react-bulma-components.min.css"
 import SiteNavbar from "../site/navbar/sitenavbar"
 import SiteFooter from "../site/footer/sitefooter"
+import "../../styles/_variables.sass"
 
 const Layout = ({ children }: any) => {
   const data = useStaticQuery(graphql`
