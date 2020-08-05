@@ -1,17 +1,9 @@
 // If you don't want to use TypeScript you can delete this file!
 import React from "react"
-import { Router } from "@reach/router"
+import Loadable from "@loadable/component"
 
-import Auth from "../../components/auth/auth"
-import Logout from "../../components/auth/logout"
+const Auth = Loadable(() => import("../../components/auth/auth"))
 
-const AuthPage = () => (
-  <Router basepath="/auth">
-    <Auth path="/signup" context="signup" />
-    <Auth path="/login" context="login" />
-    <Logout path="/logout" />
-    <Auth path="/" context="root" />
-  </Router>
-)
+const AuthPage = () => <Auth context="root" />
 
 export default AuthPage

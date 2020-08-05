@@ -49,7 +49,7 @@ module.exports = {
     },
     {
       resolve: `gatsby-plugin-create-client-paths`,
-      options: { prefixes: [`/studio/*`, `/auth/*`] },
+      options: { prefixes: [] },
     },
     `gatsby-transformer-sharp`,
     `gatsby-plugin-sharp`,

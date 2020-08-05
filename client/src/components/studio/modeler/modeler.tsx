@@ -89,7 +89,7 @@ const flows = {
   c: null,
 }
 
-const Modeler = (props: { path: string }) => {
+const Modeler = () => {
   const [flow, setFlow] = useState({
     id: "",
     main: "",
@@ -138,7 +138,7 @@ const Modeler = (props: { path: string }) => {
     <div>
       {redirect && navigate("/studio/flow/new")}
       <p>
-        Modeler {props.path} {window.location.hash?.replace("#", "")} {date}
+        Modeler for {window.location.hash?.replace("#", "")} {date}
       </p>
       <svg width="100%" height="2000">
         {flow?.subflows?.[subflow]?.lines &&

@@ -6,7 +6,7 @@ import Flow from "./flow"
 
 const flows: string[] = ["A", "B", "C"]
 
-const Studio = (props: { path: string }) => {
+const Studio = () => {
   let date = Date()
   return (
     <div>

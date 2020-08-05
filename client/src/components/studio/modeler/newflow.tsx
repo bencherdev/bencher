@@ -1,11 +1,10 @@
 import React from "react"
 
-const NewFlow = (props: { path: string }) => {
+const NewFlow = () => {
   let date = Date()
   return (
     <p>
-      TODO create a new {props.path.substring(props.path.lastIndexOf("/") + 1)}{" "}
-      {date}
+      TODO create a new Flow {window.location.href} at {date}
     </p>
   )
 }

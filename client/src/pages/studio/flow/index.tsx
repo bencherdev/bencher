@@ -6,10 +6,6 @@ const Modeler = Loadable(() =>
   import("../../../components/studio/modeler/modeler")
 )
 
-const FlowModelerPage = () => (
-  <React.Fragment>
-    <Modeler path="/studio/flow" />
-  </React.Fragment>
-)
+const FlowModelerPage = () => <Modeler />
 
 export default FlowModelerPage
