@@ -1,8 +1,11 @@
 // If you don't want to use TypeScript you can delete this file!
 import React from "react"
+import Loadable from "@loadable/component"
 
-import Modeler from "../../../components/studio/modeler/modeler"
+const Modeler = Loadable(() =>
+  import("../../../components/studio/modeler/modeler")
+)
 
-const FlowModelerPage = () => <Modeler path="/studio/flow" id="" />
+const FlowModelerPage = () => <Modeler path="/studio/flow" />
 
 export default FlowModelerPage

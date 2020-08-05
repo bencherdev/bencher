@@ -89,7 +89,7 @@ const flows = {
   c: null,
 }
 
-const Modeler = (props: { path: string; id: string }) => {
+const Modeler = (props: { path: string }) => {
   const [flow, setFlow] = useState({
     id: "",
     main: "",
