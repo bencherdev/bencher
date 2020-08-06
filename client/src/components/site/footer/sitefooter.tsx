@@ -6,7 +6,7 @@ import {
   Footer,
   Container,
   Columns,
-  Media,
+  Heading,
   Content,
 } from "react-bulma-components"
 
@@ -83,11 +83,10 @@ const SiteFooter = () => {
           </Columns.Column>
 
           <Columns.Column size="half">
-            <Media>
-              <Media.Item position="left">
-                <BrandName> TableFlow</BrandName>
-                <br />
+            <Columns>
+              <Columns.Column size="half">
                 <Content className="has-text-centered">
+                  <Heading size={2}> TableFlow</Heading>
                   <a href="https://github.com/tableflow">
                     <span className="icon has-text-primary">
                       <FontAwesomeIcon icon={faGithubSquare} size="2x" />
@@ -100,8 +99,8 @@ const SiteFooter = () => {
                     </span>
                   </a>
                 </Content>
-              </Media.Item>
-              <Media.Item>
+              </Columns.Column>
+              <Columns.Column>
                 <Content>
                   The information provided on TableFlow is not financial advice,
                   does not constitute a financial service, and no confidential
@@ -114,8 +113,8 @@ const SiteFooter = () => {
                   <br />© Pompeii LLC, All Rights Reserved{" "}
                   {new Date().getFullYear()}
                 </Content>
-              </Media.Item>
-            </Media>
+              </Columns.Column>
+            </Columns>
           </Columns.Column>
         </Columns>
       </Container>
