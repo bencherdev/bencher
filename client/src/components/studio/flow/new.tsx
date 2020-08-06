@@ -1,6 +1,6 @@
 import React from "react"
 
-const NewFlow = () => {
+const New = () => {
   let date = Date()
   return (
     <p>
@@ -9,4 +9,4 @@ const NewFlow = () => {
   )
 }
 
-export default NewFlow
+export default New

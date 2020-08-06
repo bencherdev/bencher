@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react"
 import { navigate } from "gatsby"
 import { cloneDeep } from "lodash/lang"
+import { Columns } from "react-bulma-components"
+
+import Element from "../modeler/element"
 
 const flows = {
   // Flow UUID
@@ -137,38 +140,39 @@ const Modeler = () => {
   }, [])
 
   return (
-    <div>
-      {redirect && navigate("/studio/flow/new")}
-      <p>
-        Modeler for {window.location.hash?.replace("#", "")} {date}
-      </p>
-      <svg width="100%" height="2000">
-        {flow?.subflows?.[subflow]?.lines &&
-          flow?.subflows?.[subflow]?.lines?.map(
-            (line: any, lineIndex: number) => {
-              // TODO break this into its own Line component
-              // This component will keep state for the line
-              // such as the midpoints, include when "wrap text" occurs
-              return line?.map((elementId: any, positionIndex: number) => {
-                let elements = flow?.subflows?.[subflow]?.elements
-                return (
-                  <Element
-                    key={lineIndex.toString() + ":" + positionIndex.toString()}
-                    location={{ line: lineIndex, position: positionIndex }}
-                    prior={
-                      positionIndex === 0
-                        ? null
-                        : elements?.[line[positionIndex - 1]]
-                    }
-                    element={elements?.[elementId]}
-                    handleElement={handleElement}
-                  />
-                )
-              })
-            }
-          )}
-      </svg>
-    </div>
+    <Columns className="is-paddingless">
+      <Columns.Column className="is-marginless">
+        {redirect && navigate("/studio/flow/new")}
+        <svg width="100%" height="2000">
+          {flow?.subflows?.[subflow]?.lines &&
+            flow?.subflows?.[subflow]?.lines?.map(
+              (line: any, lineIndex: number) => {
+                // TODO break this into its own Line component
+                // This component will keep state for the line
+                // such as the midpoints, include when "wrap text" occurs
+                return line?.map((elementId: any, positionIndex: number) => {
+                  let elements = flow?.subflows?.[subflow]?.elements
+                  return (
+                    <Element
+                      key={
+                        lineIndex.toString() + ":" + positionIndex.toString()
+                      }
+                      location={{ line: lineIndex, position: positionIndex }}
+                      prior={
+                        positionIndex === 0
+                          ? null
+                          : elements?.[line[positionIndex - 1]]
+                      }
+                      element={elements?.[elementId]}
+                      handleElement={handleElement}
+                    />
+                  )
+                })
+              }
+            )}
+        </svg>
+      </Columns.Column>
+    </Columns>
   )
 }
 

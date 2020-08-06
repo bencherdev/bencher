@@ -2,10 +2,8 @@
 import React from "react"
 import Loadable from "@loadable/component"
 
-const NewFlow = Loadable(() =>
-  import("../../../components/studio/modeler/newflow")
-)
+const New = Loadable(() => import("../../../components/studio/flow/new"))
 
-const NewFlowPage = () => <NewFlow />
+const NewFlowPage = () => <New />
 
 export default NewFlowPage

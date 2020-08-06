@@ -2,10 +2,16 @@
 import React from "react"
 import Loadable from "@loadable/component"
 
+import { Container } from "react-bulma-components"
+
 const Modeler = Loadable(() =>
-  import("../../../components/studio/modeler/modeler")
+  import("../../../components/studio/flow/modeler")
 )
 
-const FlowModelerPage = () => <Modeler />
+const FlowModelerPage = () => (
+  <Container breakpoint="widescreen">
+    <Modeler />
+  </Container>
+)
 
 export default FlowModelerPage
