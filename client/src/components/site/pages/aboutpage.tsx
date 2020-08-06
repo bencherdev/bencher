@@ -26,9 +26,10 @@ import { faObjectUngroup } from "@fortawesome/free-regular-svg-icons"
 
 const AboutPage = () => {
   const [redirect, setRedirect] = useState(false)
+
   return (
     <Section size="medium">
-      {redirect && <ClientSideRedirect to="/studio/flow" />}
+      {redirect && <ClientSideRedirect to="/studio/flow/new" />}
       <Container>
         <Content className="has-text-centered">
           <Heading size={2}>Build modular spreadsheets</Heading>
