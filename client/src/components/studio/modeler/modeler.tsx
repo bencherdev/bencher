@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react"
 import { navigate } from "gatsby"
+import { cloneDeep } from "lodash/lang"
 
 import Element from "./element"
+
+var curryN = require("lodash/fp/curryN")
 
 const flows = {
   // Flow UUID
@@ -116,7 +119,7 @@ const Modeler = () => {
     let elementId =
       flow?.subflows?.[subflow]?.lines?.[location.line]?.[location.position]
     if (flow?.subflows?.[subflow]?.elements?.[elementId]?.value) {
-      let newFlow = JSON.parse(JSON.stringify(flow))
+      let newFlow = cloneDeep(flow)
       newFlow.subflows[subflow].elements[elementId].value = element
       setFlow(newFlow)
     }
