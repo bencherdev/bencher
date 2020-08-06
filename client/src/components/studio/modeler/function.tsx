@@ -76,13 +76,11 @@ const Function = (props: {
   function getRow() {
     let params = []
     for (let i = 0; i < props.data.params.length; i++) {
-      console.log(props.data.params[i])
       params.push(getArg(i, props.data.params[i]))
     }
 
     let returns = []
     for (let i = 0; i < props.data.returns.length; i++) {
-      console.log(props.data.returns[i])
       returns.push(getArg(i, props.data.returns[i]))
     }
 
