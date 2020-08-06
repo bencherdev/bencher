@@ -24,20 +24,21 @@ module.exports = {
         theme_color: `#4386FA`,
         display: `minimal-ui`,
         // This path is relative to the root of the site.
-        icon: `src/images/tableflow-icon-512.png`,
+        icon: `./src/images/tableflow-icon-512.png`,
+        cache_busting_mode: `none`,
       },
     },
     {
       resolve: `gatsby-plugin-sass`,
       options: {
-        includePaths: ["./src/styles"],
+        includePaths: [`./src/styles`],
       },
     },
     {
-      resolve: "gatsby-plugin-web-font-loader",
+      resolve: `gatsby-plugin-web-font-loader`,
       options: {
         google: {
-          families: ["Abel"],
+          families: [`Abel`],
         },
       },
     },
@@ -54,7 +55,14 @@ module.exports = {
     `gatsby-transformer-sharp`,
     `gatsby-plugin-sharp`,
     `gatsby-plugin-styled-components`,
-    // To learn more, visit: https://gatsby.dev/offline
-    `gatsby-plugin-offline`,
+    {
+      resolve: `gatsby-plugin-offline`,
+      options: {
+        precachePages: [`/about`, `/studio/*`, `/auth/*`],
+        workboxConfig: {
+          globPatterns: [`./src/images/*`],
+        },
+      },
+    },
   ],
 }
