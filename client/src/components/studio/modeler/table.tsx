@@ -1,5 +1,6 @@
 import React, { ChangeEvent } from "react"
 import styled from "styled-components"
+import { cloneDeep } from "lodash/lang"
 
 const BorderedTable = styled.table`
   border-collapse: collapse;
@@ -48,7 +49,7 @@ const Table = (props: {
       props?.data?.rows?.[row]?.[column] ||
       props?.data?.rows?.[row]?.[column] === ""
     ) {
-      let table = JSON.parse(JSON.stringify(props.data))
+      let table = cloneDeep(props.data)
       table.rows[row][column] = event.target.value
       props.handleElement(props.location, table)
     }
