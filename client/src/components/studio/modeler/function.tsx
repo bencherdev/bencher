@@ -17,6 +17,7 @@ const HoverTr = styled.tr`
 
 const NameThead = styled.thead`
   display: table-header-group;
+  text-align: center;
   vertical-align: middle;
   border-color: inherit;
   border-collapse: separate;
@@ -34,7 +35,6 @@ const BorderedTh = styled.th`
   text-align: left;
   vertical-align: top;
   border-left: 1px solid black;
-  border-top: 1px solid black;
 `
 
 const BorderedTd = styled.td`
@@ -56,6 +56,45 @@ const Function = (props: {
   function handleArgs() {}
   function handleReturns() {}
 
+  function getArg(index: number, arg: any) {
+    return (
+      <React.Fragment key={index}>
+        {index > 0 && (
+          <p>
+            <br />
+          </p>
+        )}
+        <b>{arg?.name}</b>
+        <br />
+        <small>
+          <i>{arg?.type}</i>
+        </small>
+      </React.Fragment>
+    )
+  }
+
+  function getRow() {
+    let params = []
+    for (let i = 0; i < props.data.params.length; i++) {
+      console.log(props.data.params[i])
+      params.push(getArg(i, props.data.params[i]))
+    }
+
+    let returns = []
+    for (let i = 0; i < props.data.returns.length; i++) {
+      console.log(props.data.returns[i])
+      returns.push(getArg(i, props.data.returns[i]))
+    }
+
+    return (
+      <HoverTr>
+        <BorderedTd key="args">{params.map(param => param)}</BorderedTd>
+
+        <BorderedTd key="returns">{returns.map(ret => ret)}</BorderedTd>
+      </HoverTr>
+    )
+  }
+
   return (
     <BorderedTable>
       <NameThead>
@@ -64,43 +103,8 @@ const Function = (props: {
             <NameTh colSpan={2}>{props?.data?.name}</NameTh>
           </tr>
         )}
-        {props?.data?.params && (
-          <tr>
-            {props?.data?.params.map((param: any, index: number) => {
-              return (
-                <BorderedTh key={index}>
-                  <b>{param?.name}</b>
-                  <br />
-                  <i>{param?.type}</i>
-                </BorderedTh>
-              )
-            })}
-          </tr>
-        )}
       </NameThead>
-      <tbody>
-        {props?.data?.rows &&
-          props?.data?.rows.map((row: any, rowIndex: number) => {
-            return (
-              <HoverTr key={rowIndex}>
-                {row.map((cell: any, columnIndex: number) => {
-                  let cellType = props?.data?.columns?.[columnIndex]
-                  return (
-                    <BorderedTd key={rowIndex + ":" + columnIndex}>
-                      <CellInput
-                        type={cellType?.toLowerCase}
-                        value={cell}
-                        onChange={event =>
-                          handleCell(event, rowIndex, columnIndex)
-                        }
-                      />
-                    </BorderedTd>
-                  )
-                })}
-              </HoverTr>
-            )
-          })}
-      </tbody>
+      <tbody>{(props?.data?.params || props?.data?.returns) && getRow()}</tbody>
     </BorderedTable>
   )
 }
