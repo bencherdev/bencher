@@ -3,7 +3,6 @@ import { navigate } from "gatsby"
 import { cloneDeep } from "lodash/lang"
 import { Columns } from "react-bulma-components"
 
-import Element from "../modeler/element"
 import Canvas from "./canvas"
 
 const flows = {
