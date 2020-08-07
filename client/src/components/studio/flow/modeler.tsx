@@ -4,6 +4,7 @@ import { cloneDeep } from "lodash/lang"
 import { Columns } from "react-bulma-components"
 
 import Element from "../modeler/element"
+import Canvas from "./canvas"
 
 const flows = {
   // Flow UUID
@@ -143,34 +144,12 @@ const Modeler = () => {
     <Columns className="is-paddingless">
       <Columns.Column className="is-marginless">
         {redirect && navigate("/studio/flow/new")}
-        <svg width="100%" height="2000">
-          {flow?.subflows?.[subflow]?.lines &&
-            flow?.subflows?.[subflow]?.lines?.map(
-              (line: any, lineIndex: number) => {
-                // TODO break this into its own Line component
-                // This component will keep state for the line
-                // such as the midpoints, include when "wrap text" occurs
-                return line?.map((elementId: any, positionIndex: number) => {
-                  let elements = flow?.subflows?.[subflow]?.elements
-                  return (
-                    <Element
-                      key={
-                        lineIndex.toString() + ":" + positionIndex.toString()
-                      }
-                      location={{ line: lineIndex, position: positionIndex }}
-                      prior={
-                        positionIndex === 0
-                          ? null
-                          : elements?.[line[positionIndex - 1]]
-                      }
-                      element={elements?.[elementId]}
-                      handleElement={handleElement}
-                    />
-                  )
-                })
-              }
-            )}
-        </svg>
+        <Canvas
+          canvas={{ width: "100%", height: "2000" }}
+          flow={flow}
+          subflow={subflow}
+          handleElement={handleElement}
+        ></Canvas>
       </Columns.Column>
     </Columns>
   )
