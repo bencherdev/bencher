@@ -61,10 +61,7 @@ const flows = {
             value: {
               name: "Square",
               var: "square(Number)",
-              params: [
-                { name: "Base", var: "b", type: "Number", arg: "e2" },
-                { name: "Other", var: "b", type: "Number", arg: "e2" },
-              ],
+              params: [{ name: "Base", var: "b", type: "Number", arg: "e2" }],
               returns: [
                 { name: "Result", var: "r", type: "Number", arg: "e4" },
               ],
