@@ -3,6 +3,7 @@
     "eamodio.gitlens",
     "esbenp.prettier-vscode",
     "prisma.vscode-graphql",
+    "rust-lang.rust",
     "TabNine.tabnine-vscode",
     "vscode.typescript-language-feature",
     "vscodevim.vim"

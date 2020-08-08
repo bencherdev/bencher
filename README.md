@@ -6,9 +6,16 @@ Build Modular Spreadsheets
 
 ## Prerequisites
 
+### Documentation & Front End
+
 - [Git](https://www.atlassian.com/git/tutorials/install-git)
 - [NPM](https://nodejs.org/)
 - [Gatsby](https://www.gatsbyjs.org/tutorial/part-zero/)
+
+### Interpreter & WASM
+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
 
 # License
 
