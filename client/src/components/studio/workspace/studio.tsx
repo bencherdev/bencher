@@ -5,6 +5,7 @@ import SEO from "../../utils/seo"
 import Flow from "./flow"
 
 const flows: string[] = ["A", "B", "C"]
+import * as interpreter from "../../../../../interpreter/pkg"
 
 const Studio = () => {
   let date = Date()
@@ -16,6 +17,7 @@ const Studio = () => {
         return <Flow key={index} flow={flow} />
       })}
       <Link to="/studio/flow/new">New Flow</Link>
+      {interpreter.greet()}
     </div>
   )
 }

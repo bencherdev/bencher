@@ -1,10 +1,11 @@
 {
-  "name": "gatsby-starter-default",
+  "name": "tableflow",
   "private": true,
-  "description": "A simple starter to get up and developing quickly with Gatsby",
+  "description": "Build modular spreadsheets",
   "version": "0.1.0",
-  "author": "Kyle Mathews <mathews.kyle@gmail.com>",
+  "author": "TableFlow",
   "dependencies": {
+    "interpreter": "interpreter:../interpreter/pkg",
     "@fortawesome/fontawesome-common-types": "^0.2.30",
     "@fortawesome/fontawesome-free": "^5.14.0",
     "@fortawesome/fontawesome-svg-core": "^1.2.30",
