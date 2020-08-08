@@ -2,7 +2,7 @@
 name = "interpreter"
 version = "0.1.0"
 authors = ["TableFlow"]
-edition = "2020"
+edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
