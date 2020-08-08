@@ -17,7 +17,7 @@ import ExternalLink from "../../utils/externallink"
 const SiteNavbar = (props: { user: any; link: any }) => (
   <Navbar color="white">
     <Navbar.Brand>
-      <Navbar.Item renderAs={props?.link} to="/">
+      <Navbar.Item renderAs={props?.link} to="/studio">
         <BrandName> TableFlow</BrandName>
       </Navbar.Item>
 
