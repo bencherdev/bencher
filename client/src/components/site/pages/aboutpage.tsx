@@ -20,9 +20,8 @@ import {
   faRecycle,
   faTable,
   faEquals,
+  faCircle,
 } from "@fortawesome/free-solid-svg-icons"
-
-import { faObjectUngroup } from "@fortawesome/free-regular-svg-icons"
 
 const AboutPage = () => {
   const [redirect, setRedirect] = useState(false)
@@ -208,7 +207,7 @@ const AboutPage = () => {
             <Columns.Column>
               <Content className="has-text-centered">
                 <span className="icon has-text-primary">
-                  <FontAwesomeIcon icon={faObjectUngroup} size="5x" />
+                  <FontAwesomeIcon icon={faCircle} size="5x" />
                 </span>
                 <Heading size={5}>Subflows &amp; Worksheets</Heading>
               </Content>
