@@ -5,7 +5,7 @@ import SEO from "../../utils/seo"
 import Flow from "./flow"
 
 const flows: string[] = ["A", "B", "C"]
-import * as interpreter from "../../../../../interpreter/pkg"
+import * as interpreter from "interpreter"
 
 const Studio = () => {
   let date = Date()
