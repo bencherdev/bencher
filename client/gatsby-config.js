@@ -56,11 +56,17 @@ module.exports = {
     `gatsby-plugin-sharp`,
     `gatsby-plugin-styled-components`,
     {
+      resolve: `gatsby-plugin-workerize-loader`,
+      // options: {
+      //   preloads: [`interpreter`],
+      // },
+    },
+    {
       resolve: `gatsby-plugin-offline`,
       options: {
         precachePages: [`/about`, `/studio/*`, `/auth/*`],
         workboxConfig: {
-          globPatterns: [`./src/images/*`],
+          // globPatterns: ["**tableflow-icon*"],
         },
       },
     },

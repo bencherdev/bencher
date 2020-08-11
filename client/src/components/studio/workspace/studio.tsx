@@ -5,10 +5,14 @@ import SEO from "../../utils/seo"
 import Flow from "./flow"
 
 const flows: string[] = ["A", "B", "C"]
-import * as interpreter from "interpreter"
+import interpreter from "../../../workers/interpreter"
+// TODO move to web worker
+import wasm from "../../../wasm/interpreter.bootstrap"
 
 const Studio = () => {
   let date = Date()
+  interpreter.run("life").then((result: any) => console.log(result))
+  wasm
   return (
     <div>
       <SEO title="TableFlow Studio" />
@@ -17,7 +21,6 @@ const Studio = () => {
         return <Flow key={index} flow={flow} />
       })}
       <Link to="/studio/flow/new">New Flow</Link>
-      {interpreter.greet()}
     </div>
   )
 }
