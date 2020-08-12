@@ -103,7 +103,7 @@ const Modeler = () => {
   let date = Date()
 
   function handleFlow(id: string) {
-    setFlow(flows?.[id])
+    setFlow({ id: id, ...flows?.[id] })
     setSubflow(flows?.[id]?.main)
   }
 

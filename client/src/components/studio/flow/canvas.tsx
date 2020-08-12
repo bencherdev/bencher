@@ -3,6 +3,7 @@ import React, { useState, useRef } from "react"
 import Flexbox from "../modeler/flexbox"
 import { useInterval } from "../../utils/hooks/useInterval"
 import Element from "../modeler/element"
+import Beta from "./beta/beta"
 
 const Canvas = (props: {
   canvas: { width: string; height: string }
@@ -30,7 +31,8 @@ const Canvas = (props: {
 
   return (
     <svg style={{ width: "100%", height: 1024 }} ref={svgRef}>
-      {props?.flow?.subflows?.[props?.subflow]?.lines &&
+      {props?.flow?.id == "a" ? (
+        props?.flow?.subflows?.[props?.subflow]?.lines &&
         props?.flow?.subflows?.[props?.subflow]?.lines?.map(
           (line: any, lineIndex: number) => {
             // TODO break this into its own Line component
@@ -53,47 +55,10 @@ const Canvas = (props: {
               )
             })
           }
-        )}
-      <Flexbox
-        style={{
-          flexDirection: "row",
-          justifyContent: "flex-start",
-          flexWrap: "wrap",
-          width: client.width,
-          height: 1024,
-        }}
-      >
-        <circle fill={"black"} r={50} />,
-        <ellipse fill={"white"} rx={50} ry={30} />,
-        <path d={"M 0 0 L 100 0 L 50 100 z"} fill={"orange"} />,
-        <polygon fill={"cyan"} points={"0,100 50,0 100,100"} />,
-        <text
-          fill={"green"}
-          fontFamily={"Arial,Helvetica"}
-          style={{
-            dominantBaseline: "text-before-edge",
-          }}
-        >
-          {"wow such flexbox"}
-        </text>
-        ,
-        <polyline
-          fill={"none"}
-          points={"0,100 50,0 100,100"}
-          stroke={"yellow"}
-          strokeWidth={3}
-        />
-        ,
-        <rect fill={"red"} height={100} width={100} />,
-        <image
-          height={100}
-          href={"https://media.giphy.com/media/RKCAeG662WQSc/giphy.gif"}
-          width={80}
-        />
-        ,
-        <rect fill={"#f0c"} height={10} width={10} />
-        <rect fill={"#f0c"} height={10} width={20} />
-      </Flexbox>
+        )
+      ) : (
+        <Beta />
+      )}
     </svg>
   )
 }

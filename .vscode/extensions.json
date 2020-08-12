@@ -1,5 +1,6 @@
 {
   "recommendations": [
+    "dtsvet.vscode-wasm",
     "eamodio.gitlens",
     "esbenp.prettier-vscode",
     "prisma.vscode-graphql",
