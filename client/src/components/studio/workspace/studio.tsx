@@ -8,21 +8,22 @@ import Flow from "./flow"
 import interpreter from "../../../workers/interpreter"
 // TODO move to web worker
 //import wasm from "../../../wasm/interpreter.bootstrap"
-import wasm from "../../../wasm/interpreter.wasm"
+// import wasm from "../../../wasm/interpreter.wasm"
 // import { greet } from "interpreter"
 // const wasm = import("interpreter")
+import Wasm from "../../../wasm/interpreter"
 
 const flows: string[] = ["A", "B", "C"]
 
 const Studio = () => {
   let date = Date()
   interpreter.run("life").then((result: any) => console.log(result))
-  wasm
   // wasm
   //   .then(instance => console.log(instance.greet()))
   //   .catch(err => console.log(err))
   return (
     <div>
+      <Wasm />
       <SEO title="TableFlow Studio" />
       <h1>TableFlow Studio</h1>
       {flows.map((flow, index) => {
