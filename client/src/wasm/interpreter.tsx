@@ -7,9 +7,6 @@ const Wasm = () => {
 
   const loadWasm = async () => {
     try {
-      //   if (typeof window === "undefined") {
-      //     return
-      //   }
       /*eslint no-useless-concat: "off"*/
       const wasm = await import("interpreter" + "")
       setWasmModule({ wasm })

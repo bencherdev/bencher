@@ -11,5 +11,6 @@ export function greet(): void;
 export function hello(): void;
 /**
 * @param {string} msg
+* @returns {string}
 */
-export function init(msg: string): void;
+export function init(msg: string): string;

@@ -47,7 +47,8 @@ pub fn hello() {
 }
 
 #[wasm_bindgen]
-pub fn init(msg: &str) {
+pub fn init(msg: &str) -> String {
     utils::set_panic_hook();
     log!("Log from wasm: {:?}", msg);
+    return "WASM Interpreter".to_string()
 }

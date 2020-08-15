@@ -5,6 +5,8 @@ import { Columns } from "react-bulma-components"
 
 import Canvas from "./canvas"
 
+import interpreterWorker from "../../../workers/interpreter"
+
 const flows = {
   // Flow UUID
   a: {
@@ -99,12 +101,15 @@ const Modeler = () => {
   })
   const [subflow, setSubflow] = useState("")
   const [redirect, setRedirect] = useState(false)
+  const [interpreter, setInterpreter] = useState()
 
-  let date = Date()
+  const date = Date()
 
   function handleFlow(id: string) {
-    setFlow({ id: id, ...flows?.[id] })
+    let newFlow = { id: id, ...flows?.[id] }
+    setFlow(newFlow)
     setSubflow(flows?.[id]?.main)
+    handleInterpreter(newFlow)
   }
 
   function handleSubflow(id: string) {
@@ -124,15 +129,39 @@ const Modeler = () => {
     }
   }
 
+  function handleInterpreter(config: any) {
+    console.log("New interpreter")
+    interpreterWorker
+      .init(config)
+      .then((interp: any, err: any) => {
+        console.log("interpreter inited in modeler")
+        if (err) {
+          console.error(err)
+          return
+        }
+        console.log(interp)
+        setInterpreter(interp)
+        console.log("Interpreter set")
+      })
+      .catch((err: any) => console.error(err))
+  }
+
   useEffect(() => {
     let hash = window.location.hash
+    // If no Flow ID given as the URL fragment
+    // redirect to create a new Flow
     if (!hash) {
       setRedirect(true)
-    } else {
-      hash = hash.replace("#", "")
-      if (flow.id === "" || flow.id !== hash) {
-        handleFlow(hash)
-      }
+      return
+    }
+
+    hash = hash.replace("#", "")
+    // If Flow ID isn't set or if the Flow ID
+    // from the URL fragment doesn't match the current state
+    // then set the Flow ID to the given URL fragment
+    if (flow.id === "" || flow.id !== hash) {
+      handleFlow(hash)
+      return
     }
   }, [])
 
