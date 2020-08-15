@@ -1,9 +1,7 @@
 import React, { useState, useRef } from "react"
 
-import Flexbox from "../modeler/flexbox"
 import { useInterval } from "../../utils/hooks/useInterval"
 import Element from "../modeler/element"
-import Beta from "./beta/beta"
 
 const Canvas = (props: {
   canvas: { width: string; height: string }
@@ -31,8 +29,7 @@ const Canvas = (props: {
 
   return (
     <svg style={{ width: "100%", height: 1024 }} ref={svgRef}>
-      {props?.flow?.id == "a" ? (
-        props?.flow?.subflows?.[props?.subflow]?.lines &&
+      {props?.flow?.subflows?.[props?.subflow]?.lines &&
         props?.flow?.subflows?.[props?.subflow]?.lines?.map(
           (line: any, lineIndex: number) => {
             // TODO break this into its own Line component
@@ -55,10 +52,7 @@ const Canvas = (props: {
               )
             })
           }
-        )
-      ) : (
-        <Beta />
-      )}
+        )}
     </svg>
   )
 }
