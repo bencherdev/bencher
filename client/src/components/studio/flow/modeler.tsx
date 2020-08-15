@@ -5,7 +5,7 @@ import { Columns } from "react-bulma-components"
 
 import Canvas from "./canvas"
 
-import interpreterWorker from "../../../workers/interpreter"
+import InterpreterWorker from "../../../interpreter/interpreter"
 
 const flows = {
   // Flow UUID
@@ -131,8 +131,7 @@ const Modeler = () => {
 
   function handleInterpreter(config: any) {
     console.log("New interpreter")
-    interpreterWorker
-      .init(config)
+    InterpreterWorker.init(config)
       .then((interp: any, err: any) => {
         console.log("interpreter inited in modeler")
         if (err) {
