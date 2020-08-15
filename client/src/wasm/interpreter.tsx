@@ -21,7 +21,10 @@ const Wasm = () => {
 
   const callWasm = async ({ wasm }: any) => {
     console.log("calling wasm")
-    const res = await wasm.greet()
+    // const res = await wasm.greet()
+    let res = await wasm.hello()
+    console.log(res)
+    res = await wasm.init("client")
     console.log(res)
   }
 
