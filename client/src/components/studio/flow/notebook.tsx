@@ -3,7 +3,7 @@ import { navigate } from "gatsby"
 import { cloneDeep } from "lodash/lang"
 import { Columns } from "react-bulma-components"
 
-import Canvas from "./canvas"
+import Page from "./page"
 
 import InterpreterWorker from "../../../interpreter/interpreter"
 import SEO from "../../utils/seo"
@@ -92,7 +92,7 @@ const flows = {
   c: null,
 }
 
-const Modeler = () => {
+const Notebook = () => {
   const [flow, setFlow] = useState({
     id: "",
     main: "",
@@ -170,16 +170,16 @@ const Modeler = () => {
       <Columns className="is-paddingless">
         <Columns.Column className="is-marginless">
           {redirect && navigate("/studio/flow/new")}
-          <Canvas
+          <Page
             canvas={{ width: "100%", height: "2000" }}
             flow={flow}
             subflow={subflow}
             handleElement={handleElement}
-          ></Canvas>
+          ></Page>
         </Columns.Column>
       </Columns>
     </React.Fragment>
   )
 }
 
-export default Modeler
+export default Notebook

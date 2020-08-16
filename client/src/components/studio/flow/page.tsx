@@ -3,7 +3,7 @@ import React, { useState, useRef } from "react"
 import { useInterval } from "../../utils/hooks/useInterval"
 import Element from "../modeler/element"
 
-const Canvas = (props: {
+const Page = (props: {
   canvas: { width: string; height: string }
   flow: any
   subflow: any
@@ -57,4 +57,4 @@ const Canvas = (props: {
   )
 }
 
-export default Canvas
+export default Page
