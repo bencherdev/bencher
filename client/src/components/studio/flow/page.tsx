@@ -1,7 +1,7 @@
 import React from "react"
 import { Columns } from "react-bulma-components"
 
-import Element from "../modeler/element"
+import Element from "../elements/element"
 
 const Page = (props: { subflow: any; handleElement: Function }) => {
   return (
