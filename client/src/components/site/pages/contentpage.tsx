@@ -12,7 +12,7 @@ const ContentPage = ({ children }: any) => {
   return (
     <Section>
       <Container>
-        <Columns>
+        <Columns centered={true}>
           <Columns.Column size="three-quarters">
             <Content>{children}</Content>
           </Columns.Column>

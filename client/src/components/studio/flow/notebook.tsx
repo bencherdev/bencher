@@ -171,7 +171,6 @@ const Notebook = () => {
         <Columns.Column className="is-marginless">
           {redirect && navigate("/studio/flow/new")}
           <Page
-            canvas={{ width: "100%", height: "2000" }}
             flow={flow}
             subflow={subflow}
             handleElement={handleElement}
