@@ -1,27 +1,24 @@
 import React from "react"
+import { Card, Button } from "react-bulma-components"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faDirections } from "@fortawesome/free-solid-svg-icons"
 
 const Return = (props: {
-  position: { x: number; y: number }
-  dimensions: { radius: number }
+  id: number
+  value: any
+  handleElement: Function
+  context: { parent: string; subflow: string }
 }) => {
   return (
-    <g fill="white" stroke="black" strokeWidth="5">
-      <circle
-        cx={props?.position?.x?.toString()}
-        cy={props?.position?.y?.toString()}
-        r={props?.dimensions?.radius?.toString()}
-      />
-      <path
-        transform={
-          "rotate(180,864,915) translate(" +
-          (props?.position?.x + 686).toString() +
-          "," +
-          (props?.position?.y - 264).toString() +
-          ")"
-        }
-        d="m 864.20193,915.80023 c 1.93513,1.93513 4.19542,3.46579 6.70157,4.52852 2.60925,1.11032 5.37712,1.67349 8.21636,1.67349 h 24.48254 c 3.28338,0 4.52059,-2.66485 4.52059,-5.94814 0,-3.28337 -1.23721,-5.94814 -4.52059,-5.94814 h -24.48254 c -2.45063,0 -4.75851,-0.96756 -6.51123,-2.71235 -1.75272,-1.75272 -2.71235,-4.0606 -2.71235,-6.51123 v -7.69293 c 0,-2.45063 0.96756,-4.75851 2.71235,-6.51131 1.75272,-1.75272 4.0606,-2.71235 6.51123,-2.71235 h 22.52362 l -3.4975,3.49759 c -2.32374,2.32374 -2.32374,6.09089 0,8.41463 1.1579,1.15798 2.68063,1.74479 4.20335,1.74479 1.52272,0 3.04537,-0.57895 4.20335,-1.74479 l 13.70452,-13.71244 c 2.32373,-2.32374 2.32373,-6.0909 0,-8.41464 l -13.69659,-13.68865 c -2.32374,-2.32382 -6.09089,-2.32382 -8.41463,0 -2.32374,2.32374 -2.32374,6.09089 0,8.41463 l 3.58474,3.58475 h -22.61086 c -2.83924,0 -5.60711,0.56309 -8.21636,1.67341 -2.51408,1.06273 -4.76644,2.59339 -6.70157,4.5286 -1.93513,1.93504 -3.46579,4.18749 -4.52852,6.70157 C 858.56309,887.57441 858,890.34235 858,893.1816 v 7.69293 c 0,2.83924 0.56309,5.60711 1.67341,8.21644 1.06273,2.51384 2.58546,4.7662 4.52852,6.70926 z"
-      />
-    </g>
+    <Card>
+      <Card.Header>
+        <Card.Header.Icon className="has-text-primary">
+          <FontAwesomeIcon icon={faDirections} size="2x" />
+        </Card.Header.Icon>
+        <Card.Header.Title>{props?.context?.parent}</Card.Header.Title>
+      </Card.Header>
+    </Card>
   )
 }
 

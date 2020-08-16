@@ -15,6 +15,10 @@ const Page = (props: { subflow: any; handleElement: Function }) => {
                 key={elementId}
                 element={element}
                 handleElement={props.handleElement}
+                context={{
+                  parent: props?.subflow.parent,
+                  subflow: props?.subflow.name,
+                }}
               />
             )
           })}

@@ -1,17 +1,26 @@
 import React from "react"
+import { Card, Button } from "react-bulma-components"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faCircle } from "@fortawesome/free-solid-svg-icons"
 
 const Parent = (props: {
-  position: { x: number; y: number }
-  dimensions: { radius: number }
+  id: number
+  value: any
+  handleElement: Function
+  context: { parent: string; subflow: string }
 }) => {
   return (
-    <g fill="white" stroke="black" strokeWidth="5">
-      <circle
-        cx={props?.position?.x?.toString()}
-        cy={props?.position?.y?.toString()}
-        r={props?.dimensions?.radius?.toString()}
-      />
-    </g>
+    <Card>
+      <Card.Header>
+        <Card.Header.Icon>
+          <span className="icon has-text-primary">
+            <FontAwesomeIcon icon={faCircle} size="1x" />
+          </span>
+        </Card.Header.Icon>
+        <Card.Header.Title>{props?.context?.parent}</Card.Header.Title>
+      </Card.Header>
+    </Card>
   )
 }
 

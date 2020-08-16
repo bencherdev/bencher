@@ -2,36 +2,40 @@ import React, { useState, useEffect } from "react"
 
 import Parent from "./parent"
 import Input from "./input"
-import ForeignElement from "./foreignelement"
-import Arrow from "./arrow"
 import Table from "./table"
 import Function from "./function"
 import Return from "./return"
 
-const Element = (props: { element: any; handleElement: Function }) => {
-  function elementSwitch(element: any) {
-    switch (element.type) {
+const Element = (props: {
+  element: any
+  handleElement: Function
+  context: { parent: string; subflow: string }
+}) => {
+  function elementSwitch() {
+    switch (props.element.type) {
       case "parent":
         return (
           <Parent
-            id={element.id}
-            value={element.value}
+            id={props.element.id}
+            value={props.element.value}
             handleElement={props.handleElement}
+            context={props.context}
           />
         )
       case "input":
         return (
           <Input
-            id={element.id}
-            value={element.value}
+            id={props.element.id}
+            value={props.element.value}
             handleElement={props.handleElement}
+            context={props.context}
           />
         )
       case "table":
         return (
           <Table
-            id={element.id}
-            value={element.value}
+            id={props.element.id}
+            value={props.element.value}
             handleElement={props.handleElement}
           />
         )
@@ -40,8 +44,8 @@ const Element = (props: { element: any; handleElement: Function }) => {
       case "function":
         return (
           <Function
-            id={element.id}
-            value={element.value}
+            id={props.element.id}
+            value={props.element.value}
             handleElement={props.handleElement}
           />
         )
@@ -50,9 +54,10 @@ const Element = (props: { element: any; handleElement: Function }) => {
       case "return":
         return (
           <Return
-            id={element.id}
-            value={element.value}
+            id={props.element.id}
+            value={props.element.value}
             handleElement={props.handleElement}
+            context={props.context}
           />
         )
       default:
@@ -60,7 +65,7 @@ const Element = (props: { element: any; handleElement: Function }) => {
     }
   }
 
-  return <>{props.element && elementSwitch(props.element)}</>
+  return <>{props.element && elementSwitch()}</>
 }
 
 export default Element
