@@ -18,12 +18,12 @@ import {
 } from "@fortawesome/free-brands-svg-icons"
 
 import ExternalLink from "../../utils/externallink"
+import "./styles.css"
 
 const BrandName = styled.h1`
   color: black;
   font-size: 300%;
 `
-
 const SiteFooter = () => {
   return (
     <Footer>
@@ -35,19 +35,28 @@ const SiteFooter = () => {
                 TableFlow
                 <ul>
                   <li>
-                    <Link to="/about">About</Link>
+                    <Link to="/about" className="dark-green-link">
+                      About
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/studio">Studio</Link>
+                    <Link to="/studio" className="dark-green-link">
+                      Studio
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/docs">Docs</Link>
+                    <Link to="/docs" className="dark-green-link">
+                      Docs
+                    </Link>
                   </li>
                   <li>
-                    <ExternalLink to="https://github.com/tableflow/tableflow">
+                    <ExternalLink
+                      to="https://github.com/tableflow/tableflow"
+                      className="dark-green-link"
+                    >
                       GitHub
                       {" ".repeat(1)}
-                      <span className="icon has-text-primary">
+                      <span className="icon dark-green-link">
                         <FontAwesomeIcon icon={faExternalLinkAlt} />
                       </span>
                     </ExternalLink>
@@ -58,16 +67,24 @@ const SiteFooter = () => {
                 TableFlow Docs
                 <ul>
                   <li>
-                    <Link to="/docs/quick-start">Quick Start</Link>
+                    <Link to="/docs/quick-start" className="dark-green-link">
+                      Quick Start
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/docs/tutorial">Tutorial</Link>
+                    <Link to="/docs/tutorial" className="dark-green-link">
+                      Tutorial
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/docs/faq">FAQ</Link>
+                    <Link to="/docs/faq" className="dark-green-link">
+                      FAQ
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/docs/changelog">Change Log</Link>
+                    <Link to="/docs/changelog" className="dark-green-link">
+                      Change Log
+                    </Link>
                   </li>
                 </ul>
               </Columns.Column>
@@ -75,7 +92,7 @@ const SiteFooter = () => {
                 TableFlow Enterprise
                 <ul>
                   <li>
-                    <Link to="/pricing">Pricing</Link>
+                    <Link to="/pricing" className="dark-green-link">Pricing</Link>
                   </li>
                 </ul>
               </Columns.Column> */}
@@ -87,14 +104,20 @@ const SiteFooter = () => {
               <Columns.Column size="half">
                 <Content className="has-text-centered">
                   <Heading size={2}> TableFlow</Heading>
-                  <a href="https://github.com/tableflow">
-                    <span className="icon has-text-primary">
+                  <a
+                    href="https://github.com/tableflow"
+                    className="dark-green-link"
+                  >
+                    <span className="icon">
                       <FontAwesomeIcon icon={faGithubSquare} size="2x" />
                     </span>
                   </a>
                   <>{"⠀".repeat(1)}</>
-                  <a href="https://twitter.com/tableflow">
-                    <span className="icon has-text-primary">
+                  <a
+                    href="https://twitter.com/tableflow"
+                    className="dark-green-link"
+                  >
+                    <span className="icon">
                       <FontAwesomeIcon icon={faTwitterSquare} size="2x" />
                     </span>
                   </a>
@@ -106,9 +129,18 @@ const SiteFooter = () => {
                   does not constitute a financial service, and no confidential
                   or advisor-client relationship is formed by using this site.
                   Your use of this site constitutes acceptance of the{" "}
-                  <Link to="/terms">Terms of Use</Link>,{" "}
-                  <Link to="/privacy">Privacy Policy</Link>, and{" "}
-                  <Link to="/licensing">Licensing Policy</Link>.
+                  <Link to="/terms" className="dark-green-link">
+                    Terms of Use
+                  </Link>
+                  ,{" "}
+                  <Link to="/privacy" className="dark-green-link">
+                    Privacy Policy
+                  </Link>
+                  , and{" "}
+                  <Link to="/licensing" className="dark-green-link">
+                    Licensing Policy
+                  </Link>
+                  .
                   <br />
                   <br />© Pompeii LLC, All Rights Reserved{" "}
                   {new Date().getFullYear()}
