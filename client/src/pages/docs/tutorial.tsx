@@ -2,13 +2,17 @@
 import React from "react"
 import { Heading } from "react-bulma-components"
 
+import SEO from "../../components/utils/seo"
 import ContentPage from "../../components/site/pages/contentpage"
 
 const TutorialPage = () => {
   return (
-    <ContentPage>
-      <Heading>TableFlow Tutorial</Heading>
-    </ContentPage>
+    <React.Fragment>
+      <SEO title="Tutorial" />
+      <ContentPage>
+        <Heading>TableFlow Tutorial</Heading>
+      </ContentPage>
+    </React.Fragment>
   )
 }
 

@@ -1,8 +1,13 @@
 import React from "react"
-import { Link } from "gatsby"
 
+import SEO from "../components/utils/seo"
 import AboutPage from "../components/site/pages/aboutpage"
 
-const About = () => <AboutPage />
+const About = () => (
+  <React.Fragment>
+    <SEO title="About" />
+    <AboutPage />
+  </React.Fragment>
+)
 
 export default About

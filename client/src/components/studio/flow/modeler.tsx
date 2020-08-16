@@ -6,12 +6,14 @@ import { Columns } from "react-bulma-components"
 import Canvas from "./canvas"
 
 import InterpreterWorker from "../../../interpreter/interpreter"
+import SEO from "../../utils/seo"
 
 const flows = {
   // Flow UUID
   a: {
     // The UUID for the main Flow in the Subflows
     main: "a1",
+    name: "Hello, Math!",
     // A map of all of the Subflows within a Flow
     subflows: {
       // A map of all Elements
@@ -51,7 +53,7 @@ const flows = {
             value: {
               name: "Input Table",
               var: "input_table",
-              columns: [{ name: "Value", var: "value", type: "Number" }],
+              columns: [{ name: "Value", type: "Number" }],
               rows: [[5]],
             },
           },
@@ -62,10 +64,8 @@ const flows = {
             value: {
               name: "Square",
               var: "square(Number)",
-              params: [{ name: "Base", var: "b", type: "Number", arg: "e2" }],
-              returns: [
-                { name: "Result", var: "r", type: "Number", arg: "e4" },
-              ],
+              params: [{ name: "Base", type: "Number", arg: "e2" }],
+              returns: [{ name: "Result", type: "Number", arg: "e4" }],
             },
           },
           e4: {
@@ -78,7 +78,6 @@ const flows = {
               columns: [
                 {
                   name: "Squared Value",
-                  var: "squared_value",
                   type: "Number",
                 },
               ],
@@ -97,6 +96,7 @@ const Modeler = () => {
   const [flow, setFlow] = useState({
     id: "",
     main: "",
+    name: "",
     subflows: {},
   })
   const [subflow, setSubflow] = useState("")
@@ -165,17 +165,20 @@ const Modeler = () => {
   }, [])
 
   return (
-    <Columns className="is-paddingless">
-      <Columns.Column className="is-marginless">
-        {redirect && navigate("/studio/flow/new")}
-        <Canvas
-          canvas={{ width: "100%", height: "2000" }}
-          flow={flow}
-          subflow={subflow}
-          handleElement={handleElement}
-        ></Canvas>
-      </Columns.Column>
-    </Columns>
+    <React.Fragment>
+      <SEO title={flow?.name} />
+      <Columns className="is-paddingless">
+        <Columns.Column className="is-marginless">
+          {redirect && navigate("/studio/flow/new")}
+          <Canvas
+            canvas={{ width: "100%", height: "2000" }}
+            flow={flow}
+            subflow={subflow}
+            handleElement={handleElement}
+          ></Canvas>
+        </Columns.Column>
+      </Columns>
+    </React.Fragment>
   )
 }
 

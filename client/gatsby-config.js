@@ -1,7 +1,7 @@
 module.exports = {
   siteMetadata: {
     title: `TableFlow - Build Modular Spreadsheets`,
-    description: `Build modular professional business and financial modeling spreadsheets`,
+    description: `Build modular business and financial modeling spreadsheets`,
     author: `@tableflow`,
   },
   plugins: [

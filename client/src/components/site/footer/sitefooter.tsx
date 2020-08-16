@@ -131,14 +131,10 @@ const SiteFooter = () => {
                   Your use of this site constitutes acceptance of the{" "}
                   <Link to="/terms" className="dark-green-link">
                     Terms of Use
-                  </Link>
-                  ,{" "}
+                  </Link>{" "}
+                  and{" "}
                   <Link to="/privacy" className="dark-green-link">
                     Privacy Policy
-                  </Link>
-                  , and{" "}
-                  <Link to="/licensing" className="dark-green-link">
-                    Licensing Policy
                   </Link>
                   .
                   <br />

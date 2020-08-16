@@ -2,8 +2,14 @@
 import React from "react"
 import Loadable from "@loadable/component"
 
+import SEO from "../../components/utils/seo"
 const Auth = Loadable(() => import("../../components/auth/auth"))
 
-const SignupPage = () => <Auth context="signup" />
+const SignupPage = () => (
+  <React.Fragment>
+    <SEO title="Sign up" />
+    <Auth context="signup" />
+  </React.Fragment>
+)
 
 export default SignupPage
