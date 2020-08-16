@@ -7893,7 +7893,7 @@ internal-slot@^1.0.2:
     has "^1.0.3"
     side-channel "^1.0.2"
 
-interpreter@../interpreter/pkg:
+interpreter@../interpreter/pkg/:
   version "0.1.0"
 
 into-stream@^3.1.0:

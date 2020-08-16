@@ -31,7 +31,7 @@
     "gatsby-plugin-web-font-loader": "^1.0.4",
     "gatsby-source-filesystem": "^2.3.14",
     "gatsby-transformer-sharp": "^2.5.7",
-    "interpreter": "../interpreter/pkg",
+    "interpreter": "../interpreter/pkg/",
     "lodash": "^4.17.19",
     "node-sass": "^4.14.1",
     "prop-types": "^15.7.2",

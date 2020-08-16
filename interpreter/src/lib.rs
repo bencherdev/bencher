@@ -43,12 +43,12 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub fn hello() {
-    log!("Hellow from wasm");
+    log!("Hello from wasm");
 }
 
 #[wasm_bindgen]
 pub fn init(msg: &str) -> String {
     utils::set_panic_hook();
-    log!("Log from wasm: {:?}", msg);
-    return "WASM Interpreter".to_string()
+    log!("Log from interpreter wasm: {:?}", msg);
+    return "Interpreter wasm".to_string()
 }
