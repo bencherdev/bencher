@@ -8,92 +8,59 @@ import Table from "./table"
 import Function from "./function"
 import Return from "./return"
 
-const Element = (props: {
-  location: { line: number; position: number }
-  prior: any
-  element: any
-  handleElement: Function
-}) => {
+const Element = (props: { element: any; handleElement: Function }) => {
   function elementSwitch(element: any) {
-    switch (element?.type) {
+    switch (element.type) {
       case "parent":
         return (
           <Parent
-            position={element?.position}
-            dimensions={element?.dimensions}
+            id={element.id}
+            value={element.value}
+            handleElement={props.handleElement}
           />
         )
       case "input":
         return (
           <Input
-            position={element?.position}
-            dimensions={element?.dimensions}
+            id={element.id}
+            value={element.value}
+            handleElement={props.handleElement}
           />
         )
       case "table":
         return (
-          <ForeignElement
-            position={element?.position}
-            dimensions={element?.dimensions}
-          >
-            <Table
-              data={element?.value}
-              location={props.location}
-              handleElement={props.handleElement}
-            />
-          </ForeignElement>
+          <Table
+            id={element.id}
+            value={element.value}
+            handleElement={props.handleElement}
+          />
         )
       case "decision":
-        return (
-          <ForeignElement
-            position={element?.position}
-            dimensions={element?.dimensions}
-          >
-            <p>Decision Table</p>
-          </ForeignElement>
-        )
+        return <p>Decision Table</p>
       case "function":
         return (
-          <ForeignElement
-            position={element?.position}
-            dimensions={element?.dimensions}
-          >
-            <Function
-              data={element?.value}
-              location={props.location}
-              handleElement={props.handleElement}
-            />
-          </ForeignElement>
+          <Function
+            id={element.id}
+            value={element.value}
+            handleElement={props.handleElement}
+          />
         )
       case "subflow":
         return <p>Subflow</p>
       case "return":
         return (
           <Return
-            position={element?.position}
-            dimensions={element?.dimensions}
+            id={element.id}
+            value={element.value}
+            handleElement={props.handleElement}
           />
         )
       default:
-        return (
-          <ForeignElement
-            position={element?.position}
-            dimensions={element?.dimensions}
-          >
-            <p>Error: Unknown Element Type</p>
-          </ForeignElement>
-        )
+        return <p>Error: Unknown Element Type</p>
     }
   }
 
-  return (
-    <g>
-      {elementSwitch(props?.element)}
-      {props?.prior && (
-        <Arrow source={props?.prior} destination={props?.element} />
-      )}
-    </g>
-  )
+  return <>{props.element && elementSwitch(props.element)}</>
 }
 
 export default Element

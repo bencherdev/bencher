@@ -11,45 +11,42 @@ import SEO from "../../utils/seo"
 const flows = {
   // Flow UUID
   a: {
-    // The UUID for the main Flow in the Subflows
+    // The Flow ID
+    id: "a",
+    // The ID for the main Flow in the Subflows
     main: "a1",
     name: "Hello, Math!",
     // A map of all of the Subflows within a Flow
     subflows: {
       // A map of all Elements
-      // and there order in lines within the flow
+      // and their order within their Subflow
       a1: {
-        lines: [
-          // It is a list of lists
-          // Think lines in a file for each Subflow
-          ["e1", "e2", "e3", "e4"],
-          ["e0"],
-        ],
+        // The Subflow ID
+        id: "a1",
+        // The order of elements in the Subflow
+        order: ["e1", "e2", "e3", "e4", "e0"],
         // Each Element is its own object
         elements: {
           // There will always be a Return element
           // even if it is unused
           e0: {
+            // The id of the element
+            id: "e0",
+            // The type of the Element
             type: "return",
-            position: { x: 75, y: 600 },
-            dimensions: { radius: 50 },
+            // Each type will have a different value
+            // TODO make these in Typescript
             value: {},
-            args: [],
           },
           // Need a for Flow inputs
           e1: {
+            id: "e1",
             type: "input",
-            position: { x: 75, y: 125 },
-            dimensions: { radius: 50 },
             value: {},
           },
           e2: {
-            // The type of the Element
+            id: "e2",
             type: "table",
-            position: { x: 250, y: 10 },
-            dimensions: { width: 200, height: 250 },
-            // Each type will have a different value
-            // TODO make these in Typescript
             value: {
               name: "Input Table",
               var: "input_table",
@@ -58,9 +55,8 @@ const flows = {
             },
           },
           e3: {
+            id: "e3",
             type: "function",
-            position: { x: 600, y: 50 },
-            dimensions: { width: 200, height: 250 },
             value: {
               name: "Square",
               var: "square(Number)",
@@ -69,9 +65,8 @@ const flows = {
             },
           },
           e4: {
+            id: "e4",
             type: "table",
-            position: { x: 950, y: 10 },
-            dimensions: { width: 200, height: 250 },
             value: {
               name: "Output Table",
               var: "output_table",
@@ -116,15 +111,10 @@ const Notebook = () => {
     setSubflow(id)
   }
 
-  function handleElement(
-    location: { line: number; position: number },
-    element: any
-  ) {
-    let elementId =
-      flow?.subflows?.[subflow]?.lines?.[location.line]?.[location.position]
-    if (flow?.subflows?.[subflow]?.elements?.[elementId]?.value) {
+  function handleElement(element: any) {
+    if (flow?.subflows?.[subflow]?.elements?.[element.id]?.value) {
       let newFlow = cloneDeep(flow)
-      newFlow.subflows[subflow].elements[elementId].value = element
+      newFlow.subflows[subflow].elements[element.id].value = element
       setFlow(newFlow)
     }
   }
@@ -171,8 +161,7 @@ const Notebook = () => {
         <Columns.Column className="is-marginless">
           {redirect && navigate("/studio/flow/new")}
           <Page
-            flow={flow}
-            subflow={subflow}
+            subflow={flow?.subflows?.[subflow]}
             handleElement={handleElement}
           ></Page>
         </Columns.Column>
