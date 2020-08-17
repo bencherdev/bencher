@@ -34,6 +34,8 @@ module.exports = {
         includePaths: [`./src/styles`],
       },
     },
+    `gatsby-plugin-styled-components`,
+    `gatsby-plugin-fontawesome-css`,
     {
       resolve: `gatsby-plugin-web-font-loader`,
       options: {
@@ -42,6 +44,8 @@ module.exports = {
         },
       },
     },
+    `gatsby-transformer-sharp`,
+    `gatsby-plugin-sharp`,
     {
       resolve: `gatsby-plugin-layout`,
       options: {
@@ -52,9 +56,6 @@ module.exports = {
       resolve: `gatsby-plugin-create-client-paths`,
       options: { prefixes: [] },
     },
-    `gatsby-transformer-sharp`,
-    `gatsby-plugin-sharp`,
-    `gatsby-plugin-styled-components`,
     {
       resolve: `gatsby-plugin-workerize-loader`,
       // options: {
