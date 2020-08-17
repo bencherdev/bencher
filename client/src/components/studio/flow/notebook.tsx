@@ -31,7 +31,7 @@ const flows = {
         // This will be a blank string for Main Subflows
         parent: "",
         // The order of elements in the Subflow
-        order: ["e0", "e3", "e4", "e1"],
+        order: ["e0", "e3", "e1"],
         // Each Element is its own object
         elements: {
           // Need a for Flow inputs
@@ -47,6 +47,7 @@ const flows = {
             // The value of the Element
             // each Element type may have different keys here
             value: {
+              disabled: false,
               params: [{ name: "Base", type: "Number" }],
               args: {
                 inputs: ["e2"],
@@ -59,6 +60,7 @@ const flows = {
             id: "e1",
             type: "return",
             value: {
+              disabled: false,
               returns: [{ name: "Result", type: "Number" }],
               args: {
                 outputs: ["e4"],
@@ -70,7 +72,7 @@ const flows = {
             type: "table",
             value: {
               name: "Input Table",
-              var: "input_table",
+              disabled: false,
               columns: [{ name: "Value", type: "Number" }],
               rows: [[5]],
             },
@@ -80,6 +82,7 @@ const flows = {
             type: "function",
             value: {
               name: "Square",
+              disabled: false,
               params: [{ name: "Base", type: "Number" }],
               returns: [{ name: "Result", type: "Number" }],
               args: {
@@ -93,6 +96,7 @@ const flows = {
             type: "table",
             value: {
               name: "Output Table",
+              disabled: true,
               columns: [
                 {
                   name: "Squared Value",
@@ -134,10 +138,10 @@ const Notebook = () => {
     setSubflowId(id)
   }
 
-  function handleElement(element: any) {
-    if (flow?.subflows?.[subflowId]?.elements?.[element.id]?.value) {
+  function handleElement(id: string, value: any) {
+    if (flow?.subflows?.[subflowId]?.elements?.[id]?.value) {
       let newFlow = cloneDeep(flow)
-      newFlow.subflows[subflow].elements[element.id].value = element
+      newFlow.subflows[subflowId].elements[id].value = value
       setFlow(newFlow)
     }
   }
@@ -187,8 +191,8 @@ const Notebook = () => {
   return (
     <React.Fragment>
       <SEO title={flow?.name} />
-      <Columns className="is-paddingless">
-        <Columns.Column className="is-marginless">
+      <Columns gapless={true}>
+        <Columns.Column className="is-marginless is-full">
           {redirect && navigate("/studio/flow/new")}
           <Page
             subflow={getSubflow(subflowId)}

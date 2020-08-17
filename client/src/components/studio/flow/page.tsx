@@ -18,17 +18,19 @@ const Page = (props: {
         {props?.subflow?.order?.map((elementId: any) => {
           let element = props.subflow.elements?.[elementId]
           return (
-            <Element
-              key={elementId}
-              element={element}
-              handleElement={props.handleElement}
-              getElement={getElement}
-              context={{
-                parent: props.subflow.parent,
-                current: props.subflow.id,
-              }}
-              getSubflowName={props.getSubflowName}
-            />
+            <div key={elementId}>
+              <Element
+                element={element}
+                handleElement={props.handleElement}
+                getElement={getElement}
+                context={{
+                  parent: props.subflow.parent,
+                  current: props.subflow.id,
+                }}
+                getSubflowName={props.getSubflowName}
+              />
+              <br />
+            </div>
           )
         })}
       </Columns.Column>

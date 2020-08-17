@@ -32,6 +32,7 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
+            getElement={props.getElement}
             context={props.context}
             getSubflowName={props.getSubflowName}
           />
@@ -52,6 +53,7 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
+            getElement={props.getElement}
             context={props.context}
             getSubflowName={props.getSubflowName}
           />
@@ -64,6 +66,7 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
+            getElement={props.getElement}
             context={props.context}
             getSubflowName={props.getSubflowName}
           />
@@ -73,12 +76,7 @@ const Element = (props: {
     }
   }
 
-  return (
-    <Container>
-      {props.element && elementSwitch()}
-      <br />
-    </Container>
-  )
+  return <React.Fragment>{props.element && elementSwitch()}</React.Fragment>
 }
 
 export default Element
