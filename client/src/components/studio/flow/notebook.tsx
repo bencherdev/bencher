@@ -31,7 +31,7 @@ const flows = {
         // This will be a blank string for Main Subflows
         parent: "",
         // The order of elements in the Subflow
-        order: ["e0", "e2", "e3", "e4", "e1"],
+        order: ["e0", "e3", "e4", "e1"],
         // Each Element is its own object
         elements: {
           // Need a for Flow inputs
@@ -48,7 +48,6 @@ const flows = {
             // each Element type may have different keys here
             value: {
               params: [{ name: "Base", type: "Number" }],
-              returns: [{ name: "Result", type: "Number" }],
               args: {
                 inputs: ["e2"],
               },

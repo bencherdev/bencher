@@ -8,6 +8,10 @@ const Page = (props: {
   handleElement: Function
   getSubflowName: Function
 }) => {
+  function getElement(id: string): any {
+    return props?.subflow?.elements?.[id]
+  }
+
   return (
     <Columns centered={true}>
       <Columns.Column size="three-quarters">
@@ -18,6 +22,7 @@ const Page = (props: {
               key={elementId}
               element={element}
               handleElement={props.handleElement}
+              getElement={getElement}
               context={{
                 parent: props.subflow.parent,
                 current: props.subflow.id,

@@ -2,7 +2,9 @@ import React from "react"
 import { Card, Button, Content } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faTable } from "@fortawesome/free-solid-svg-icons"
+
+import Element from "./element"
 
 const Input = (props: {
   id: number
@@ -23,6 +25,10 @@ const Input = (props: {
       </Card.Header>
       <Card.Content>
         <Content>
+          {props?.value?.params?.map((param: any, index: number) => {
+            const elementId = props.value.args?.inputs?.[index]
+            return <p key={elementId}>TODO Subelements</p>
+          })}
           <p>Input Elements and such</p>
         </Content>
       </Card.Content>

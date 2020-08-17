@@ -10,6 +10,7 @@ import Return from "./return"
 const Element = (props: {
   element: any
   handleElement: Function
+  getElement: Function
   context: { parent: string; current: string }
   getSubflowName: Function
 }) => {
@@ -51,6 +52,8 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
+            context={props.context}
+            getSubflowName={props.getSubflowName}
           />
         )
       case "subflow":
