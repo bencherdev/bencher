@@ -31,25 +31,40 @@ const flows = {
         // This will be a blank string for Main Subflows
         parent: "",
         // The order of elements in the Subflow
-        order: ["e1", "e2", "e3", "e4", "e0"],
+        order: ["e0", "e2", "e3", "e4", "e1"],
         // Each Element is its own object
         elements: {
-          // There will always be a Return element
-          // even if it is unused
+          // Need a for Flow inputs
           e0: {
+            // There will always be an Input Element
+            // even if it is unused
             // The id of the element
             id: "e0",
             // The type of the Element
-            type: "return",
             // Each type will have a different value
             // TODO make these in Typescript
-            value: {},
-          },
-          // Need a for Flow inputs
-          e1: {
-            id: "e1",
             type: "input",
-            value: {},
+            // The value of the Element
+            // each Element type may have different keys here
+            value: {
+              params: [{ name: "Base", type: "Number" }],
+              returns: [{ name: "Result", type: "Number" }],
+              args: {
+                inputs: ["e2"],
+              },
+            },
+          },
+          e1: {
+            // There will always be a Return Element
+            // even if it is unused
+            id: "e1",
+            type: "return",
+            value: {
+              returns: [{ name: "Result", type: "Number" }],
+              args: {
+                outputs: ["e4"],
+              },
+            },
           },
           e2: {
             id: "e2",
@@ -66,8 +81,12 @@ const flows = {
             type: "function",
             value: {
               name: "Square",
-              params: [{ name: "Base", type: "Number", id: "e2" }],
-              returns: [{ name: "Result", type: "Number", id: "e4" }],
+              params: [{ name: "Base", type: "Number" }],
+              returns: [{ name: "Result", type: "Number" }],
+              args: {
+                inputs: ["e2"],
+                outputs: ["e4"],
+              },
             },
           },
           e4: {
