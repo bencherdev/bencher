@@ -9,7 +9,8 @@ import Return from "./return"
 const Element = (props: {
   element: any
   handleElement: Function
-  context: { parent: string; subflow: string }
+  context: { parent: string; current: string }
+  getSubflowName: Function
 }) => {
   function elementSwitch() {
     switch (props.element.type) {
@@ -20,6 +21,7 @@ const Element = (props: {
             value={props.element.value}
             handleElement={props.handleElement}
             context={props.context}
+            getSubflowName={props.getSubflowName}
           />
         )
       case "input":
@@ -29,6 +31,7 @@ const Element = (props: {
             value={props.element.value}
             handleElement={props.handleElement}
             context={props.context}
+            getSubflowName={props.getSubflowName}
           />
         )
       case "table":
@@ -58,6 +61,7 @@ const Element = (props: {
             value={props.element.value}
             handleElement={props.handleElement}
             context={props.context}
+            getSubflowName={props.getSubflowName}
           />
         )
       default:

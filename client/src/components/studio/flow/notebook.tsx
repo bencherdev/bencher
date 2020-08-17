@@ -15,15 +15,20 @@ const flows = {
     id: "a",
     // The ID for the main Flow in the Subflows
     main: "a1",
+    // The name of the Flow
     name: "Hello, Math!",
     // A map of all of the Subflows within a Flow
     subflows: {
-      // A map of all Elements
-      // and their order within their Subflow
+      // A map of all Subflows
       a1: {
         // The Subflow ID
         id: "a1",
+        // The Subflow name
+        // the first Subflow by convention is called `Main`
+        // but its name can be changed like all other Subflows
+        name: "Main",
         // The Subflows Parent Subflow ID
+        // This will be a blank string for Main Subflows
         parent: "",
         // The order of elements in the Subflow
         order: ["e1", "e2", "e3", "e4", "e0"],
@@ -62,8 +67,8 @@ const flows = {
             value: {
               name: "Square",
               var: "square(Number)",
-              params: [{ name: "Base", type: "Number", arg: "e2" }],
-              returns: [{ name: "Result", type: "Number", arg: "e4" }],
+              params: [{ name: "Base", type: "Number", id: "e2" }],
+              returns: [{ name: "Result", type: "Number", id: "e4" }],
             },
           },
           e4: {
@@ -96,7 +101,7 @@ const Notebook = () => {
     name: "",
     subflows: {},
   })
-  const [subflow, setSubflow] = useState("")
+  const [subflowId, setSubflowId] = useState("")
   const [redirect, setRedirect] = useState(false)
   const [interpreter, setInterpreter] = useState()
 
@@ -105,16 +110,16 @@ const Notebook = () => {
   function handleFlow(id: string) {
     let newFlow = { id: id, ...flows?.[id] }
     setFlow(newFlow)
-    setSubflow(flows?.[id]?.main)
+    setSubflowId(flows?.[id]?.main)
     handleInterpreter(newFlow)
   }
 
   function handleSubflow(id: string) {
-    setSubflow(id)
+    setSubflowId(id)
   }
 
   function handleElement(element: any) {
-    if (flow?.subflows?.[subflow]?.elements?.[element.id]?.value) {
+    if (flow?.subflows?.[subflowId]?.elements?.[element.id]?.value) {
       let newFlow = cloneDeep(flow)
       newFlow.subflows[subflow].elements[element.id].value = element
       setFlow(newFlow)
@@ -137,8 +142,16 @@ const Notebook = () => {
       .catch((err: any) => console.error(err))
   }
 
+  function getSubflow(id: string): any {
+    return flow?.subflows?.[id]
+  }
+
+  function getSubflowName(id: string): string {
+    return getSubflow(id)?.name
+  }
+
   useEffect(() => {
-    let hash = window.location.hash
+    let hash = window.location.hash.substr(1)
     // If no Flow ID given as the URL fragment
     // redirect to create a new Flow
     if (!hash) {
@@ -146,7 +159,6 @@ const Notebook = () => {
       return
     }
 
-    hash = hash.replace("#", "")
     // If Flow ID isn't set or if the Flow ID
     // from the URL fragment doesn't match the current state
     // then set the Flow ID to the given URL fragment
@@ -163,8 +175,10 @@ const Notebook = () => {
         <Columns.Column className="is-marginless">
           {redirect && navigate("/studio/flow/new")}
           <Page
-            subflow={flow?.subflows?.[subflow]}
+            subflow={getSubflow(subflowId)}
+            // TODO create a React Context for handleElement and getSubflowName
             handleElement={handleElement}
+            getSubflowName={getSubflowName}
           ></Page>
         </Columns.Column>
       </Columns>

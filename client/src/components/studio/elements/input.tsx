@@ -1,22 +1,27 @@
 import React from "react"
+import { Card, Button } from "react-bulma-components"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons"
 
 const Input = (props: {
-  position: { x: number; y: number }
-  dimensions: { radius: number }
+  id: number
+  value: any
+  handleElement: Function
+  context: { parent: string; current: string }
+  getSubflowName: Function
 }) => {
   return (
-    <g fill="white" stroke="black" strokeWidth="5">
-      <circle
-        cx={props?.position?.x?.toString()}
-        cy={props?.position?.y?.toString()}
-        r={props?.dimensions?.radius?.toString()}
-      />
-      <circle
-        cx={props?.position?.x?.toString()}
-        cy={props?.position?.y?.toString()}
-        r={(props?.dimensions?.radius / 2).toString()}
-      />
-    </g>
+    <Card>
+      <Card.Header>
+        <Card.Header.Icon className="has-text-primary">
+          <FontAwesomeIcon icon={faArrowRight} size="2x" />
+        </Card.Header.Icon>
+        <Card.Header.Title>
+          Input to {props?.getSubflowName(props?.context?.current)} Subflow
+        </Card.Header.Title>
+      </Card.Header>
+    </Card>
   )
 }
 

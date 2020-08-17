@@ -8,17 +8,20 @@ const Parent = (props: {
   id: number
   value: any
   handleElement: Function
-  context: { parent: string; subflow: string }
+  context: { parent: string; current: string }
+  getSubflowName: Function
 }) => {
   return (
     <Card>
       <Card.Header>
         <Card.Header.Icon>
           <span className="icon has-text-primary">
-            <FontAwesomeIcon icon={faCircle} size="1x" />
+            <FontAwesomeIcon icon={faCircle} size="2x" />
           </span>
         </Card.Header.Icon>
-        <Card.Header.Title>{props?.context?.parent}</Card.Header.Title>
+        <Card.Header.Title>
+          {props?.getSubflowName(props?.context?.parent)}
+        </Card.Header.Title>
       </Card.Header>
     </Card>
   )

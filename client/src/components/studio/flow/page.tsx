@@ -3,25 +3,29 @@ import { Columns } from "react-bulma-components"
 
 import Element from "../elements/element"
 
-const Page = (props: { subflow: any; handleElement: Function }) => {
+const Page = (props: {
+  subflow: any
+  handleElement: Function
+  getSubflowName: Function
+}) => {
   return (
     <Columns centered={true}>
       <Columns.Column size="three-quarters">
-        {props?.subflow &&
-          props?.subflow?.order.map((elementId: any) => {
-            let element = props?.subflow?.elements?.[elementId]
-            return (
-              <Element
-                key={elementId}
-                element={element}
-                handleElement={props.handleElement}
-                context={{
-                  parent: props?.subflow.parent,
-                  subflow: props?.subflow.name,
-                }}
-              />
-            )
-          })}
+        {props?.subflow?.order?.map((elementId: any) => {
+          let element = props.subflow.elements?.[elementId]
+          return (
+            <Element
+              key={elementId}
+              element={element}
+              handleElement={props.handleElement}
+              context={{
+                parent: props.subflow.parent,
+                current: props.subflow.id,
+              }}
+              getSubflowName={props.getSubflowName}
+            />
+          )
+        })}
       </Columns.Column>
     </Columns>
   )
