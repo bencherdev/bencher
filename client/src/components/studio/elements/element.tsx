@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+import { Container } from "react-bulma-components"
 
 import Parent from "./parent"
 import Input from "./input"
@@ -69,7 +70,12 @@ const Element = (props: {
     }
   }
 
-  return <>{props.element && elementSwitch()}</>
+  return (
+    <Container>
+      {props.element && elementSwitch()}
+      <br />
+    </Container>
+  )
 }
 
 export default Element
