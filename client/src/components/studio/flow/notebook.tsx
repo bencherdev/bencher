@@ -66,7 +66,6 @@ const flows = {
             type: "function",
             value: {
               name: "Square",
-              var: "square(Number)",
               params: [{ name: "Base", type: "Number", id: "e2" }],
               returns: [{ name: "Result", type: "Number", id: "e4" }],
             },
@@ -76,7 +75,6 @@ const flows = {
             type: "table",
             value: {
               name: "Output Table",
-              var: "output_table",
               columns: [
                 {
                   name: "Squared Value",

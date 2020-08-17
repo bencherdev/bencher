@@ -35,39 +35,35 @@ const CellInput = styled.input`
 `
 
 // TODO add table input type validation
-const Table = (props: {
-  location: { line: number; position: number }
-  data: any
-  handleElement: Function
-}) => {
+const Table = (props: { id: string; value: any; handleElement: Function }) => {
   function handleCell(
     event: ChangeEvent<HTMLInputElement>,
     row: number,
     column: number
   ) {
     if (
-      props?.data?.rows?.[row]?.[column] ||
-      props?.data?.rows?.[row]?.[column] === ""
+      props?.value?.rows?.[row]?.[column] ||
+      props?.value?.rows?.[row]?.[column] === ""
     ) {
-      let table = cloneDeep(props.data)
+      let table = cloneDeep(props.value)
       table.rows[row][column] = event.target.value
-      props.handleElement(props.location, table)
+      props.handleElement(props.id, table)
     }
   }
 
   return (
     <BorderedTable>
       <thead>
-        {props?.data?.name && (
+        {props?.value?.name && (
           <tr>
-            <NameTh colSpan={props?.data?.columns?.length}>
-              {props?.data?.name}
+            <NameTh colSpan={props?.value?.columns?.length}>
+              {props?.value?.name}
             </NameTh>
           </tr>
         )}
-        {props?.data?.columns && (
+        {props?.value?.columns && (
           <tr>
-            {props?.data?.columns.map((column: any, index: number) => {
+            {props?.value?.columns.map((column: any, index: number) => {
               return (
                 <BorderedTh key={index}>
                   <b>{column?.name}</b>
@@ -80,12 +76,12 @@ const Table = (props: {
         )}
       </thead>
       <tbody>
-        {props?.data?.rows &&
-          props?.data?.rows.map((row: any, rowIndex: number) => {
+        {props?.value?.rows &&
+          props?.value?.rows.map((row: any, rowIndex: number) => {
             return (
               <HoverTr key={rowIndex}>
                 {row.map((cell: any, columnIndex: number) => {
-                  let cellType = props?.data?.columns?.[columnIndex]
+                  let cellType = props?.value?.columns?.[columnIndex]
                   return (
                     <BorderedTd key={rowIndex + ":" + columnIndex}>
                       <CellInput
