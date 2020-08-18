@@ -7,7 +7,7 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons"
 import Parent from "./parent"
 import Input from "./input"
 import Function from "./function"
-import Output from "./return"
+import Output from "./output"
 
 const Element = (props: {
   element: any
