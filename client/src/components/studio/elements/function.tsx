@@ -27,40 +27,40 @@ const Function = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
+              {props?.value?.params?.map((param: any, index: number) => {
+                const input = props.value.args?.inputs?.[index]
+                return (
+                  <div key={index}>
+                    {/* // TODO make this an input field */}
+                    <h4>{param.name}</h4>
+                    <span className="icon has-text-primary">
+                      <FontAwesomeIcon icon={faTable} size="3x" />
+                    </span>
+                    {/* // TODO make this an input field */}
+                    <h5>{props.getElement(input)?.value?.name}</h5>
+                  </div>
+                )
+              })}
             </Content>
-            {props?.value?.params?.map((param: any, index: number) => {
-              const input = props.value.args?.inputs?.[index]
-              return (
-                <Content key={index} className="has-text-centered">
-                  {/* // TODO make this an input field */}
-                  <h4>{param.name}</h4>
-                  <span className="icon has-text-primary">
-                    <FontAwesomeIcon icon={faTable} size="3x" />
-                  </span>
-                  {/* // TODO make this an input field */}
-                  <h5>{props.getElement(input)?.value?.name}</h5>
-                </Content>
-              )
-            })}
           </Columns.Column>
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
+              {props?.value?.returns?.map((ret: any, index: number) => {
+                const output = props.value.args?.outputs?.[index]
+                return (
+                  <div key={index}>
+                    {/* // TODO make this an input field */}
+                    <h4>{ret.name}</h4>
+                    <span className="icon">
+                      <FontAwesomeIcon icon={faTable} size="3x" />
+                    </span>
+                    {/* // TODO make this an input field */}
+                    <h5>{props.getElement(output)?.value?.name}</h5>
+                  </div>
+                )
+              })}
             </Content>
-            {props?.value?.returns?.map((ret: any, index: number) => {
-              const output = props.value.args?.outputs?.[index]
-              return (
-                <Content key={index} className="has-text-centered">
-                  {/* // TODO make this an input field */}
-                  <h4>{ret.name}</h4>
-                  <span className="icon">
-                    <FontAwesomeIcon icon={faTable} size="3x" />
-                  </span>
-                  {/* // TODO make this an input field */}
-                  <h5>{props.getElement(output)?.value?.name}</h5>
-                </Content>
-              )
-            })}
           </Columns.Column>
         </Columns>
       </Card.Content>

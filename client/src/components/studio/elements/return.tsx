@@ -1,5 +1,5 @@
 import React from "react"
-import { Card, Button, Content, Columns } from "react-bulma-components"
+import { Card, Button, Content, Columns, Heading } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faArrowLeft, faTable } from "@fortawesome/free-solid-svg-icons"
@@ -27,20 +27,23 @@ const Return = (props: {
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">
           <Columns.Column>
-            {props?.value?.returns?.map((ret: any, index: number) => {
-              const output = props.value.args?.outputs?.[index]
-              return (
-                <Content key={index} className="has-text-centered">
-                  {/* // TODO make this an input field */}
-                  <h4>{ret.name}</h4>
-                  <span className="icon">
-                    <FontAwesomeIcon icon={faTable} size="3x" />
-                  </span>
-                  {/* // TODO make this an input field */}
-                  <h5>{props.getElement(output)?.value?.name}</h5>
-                </Content>
-              )
-            })}
+            <Content className="has-text-centered">
+              <Heading size={4}>Output</Heading>
+              {props?.value?.returns?.map((ret: any, index: number) => {
+                const output = props.value.args?.outputs?.[index]
+                return (
+                  <div key={index}>
+                    {/* // TODO make this an input field */}
+                    <h4>{ret.name}</h4>
+                    <span className="icon">
+                      <FontAwesomeIcon icon={faTable} size="3x" />
+                    </span>
+                    {/* // TODO make this an input field */}
+                    <h5>{props.getElement(output)?.value?.name}</h5>
+                  </div>
+                )
+              })}
+            </Content>
           </Columns.Column>
         </Columns>
       </Card.Content>

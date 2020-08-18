@@ -1,5 +1,12 @@
 import React, { ChangeEvent } from "react"
-import { Card, Button, Content, Columns, Icon } from "react-bulma-components"
+import {
+  Card,
+  Button,
+  Content,
+  Columns,
+  Icon,
+  Heading,
+} from "react-bulma-components"
 import { cloneDeep } from "lodash/lang"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -47,6 +54,7 @@ const Input = (props: {
         <Columns centered={true} breakpoint="mobile">
           <Columns.Column>
             <Content className="has-text-centered">
+              <Heading size={4}>Input</Heading>
               {props.value?.params?.map((param: any, index: number) => {
                 const input = props.value.args?.inputs?.[index]
                 return (
