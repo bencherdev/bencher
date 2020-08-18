@@ -22,9 +22,6 @@ import {
 
 import Element from "./element"
 
-import ContentEditable from "../../utils/contenteditable"
-import sanitize from "../../utils/sanitize"
-
 const Input = (props: {
   id: number
   value: any
@@ -89,17 +86,17 @@ const Input = (props: {
                           </span>
                         </Level.Item>
                       </Level.Side>
+                      <br />
                       <Level.Side align="center">
                         <Level.Item>
                           <Content className="has-text-centered">
                             <Heading size={5}>
-                              {sanitize.toHtml(
-                                element?.value?.name?.toString()
-                              )}
+                              {element?.value?.name?.toString()}
                             </Heading>
                           </Content>
                         </Level.Item>
                       </Level.Side>
+                      <br />
                       <Level.Side align="right">
                         <Level.Item>
                           <Button
