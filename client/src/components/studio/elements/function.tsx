@@ -1,5 +1,5 @@
 import React from "react"
-import { Card, Button, Content, Columns } from "react-bulma-components"
+import { Card, Heading, Button, Content, Columns } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEquals, faTable } from "@fortawesome/free-solid-svg-icons"
@@ -25,6 +25,9 @@ const Function = (props: {
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">
           <Columns.Column size="half">
+            <Content className="has-text-centered">
+              <Heading size={4}>Input</Heading>
+            </Content>
             {props?.value?.params?.map((param: any, index: number) => {
               const input = props.value.args?.inputs?.[index]
               return (
@@ -41,6 +44,9 @@ const Function = (props: {
             })}
           </Columns.Column>
           <Columns.Column size="half">
+            <Content className="has-text-centered">
+              <Heading size={4}>Output</Heading>
+            </Content>
             {props?.value?.returns?.map((ret: any, index: number) => {
               const output = props.value.args?.outputs?.[index]
               return (

@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from "react"
-import { Container } from "react-bulma-components"
+import React from "react"
+import { Box, Icon, Button } from "react-bulma-components"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Parent from "./parent"
 import Input from "./input"
@@ -28,14 +31,17 @@ const Element = (props: {
         )
       case "input":
         return (
-          <Input
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            getElement={props.getElement}
-            context={props.context}
-            getSubflowName={props.getSubflowName}
-          />
+          <React.Fragment>
+            <Input
+              id={props.element.id}
+              value={props.element.value}
+              handleElement={props.handleElement}
+              getElement={props.getElement}
+              context={props.context}
+              getSubflowName={props.getSubflowName}
+            />
+            {getAddButton()}
+          </React.Fragment>
         )
       case "table":
         return (
@@ -49,17 +55,25 @@ const Element = (props: {
         return <p>Decision Table</p>
       case "function":
         return (
-          <Function
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            getElement={props.getElement}
-            context={props.context}
-            getSubflowName={props.getSubflowName}
-          />
+          <React.Fragment>
+            <Function
+              id={props.element.id}
+              value={props.element.value}
+              handleElement={props.handleElement}
+              getElement={props.getElement}
+              context={props.context}
+              getSubflowName={props.getSubflowName}
+            />
+            {getAddButton()}
+          </React.Fragment>
         )
       case "subflow":
-        return <p>Subflow</p>
+        return (
+          <React.Fragment>
+            <p>Subflow</p>
+            {getAddButton()}
+          </React.Fragment>
+        )
       case "return":
         return (
           <Return
@@ -74,6 +88,30 @@ const Element = (props: {
       default:
         return <p>Error: Unknown Element Type</p>
     }
+  }
+
+  function getAddButton() {
+    return (
+      <div>
+        <br />
+        <Box>
+          <Button
+            color="primary"
+            outlined={true}
+            fullwidth={true}
+            onClick={(event: any) => {
+              event.preventDefault()
+              console.log("TODO add a new element")
+            }}
+          >
+            <Icon className="primary">
+              <FontAwesomeIcon icon={faPlus} size="1x" />
+            </Icon>
+            <span>Add</span>
+          </Button>
+        </Box>
+      </div>
+    )
   }
 
   return <React.Fragment>{props.element && elementSwitch()}</React.Fragment>

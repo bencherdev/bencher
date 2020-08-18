@@ -14,7 +14,7 @@ const Notebook = Loadable(() =>
 const FlowModelerPage = () => (
   <React.Fragment>
     <Toolbar />
-    <Container breakpoint="widescreen">
+    <Container fluid={true} breakpoint="widescreen">
       <Notebook />
     </Container>
   </React.Fragment>

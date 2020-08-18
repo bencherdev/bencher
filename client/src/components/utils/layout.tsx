@@ -26,13 +26,11 @@ const Layout = ({ children }: any) => {
   `)
 
   return (
-    <>
+    <React.Fragment>
       <SiteNavbar link={Link} user={{ isAuth: false }} />
-      <div>
-        <main>{children}</main>
-        <SiteFooter />
-      </div>
-    </>
+      <main>{children}</main>
+      <SiteFooter />
+    </React.Fragment>
   )
 }
 

@@ -72,7 +72,14 @@ const Input = (props: {
                 )
               })}
               {!props.value?.disabled && (
-                <Button color="primary" outlined={true}>
+                <Button
+                  color="primary"
+                  outlined={true}
+                  onClick={(event: any) => {
+                    event.preventDefault()
+                    console.log("TODO add a new inut element")
+                  }}
+                >
                   <Icon className="primary">
                     <FontAwesomeIcon icon={faPlus} size="1x" />
                   </Icon>

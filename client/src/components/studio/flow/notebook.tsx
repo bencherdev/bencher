@@ -191,8 +191,8 @@ const Notebook = () => {
   return (
     <React.Fragment>
       <SEO title={flow?.name} />
-      <Columns gapless={true}>
-        <Columns.Column className="is-marginless is-full">
+      <Columns centered={true} gapless={true}>
+        <Columns.Column narrow={true} size={12}>
           {redirect && navigate("/studio/flow/new")}
           <Page
             subflow={getSubflow(subflowId)}
