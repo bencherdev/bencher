@@ -37,7 +37,7 @@ const Argument = (props: { element: any; disabled: boolean }) => {
               <Button
                 size="small"
                 onClick={(event: any) => {
-                  console.log("TODO Remove arg")
+                  console.log("TODO Edit Argument")
                 }}
               >
                 <span className="icon">

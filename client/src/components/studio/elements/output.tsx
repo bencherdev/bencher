@@ -1,9 +1,17 @@
 import React from "react"
-import { Card, Content, Columns, Heading } from "react-bulma-components"
+import {
+  Card,
+  Content,
+  Columns,
+  Heading,
+  Button,
+  Icon,
+} from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faArrowLeft, faTable } from "@fortawesome/free-solid-svg-icons"
+import { faArrowLeft, faPlus } from "@fortawesome/free-solid-svg-icons"
 
+import Argument from "./argument"
 import Variable from "./variables/variable"
 
 const Output = (props: {
@@ -32,17 +40,27 @@ const Output = (props: {
               {props?.value?.returns?.map((ret: any, index: number) => {
                 const output = props.value.args?.outputs?.[index]
                 return (
-                  <div key={index}>
-                    {/* // TODO make this an input field */}
-                    <h4>{ret.name}</h4>
-                    <span className="icon">
-                      <FontAwesomeIcon icon={faTable} size="3x" />
-                    </span>
-                    {/* // TODO make this an input field */}
-                    <h5>{props.getElement(output)?.value?.name}</h5>
-                  </div>
+                  <Argument
+                    key={index}
+                    element={props.getElement(output)}
+                    disabled={false}
+                  />
                 )
               })}
+              <Button
+                color="primary"
+                outlined={true}
+                fullwidth={true}
+                onClick={(event: any) => {
+                  event.preventDefault()
+                  console.log("TODO add a new output element")
+                }}
+              >
+                <Icon className="primary">
+                  <FontAwesomeIcon icon={faPlus} size="1x" />
+                </Icon>
+                <span>Add</span>
+              </Button>
             </Content>
           </Columns.Column>
         </Columns>
