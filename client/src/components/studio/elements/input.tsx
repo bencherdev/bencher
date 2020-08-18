@@ -6,6 +6,8 @@ import {
   Columns,
   Icon,
   Heading,
+  Box,
+  Level,
 } from "react-bulma-components"
 import { cloneDeep } from "lodash/lang"
 
@@ -14,6 +16,8 @@ import {
   faArrowRight,
   faTable,
   faPlus,
+  faTimes,
+  faPen,
 } from "@fortawesome/free-solid-svg-icons"
 
 import Element from "./element"
@@ -29,14 +33,25 @@ const Input = (props: {
   context: { parent: string; current: string }
   getSubflowName: Function
 }) => {
-  function handleParam(event: ChangeEvent<HTMLInputElement>, param: number) {
-    if (
-      props.value?.params?.[param]?.name ||
-      props.value?.params?.[param]?.name === ""
-    ) {
-      let table = cloneDeep(props.value)
-      table.params[param].name = sanitize.toText(event.target.value)
-      props.handleElement(props.id, table)
+  function handleInput(index: number, elementId: string) {
+    if (index >= 0) {
+      let functional = cloneDeep(props.value)
+      // Check if the index is within the current array
+      if (index < props.value.inputs.length) {
+        // If the Element ID exists then update the index
+        if (elementId && elementId != "") {
+          functional.inputs[index] = elementId
+          // If the Element ID doesn't exist
+          // remove the current Element ID at that index
+        } else {
+          functional.inputs = functional.inputs.splice(index, 1)
+        }
+        // If the index is greater and there is an Element ID
+        // append it to the inputs array
+      } else if (elementId && elementId != "") {
+        functional.inputs.push(elementId)
+      }
+      props.handleElement(props.id, functional)
     }
   }
 
@@ -52,37 +67,63 @@ const Input = (props: {
       </Card.Header>
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">
-          <Columns.Column>
+          <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
-              {props.value?.params?.map((param: any, index: number) => {
-                const input = props.value.args?.inputs?.[index]
+              {props.value?.inputs?.map((elementId: any, index: number) => {
+                let element = props?.getElement(elementId)
                 return (
-                  <div key={index}>
-                    <ContentEditable
-                      html={sanitize.toHtml(param?.name?.toString())}
-                      disabled={props.value?.disabled}
-                      onChange={(event: any) => handleParam(event, index)}
-                      tagName="h4"
-                      // TODO change color to red if there is an input error
-                      style={{
-                        textAlign: "center",
-                        outlineColor: "#009933",
-                      }}
-                    />
-                    {/* TODO on click redirect to ref for input decleration
-                  if it is from elsewhere */}
-                    <span className="icon has-text-primary">
-                      <FontAwesomeIcon icon={faTable} size="3x" />
-                    </span>
-                    <h5>{props.getElement(input)?.value?.name}</h5>
-                  </div>
+                  <Box key={index}>
+                    <Level breakpoint="mobile">
+                      <Level.Side align="left">
+                        <Level.Item>
+                          {/* TODO change color to red if there is an input error */}
+                          <span className="icon has-text-primary">
+                            <FontAwesomeIcon
+                              // TODO make this a more advanced switch statement
+                              icon={
+                                element?.type === "table" ? faTable : faTimes
+                              }
+                              size="3x"
+                            />
+                          </span>
+                        </Level.Item>
+                      </Level.Side>
+                      <Level.Side align="center">
+                        <Level.Item>
+                          <Content className="has-text-centered">
+                            <Heading size={5}>
+                              {sanitize.toHtml(
+                                element?.value?.name?.toString()
+                              )}
+                            </Heading>
+                          </Content>
+                        </Level.Item>
+                      </Level.Side>
+                      <Level.Side align="right">
+                        <Level.Item>
+                          <Button
+                            size="small"
+                            onClick={(event: any) => {
+                              console.log("TODO Remove arg")
+                            }}
+                          >
+                            <span className="icon">
+                              <FontAwesomeIcon icon={faPen} size="1x" />
+                            </span>
+                            <span>Edit</span>
+                          </Button>
+                        </Level.Item>
+                      </Level.Side>
+                    </Level>
+                  </Box>
                 )
               })}
               {!props.value?.disabled && (
                 <Button
                   color="primary"
                   outlined={true}
+                  fullwidth={true}
                   onClick={(event: any) => {
                     event.preventDefault()
                     console.log("TODO add a new inut element")

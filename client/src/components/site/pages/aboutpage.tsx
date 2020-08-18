@@ -69,7 +69,7 @@ const AboutPage = () => {
               <Columns className="is-vcentered">
                 <Columns.Column>
                   <Content className="has-text-centered">
-                    <span className="icon has-text-primary">
+                    <span className="icon is-large has-text-success">
                       <FontAwesomeIcon icon={faStream} size="5x" />
                     </span>
                   </Content>

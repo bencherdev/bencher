@@ -48,6 +48,7 @@ const flows = {
             // each Element type may have different keys here
             value: {
               disabled: false,
+              inputs: ["e2"],
               params: [{ name: "Base", type: "Number" }],
               args: {
                 inputs: ["e2"],
