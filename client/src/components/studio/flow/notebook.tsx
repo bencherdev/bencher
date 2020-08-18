@@ -30,6 +30,15 @@ const flows = {
         // The Subflows Parent Subflow ID
         // This will be a blank string for Main Subflows
         parent: "",
+        // The Input Element ID for the Subflow
+        // This can be cross-checked with the order below
+        // For the Main Subflow, it should be the first element
+        // but for all other Subflows it should be the second
+        input: "e0",
+        // The Output Element for the Subflow
+        // This can be cross-checked with the order below
+        // It should always be last
+        output: "e1",
         // The order of elements in the Subflow
         order: ["e0", "e3", "e1"],
         // Each Element is its own object
@@ -106,6 +115,38 @@ const flows = {
               ],
               rows: [[25]],
             },
+          },
+          e5: {
+            id: "e5",
+            type: "subflow",
+            value: {
+              id: "a2",
+              input: "a2e0",
+              output: "a2e1",
+            },
+          },
+        },
+      },
+      // TODO Fill in this as the first non-Main Subflow!
+      a2: {
+        id: "a2",
+        name: "First Real Subflow",
+        parent: "a1",
+        input: "a2e0",
+        output: "a2e1",
+        order: ["a2e2", "a2e0", "a2e1"],
+        elements: {
+          a2e0: {
+            type: "input",
+            // TODO Fill in
+          },
+          a2e1: {
+            type: "output",
+            // TODO Fill in
+          },
+          a2e2: {
+            type: "parent",
+            // TODO Fill in
           },
         },
       },
