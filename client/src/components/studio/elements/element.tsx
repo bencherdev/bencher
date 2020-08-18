@@ -6,9 +6,8 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Parent from "./parent"
 import Input from "./input"
-import Table from "./table"
 import Function from "./function"
-import Return from "./return"
+import Output from "./return"
 
 const Element = (props: {
   element: any
@@ -43,16 +42,13 @@ const Element = (props: {
             {getAddButton()}
           </React.Fragment>
         )
-      case "table":
+      case "formula":
         return (
-          <Table
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-          />
+          <React.Fragment>
+            <p>Formula</p>
+            {getAddButton()}
+          </React.Fragment>
         )
-      case "decision":
-        return <p>Decision Table</p>
       case "function":
         return (
           <React.Fragment>
@@ -67,6 +63,13 @@ const Element = (props: {
             {getAddButton()}
           </React.Fragment>
         )
+      case "decision":
+        return (
+          <React.Fragment>
+            <p>Decision</p>
+            {getAddButton()}
+          </React.Fragment>
+        )
       case "subflow":
         return (
           <React.Fragment>
@@ -74,9 +77,9 @@ const Element = (props: {
             {getAddButton()}
           </React.Fragment>
         )
-      case "return":
+      case "output":
         return (
-          <Return
+          <Output
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}

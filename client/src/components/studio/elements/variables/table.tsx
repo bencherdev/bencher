@@ -2,16 +2,17 @@ import React, { ChangeEvent } from "react"
 import { Table } from "react-bulma-components"
 import { cloneDeep } from "lodash/lang"
 
-import ContentEditable from "../../utils/contenteditable"
-import sanitize from "../../utils/sanitize"
+import ContentEditable from "../../../utils/contenteditable"
+import sanitize from "../../../utils/sanitize"
 
 import typeSelect from "./typeselect"
-import Select from "../../utils/forms/select"
+import Select from "../../../utils/forms/select"
 
 // TODO add table input type validation
-const TableElement = (props: {
+const IOTable = (props: {
   id: string
   value: any
+  disabled: boolean
   handleElement: Function
 }) => {
   function handleName(event: ChangeEvent<HTMLInputElement>) {
@@ -64,7 +65,7 @@ const TableElement = (props: {
           <tr>
             <ContentEditable
               html={sanitize.toHtml(props?.value?.name.toString())}
-              disabled={props.value?.disabled}
+              disabled={props.disabled}
               onChange={(event: any) => handleName(event)}
               tagName="th"
               // TODO change color to red if there is an input error
@@ -82,7 +83,7 @@ const TableElement = (props: {
                   <ContentEditable
                     key={index}
                     html={sanitize.toHtml(column?.name?.toString())}
-                    disabled={props.value?.disabled}
+                    disabled={props.disabled}
                     onChange={(event: any) => handleColumn(event, index)}
                     tagName="th"
                     // TODO change color to red if there is an input error
@@ -98,7 +99,7 @@ const TableElement = (props: {
                 return (
                   <th key={index}>
                     <Select
-                      disabled={props.value?.disabled}
+                      disabled={props.disabled}
                       column={index}
                       selected={column?.type}
                       config={typeSelect}
@@ -120,7 +121,7 @@ const TableElement = (props: {
                       <ContentEditable
                         key={rowIndex + ":" + columnIndex}
                         html={sanitize.toHtml(cell?.toString())}
-                        disabled={props.value?.disabled}
+                        disabled={props.disabled}
                         onChange={(event: any) =>
                           handleCell(event, rowIndex, columnIndex)
                         }
@@ -139,4 +140,4 @@ const TableElement = (props: {
   )
 }
 
-export default TableElement
+export default IOTable

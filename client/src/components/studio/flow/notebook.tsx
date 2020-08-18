@@ -56,7 +56,6 @@ const flows = {
             // The value of the Element
             // each Element type may have different keys here
             value: {
-              disabled: false,
               inputs: ["e2"],
               params: [{ name: "Base", type: "Number" }],
               args: {
@@ -65,10 +64,10 @@ const flows = {
             },
           },
           e1: {
-            // There will always be a Return Element
+            // There will always be a Output Element
             // even if it is unused
             id: "e1",
-            type: "return",
+            type: "output",
             value: {
               disabled: false,
               returns: [{ name: "Result", type: "Number" }],
