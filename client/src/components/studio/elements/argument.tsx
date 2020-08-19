@@ -11,7 +11,7 @@ const Argument = (props: { element: any; disabled: boolean }) => {
         <Level.Side align="left">
           <Level.Item>
             {/* TODO change color to red if there is an input error */}
-            <span className="icon has-text-primary">
+            <span className="icon is-large has-text-primary">
               <FontAwesomeIcon
                 // TODO make this a more advanced switch statement
                 icon={props.element?.type === "table" ? faTable : faTimes}

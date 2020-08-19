@@ -26,7 +26,15 @@ const Subflow = (props: {
   const [subflow, setSubflow] = useState(props.getSubflow(props?.value?.id))
 
   function getElement(id: string): any {
+    // TODO use this to get the Elements in the Sublfow
     return subflow?.elements?.[id]
+  }
+
+  function handleSubflow() {
+    // TODO need to be able to change both ourselves
+    // and the underlying subflow from calls here
+    // getElement(subflow?.input)?.value?.inputs?
+    // getElement(subflow?.output)?.value?.outputs?
   }
 
   return (
@@ -42,17 +50,18 @@ const Subflow = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
-              {getElement(subflow?.input)?.value?.inputs?.map(
-                (elementId: string, index: number) => {
-                  return (
-                    <Argument
-                      key={index}
-                      element={getElement(elementId)}
-                      disabled={false}
-                    />
-                  )
-                }
-              )}
+              {props?.value?.inputs?.map((elementId: string, index: number) => {
+                // TODO Figure out the distinction between
+                // variables that are passed into the Input for a Subflow
+                // and variables that are set from the Input for a Subflow
+                return (
+                  <Argument
+                    key={index}
+                    element={props.getElement(elementId)}
+                    disabled={false}
+                  />
+                )
+              })}
               <Button
                 color="primary"
                 outlined={true}
@@ -72,12 +81,12 @@ const Subflow = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
-              {getElement(subflow?.output)?.value?.outputs?.map(
+              {props?.value?.outputs?.map(
                 (elementId: string, index: number) => {
                   return (
                     <Argument
                       key={index}
-                      element={getElement(elementId)}
+                      element={props.getElement(elementId)}
                       disabled={false}
                     />
                   )
@@ -104,21 +113,19 @@ const Subflow = (props: {
       <Card.Footer />
       <Card.Content>
         <Content>
-          {getElement(subflow?.output)?.value?.outputs?.map(
-            (elementId: string, index: number) => {
-              console.log(elementId)
-              return (
-                <Variable
-                  key={index}
-                  element={getElement(elementId)}
-                  disabled={true}
-                  handleElement={props.handleElement}
-                  getElement={props.getElement}
-                  context={props.context}
-                />
-              )
-            }
-          )}
+          {props?.value?.outputs?.map((elementId: string, index: number) => {
+            console.log(elementId)
+            return (
+              <Variable
+                key={index}
+                element={props.getElement(elementId)}
+                disabled={true}
+                handleElement={props.handleElement}
+                getElement={props.getElement}
+                context={props.context}
+              />
+            )
+          })}
         </Content>
       </Card.Content>
     </Card>
