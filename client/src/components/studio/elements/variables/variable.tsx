@@ -10,7 +10,6 @@ const Variable = (props: {
   handleElement: Function
   getElement: Function
   context: { parent: string; current: string }
-  getSubflowName: Function
 }) => {
   function variableSwitch() {
     switch (props.element.type) {

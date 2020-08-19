@@ -9,7 +9,7 @@ const Parent = (props: {
   value: any
   handleElement: Function
   context: { parent: string; current: string }
-  getSubflowName: Function
+  getSubflow: Function
 }) => {
   return (
     <Card>
@@ -20,7 +20,7 @@ const Parent = (props: {
           </span>
         </Card.Header.Icon>
         <Card.Header.Title>
-          {props?.getSubflowName(props?.context?.parent)}
+          {props?.getSubflow(props?.context?.parent)?.name}
         </Card.Header.Title>
       </Card.Header>
     </Card>

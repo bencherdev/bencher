@@ -9,7 +9,7 @@ import Element from "../elements/element"
 const Page = (props: {
   subflow: any
   handleElement: Function
-  getSubflowName: Function
+  getSubflow: Function
 }) => {
   function getElement(id: string): any {
     return props?.subflow?.elements?.[id]
@@ -30,7 +30,7 @@ const Page = (props: {
                   parent: props.subflow.parent,
                   current: props.subflow.id,
                 }}
-                getSubflowName={props.getSubflowName}
+                getSubflow={props.getSubflow}
               />
               <br />
             </div>

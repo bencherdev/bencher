@@ -20,7 +20,7 @@ const Output = (props: {
   handleElement: Function
   getElement: Function
   context: { parent: string; current: string }
-  getSubflowName: Function
+  getSubflow: Function
 }) => {
   return (
     <Card>
@@ -29,7 +29,7 @@ const Output = (props: {
           <FontAwesomeIcon icon={faArrowLeft} size="2x" />
         </Card.Header.Icon>
         <Card.Header.Title>
-          Output from {props?.getSubflowName(props?.context?.current)} Subflow
+          Output from {props?.getSubflow(props?.context?.current)?.name} Subflow
         </Card.Header.Title>
       </Card.Header>
       <Card.Content>
@@ -37,16 +37,17 @@ const Output = (props: {
           <Columns.Column>
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
-              {props?.value?.returns?.map((ret: any, index: number) => {
-                const output = props.value.args?.outputs?.[index]
-                return (
-                  <Argument
-                    key={index}
-                    element={props.getElement(output)}
-                    disabled={false}
-                  />
-                )
-              })}
+              {props?.value?.outputs?.map(
+                (elementId: string, index: number) => {
+                  return (
+                    <Argument
+                      key={index}
+                      element={props.getElement(elementId)}
+                      disabled={false}
+                    />
+                  )
+                }
+              )}
               <Button
                 color="primary"
                 outlined={true}
@@ -68,17 +69,15 @@ const Output = (props: {
       <Card.Footer />
       <Card.Content>
         <Content>
-          {props?.value?.returns?.map((_unused: any, index: number) => {
-            const elementId = props.value.args?.outputs?.[index]
+          {props?.value?.outputs?.map((elementId: string, index: number) => {
             return (
               <Variable
-                key={elementId}
+                key={index}
                 element={props?.getElement(elementId)}
                 disabled={true}
                 handleElement={props.handleElement}
                 getElement={props.getElement}
                 context={props.context}
-                getSubflowName={props.getSubflowName}
               />
             )
           })}

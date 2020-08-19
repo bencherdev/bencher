@@ -21,7 +21,7 @@ const Input = (props: {
   handleElement: Function
   getElement: Function
   context: { parent: string; current: string }
-  getSubflowName: Function
+  getSubflow: Function
 }) => {
   function handleInput(index: number, elementId: string) {
     if (index >= 0) {
@@ -52,7 +52,7 @@ const Input = (props: {
           <FontAwesomeIcon icon={faArrowRight} size="2x" />
         </Card.Header.Icon>
         <Card.Header.Title>
-          Input to {props?.getSubflowName(props?.context?.current)} Subflow
+          Input to {props?.getSubflow(props?.context?.current)?.name} Subflow
         </Card.Header.Title>
       </Card.Header>
       <Card.Content>
@@ -60,10 +60,13 @@ const Input = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
-              {props.value?.inputs?.map((elementId: any, index: number) => {
-                let element = props?.getElement(elementId)
+              {props.value?.inputs?.map((elementId: string, index: number) => {
                 return (
-                  <Argument key={index} element={element} disabled={false} />
+                  <Argument
+                    key={index}
+                    element={props?.getElement(elementId)}
+                    disabled={false}
+                  />
                 )
               })}
               <Button
@@ -87,17 +90,15 @@ const Input = (props: {
       <Card.Footer />
       <Card.Content>
         <Content>
-          {props?.value?.params?.map((_unused: any, index: number) => {
-            const elementId = props.value.args?.inputs?.[index]
+          {props?.value?.inputs?.map((elementId: string, index: number) => {
             return (
               <Variable
-                key={elementId}
+                key={index}
                 element={props?.getElement(elementId)}
                 disabled={false}
                 handleElement={props.handleElement}
                 getElement={props.getElement}
                 context={props.context}
-                getSubflowName={props.getSubflowName}
               />
             )
           })}

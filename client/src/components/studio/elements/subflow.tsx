@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import {
   Card,
   Heading,
@@ -21,33 +21,38 @@ const Subflow = (props: {
   getElement: Function
   context: { parent: string; current: string }
   // TODO change this call to just getSubflow
-  getSubflowName: Function
+  getSubflow: Function
 }) => {
+  const [subflow, setSubflow] = useState(props.getSubflow(props?.value?.id))
+
+  function getElement(id: string): any {
+    return subflow?.elements?.[id]
+  }
+
   return (
     <Card>
       <Card.Header>
         <Card.Header.Icon className="has-text-primary">
           <FontAwesomeIcon icon={faCircle} size="2x" />
         </Card.Header.Icon>
-        <Card.Header.Title>
-          {props.getSubflowName(props?.value?.id)}
-        </Card.Header.Title>
+        <Card.Header.Title>{subflow?.name}</Card.Header.Title>
       </Card.Header>
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
-              {props?.value?.params?.map((param: any, index: number) => {
-                const input = props.value.args?.inputs?.[index]
-                return (
-                  <Argument
-                    key={index}
-                    element={props.getElement(input)}
-                    disabled={false}
-                  />
-                )
-              })}
+              {getElement(subflow?.input)?.value?.inputs?.map(
+                (elementId: string, index: number) => {
+                  return (
+                    <Argument
+                      key={index}
+                      element={getElement(elementId)}
+                      disabled={false}
+                    />
+                  )
+                }
+              )}
               <Button
                 color="primary"
                 outlined={true}
@@ -67,23 +72,24 @@ const Subflow = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
-              {props?.value?.returns?.map((ret: any, index: number) => {
-                const output = props.value.args?.outputs?.[index]
-                return (
-                  <Argument
-                    key={index}
-                    element={props.getElement(output)}
-                    disabled={true}
-                  />
-                )
-              })}
+              {getElement(subflow?.output)?.value?.outputs?.map(
+                (elementId: string, index: number) => {
+                  return (
+                    <Argument
+                      key={index}
+                      element={getElement(elementId)}
+                      disabled={false}
+                    />
+                  )
+                }
+              )}
               <Button
                 color="primary"
                 outlined={true}
                 fullwidth={true}
                 onClick={(event: any) => {
                   event.preventDefault()
-                  console.log("TODO add a new inut element")
+                  console.log("TODO add a new output element")
                 }}
               >
                 <Icon className="primary">
@@ -98,20 +104,21 @@ const Subflow = (props: {
       <Card.Footer />
       <Card.Content>
         <Content>
-          {props?.value?.returns?.map((_unused: any, index: number) => {
-            const elementId = props.value.args?.outputs?.[index]
-            return (
-              <Variable
-                key={elementId}
-                element={props?.getElement(elementId)}
-                disabled={true}
-                handleElement={props.handleElement}
-                getElement={props.getElement}
-                context={props.context}
-                getSubflowName={props.getSubflowName}
-              />
-            )
-          })}
+          {getElement(subflow?.output)?.value?.outputs?.map(
+            (elementId: string, index: number) => {
+              console.log(elementId)
+              return (
+                <Variable
+                  key={index}
+                  element={getElement(elementId)}
+                  disabled={true}
+                  handleElement={props.handleElement}
+                  getElement={props.getElement}
+                  context={props.context}
+                />
+              )
+            }
+          )}
         </Content>
       </Card.Content>
     </Card>

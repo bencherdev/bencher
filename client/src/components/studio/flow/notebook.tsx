@@ -57,10 +57,6 @@ const flows = {
             // each Element type may have different keys here
             value: {
               inputs: ["e2"],
-              params: [{ name: "Base", type: "Number" }],
-              args: {
-                inputs: ["e2"],
-              },
             },
           },
           e1: {
@@ -69,11 +65,7 @@ const flows = {
             id: "e1",
             type: "output",
             value: {
-              disabled: false,
-              returns: [{ name: "Result", type: "Number" }],
-              args: {
-                outputs: ["e4"],
-              },
+              outputs: ["e4"],
             },
           },
           e2: {
@@ -81,7 +73,6 @@ const flows = {
             type: "table",
             value: {
               name: "Input Table",
-              disabled: false,
               columns: [{ name: "Value", type: "Number" }],
               rows: [[5]],
             },
@@ -91,13 +82,16 @@ const flows = {
             type: "decision",
             value: {
               name: "Decision",
-              disabled: false,
-              params: [{ name: "Base", type: "Number" }],
-              returns: [{ name: "Result", type: "Number" }],
-              args: {
-                inputs: ["e2"],
-                outputs: ["e4"],
-              },
+              inputs: ["e2"],
+              outputs: ["e4"],
+              // TODO make this actually make sense
+              columns: [
+                {
+                  name: "Decision Table",
+                  type: "Number",
+                },
+              ],
+              rows: [[25]],
             },
           },
           e4: {
@@ -105,7 +99,6 @@ const flows = {
             type: "table",
             value: {
               name: "Output Table",
-              disabled: true,
               columns: [
                 {
                   name: "Squared Value",
@@ -120,13 +113,8 @@ const flows = {
             type: "function",
             value: {
               name: "Square",
-              disabled: false,
-              params: [{ name: "Base", type: "Number" }],
-              returns: [{ name: "Result", type: "Number" }],
-              args: {
-                inputs: ["e4"],
-                outputs: ["e6"],
-              },
+              inputs: ["e4"],
+              outputs: ["e6"],
             },
           },
           e6: {
@@ -134,7 +122,6 @@ const flows = {
             type: "table",
             value: {
               name: "Output Table",
-              disabled: true,
               columns: [
                 {
                   name: "Squared Value",
@@ -149,32 +136,66 @@ const flows = {
             type: "subflow",
             value: {
               id: "a2",
-              input: "a2e0",
-              output: "a2e1",
             },
           },
         },
       },
-      // TODO Fill in this as the first non-Main Subflow!
       a2: {
         id: "a2",
-        name: "First Real Subflow",
+        name: "The Subflow to Answer Everything",
         parent: "a1",
         input: "a2e0",
         output: "a2e1",
         order: ["a2e2", "a2e0", "a2e1"],
         elements: {
           a2e0: {
+            id: "a2e0",
             type: "input",
-            // TODO Fill in
+            value: {
+              inputs: ["a2e3"],
+            },
           },
           a2e1: {
+            id: "a2e1",
             type: "output",
-            // TODO Fill in
+            value: {
+              outputs: ["a2e4"],
+            },
           },
           a2e2: {
+            id: "a2e2",
             type: "parent",
-            // TODO Fill in
+            value: {
+              id: "a1",
+            },
+          },
+          a2e3: {
+            id: "a2e3",
+            type: "table",
+            value: {
+              name: "The Question",
+              columns: [
+                {
+                  name: "Life",
+                  type: "String",
+                },
+              ],
+              rows: [["What is the meaning of life?"]],
+            },
+          },
+          a2e4: {
+            id: "a2e4",
+            type: "table",
+            value: {
+              name: "The Answer",
+              columns: [
+                {
+                  name: "Answer",
+                  type: "Number",
+                },
+              ],
+              rows: [[42]],
+            },
           },
         },
       },
@@ -236,10 +257,6 @@ const Notebook = () => {
     return flow?.subflows?.[id]
   }
 
-  function getSubflowName(id: string): string {
-    return getSubflow(id)?.name
-  }
-
   useEffect(() => {
     let hash = window.location.hash.substr(1)
     // If no Flow ID given as the URL fragment
@@ -266,9 +283,9 @@ const Notebook = () => {
           {redirect && navigate("/studio/flow/new")}
           <Page
             subflow={getSubflow(subflowId)}
-            // TODO create a React Context for handleElement and getSubflowName
+            // TODO create a React Context for handleElement and getSubflow
             handleElement={handleElement}
-            getSubflowName={getSubflowName}
+            getSubflow={getSubflow}
           ></Page>
         </Columns.Column>
       </Columns>

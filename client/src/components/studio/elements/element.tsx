@@ -16,7 +16,7 @@ const Element = (props: {
   handleElement: Function
   getElement: Function
   context: { parent: string; current: string }
-  getSubflowName: Function
+  getSubflow: Function
 }) => {
   function elementSwitch() {
     switch (props.element.type) {
@@ -27,7 +27,7 @@ const Element = (props: {
             value={props.element.value}
             handleElement={props.handleElement}
             context={props.context}
-            getSubflowName={props.getSubflowName}
+            getSubflow={props.getSubflow}
           />
         )
       case "input":
@@ -39,7 +39,7 @@ const Element = (props: {
               handleElement={props.handleElement}
               getElement={props.getElement}
               context={props.context}
-              getSubflowName={props.getSubflowName}
+              getSubflow={props.getSubflow}
             />
             {getAddButton()}
           </React.Fragment>
@@ -53,7 +53,6 @@ const Element = (props: {
               handleElement={props.handleElement}
               getElement={props.getElement}
               context={props.context}
-              getSubflowName={props.getSubflowName}
             />
             {getAddButton()}
           </React.Fragment>
@@ -67,7 +66,6 @@ const Element = (props: {
               handleElement={props.handleElement}
               getElement={props.getElement}
               context={props.context}
-              getSubflowName={props.getSubflowName}
             />
             {getAddButton()}
           </React.Fragment>
@@ -81,7 +79,7 @@ const Element = (props: {
               handleElement={props.handleElement}
               getElement={props.getElement}
               context={props.context}
-              getSubflowName={props.getSubflowName}
+              getSubflow={props.getSubflow}
             />
             {getAddButton()}
           </React.Fragment>
@@ -94,7 +92,7 @@ const Element = (props: {
             handleElement={props.handleElement}
             getElement={props.getElement}
             context={props.context}
-            getSubflowName={props.getSubflowName}
+            getSubflow={props.getSubflow}
           />
         )
       default:

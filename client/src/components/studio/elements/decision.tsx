@@ -13,7 +13,6 @@ const Decision = (props: {
   handleElement: Function
   getElement: Function
   context: { parent: string; current: string }
-  getSubflowName: Function
 }) => {
   return (
     <Card>
@@ -28,12 +27,11 @@ const Decision = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
-              {props?.value?.params?.map((param: any, index: number) => {
-                const input = props.value.args?.inputs?.[index]
+              {props?.value?.inputs?.map((elementId: string, index: number) => {
                 return (
                   <Argument
                     key={index}
-                    element={props.getElement(input)}
+                    element={props.getElement(elementId)}
                     disabled={false}
                   />
                 )
@@ -43,16 +41,17 @@ const Decision = (props: {
           <Columns.Column size="half">
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
-              {props?.value?.returns?.map((ret: any, index: number) => {
-                const output = props.value.args?.outputs?.[index]
-                return (
-                  <Argument
-                    key={index}
-                    element={props.getElement(output)}
-                    disabled={true}
-                  />
-                )
-              })}
+              {props?.value?.outputs?.map(
+                (elementId: string, index: number) => {
+                  return (
+                    <Argument
+                      key={index}
+                      element={props.getElement(elementId)}
+                      disabled={true}
+                    />
+                  )
+                }
+              )}
             </Content>
           </Columns.Column>
         </Columns>
@@ -60,17 +59,15 @@ const Decision = (props: {
       <Card.Footer />
       <Card.Content>
         <Content>
-          {props?.value?.returns?.map((_unused: any, index: number) => {
-            const elementId = props.value.args?.outputs?.[index]
+          {props?.value?.outputs?.map((elementId: string, index: number) => {
             return (
               <Variable
-                key={elementId}
+                key={index}
                 element={props?.getElement(elementId)}
                 disabled={true}
                 handleElement={props.handleElement}
                 getElement={props.getElement}
                 context={props.context}
-                getSubflowName={props.getSubflowName}
               />
             )
           })}
