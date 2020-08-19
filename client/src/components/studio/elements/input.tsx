@@ -16,7 +16,7 @@ import Variable from "./variables/variable"
 import Argument from "./argument"
 
 const Input = (props: {
-  id: number
+  id: string
   value: any
   handleElement: Function
   getElement: Function

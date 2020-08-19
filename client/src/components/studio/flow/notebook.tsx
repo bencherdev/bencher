@@ -73,7 +73,10 @@ const flows = {
             type: "table",
             value: {
               name: "Input Table",
-              columns: [{ name: "Value", type: "Number" }],
+              columns: ["e2h1"],
+              headers: {
+                e2h1: { id: "e2h1", name: "Value", type: "Number" },
+              },
               rows: [[5]],
             },
           },
@@ -81,17 +84,53 @@ const flows = {
             id: "e3",
             type: "decision",
             value: {
-              name: "Decision",
+              name: "Square Formula",
               inputs: ["e2"],
               outputs: ["e4"],
-              // TODO make this actually make sense
-              columns: [
-                {
-                  name: "Decision Table",
-                  type: "Number",
+              columns: {
+                inputs: ["e3h1"],
+                outputs: ["e3h2"],
+              },
+              headers: {
+                inputs: {
+                  e3h1: {
+                    id: "e3h1",
+                    table: "e2",
+                    column: "e2h1",
+                    // A comma separated list of conditions
+                    // These are evaluated with AND logic
+                    // The conditions variable depend on the column type
+                    // Eventually create a UI wrapper for the complex ones
+                    conditions: "=",
+                  },
                 },
-              ],
-              rows: [[25]],
+                outputs: {
+                  e3h2: {
+                    id: "e3h2",
+                    table: "e4",
+                    column: "e4h1",
+                  },
+                },
+              },
+              // The inputs are literal values
+              // They evaluate to true/false based off of all the column's conditions
+              // The conditions for all columns are evaluated using AND logic
+              // `-` or `*` are special "match all" characters
+              // Strings need to be in single or double quotes `''` or `""`
+              // The outputs are expressions
+              // They may use simple arithmetic operators: +, -, *, /, %, and ^
+              // Sum, Minimum, Maximum, Count, and Average functions
+              // should be available as well
+              // Table and column names may be referenced with snake_case
+              // based off of their respective names using dot notation
+              // Each row is evaluated with OR logic
+              // The first case to match is the one evaluated
+              // A `?` is used to trigger the creation of a Decision Subflow for a case's output
+              // If a value doesn't match any of the cases,
+              // then the zero value for the type will be placed in the output table
+              rows: [{ inputs: ["-"], outputs: ["input_table.value^2"] }],
+              // Sum, Minimum, Maximum, Count, and Average functions
+              // should also be available for COLUMNS. How though?
             },
           },
           e4: {
@@ -99,12 +138,10 @@ const flows = {
             type: "table",
             value: {
               name: "Output Table",
-              columns: [
-                {
-                  name: "Squared Value",
-                  type: "Number",
-                },
-              ],
+              columns: ["e4h1"],
+              headers: {
+                e4h1: { id: "e4h1", name: "Squared Value", type: "Number" },
+              },
               rows: [[25]],
             },
           },
@@ -121,13 +158,15 @@ const flows = {
             id: "e4",
             type: "table",
             value: {
-              name: "Output Table",
-              columns: [
-                {
-                  name: "Squared Value",
+              name: "Function Output Table",
+              columns: ["e6h1"],
+              headers: {
+                e6h1: {
+                  id: "e6h1",
+                  name: "Function Squared Value",
                   type: "Number",
                 },
-              ],
+              },
               rows: [[25]],
             },
           },
@@ -136,12 +175,10 @@ const flows = {
             type: "table",
             value: {
               name: "The Question",
-              columns: [
-                {
-                  name: "Life",
-                  type: "String",
-                },
-              ],
+              columns: ["e7h1"],
+              headers: {
+                e7h1: { id: "e7h1", name: "Life", type: "String" },
+              },
               rows: [["What is the meaning of life?"]],
             },
           },
@@ -159,12 +196,10 @@ const flows = {
             type: "table",
             value: {
               name: "The Answer",
-              columns: [
-                {
-                  name: "Answer",
-                  type: "Number",
-                },
-              ],
+              columns: ["e9h1"],
+              headers: {
+                e9h1: { id: "e9h1", name: "Answer", type: "Number" },
+              },
               rows: [[42]],
             },
           },
@@ -204,12 +239,10 @@ const flows = {
             type: "table",
             value: {
               name: "The Question",
-              columns: [
-                {
-                  name: "Life",
-                  type: "String",
-                },
-              ],
+              columns: ["a2e3h1"],
+              headers: {
+                a2e3h1: { id: "a2e3h1", name: "Life", type: "String" },
+              },
               rows: [["What is the meaning of life?"]],
             },
           },
@@ -218,12 +251,10 @@ const flows = {
             type: "table",
             value: {
               name: "The Answer",
-              columns: [
-                {
-                  name: "Answer",
-                  type: "Number",
-                },
-              ],
+              columns: ["a2e4h1"],
+              headers: {
+                a2e4h1: { id: "a2e4h1", name: "Answer", type: "Number" },
+              },
               rows: [[42]],
             },
           },
@@ -259,10 +290,17 @@ const Notebook = () => {
     setSubflowId(id)
   }
 
-  function handleElement(id: string, value: any) {
-    if (flow?.subflows?.[subflowId]?.elements?.[id]?.value) {
+  function handleElement(
+    id: string,
+    value: any,
+    elementSubflowId: string = ""
+  ) {
+    if (elementSubflowId === "") {
+      elementSubflowId = subflowId
+    }
+    if (flow?.subflows?.[elementSubflowId]?.elements?.[id]?.value) {
       let newFlow = cloneDeep(flow)
-      newFlow.subflows[subflowId].elements[id].value = value
+      newFlow.subflows[elementSubflowId].elements[id].value = value
       setFlow(newFlow)
     }
   }

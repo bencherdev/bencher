@@ -15,7 +15,7 @@ import Argument from "./argument"
 import Variable from "./variables/variable"
 
 const Output = (props: {
-  id: number
+  id: string
   value: any
   handleElement: Function
   getElement: Function

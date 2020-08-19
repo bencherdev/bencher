@@ -15,7 +15,7 @@ import Argument from "./argument"
 import Variable from "./variables/variable"
 
 const Subflow = (props: {
-  id: number
+  id: string
   value: any
   handleElement: Function
   getElement: Function
@@ -25,17 +25,14 @@ const Subflow = (props: {
 }) => {
   const [subflow, setSubflow] = useState(props.getSubflow(props?.value?.id))
 
-  function getElement(id: string): any {
+  function getSubflowElement(id: string): any {
     // TODO use this to get the Elements in the Sublfow
     return subflow?.elements?.[id]
   }
+  // getSubflowElement(subflow?.input)?.value?.inputs?
+  // getSubflowElement(subflow?.output)?.value?.outputs?
 
-  function handleSubflow() {
-    // TODO need to be able to change both ourselves
-    // and the underlying subflow from calls here
-    // getElement(subflow?.input)?.value?.inputs?
-    // getElement(subflow?.output)?.value?.outputs?
-  }
+  // handleElement(elementId, newElement, subflow.id)
 
   return (
     <Card>
@@ -114,7 +111,6 @@ const Subflow = (props: {
       <Card.Content>
         <Content>
           {props?.value?.outputs?.map((elementId: string, index: number) => {
-            console.log(elementId)
             return (
               <Variable
                 key={index}

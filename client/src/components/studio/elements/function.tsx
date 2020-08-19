@@ -8,7 +8,7 @@ import Argument from "./argument"
 import Variable from "./variables/variable"
 
 const Function = (props: {
-  id: number
+  id: string
   value: any
   handleElement: Function
   getElement: Function

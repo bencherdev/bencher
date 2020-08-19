@@ -22,23 +22,27 @@ const IOTable = (props: {
   }
 
   function handleColumn(event: ChangeEvent<HTMLInputElement>, column: number) {
+    const headerId = props.value?.columns?.[column]
     if (
-      props.value?.columns?.[column]?.name ||
-      props.value?.columns?.[column]?.name === ""
+      headerId &&
+      (props.value?.headers?.[headerId]?.name ||
+        props.value?.headers?.[headerId]?.name === "")
     ) {
       let table = cloneDeep(props.value)
-      table.columns[column].name = sanitize.toText(event.target.value)
+      table.headers[headerId].name = sanitize.toText(event.target.value)
       props.handleElement(props.id, table)
     }
   }
 
   function handleType(event: ChangeEvent<HTMLInputElement>, column: number) {
+    const headerId = props.value?.columns?.[column]
     if (
-      props.value?.columns?.[column]?.type ||
-      props.value?.columns?.[column]?.type === ""
+      headerId &&
+      (props.value?.headers?.[headerId]?.type ||
+        props.value?.headers?.[headerId]?.type === "")
     ) {
       let table = cloneDeep(props.value)
-      table.columns[column].type = event.target.value
+      table.headers[headerId].type = event.target.value
       props.handleElement(props.id, table)
     }
   }
@@ -64,76 +68,74 @@ const IOTable = (props: {
         <thead>
           <tr>
             <ContentEditable
-              html={sanitize.toHtml(props?.value?.name.toString())}
+              html={sanitize.toHtml(props.value?.name?.toString())}
               disabled={props.disabled}
               onChange={(event: any) => handleName(event)}
               tagName="th"
+              colSpan={props.value?.columns?.length}
               // TODO change color to red if there is an input error
               style={{
-                colSpan: `${props.value?.columns?.length}`,
                 textAlign: "center",
                 outlineColor: "#009933",
               }}
             />
           </tr>
-          {props?.value?.columns && (
-            <tr>
-              {props?.value?.columns.map((column: any, index: number) => {
-                return (
-                  <ContentEditable
-                    key={index}
-                    html={sanitize.toHtml(column?.name?.toString())}
-                    disabled={props.disabled}
-                    onChange={(event: any) => handleColumn(event, index)}
-                    tagName="th"
-                    // TODO change color to red if there is an input error
-                    style={{ outlineColor: "#009933" }}
-                  />
-                )
-              })}
-            </tr>
-          )}
-          {props.value?.columns && (
-            <tr>
-              {props.value?.columns.map((column: any, index: number) => {
-                return (
-                  <th key={index}>
-                    <Select
-                      disabled={props.disabled}
-                      column={index}
-                      selected={column?.type}
-                      config={typeSelect}
-                      handleType={handleType}
-                    />
-                  </th>
-                )
-              })}
-            </tr>
-          )}
-        </thead>
-        <tbody>
-          {props.value?.rows &&
-            props.value?.rows?.map((row: any, rowIndex: number) => {
+          <tr>
+            {props.value?.columns?.map((headerId: any, index: number) => {
+              const header = props.value?.headers?.[headerId]
               return (
-                <tr key={rowIndex}>
-                  {row.map((cell: string, columnIndex: number) => {
-                    return (
-                      <ContentEditable
-                        key={rowIndex + ":" + columnIndex}
-                        html={sanitize.toHtml(cell?.toString())}
-                        disabled={props.disabled}
-                        onChange={(event: any) =>
-                          handleCell(event, rowIndex, columnIndex)
-                        }
-                        tagName="td"
-                        // TODO change color to red if there is an input error
-                        style={{ outlineColor: "#009933" }}
-                      />
-                    )
-                  })}
-                </tr>
+                <ContentEditable
+                  key={index}
+                  html={sanitize.toHtml(header?.name?.toString())}
+                  disabled={props.disabled}
+                  onChange={(event: any) => handleColumn(event, index)}
+                  tagName="th"
+                  // TODO change color to red if there is an input error
+                  style={{ outlineColor: "#009933" }}
+                />
               )
             })}
+          </tr>
+          <tr>
+            {props.value?.columns?.map((headerId: any, index: number) => {
+              const header = props.value?.headers?.[headerId]
+              return (
+                <th key={index}>
+                  <Select
+                    name="Column Type Select"
+                    disabled={props.disabled}
+                    column={index}
+                    selected={header?.type}
+                    config={typeSelect}
+                    handleSelect={handleType}
+                  />
+                </th>
+              )
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {props.value?.rows?.map((row: any, rowIndex: number) => {
+            return (
+              <tr key={rowIndex}>
+                {row.map((cell: string, columnIndex: number) => {
+                  return (
+                    <ContentEditable
+                      key={rowIndex + ":" + columnIndex}
+                      html={sanitize.toHtml(cell?.toString())}
+                      disabled={props.disabled}
+                      onChange={(event: any) =>
+                        handleCell(event, rowIndex, columnIndex)
+                      }
+                      tagName="td"
+                      // TODO change color to red if there is an input error
+                      style={{ outlineColor: "#009933" }}
+                    />
+                  )
+                })}
+              </tr>
+            )
+          })}
         </tbody>
       </Table>
     </div>
