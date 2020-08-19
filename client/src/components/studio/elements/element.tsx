@@ -6,7 +6,9 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Parent from "./parent"
 import Input from "./input"
+import Decision from "./decision"
 import Function from "./function"
+import Subflow from "./subflow"
 import Output from "./output"
 
 const Element = (props: {
@@ -42,10 +44,17 @@ const Element = (props: {
             {getAddButton()}
           </React.Fragment>
         )
-      case "formula":
+      case "decision":
         return (
           <React.Fragment>
-            <p>Formula</p>
+            <Decision
+              id={props.element.id}
+              value={props.element.value}
+              handleElement={props.handleElement}
+              getElement={props.getElement}
+              context={props.context}
+              getSubflowName={props.getSubflowName}
+            />
             {getAddButton()}
           </React.Fragment>
         )
@@ -63,17 +72,17 @@ const Element = (props: {
             {getAddButton()}
           </React.Fragment>
         )
-      case "decision":
-        return (
-          <React.Fragment>
-            <p>Decision</p>
-            {getAddButton()}
-          </React.Fragment>
-        )
       case "subflow":
         return (
           <React.Fragment>
-            <p>Subflow</p>
+            <Subflow
+              id={props.element.id}
+              value={props.element.value}
+              handleElement={props.handleElement}
+              getElement={props.getElement}
+              context={props.context}
+              getSubflowName={props.getSubflowName}
+            />
             {getAddButton()}
           </React.Fragment>
         )
@@ -89,7 +98,7 @@ const Element = (props: {
           />
         )
       default:
-        return <p>Error: Unknown Element Type</p>
+        return <h4>Error: Unknown Element Type</h4>
     }
   }
 

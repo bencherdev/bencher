@@ -14,7 +14,7 @@ const Signature = (props: {
           <tr>
             <th
               style={{
-                colSpan: 1,
+                colSpan: "1",
                 textAlign: "center",
               }}
             >

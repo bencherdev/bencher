@@ -1,27 +1,37 @@
 import React from "react"
-import { Card, Heading, Button, Content, Columns } from "react-bulma-components"
+import {
+  Card,
+  Heading,
+  Button,
+  Content,
+  Columns,
+  Icon,
+} from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faEquals } from "@fortawesome/free-solid-svg-icons"
+import { faCircle, faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Argument from "./argument"
 import Variable from "./variables/variable"
 
-const Function = (props: {
+const Subflow = (props: {
   id: number
   value: any
   handleElement: Function
   getElement: Function
   context: { parent: string; current: string }
+  // TODO change this call to just getSubflow
   getSubflowName: Function
 }) => {
   return (
     <Card>
       <Card.Header>
         <Card.Header.Icon className="has-text-primary">
-          <FontAwesomeIcon icon={faEquals} size="2x" />
+          <FontAwesomeIcon icon={faCircle} size="2x" />
         </Card.Header.Icon>
-        <Card.Header.Title>{props?.value?.name}</Card.Header.Title>
+        <Card.Header.Title>
+          {props.getSubflowName(props?.value?.id)}
+        </Card.Header.Title>
       </Card.Header>
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">
@@ -38,6 +48,20 @@ const Function = (props: {
                   />
                 )
               })}
+              <Button
+                color="primary"
+                outlined={true}
+                fullwidth={true}
+                onClick={(event: any) => {
+                  event.preventDefault()
+                  console.log("TODO add a new inut element")
+                }}
+              >
+                <Icon className="primary">
+                  <FontAwesomeIcon icon={faPlus} size="1x" />
+                </Icon>
+                <span>Add</span>
+              </Button>
             </Content>
           </Columns.Column>
           <Columns.Column size="half">
@@ -53,6 +77,20 @@ const Function = (props: {
                   />
                 )
               })}
+              <Button
+                color="primary"
+                outlined={true}
+                fullwidth={true}
+                onClick={(event: any) => {
+                  event.preventDefault()
+                  console.log("TODO add a new inut element")
+                }}
+              >
+                <Icon className="primary">
+                  <FontAwesomeIcon icon={faPlus} size="1x" />
+                </Icon>
+                <span>Add</span>
+              </Button>
             </Content>
           </Columns.Column>
         </Columns>
@@ -80,4 +118,4 @@ const Function = (props: {
   )
 }
 
-export default Function
+export default Subflow

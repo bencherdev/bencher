@@ -2,12 +2,12 @@ import React from "react"
 import { Card, Heading, Button, Content, Columns } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faEquals } from "@fortawesome/free-solid-svg-icons"
+import { faQuestion } from "@fortawesome/free-solid-svg-icons"
 
 import Argument from "./argument"
 import Variable from "./variables/variable"
 
-const Function = (props: {
+const Decision = (props: {
   id: number
   value: any
   handleElement: Function
@@ -19,7 +19,7 @@ const Function = (props: {
     <Card>
       <Card.Header>
         <Card.Header.Icon className="has-text-primary">
-          <FontAwesomeIcon icon={faEquals} size="2x" />
+          <FontAwesomeIcon icon={faQuestion} size="2x" />
         </Card.Header.Icon>
         <Card.Header.Title>{props?.value?.name}</Card.Header.Title>
       </Card.Header>
@@ -80,4 +80,4 @@ const Function = (props: {
   )
 }
 
-export default Function
+export default Decision

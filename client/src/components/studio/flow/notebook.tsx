@@ -40,7 +40,7 @@ const flows = {
         // It should always be last
         output: "e1",
         // The order of elements in the Subflow
-        order: ["e0", "e3", "e1"],
+        order: ["e0", "e3", "e5", "e7", "e1"],
         // Each Element is its own object
         elements: {
           // Need a for Flow inputs
@@ -88,9 +88,9 @@ const flows = {
           },
           e3: {
             id: "e3",
-            type: "function",
+            type: "decision",
             value: {
-              name: "Square",
+              name: "Decision",
               disabled: false,
               params: [{ name: "Base", type: "Number" }],
               returns: [{ name: "Result", type: "Number" }],
@@ -117,6 +117,35 @@ const flows = {
           },
           e5: {
             id: "e5",
+            type: "function",
+            value: {
+              name: "Square",
+              disabled: false,
+              params: [{ name: "Base", type: "Number" }],
+              returns: [{ name: "Result", type: "Number" }],
+              args: {
+                inputs: ["e4"],
+                outputs: ["e6"],
+              },
+            },
+          },
+          e6: {
+            id: "e4",
+            type: "table",
+            value: {
+              name: "Output Table",
+              disabled: true,
+              columns: [
+                {
+                  name: "Squared Value",
+                  type: "Number",
+                },
+              ],
+              rows: [[25]],
+            },
+          },
+          e7: {
+            id: "e7",
             type: "subflow",
             value: {
               id: "a2",
