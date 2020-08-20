@@ -1,8 +1,18 @@
 import React from "react"
-import { Section, Columns, Box, Icon, Button } from "react-bulma-components"
+import {
+  Section,
+  Columns,
+  Box,
+  Icon,
+  Button,
+  Content,
+} from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faArrowUp } from "@fortawesome/free-solid-svg-icons"
+import {
+  faPlusCircle,
+  faArrowCircleUp,
+} from "@fortawesome/free-solid-svg-icons"
 
 import Element from "../elements/element"
 
@@ -16,12 +26,12 @@ const Page = (props: {
   }
 
   return (
-    <Columns centered={true} gapless={true}>
-      <Columns.Column narrow={true} size="three-quarters">
-        {props?.subflow?.order?.map((elementId: any) => {
-          let element = props.subflow.elements?.[elementId]
-          return (
-            <div key={elementId}>
+    <Columns>
+      {props?.subflow?.order?.map((elementId: any, index: number) => {
+        let element = props.subflow.elements?.[elementId]
+        return (
+          <React.Fragment key={index}>
+            <Columns.Column size={12} narrow={true}>
               <Element
                 element={element}
                 handleElement={props.handleElement}
@@ -32,28 +42,47 @@ const Page = (props: {
                 }}
                 getSubflow={props.getSubflow}
               />
-              <br />
-            </div>
-          )
-        })}
-        <br />
-        <Box>
-          <Button
-            color="primary"
-            outlined={true}
-            fullwidth={true}
-            onClick={(event: any) => {
-              event.preventDefault()
-              window.scrollTo(0, 0)
-            }}
-          >
-            <Icon className="primary">
-              <FontAwesomeIcon icon={faArrowUp} size="1x" />
-            </Icon>
-            <span>Back to Top</span>
-          </Button>
-        </Box>
+            </Columns.Column>
+            {element?.type && element.type !== "output" && (
+              <Columns.Column size={12} narrow={true}>
+                <Button
+                  color="primary"
+                  size="medium"
+                  fullwidth={true}
+                  inverted={true}
+                  title="Add Element"
+                  onClick={(event: any) => console.log("TODO add Element")}
+                >
+                  <FontAwesomeIcon icon={faPlusCircle} size="2x" />
+                </Button>
+              </Columns.Column>
+            )}
+          </React.Fragment>
+        )
+      })}
+      <Columns.Column size={12}>
         <Section>
+          <br />
+        </Section>
+      </Columns.Column>
+      <Columns.Column>
+        <Button
+          color="primary"
+          size="medium"
+          fullwidth={true}
+          inverted={true}
+          title="Jump to top of page"
+          onClick={(event: any) => {
+            event.preventDefault()
+            window.scrollTo(0, 0)
+          }}
+        >
+          <FontAwesomeIcon icon={faArrowCircleUp} size="2x" />
+        </Button>
+      </Columns.Column>
+      <Columns.Column size={12}>
+        <Section>
+          <br />
           <br />
         </Section>
       </Columns.Column>

@@ -1,5 +1,5 @@
 import React from "react"
-import { Card, Button } from "react-bulma-components"
+import { Card } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCircle } from "@fortawesome/free-solid-svg-icons"

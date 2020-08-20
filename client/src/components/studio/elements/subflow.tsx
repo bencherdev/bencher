@@ -43,8 +43,8 @@ const Subflow = (props: {
         <Card.Header.Title>{subflow?.name}</Card.Header.Title>
       </Card.Header>
       <Card.Content>
-        <Columns centered={true} breakpoint="mobile">
-          <Columns.Column size="half">
+        <Columns centered={true}>
+          <Columns.Column>
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
               {props?.value?.inputs?.map((elementId: string, index: number) => {
@@ -55,7 +55,9 @@ const Subflow = (props: {
                   <Argument
                     key={index}
                     element={props.getElement(elementId)}
-                    disabled={false}
+                    disabled={{ settings: false, edit: true }}
+                    handleElement={props.handleElement}
+                    getElement={props.getElement}
                   />
                 )
               })}
@@ -75,16 +77,18 @@ const Subflow = (props: {
               </Button>
             </Content>
           </Columns.Column>
-          <Columns.Column size="half">
+          <Columns.Column>
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
               {props?.value?.outputs?.map(
                 (elementId: string, index: number) => {
                   return (
-                    <Argument
+                    <Variable
                       key={index}
                       element={props.getElement(elementId)}
-                      disabled={false}
+                      disabled={{ settings: false, edit: true }}
+                      handleElement={props.handleElement}
+                      getElement={props.getElement}
                     />
                   )
                 }
@@ -106,23 +110,6 @@ const Subflow = (props: {
             </Content>
           </Columns.Column>
         </Columns>
-      </Card.Content>
-      <Card.Footer />
-      <Card.Content>
-        <Content>
-          {props?.value?.outputs?.map((elementId: string, index: number) => {
-            return (
-              <Variable
-                key={index}
-                element={props.getElement(elementId)}
-                disabled={true}
-                handleElement={props.handleElement}
-                getElement={props.getElement}
-                context={props.context}
-              />
-            )
-          })}
-        </Content>
       </Card.Content>
     </Card>
   )

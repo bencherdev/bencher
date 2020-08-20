@@ -1,33 +1,45 @@
 import React from "react"
-import { Box, Icon, Button } from "react-bulma-components"
+import { Box, Button, Icon } from "react-bulma-components"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faCog } from "@fortawesome/free-solid-svg-icons"
 
 import Table from "./table"
-import Signature from "./signature"
+import Function from "./function"
+import Row from "./row"
 
 const Variable = (props: {
   element: any
-  disabled: boolean
+  disabled: { settings: boolean; edit: boolean }
   handleElement: Function
   getElement: Function
-  context: { parent: string; current: string }
 }) => {
   function variableSwitch() {
     switch (props.element.type) {
+      case "row":
+        return (
+          <Row
+            id={props.element.id}
+            value={props.element.value}
+            disabled={props.disabled?.edit}
+            handleElement={props.handleElement}
+          />
+        )
       case "table":
         return (
           <Table
             id={props.element.id}
             value={props.element.value}
-            disabled={props.disabled}
+            disabled={props.disabled?.edit}
             handleElement={props.handleElement}
           />
         )
-      case "signature":
+      case "function":
         return (
-          <Signature
+          <Function
             id={props.element.id}
             value={props.element.value}
-            disabled={props.disabled}
+            disabled={props.disabled?.edit}
             handleElement={props.handleElement}
           />
         )
@@ -36,7 +48,29 @@ const Variable = (props: {
     }
   }
 
-  return <React.Fragment>{props.element && variableSwitch()}</React.Fragment>
+  return (
+    <Box>
+      {props.element && variableSwitch()}{" "}
+      {!props.disabled?.settings && (
+        <Button
+          color="primary"
+          outlined={true}
+          size="small"
+          fullwidth={true}
+          title="Settings"
+          onClick={(event: any) => {
+            event.preventDefault()
+            console.log("TODO edit settings")
+          }}
+        >
+          <Icon className="primary">
+            <FontAwesomeIcon icon={faCog} size="1x" />
+          </Icon>
+          <span>Settings</span>
+        </Button>
+      )}
+    </Box>
+  )
 }
 
 export default Variable

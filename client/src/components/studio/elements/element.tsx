@@ -6,7 +6,7 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Parent from "./parent"
 import Input from "./input"
-import Table from "./table"
+import Row from "./row"
 import Decision from "./decision"
 import Function from "./function"
 import Subflow from "./subflow"
@@ -33,69 +33,54 @@ const Element = (props: {
         )
       case "input":
         return (
-          <React.Fragment>
-            <Input
-              id={props.element.id}
-              value={props.element.value}
-              handleElement={props.handleElement}
-              getElement={props.getElement}
-              context={props.context}
-              getSubflow={props.getSubflow}
-            />
-            {getAddButton()}
-          </React.Fragment>
+          <Input
+            id={props.element.id}
+            value={props.element.value}
+            handleElement={props.handleElement}
+            getElement={props.getElement}
+            context={props.context}
+            getSubflow={props.getSubflow}
+          />
         )
-      case "table":
+      case "row":
         return (
-          <React.Fragment>
-            <Table
-              id={props.element.id}
-              value={props.element.value}
-              disabled={false}
-              handleElement={props.handleElement}
-            />
-            {getAddButton()}
-          </React.Fragment>
+          <Row
+            id={props.element.id}
+            value={props.element.value}
+            handleElement={props.handleElement}
+            getElement={props.getElement}
+          />
         )
       case "decision":
         return (
-          <React.Fragment>
-            <Decision
-              id={props.element.id}
-              value={props.element.value}
-              handleElement={props.handleElement}
-              getElement={props.getElement}
-              context={props.context}
-            />
-            {getAddButton()}
-          </React.Fragment>
+          <Decision
+            id={props.element.id}
+            value={props.element.value}
+            handleElement={props.handleElement}
+            getElement={props.getElement}
+            context={props.context}
+          />
         )
       case "function":
         return (
-          <React.Fragment>
-            <Function
-              id={props.element.id}
-              value={props.element.value}
-              handleElement={props.handleElement}
-              getElement={props.getElement}
-              context={props.context}
-            />
-            {getAddButton()}
-          </React.Fragment>
+          <Function
+            id={props.element.id}
+            value={props.element.value}
+            handleElement={props.handleElement}
+            getElement={props.getElement}
+            context={props.context}
+          />
         )
       case "subflow":
         return (
-          <React.Fragment>
-            <Subflow
-              id={props.element.id}
-              value={props.element.value}
-              handleElement={props.handleElement}
-              getElement={props.getElement}
-              context={props.context}
-              getSubflow={props.getSubflow}
-            />
-            {getAddButton()}
-          </React.Fragment>
+          <Subflow
+            id={props.element.id}
+            value={props.element.value}
+            handleElement={props.handleElement}
+            getElement={props.getElement}
+            context={props.context}
+            getSubflow={props.getSubflow}
+          />
         )
       case "output":
         return (
@@ -111,30 +96,6 @@ const Element = (props: {
       default:
         return <h4>Error: Unknown Element Type</h4>
     }
-  }
-
-  function getAddButton() {
-    return (
-      <div>
-        <br />
-        <Box>
-          <Button
-            color="primary"
-            outlined={true}
-            fullwidth={true}
-            onClick={(event: any) => {
-              event.preventDefault()
-              console.log("TODO add a new element")
-            }}
-          >
-            <Icon className="primary">
-              <FontAwesomeIcon icon={faPlus} size="1x" />
-            </Icon>
-            <span>Add</span>
-          </Button>
-        </Box>
-      </div>
-    )
   }
 
   return <React.Fragment>{props.element && elementSwitch()}</React.Fragment>

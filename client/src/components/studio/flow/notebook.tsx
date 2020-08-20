@@ -40,8 +40,9 @@ const flows = {
         // It should always be last
         output: "e1",
         // The order of elements in the Subflow
-        order: ["e0", "e3", "e5", "e8", "e1"],
+        order: ["e0", "e3", "e5", "e8", "e11", "e1"],
         // Each Element is its own object
+        // TODO break out Elements and variables
         elements: {
           // Need a for Flow inputs
           e0: {
@@ -65,7 +66,7 @@ const flows = {
             id: "e1",
             type: "output",
             value: {
-              outputs: ["e4"],
+              outputs: ["e4", "e10"],
             },
           },
           e2: {
@@ -73,11 +74,16 @@ const flows = {
             type: "table",
             value: {
               name: "Input Table",
-              columns: ["e2h1"],
+              columns: ["e2h1", "e2h1", "e2h1", "e2h1", "e2h1", "e2h1"],
               headers: {
                 e2h1: { id: "e2h1", name: "Value", type: "Number" },
               },
-              rows: [[5]],
+              rows: [
+                [5, 4, 3, 2, 1, 0],
+                [5, 4, 3, 2, 1, 0],
+                [5, 4, 3, 2, 1, 0],
+                [5, 4, 3, 2, 1, 0],
+              ],
             },
           },
           e3: {
@@ -149,8 +155,9 @@ const flows = {
             id: "e5",
             type: "function",
             value: {
-              name: "Square",
-              inputs: ["e4"],
+              // TODO make Function element actually link to another Flow
+              name: "Sum",
+              inputs: ["e4", ""],
               outputs: ["e6"],
             },
           },
@@ -163,11 +170,11 @@ const flows = {
               headers: {
                 e6h1: {
                   id: "e6h1",
-                  name: "Function Squared Value",
+                  name: "Function Sum Value",
                   type: "Number",
                 },
               },
-              rows: [[25]],
+              rows: [[0]],
             },
           },
           e7: {
@@ -201,6 +208,25 @@ const flows = {
                 e9h1: { id: "e9h1", name: "Answer", type: "Number" },
               },
               rows: [[42]],
+            },
+          },
+          e10: {
+            id: "e10",
+            type: "row",
+            value: {
+              name: "Locked Row",
+              columns: ["e10h1"],
+              headers: {
+                e10h1: { id: "e10h1", name: "Pi", type: "Number" },
+              },
+              rows: [[3.14159]],
+            },
+          },
+          e11: {
+            id: "e11",
+            type: "row",
+            value: {
+              id: "e10",
             },
           },
         },

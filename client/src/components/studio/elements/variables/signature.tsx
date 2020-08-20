@@ -12,24 +12,9 @@ const Signature = (props: {
       <Table bordered={true} striped={false}>
         <thead>
           <tr>
-            <th
-              style={{
-                colSpan: "1",
-                textAlign: "center",
-              }}
-            >
-              Function Signature
-            </th>
-          </tr>
-          <tr>
-            <th>Some Input</th>
-            <th>Some Output</th>
+            <th>Number</th>
           </tr>
         </thead>
-        <tbody>
-          <td>Table Template</td>
-          <td>Table Template</td>
-        </tbody>
       </Table>
     </div>
   )
