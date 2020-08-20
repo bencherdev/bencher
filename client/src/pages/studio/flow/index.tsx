@@ -7,6 +7,9 @@ import { Container } from "react-bulma-components"
 const Toolbar = Loadable(() =>
   import("../../../components/studio/flow/toolbar")
 )
+const Breadcrumb = Loadable(() =>
+  import("../../../components/studio/flow/breadcrumb")
+)
 const Notebook = Loadable(() =>
   import("../../../components/studio/flow/notebook")
 )
@@ -14,6 +17,7 @@ const Notebook = Loadable(() =>
 const FlowModelerPage = () => (
   <React.Fragment>
     <Toolbar />
+    <Breadcrumb />
     <Container fluid={true} breakpoint="widescreen">
       <Notebook />
     </Container>

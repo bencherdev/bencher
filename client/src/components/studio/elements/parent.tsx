@@ -5,9 +5,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCircle } from "@fortawesome/free-solid-svg-icons"
 
 const Parent = (props: {
-  id: string
-  value: any
-  handleElement: Function
   context: { parent: string; current: string }
   getSubflow: Function
 }) => {

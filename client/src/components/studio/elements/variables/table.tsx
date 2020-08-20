@@ -13,12 +13,12 @@ const IOTable = (props: {
   id: string
   value: any
   disabled: boolean
-  handleElement: Function
+  handleVariable: Function
 }) => {
   function handleName(event: ChangeEvent<HTMLInputElement>) {
     let table = cloneDeep(props.value)
     table.name = sanitize.toText(event.target.value)
-    props.handleElement(props.id, table)
+    props.handleVariable(props.id, table)
   }
 
   function handleColumn(event: ChangeEvent<HTMLInputElement>, column: number) {
@@ -30,7 +30,7 @@ const IOTable = (props: {
     ) {
       let table = cloneDeep(props.value)
       table.headers[headerId].name = sanitize.toText(event.target.value)
-      props.handleElement(props.id, table)
+      props.handleVariable(props.id, table)
     }
   }
 
@@ -43,7 +43,7 @@ const IOTable = (props: {
     ) {
       let table = cloneDeep(props.value)
       table.headers[headerId].type = event.target.value
-      props.handleElement(props.id, table)
+      props.handleVariable(props.id, table)
     }
   }
 
@@ -58,7 +58,7 @@ const IOTable = (props: {
     ) {
       let table = cloneDeep(props.value)
       table.rows[row][column] = sanitize.toText(event.target.value)
-      props.handleElement(props.id, table)
+      props.handleVariable(props.id, table)
     }
   }
 

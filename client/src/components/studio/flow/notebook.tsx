@@ -57,7 +57,7 @@ const flows = {
             // The value of the Element
             // each Element type may have different keys here
             value: {
-              inputs: ["e2", "e7"],
+              inputs: ["v2", "v7"],
             },
           },
           e1: {
@@ -66,24 +66,7 @@ const flows = {
             id: "e1",
             type: "output",
             value: {
-              outputs: ["e4", "e10"],
-            },
-          },
-          e2: {
-            id: "e2",
-            type: "table",
-            value: {
-              name: "Input Table",
-              columns: ["e2h1", "e2h1", "e2h1", "e2h1", "e2h1", "e2h1"],
-              headers: {
-                e2h1: { id: "e2h1", name: "Value", type: "Number" },
-              },
-              rows: [
-                [5, 4, 3, 2, 1, 0],
-                [5, 4, 3, 2, 1, 0],
-                [5, 4, 3, 2, 1, 0],
-                [5, 4, 3, 2, 1, 0],
-              ],
+              outputs: ["v4", "v10"],
             },
           },
           e3: {
@@ -91,8 +74,8 @@ const flows = {
             type: "decision",
             value: {
               name: "Square Formula",
-              inputs: ["e2"],
-              outputs: ["e4"],
+              inputs: ["v2"],
+              outputs: ["v4"],
               columns: {
                 inputs: ["e3h1"],
                 outputs: ["e3h2"],
@@ -101,8 +84,8 @@ const flows = {
                 inputs: {
                   e3h1: {
                     id: "e3h1",
-                    table: "e2",
-                    column: "e2h1",
+                    table: "v2",
+                    column: "v2h1",
                     // A comma separated list of conditions
                     // These are evaluated with AND logic
                     // The conditions variable depend on the column type
@@ -113,8 +96,8 @@ const flows = {
                 outputs: {
                   e3h2: {
                     id: "e3h2",
-                    table: "e4",
-                    column: "e4h1",
+                    table: "v4",
+                    column: "v4h1",
                   },
                 },
               },
@@ -139,54 +122,15 @@ const flows = {
               // should also be available for COLUMNS. How though?
             },
           },
-          e4: {
-            id: "e4",
-            type: "table",
-            value: {
-              name: "Output Table",
-              columns: ["e4h1"],
-              headers: {
-                e4h1: { id: "e4h1", name: "Squared Value", type: "Number" },
-              },
-              rows: [[25]],
-            },
-          },
           e5: {
             id: "e5",
             type: "function",
             value: {
               // TODO make Function element actually link to another Flow
+              id: "",
               name: "Sum",
-              inputs: ["e4", ""],
-              outputs: ["e6"],
-            },
-          },
-          e6: {
-            id: "e4",
-            type: "table",
-            value: {
-              name: "Function Output Table",
-              columns: ["e6h1"],
-              headers: {
-                e6h1: {
-                  id: "e6h1",
-                  name: "Function Sum Value",
-                  type: "Number",
-                },
-              },
-              rows: [[0]],
-            },
-          },
-          e7: {
-            id: "e7",
-            type: "table",
-            value: {
-              name: "The Question",
-              columns: ["e7h1"],
-              headers: {
-                e7h1: { id: "e7h1", name: "Life", type: "String" },
-              },
-              rows: [["What is the meaning of life?"]],
+              inputs: ["v4", ""],
+              outputs: ["v6"],
             },
           },
           e8: {
@@ -194,39 +138,99 @@ const flows = {
             type: "subflow",
             value: {
               id: "a2",
-              inputs: ["e7"],
-              outputs: ["e9"],
-            },
-          },
-          e9: {
-            id: "e9",
-            type: "table",
-            value: {
-              name: "The Answer",
-              columns: ["e9h1"],
-              headers: {
-                e9h1: { id: "e9h1", name: "Answer", type: "Number" },
-              },
-              rows: [[42]],
-            },
-          },
-          e10: {
-            id: "e10",
-            type: "row",
-            value: {
-              name: "Locked Row",
-              columns: ["e10h1"],
-              headers: {
-                e10h1: { id: "e10h1", name: "Pi", type: "Number" },
-              },
-              rows: [[3.14159]],
+              inputs: ["v7"],
+              outputs: ["v9"],
             },
           },
           e11: {
             id: "e11",
             type: "row",
             value: {
-              id: "e10",
+              id: "v10",
+            },
+          },
+        },
+        declarations: ["v2", "v7", "v4", "v6", "v9", "v10"],
+        variables: {
+          v2: {
+            id: "v2",
+            type: "table",
+            value: {
+              name: "Input Table",
+              columns: ["v2h1", "v2h1", "v2h1", "v2h1", "v2h1", "v2h1"],
+              headers: {
+                v2h1: { id: "v2h1", name: "Value", type: "Number" },
+              },
+              rows: [
+                [5, 4, 3, 2, 1, 0],
+                [5, 4, 3, 2, 1, 0],
+                [5, 4, 3, 2, 1, 0],
+                [5, 4, 3, 2, 1, 0],
+              ],
+            },
+          },
+          v4: {
+            id: "v4",
+            type: "table",
+            value: {
+              name: "Output Table",
+              columns: ["v4h1"],
+              headers: {
+                v4h1: { id: "v4h1", name: "Squared Value", type: "Number" },
+              },
+              rows: [[25]],
+            },
+          },
+          v6: {
+            id: "v6",
+            type: "table",
+            value: {
+              name: "Function Output Table",
+              columns: ["v6h1"],
+              headers: {
+                v6h1: {
+                  id: "v6h1",
+                  name: "Function Sum Value",
+                  type: "Number",
+                },
+              },
+              rows: [[0]],
+            },
+          },
+          v7: {
+            id: "v7",
+            type: "table",
+            value: {
+              name: "The Question",
+              columns: ["v7h1"],
+              headers: {
+                v7h1: { id: "v7h1", name: "Life", type: "String" },
+              },
+              rows: [["What is the meaning of life?"]],
+            },
+          },
+          v9: {
+            id: "v9",
+            type: "table",
+            value: {
+              name: "The Answer",
+              columns: ["v9h1"],
+              headers: {
+                v9h1: { id: "v9h1", name: "Answer", type: "Number" },
+              },
+              rows: [[42]],
+            },
+          },
+          v10: {
+            id: "v10",
+            type: "row",
+            value: {
+              name: "Locked Row",
+              columns: ["v10h1"],
+              headers: {
+                v10h1: { id: "v10h1", name: "Pi", type: "Number" },
+              },
+              rows: [[3.14159]],
             },
           },
         },
@@ -243,14 +247,14 @@ const flows = {
             id: "a2e0",
             type: "input",
             value: {
-              inputs: ["a2e3"],
+              inputs: ["a2v3"],
             },
           },
           a2e1: {
             id: "a2e1",
             type: "output",
             value: {
-              outputs: ["a2e4"],
+              outputs: ["a2v4"],
             },
           },
           a2e2: {
@@ -260,26 +264,29 @@ const flows = {
               id: "a1",
             },
           },
-          a2e3: {
-            id: "a2e3",
+        },
+        declarations: ["a2v3", "a2v4"],
+        variables: {
+          a2v3: {
+            id: "a2v3",
             type: "table",
             value: {
               name: "The Question",
-              columns: ["a2e3h1"],
+              columns: ["a2v3h1"],
               headers: {
-                a2e3h1: { id: "a2e3h1", name: "Life", type: "String" },
+                a2v3h1: { id: "a2v3h1", name: "Life", type: "String" },
               },
               rows: [["What is the meaning of life?"]],
             },
           },
-          a2e4: {
-            id: "a2e4",
+          a2v4: {
+            id: "a2v4",
             type: "table",
             value: {
               name: "The Answer",
-              columns: ["a2e4h1"],
+              columns: ["a2v4h1"],
               headers: {
-                a2e4h1: { id: "a2e4h1", name: "Answer", type: "Number" },
+                a2v4h1: { id: "a2v4h1", name: "Answer", type: "Number" },
               },
               rows: [[42]],
             },
@@ -306,7 +313,11 @@ const Notebook = () => {
   const date = Date()
 
   function handleFlow(id: string) {
-    let newFlow = { id: id, ...flows?.[id] }
+    let currentFlow = flows?.[id]
+    if (!currentFlow) {
+      setRedirect(true)
+    }
+    let newFlow = { id: id, ...currentFlow }
     setFlow(newFlow)
     setSubflowId(flows?.[id]?.main)
     handleInterpreter(newFlow)
@@ -316,19 +327,33 @@ const Notebook = () => {
     setSubflowId(id)
   }
 
+  function handleUpdate(
+    id: string,
+    value: any,
+    updateSubflowId: string,
+    type: "elements" | "variables"
+  ) {
+    if (flow?.subflows?.[updateSubflowId]?.[type]?.[id]?.value) {
+      let newFlow = cloneDeep(flow)
+      newFlow.subflows[updateSubflowId][type][id].value = value
+      setFlow(newFlow)
+    }
+  }
+
   function handleElement(
     id: string,
     value: any,
-    elementSubflowId: string = ""
+    elementSubflowId: string = subflowId
   ) {
-    if (elementSubflowId === "") {
-      elementSubflowId = subflowId
-    }
-    if (flow?.subflows?.[elementSubflowId]?.elements?.[id]?.value) {
-      let newFlow = cloneDeep(flow)
-      newFlow.subflows[elementSubflowId].elements[id].value = value
-      setFlow(newFlow)
-    }
+    handleUpdate(id, value, elementSubflowId, "elements")
+  }
+
+  function handleVariable(
+    id: string,
+    value: any,
+    variableSubflowId: string = subflowId
+  ) {
+    handleUpdate(id, value, variableSubflowId, "variables")
   }
 
   function handleInterpreter(config: any) {
@@ -371,7 +396,7 @@ const Notebook = () => {
 
   return (
     <React.Fragment>
-      <SEO title={flow?.name} />
+      {flow?.name && <SEO title={flow?.name} />}
       <Columns centered={true} gapless={true}>
         <Columns.Column narrow={true} size={12}>
           {redirect && navigate("/studio/flow/new")}
@@ -379,6 +404,7 @@ const Notebook = () => {
             subflow={getSubflow(subflowId)}
             // TODO create a React Context for handleElement and getSubflow
             handleElement={handleElement}
+            handleVariable={handleVariable}
             getSubflow={getSubflow}
           ></Page>
         </Columns.Column>

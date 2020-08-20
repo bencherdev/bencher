@@ -11,9 +11,10 @@ const Function = (props: {
   id: string
   value: any
   handleElement: Function
-  getElement: Function
-  context: { parent: string; current: string }
+  handleVariable: Function
+  getVariable: Function
 }) => {
+  // TODO pass down handleElement for configuring the argument
   return (
     <Card>
       <Card.Header>
@@ -28,14 +29,14 @@ const Function = (props: {
             <Content className="has-text-centered">
               <Heading size={4}>Input</Heading>
             </Content>
-            {props?.value?.inputs?.map((elementId: string, index: number) => {
+            {props?.value?.inputs?.map((variableId: string, index: number) => {
               return (
                 <Argument
                   key={index}
-                  element={props?.getElement(elementId)}
+                  variable={props?.getVariable(variableId)}
                   disabled={{ settings: false, edit: true }}
-                  handleElement={props.handleElement}
-                  getElement={props.getElement}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
                 />
               )
             })}
@@ -44,14 +45,14 @@ const Function = (props: {
             <Content className="has-text-centered">
               <Heading size={4}>Output</Heading>
             </Content>
-            {props?.value?.outputs?.map((elementId: string, index: number) => {
+            {props?.value?.outputs?.map((variableId: string, index: number) => {
               return (
                 <Variable
                   key={index}
-                  element={props?.getElement(elementId)}
+                  variable={props?.getVariable(variableId)}
                   disabled={{ settings: false, edit: true }}
-                  handleElement={props.handleElement}
-                  getElement={props.getElement}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
                 />
               )
             })}

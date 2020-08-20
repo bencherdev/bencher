@@ -1,8 +1,4 @@
 import React from "react"
-import { Box, Icon, Button } from "react-bulma-components"
-
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Parent from "./parent"
 import Input from "./input"
@@ -15,29 +11,23 @@ import Output from "./output"
 const Element = (props: {
   element: any
   handleElement: Function
-  getElement: Function
+  handleVariable: Function
+  getVariable: Function
   context: { parent: string; current: string }
   getSubflow: Function
 }) => {
   function elementSwitch() {
     switch (props.element.type) {
       case "parent":
-        return (
-          <Parent
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            context={props.context}
-            getSubflow={props.getSubflow}
-          />
-        )
+        return <Parent context={props.context} getSubflow={props.getSubflow} />
       case "input":
         return (
           <Input
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
-            getElement={props.getElement}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
             context={props.context}
             getSubflow={props.getSubflow}
           />
@@ -48,7 +38,8 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
-            getElement={props.getElement}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
           />
         )
       case "decision":
@@ -57,8 +48,8 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
-            getElement={props.getElement}
-            context={props.context}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
           />
         )
       case "function":
@@ -67,8 +58,8 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
-            getElement={props.getElement}
-            context={props.context}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
           />
         )
       case "subflow":
@@ -77,8 +68,8 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
-            getElement={props.getElement}
-            context={props.context}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
             getSubflow={props.getSubflow}
           />
         )
@@ -88,7 +79,8 @@ const Element = (props: {
             id={props.element.id}
             value={props.element.value}
             handleElement={props.handleElement}
-            getElement={props.getElement}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
             context={props.context}
             getSubflow={props.getSubflow}
           />

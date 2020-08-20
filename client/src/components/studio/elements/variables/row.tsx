@@ -6,7 +6,7 @@ const Row = (props: {
   id: string
   value: any
   disabled: boolean
-  handleElement: Function
+  handleVariable: Function
 }) => {
   // TODO create a Row type wrapper around a Table
   // it should only allow for a single row to be created
@@ -15,7 +15,7 @@ const Row = (props: {
       id={props.id}
       value={props.value}
       disabled={props.disabled}
-      handleElement={props.handleElement}
+      handleVariable={props.handleVariable}
     />
   )
 }

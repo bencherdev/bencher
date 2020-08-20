@@ -1,12 +1,5 @@
 import React from "react"
-import {
-  Section,
-  Columns,
-  Box,
-  Icon,
-  Button,
-  Content,
-} from "react-bulma-components"
+import { Section, Columns, Button } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
@@ -19,10 +12,11 @@ import Element from "../elements/element"
 const Page = (props: {
   subflow: any
   handleElement: Function
+  handleVariable: Function
   getSubflow: Function
 }) => {
-  function getElement(id: string): any {
-    return props?.subflow?.elements?.[id]
+  function getVariable(id: string): any {
+    return props?.subflow?.variables?.[id]
   }
 
   return (
@@ -35,7 +29,8 @@ const Page = (props: {
               <Element
                 element={element}
                 handleElement={props.handleElement}
-                getElement={getElement}
+                handleVariable={props.handleVariable}
+                getVariable={getVariable}
                 context={{
                   parent: props.subflow.parent,
                   current: props.subflow.id,

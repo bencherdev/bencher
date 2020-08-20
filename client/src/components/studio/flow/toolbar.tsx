@@ -19,7 +19,7 @@ const Toolbar = (props: any) => (
         color="primary"
         size="medium"
         inverted={true}
-        title="Back to Studio"
+        title="View Flow Output"
       >
         <FontAwesomeIcon icon={faCircle} size="2x" />
       </Button>

@@ -5,7 +5,7 @@ const Signature = (props: {
   id: string
   value: any
   disabled: boolean
-  handleElement: Function
+  handleVariable: Function
 }) => {
   return (
     <div className="table-container">

@@ -10,9 +10,10 @@ const Row = (props: {
   id: string
   value: any
   handleElement: Function
-  getElement: Function
+  handleVariable: Function
+  getVariable: Function
 }) => {
-  const row = props.getElement(props?.value?.id)
+  const row = props.getVariable(props?.value?.id)
   return (
     <Card>
       <Card.Header>
@@ -24,10 +25,10 @@ const Row = (props: {
       <Card.Content>
         <Content>
           <Table
-            id={row.id}
-            value={row.value}
+            id={row?.id}
+            value={row?.value}
             disabled={false}
-            handleElement={props.handleElement}
+            handleVariable={props.handleVariable}
           />
           <Button
             color="primary"
@@ -37,6 +38,7 @@ const Row = (props: {
             title="Settings"
             onClick={(event: any) => {
               event.preventDefault()
+              // props.handleElement()
               console.log("TODO edit settings")
             }}
           >

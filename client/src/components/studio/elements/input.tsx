@@ -10,7 +10,8 @@ const Input = (props: {
   id: string
   value: any
   handleElement: Function
-  getElement: Function
+  handleVariable: Function
+  getVariable: Function
   context: { parent: string; current: string }
   getSubflow: Function
 }) => {
@@ -27,14 +28,14 @@ const Input = (props: {
       <Card.Content>
         <Columns centered={true}>
           <Columns.Column>
-            {props.value?.inputs?.map((elementId: string, index: number) => {
+            {props.value?.inputs?.map((variableId: string, index: number) => {
               return (
                 <Variable
                   key={index}
-                  element={props?.getElement(elementId)}
+                  variable={props?.getVariable(variableId)}
                   disabled={{ settings: false, edit: false }}
-                  handleElement={props.handleElement}
-                  getElement={props.getElement}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
                 />
               )
             })}
@@ -45,6 +46,7 @@ const Input = (props: {
               title="Add input"
               onClick={(event: any) => {
                 event.preventDefault()
+                // props.handleElement()
                 console.log("TODO add a new inut element")
               }}
             >

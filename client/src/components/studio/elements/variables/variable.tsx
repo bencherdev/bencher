@@ -9,48 +9,48 @@ import Function from "./function"
 import Row from "./row"
 
 const Variable = (props: {
-  element: any
+  variable: any
   disabled: { settings: boolean; edit: boolean }
-  handleElement: Function
-  getElement: Function
+  handleVariable: Function
+  getVariable: Function
 }) => {
   function variableSwitch() {
-    switch (props.element.type) {
+    switch (props.variable.type) {
       case "row":
         return (
           <Row
-            id={props.element.id}
-            value={props.element.value}
+            id={props.variable.id}
+            value={props.variable.value}
             disabled={props.disabled?.edit}
-            handleElement={props.handleElement}
+            handleVariable={props.handleVariable}
           />
         )
       case "table":
         return (
           <Table
-            id={props.element.id}
-            value={props.element.value}
+            id={props.variable.id}
+            value={props.variable.value}
             disabled={props.disabled?.edit}
-            handleElement={props.handleElement}
+            handleVariable={props.handleVariable}
           />
         )
       case "function":
         return (
           <Function
-            id={props.element.id}
-            value={props.element.value}
+            id={props.variable.id}
+            value={props.variable.value}
             disabled={props.disabled?.edit}
-            handleElement={props.handleElement}
+            handleVariable={props.handleVariable}
           />
         )
       default:
-        return <p>Error: Unknown Element Type</p>
+        return <p>Error: Unknown Variable Type</p>
     }
   }
 
   return (
     <Box>
-      {props.element && variableSwitch()}{" "}
+      {props.variable && variableSwitch()}{" "}
       {!props.disabled?.settings && (
         <Button
           color="primary"

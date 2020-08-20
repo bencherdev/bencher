@@ -8,10 +8,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faTable, faArrowRight, faCog } from "@fortawesome/free-solid-svg-icons"
 
 const Argument = (props: {
-  element: any
+  variable: any
   disabled: { settings: boolean; edit: boolean }
-  handleElement: Function
-  getElement: Function
+  handleVariable: Function
+  getVariable: Function
 }) => {
   // TODO actually check things once Elements and Varibles are broken out
   function argumentSwitch(variable: string) {
@@ -70,7 +70,7 @@ const Argument = (props: {
               id={""}
               value={{}}
               disabled={true}
-              handleElement={() => {}}
+              handleVariable={() => {}}
             />
             <Button
               color="primary"
@@ -96,12 +96,12 @@ const Argument = (props: {
 
   return (
     <React.Fragment>
-      {props.element ? (
+      {props.variable ? (
         <Variable
-          element={props.element}
+          variable={props.variable}
           disabled={props.disabled}
-          handleElement={props.handleElement}
-          getElement={props.getElement}
+          handleVariable={props.handleVariable}
+          getVariable={props.getVariable}
         />
       ) : (
         <Box>{argumentSwitch("TODO")}</Box>

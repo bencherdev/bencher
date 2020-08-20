@@ -11,8 +11,8 @@ const Decision = (props: {
   id: string
   value: any
   handleElement: Function
-  getElement: Function
-  context: { parent: string; current: string }
+  handleVariable: Function
+  getVariable: Function
 }) => {
   return (
     <Card>
@@ -28,23 +28,24 @@ const Decision = (props: {
             id={props.id}
             value={props.value}
             disabled={false}
-            getElement={props.getElement}
             handleElement={props.handleElement}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
           />
         </Content>
       </Card.Content>
       <Card.Footer />
       <Card.Content>
         <Content>
-          {props?.value?.outputs?.map((elementId: string, index: number) => {
-            const table = props?.getElement(elementId)
+          {props?.value?.outputs?.map((variableId: string, index: number) => {
+            const table = props?.getVariable(variableId)
             return (
               <Table
                 key={index}
                 id={table?.id}
                 value={table?.value}
                 disabled={true}
-                handleElement={props.handleElement}
+                handleVariable={props.handleVariable}
               />
             )
           })}

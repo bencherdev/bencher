@@ -10,7 +10,8 @@ const Output = (props: {
   id: string
   value: any
   handleElement: Function
-  getElement: Function
+  handleVariable: Function
+  getVariable: Function
   context: { parent: string; current: string }
   getSubflow: Function
 }) => {
@@ -27,14 +28,14 @@ const Output = (props: {
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">
           <Columns.Column>
-            {props?.value?.outputs?.map((elementId: string, index: number) => {
+            {props?.value?.outputs?.map((variableId: string, index: number) => {
               return (
                 <Variable
                   key={index}
-                  element={props?.getElement(elementId)}
+                  variable={props?.getVariable(variableId)}
                   disabled={{ settings: false, edit: true }}
-                  handleElement={props.handleElement}
-                  getElement={props.getElement}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
                 />
               )
             })}
@@ -44,6 +45,7 @@ const Output = (props: {
               fullwidth={true}
               onClick={(event: any) => {
                 event.preventDefault()
+                // props.handleElement
                 console.log("TODO add a new output element")
               }}
             >

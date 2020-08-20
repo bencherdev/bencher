@@ -14,9 +14,13 @@ const DecisionTable = (props: {
   id: string
   value: any
   disabled: boolean
-  getElement: Function
   handleElement: Function
+  handleVariable: Function
+  getVariable: Function
 }) => {
+  // TODO add event.preventDefault()
+  // TODO switch callbacks to closures for the selects
+
   function handleName(event: ChangeEvent<HTMLInputElement>) {
     let table = cloneDeep(props.value)
     table.name = sanitize.toText(event.target.value)
@@ -28,6 +32,7 @@ const DecisionTable = (props: {
     column: number,
     tableId: string
   ) {
+    // props.handleElement()
     console.log("TODO set the input table to a new Table ID")
   }
 
@@ -37,26 +42,45 @@ const DecisionTable = (props: {
     tableId: string,
     columnId: string
   ) {
+    // props.handleElement()
     console.log(
       "TODO set the input column to a new Column ID for the input Table"
     )
   }
 
-  function handleOutputTable(
+  function handleOutputTableName(
     event: ChangeEvent<HTMLInputElement>,
     column: number,
     tableId: string
   ) {
+    // props.handleVariable()
     console.log("TODO update the output table with the new value")
   }
 
-  function handleOutputColumn(
+  function handleOutputTableColumnName(
     event: ChangeEvent<HTMLInputElement>,
     column: number,
     tableId: string,
     columnId: string
   ) {
+    // props.handleVariable()
     console.log("TODO update the output table with the new value")
+  }
+
+  function handleOutputTableColumnType(
+    event: ChangeEvent<HTMLInputElement>,
+    column: number
+  ) {
+    const headerId = props.value?.columns?.outputs?.[column]
+    if (
+      headerId &&
+      (props.value?.headers?.outputs?.[headerId]?.type ||
+        props.value?.headers?.outputs?.[headerId]?.type === "")
+    ) {
+      let table = cloneDeep(props.value)
+      table.headers.outputs[headerId].type = event.target.value
+      props.handleVariable(props.id, table)
+    }
   }
 
   function handleConditions(
@@ -69,19 +93,6 @@ const DecisionTable = (props: {
       event.target.value
     )
     props.handleElement(props.id, table)
-  }
-
-  function handleType(event: ChangeEvent<HTMLInputElement>, column: number) {
-    const headerId = props.value?.columns?.outputs?.[column]
-    if (
-      headerId &&
-      (props.value?.headers?.outputs?.[headerId]?.type ||
-        props.value?.headers?.outputs?.[headerId]?.type === "")
-    ) {
-      let table = cloneDeep(props.value)
-      table.headers.outputs[headerId].type = event.target.value
-      props.handleElement(props.id, table)
-    }
   }
 
   function handleCell(
@@ -142,7 +153,7 @@ const DecisionTable = (props: {
           <tr>
             {props.value?.columns?.inputs?.map(
               (headerId: any, index: number) => {
-                const table = props.getElement(
+                const table = props.getVariable(
                   props.value?.headers?.inputs?.[headerId]?.table
                 )
                 const tableName = table?.value?.name?.toString()
@@ -170,7 +181,7 @@ const DecisionTable = (props: {
             )}
             {props.value?.columns?.outputs?.map(
               (headerId: any, index: number) => {
-                const table = props.getElement(
+                const table = props.getVariable(
                   props.value?.headers?.outputs?.[headerId]?.table
                 )
                 return (
@@ -179,7 +190,7 @@ const DecisionTable = (props: {
                     html={sanitize.toHtml(table?.value?.name?.toString())}
                     disabled={props.disabled}
                     onChange={(event: any) =>
-                      handleOutputTable(event, index, table?.id)
+                      handleOutputTableName(event, index, table?.id)
                     }
                     tagName="th"
                     // TODO change color to red if there is an input error
@@ -192,7 +203,7 @@ const DecisionTable = (props: {
           <tr>
             {props.value?.columns?.inputs?.map(
               (headerId: any, index: number) => {
-                const table = props.getElement(
+                const table = props.getVariable(
                   props.value?.headers?.inputs?.[headerId]?.table
                 )
                 const column =
@@ -224,7 +235,7 @@ const DecisionTable = (props: {
             )}
             {props.value?.columns?.outputs?.map(
               (headerId: any, index: number) => {
-                const table = props.getElement(
+                const table = props.getVariable(
                   props.value?.headers?.outputs?.[headerId]?.table
                 )
                 const tableColumn =
@@ -237,7 +248,7 @@ const DecisionTable = (props: {
                     html={sanitize.toHtml(tableColumn?.name)}
                     disabled={props.disabled}
                     onChange={(event: any) =>
-                      handleOutputColumn(
+                      handleOutputTableColumnName(
                         event,
                         index,
                         table?.id,
@@ -282,7 +293,7 @@ const DecisionTable = (props: {
                       column={index}
                       selected={columnType}
                       config={typeSelect}
-                      handleSelect={handleType}
+                      handleSelect={handleOutputTableColumnType}
                     />
                   </th>
                 )
