@@ -69,7 +69,7 @@ const AboutPage = () => {
               <Columns className="is-vcentered">
                 <Columns.Column>
                   <Content className="has-text-centered">
-                    <span className="icon is-large has-text-success">
+                    <span className="icon is-large has-text-primary">
                       <FontAwesomeIcon icon={faStream} size="5x" />
                     </span>
                   </Content>
@@ -91,7 +91,7 @@ const AboutPage = () => {
               <Columns className="is-vcentered">
                 <Columns.Column>
                   <Content className="has-text-centered">
-                    <span className="icon has-text-primary">
+                    <span className="icon is-large has-text-primary">
                       <FontAwesomeIcon icon={faStopwatch} size="5x" />
                     </span>
                   </Content>
@@ -115,7 +115,7 @@ const AboutPage = () => {
               <Columns className="is-vcentered">
                 <Columns.Column>
                   <Content className="has-text-centered">
-                    <span className="icon has-text-primary">
+                    <span className="icon is-large has-text-primary">
                       <FontAwesomeIcon icon={faPlusCircle} size="5x" />
                     </span>
                   </Content>
@@ -137,7 +137,7 @@ const AboutPage = () => {
               <Columns className="is-vcentered">
                 <Columns.Column>
                   <Content className="has-text-centered">
-                    <span className="icon has-text-primary">
+                    <span className="icon is-large has-text-primary">
                       <FontAwesomeIcon icon={faRecycle} size="5x" />
                     </span>
                   </Content>
@@ -172,7 +172,7 @@ const AboutPage = () => {
           <Columns centered={true}>
             <Columns.Column>
               <Content className="has-text-centered">
-                <span className="icon has-text-primary">
+                <span className="icon is-large has-text-primary">
                   <FontAwesomeIcon icon={faTable} size="5x" />
                 </span>
                 <Heading size={5}>Tables &amp; Cells</Heading>
@@ -189,7 +189,7 @@ const AboutPage = () => {
             </Columns.Column>
             <Columns.Column>
               <Content className="has-text-centered">
-                <span className="icon has-text-primary">
+                <span className="icon is-large has-text-primary">
                   <FontAwesomeIcon icon={faEquals} size="5x" />
                 </span>
                 <Heading size={5}>Flows &amp; Functions</Heading>
@@ -206,7 +206,7 @@ const AboutPage = () => {
             </Columns.Column>
             <Columns.Column>
               <Content className="has-text-centered">
-                <span className="icon has-text-primary">
+                <span className="icon is-large has-text-primary">
                   <FontAwesomeIcon icon={faCircle} size="5x" />
                 </span>
                 <Heading size={5}>Subflows &amp; Worksheets</Heading>

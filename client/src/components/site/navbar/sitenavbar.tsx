@@ -42,19 +42,12 @@ const SiteNavbar = (props: { user: any; link: any }) => (
         <Navbar.Item renderAs={props?.link} to="/docs">
           Docs
         </Navbar.Item>
-        {/* <Navbar.Item renderAs={props?.link} to="/Hub">Hub</Navbar.Item> */}
-        <Navbar.Item renderAs={NavbarDiv}>
-          <Navbar.Link
-            renderAs={ExternalLink}
-            to="https://github.com/tableflow/tableflow"
-            black={true}
-          >
-            GitHub
-            {" ".repeat(1)}
-            <span className="icon has-text-primary">
-              <FontAwesomeIcon icon={faExternalLinkAlt} />
-            </span>
-          </Navbar.Link>
+        <Navbar.Item renderAs={props?.link} to="/github">
+          GitHub
+          {"⠀".repeat(1)}
+          <span className="icon has-text-primary">
+            <FontAwesomeIcon icon={faExternalLinkAlt} />
+          </span>
         </Navbar.Item>
       </Navbar.Container>
 
