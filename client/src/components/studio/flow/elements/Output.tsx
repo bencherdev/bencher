@@ -4,7 +4,7 @@ import { Card, Icon, Columns, Box, Button } from "react-bulma-components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faArrowLeft, faCog, faPlus } from "@fortawesome/free-solid-svg-icons"
 
-import Variable from "./variables/variable"
+import Variable from "../variables/Variable"
 
 const Output = (props: {
   id: string

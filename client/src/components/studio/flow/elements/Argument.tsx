@@ -1,8 +1,8 @@
 import React from "react"
 import { Button, Icon, Level, Heading } from "react-bulma-components"
 
-import Variable from "./variables/variable"
-import Signature from "./variables/signature"
+import Variable from "../variables/Variable"
+import TableSignature from "../variables/signatures/TableSignature"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faTable, faArrowRight, faCog } from "@fortawesome/free-solid-svg-icons"
@@ -68,7 +68,7 @@ const Argument = (props: {
               </Level.Side>
             </Level>
 
-            <Signature
+            <TableSignature
               id={""}
               value={{}}
               disabled={true}

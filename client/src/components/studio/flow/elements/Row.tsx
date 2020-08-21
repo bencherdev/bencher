@@ -4,7 +4,7 @@ import { Card, Content, Box, Button, Icon } from "react-bulma-components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faLock, faCog } from "@fortawesome/free-solid-svg-icons"
 
-import Table from "./variables/table"
+import Table from "../variables/tabular/Table"
 
 const Row = (props: {
   id: string

@@ -7,7 +7,7 @@ import {
   faArrowCircleUp,
 } from "@fortawesome/free-solid-svg-icons"
 
-import Element from "../elements/element"
+import Element from "../flow/elements/Element"
 
 const Page = (props: {
   subflow: any

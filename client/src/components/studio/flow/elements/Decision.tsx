@@ -4,8 +4,8 @@ import { Card, Icon, Content, Box } from "react-bulma-components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faQuestion, faCog } from "@fortawesome/free-solid-svg-icons"
 
-import DecisionTable from "./decisiontable"
-import Variable from "./variables/variable"
+import DecisionTable from "./DecisionTable"
+import Variable from "../variables/Variable"
 
 const Decision = (props: {
   id: string

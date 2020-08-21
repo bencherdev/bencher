@@ -1,17 +1,17 @@
 import React from "react"
-import { Table } from "react-bulma-components"
 
-import Signature from "./signature"
+import Table from "./Table"
 
-const Function = (props: {
+const Row = (props: {
   id: string
   value: any
   disabled: boolean
   handleVariable: Function
 }) => {
-  // TODO iterate over all signatures for the function's inputs
+  // TODO create a Row type wrapper around a Table
+  // it should only allow for a single row to be created
   return (
-    <Signature
+    <Table
       id={props.id}
       value={props.value}
       disabled={props.disabled}
@@ -20,4 +20,4 @@ const Function = (props: {
   )
 }
 
-export default Function
+export default Row

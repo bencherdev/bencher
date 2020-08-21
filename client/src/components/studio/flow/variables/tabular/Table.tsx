@@ -2,11 +2,11 @@ import React, { ChangeEvent } from "react"
 import { Table } from "react-bulma-components"
 import { cloneDeep } from "lodash/lang"
 
-import ContentEditable from "../../../utils/contenteditable"
-import sanitize from "../../../utils/sanitize"
+import ContentEditable from "../../../../utils/contenteditable"
+import sanitize from "../../../../utils/sanitize"
 
 import typeSelect from "./typeselect"
-import Select from "../../../utils/forms/select"
+import Select from "../../../../utils/forms/select"
 
 // TODO add table input type validation
 const IOTable = (props: {

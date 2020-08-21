@@ -12,8 +12,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCircle, faCog, faPlus } from "@fortawesome/free-solid-svg-icons"
 
-import Argument from "./argument"
-import Variable from "./variables/variable"
+import Argument from "./Argument"
+import Variable from "../variables/Variable"
 
 const Subflow = (props: {
   id: string

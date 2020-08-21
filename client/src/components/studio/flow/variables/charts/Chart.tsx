@@ -1,6 +1,6 @@
 import React from "react"
 
-import BarChart from "./barchart"
+import BarChart from "./BarChart"
 
 const Chart = (props: {
   id: string

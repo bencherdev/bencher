@@ -3,7 +3,7 @@ import { navigate } from "gatsby"
 import { cloneDeep } from "lodash/lang"
 import { Columns } from "react-bulma-components"
 
-import Page from "./page"
+import Page from "./Page"
 
 import InterpreterWorker from "../../../interpreter/interpreter"
 import SEO from "../../utils/seo"

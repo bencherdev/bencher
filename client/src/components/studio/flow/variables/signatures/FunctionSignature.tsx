@@ -1,17 +1,16 @@
 import React from "react"
 
-import Table from "./table"
+import TableSignature from "./TableSignature"
 
-const Row = (props: {
+const FunctionSignature = (props: {
   id: string
   value: any
   disabled: boolean
   handleVariable: Function
 }) => {
-  // TODO create a Row type wrapper around a Table
-  // it should only allow for a single row to be created
+  // TODO iterate over all signatures for the function's inputs
   return (
-    <Table
+    <TableSignature
       id={props.id}
       value={props.value}
       disabled={props.disabled}
@@ -20,4 +19,4 @@ const Row = (props: {
   )
 }
 
-export default Row
+export default FunctionSignature

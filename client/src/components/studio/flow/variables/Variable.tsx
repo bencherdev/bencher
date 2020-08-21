@@ -4,10 +4,10 @@ import { Button, Icon } from "react-bulma-components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCog } from "@fortawesome/free-solid-svg-icons"
 
-import Table from "./table"
-import Row from "./row"
-import Function from "./function"
-import Chart from "./chart/chart"
+import Table from "./tabular/Table"
+import Row from "./tabular/Row"
+import Function from "./functional/Function"
+import Chart from "./charts/Chart"
 
 const Variable = (props: {
   variable: any

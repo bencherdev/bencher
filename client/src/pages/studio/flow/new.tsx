@@ -3,7 +3,7 @@ import React from "react"
 import Loadable from "@loadable/component"
 
 import SEO from "../../../components/utils/seo"
-const New = Loadable(() => import("../../../components/studio/flow/new"))
+const New = Loadable(() => import("../../../components/studio/notebook/New"))
 
 const NewFlowPage = () => (
   <React.Fragment>

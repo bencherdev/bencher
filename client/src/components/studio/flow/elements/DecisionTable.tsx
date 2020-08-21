@@ -2,13 +2,13 @@ import React, { ChangeEvent } from "react"
 import { Table } from "react-bulma-components"
 import { cloneDeep } from "lodash/lang"
 
-import ContentEditable from "../../utils/contenteditable"
-import sanitize from "../../utils/sanitize"
+import ContentEditable from "../../../utils/contenteditable"
+import sanitize from "../../../utils/sanitize"
 
-import typeSelect from "./variables/typeselect"
+import typeSelect from "../variables/tabular/typeselect"
 // TODO either create a new Select that can update *another* Element
 // or add a tableID as part of the props to the current Select component
-import Select from "../../utils/forms/select"
+import Select from "../../../utils/forms/select"
 
 const DecisionTable = (props: {
   id: string

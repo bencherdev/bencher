@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { Link } from "@reach/router"
 
 import SEO from "../../utils/seo"
-import Flow from "./flow"
+import Flow from "./Flow"
 
 const flows: string[] = ["A", "B", "C"]
 

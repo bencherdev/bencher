@@ -1,7 +1,7 @@
 import React from "react"
 import { Table } from "react-bulma-components"
 
-const Signature = (props: {
+const TableSignature = (props: {
   id: string
   value: any
   disabled: boolean
@@ -20,4 +20,4 @@ const Signature = (props: {
   )
 }
 
-export default Signature
+export default TableSignature

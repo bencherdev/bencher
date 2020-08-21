@@ -1,13 +1,13 @@
 import React from "react"
 
-import Parent from "./parent"
-import Input from "./input"
-import Row from "./row"
-import Decision from "./decision"
-import Function from "./function"
-import Subflow from "./subflow"
-import Chart from "./chart"
-import Output from "./output"
+import Parent from "./Parent"
+import Input from "./Input"
+import Row from "./Row"
+import Decision from "./Decision"
+import Function from "./Function"
+import Subflow from "./Subflow"
+import Chart from "./Chart"
+import Output from "./Output"
 
 const Element = (props: {
   element: any

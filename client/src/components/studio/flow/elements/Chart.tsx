@@ -4,7 +4,7 @@ import { Card, Content, Box, Button, Icon } from "react-bulma-components"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faChartBar, faCog } from "@fortawesome/free-solid-svg-icons"
 
-import Chart from "./variables/chart/chart"
+import Chart from "../variables/charts/Chart"
 
 const ChartElement = (props: {
   id: string

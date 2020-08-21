@@ -4,7 +4,7 @@ import Loadable from "@loadable/component"
 
 import SEO from "../../components/utils/seo"
 const Studio = Loadable(() =>
-  import("../../components/studio/dashboard/studio")
+  import("../../components/studio/dashboard/Studio")
 )
 
 const StudioPage = () => (

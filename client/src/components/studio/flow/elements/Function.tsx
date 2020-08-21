@@ -11,8 +11,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEquals, faCog } from "@fortawesome/free-solid-svg-icons"
 
-import Argument from "./argument"
-import Variable from "./variables/variable"
+import Argument from "./Argument"
+import Variable from "../variables/Variable"
 
 const Function = (props: {
   id: string
