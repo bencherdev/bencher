@@ -1,5 +1,5 @@
 import React from "react"
-import { Box, Button, Icon } from "react-bulma-components"
+import { Button, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCog } from "@fortawesome/free-solid-svg-icons"
@@ -49,7 +49,7 @@ const Variable = (props: {
   }
 
   return (
-    <Box>
+    <React.Fragment>
       {props.variable && variableSwitch()}{" "}
       {!props.disabled?.settings && (
         <Button
@@ -69,7 +69,7 @@ const Variable = (props: {
           <span>Settings</span>
         </Button>
       )}
-    </Box>
+    </React.Fragment>
   )
 }
 

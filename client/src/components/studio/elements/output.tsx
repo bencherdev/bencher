@@ -1,5 +1,5 @@
 import React from "react"
-import { Card, Columns, Button, Icon } from "react-bulma-components"
+import { Card, Columns, Box, Button, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faArrowLeft, faPlus } from "@fortawesome/free-solid-svg-icons"
@@ -30,13 +30,14 @@ const Output = (props: {
           <Columns.Column>
             {props?.value?.outputs?.map((variableId: string, index: number) => {
               return (
-                <Variable
-                  key={index}
-                  variable={props?.getVariable(variableId)}
-                  disabled={{ settings: false, edit: true }}
-                  handleVariable={props.handleVariable}
-                  getVariable={props.getVariable}
-                />
+                <Box key={index}>
+                  <Variable
+                    variable={props?.getVariable(variableId)}
+                    disabled={{ settings: false, edit: true }}
+                    handleVariable={props.handleVariable}
+                    getVariable={props.getVariable}
+                  />
+                </Box>
               )
             })}
             <Button

@@ -1,5 +1,5 @@
 import React from "react"
-import { Box, Button, Icon, Level, Heading } from "react-bulma-components"
+import { Button, Icon, Level, Heading } from "react-bulma-components"
 
 import Variable from "./variables/variable"
 import Signature from "./variables/signature"
@@ -104,7 +104,7 @@ const Argument = (props: {
           getVariable={props.getVariable}
         />
       ) : (
-        <Box>{argumentSwitch("TODO")}</Box>
+        <React.Fragment>{argumentSwitch("TODO")}</React.Fragment>
       )}
     </React.Fragment>
   )

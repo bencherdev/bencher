@@ -1,11 +1,11 @@
 import React from "react"
-import { Card, Content } from "react-bulma-components"
+import { Card, Content, Box } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faQuestion } from "@fortawesome/free-solid-svg-icons"
 
 import DecisionTable from "./decisiontable"
-import Table from "./variables/table"
+import Variable from "./variables/variable"
 
 const Decision = (props: {
   id: string
@@ -24,29 +24,31 @@ const Decision = (props: {
       </Card.Header>
       <Card.Content>
         <Content>
-          <DecisionTable
-            id={props.id}
-            value={props.value}
-            disabled={false}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-          />
+          <Box>
+            <DecisionTable
+              id={props.id}
+              value={props.value}
+              disabled={false}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+            />
+          </Box>
         </Content>
       </Card.Content>
       <Card.Footer />
       <Card.Content>
         <Content>
           {props?.value?.outputs?.map((variableId: string, index: number) => {
-            const table = props?.getVariable(variableId)
             return (
-              <Table
-                key={index}
-                id={table?.id}
-                value={table?.value}
-                disabled={true}
-                handleVariable={props.handleVariable}
-              />
+              <Box key={index}>
+                <Variable
+                  variable={props.getVariable(variableId)}
+                  disabled={{ settings: true, edit: true }}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
+                />
+              </Box>
             )
           })}
         </Content>

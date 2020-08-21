@@ -6,6 +6,7 @@ import {
   Content,
   Columns,
   Icon,
+  Box,
 } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -44,13 +45,14 @@ const Subflow = (props: {
               // variables that are passed into the Input for a Subflow
               // and variables that are set from the Input for a Subflow
               return (
-                <Argument
-                  key={index}
-                  variable={props.getVariable(variableId)}
-                  disabled={{ settings: false, edit: true }}
-                  handleVariable={props.handleVariable}
-                  getVariable={props.getVariable}
-                />
+                <Box key={index}>
+                  <Argument
+                    variable={props.getVariable(variableId)}
+                    disabled={{ settings: false, edit: true }}
+                    handleVariable={props.handleVariable}
+                    getVariable={props.getVariable}
+                  />
+                </Box>
               )
             })}
             <Button
@@ -75,13 +77,14 @@ const Subflow = (props: {
             </Content>
             {props?.value?.outputs?.map((variableId: string, index: number) => {
               return (
-                <Variable
-                  key={index}
-                  variable={props.getVariable(variableId)}
-                  disabled={{ settings: false, edit: true }}
-                  handleVariable={props.handleVariable}
-                  getVariable={props.getVariable}
-                />
+                <Box key={index}>
+                  <Variable
+                    variable={props.getVariable(variableId)}
+                    disabled={{ settings: false, edit: true }}
+                    handleVariable={props.handleVariable}
+                    getVariable={props.getVariable}
+                  />
+                </Box>
               )
             })}
             <Button

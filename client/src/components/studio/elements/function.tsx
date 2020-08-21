@@ -1,5 +1,5 @@
 import React from "react"
-import { Card, Heading, Button, Content, Columns } from "react-bulma-components"
+import { Card, Heading, Content, Columns, Box } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faEquals } from "@fortawesome/free-solid-svg-icons"
@@ -31,13 +31,14 @@ const Function = (props: {
             </Content>
             {props?.value?.inputs?.map((variableId: string, index: number) => {
               return (
-                <Argument
-                  key={index}
-                  variable={props?.getVariable(variableId)}
-                  disabled={{ settings: false, edit: true }}
-                  handleVariable={props.handleVariable}
-                  getVariable={props.getVariable}
-                />
+                <Box key={index}>
+                  <Argument
+                    variable={props?.getVariable(variableId)}
+                    disabled={{ settings: false, edit: true }}
+                    handleVariable={props.handleVariable}
+                    getVariable={props.getVariable}
+                  />
+                </Box>
               )
             })}
           </Columns.Column>
@@ -47,13 +48,14 @@ const Function = (props: {
             </Content>
             {props?.value?.outputs?.map((variableId: string, index: number) => {
               return (
-                <Variable
-                  key={index}
-                  variable={props?.getVariable(variableId)}
-                  disabled={{ settings: false, edit: true }}
-                  handleVariable={props.handleVariable}
-                  getVariable={props.getVariable}
-                />
+                <Box key={index}>
+                  <Variable
+                    variable={props?.getVariable(variableId)}
+                    disabled={{ settings: true, edit: true }}
+                    handleVariable={props.handleVariable}
+                    getVariable={props.getVariable}
+                  />
+                </Box>
               )
             })}
           </Columns.Column>
