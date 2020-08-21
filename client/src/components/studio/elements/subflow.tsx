@@ -2,15 +2,15 @@ import React, { useState } from "react"
 import {
   Card,
   Heading,
+  Icon,
   Button,
   Content,
   Columns,
-  Icon,
   Box,
 } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCircle, faPlus } from "@fortawesome/free-solid-svg-icons"
+import { faCircle, faCog, faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Argument from "./argument"
 import Variable from "./variables/variable"
@@ -33,6 +33,11 @@ const Subflow = (props: {
           <FontAwesomeIcon icon={faCircle} size="2x" />
         </Card.Header.Icon>
         <Card.Header.Title>{subflow?.name}</Card.Header.Title>
+        <Card.Header.Icon>
+          <Icon className="has-text-primary">
+            <FontAwesomeIcon icon={faCog} size="2x" />
+          </Icon>
+        </Card.Header.Icon>
       </Card.Header>
       <Card.Content>
         <Columns centered={true}>

@@ -1,8 +1,15 @@
 import React from "react"
-import { Card, Heading, Content, Columns, Box } from "react-bulma-components"
+import {
+  Card,
+  Heading,
+  Icon,
+  Content,
+  Columns,
+  Box,
+} from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faEquals } from "@fortawesome/free-solid-svg-icons"
+import { faEquals, faCog } from "@fortawesome/free-solid-svg-icons"
 
 import Argument from "./argument"
 import Variable from "./variables/variable"
@@ -22,6 +29,11 @@ const Function = (props: {
           <FontAwesomeIcon icon={faEquals} size="2x" />
         </Card.Header.Icon>
         <Card.Header.Title>{props?.value?.name}</Card.Header.Title>
+        <Card.Header.Icon>
+          <Icon className="has-text-primary">
+            <FontAwesomeIcon icon={faCog} size="2x" />
+          </Icon>
+        </Card.Header.Icon>
       </Card.Header>
       <Card.Content>
         <Columns centered={true}>

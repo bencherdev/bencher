@@ -40,7 +40,7 @@ const flows = {
         // It should always be last
         output: "e1",
         // The order of elements in the Subflow
-        order: ["e0", "e3", "e5", "e8", "e11", "e1"],
+        order: ["e0", "e3", "e5", "e8", "e11", "e13", "e1"],
         // Each Element is its own object
         // TODO break out Elements and variables
         elements: {
@@ -57,7 +57,11 @@ const flows = {
             // The value of the Element
             // each Element type may have different keys here
             value: {
-              inputs: ["v2", "v7"],
+              inputs: [
+                "v2",
+                "v7",
+                // "v12", TODO add back once Table format changed
+              ],
             },
           },
           e1: {
@@ -149,8 +153,26 @@ const flows = {
               id: "v10",
             },
           },
+          e13: {
+            id: "e13",
+            type: "chart",
+            value: {
+              id: "v12",
+              config: {
+                // TODO add the D3 config options here
+                // And actually get the data from the Table!
+                rows: [
+                  { genre: "Alternative", revenue: 5 },
+                  { genre: "Classical", revenue: 3 },
+                  { genre: "Disco", revenue: 7 },
+                  { genre: "R&B", revenue: 9 },
+                  { genre: "Rock", revenue: 1 },
+                ],
+              },
+            },
+          },
         },
-        declarations: ["v2", "v7", "v4", "v6", "v9", "v10"],
+        declarations: ["v2", "v7", "v12", "v4", "v6", "v9", "v10"],
         variables: {
           v2: {
             id: "v2",
@@ -230,7 +252,32 @@ const flows = {
               headers: {
                 v10h1: { id: "v10h1", name: "Pi", type: "Number" },
               },
+              // TODO move this to a single row
+              // and have the Row variable handle wrapping it
               rows: [[3.14159]],
+            },
+          },
+          v12: {
+            id: "v12",
+            type: "table",
+            value: {
+              name: "The Table to be Charted",
+              columns: ["v12h1"],
+              headers: {
+                v12h1: { id: "v12h1", name: "Genre", type: "String" },
+                v12h2: { id: "v12h2", name: "Revenue", type: "Number" },
+              },
+              // TODO investigate moving over to this data format for Tables
+              // it would make it a lot easier to handle the arbitrary movement of rows.
+              // but it would make handling and storing the data a lot more expensive
+              // though also much easier to reason about, especially for Decision Tables
+              rows: [
+                { v12h1: "Alternative", v12h2: 5 },
+                { v12h1: "Classical", v12h2: 3 },
+                { v12h1: "Disco", v12h2: 7 },
+                { v12h1: "R&B", v12h2: 9 },
+                { v12h1: "Rock", v12h2: -1 },
+              ],
             },
           },
         },

@@ -6,6 +6,7 @@ import Row from "./row"
 import Decision from "./decision"
 import Function from "./function"
 import Subflow from "./subflow"
+import Chart from "./chart"
 import Output from "./output"
 
 const Element = (props: {
@@ -71,6 +72,16 @@ const Element = (props: {
             handleVariable={props.handleVariable}
             getVariable={props.getVariable}
             getSubflow={props.getSubflow}
+          />
+        )
+      case "chart":
+        return (
+          <Chart
+            id={props.element.id}
+            value={props.element.value}
+            handleElement={props.handleElement}
+            handleVariable={props.handleVariable}
+            getVariable={props.getVariable}
           />
         )
       case "output":

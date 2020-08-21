@@ -1,8 +1,8 @@
 import React from "react"
-import { Card, Columns, Box, Button, Icon } from "react-bulma-components"
+import { Card, Icon, Columns, Box, Button } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faArrowLeft, faPlus } from "@fortawesome/free-solid-svg-icons"
+import { faArrowLeft, faCog, faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Variable from "./variables/variable"
 
@@ -24,6 +24,11 @@ const Output = (props: {
         <Card.Header.Title>
           Output from {props?.getSubflow(props?.context?.current)?.name} Subflow
         </Card.Header.Title>
+        <Card.Header.Icon>
+          <Icon className="has-text-primary">
+            <FontAwesomeIcon icon={faCog} size="2x" />
+          </Icon>
+        </Card.Header.Icon>
       </Card.Header>
       <Card.Content>
         <Columns centered={true} breakpoint="mobile">

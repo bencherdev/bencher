@@ -5,8 +5,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCog } from "@fortawesome/free-solid-svg-icons"
 
 import Table from "./table"
-import Function from "./function"
 import Row from "./row"
+import Function from "./function"
+import Chart from "./chart/chart"
 
 const Variable = (props: {
   variable: any
@@ -16,15 +17,6 @@ const Variable = (props: {
 }) => {
   function variableSwitch() {
     switch (props.variable.type) {
-      case "row":
-        return (
-          <Row
-            id={props.variable.id}
-            value={props.variable.value}
-            disabled={props.disabled?.edit}
-            handleVariable={props.handleVariable}
-          />
-        )
       case "table":
         return (
           <Table
@@ -34,9 +26,27 @@ const Variable = (props: {
             handleVariable={props.handleVariable}
           />
         )
+      case "row":
+        return (
+          <Row
+            id={props.variable.id}
+            value={props.variable.value}
+            disabled={props.disabled?.edit}
+            handleVariable={props.handleVariable}
+          />
+        )
       case "function":
         return (
           <Function
+            id={props.variable.id}
+            value={props.variable.value}
+            disabled={props.disabled?.edit}
+            handleVariable={props.handleVariable}
+          />
+        )
+      case "chart":
+        return (
+          <Chart
             id={props.variable.id}
             value={props.variable.value}
             disabled={props.disabled?.edit}

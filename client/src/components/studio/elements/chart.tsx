@@ -2,25 +2,25 @@ import React from "react"
 import { Card, Content, Box, Button, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faLock, faCog } from "@fortawesome/free-solid-svg-icons"
+import { faChartBar, faCog } from "@fortawesome/free-solid-svg-icons"
 
-import Table from "./variables/table"
+import Chart from "./variables/chart/chart"
 
-const Row = (props: {
+const ChartElement = (props: {
   id: string
   value: any
   handleElement: Function
   handleVariable: Function
   getVariable: Function
 }) => {
-  const row = props.getVariable(props?.value?.id)
+  const table = props.getVariable(props?.value?.id)
   return (
     <Card>
       <Card.Header>
         <Card.Header.Icon className="has-text-primary">
-          <FontAwesomeIcon icon={faLock} size="2x" />
+          <FontAwesomeIcon icon={faChartBar} size="2x" />
         </Card.Header.Icon>
-        <Card.Header.Title>{row?.value?.name}</Card.Header.Title>
+        <Card.Header.Title>{table?.value?.name}</Card.Header.Title>
         <Card.Header.Icon>
           <Icon className="has-text-primary">
             <FontAwesomeIcon icon={faCog} size="2x" />
@@ -30,9 +30,10 @@ const Row = (props: {
       <Card.Content>
         <Content>
           <Box>
-            <Table
-              id={row?.id}
-              value={row?.value}
+            {/* TODO have this actually pull from the Table */}
+            <Chart
+              id={table?.id}
+              value={props?.value?.config}
               disabled={false}
               handleVariable={props.handleVariable}
             />
@@ -60,4 +61,4 @@ const Row = (props: {
   )
 }
 
-export default Row
+export default ChartElement

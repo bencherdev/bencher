@@ -22,6 +22,8 @@ const Argument = (props: {
       // faTable
       case "function":
       // faEquals
+      case "chart":
+      // faChartBar
       default:
         return (
           <React.Fragment>

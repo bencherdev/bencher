@@ -2,7 +2,7 @@ import React from "react"
 import { Card, Button, Columns, Icon, Box } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faArrowRight, faPlus } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faCog, faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Variable from "./variables/variable"
 
@@ -24,6 +24,11 @@ const Input = (props: {
         <Card.Header.Title>
           Input to {props?.getSubflow(props?.context?.current)?.name} Subflow
         </Card.Header.Title>
+        <Card.Header.Icon>
+          <Icon className="has-text-primary">
+            <FontAwesomeIcon icon={faCog} size="2x" />
+          </Icon>
+        </Card.Header.Icon>
       </Card.Header>
       <Card.Content>
         <Columns centered={true}>

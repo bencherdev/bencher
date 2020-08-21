@@ -1,8 +1,8 @@
 import React from "react"
-import { Card, Content, Box } from "react-bulma-components"
+import { Card, Icon, Content, Box } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faQuestion } from "@fortawesome/free-solid-svg-icons"
+import { faQuestion, faCog } from "@fortawesome/free-solid-svg-icons"
 
 import DecisionTable from "./decisiontable"
 import Variable from "./variables/variable"
@@ -21,6 +21,11 @@ const Decision = (props: {
           <FontAwesomeIcon icon={faQuestion} size="2x" />
         </Card.Header.Icon>
         <Card.Header.Title>{props?.value?.name}</Card.Header.Title>
+        <Card.Header.Icon>
+          <Icon className="has-text-primary">
+            <FontAwesomeIcon icon={faCog} size="2x" />
+          </Icon>
+        </Card.Header.Icon>
       </Card.Header>
       <Card.Content>
         <Content>
