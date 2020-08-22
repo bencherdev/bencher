@@ -1,7 +1,9 @@
 import React, { useState } from "react"
 import { Link } from "@reach/router"
+import { Section, Columns } from "react-bulma-components"
 
 import SEO from "../../utils/seo"
+import Menu from "./menu/Menu"
 import Flow from "./Flow"
 
 import getConfig from "../utils/getConfig"
@@ -16,14 +18,20 @@ const Studio = () => {
   }
 
   return (
-    <div>
+    <Section>
       <SEO title="TableFlow Studio" />
-      <h1>TableFlow Studio</h1>
-      {config?.flows?.map((id: any) => {
-        return <Flow key={id} id={id} />
-      })}
-      <Link to="/studio/flow/new">New Flow</Link>
-    </div>
+      <Columns className="is-reverse-mobile">
+        <Columns.Column size="one-fifth">
+          <Menu path="/studio" />
+        </Columns.Column>
+        <Columns.Column>
+          {config?.flows?.map((id: any) => {
+            return <Flow key={id} id={id} />
+          })}
+          <Link to="/studio/flow/new">New Flow</Link>
+        </Columns.Column>
+      </Columns>
+    </Section>
   )
 }
 

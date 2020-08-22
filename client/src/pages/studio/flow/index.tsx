@@ -6,6 +6,6 @@ const Notebook = Loadable(() =>
   import("../../../components/studio/notebook/Notebook")
 )
 
-const FlowModelerPage = () => <Notebook />
+const NotebookPage = () => <Notebook />
 
-export default FlowModelerPage
+export default NotebookPage

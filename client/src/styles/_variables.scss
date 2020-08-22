@@ -34,3 +34,10 @@ $badge-z-index: 5 !default;
 @import "~bulma/sass/components/breadcrumb.sass";
 @import "~bulma/sass/components/menu.sass";
 @import "~bulma/sass/components/pagination.sass";
+
+.columns.is-reverse-mobile {
+  @include mobile {
+    flex-direction: column-reverse;
+    display: flex;
+  }
+}

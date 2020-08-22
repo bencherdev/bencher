@@ -1,6 +1,8 @@
 import React from "react"
 import { Link } from "@reach/router"
 
+import { Columns } from "react-bulma-components"
+
 import getFlow from "../utils/getFlow"
 
 const Flow = (props: { id: string }) => {

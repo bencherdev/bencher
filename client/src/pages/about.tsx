@@ -1,7 +1,7 @@
 import React from "react"
 
 import SEO from "../components/utils/seo"
-import AboutPage from "../components/site/pages/aboutpage"
+import AboutPage from "../components/site/pages/AboutPage"
 
 const About = () => (
   <React.Fragment>
