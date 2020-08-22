@@ -8,7 +8,8 @@ const FunctionSignature = (props: {
   disabled: boolean
   handleVariable: Function
 }) => {
-  // TODO iterate over all signatures for the function's inputs
+  // TODO iterate over all signatures for the Function's
+  // inputs and outputs as two sides of a its Signature Table
   return (
     <TableSignature
       id={props.id}
