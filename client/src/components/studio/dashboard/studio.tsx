@@ -1,5 +1,4 @@
 import React, { useState } from "react"
-import { Link } from "@reach/router"
 import { Section, Columns } from "react-bulma-components"
 
 import SEO from "../../utils/seo"
@@ -28,7 +27,6 @@ const Studio = () => {
           {config?.flows?.map((id: any) => {
             return <Flow key={id} id={id} />
           })}
-          <Link to="/studio/flow/new">New Flow</Link>
         </Columns.Column>
       </Columns>
     </Section>

@@ -6,9 +6,9 @@ import { Container, Columns } from "react-bulma-components"
 import Toolbar from "./Toolbar"
 import Page from "./Page"
 
-import InterpreterWorker from "../../../interpreter/interpreter"
 import SEO from "../../utils/seo"
 import getFlow from "../utils/getFlow"
+import InterpreterWorker from "../../../interpreter/interpreter"
 
 const Notebook = () => {
   const [flow, setFlow] = useState({
@@ -121,13 +121,13 @@ const Notebook = () => {
         }}
       >
         <Columns.Column size={12}>
-          <Toolbar />
+          <Toolbar flowId={flow?.id} />
         </Columns.Column>
         <Columns.Column size={12}>
           <hr />
         </Columns.Column>
         <Columns.Column narrow={true} size={12}>
-          {redirect && navigate("/studio/flow/new")}
+          {redirect && navigate("/studio/flows/new")}
           <Page
             subflow={getSubflow(subflowId)}
             // TODO create a React Context for handleElement and getSubflow

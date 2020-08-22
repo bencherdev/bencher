@@ -7,6 +7,7 @@ import SEO from "../../components/utils/seo"
 const StudioPage = () => (
   <React.Fragment>
     <SEO title="Studio" />
+    {/* TODO build out studio dashboard page */}
     {navigate("/studio/flows")}
   </React.Fragment>
 )

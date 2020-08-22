@@ -7,11 +7,11 @@ const Studio = Loadable(() =>
   import("../../../components/studio/dashboard/Studio")
 )
 
-const StudioPage = () => (
+const FlowsPage = () => (
   <React.Fragment>
     <SEO title="Flows" />
     <Studio />
   </React.Fragment>
 )
 
-export default StudioPage
+export default FlowsPage

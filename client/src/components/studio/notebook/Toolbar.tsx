@@ -16,7 +16,7 @@ import { faCircle } from "@fortawesome/free-regular-svg-icons"
 
 import Breadcrumb from "./Breadcrumb"
 
-const Toolbar = (props: any) => (
+const Toolbar = (props: { flowId: string }) => (
   <Columns breakpoint="mobile" className="is-vcentered">
     <Columns.Column className="is-gapless is-narrow">
       <Button
@@ -37,7 +37,11 @@ const Toolbar = (props: any) => (
         color="primary"
         size="medium"
         inverted={true}
-        title="View Flow Output"
+        title="View Flow App"
+        onClick={(event: any) => {
+          event.preventDefault()
+          navigate(`/flow/#${props.flowId}`)
+        }}
       >
         <FontAwesomeIcon icon={faCircle} size="2x" />
       </Button>
