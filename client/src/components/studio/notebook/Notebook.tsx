@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react"
 import { navigate } from "gatsby"
 import { cloneDeep } from "lodash/lang"
-import { Columns } from "react-bulma-components"
+import { Container, Columns } from "react-bulma-components"
 
+import Toolbar from "./Toolbar"
 import Page from "./Page"
 
 import InterpreterWorker from "../../../interpreter/interpreter"
@@ -356,6 +357,7 @@ const Notebook = () => {
   const [subflowId, setSubflowId] = useState("")
   const [redirect, setRedirect] = useState(false)
   const [interpreter, setInterpreter] = useState()
+  const scale = 0.8
 
   const date = Date()
 
@@ -442,9 +444,25 @@ const Notebook = () => {
   }, [])
 
   return (
-    <React.Fragment>
+    <Container fluid={true} breakpoint="widescreen">
       {flow?.name && <SEO title={flow?.name} />}
-      <Columns centered={true} gapless={true}>
+      <Columns
+        centered={true}
+        gapless={true}
+        style={{
+          // https://stackoverflow.com/questions/10858523/css-transform-with-element-resizing
+          transform: `scale(${scale})`,
+          margin: `-550px calc((-550px * (1 - ${scale})) / 2) calc(-550px * (1 - ${scale}))`,
+          zIndex: "-10",
+          position: "static",
+        }}
+      >
+        <Columns.Column size={12}>
+          <Toolbar />
+        </Columns.Column>
+        <Columns.Column size={12}>
+          <hr />
+        </Columns.Column>
         <Columns.Column narrow={true} size={12}>
           {redirect && navigate("/studio/flow/new")}
           <Page
@@ -453,10 +471,10 @@ const Notebook = () => {
             handleElement={handleElement}
             handleVariable={handleVariable}
             getSubflow={getSubflow}
-          ></Page>
+          />
         </Columns.Column>
       </Columns>
-    </React.Fragment>
+    </Container>
   )
 }
 

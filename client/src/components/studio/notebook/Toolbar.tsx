@@ -1,4 +1,5 @@
 import React from "react"
+import { navigate } from "gatsby"
 import { Columns, Button } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -9,11 +10,28 @@ import {
   faSearchPlus,
   faArrowCircleDown,
   faCloudUploadAlt,
+  faChevronLeft,
 } from "@fortawesome/free-solid-svg-icons"
 import { faCircle } from "@fortawesome/free-regular-svg-icons"
 
+import Breadcrumb from "./Breadcrumb"
+
 const Toolbar = (props: any) => (
-  <Columns breakpoint="mobile">
+  <Columns breakpoint="mobile" className="is-vcentered">
+    <Columns.Column className="is-gapless is-narrow">
+      <Button
+        color="primary"
+        size="medium"
+        inverted={true}
+        title="Back to Studio"
+        onClick={(event: any) => {
+          event.preventDefault()
+          navigate("/studio")
+        }}
+      >
+        <FontAwesomeIcon icon={faChevronLeft} size="1x" />
+      </Button>
+    </Columns.Column>
     <Columns.Column className="is-gapless is-narrow">
       <Button
         color="primary"
@@ -47,6 +65,9 @@ const Toolbar = (props: any) => (
       <Button color="primary" size="medium" inverted={true} title="Cloud Sync">
         <FontAwesomeIcon icon={faCloudUploadAlt} size="1x" />
       </Button>
+    </Columns.Column>
+    <Columns.Column className="is-gapless is-narrow">
+      <Breadcrumb />
     </Columns.Column>
   </Columns>
 )
