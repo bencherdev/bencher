@@ -1,4 +1,4 @@
-import flows from "../../../../flows/flows"
+import flows from "../data/flows"
 
 function getFlow(id: string): any {
   return flows[id]

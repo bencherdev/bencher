@@ -1,11 +1,14 @@
 import React from "react"
 import { Link } from "@reach/router"
 
-const Flow = (props: { flow: string }) => {
+import getFlow from "../utils/getFlow"
+
+const Flow = (props: { id: string }) => {
+  const flow = getFlow(props.id)
   return (
     <p>
-      <Link to={"/studio/flow/#" + props.flow.toLowerCase()}>
-        Flow {props.flow}
+      <Link to={"/studio/flow/#" + flow?.id?.toLowerCase()}>
+        {flow?.name} Flow
       </Link>
     </p>
   )

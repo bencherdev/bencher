@@ -324,8 +324,8 @@ const flows = {
       },
     },
   },
-  b: null,
-  c: null,
+  b: {},
+  c: {},
 }
 
 export default flows

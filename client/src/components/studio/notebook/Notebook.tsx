@@ -8,7 +8,7 @@ import Page from "./Page"
 
 import InterpreterWorker from "../../../interpreter/interpreter"
 import SEO from "../../utils/seo"
-import getFlow from "./utils/getFlow"
+import getFlow from "../utils/getFlow"
 
 const Notebook = () => {
   const [flow, setFlow] = useState({
