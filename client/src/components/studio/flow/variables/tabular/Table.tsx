@@ -49,15 +49,15 @@ const IOTable = (props: {
 
   function handleCell(
     event: ChangeEvent<HTMLInputElement>,
-    row: number,
-    column: number
+    rowIndex: number,
+    columnId: string
   ) {
     if (
-      props.value?.rows?.[row]?.[column] ||
-      props.value?.rows?.[row]?.[column] === ""
+      props.value?.rows?.[rowIndex]?.[columnId] ||
+      props.value?.rows?.[rowIndex]?.[columnId] === ""
     ) {
       let table = cloneDeep(props.value)
-      table.rows[row][column] = sanitize.toText(event.target.value)
+      table.rows[rowIndex][columnId] = sanitize.toText(event.target.value)
       props.handleVariable(props.id, table)
     }
   }
@@ -118,21 +118,23 @@ const IOTable = (props: {
           {props.value?.rows?.map((row: any, rowIndex: number) => {
             return (
               <tr key={rowIndex}>
-                {row.map((cell: string, columnIndex: number) => {
-                  return (
-                    <ContentEditable
-                      key={rowIndex + ":" + columnIndex}
-                      html={sanitize.toHtml(cell?.toString())}
-                      disabled={props.disabled}
-                      onChange={(event: any) =>
-                        handleCell(event, rowIndex, columnIndex)
-                      }
-                      tagName="td"
-                      // TODO change color to red if there is an input error
-                      style={{ outlineColor: "#009933" }}
-                    />
-                  )
-                })}
+                {props.value?.columns?.map(
+                  (columnId: string, columnIndex: number) => {
+                    return (
+                      <ContentEditable
+                        key={rowIndex + ":" + columnIndex}
+                        html={sanitize.toHtml(row?.[columnId]?.toString())}
+                        disabled={props.disabled}
+                        onChange={(event: any) =>
+                          handleCell(event, rowIndex, columnId)
+                        }
+                        tagName="td"
+                        // TODO change color to red if there is an input error
+                        style={{ outlineColor: "#009933" }}
+                      />
+                    )
+                  }
+                )}
               </tr>
             )
           })}

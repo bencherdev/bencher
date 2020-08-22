@@ -111,7 +111,12 @@ const flows = {
               // A `?` is used to trigger the creation of a Decision Subflow for a case's output
               // If a value doesn't match any of the cases,
               // then the zero value for the type will be placed in the output table
-              rows: [{ inputs: ["-"], outputs: ["input_table.value^2"] }],
+              rows: [
+                {
+                  inputs: { e3h1: "-" },
+                  outputs: { e3h2: "input_table.value^2" },
+                },
+              ],
               // Sum, Minimum, Maximum, Count, and Average functions
               // should also be available for COLUMNS. How though?
             },
@@ -150,14 +155,6 @@ const flows = {
               id: "v12",
               config: {
                 // TODO add the D3 config options here
-                // And actually get the data from the Table!
-                rows: [
-                  { genre: "Alternative", revenue: 5 },
-                  { genre: "Classical", revenue: 3 },
-                  { genre: "Disco", revenue: 7 },
-                  { genre: "R&B", revenue: 9 },
-                  { genre: "Rock", revenue: 1 },
-                ],
               },
             },
           },
@@ -169,16 +166,11 @@ const flows = {
             type: "table",
             value: {
               name: "Input Table",
-              columns: ["v2h1", "v2h1", "v2h1", "v2h1", "v2h1", "v2h1"],
+              columns: ["v2h1"],
               headers: {
                 v2h1: { id: "v2h1", name: "Value", type: "Number" },
               },
-              rows: [
-                [5, 4, 3, 2, 1, 0],
-                [5, 4, 3, 2, 1, 0],
-                [5, 4, 3, 2, 1, 0],
-                [5, 4, 3, 2, 1, 0],
-              ],
+              rows: [{ v2h1: 5 }],
             },
           },
           v4: {
@@ -190,7 +182,7 @@ const flows = {
               headers: {
                 v4h1: { id: "v4h1", name: "Squared Value", type: "Number" },
               },
-              rows: [[25]],
+              rows: [{ v4h1: 25 }],
             },
           },
           v6: {
@@ -206,7 +198,7 @@ const flows = {
                   type: "Number",
                 },
               },
-              rows: [[0]],
+              rows: [{ v6h1: 0 }],
             },
           },
           v7: {
@@ -218,7 +210,7 @@ const flows = {
               headers: {
                 v7h1: { id: "v7h1", name: "Life", type: "String" },
               },
-              rows: [["What is the meaning of life?"]],
+              rows: [{ v7h1: "What is the meaning of life?" }],
             },
           },
           v9: {
@@ -230,7 +222,7 @@ const flows = {
               headers: {
                 v9h1: { id: "v9h1", name: "Answer", type: "Number" },
               },
-              rows: [[42]],
+              rows: [{ v9h1: 42 }],
             },
           },
           v10: {
@@ -242,9 +234,7 @@ const flows = {
               headers: {
                 v10h1: { id: "v10h1", name: "Pi", type: "Number" },
               },
-              // TODO move this to a single row
-              // and have the Row variable handle wrapping it
-              rows: [[3.14159]],
+              rows: [{ v10h1: 3.14159 }],
             },
           },
           v12: {
@@ -257,16 +247,18 @@ const flows = {
                 v12h1: { id: "v12h1", name: "Genre", type: "String" },
                 v12h2: { id: "v12h2", name: "Revenue", type: "Number" },
               },
-              // TODO investigate moving over to this data format for Tables
-              // it would make it a lot easier to handle the arbitrary movement of rows.
-              // but it would make handling and storing the data a lot more expensive
-              // though also much easier to reason about, especially for Decision Tables
               rows: [
-                { v12h1: "Alternative", v12h2: 5 },
-                { v12h1: "Classical", v12h2: 3 },
-                { v12h1: "Disco", v12h2: 7 },
-                { v12h1: "R&B", v12h2: 9 },
-                { v12h1: "Rock", v12h2: -1 },
+                { genre: "Alt", revenue: 5 },
+                { genre: "Classical", revenue: 3 },
+                { genre: "Disco", revenue: 7 },
+                { genre: "R&B", revenue: 9 },
+                { genre: "Rock", revenue: 1 },
+                // TODO use real Table once Chart has been updated
+                // { v12h1: "Alt", v12h2: 5 },
+                // { v12h1: "Classical", v12h2: 3 },
+                // { v12h1: "Disco", v12h2: 7 },
+                // { v12h1: "R&B", v12h2: 9 },
+                // { v12h1: "Rock", v12h2: 1 },
               ],
             },
           },
@@ -313,7 +305,7 @@ const flows = {
               headers: {
                 a2v3h1: { id: "a2v3h1", name: "Life", type: "String" },
               },
-              rows: [["What is the meaning of life?"]],
+              rows: [{ a2v3h1: "What is the meaning of life?" }],
             },
           },
           a2v4: {
@@ -325,7 +317,7 @@ const flows = {
               headers: {
                 a2v4h1: { id: "a2v4h1", name: "Answer", type: "Number" },
               },
-              rows: [[42]],
+              rows: [{ a2v4h1: 42 }],
             },
           },
         },

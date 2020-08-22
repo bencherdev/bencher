@@ -97,16 +97,16 @@ const DecisionTable = (props: {
 
   function handleCell(
     event: ChangeEvent<HTMLInputElement>,
-    row: number,
-    column: number,
+    rowIndex: number,
+    columnId: string,
     io: string
   ) {
     if (
-      props.value?.rows?.[row]?.[io]?.[column] ||
-      props.value?.rows?.[row]?.[io]?.[column] === ""
+      props.value?.rows?.[rowIndex]?.[io]?.[columnId] ||
+      props.value?.rows?.[rowIndex]?.[io]?.[columnId] === ""
     ) {
       let table = cloneDeep(props.value)
-      table.rows[row][io][column] = sanitize.toText(event.target.value)
+      table.rows[rowIndex][io][columnId] = sanitize.toText(event.target.value)
       props.handleElement(props.id, table)
     }
   }
@@ -305,36 +305,44 @@ const DecisionTable = (props: {
           {props.value?.rows?.map((row: any, rowIndex: number) => {
             return (
               <tr key={rowIndex}>
-                {row?.inputs?.map((cell: string, columnIndex: number) => {
-                  return (
-                    <ContentEditable
-                      key={rowIndex + ":" + columnIndex}
-                      html={sanitize.toHtml(cell?.toString())}
-                      disabled={props.disabled}
-                      onChange={(event: any) =>
-                        handleCell(event, rowIndex, columnIndex, "inputs")
-                      }
-                      tagName="td"
-                      // TODO change color to red if there is an input error
-                      style={{ outlineColor: "#009933" }}
-                    />
-                  )
-                })}
-                {row.outputs?.map((cell: string, columnIndex: number) => {
-                  return (
-                    <ContentEditable
-                      key={rowIndex + ":" + columnIndex}
-                      html={sanitize.toHtml(cell?.toString())}
-                      disabled={props.disabled}
-                      onChange={(event: any) =>
-                        handleCell(event, rowIndex, columnIndex, "outputs")
-                      }
-                      tagName="td"
-                      // TODO change color to red if there is an input error
-                      style={{ outlineColor: "#009933" }}
-                    />
-                  )
-                })}
+                {props.value?.columns?.inputs?.map(
+                  (columnId: string, columnIndex: number) => {
+                    return (
+                      <ContentEditable
+                        key={rowIndex + ":" + columnIndex}
+                        html={sanitize.toHtml(
+                          row?.inputs?.[columnId]?.toString()
+                        )}
+                        disabled={props.disabled}
+                        onChange={(event: any) =>
+                          handleCell(event, rowIndex, columnId, "inputs")
+                        }
+                        tagName="td"
+                        // TODO change color to red if there is an input error
+                        style={{ outlineColor: "#009933" }}
+                      />
+                    )
+                  }
+                )}
+                {props.value?.columns?.outputs?.map(
+                  (columnId: string, columnIndex: number) => {
+                    return (
+                      <ContentEditable
+                        key={rowIndex + ":" + columnIndex}
+                        html={sanitize.toHtml(
+                          row?.outputs?.[columnId]?.toString()
+                        )}
+                        disabled={props.disabled}
+                        onChange={(event: any) =>
+                          handleCell(event, rowIndex, columnId, "outputs")
+                        }
+                        tagName="td"
+                        // TODO change color to red if there is an input error
+                        style={{ outlineColor: "#009933" }}
+                      />
+                    )
+                  }
+                )}
               </tr>
             )
           })}

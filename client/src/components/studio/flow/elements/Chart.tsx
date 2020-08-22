@@ -30,10 +30,9 @@ const ChartElement = (props: {
       <Card.Content>
         <Content>
           <Box>
-            {/* TODO have this actually pull from the Table */}
             <Chart
               id={table?.id}
-              value={props?.value?.config}
+              value={table?.value}
               disabled={false}
               handleVariable={props.handleVariable}
             />
