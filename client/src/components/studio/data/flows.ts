@@ -10,6 +10,19 @@ const flows = {
     // A bascic description of the Flow
     description:
       "A kitchen sink example of all TableFlow Elements doing very basic operations. Eventually this will turn into the foundation for the Tour of TableFlow",
+    // A list of UUIDs for the collaborators for the Flow
+    collaborators: ["u1"],
+    // A list of UUIDs for the dependency Flows used in alphanumeric order
+    flows: ["b"],
+    // A map of dependency Flows, includes semver, timestamp, and checksum
+    lock: {
+      b: {
+        id: "b",
+        version: "v0.0.1",
+        timestamp: "20200810221718",
+        sum: "G0oB1YgO0k",
+      },
+    },
     // A map of all of the Subflows within a Flow
     subflows: {
       // A map of all Subflows
@@ -121,7 +134,8 @@ const flows = {
                 },
               ],
               // Sum, Minimum, Maximum, Count, and Average functions
-              // should also be available for COLUMNS. How though?
+              // These functions will be available when the output type is a Locked Row only.
+              // This helps to solve the cross-row/columnar problem.
             },
           },
           e5: {
@@ -129,7 +143,7 @@ const flows = {
             type: "function",
             value: {
               // TODO make Function element actually link to another Flow
-              id: "",
+              id: "b",
               name: "Sum",
               inputs: ["v4", ""],
               outputs: ["v6"],
@@ -327,8 +341,123 @@ const flows = {
       },
     },
   },
-  b: {},
-  c: {},
+  b: {
+    id: "b",
+    main: "b1",
+    name: "Sum",
+    description:
+      "A really basic wrapper over addition to test out how Functions should work.",
+    collaborators: ["u2"],
+    flows: [],
+    lock: {},
+    subflows: {
+      b1: {
+        id: "b1",
+        name: "Main",
+        parent: "",
+        input: "b1e0",
+        output: "b1e1",
+        order: ["b1e0", "b1e4", "b1e1"],
+        elements: {
+          b1e0: {
+            id: "b1e0",
+            type: "input",
+            value: {
+              inputs: ["b1v2", "b1v3"],
+            },
+          },
+          b1e1: {
+            id: "b1e1",
+            type: "output",
+            value: {
+              outputs: ["b1v5"],
+            },
+          },
+          b1e4: {
+            id: "b1e4",
+            type: "decision",
+            value: {
+              name: "Sum Formula",
+              inputs: ["b1v2", "b1v3"],
+              outputs: ["b1v5"],
+              columns: {
+                inputs: ["b1e4h1", "b1e4h2"],
+                outputs: ["b1e4h3"],
+              },
+              headers: {
+                inputs: {
+                  b1e4h1: {
+                    id: "b1e4h1",
+                    table: "b1v2",
+                    column: "b1v2h1",
+                    conditions: "=",
+                  },
+                  b1e4h2: {
+                    id: "b1e4h2",
+                    table: "b1v3",
+                    column: "b1v3h1",
+                    conditions: "=",
+                  },
+                },
+                outputs: {
+                  b1e4h3: {
+                    id: "b1e4h3",
+                    table: "b1v5",
+                    column: "b1v5h1",
+                  },
+                },
+              },
+              rows: [
+                {
+                  inputs: { b1e4h1: "*", b1e4h2: "*" },
+                  outputs: { b1e4h3: "left_side.left + right_side.right" },
+                },
+              ],
+            },
+          },
+        },
+        declarations: ["b1v2", "b1v3", "b1v5"],
+        variables: {
+          b1v2: {
+            id: "b1v2",
+            type: "table",
+            value: {
+              name: "Left Side",
+              columns: ["b1v2h1"],
+              headers: {
+                b1v2h1: { id: "b1v2h1", name: "Left", type: "Number" },
+              },
+              rows: [{ b1v2h1: 0 }],
+            },
+          },
+          b1v3: {
+            id: "b1v3",
+            type: "table",
+            value: {
+              name: "Right Side",
+              columns: ["b1v3h1"],
+              headers: {
+                b1v3h1: { id: "b1v3h1", name: "Right", type: "Number" },
+              },
+              rows: [{ b1v3h1: 0 }],
+            },
+          },
+          b1v5: {
+            id: "b1v5",
+            type: "table",
+            value: {
+              name: "Sum Table",
+              columns: ["b1v5h1"],
+              headers: {
+                b1v5h1: { id: "b1v5h1", name: "Sum", type: "Number" },
+              },
+              rows: [{ b1v5h1: 0 }],
+            },
+          },
+        },
+      },
+    },
+  },
 }
 
 export default flows
