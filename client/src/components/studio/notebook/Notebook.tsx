@@ -107,37 +107,37 @@ const Notebook = () => {
   }, [])
 
   return (
-    <Container fluid={true} breakpoint="widescreen">
-      {flow?.name && <SEO title={flow?.name} />}
-      <Columns
-        centered={true}
-        gapless={true}
-        style={{
-          // https://stackoverflow.com/questions/10858523/css-transform-with-element-resizing
-          transform: `scale(${scale})`,
-          margin: `calc(-675px * ${scale}) calc((-675px * (1 - ${scale})) / 2) calc(-675px * (1 - ${scale}))`,
-          zIndex: "-10",
-          position: "static",
-        }}
-      >
-        <Columns.Column size={12}>
-          <Toolbar flowId={flow?.id} />
-        </Columns.Column>
-        <Columns.Column size={12}>
-          <hr />
-        </Columns.Column>
-        <Columns.Column narrow={true} size={12}>
-          {redirect && navigate("/studio/flows/new")}
-          <Page
-            subflow={getSubflow(subflowId)}
-            // TODO create a React Context for handleElement and getSubflow
-            handleElement={handleElement}
-            handleVariable={handleVariable}
-            getSubflow={getSubflow}
-          />
-        </Columns.Column>
-      </Columns>
-    </Container>
+    <React.Fragment>
+      <br />
+      <Toolbar flowId={flow?.id} />
+      <hr />
+      <Container fluid={true} breakpoint="widescreen">
+        {flow?.name && <SEO title={flow?.name} />}
+        <Columns
+          centered={true}
+          gapless={true}
+          style={
+            {
+              // https://css-tricks.com/almanac/properties/t/transform/
+              // transform: `scale(${scale}) translate(0, -660px)`,
+              // https://stackoverflow.com/questions/10858523/css-transform-with-element-resizing
+              // margin: `calc(-675px * ${scale}) calc((-675px * (1 - ${scale})) / 2) calc(-675px * (1 - ${scale}))`,
+            }
+          }
+        >
+          <Columns.Column narrow={true} size={12}>
+            {redirect && navigate("/studio/flows/new")}
+            <Page
+              subflow={getSubflow(subflowId)}
+              // TODO create a React Context for handleElement and getSubflow
+              handleElement={handleElement}
+              handleVariable={handleVariable}
+              getSubflow={getSubflow}
+            />
+          </Columns.Column>
+        </Columns>
+      </Container>
+    </React.Fragment>
   )
 }
 

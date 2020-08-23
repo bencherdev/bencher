@@ -12,13 +12,14 @@ import {
   faCloudUploadAlt,
   faChevronLeft,
   faCog,
+  faHistory,
 } from "@fortawesome/free-solid-svg-icons"
 import { faCircle } from "@fortawesome/free-regular-svg-icons"
 
 import Breadcrumb from "./Breadcrumb"
 
 const Toolbar = (props: { flowId: string }) => (
-  <Columns breakpoint="mobile" className="is-vcentered">
+  <Columns breakpoint="mobile" className="is-vcentered" styles={{ zIndex: 10 }}>
     <Columns.Column className="is-gapless is-narrow">
       <Button
         color="primary"
@@ -64,7 +65,10 @@ const Toolbar = (props: { flowId: string }) => (
       </Button>
     </Columns.Column>
     <Columns.Column className="is-gapless is-narrow">
-      <Button color="primary" size="medium" inverted={true} title="Zoom Out">
+      <Button color="primary" size="medium" inverted={true} title="History">
+        <FontAwesomeIcon icon={faHistory} size="1x" />
+      </Button>
+      <Button color="primary" size="medium" inverted={true} title="Settings">
         <FontAwesomeIcon icon={faCog} size="1x" />
       </Button>
     </Columns.Column>
