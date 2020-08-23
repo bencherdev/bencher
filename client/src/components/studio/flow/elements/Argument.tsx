@@ -2,114 +2,64 @@ import React from "react"
 import { Button, Icon, Level, Heading } from "react-bulma-components"
 
 import Variable from "../variables/Variable"
-import TableSignature from "../variables/signatures/TableSignature"
+import TableSignature from "../signatures/TableSignature"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faTable, faArrowRight, faCog } from "@fortawesome/free-solid-svg-icons"
 
 const Argument = (props: {
+  parameter:
+    | undefined
+    | {
+        id: string
+        type: string
+        value: any
+      }
+  handleArgument: Function
   variable: any
   disabled: { settings: boolean; edit: boolean }
   handleVariable: Function
   getVariable: Function
 }) => {
   // TODO actually check things once Elements and Varibles are broken out
-  function argumentSwitch(variable: string) {
-    switch (variable) {
+  function signatureSwitch() {
+    console.log(props?.parameter?.type)
+    switch (props?.parameter?.type) {
       case "row":
-      // faLock
+        // faLock
+        return <></>
       case "table":
-      // faTable
-      case "function":
-      // faEquals
-      case "chart":
-      // faChartBar
-      default:
         return (
-          <React.Fragment>
-            <Level>
-              <Level.Side align="left">
-                <Level.Item>
-                  {/* TODO change color to red if there is an input error */}
-                  <span className="icon is-medium has-text-primary">
-                    <FontAwesomeIcon
-                      // TODO make this a more advanced switch statement
-                      icon={faTable}
-                      size="2x"
-                    />
-                  </span>
-                </Level.Item>
-              </Level.Side>
-              <br />
-              <Level.Side align="center">
-                <Level.Item>
-                  <Heading size={5}>Table Signature</Heading>
-                </Level.Item>
-              </Level.Side>
-              <br />
-              <Level.Side align="right">
-                <Level.Item>
-                  <Button
-                    color="primary"
-                    outlined={true}
-                    size="small"
-                    fullwidth={true}
-                    title="Settings"
-                    onClick={(event: any) => {
-                      console.log("TODO Argument Settings")
-                    }}
-                  >
-                    <span className="icon">
-                      <FontAwesomeIcon icon={faCog} size="1x" />
-                    </span>
-                    <span>Settings</span>
-                  </Button>
-                </Level.Item>
-              </Level.Side>
-            </Level>
-
-            <TableSignature
-              id={""}
-              value={{}}
-              disabled={true}
-              handleVariable={() => {}}
-            />
-            <Button
-              color="primary"
-              size="small"
-              fullwidth={true}
-              title="Select input"
-              onClick={(event: any) => {
-                event.preventDefault()
-                console.log("TODO select intput for argument")
-              }}
-            >
-              <Icon className="primary">
-                <FontAwesomeIcon icon={faArrowRight} size="1x" />
-              </Icon>
-              <span>Select Input</span>
-            </Button>
-          </React.Fragment>
+          <TableSignature
+            value={props.parameter?.value}
+            handleArgument={props.handleArgument}
+          />
         )
-      // default:
-      //   return <p>Error: Unknown Argument Type</p>
+      case "function":
+        // faEquals
+        return <></>
+      case "chart":
+        // faChartBar
+        return <></>
+      default:
+        return <p>Error: Unknown Signature Type</p>
     }
   }
 
-  return (
-    <React.Fragment>
-      {props.variable ? (
-        <Variable
-          variable={props.variable}
-          disabled={props.disabled}
-          handleVariable={props.handleVariable}
-          getVariable={props.getVariable}
-        />
-      ) : (
-        <React.Fragment>{argumentSwitch("TODO")}</React.Fragment>
-      )}
-    </React.Fragment>
-  )
+  console.log("Variable check")
+  if (props.variable && props.variable !== "") {
+    return (
+      <Variable
+        variable={props.variable}
+        disabled={props.disabled}
+        handleVariable={props.handleVariable}
+        getVariable={props.getVariable}
+      />
+    )
+  }
+  console.log("no variable")
+
+  return <React.Fragment>{signatureSwitch()}</React.Fragment>
 }
 
 export default Argument

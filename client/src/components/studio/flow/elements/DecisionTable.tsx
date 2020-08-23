@@ -98,8 +98,8 @@ const DecisionTable = (props: {
   function handleCell(
     event: ChangeEvent<HTMLInputElement>,
     rowIndex: number,
-    columnId: string,
-    io: string
+    io: string,
+    columnId: string
   ) {
     if (
       props.value?.rows?.[rowIndex]?.[io]?.[columnId] ||
@@ -315,7 +315,7 @@ const DecisionTable = (props: {
                         )}
                         disabled={props.disabled}
                         onChange={(event: any) =>
-                          handleCell(event, rowIndex, columnId, "inputs")
+                          handleCell(event, rowIndex, "inputs", columnId)
                         }
                         tagName="td"
                         // TODO change color to red if there is an input error
@@ -334,7 +334,7 @@ const DecisionTable = (props: {
                         )}
                         disabled={props.disabled}
                         onChange={(event: any) =>
-                          handleCell(event, rowIndex, columnId, "outputs")
+                          handleCell(event, rowIndex, "outputs", columnId)
                         }
                         tagName="td"
                         // TODO change color to red if there is an input error

@@ -14,6 +14,9 @@ import { faEquals, faCog } from "@fortawesome/free-solid-svg-icons"
 import Argument from "./Argument"
 import Variable from "../variables/Variable"
 
+import getFlow from "../../utils/getFlow"
+import getFlowSignature from "../../utils/getFlowSignature"
+
 const Function = (props: {
   id: string
   value: any
@@ -21,14 +24,34 @@ const Function = (props: {
   handleVariable: Function
   getVariable: Function
 }) => {
-  // TODO pass down handleElement for configuring the argument
+  const flow = getFlow(props?.value?.id)
+  const flowSignature = getFlowSignature(flow)
+
+  function getParameter(io: string, index: number) {
+    if (!flow || !flowSignature) {
+      return
+    }
+
+    let mainSubflowId = flowSignature.main
+    let flowVariableId = flowSignature[io]?.[index]
+    if (!mainSubflowId || !flowVariableId) {
+      return
+    }
+
+    return flow.subflows?.[mainSubflowId]?.variables?.[flowVariableId]
+  }
+
+  function handleArgument(id: string, value: any) {
+    console.log("TODO handle argument")
+  }
+
   return (
     <Card>
       <Card.Header>
         <Card.Header.Icon className="has-text-primary">
           <FontAwesomeIcon icon={faEquals} size="2x" />
         </Card.Header.Icon>
-        <Card.Header.Title>{props?.value?.name}</Card.Header.Title>
+        <Card.Header.Title>{flow?.name}</Card.Header.Title>
         <Card.Header.Icon>
           <Icon className="has-text-primary">
             <FontAwesomeIcon icon={faCog} size="2x" />
@@ -42,10 +65,18 @@ const Function = (props: {
               <Heading size={4}>Input</Heading>
             </Content>
             {props?.value?.inputs?.map((variableId: string, index: number) => {
+              let variable
+              if (variableId && variableId !== "") {
+                variable = props?.getVariable(variableId)
+              }
               return (
                 <Box key={index}>
                   <Argument
-                    variable={props?.getVariable(variableId)}
+                    parameter={
+                      !variable ? getParameter("inputs", index) : undefined
+                    }
+                    handleArgument={handleArgument}
+                    variable={variable}
                     disabled={{ settings: false, edit: true }}
                     handleVariable={props.handleVariable}
                     getVariable={props.getVariable}

@@ -142,9 +142,7 @@ const flows = {
             id: "e5",
             type: "function",
             value: {
-              // TODO make Function element actually link to another Flow
               id: "b",
-              name: "Sum",
               inputs: ["v4", ""],
               outputs: ["v6"],
             },
