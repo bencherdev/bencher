@@ -23,7 +23,6 @@ const Argument = (props: {
 }) => {
   // TODO actually check things once Elements and Varibles are broken out
   function signatureSwitch() {
-    console.log(props?.parameter?.type)
     switch (props?.parameter?.type) {
       case "row":
         // faLock
@@ -46,7 +45,6 @@ const Argument = (props: {
     }
   }
 
-  console.log("Variable check")
   if (props.variable && props.variable !== "") {
     return (
       <Variable
@@ -57,7 +55,6 @@ const Argument = (props: {
       />
     )
   }
-  console.log("no variable")
 
   return <React.Fragment>{signatureSwitch()}</React.Fragment>
 }

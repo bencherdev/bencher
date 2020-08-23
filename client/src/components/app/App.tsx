@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from "react"
 import { navigate } from "gatsby"
-import { Container, Section, Heading, Columns } from "react-bulma-components"
+import {
+  Container,
+  Section,
+  Content,
+  Heading,
+  Columns,
+} from "react-bulma-components"
 
 import SEO from "../utils/seo"
 import getFlow from "../studio/utils/getFlow"
 import InterpreterWorker from "../../interpreter/interpreter"
+
+import Back from "./Back"
+import Input from "./Input"
+import Output from "./Output"
+
+import FooterPadding from "../utils/FooterPadding"
 
 const App = () => {
   const [flow, setFlow] = useState({
@@ -64,19 +76,16 @@ const App = () => {
     <Container>
       {flow?.name && <SEO title={flow?.name} />}
       {redirect && navigate("/studio/flows")}
+      <br />
+      <Back id={flow?.id} />
       <Section>
-        <Heading size={1}>{flow?.name}</Heading>
+        <Content className="has-text-centered">
+          <Heading size={1}>{flow?.name}</Heading>
+        </Content>
       </Section>
-      <Section>
-        <Columns centered={true}>
-          <Columns.Column size={12}>
-            <Heading size={2}>Flow Input</Heading>
-          </Columns.Column>
-          <Columns.Column size={12}>
-            <Heading size={2}>Flow Output</Heading>
-          </Columns.Column>
-        </Columns>
-      </Section>
+      <Input flow={flow} />
+      <Output flow={flow} />
+      <FooterPadding margin={1000} />
     </Container>
   )
 }

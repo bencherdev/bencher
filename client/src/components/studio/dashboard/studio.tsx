@@ -4,6 +4,7 @@ import { Section, Columns } from "react-bulma-components"
 import SEO from "../../utils/seo"
 import Menu from "./menu/Menu"
 import Flow from "./Flow"
+import FooterPadding from "../../utils/FooterPadding"
 
 import getConfig from "../utils/getConfig"
 import getUser from "../../utils/getUser"
@@ -29,6 +30,7 @@ const Studio = () => {
           })}
         </Columns.Column>
       </Columns>
+      <FooterPadding margin={1000} />
     </Section>
   )
 }

@@ -10,6 +10,8 @@ import SEO from "../../utils/seo"
 import getFlow from "../utils/getFlow"
 import InterpreterWorker from "../../../interpreter/interpreter"
 
+import FooterPadding from "../../utils/FooterPadding"
+
 const Notebook = () => {
   const [flow, setFlow] = useState({
     id: "",
@@ -137,6 +139,7 @@ const Notebook = () => {
           </Columns.Column>
         </Columns>
       </Container>
+      <FooterPadding margin={1000} />
     </React.Fragment>
   )
 }

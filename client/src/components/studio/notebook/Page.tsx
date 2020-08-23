@@ -75,12 +75,6 @@ const Page = (props: {
           <FontAwesomeIcon icon={faArrowCircleUp} size="2x" />
         </Button>
       </Columns.Column>
-      <Columns.Column size={12}>
-        <Section>
-          <br />
-          <br />
-        </Section>
-      </Columns.Column>
     </Columns>
   )
 }
