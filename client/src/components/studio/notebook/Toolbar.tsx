@@ -11,6 +11,7 @@ import {
   faArrowCircleDown,
   faCloudUploadAlt,
   faChevronLeft,
+  faCog,
 } from "@fortawesome/free-solid-svg-icons"
 import { faCircle } from "@fortawesome/free-regular-svg-icons"
 
@@ -60,6 +61,11 @@ const Toolbar = (props: { flowId: string }) => (
       </Button>
       <Button color="primary" size="medium" inverted={true} title="Zoom In">
         <FontAwesomeIcon icon={faSearchPlus} size="1x" />
+      </Button>
+    </Columns.Column>
+    <Columns.Column className="is-gapless is-narrow">
+      <Button color="primary" size="medium" inverted={true} title="Zoom Out">
+        <FontAwesomeIcon icon={faCog} size="1x" />
       </Button>
     </Columns.Column>
     <Columns.Column className="is-gapless is-narrow">

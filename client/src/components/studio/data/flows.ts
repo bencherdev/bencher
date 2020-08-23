@@ -7,6 +7,9 @@ const flows = {
     main: "a1",
     // The name of the Flow
     name: "Hello, Math!",
+    // A bascic description of the Flow
+    description:
+      "A kitchen sink example of all TableFlow Elements doing very basic operations. Eventually this will turn into the foundation for the Tour of TableFlow",
     // A map of all of the Subflows within a Flow
     subflows: {
       // A map of all Subflows
