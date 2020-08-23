@@ -115,7 +115,7 @@ const Notebook = () => {
         style={{
           // https://stackoverflow.com/questions/10858523/css-transform-with-element-resizing
           transform: `scale(${scale})`,
-          margin: `-550px calc((-550px * (1 - ${scale})) / 2) calc(-550px * (1 - ${scale}))`,
+          margin: `calc(-675px * ${scale}) calc((-675px * (1 - ${scale})) / 2) calc(-675px * (1 - ${scale}))`,
           zIndex: "-10",
           position: "static",
         }}
