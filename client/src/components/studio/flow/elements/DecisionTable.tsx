@@ -283,15 +283,20 @@ const DecisionTable = (props: {
             )}
             {props.value?.columns?.outputs?.map(
               (headerId: any, index: number) => {
-                const columnType =
-                  props.value?.headers?.outputs?.[headerId]?.type
+                const table = props.getVariable(
+                  props.value?.headers?.outputs?.[headerId]?.table
+                )
+                const tableColumn =
+                  table?.value?.headers?.[
+                    props.value?.headers?.outputs?.[headerId]?.column
+                  ]
                 return (
                   <th key={index}>
                     <Select
                       name="Output Column Type"
                       disabled={props.disabled}
                       column={index}
-                      selected={columnType}
+                      selected={tableColumn?.type}
                       config={typeSelect}
                       handleSelect={handleOutputTableColumnType}
                     />
