@@ -125,9 +125,15 @@ const flows = {
               // Each row is evaluated with OR logic
               // The first case to match is the one evaluated
               // A `?` is used to trigger the creation of a Decision Subflow for a case's output
+              // Decision Subflows are stored as a URI for the Subflow (subflow://[subflowId])
+              // This Subflow ID value will have a nice GUI wrapper
               // If a value doesn't match any of the cases,
               // then the zero value for the type will be placed in the output table
               rows: [
+                {
+                  inputs: { e3h1: "0" },
+                  outputs: { e3h2: "subflow://a3" },
+                },
                 {
                   inputs: { e3h1: "-" },
                   outputs: { e3h2: "input_table.value^2" },
@@ -333,6 +339,73 @@ const flows = {
                 a2v4h1: { id: "a2v4h1", name: "Answer", type: "Number" },
               },
               rows: [{ a2v4h1: 42 }],
+            },
+          },
+        },
+      },
+      a3: {
+        id: "a3",
+        name: "A Needless Decision Subflow",
+        parent: "a1",
+        input: "a3e0",
+        output: "a3e1",
+        order: ["a3e2", "a3e0", "a3e1"],
+        elements: {
+          a3e0: {
+            id: "a3e0",
+            type: "input",
+            value: {
+              inputs: ["a3v3"],
+            },
+          },
+          a3e1: {
+            id: "a3e1",
+            type: "output",
+            value: {
+              outputs: ["a3v4"],
+            },
+          },
+          a3e2: {
+            id: "a3e2",
+            type: "parent",
+            value: {
+              id: "a1",
+            },
+          },
+        },
+        declarations: ["a3v3", "a3v4"],
+        variables: {
+          a3v3: {
+            id: "a3v3",
+            type: "table",
+            value: {
+              // In a Decision Subflow the inputs to the Subflow
+              // are exactly the same as the inputs to the parent Decision Table
+              name: "Input Table",
+              columns: ["a3v3h1"],
+              headers: {
+                a3v3h1: { id: "a3v3h1", name: "Value", type: "Number" },
+              },
+              rows: [{ a3v3h1: 0 }],
+            },
+          },
+          a3v4: {
+            id: "a3v4",
+            type: "table",
+            value: {
+              // In a Decision Subflow the outputs from the Subflow
+              // are exactly the same as the outputs from the parent Decision Table
+              // ie Continue logic ->
+              // or
+              // they are exactly the same as the parent Subflow (the one with the Decision Table)
+              // This allows a Decision Subflow to return from that parent Subflow
+              // ie Return logic <-
+              name: "Output Table",
+              columns: ["a3v4h1"],
+              headers: {
+                a3v4h1: { id: "a3v4h1", name: "Squared Value", type: "Number" },
+              },
+              rows: [{ a3v4h1: 0 }],
             },
           },
         },
