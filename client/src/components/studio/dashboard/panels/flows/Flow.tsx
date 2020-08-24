@@ -1,21 +1,13 @@
 import React from "react"
 import { navigate } from "gatsby"
-import { Link } from "@reach/router"
 
-import {
-  Card,
-  Columns,
-  Heading,
-  Button,
-  Icon,
-  Content,
-} from "react-bulma-components"
+import { Card, Columns, Button, Icon, Content } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faPlusCircle, faPen } from "@fortawesome/free-solid-svg-icons"
+import { faPen } from "@fortawesome/free-solid-svg-icons"
 import { faCircle } from "@fortawesome/free-regular-svg-icons"
 
-import getFlow from "../utils/getFlow"
+import getFlow from "../../../utils/getFlow"
 
 const Flow = (props: { id: string }) => {
   const flow = getFlow(props.id)
