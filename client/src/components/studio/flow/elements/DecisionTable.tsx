@@ -1,12 +1,15 @@
 import React, { ChangeEvent } from "react"
-import { Table } from "react-bulma-components"
+import { Table, Button, Icon } from "react-bulma-components"
 import { cloneDeep } from "lodash/lang"
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faQuestionCircle } from "@fortawesome/free-solid-svg-icons"
 
 import ContentEditable from "../../../utils/contenteditable"
 import sanitize from "../../../utils/sanitize"
 
 import typeSelect from "../variables/tabular/typeselect"
-// TODO either create a new Select that can update *another* Element
+// todo either create a new Select that can update *another* Element
 // or add a tableID as part of the props to the current Select component
 import Select from "../../../utils/forms/select"
 
@@ -331,12 +334,46 @@ const DecisionTable = (props: {
                 )}
                 {props.value?.columns?.outputs?.map(
                   (columnId: string, columnIndex: number) => {
+                    const output = row?.outputs?.[columnId]?.toString()
+                    if (output.startsWith("subflow://")) {
+                      if (columnIndex == 0) {
+                        const subflowId = output.slice("subflow://".length)
+                        return (
+                          <td
+                            key={rowIndex + ":" + columnIndex}
+                            colSpan={props.value?.columns?.outputs?.length}
+                          >
+                            <Button
+                              color="primary"
+                              outlined={true}
+                              size="small"
+                              fullwidth={true}
+                              title="Settings"
+                              onClick={(event: any) => {
+                                event.preventDefault()
+                                console.log(
+                                  "TODO redirect to Decision Subflow",
+                                  subflowId
+                                )
+                              }}
+                            >
+                              <Icon>
+                                <FontAwesomeIcon
+                                  icon={faQuestionCircle}
+                                  size="1x"
+                                />
+                              </Icon>
+                              <span>Decision Subflow Case #{rowIndex + 1}</span>
+                            </Button>
+                          </td>
+                        )
+                      }
+                      return
+                    }
                     return (
                       <ContentEditable
                         key={rowIndex + ":" + columnIndex}
-                        html={sanitize.toHtml(
-                          row?.outputs?.[columnId]?.toString()
-                        )}
+                        html={sanitize.toHtml(output)}
                         disabled={props.disabled}
                         onChange={(event: any) =>
                           handleCell(event, rowIndex, "outputs", columnId)

@@ -54,9 +54,9 @@ const Signature = (props: {
                 props?.handleArgument()
               }}
             >
-              <span className="icon">
+              <Icon>
                 <FontAwesomeIcon icon={faCog} size="1x" />
-              </span>
+              </Icon>
               <span>Settings</span>
             </Button>
           </Level.Item>
