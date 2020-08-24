@@ -1,11 +1,18 @@
-import React from "react"
-import { navigate } from "gatsby"
+import React, { useState } from "react"
 import { Button, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
-const AddButton = (props: {}) => {
+import OptionsBox from "./OptionsBox"
+
+const NewButton = () => {
+  const [show, setShow] = useState(false)
+
+  if (show) {
+    return <OptionsBox />
+  }
+
   return (
     <Button
       color="primary"
@@ -16,10 +23,7 @@ const AddButton = (props: {}) => {
       title="New"
       onClick={(event: any) => {
         event.preventDefault()
-        // TODO in the future make this a dynamic button
-        // It should show options for what to make a new instance of
-        // Flow, Template, etc
-        navigate("/studio/flows/new")
+        setShow(true)
       }}
     >
       <Icon size="small" className="primary">
@@ -30,4 +34,4 @@ const AddButton = (props: {}) => {
   )
 }
 
-export default AddButton
+export default NewButton

@@ -1,11 +1,7 @@
 import React from "react"
-import { Button, Icon, Level, Heading } from "react-bulma-components"
 
 import Variable from "../variables/Variable"
 import TableSignature from "../signatures/TableSignature"
-
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faTable, faArrowRight, faCog } from "@fortawesome/free-solid-svg-icons"
 
 const Argument = (props: {
   parameter:
