@@ -2,7 +2,7 @@ import React from "react"
 import { navigate } from "gatsby"
 import { Menu } from "react-bulma-components"
 
-import AddButton from "./AddButton"
+import NewButton from "./button/NewButton"
 import studioMenu from "./config/studioMenu"
 
 const DashboardMenu = (props: { path: string }) => {
@@ -39,7 +39,7 @@ const DashboardMenu = (props: { path: string }) => {
 
   return (
     <Menu>
-      <AddButton />
+      <NewButton />
       {handleSections()}
     </Menu>
   )
