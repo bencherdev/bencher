@@ -7,6 +7,7 @@ import {
   faQuestion,
   faEquals,
   faChartBar,
+  faArrowLeft,
 } from "@fortawesome/free-solid-svg-icons"
 
 import ElementCard from "./ElementCard"
@@ -55,7 +56,6 @@ const Element = (props: {
               handleVariable={props.handleVariable}
               getVariable={props.getVariable}
               context={props.context}
-              getSubflow={props.getSubflow}
             />
           </ElementCard>
         )
@@ -134,15 +134,21 @@ const Element = (props: {
         )
       case "output":
         return (
-          <Output
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-            context={props.context}
-            getSubflow={props.getSubflow}
-          />
+          <ElementCard
+            icon={faArrowLeft}
+            name={`Output from ${
+              props?.getSubflow(props.context?.current)?.name
+            } Subflow`}
+          >
+            <Output
+              id={props.element.id}
+              value={props.element.value}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+              context={props.context}
+            />
+          </ElementCard>
         )
       default:
         return <h4>Error: Unknown Element Type</h4>

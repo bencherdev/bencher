@@ -13,7 +13,6 @@ const Input = (props: {
   handleVariable: Function
   getVariable: Function
   context: { parent: string; current: string }
-  getSubflow: Function
 }) => {
   return (
     <Card.Content>
