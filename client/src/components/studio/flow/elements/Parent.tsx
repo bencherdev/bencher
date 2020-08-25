@@ -1,5 +1,5 @@
 import React from "react"
-import { Card } from "react-bulma-components"
+import { Card, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCircle } from "@fortawesome/free-solid-svg-icons"
@@ -12,9 +12,9 @@ const Parent = (props: {
     <Card>
       <Card.Header>
         <Card.Header.Icon>
-          <span className="icon has-text-primary">
+          <Icon className="has-text-primary">
             <FontAwesomeIcon icon={faCircle} size="2x" />
-          </span>
+          </Icon>
         </Card.Header.Icon>
         <Card.Header.Title>
           {props?.getSubflow(props?.context?.parent)?.name}

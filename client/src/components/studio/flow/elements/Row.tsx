@@ -18,7 +18,15 @@ const Row = (props: {
     <Card>
       <Card.Header>
         <Card.Header.Icon className="has-text-primary">
-          <FontAwesomeIcon icon={faLock} size="2x" />
+          <Icon
+            className="has-text-primary"
+            onClick={(event: Event) => {
+              event.preventDefault()
+              console.log("TODO add ref to url bar and focus")
+            }}
+          >
+            <FontAwesomeIcon icon={faLock} size="2x" />
+          </Icon>
         </Card.Header.Icon>
         <Card.Header.Title>{row?.value?.name}</Card.Header.Title>
         <Card.Header.Icon>
