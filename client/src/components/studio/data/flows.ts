@@ -175,6 +175,7 @@ const flows = {
             value: {
               id: "v12",
               config: {
+                name: "Music Sales Q1 2020",
                 // TODO add the D3 config options here
               },
             },

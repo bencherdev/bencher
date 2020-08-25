@@ -6,6 +6,7 @@ import {
   faLock,
   faQuestion,
   faEquals,
+  faChartBar,
 } from "@fortawesome/free-solid-svg-icons"
 
 import ElementCard from "./ElementCard"
@@ -116,14 +117,20 @@ const Element = (props: {
           </ElementCard>
         )
       case "chart":
+        const chartValue = props.element.value
+        const chartTable = props.getVariable(chartValue?.id)
+        const chartConfig = chartValue?.config
         return (
-          <Chart
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-          />
+          <ElementCard icon={faChartBar} name={chartConfig?.name}>
+            <Chart
+              id={props.element.id}
+              config={chartConfig}
+              table={chartTable}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+            />
+          </ElementCard>
         )
       case "output":
         return (
