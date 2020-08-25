@@ -100,15 +100,20 @@ const Element = (props: {
           </ElementCard>
         )
       case "subflow":
+        const subflowValue = props.element.value
+        const subflow = props.getSubflow(subflowValue?.id)
         return (
-          <Subflow
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-            getSubflow={props.getSubflow}
-          />
+          <ElementCard icon={faCircle} name={subflow?.name}>
+            <Subflow
+              id={props.element.id}
+              value={subflowValue}
+              subflow={subflow}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+              getSubflow={props.getSubflow}
+            />
+          </ElementCard>
         )
       case "chart":
         return (

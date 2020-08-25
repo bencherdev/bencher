@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import {
   Card,
   Heading,
@@ -10,115 +10,120 @@ import {
 } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCircle, faCog, faPlus } from "@fortawesome/free-solid-svg-icons"
+import { faPlus } from "@fortawesome/free-solid-svg-icons"
 
 import Argument from "./Argument"
 import Variable from "../variables/Variable"
 
+import getSubflowSignature from "../../utils/getSubflowSignature"
+
 const Subflow = (props: {
   id: string
   value: any
+  subflow: any
   handleElement: Function
   handleVariable: Function
   getVariable: Function
   getSubflow: Function
 }) => {
-  const [subflow, setSubflow] = useState(props.getSubflow(props?.value?.id))
   // TODO update the other subflow with changes
   // TODO pass down handleElement for configuring the argument
+  const subflowSignature = getSubflowSignature(props?.subflow)
+
+  function getParameter(io: string, index: number) {
+    if (!props?.subflow || !subflowSignature) {
+      return
+    }
+
+    let subflowVariableId = subflowSignature[io]?.[index]
+    if (!subflowVariableId) {
+      return
+    }
+
+    return props.subflow?.variables?.[subflowVariableId]
+  }
+
+  function handleArgument(id: string, value: any) {
+    console.log("TODO handle argument")
+  }
+
   return (
-    <Card>
-      <Card.Header>
-        <Card.Header.Icon className="has-text-primary">
-          <Icon
-            className="has-text-primary"
-            onClick={(event: Event) => {
+    <Card.Content>
+      <Columns centered={true}>
+        <Columns.Column>
+          <Content className="has-text-centered">
+            <Heading size={4}>Input</Heading>
+          </Content>
+          {props?.value?.inputs?.map((variableId: string, index: number) => {
+            let variable
+            if (variableId && variableId !== "") {
+              variable = props?.getVariable(variableId)
+            }
+            return (
+              <Box key={index}>
+                <Argument
+                  parameter={
+                    !variable ? getParameter("inputs", index) : undefined
+                  }
+                  handleArgument={handleArgument}
+                  variable={variable}
+                  disabled={{ settings: false, edit: true }}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
+                />
+              </Box>
+            )
+          })}
+          <Button
+            color="primary"
+            outlined={true}
+            fullwidth={true}
+            onClick={(event: any) => {
               event.preventDefault()
-              console.log("TODO add ref to url bar and focus")
+              // props.handleElement()
+              console.log("TODO add a new inut element")
             }}
           >
-            <FontAwesomeIcon icon={faCircle} size="2x" />
-          </Icon>
-        </Card.Header.Icon>
-        <Card.Header.Title>{subflow?.name}</Card.Header.Title>
-        <Card.Header.Icon>
-          <Icon className="has-text-primary">
-            <FontAwesomeIcon icon={faCog} size="2x" />
-          </Icon>
-        </Card.Header.Icon>
-      </Card.Header>
-      <Card.Content>
-        <Columns centered={true}>
-          <Columns.Column>
-            <Content className="has-text-centered">
-              <Heading size={4}>Input</Heading>
-            </Content>
-            {props?.value?.inputs?.map((variableId: string, index: number) => {
-              // TODO Figure out the distinction between
-              // variables that are passed into the Input for a Subflow
-              // and variables that are set from the Input for a Subflow
-              return (
-                <Box key={index}>
-                  <Argument
-                    variable={props.getVariable(variableId)}
-                    disabled={{ settings: false, edit: true }}
-                    handleVariable={props.handleVariable}
-                    getVariable={props.getVariable}
-                  />
-                </Box>
-              )
-            })}
-            <Button
-              color="primary"
-              outlined={true}
-              fullwidth={true}
-              onClick={(event: any) => {
-                event.preventDefault()
-                // props.handleElement()
-                console.log("TODO add a new inut element")
-              }}
-            >
-              <Icon className="primary">
-                <FontAwesomeIcon icon={faPlus} size="1x" />
-              </Icon>
-              <span>Add</span>
-            </Button>
-          </Columns.Column>
-          <Columns.Column>
-            <Content className="has-text-centered">
-              <Heading size={4}>Output</Heading>
-            </Content>
-            {props?.value?.outputs?.map((variableId: string, index: number) => {
-              return (
-                <Box key={index}>
-                  <Variable
-                    variable={props.getVariable(variableId)}
-                    disabled={{ settings: false, edit: true }}
-                    handleVariable={props.handleVariable}
-                    getVariable={props.getVariable}
-                  />
-                </Box>
-              )
-            })}
-            <Button
-              color="primary"
-              outlined={true}
-              fullwidth={true}
-              onClick={(event: any) => {
-                event.preventDefault()
-                // props.handleElement()
-                console.log("TODO add a new output element")
-              }}
-            >
-              <Icon className="primary">
-                <FontAwesomeIcon icon={faPlus} size="1x" />
-              </Icon>
-              <span>Add</span>
-            </Button>
-          </Columns.Column>
-        </Columns>
-      </Card.Content>
-    </Card>
+            <Icon className="primary">
+              <FontAwesomeIcon icon={faPlus} size="1x" />
+            </Icon>
+            <span>Add</span>
+          </Button>
+        </Columns.Column>
+        <Columns.Column>
+          <Content className="has-text-centered">
+            <Heading size={4}>Output</Heading>
+          </Content>
+          {props?.value?.outputs?.map((variableId: string, index: number) => {
+            return (
+              <Box key={index}>
+                <Variable
+                  variable={props.getVariable(variableId)}
+                  disabled={{ settings: false, edit: true }}
+                  handleVariable={props.handleVariable}
+                  getVariable={props.getVariable}
+                />
+              </Box>
+            )
+          })}
+          <Button
+            color="primary"
+            outlined={true}
+            fullwidth={true}
+            onClick={(event: any) => {
+              event.preventDefault()
+              // props.handleElement()
+              console.log("TODO add a new output element")
+            }}
+          >
+            <Icon className="primary">
+              <FontAwesomeIcon icon={faPlus} size="1x" />
+            </Icon>
+            <span>Add</span>
+          </Button>
+        </Columns.Column>
+      </Columns>
+    </Card.Content>
   )
 }
 
