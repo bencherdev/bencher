@@ -5,6 +5,7 @@ import {
   faArrowRight,
   faLock,
   faQuestion,
+  faEquals,
 } from "@fortawesome/free-solid-svg-icons"
 
 import ElementCard from "./ElementCard"
@@ -16,6 +17,8 @@ import Function from "./Function"
 import Subflow from "./Subflow"
 import Chart from "./Chart"
 import Output from "./Output"
+
+import getFlow from "../../utils/getFlow"
 
 const Element = (props: {
   element: any
@@ -69,12 +72,12 @@ const Element = (props: {
           </ElementCard>
         )
       case "decision":
-        const value = props.element.value
+        const decisionValue = props.element.value
         return (
-          <ElementCard icon={faQuestion} name={value?.name}>
+          <ElementCard icon={faQuestion} name={decisionValue?.name}>
             <Decision
               id={props.element.id}
-              value={value}
+              value={decisionValue}
               handleElement={props.handleElement}
               handleVariable={props.handleVariable}
               getVariable={props.getVariable}
@@ -82,14 +85,19 @@ const Element = (props: {
           </ElementCard>
         )
       case "function":
+        const functionValue = props.element.value
+        const flow = getFlow(functionValue?.id)
         return (
-          <Function
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-          />
+          <ElementCard icon={faEquals} name={flow?.name}>
+            <Function
+              id={props.element.id}
+              value={functionValue}
+              flow={flow}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+            />
+          </ElementCard>
         )
       case "subflow":
         return (
