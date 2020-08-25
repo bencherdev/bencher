@@ -2,7 +2,7 @@ import React from "react"
 import { Card, Content, Box, Button, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faChartBar, faCog } from "@fortawesome/free-solid-svg-icons"
+import { faCog } from "@fortawesome/free-solid-svg-icons"
 
 import Chart from "../variables/charts/Chart"
 

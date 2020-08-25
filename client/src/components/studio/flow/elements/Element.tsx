@@ -8,6 +8,7 @@ import {
   faEquals,
   faChartBar,
   faArrowLeft,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons"
 
 import ElementCard from "./ElementCard"
@@ -151,7 +152,11 @@ const Element = (props: {
           </ElementCard>
         )
       default:
-        return <h4>Error: Unknown Element Type</h4>
+        return (
+          <ElementCard icon={faTimes} name="Unknown Element">
+            <p>Unknown Element</p>
+          </ElementCard>
+        )
     }
   }
 

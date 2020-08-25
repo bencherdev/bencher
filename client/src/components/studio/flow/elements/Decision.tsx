@@ -1,8 +1,5 @@
 import React from "react"
-import { Card, Icon, Content, Box } from "react-bulma-components"
-
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faQuestion, faCog } from "@fortawesome/free-solid-svg-icons"
+import { Card, Content, Box } from "react-bulma-components"
 
 import DecisionTable from "./DecisionTable"
 import Variable from "../variables/Variable"
