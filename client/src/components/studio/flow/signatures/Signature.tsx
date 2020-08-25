@@ -3,10 +3,6 @@ import { Button, Icon, Level, Heading } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
-  faLock,
-  faTable,
-  faEquals,
-  faChartBar,
   faTimes,
   faCog,
   faArrowRight,
@@ -24,12 +20,12 @@ const Signature = (props: {
       <Level>
         <Level.Side align="left">
           <Level.Item>
-            <span className="icon is-medium has-text-primary">
+            <Icon size="medium" className="has-text-primary">
               <FontAwesomeIcon
                 icon={props.icon ? props.icon : faTimes}
                 size="2x"
               />
-            </span>
+            </Icon>
           </Level.Item>
         </Level.Side>
         <br />

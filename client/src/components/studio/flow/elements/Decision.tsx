@@ -15,26 +15,7 @@ const Decision = (props: {
   getVariable: Function
 }) => {
   return (
-    <Card>
-      <Card.Header>
-        <Card.Header.Icon className="has-text-primary">
-          <Icon
-            className="has-text-primary"
-            onClick={(event: Event) => {
-              event.preventDefault()
-              console.log("TODO add ref to url bar and focus")
-            }}
-          >
-            <FontAwesomeIcon icon={faQuestion} size="2x" />
-          </Icon>
-        </Card.Header.Icon>
-        <Card.Header.Title>{props?.value?.name}</Card.Header.Title>
-        <Card.Header.Icon>
-          <Icon className="has-text-primary">
-            <FontAwesomeIcon icon={faCog} size="2x" />
-          </Icon>
-        </Card.Header.Icon>
-      </Card.Header>
+    <React.Fragment>
       <Card.Content>
         <Content>
           <Box>
@@ -66,7 +47,7 @@ const Decision = (props: {
           })}
         </Content>
       </Card.Content>
-    </Card>
+    </React.Fragment>
   )
 }
 

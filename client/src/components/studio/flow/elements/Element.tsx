@@ -1,5 +1,13 @@
 import React from "react"
 
+import {
+  faCircle,
+  faArrowRight,
+  faLock,
+  faQuestion,
+} from "@fortawesome/free-solid-svg-icons"
+
+import ElementCard from "./ElementCard"
 import Parent from "./Parent"
 import Input from "./Input"
 import Row from "./Row"
@@ -20,38 +28,58 @@ const Element = (props: {
   function elementSwitch() {
     switch (props.element.type) {
       case "parent":
-        return <Parent context={props.context} getSubflow={props.getSubflow} />
+        return (
+          <ElementCard
+            icon={faCircle}
+            name={props?.getSubflow(props.context?.parent)?.name}
+          >
+            <Parent />
+          </ElementCard>
+        )
       case "input":
         return (
-          <Input
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-            context={props.context}
-            getSubflow={props.getSubflow}
-          />
+          <ElementCard
+            icon={faArrowRight}
+            name={`Input to ${
+              props?.getSubflow(props.context?.current)?.name
+            } Subflow`}
+          >
+            <Input
+              id={props.element.id}
+              value={props.element.value}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+              context={props.context}
+              getSubflow={props.getSubflow}
+            />
+          </ElementCard>
         )
       case "row":
+        const row = props.getVariable(props.element.value?.id)
         return (
-          <Row
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-          />
+          <ElementCard icon={faLock} name={row?.value?.name}>
+            <Row
+              id={props.element.id}
+              row={row}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+            />
+          </ElementCard>
         )
       case "decision":
+        const value = props.element.value
         return (
-          <Decision
-            id={props.element.id}
-            value={props.element.value}
-            handleElement={props.handleElement}
-            handleVariable={props.handleVariable}
-            getVariable={props.getVariable}
-          />
+          <ElementCard icon={faQuestion} name={value?.name}>
+            <Decision
+              id={props.element.id}
+              value={value}
+              handleElement={props.handleElement}
+              handleVariable={props.handleVariable}
+              getVariable={props.getVariable}
+            />
+          </ElementCard>
         )
       case "function":
         return (
