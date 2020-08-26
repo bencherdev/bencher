@@ -3,6 +3,11 @@ const flows = {
   a: {
     // The Flow ID
     id: "a",
+    // The Workflow ID that the Flow is defined in
+    workflow: "w1",
+    // Whether the Flow is hidden outside of its defining Workflow
+    // The default value is true
+    hidden: false,
     // The ID for the main Flow in the Subflows
     main: "a1",
     // The name of the Flow
@@ -415,6 +420,8 @@ const flows = {
   },
   b: {
     id: "b",
+    workflow: "w1",
+    hidden: true,
     main: "b1",
     name: "Sum",
     description:
