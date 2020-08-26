@@ -1,6 +1,6 @@
 import React from "react"
 
-import Flows from "./flows/Flows"
+import Flows from "./Flows"
 
 const Panel = (props: { config: any; panel: string }) => {
   function panelSwitch() {

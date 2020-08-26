@@ -2,13 +2,11 @@ import React from "react"
 
 import { Content } from "react-bulma-components"
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faPen } from "@fortawesome/free-solid-svg-icons"
 import { faCircle } from "@fortawesome/free-regular-svg-icons"
 
-import PanelCard from "./Flow"
+import PanelCard from "./PanelCard"
 
-import getFlow from "../../../utils/getFlow"
+import getFlow from "../../utils/getFlow"
 
 const Flows = (props: { flows: any }) => {
   return (
