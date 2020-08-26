@@ -1,6 +1,7 @@
 import React from "react"
 
 import Flows from "./Flows"
+import Templates from "./Templates"
 
 const Panel = (props: { config: any; panel: string }) => {
   function panelSwitch() {
@@ -8,7 +9,7 @@ const Panel = (props: { config: any; panel: string }) => {
       case "flows":
         return <Flows flows={props?.config?.flows} />
       case "templates":
-        return <p>TODO</p>
+        return <Templates templates={props?.config?.templates} />
       case "contracts":
         return <p>TODO</p>
     }
