@@ -1,16 +1,17 @@
 import React from "react"
 import { navigate } from "gatsby"
 
-import { Card, Columns, Button, Icon, Content } from "react-bulma-components"
+import { Card, Columns, Button, Icon } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faPen } from "@fortawesome/free-solid-svg-icons"
-import { faCircle } from "@fortawesome/free-regular-svg-icons"
+import { faPen, IconDefinition } from "@fortawesome/free-solid-svg-icons"
 
-import getFlow from "../../../utils/getFlow"
-
-const Flow = (props: { id: string }) => {
-  const flow = getFlow(props.id)
+const PanelCard = (props: {
+  icon: IconDefinition
+  to: string
+  title: string
+  children: React.ReactElement
+}) => {
   return (
     <Columns>
       <Columns.Column size={12}>
@@ -21,13 +22,13 @@ const Flow = (props: { id: string }) => {
                 className="primary"
                 onClick={(event: any) => {
                   event.preventDefault()
-                  navigate(`/studio/flow/#${flow?.id?.toLowerCase()}`)
+                  navigate(props?.to)
                 }}
               >
-                <FontAwesomeIcon icon={faCircle} size="2x" />
+                <FontAwesomeIcon icon={props?.icon} size="2x" />
               </Icon>
             </Card.Header.Icon>
-            <Card.Header.Title>{flow?.name}</Card.Header.Title>
+            <Card.Header.Title>{props?.title}</Card.Header.Title>
             <Card.Header.Icon>
               <Button
                 color="primary"
@@ -37,7 +38,7 @@ const Flow = (props: { id: string }) => {
                 title="Settings"
                 onClick={(event: any) => {
                   event.preventDefault()
-                  navigate(`/studio/flow/#${flow?.id?.toLowerCase()}`)
+                  navigate(props?.to)
                 }}
               >
                 <Icon className="primary">
@@ -47,15 +48,11 @@ const Flow = (props: { id: string }) => {
               </Button>
             </Card.Header.Icon>
           </Card.Header>
-          <Card.Content>
-            <Content>
-              <p>{flow?.description}</p>
-            </Content>
-          </Card.Content>
+          <Card.Content>{props?.children}</Card.Content>
         </Card>
       </Columns.Column>
     </Columns>
   )
 }
 
-export default Flow
+export default PanelCard
