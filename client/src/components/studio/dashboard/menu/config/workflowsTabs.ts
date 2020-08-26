@@ -1,4 +1,4 @@
-const flowsTabs = {
+const workflowsTabs = {
   dashboard: (path: string, key: string) => {
     return {
       path: `${path}/${key.toLocaleLowerCase()}`,
@@ -7,4 +7,4 @@ const flowsTabs = {
   },
 }
 
-export default flowsTabs
+export default workflowsTabs

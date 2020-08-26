@@ -1,11 +1,14 @@
 import React from "react"
 
+import Workflows from "./Workflows"
 import Flows from "./Flows"
 import Templates from "./Templates"
 
 const Panel = (props: { config: any; panel: string }) => {
   function panelSwitch() {
     switch (props.panel) {
+      case "workflows":
+        return <Workflows workflows={props?.config?.workflows} />
       case "flows":
         return <Flows flows={props?.config?.flows} />
       case "templates":

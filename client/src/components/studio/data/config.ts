@@ -1,5 +1,5 @@
 const config = {
-  u1: { flows: ["a", "b"] },
+  u1: { workflows: ["w1"], flows: ["a", "b"], templates: ["t1"] },
 }
 
 export default config
