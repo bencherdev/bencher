@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { Section, Columns } from "react-bulma-components"
 
 import SEO from "../../utils/seo"
@@ -10,25 +10,17 @@ import getConfig from "../utils/getConfig"
 import getUser from "../../utils/getUser"
 
 function getPath() {
-  const pathname = window.location.pathname.split("/")
-  return pathname[pathname.length - 1]
+  console.log(window.location.pathname.split("/"))
+  return window.location.pathname.split("/")
 }
 
 const Studio = () => {
   const user = getUser()
   const [config, setConfig] = useState(getConfig(user?.id))
-  const [path, setPath] = useState(getPath())
 
   function handleConfig(config: any) {
     setConfig(config)
   }
-
-  useEffect(() => {
-    const currentPath = getPath()
-    if (currentPath != path) {
-      setPath(currentPath)
-    }
-  }, [])
 
   return (
     <Section>
@@ -38,7 +30,7 @@ const Studio = () => {
           <Menu path="/studio" />
         </Columns.Column>
         <Columns.Column>
-          <Panel config={config} panel={path} />
+          <Panel config={config} />
         </Columns.Column>
       </Columns>
       <FooterPadding margin={1000} />

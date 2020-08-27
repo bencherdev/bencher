@@ -8,7 +8,7 @@ import PanelCard from "./PanelCard"
 
 import getFlow from "../../utils/getFlow"
 
-const Flows = (props: { flows: any }) => {
+const Flows = (props: { path: string; flows: any }) => {
   return (
     <React.Fragment>
       {props?.flows?.map((id: any, index: number) => {

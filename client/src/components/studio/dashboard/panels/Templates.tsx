@@ -7,7 +7,7 @@ import PanelCard from "./PanelCard"
 import getTemplate from "../../utils/getTemplate"
 import { faBorderNone } from "@fortawesome/free-solid-svg-icons"
 
-const Templates = (props: { templates: any }) => {
+const Templates = (props: { path: string; templates: any }) => {
   return (
     <React.Fragment>
       {props?.templates?.map((id: any, index: number) => {

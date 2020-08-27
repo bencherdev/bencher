@@ -3,12 +3,14 @@ import React from "react"
 import Loadable from "@loadable/component"
 
 import SEO from "../../../components/utils/seo"
-const New = Loadable(() => import("../../../components/studio/workflow/New"))
+const Studio = Loadable(() =>
+  import("../../../components/studio/dashboard/Studio")
+)
 
 const NewWorkflowPage = () => (
   <React.Fragment>
     <SEO title="New Workflow" />
-    <New />
+    <Studio />
   </React.Fragment>
 )
 

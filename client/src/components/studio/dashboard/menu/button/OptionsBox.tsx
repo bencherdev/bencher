@@ -1,9 +1,9 @@
 import React from "react"
 import { navigate } from "gatsby"
-import { Box, Button, Icon, Columns } from "react-bulma-components"
+import { Button, Icon, Columns } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faBorderNone } from "@fortawesome/free-solid-svg-icons"
+import { faStream, faBorderNone } from "@fortawesome/free-solid-svg-icons"
 import { faCircle, IconDefinition } from "@fortawesome/free-regular-svg-icons"
 
 const OptionButton = (props: { name: string; icon: IconDefinition }) => (
@@ -30,6 +30,9 @@ const OptionsBox = () => {
   return (
     <React.Fragment>
       <Columns>
+        <Columns.Column>
+          <OptionButton name="Workflow" icon={faStream} />
+        </Columns.Column>
         <Columns.Column>
           <OptionButton name="Flow" icon={faCircle} />
         </Columns.Column>

@@ -1,14 +1,16 @@
 // If you don't want to use TypeScript you can delete this file!
 import React from "react"
-import { navigate } from "gatsby"
+import Loadable from "@loadable/component"
 
 import SEO from "../../components/utils/seo"
+const Studio = Loadable(() =>
+  import("../../components/studio/dashboard/Studio")
+)
 
 const StudioPage = () => (
   <React.Fragment>
     <SEO title="Studio" />
-    {/* TODO build out studio dashboard page */}
-    {navigate("/studio/flows")}
+    <Studio />
   </React.Fragment>
 )
 

@@ -8,7 +8,7 @@ import PanelCard from "./PanelCard"
 
 import getWorkflow from "../../utils/getWorkflow"
 
-const Workflows = (props: { workflows: any }) => {
+const Workflows = (props: { path: string; workflows: any }) => {
   return (
     <React.Fragment>
       {props?.workflows?.map((id: any, index: number) => {
