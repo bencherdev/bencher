@@ -1,8 +1,18 @@
 const workflowsTabs = {
-  dashboard: (path: string, key: string) => {
+  workflows: (path: string) => {
+    const workflowsPath = `${path}/workflows`
     return {
-      path: `${path}/${key.toLocaleLowerCase()}`,
-      label: key,
+      path: workflowsPath,
+      active: workflowsPath,
+      label: "Workflows",
+    }
+  },
+  new: (path: string) => {
+    const workflowsPath = `${path}/workflows`
+    return {
+      path: `${workflowsPath}/new`,
+      active: workflowsPath,
+      label: "",
     }
   },
 }

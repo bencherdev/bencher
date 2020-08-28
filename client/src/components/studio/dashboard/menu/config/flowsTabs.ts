@@ -1,8 +1,18 @@
 const flowsTabs = {
-  dashboard: (path: string, key: string) => {
+  flows: (path: string) => {
+    const flowsPath = `${path}/flows`
     return {
-      path: `${path}/${key.toLocaleLowerCase()}`,
-      label: key,
+      path: flowsPath,
+      active: flowsPath,
+      label: "Flows",
+    }
+  },
+  new: (path: string) => {
+    const flowsPath = `${path}/flows`
+    return {
+      path: `${flowsPath}/new`,
+      active: flowsPath,
+      label: "",
     }
   },
 }

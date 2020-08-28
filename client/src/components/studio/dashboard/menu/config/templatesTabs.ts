@@ -1,8 +1,18 @@
 const templatesTabs = {
-  dashboard: (path: string, key: string) => {
+  templates: (path: string) => {
+    const templatesPath = `${path}/templates`
     return {
-      path: `${path}/${key.toLocaleLowerCase()}`,
-      label: key,
+      path: templatesPath,
+      active: templatesPath,
+      label: "Templates",
+    }
+  },
+  new: (path: string) => {
+    const templatesPath = `${path}/templates`
+    return {
+      path: `${templatesPath}/new`,
+      active: templatesPath,
+      label: "",
     }
   },
 }
