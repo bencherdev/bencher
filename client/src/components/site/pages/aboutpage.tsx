@@ -14,14 +14,15 @@ import {
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
-  faStream,
   faStopwatch,
   faPlusCircle,
   faRecycle,
   faTable,
   faEquals,
-  faCircle,
+  faCircle as fasCircle,
 } from "@fortawesome/free-solid-svg-icons"
+
+import { faCircle as farCircle } from "@fortawesome/free-regular-svg-icons"
 
 const AboutPage = () => {
   const [redirect, setRedirect] = useState(false)
@@ -70,7 +71,7 @@ const AboutPage = () => {
                 <Columns.Column>
                   <Content className="has-text-centered">
                     <span className="icon is-large has-text-primary">
-                      <FontAwesomeIcon icon={faStream} size="5x" />
+                      <FontAwesomeIcon icon={farCircle} size="5x" />
                     </span>
                   </Content>
                 </Columns.Column>
@@ -207,7 +208,7 @@ const AboutPage = () => {
             <Columns.Column>
               <Content className="has-text-centered">
                 <span className="icon is-large has-text-primary">
-                  <FontAwesomeIcon icon={faCircle} size="5x" />
+                  <FontAwesomeIcon icon={fasCircle} size="5x" />
                 </span>
                 <Heading size={5}>Subflows &amp; Worksheets</Heading>
               </Content>
