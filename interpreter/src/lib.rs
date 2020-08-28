@@ -1,5 +1,18 @@
 mod utils;
 
+// https://github.com/pauldix/monkey-rust
+mod token;
+// mod ast;
+// pub mod object;
+pub mod lexer;
+// pub mod repl;
+// pub mod parser;
+// pub mod evaluator;
+// pub mod code;
+// pub mod compiler;
+// pub mod vm;
+
+
 use wasm_bindgen::prelude::*;
 // use web_sys::console;
 
