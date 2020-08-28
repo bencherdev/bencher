@@ -5,7 +5,8 @@ import { Content } from "react-bulma-components"
 import PanelCard from "./PanelCard"
 
 import getTemplate from "../../utils/getTemplate"
-import { faBorderNone } from "@fortawesome/free-solid-svg-icons"
+import { faSquare } from "@fortawesome/free-regular-svg-icons"
+// TODO use fas fa-stop-circle for Template Subflows
 
 const Templates = (props: { path: string; templates: any }) => {
   return (
@@ -15,7 +16,7 @@ const Templates = (props: { path: string; templates: any }) => {
         return (
           <PanelCard
             key={index}
-            icon={faBorderNone}
+            icon={faSquare}
             to={`/studio/templates/#${template?.id?.toLowerCase()}`}
             title={template?.name}
           >

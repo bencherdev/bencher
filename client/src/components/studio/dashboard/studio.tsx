@@ -9,18 +9,9 @@ import FooterPadding from "../../utils/FooterPadding"
 import getConfig from "../utils/getConfig"
 import getUser from "../../utils/getUser"
 
-function getPath() {
-  console.log(window.location.pathname.split("/"))
-  return window.location.pathname.split("/")
-}
-
 const Studio = () => {
   const user = getUser()
   const [config, setConfig] = useState(getConfig(user?.id))
-
-  function handleConfig(config: any) {
-    setConfig(config)
-  }
 
   return (
     <Section>

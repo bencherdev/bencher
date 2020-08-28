@@ -3,8 +3,12 @@ import { navigate } from "gatsby"
 import { Button, Icon, Columns } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faStream, faBorderNone } from "@fortawesome/free-solid-svg-icons"
-import { faCircle, IconDefinition } from "@fortawesome/free-regular-svg-icons"
+import { faStream } from "@fortawesome/free-solid-svg-icons"
+import {
+  faCircle,
+  faSquare,
+  IconDefinition,
+} from "@fortawesome/free-regular-svg-icons"
 
 const OptionButton = (props: { name: string; icon: IconDefinition }) => (
   <Button
@@ -37,7 +41,7 @@ const OptionsBox = () => {
           <OptionButton name="Flow" icon={faCircle} />
         </Columns.Column>
         <Columns.Column>
-          <OptionButton name="Template" icon={faBorderNone} />
+          <OptionButton name="Template" icon={faSquare} />
         </Columns.Column>
       </Columns>
     </React.Fragment>
