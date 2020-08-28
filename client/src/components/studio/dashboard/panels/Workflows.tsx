@@ -2,7 +2,7 @@ import React from "react"
 
 import { Content } from "react-bulma-components"
 
-import { faStream } from "@fortawesome/free-solid-svg-icons"
+import { faBars } from "@fortawesome/free-solid-svg-icons"
 
 import PanelCard from "./PanelCard"
 
@@ -16,7 +16,7 @@ const Workflows = (props: { path: string; workflows: any }) => {
         return (
           <PanelCard
             key={index}
-            icon={faStream}
+            icon={faBars}
             to={`/studio/workflow/#${workflow?.id?.toLowerCase()}`}
             title={workflow?.name}
           >
