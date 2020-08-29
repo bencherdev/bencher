@@ -6,6 +6,7 @@ import New from "./New"
 import Workflows from "./Workflows"
 import Flows from "./Flows"
 import Templates from "./Templates"
+import Contracts from "./Contracts"
 
 const Panel = (props: { config: any }) => {
   return (
@@ -15,9 +16,9 @@ const Panel = (props: { config: any }) => {
       <New path="/flows/new" />
       <Flows path="/flows" flows={props?.config?.flows} />
       <New path="/templates/new" />
-      <Templates path="templates" templates={props?.config?.templates} />
+      <Templates path="/templates" templates={props?.config?.templates} />
       <New path="/contracts/new" />
-      {/* TODO Contracts */}
+      <Contracts path="/contracts" contracts={props?.config?.contracts} />
       <Dashboard path="/" />
     </Router>
   )

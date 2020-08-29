@@ -3,9 +3,9 @@ import React from "react"
 import Loadable from "@loadable/component"
 
 const Notebook = Loadable(() =>
-  import("../../../components/studio/notebook/Notebook")
+  import("../../components/studio/notebook/Notebook")
 )
 
-const NotebookPage = () => <Notebook />
+const FlowPage = () => <Notebook />
 
-export default NotebookPage
+export default FlowPage

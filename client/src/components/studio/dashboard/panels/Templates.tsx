@@ -17,7 +17,7 @@ const Templates = (props: { path: string; templates: any }) => {
           <PanelCard
             key={index}
             icon={faSquare}
-            to={`/studio/templates/#${template?.id?.toLowerCase()}`}
+            to={`/studio/template/#${template?.id?.toLowerCase()}`}
             title={template?.name}
           >
             <Content>
