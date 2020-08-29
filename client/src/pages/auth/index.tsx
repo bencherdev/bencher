@@ -3,7 +3,7 @@ import React from "react"
 import Loadable from "@loadable/component"
 
 import SEO from "../../components/utils/seo"
-const Auth = Loadable(() => import("../../components/auth/auth"))
+const Auth = Loadable(() => import("../../components/auth/Auth"))
 
 const AuthPage = () => (
   <React.Fragment>

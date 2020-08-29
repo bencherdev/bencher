@@ -3,7 +3,7 @@ import React from "react"
 import Loadable from "@loadable/component"
 
 import SEO from "../../components/utils/seo"
-const Logout = Loadable(() => import("../../components/auth/logout"))
+const Logout = Loadable(() => import("../../components/auth/Logout"))
 
 const LogoutPage = () => (
   <React.Fragment>

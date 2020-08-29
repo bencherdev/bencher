@@ -1,5 +1,5 @@
 import React from "react"
-import { Form, Icon } from "react-bulma-components"
+import { Form } from "react-bulma-components"
 
 const Select = (props: {
   name: string

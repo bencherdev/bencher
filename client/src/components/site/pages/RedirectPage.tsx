@@ -1,8 +1,9 @@
 import React from "react"
-import { Heading, Section } from "react-bulma-components"
+import { Heading } from "react-bulma-components"
 
 import SEO from "../../utils/seo"
 import ContentPage from "./ContentPage"
+import FooterPadding from "../../utils/FooterPadding"
 
 const RedirectPage = (props: { title: string; to: string }) => {
   return (
@@ -13,24 +14,7 @@ const RedirectPage = (props: { title: string; to: string }) => {
       )}
       <ContentPage>
         <Heading>{`Redirecting to ${props.title}...`}</Heading>
-        <Section>
-          <br />
-        </Section>
-        <Section>
-          <br />
-        </Section>
-        <Section>
-          <br />
-        </Section>
-        <Section>
-          <br />
-        </Section>
-        <Section>
-          <br />
-        </Section>
-        <Section>
-          <br />
-        </Section>
+        <FooterPadding margin={1000} />
       </ContentPage>
     </React.Fragment>
   )

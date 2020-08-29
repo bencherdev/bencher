@@ -10,10 +10,6 @@ const BrandName = styled.h1`
   font-size: 300%;
 `
 
-const NavbarDiv = styled.div``
-
-import ExternalLink from "../../utils/externallink"
-
 const SiteNavbar = (props: { user: any; link: any }) => (
   <Navbar color="white">
     <Navbar.Brand>

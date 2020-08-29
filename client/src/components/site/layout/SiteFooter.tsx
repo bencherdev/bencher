@@ -1,6 +1,5 @@
 import React from "react"
 import { Link } from "@reach/router"
-import styled from "styled-components"
 
 import {
   Footer,
@@ -20,10 +19,6 @@ import {
 import ExternalLink from "../../utils/externallink"
 import "./styles.css"
 
-const BrandName = styled.h1`
-  color: black;
-  font-size: 300%;
-`
 const SiteFooter = () => {
   return (
     <Footer>
