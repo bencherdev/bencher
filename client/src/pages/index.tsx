@@ -9,7 +9,7 @@ const ClientSideRedirect = Loadable(() =>
 const RootIndex = () => (
   <React.Fragment>
     <SEO title="TableFlow" />
-    <ClientSideRedirect to={"/studio/flow/new"} />
+    <ClientSideRedirect to={"/tour"} />
   </React.Fragment>
 )
 

@@ -2,15 +2,15 @@
 import React from "react"
 import { Heading } from "react-bulma-components"
 
-import SEO from "../../components/utils/seo"
-import ContentPage from "../../components/site/pages/ContentPage"
+import SEO from "../components/utils/seo"
+import ContentPage from "../components/site/pages/ContentPage"
 
 const TourPage = () => {
   return (
     <React.Fragment>
       <SEO title="A Tour of TableFlow" />
       <ContentPage>
-        <Heading>A Tour of TableFlow</Heading>
+        <Heading>Redirecting to A Tour of TableFlow...</Heading>
       </ContentPage>
     </React.Fragment>
   )

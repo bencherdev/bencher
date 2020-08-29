@@ -13,7 +13,7 @@ const BrandName = styled.h1`
 const SiteNavbar = (props: { user: any; link: any }) => (
   <Navbar color="white">
     <Navbar.Brand>
-      <Navbar.Item renderAs={props?.link} to="/studio">
+      <Navbar.Item renderAs={props?.link} to="/tour">
         <BrandName> TableFlow</BrandName>
       </Navbar.Item>
 

@@ -29,7 +29,7 @@ const AboutPage = () => {
 
   return (
     <Section size="medium">
-      {redirect && <ClientSideRedirect to="/studio/flow/new" />}
+      {redirect && <ClientSideRedirect to="/tour" />}
       <Container>
         <Content className="has-text-centered">
           <Heading size={2}>Build modular spreadsheets</Heading>
@@ -43,7 +43,8 @@ const AboutPage = () => {
               <Button
                 fullwidth={true}
                 color="primary"
-                onClick={() => {
+                onClick={(event: Event) => {
+                  event.preventDefault()
                   setRedirect(true)
                 }}
               >
