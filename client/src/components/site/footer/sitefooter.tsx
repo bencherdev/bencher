@@ -67,13 +67,13 @@ const SiteFooter = () => {
                 TableFlow Docs
                 <ul>
                   <li>
-                    <Link to="/docs/quick-start" className="dark-green-link">
-                      Quick Start
+                    <Link to="/docs/tour" className="dark-green-link">
+                      Tour
                     </Link>
                   </li>
                   <li>
-                    <Link to="/docs/tutorial" className="dark-green-link">
-                      Tutorial
+                    <Link to="/docs/manual" className="dark-green-link">
+                      Manual
                     </Link>
                   </li>
                   <li>

@@ -11,7 +11,7 @@ const ChangeLogPage = () => {
       <SEO title="Change Log" />
       <ContentPage>
         <Heading>TableFlow Change Log</Heading>
-      </ContentPage>{" "}
+      </ContentPage>
     </React.Fragment>
   )
 }

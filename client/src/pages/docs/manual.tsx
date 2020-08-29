@@ -5,15 +5,15 @@ import { Heading } from "react-bulma-components"
 import SEO from "../../components/utils/seo"
 import ContentPage from "../../components/site/pages/ContentPage"
 
-const TutorialPage = () => {
+const ManualPage = () => {
   return (
     <React.Fragment>
-      <SEO title="Tutorial" />
+      <SEO title="TableFlow Manual" />
       <ContentPage>
-        <Heading>TableFlow Tutorial</Heading>
+        <Heading>TableFlow Manual</Heading>
       </ContentPage>
     </React.Fragment>
   )
 }
 
-export default TutorialPage
+export default ManualPage

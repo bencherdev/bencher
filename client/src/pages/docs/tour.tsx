@@ -5,15 +5,15 @@ import { Heading } from "react-bulma-components"
 import SEO from "../../components/utils/seo"
 import ContentPage from "../../components/site/pages/ContentPage"
 
-const QuickStart = () => {
+const TourPage = () => {
   return (
     <React.Fragment>
-      <SEO title="Quick Start" />
+      <SEO title="Tour of TableFlow" />
       <ContentPage>
-        <Heading>TableFlow Quick Start Guide</Heading>
+        <Heading>Tour of TableFlow</Heading>
       </ContentPage>
     </React.Fragment>
   )
 }
 
-export default QuickStart
+export default TourPage
