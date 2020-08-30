@@ -3,7 +3,7 @@ import { navigate } from "gatsby"
 import { Button, Icon, Columns } from "react-bulma-components"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faBars, faShapes } from "@fortawesome/free-solid-svg-icons"
+import { faBars, faEllipsisH } from "@fortawesome/free-solid-svg-icons"
 import {
   faCircle,
   faSquare,
@@ -44,7 +44,7 @@ const OptionsBox = () => {
           <OptionButton name="Template" icon={faSquare} />
         </Columns.Column>
         <Columns.Column>
-          <OptionButton name="Contract" icon={faShapes} />
+          <OptionButton name="Contract" icon={faEllipsisH} />
         </Columns.Column>
       </Columns>
     </React.Fragment>

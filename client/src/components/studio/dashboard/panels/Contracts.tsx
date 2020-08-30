@@ -2,7 +2,7 @@ import React from "react"
 
 import { Content } from "react-bulma-components"
 
-import { faShapes } from "@fortawesome/free-solid-svg-icons"
+import { faEllipsisH } from "@fortawesome/free-solid-svg-icons"
 
 import PanelCard from "./PanelCard"
 
@@ -16,7 +16,7 @@ const Contracts = (props: { path: string; contracts: any }) => {
         return (
           <PanelCard
             key={index}
-            icon={faShapes}
+            icon={faEllipsisH}
             to={`/studio/contract/#${contract?.id?.toLowerCase()}`}
             title={contract?.name}
           >
