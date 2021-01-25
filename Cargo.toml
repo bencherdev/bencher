@@ -1,0 +1,31 @@
+[package]
+name = "tableflow"
+version = "0.1.0"
+authors = ["Everett Pompeii <epompeii@protonmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.htm
+
+# Dev Environment
+# cargo-edit = "0.7"
+# cargo-make = "0.32.10"
+# cargo-watch = "7.4"
+# trunk = "0.7.4"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dev-dependencies]
+wasm-bindgen-cli = "0.2.69"
+wasm-bindgen-test = "0.3.19"
+
+[dependencies]
+seed = "0.8.0"
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-Os']
