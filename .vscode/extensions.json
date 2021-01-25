@@ -3,10 +3,9 @@
     "dtsvet.vscode-wasm",
     "eamodio.gitlens",
     "esbenp.prettier-vscode",
-    "prisma.vscode-graphql",
+    "matklad.rust-analyzer",
     "rust-lang.rust",
     "TabNine.tabnine-vscode",
-    "vscode.typescript-language-feature",
     "vscodevim.vim"
   ]
 }
