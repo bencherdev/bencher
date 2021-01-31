@@ -73,6 +73,7 @@ struct User {
 
 enum Page {
     Home,
+    About(page::about::Model),
     Settings(page::settings::Model),
     NotFound,
 }
