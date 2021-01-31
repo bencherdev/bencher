@@ -20,7 +20,9 @@ wasm-bindgen-cli = "0.2.69"
 wasm-bindgen-test = "0.3.19"
 
 [dependencies]
+chrono = "0.4.19"
 seed = "0.8.0"
+ulid = "0.4.1"
 
 [profile.release]
 lto = true
