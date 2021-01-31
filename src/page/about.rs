@@ -53,14 +53,3 @@ pub fn view(model: &Model) -> Node<Msg> {
         button![model, ev(Ev::Click, |_| Msg::Increment),],
     ]
 }
-
-// ------ ------
-//     Start
-// ------ ------
-
-// (This function is invoked by `init` function in `index.html`.)
-#[wasm_bindgen(start)]
-pub fn start() {
-    // Mount the `app` to the element with the `id` "app".
-    App::start("app", init, update, view);
-}

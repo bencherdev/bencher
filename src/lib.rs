@@ -16,7 +16,9 @@ const SETTINGS: &str = "settings";
 
 // `init` describes what should happen when your app started.
 fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
-    orders.stream(streams::window_event(Ev::Click, |_| Msg::HideMenu));
+    orders
+        .subscribe(Msg::UrlChanged)
+        .stream(streams::window_event(Ev::Click, |_| Msg::HideMenu));
     Model {
         ctx: Context {
             user: None,
@@ -24,7 +26,6 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
         },
         base_url: url.to_base_url(),
         page: Page::Home,
-        counter: 0,
         menu_visible: false,
     }
 }
@@ -57,7 +58,6 @@ struct Model {
     ctx: Context,
     base_url: Url,
     page: Page,
-    counter: u32,
     menu_visible: bool,
 }
 
@@ -78,6 +78,20 @@ enum Page {
     NotFound,
 }
 
+impl Page {
+    fn init(mut url: Url, orders: &mut impl Orders<Msg>) -> Self {
+        match url.remaining_path_parts().as_slice() {
+            [] => Self::Home,
+            [ABOUT] => Self::About(page::about::init(url, &mut orders.proxy(Msg::AboutMsg))),
+            [SETTINGS] => Self::Settings(page::settings::init(
+                url,
+                &mut orders.proxy(Msg::SettingsMsg),
+            )),
+            _ => Self::NotFound,
+        }
+    }
+}
+
 // ------ ------
 //    Update
 // ------ ------
@@ -88,13 +102,14 @@ enum Msg {
     UrlChanged(subs::UrlChanged),
     ToggleMenu,
     HideMenu,
-    // Increment,
+    AboutMsg(page::about::Msg),
+    SettingsMsg(page::settings::Msg),
 }
 
 // `update` describes how to handle each `Msg`.
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
-        Msg::UrlChanged(subs::UrlChanged(url)) => {}
+        Msg::UrlChanged(subs::UrlChanged(url)) => model.page = Page::init(url, orders),
         Msg::ToggleMenu => model.menu_visible = not(model.menu_visible),
         Msg::HideMenu => {
             if model.menu_visible {
@@ -102,7 +117,17 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             } else {
                 orders.skip();
             }
-        } // Msg::Increment => model.counter += 1,
+        }
+        Msg::AboutMsg(msg) => {
+            if let Page::About(model) = &mut model.page {
+                page::about::update(msg, model, &mut orders.proxy(Msg::AboutMsg))
+            }
+        }
+        Msg::SettingsMsg(msg) => {
+            if let Page::Settings(model) = &mut model.page {
+                page::settings::update(msg, model, &mut orders.proxy(Msg::SettingsMsg))
+            }
+        }
     }
 }
 
@@ -112,17 +137,21 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 
 // (Remove the line below once your `Model` become more complex.)
 // `view` describes what to display.
-fn view(model: &Model) -> Node<Msg> {
-    // div!["Root view"]
-    view_navbar(model.menu_visible, &model.base_url, model.ctx.user.as_ref())
-    // div![
-    //     "This is a counter: ",
-    //     C!["counter"],
-    //     button![model, ev(Ev::Click, |_| Msg::Increment),],
-    // ]
+fn view(model: &Model) -> Vec<Node<Msg>> {
+    vec![
+        view_navbar(
+            model.menu_visible,
+            &model.base_url,
+            model.ctx.user.as_ref(),
+            &model.page,
+        ),
+        view_content(&model.page),
+    ]
 }
 
-fn view_navbar(menu_visible: bool, base_url: &Url, user: Option<&User>) -> Node<Msg> {
+// ----- view_navbar ------
+
+fn view_navbar(menu_visible: bool, base_url: &Url, user: Option<&User>, page: &Page) -> Node<Msg> {
     nav![
         C!["navbar"],
         attrs! {
@@ -130,7 +159,7 @@ fn view_navbar(menu_visible: bool, base_url: &Url, user: Option<&User>) -> Node<
             At::AriaLabel => "main navigation",
         },
         view_brand_and_hamburger(menu_visible, base_url),
-        view_navbar_menu(menu_visible, base_url, user),
+        view_navbar_menu(menu_visible, base_url, user, page),
     ]
 }
 
@@ -162,19 +191,28 @@ fn view_brand_and_hamburger(menu_visible: bool, base_url: &Url) -> Node<Msg> {
     ]
 }
 
-fn view_navbar_menu(menu_visible: bool, base_url: &Url, user: Option<&User>) -> Node<Msg> {
+fn view_navbar_menu(
+    menu_visible: bool,
+    base_url: &Url,
+    user: Option<&User>,
+    page: &Page,
+) -> Node<Msg> {
     div![
         C!["navbar-menu", IF!(menu_visible => "is-active")],
-        view_navbar_menu_start(base_url),
+        view_navbar_menu_start(base_url, page),
         view_navbar_menu_end(base_url, user),
     ]
 }
 
-fn view_navbar_menu_start(base_url: &Url) -> Node<Msg> {
+fn view_navbar_menu_start(base_url: &Url, page: &Page) -> Node<Msg> {
     div![
         C!["navbar-start"],
         a![
-            C!["navbar-item"],
+            C![
+                "navbar-item",
+                "is-tab",
+                IF!(matches!(page, Page::About(_)) => "is-active"),
+            ],
             attrs! {At::Href => Urls::new(base_url).about()},
             "About",
         ],
@@ -236,6 +274,20 @@ fn view_buttons_for_anonymous_user() -> Vec<Node<Msg>> {
             ],
             "Log in",
         ],
+    ]
+}
+
+// ----- view_content ------
+
+fn view_content(page: &Page) -> Node<Msg> {
+    div![
+        C!["container"],
+        match page {
+            Page::Home => page::home::view(),
+            Page::About(model) => page::about::view(model).map_msg(Msg::AboutMsg),
+            Page::Settings(model) => page::settings::view(model).map_msg(Msg::SettingsMsg),
+            Page::NotFound => page::not_found::view(),
+        }
     ]
 }
 
