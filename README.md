@@ -4,12 +4,14 @@ Build full stack applications while only having to think about what actually mat
 
 # Contributing
 
-- [Git](https://www.atlassian.com/git/tutorials/install-git)
+- [Git](https://git-scm.com/downloads)
 - [Rust](https://www.rust-lang.org/tools/install)
-- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+- [Seed](https://seed-rs.org)
 
 cargo watch -x fmt -x check -x test
 
 cargo make serve
+
+http://0.0.0.0:8000
 
 cargo make watch
