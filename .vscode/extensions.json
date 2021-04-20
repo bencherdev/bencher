@@ -4,7 +4,6 @@
     "eamodio.gitlens",
     "esbenp.prettier-vscode",
     "matklad.rust-analyzer",
-    "rust-lang.rust",
     "TabNine.tabnine-vscode",
     "vscodevim.vim"
   ]
