@@ -6,18 +6,15 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.htm
 
-# Dev Environment
-# cargo-edit = "0.7"
-# cargo-make = "0.32.10"
-# cargo-watch = "7.4"
-# trunk = "0.7.4"
-
 [lib]
 crate-type = ["cdylib"]
 
 [dev-dependencies]
 wasm-bindgen-cli = "0.2.69"
 wasm-bindgen-test = "0.3.19"
+cargo-make = "0.32.10"
+cargo-watch = "7.4"
+trunk = "0.7.4"
 
 [dependencies]
 seed = "0.8.0"
