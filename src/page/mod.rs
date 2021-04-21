@@ -1,7 +1,4 @@
-pub mod home;
-
 pub mod about;
-
-pub mod settings;
-
+pub mod home;
 pub mod not_found;
+pub mod settings;
