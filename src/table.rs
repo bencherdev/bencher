@@ -1,4 +1,4 @@
-pub type Uuid = uuid::Uuid;
+pub type Uuid = ulid::Ulid;
 
 pub struct Table<T> {
     id: Uuid,

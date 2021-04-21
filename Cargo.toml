@@ -17,8 +17,9 @@ cargo-watch = "7.4"
 trunk = "0.7.4"
 
 [dependencies]
+chrono = "0.4.19"
 seed = "0.8.0"
-uuid = "0.8.2"
+ulid = "0.4.1"
 
 [profile.release]
 lto = true
