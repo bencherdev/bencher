@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 pub type Uuid = ulid::Ulid;
 
-pub struct Table<T> {
+pub struct Table {
     id: Uuid,
     name: String,
     columns: Vec<Uuid>,
     headers: HashMap<Uuid, Header>,
-    rows: Vec<HashMap<Uuid, T>>,
+    rows: Vec<HashMap<Uuid, DataType>>,
 }
 
 pub struct Header {
@@ -17,8 +17,8 @@ pub struct Header {
 }
 
 pub enum DataType {
-    Text,
-    Number,
+    Text(String),
+    Number(f64),
     // List,
     // Dictionary,
     // Table,
