@@ -10,6 +10,7 @@ mod studio;
 
 const ABOUT: &str = "about";
 const SETTINGS: &str = "settings";
+const BASIC: &str = "basic";
 
 // ------ ------
 //     Init
@@ -26,7 +27,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
             token: None,
         },
         base_url: url.to_base_url(),
-        page: Page::Home,
+        page: Page::Home(pages::home::Model::default()),
         menu_visible: false,
     }
 }
@@ -73,21 +74,23 @@ struct User {
 }
 
 enum Page {
-    Home,
+    Home(pages::home::Model),
     About(pages::about::Model),
     Settings(pages::settings::Model),
+    Basic,
     NotFound,
 }
 
 impl Page {
     fn init(mut url: Url, orders: &mut impl Orders<Msg>) -> Self {
         match url.remaining_path_parts().as_slice() {
-            [] => Self::Home,
+            [] => Self::Home(pages::home::init(url, &mut orders.proxy(Msg::HomeMsg))),
             [ABOUT] => Self::About(pages::about::init(url, &mut orders.proxy(Msg::AboutMsg))),
             [SETTINGS] => Self::Settings(pages::settings::init(
                 url,
                 &mut orders.proxy(Msg::SettingsMsg),
             )),
+            [BASIC] => Self::Basic,
             _ => Self::NotFound,
         }
     }
@@ -103,6 +106,7 @@ enum Msg {
     UrlChanged(subs::UrlChanged),
     ToggleMenu,
     HideMenu,
+    HomeMsg(pages::home::Msg),
     AboutMsg(pages::about::Msg),
     SettingsMsg(pages::settings::Msg),
 }
@@ -117,6 +121,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.menu_visible = false;
             } else {
                 orders.skip();
+            }
+        }
+        Msg::HomeMsg(msg) => {
+            if let Page::Home(model) = &mut model.page {
+                pages::home::update(msg, model, &mut orders.proxy(Msg::HomeMsg))
             }
         }
         Msg::AboutMsg(msg) => {
@@ -284,9 +293,10 @@ fn view_content(page: &Page) -> Node<Msg> {
     div![
         C!["container"],
         match page {
-            Page::Home => pages::home::view(),
+            Page::Home(model) => pages::home::view(model).map_msg(Msg::HomeMsg),
             Page::About(model) => pages::about::view(model).map_msg(Msg::AboutMsg),
             Page::Settings(model) => pages::settings::view(model).map_msg(Msg::SettingsMsg),
+            Page::Basic => pages::basic::view(),
             Page::NotFound => pages::not_found::view(),
         }
     ]

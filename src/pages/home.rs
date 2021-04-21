@@ -45,7 +45,8 @@ pub fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
 //     View
 // ------ ------
 
-pub fn view<Ms>() -> Node<Ms> {
+#[allow(clippy::trivially_copy_pass_by_ref)]
+pub fn view(model: &Model) -> Node<Msg> {
     div![
         attrs![At::Class => "columns"],
         div![
