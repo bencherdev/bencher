@@ -15,11 +15,17 @@ wasm-bindgen-test = "0.3.19"
 cargo-make = "0.32.10"
 cargo-watch = "7.4"
 trunk = "0.7.4"
+pretty_assertions = "0.7.2"
 
 [dependencies]
+anyhow = "1.0.40"
 chrono = "0.4.19"
+english-numbers = "0.3.3"
+im = { version = "15.0.0", features = ["serde"] }
+ron = "0.6.4"
 seed = "0.8.0"
-ulid = "0.4.1"
+serde = "1.0.125"
+ulid = { version = "0.4.1", features = ["uuid", "serde"] }
 
 [profile.release]
 lto = true

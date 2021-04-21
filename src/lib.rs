@@ -27,7 +27,7 @@ fn init(url: Url, orders: &mut impl Orders<Msg>) -> Model {
             token: None,
         },
         base_url: url.to_base_url(),
-        page: Page::Home(pages::home::Model::default()),
+        page: Page::Home(pages::home::Model::new()),
         menu_visible: false,
     }
 }

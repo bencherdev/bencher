@@ -5,7 +5,7 @@
 
 use seed::{prelude::*, *};
 
-use crate::studio::table::Table;
+use crate::studio::table::table::{Table, TableMsg};
 
 // ------ ------
 //     Init
@@ -13,7 +13,7 @@ use crate::studio::table::Table;
 
 // `init` describes what should happen when your app started.
 pub fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
-    Model::default()
+    Model::new()
 }
 
 // ------ ------
@@ -21,48 +21,31 @@ pub fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 // ------ ------
 
 // `Model` describes our app state.
-pub type Model = i32;
+pub type Model = Table;
 
 // ------ ------
 //    Update
 // ------ ------
 
-// (Remove the line below once any of your `Msg` variants doesn't implement `Copy`.)
-#[derive(Copy, Clone)]
-// `Msg` describes the different events you can modify state with.
-pub enum Msg {
-    Increment,
-}
+pub type Msg = TableMsg;
 
 // `update` describes how to handle each `Msg`.
 pub fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
     match msg {
-        Msg::Increment => *model += 1,
-    }
+        TableMsg::Increment => {}
+    };
 }
 
 // ------ ------
 //     View
 // ------ ------
 
-#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn view(model: &Model) -> Node<Msg> {
     div![
         attrs![At::Class => "columns"],
         div![
             attrs![At::Class => "column is-half"],
-            div![
-                attrs![At::Class => "content"],
-                div![
-                    attrs![At::Class => "table-container"],
-                    table![
-                        attrs![At::Class => "table is-bordered is-hoverable is-narrow"],
-                        thead![tr![th!["Names"]],],
-                        thead![tr![th!["First"], th!["Last"],],],
-                        tbody![tr![td!["Saul"], td!["Goodman"],],],
-                    ],
-                ],
-            ],
+            div![attrs![At::Class => "content"], model.to_html(),],
         ]
     ]
 }
