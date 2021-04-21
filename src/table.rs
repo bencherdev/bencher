@@ -15,9 +15,20 @@ pub struct Header {
 }
 
 pub enum DataType {
+    Text,
     Number,
-    String,
-    Date,
-    Time,
-    DateTime,
+    // List,
+    // Dictionary,
+    // Table,
+    // Function,
+    // Percentage,
+    // Currency,
+    // Date,
+    // Time,
+    // DateTime,
+    // Duration,
+    // Email,
+    // URL,
+    // Phone Number,
+    // Address,
 }

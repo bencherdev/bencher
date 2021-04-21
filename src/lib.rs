@@ -60,6 +60,7 @@ fn view(model: &Model) -> Node<Msg> {
                     attrs![At::Class => "table-container"],
                     table![
                         attrs![At::Class => "table is-bordered is-hoverable is-narrow"],
+                        thead![tr![th!["Names"]],],
                         thead![tr![th!["First"], th!["Last"],],],
                         tbody![tr![td!["Saul"], td!["Goodman"],],],
                     ],
