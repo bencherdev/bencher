@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub type Uuid = ulid::Ulid;
 
 pub struct Table<T> {

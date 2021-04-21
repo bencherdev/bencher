@@ -5,7 +5,8 @@
 
 use seed::{prelude::*, *};
 
-mod page;
+mod pages;
+mod studio;
 
 const ABOUT: &str = "about";
 const SETTINGS: &str = "settings";
@@ -73,8 +74,8 @@ struct User {
 
 enum Page {
     Home,
-    About(page::about::Model),
-    Settings(page::settings::Model),
+    About(pages::about::Model),
+    Settings(pages::settings::Model),
     NotFound,
 }
 
@@ -82,8 +83,8 @@ impl Page {
     fn init(mut url: Url, orders: &mut impl Orders<Msg>) -> Self {
         match url.remaining_path_parts().as_slice() {
             [] => Self::Home,
-            [ABOUT] => Self::About(page::about::init(url, &mut orders.proxy(Msg::AboutMsg))),
-            [SETTINGS] => Self::Settings(page::settings::init(
+            [ABOUT] => Self::About(pages::about::init(url, &mut orders.proxy(Msg::AboutMsg))),
+            [SETTINGS] => Self::Settings(pages::settings::init(
                 url,
                 &mut orders.proxy(Msg::SettingsMsg),
             )),
@@ -102,8 +103,8 @@ enum Msg {
     UrlChanged(subs::UrlChanged),
     ToggleMenu,
     HideMenu,
-    AboutMsg(page::about::Msg),
-    SettingsMsg(page::settings::Msg),
+    AboutMsg(pages::about::Msg),
+    SettingsMsg(pages::settings::Msg),
 }
 
 // `update` describes how to handle each `Msg`.
@@ -120,12 +121,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::AboutMsg(msg) => {
             if let Page::About(model) = &mut model.page {
-                page::about::update(msg, model, &mut orders.proxy(Msg::AboutMsg))
+                pages::about::update(msg, model, &mut orders.proxy(Msg::AboutMsg))
             }
         }
         Msg::SettingsMsg(msg) => {
             if let Page::Settings(model) = &mut model.page {
-                page::settings::update(msg, model, &mut orders.proxy(Msg::SettingsMsg))
+                pages::settings::update(msg, model, &mut orders.proxy(Msg::SettingsMsg))
             }
         }
     }
@@ -283,10 +284,10 @@ fn view_content(page: &Page) -> Node<Msg> {
     div![
         C!["container"],
         match page {
-            Page::Home => page::home::view(),
-            Page::About(model) => page::about::view(model).map_msg(Msg::AboutMsg),
-            Page::Settings(model) => page::settings::view(model).map_msg(Msg::SettingsMsg),
-            Page::NotFound => page::not_found::view(),
+            Page::Home => pages::home::view(),
+            Page::About(model) => pages::about::view(model).map_msg(Msg::AboutMsg),
+            Page::Settings(model) => pages::settings::view(model).map_msg(Msg::SettingsMsg),
+            Page::NotFound => pages::not_found::view(),
         }
     ]
 }
