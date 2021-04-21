@@ -51,6 +51,10 @@ fn view(model: &Model) -> Node<Msg> {
         "This is a counter: ",
         C!["counter"],
         button![model, ev(Ev::Click, |_| Msg::Increment),],
+        div![table![
+            tr![th!["First"], th!["Last"],],
+            tr![td!["Saul"], td!["Goodman"],],
+        ],],
     ]
 }
 
