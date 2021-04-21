@@ -7,7 +7,7 @@ pub struct Table {
     name: String,
     columns: Vec<Uuid>,
     headers: HashMap<Uuid, Header>,
-    rows: Vec<HashMap<Uuid, DataType>>,
+    rows: Vec<HashMap<Uuid, DataValue>>,
 }
 
 pub struct Header {
@@ -17,20 +17,27 @@ pub struct Header {
 }
 
 pub enum DataType {
+    Text,
+    Number,
+}
+
+pub enum DataValue {
     Text(String),
     Number(f64),
-    // List,
-    // Dictionary,
-    // Table,
-    // Function,
-    // Percentage,
-    // Currency,
-    // Date,
-    // Time,
-    // DateTime,
-    // Duration,
-    // Email,
-    // URL,
-    // Phone Number,
-    // Address,
 }
+
+// TODO add
+// List,
+// Dictionary,
+// Table,
+// Function,
+// Percentage,
+// Currency,
+// Date,
+// Time,
+// DateTime,
+// Duration,
+// Email,
+// URL,
+// Phone Number,
+// Address,
