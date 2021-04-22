@@ -1,24 +1,24 @@
+use std::fmt;
+
 use anyhow::{anyhow, bail, Result};
 use english_numbers;
 use im::hashmap::HashMap;
 use im::vector::Vector;
-use ron::de::from_str;
 use ron::ser::{to_string_pretty, PrettyConfig};
 use seed::{prelude::*, *};
 use serde::{Deserialize, Serialize};
 
 use crate::studio::table::cell::{Cell, NumberCell, TextCell};
 use crate::studio::table::header::{DataType, Header};
+use crate::studio::table::nameless::nameless;
 use crate::studio::table::row::Row;
-use crate::studio::table::table::TableMsg;
 use crate::studio::uuid::Uuid;
-
-const DEFAULT_TAB_NAME: &str = "Tab";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tab {
     id: Uuid,
-    name: String,
+    tab_type: TabType,
+    name: Option<String>,
     columns: Vector<Uuid>,
     headers: HashMap<Uuid, Header>,
     rows: Vector<Row>,
@@ -28,54 +28,54 @@ impl Tab {
     pub fn new() -> Tab {
         Tab {
             id: Uuid::new(),
-            name: DEFAULT_TAB_NAME.to_owned(),
+            tab_type: TabType::Tuple,
+            name: None,
             columns: Vector::new(),
             headers: HashMap::new(),
             rows: Vector::new(),
         }
     }
 
-    pub fn load(data: &str) -> Result<Tab> {
-        Ok(from_str(data)?)
-    }
-
-    pub fn save(&self) -> Result<String> {
-        let pretty = PrettyConfig::new();
-        Ok(to_string_pretty(&self, pretty)?)
-    }
-
     pub fn id(&self) -> &Uuid {
         &self.id
     }
 
-    pub fn name(&self) -> &str {
+    pub fn tab_type(&self) -> &TabType {
+        &self.tab_type
+    }
+
+    pub fn set_tab_type(&mut self, tab_type: &TabType) {
+        self.tab_type = tab_type.to_owned();
+    }
+
+    pub fn name(&self) -> &Option<String> {
         &self.name
     }
 
-    pub fn set_name(&mut self, name: &str) {
-        self.name = name.to_owned();
+    pub fn set_name(&mut self, name: Option<String>) {
+        self.name = name;
     }
 
-    pub fn columns(&self) -> usize {
-        self.columns.len()
+    pub fn columns(&self) -> &Vector<Uuid> {
+        &self.columns
     }
 
-    pub fn rows(&self) -> usize {
-        self.rows.len()
+    pub fn headers(&self) -> &HashMap<Uuid, Header> {
+        &self.headers
+    }
+
+    pub fn rows(&self) -> &Vector<Row> {
+        &self.rows
     }
 
     pub fn add_column(&mut self) -> Uuid {
-        let name = english_numbers::convert(
-            (self.columns.len() + 1) as i64,
-            english_numbers::Formatting {
-                title_case: true,
-                spaces: true,
-                conjunctions: false,
-                commas: false,
-                dashes: false,
+        let header = Header::new(
+            match self.tab_type {
+                TabType::Tuple => None,
+                TabType::Struct => Some(nameless(self.columns.len())),
             },
+            DataType::Text,
         );
-        let header = Header::new(&name, DataType::Text);
         let id = header.id().clone();
         self.columns.push_back(id.clone());
         for row in self.rows.iter_mut() {
@@ -111,7 +111,7 @@ impl Tab {
         Ok(())
     }
 
-    pub fn update_header_name(&mut self, id: &Uuid, name: &str) -> Result<()> {
+    pub fn update_header_name(&mut self, id: &Uuid, name: Option<String>) -> Result<()> {
         let header = self.headers.get_mut(id).ok_or(anyhow!(
             "Update header name failed to find id {} in headers",
             *id
@@ -172,79 +172,88 @@ impl Tab {
         Ok(())
     }
 
-    pub fn get_headers(&self, col_span: usize) -> Vec<Node<TableMsg>> {
-        let left = th![
-            attrs![At::Scope => "row", At::RowSpan => 2],
-            style![St::TextAlign => "center"],
-            "[ ]"
-        ];
-        let right = td![
-            attrs![At::Scope => "row", At::RowSpan => 2],
-            style![St::TextAlign => "center"],
-            "+"
-        ];
-
+    pub fn to_code(&self) -> Result<String> {
         if self.columns.len() == 0 {
-            return vec![
-                tr![
-                    left,
-                    th![attrs![At::Scope => "column", At::ColSpan => col_span.to_string() ],],
-                    right,
-                ],
-                tr![th![
-                    attrs![At::Scope => "column", At::ColSpan => col_span.to_string() ],
-                ],],
-            ];
+            // If the Tab has no Columns then it is a Unit Struct
+            // Note that a Table uses this same condition for Enum Variants
+            // with no associated data type.
+            // Therefore it will only be possible to have a Unit Struct outside of an Enum
+            // This can be overcome by having all Enums have an associated data type
+            return Ok(format!("struct Unit{}; ", self.id));
         }
 
-        vec![
-            tr![
-                left,
-                self.columns.iter().map(|column_id| {
-                    th![
-                        attrs![At::Scope => "column"],
-                        match self.headers.get(column_id) {
-                            Some(header) => header.name(),
-                            None => "ERROR",
-                        }
-                    ]
-                }),
-                right,
-            ],
-            tr![div![self.columns.iter().map(|column_id| {
-                th![
-                    attrs![At::Scope => "column"],
-                    match self.headers.get(column_id) {
-                        Some(header) => header.data_type().to_html(),
-                        None => DataType::Text.to_html(),
-                    }
-                ]
-            })],],
-        ]
-    }
+        let mut open;
+        let mut fields = String::new();
+        let mut close;
 
-    pub fn get_rows(&self, col_span: usize) -> Node<TableMsg> {
-        tbody![
-            self.rows.iter().map(|row| {
-                tr![self.columns.iter().enumerate().map(|(index, column_id)| {
-                    div![
-                        th![attrs![At::Scope => "row"], (index + 1).to_string()],
-                        td![match row.get(column_id) {
-                            Some(cell) => match cell {
-                                Cell::Text(text) => text.value().to_owned(),
-                                Cell::Number(number) => number.value().to_string(),
-                            },
-                            None => "ERROR".to_owned(),
-                        }]
-                    ]
-                })]
-            }),
-            tr![td![
-                attrs![At::ColSpan => (col_span + 2).to_string()],
-                style![St::TextAlign => "center"],
-                "+"
-            ]],
-        ]
+        match self.tab_type {
+            TabType::Tuple => {
+                open = "(";
+                close = ");";
+                // For each Column, add a data type to the Tuple Struct
+                for (index, column_id) in self.columns.iter().enumerate() {
+                    let header = self.headers.get(column_id).ok_or(anyhow!(
+                        "Tuple tab to code failed to find header {} in map",
+                        *column_id
+                    ))?;
+
+                    match header.name() {
+                        Some(name) => bail!(
+                            "Tuple tab to code failed as header {} is named {}",
+                            header.id(),
+                            name,
+                        ),
+                        None => {}
+                    }
+
+                    if index != 0 {
+                        fields.push_str(", ");
+                    }
+                    fields.push_str(&format!("{}", *header.data_type()));
+                }
+            }
+            TabType::Struct => {
+                open = "{";
+                close = "}";
+                // For each Column, add a field and its data type to the Struct
+                for column_id in &self.columns {
+                    let header = self.headers.get(column_id).ok_or(anyhow!(
+                        "Struct tab to code failed to find header {} in map",
+                        *column_id
+                    ))?;
+                    fields.push_str(&format!(
+                        "field_{}: {}, ",
+                        *header.id(),
+                        *header.data_type(),
+                    ));
+                }
+            }
+        }
+
+        let mut code = format!(
+            "struct {}{} {} {} {}",
+            self.tab_type, self.id, open, fields, close
+        );
+        Ok(code)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TabType {
+    Tuple,
+    Struct,
+}
+
+impl fmt::Display for TabType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                TabType::Tuple => "Tuple",
+                TabType::Struct => "Struct",
+            }
+        )
     }
 }
 
@@ -254,6 +263,9 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
+    const DEFAULT_TAB_NAME: Option<String> = None;
+    const DEFAULT_HEADER_NAME: Option<String> = None;
+
     enum Dimensions {
         Column,
         Row,
@@ -262,24 +274,22 @@ mod tests {
 
     fn get_tab(dimensions: Dimensions) -> (Tab, Option<Uuid>) {
         let mut tab = Tab::new();
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(0, tab.columns.len());
         assert_eq!(0, tab.headers.len());
         assert_eq!(0, tab.rows.len());
-
-        let header_name = "One";
 
         let mut id = None;
         match dimensions {
             Dimensions::Column => {
                 let column_id = tab.add_column();
-                assert_eq!(DEFAULT_TAB_NAME, tab.name());
+                assert_eq!(DEFAULT_TAB_NAME, *tab.name());
                 assert_eq!(1, tab.columns.len());
                 assert_eq!(1, tab.headers.len());
                 assert_eq!(0, tab.rows.len());
 
                 let header = tab.headers.get(&column_id).expect("test");
-                assert_eq!(header_name, header.name());
+                assert_eq!(DEFAULT_HEADER_NAME, *header.name());
                 match header.data_type() {
                     DataType::Text => {}
                     _ => panic!("test"),
@@ -290,7 +300,7 @@ mod tests {
             Dimensions::Row => {
                 tab.add_row().expect("test");
 
-                assert_eq!(DEFAULT_TAB_NAME, tab.name());
+                assert_eq!(DEFAULT_TAB_NAME, *tab.name());
                 assert_eq!(0, tab.columns.len());
                 assert_eq!(0, tab.headers.len());
                 assert_eq!(1, tab.rows.len());
@@ -303,13 +313,13 @@ mod tests {
                 let c_id = c_id.expect("test");
 
                 c_tab.add_row().expect("test");
-                assert_eq!(DEFAULT_TAB_NAME, c_tab.name());
+                assert_eq!(DEFAULT_TAB_NAME, *c_tab.name());
                 assert_eq!(1, c_tab.columns.len());
                 assert_eq!(1, c_tab.headers.len());
                 assert_eq!(1, c_tab.rows.len());
 
                 let header = c_tab.headers.get(&c_id).expect("test");
-                assert_eq!(header_name, header.name());
+                assert_eq!(DEFAULT_HEADER_NAME, *header.name());
                 match header.data_type() {
                     DataType::Text => {}
                     _ => panic!("test"),
@@ -325,13 +335,13 @@ mod tests {
                 let (mut r_tab, _) = get_tab(Dimensions::Row);
 
                 let r_id = r_tab.add_column();
-                assert_eq!(DEFAULT_TAB_NAME, r_tab.name());
+                assert_eq!(DEFAULT_TAB_NAME, *r_tab.name());
                 assert_eq!(1, r_tab.columns.len());
                 assert_eq!(1, r_tab.headers.len());
                 assert_eq!(1, r_tab.rows.len());
 
                 let header = r_tab.headers.get(&r_id).expect("test");
-                assert_eq!(header_name, header.name());
+                assert_eq!(DEFAULT_HEADER_NAME, *header.name());
                 match header.data_type() {
                     DataType::Text => {}
                     _ => panic!("test"),
@@ -357,42 +367,23 @@ mod tests {
     #[test]
     pub fn test_tab_new() {
         let tab = Tab::new();
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(0, tab.columns.len());
         assert_eq!(0, tab.headers.len());
         assert_eq!(0, tab.rows.len());
-    }
-
-    #[test]
-    pub fn test_tab_save_load() {
-        let saved = r#"(
-    id: "01F3TNWZE89WQKSMQXTTAZ8V8X",
-    name: "Tab",
-    columns: [],
-    headers: {},
-    rows: [],
-)"#;
-        let mut tab = Tab::load(saved).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
-        assert_eq!(0, tab.columns.len());
-        assert_eq!(0, tab.headers.len());
-        assert_eq!(0, tab.rows.len());
-
-        let last_saved = tab.save().expect("test");
-        assert_eq!(saved, last_saved);
     }
 
     #[test]
     pub fn test_tab_name() {
         let mut tab = Tab::new();
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(0, tab.columns.len());
         assert_eq!(0, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
-        let tab_name = "People";
-        tab.set_name(tab_name);
-        assert_eq!(tab_name, tab.name());
+        let tab_name = Some("Person".to_owned());
+        tab.set_name(tab_name.clone());
+        assert_eq!(tab_name, *tab.name());
         assert_eq!(0, tab.columns.len());
         assert_eq!(0, tab.headers.len());
         assert_eq!(0, tab.rows.len());
@@ -404,20 +395,20 @@ mod tests {
         let first_id = first_id.expect("test");
 
         let second_id = tab.add_column();
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(2, tab.columns.len());
         assert_eq!(2, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&first_id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
         }
 
         let header = tab.headers.get(&second_id).expect("test");
-        assert_eq!("Two", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -427,54 +418,20 @@ mod tests {
         let first_id = first_id.expect("test");
 
         let second_id = tab.add_column();
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(2, tab.columns.len());
         assert_eq!(2, tab.headers.len());
         assert_eq!(1, tab.rows.len());
 
         let header = tab.headers.get(&first_id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
         }
 
         let header = tab.headers.get(&second_id).expect("test");
-        assert_eq!("Two", header.name());
-        match header.data_type() {
-            DataType::Text => {}
-            _ => panic!("test"),
-        }
-
-        let row = tab.rows.get(0).expect("test");
-        let cell = row.get(&first_id).expect("test");
-        match cell {
-            Cell::Text(text) => assert_eq!("", text.value()),
-            _ => panic!("test"),
-        }
-        let cell = row.get(&second_id).expect("test");
-        match cell {
-            Cell::Text(text) => assert_eq!("", text.value()),
-            _ => panic!("test"),
-        }
-
-        let saved = tab.save().expect("test");
-        tab = Tab::load(&saved).expect("test");
-
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
-        assert_eq!(2, tab.columns.len());
-        assert_eq!(2, tab.headers.len());
-        assert_eq!(1, tab.rows.len());
-
-        let header = tab.headers.get(&first_id).expect("test");
-        assert_eq!("One", header.name());
-        match header.data_type() {
-            DataType::Text => {}
-            _ => panic!("test"),
-        }
-
-        let header = tab.headers.get(&second_id).expect("test");
-        assert_eq!("Two", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -499,33 +456,33 @@ mod tests {
         let first_id = first_id.expect("test");
 
         let second_id = tab.add_column();
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(2, tab.columns.len());
         assert_eq!(2, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&first_id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
         }
 
         let header = tab.headers.get(&second_id).expect("test");
-        assert_eq!("Two", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
         }
 
         tab.delete_column(&second_id).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&first_id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -540,13 +497,13 @@ mod tests {
             Ok(_) => panic!("test"),
             Err(_) => {}
         }
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&first_id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -558,15 +515,7 @@ mod tests {
         }
 
         tab.delete_column(&first_id).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
-        assert_eq!(0, tab.columns.len());
-        assert_eq!(0, tab.headers.len());
-        assert_eq!(0, tab.rows.len());
-
-        let saved = tab.save().expect("test");
-        tab = Tab::load(&saved).expect("test");
-
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(0, tab.columns.len());
         assert_eq!(0, tab.headers.len());
         assert_eq!(0, tab.rows.len());
@@ -577,44 +526,46 @@ mod tests {
         let (mut tab, id) = get_tab(Dimensions::Column);
         let id = id.expect("test");
 
-        let header_name = "First";
-        tab.update_header_name(&id, header_name).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        let header_name = Some("First".to_owned());
+        tab.update_header_name(&id, header_name.clone())
+            .expect("test");
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!(header_name, header.name());
+        assert_eq!(header_name, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
         }
 
-        let header_name = "Last";
-        tab.update_header_name(&id, header_name).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        let header_name = Some("Last".to_owned());
+        tab.update_header_name(&id, header_name.clone())
+            .expect("test");
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!(header_name, header.name());
+        assert_eq!(header_name, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
         }
 
-        let saved = tab.save().expect("test");
-        tab = Tab::load(&saved).expect("test");
-
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        let header_name = DEFAULT_HEADER_NAME;
+        tab.update_header_name(&id, header_name.clone())
+            .expect("test");
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!(header_name, header.name());
+        assert_eq!(header_name, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -626,16 +577,15 @@ mod tests {
         let (mut tab, id) = get_tab(Dimensions::Column);
         let id = id.expect("test");
 
-        let header_name = "One";
         tab.update_header_data_type(&id, DataType::Text)
             .expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!(header_name, header.name());
+        assert_eq!(DEFAULT_HEADER_NAME, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -643,28 +593,13 @@ mod tests {
 
         tab.update_header_data_type(&id, DataType::Number)
             .expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!(header_name, header.name());
-        match header.data_type() {
-            DataType::Number => {}
-            _ => panic!("test"),
-        }
-
-        let saved = tab.save().expect("test");
-        tab = Tab::load(&saved).expect("test");
-
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
-        assert_eq!(1, tab.columns.len());
-        assert_eq!(1, tab.headers.len());
-        assert_eq!(0, tab.rows.len());
-
-        let header = tab.headers.get(&id).expect("test");
-        assert_eq!(header_name, header.name());
+        assert_eq!(DEFAULT_HEADER_NAME, *header.name());
         match header.data_type() {
             DataType::Number => {}
             _ => panic!("test"),
@@ -676,7 +611,7 @@ mod tests {
         let (mut tab, _) = get_tab(Dimensions::Row);
 
         tab.add_row().expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(0, tab.columns.len());
         assert_eq!(0, tab.headers.len());
         assert_eq!(2, tab.rows.len());
@@ -691,42 +626,13 @@ mod tests {
         let id = id.expect("test");
 
         tab.add_row().expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(2, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!("One", header.name());
-        match header.data_type() {
-            DataType::Text => {}
-            _ => panic!("test"),
-        }
-
-        let row = tab.rows.get(0).expect("test");
-        let cell = row.get(&id).expect("test");
-        match cell {
-            Cell::Text(text) => assert_eq!("", text.value()),
-            _ => panic!("test"),
-        }
-
-        let row = tab.rows.get(1).expect("test");
-        let cell = row.get(&id).expect("test");
-        match cell {
-            Cell::Text(text) => assert_eq!("", text.value()),
-            _ => panic!("test"),
-        }
-
-        let saved = tab.save().expect("test");
-        tab = Tab::load(&saved).expect("test");
-
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
-        assert_eq!(1, tab.columns.len());
-        assert_eq!(1, tab.headers.len());
-        assert_eq!(2, tab.rows.len());
-
-        let header = tab.headers.get(&id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -753,13 +659,13 @@ mod tests {
         let id = id.expect("test");
 
         tab.add_row().expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(2, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -780,13 +686,13 @@ mod tests {
         }
 
         tab.delete_row(1).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(1, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
@@ -810,38 +716,13 @@ mod tests {
         }
 
         tab.delete_row(0).expect("test");
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
+        assert_eq!(DEFAULT_TAB_NAME, *tab.name());
         assert_eq!(1, tab.columns.len());
         assert_eq!(1, tab.headers.len());
         assert_eq!(0, tab.rows.len());
 
         let header = tab.headers.get(&id).expect("test");
-        assert_eq!("One", header.name());
-        match header.data_type() {
-            DataType::Text => {}
-            _ => panic!("test"),
-        }
-
-        match tab.rows.get(0) {
-            Some(_) => panic!("test"),
-            None => {}
-        }
-
-        match tab.rows.get(1) {
-            Some(_) => panic!("test"),
-            None => {}
-        }
-
-        let saved = tab.save().expect("test");
-        tab = Tab::load(&saved).expect("test");
-
-        assert_eq!(DEFAULT_TAB_NAME, tab.name());
-        assert_eq!(1, tab.columns.len());
-        assert_eq!(1, tab.headers.len());
-        assert_eq!(0, tab.rows.len());
-
-        let header = tab.headers.get(&id).expect("test");
-        assert_eq!("One", header.name());
+        assert_eq!(None, *header.name());
         match header.data_type() {
             DataType::Text => {}
             _ => panic!("test"),
