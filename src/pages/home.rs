@@ -4,10 +4,11 @@
 #![allow(clippy::wildcard_imports)]
 
 use std::convert::TryFrom;
+use std::env;
 
 use seed::{prelude::*, *};
+use serde::{Deserialize, Serialize};
 
-use crate::studio::exec::exec;
 use crate::studio::table::cell::{Cell, NumberCell, TextCell};
 use crate::studio::table::header::{DataType, Header};
 use crate::studio::table::nameless::nameless;
@@ -23,7 +24,9 @@ const ENTER_KEY: &str = "Enter";
 // ------ ------
 
 // `init` describes what should happen when your app started.
-pub fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
+pub fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
+    // TODO get this to work so the code is inited at load time
+    orders.send_msg(Msg::Transpile);
     Model::new()
 }
 
@@ -35,6 +38,7 @@ pub fn init(_: Url, _: &mut impl Orders<Msg>) -> Model {
 pub struct Model {
     table: Table,
     selected: Option<Selected>,
+    code: Option<String>,
 }
 
 impl Model {
@@ -42,6 +46,7 @@ impl Model {
         Model {
             table: Table::new(),
             selected: None,
+            code: None,
         }
     }
 }
@@ -56,6 +61,9 @@ struct Selected {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
+    Transpile,
+    OkTranspiled(Rustc),
+    ErrTranspiled,
     Deselect,
     SelectTableName,
     UpdateTableName(String),
@@ -69,6 +77,16 @@ pub enum Selectable {
 // `update` describes how to handle each `Msg`.
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
+        Msg::Transpile => {
+            to_code(&model.table, orders);
+        }
+        Msg::OkTranspiled(rustc) => {
+            log(format!("{:#?}", rustc));
+            model.code = Some(rustc.stdout);
+        }
+        Msg::ErrTranspiled => {
+            log("Transpile failed");
+        }
         Msg::Deselect => {
             model.selected = None;
         }
@@ -98,13 +116,71 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::UpdateTableName(field) => {
             model.table.set_name(Some(field));
-            let mut code = "fn main() {".to_owned();
-            code.push_str(&model.table.to_code().unwrap());
-            code.push_str("}");
-            log(code.clone());
-            log(exec(code));
+            if model.code.is_none() {
+                orders.send_msg(Msg::Transpile);
+            }
         }
     };
+}
+
+pub fn to_code(table: &Table, orders: &mut impl Orders<Msg>) {
+    let func_handle = "FuncTODO";
+    let (table_handle, mut code) = table.to_code().unwrap();
+    code.push_str(&format!(
+        r#"
+    fn {}({}: {}) {{
+        println!("Hello, TableFlow!");
+    }}
+
+    #[cfg(test)]
+    mod tests {{
+        use super::*;
+
+        #[test]
+        pub fn test_{}() {{
+            {}({});
+        }}
+    }}
+    "#,
+        func_handle,
+        table_handle.to_lowercase(),
+        table_handle,
+        func_handle,
+        func_handle,
+        table_handle
+    ));
+    exec(code, orders)
+}
+
+#[derive(Deserialize, Serialize)]
+struct Code(String);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct Rustc {
+    stdout: String,
+    stderr: String,
+}
+
+pub fn exec(code: String, orders: &mut impl Orders<Msg>) {
+    let address = env::var("ENDPOINT_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = env::var("ENDPOINT_PORT").unwrap_or_else(|_| "4040".to_string());
+    let endpoint = format!("http://{}:{}/api/v1/exec", address, port);
+
+    let request = Request::new(endpoint)
+        .method(Method::Post)
+        .json(&Code(code))
+        .unwrap();
+
+    log(format!("{:#?}", request));
+
+    orders.perform_cmd(async {
+        let response = fetch(request).await.expect("HTTP request failed");
+        if response.status().is_ok() {
+            Msg::OkTranspiled(response.json::<Rustc>().await.unwrap())
+        } else {
+            Msg::ErrTranspiled
+        }
+    });
 }
 
 // ------ ------

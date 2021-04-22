@@ -172,14 +172,18 @@ impl Tab {
         Ok(())
     }
 
-    pub fn to_code(&self) -> Result<String> {
+    pub fn to_code(&self) -> Result<(String, String)> {
+        let mut handle = String::new();
+
         if self.columns.len() == 0 {
             // If the Tab has no Columns then it is a Unit Struct
             // Note that a Table uses this same condition for Enum Variants
             // with no associated data type.
             // Therefore it will only be possible to have a Unit Struct outside of an Enum
             // This can be overcome by having all Enums have an associated data type
-            return Ok(format!("struct Unit{}; ", self.id));
+            handle = format!("Unit{}", self.id);
+            let code = format!("struct {}; ", handle);
+            return Ok((handle, code));
         }
 
         let mut open;
@@ -230,11 +234,9 @@ impl Tab {
             }
         }
 
-        let mut code = format!(
-            "struct {}{} {} {} {}",
-            self.tab_type, self.id, open, fields, close
-        );
-        Ok(code)
+        handle = format!("{}{}", self.tab_type.to_code(), self.id);
+        let mut code = format!("struct {} {} {} {}", handle, open, fields, close);
+        Ok((handle, code))
     }
 }
 
@@ -244,16 +246,12 @@ pub enum TabType {
     Struct,
 }
 
-impl fmt::Display for TabType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                TabType::Tuple => "Tuple",
-                TabType::Struct => "Struct",
-            }
-        )
+impl TabType {
+    pub fn to_code(&self) -> String {
+        match self {
+            TabType::Tuple => "Tupl".to_owned(),
+            TabType::Struct => "Stct".to_owned(),
+        }
     }
 }
 

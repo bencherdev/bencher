@@ -9,3 +9,4 @@ tide = "0.16.0"
 async-std = { version = "1.9", features = ["attributes"] }
 serde = "1.0.125"
 serde_json = "1.0.64"
+http-types = "2.11.0"

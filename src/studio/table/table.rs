@@ -111,25 +111,26 @@ impl Table {
         Ok(to_string_pretty(&self, pretty)?)
     }
 
-    pub fn to_code(&self) -> Result<String> {
+    pub fn to_code(&self) -> Result<(String, String)> {
+        let mut handle = String::new();
         let mut code = String::new();
         // If there is more than one Tab, then the Table is an Enum
-        // If there is only one Tab, then the Table is simply transparent to its only Tab
         if self.tabs_vec.len() > 1 {
-            code.push_str(&format!("enum Enum{} {{", self.id));
+            handle = format!("Enum{}", self.id);
+            code.push_str(&format!("enum {} {{", handle));
             for tab_id in &self.tabs_vec {
                 let tab = self.tabs_map.get(tab_id).ok_or(anyhow!(
                     "Table to code failed to find tab {} in map",
                     *tab_id
                 ))?;
                 // Create a Variant for each Tab
-                code.push_str(&format!("Variant{}", *tab_id,));
+                code.push_str(&format!("Vari{}", *tab_id,));
                 if tab.columns().len() == 0 {
                     // If the Tab has no Columns, it is a Variant with no associated data type
                     code.push_str(", ");
                 } else {
                     // If the Tab has columns, it is a Variant with an associated data type
-                    code.push_str(&format!("({}{}), ", *tab.tab_type(), *tab_id));
+                    code.push_str(&format!("({}{}), ", tab.tab_type().to_code(), *tab_id));
                 }
             }
             code.push_str("}");
@@ -141,10 +142,17 @@ impl Table {
                 "Table to code failed to find tab {} in map",
                 *tab_id
             ))?;
-            code.push_str(&tab.to_code()?);
+            let (tab_handle, tab_code) = tab.to_code()?;
+
+            // If there is only one Tab, then the Table is simply transparent to its only Tab
+            if self.tabs_vec.len() == 1 {
+                handle = tab_handle;
+            }
+
+            code.push_str(&tab_code);
         }
 
-        Ok(code)
+        Ok((handle, code))
     }
 
     pub fn nameless(index: usize) -> String {
