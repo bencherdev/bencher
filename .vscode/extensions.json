@@ -1,11 +1,15 @@
 {
   "recommendations": [
-    "dtsvet.vscode-wasm",
     "eamodio.gitlens",
-    "esbenp.prettier-vscode",
+    "vscodevim.vim",
     "matklad.rust-analyzer",
-    "a5huynh.vscode-ron",
+    "wcrichton.flowistry",
+    "tamasfe.even-better-toml",
+    "serayuzgur.crates",
+    "yzhang.markdown-all-in-one",
+    "redhat.vscode-yaml",
     "TabNine.tabnine-vscode",
-    "vscodevim.vim"
+    "esbenp.prettier-vscode",
+    "dtsvet.vscode-wasm",
   ]
 }

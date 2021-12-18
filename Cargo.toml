@@ -1,5 +1,5 @@
 [package]
-name = "tableflow"
+name = "rollback"
 version = "0.1.0"
 authors = ["Everett Pompeii <epompeii@protonmail.com>"]
 edition = "2018"
