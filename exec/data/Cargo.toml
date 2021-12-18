@@ -1,7 +1,0 @@
-[package]
-name = "data"
-version = "0.1.0"
-authors = ["TableFlow"]
-edition = "2018"
-
-[dependencies]
