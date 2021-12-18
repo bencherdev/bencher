@@ -1,17 +1,10 @@
-# TableFlow
+# Rollback
 
-Build full stack applications while only having to think about what actually matters.
+rustup target add wasm32-unknown-unknown
 
-# Contributing
+cargo install --locked cargo-watch
+cargo install --locked cargo-edit --features vendored-openssl
+cargo install --locked cargo-udeps
+cargo install --locked cargo-audit
 
-- [Git](https://git-scm.com/downloads)
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Seed](https://seed-rs.org)
-
-cargo watch -x fmt -x check -x test
-
-cargo make serve
-
-http://0.0.0.0:8000
-
-cargo make watch
+cargo install --locked trunk
