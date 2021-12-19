@@ -5,10 +5,33 @@ struct Institution {
     url: Url,
 }
 
-enum AccountType {
+enum AccountKind {
     Brokerage,
-    IRA,
-    DefinedContribution,
+    IRA(IraKind),
+    DefinedContribution(DcKind),
+}
+
+enum IraKind {
+    Traditional,
+    Roth,
+    SEP,
+    SIMPLE,
+    Conduit,
+}
+
+enum DcKind {
+    Dc401k(BucketKind),
+    Dc403b(BucketKind),
+    Dc457b(BucketKind),
+    ProfitSharing,
+    MoneyPurchase,
+    DefinedBenefit,
+}
+
+enum BucketKind {
+    PreTax,
+    Roth,
+    AfterTax,
 }
 
 struct Account {
