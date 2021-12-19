@@ -34,14 +34,32 @@ enum BucketKind {
     AfterTax,
 }
 
+trait Total {
+    fn total(&self) -> u64;
+}
+
 struct Account {
-    account_type: AccountType,
+    account_type: AccountKind,
     investments: Vec<Investment>,
+}
+
+impl Total for Account {
+    fn total(&self) -> u64 {
+        self.investments
+            .iter()
+            .fold(0, |acc, inv| acc + inv.total())
+    }
 }
 
 struct Investment {
     fund: Fund,
     shares: u64,
+}
+
+impl Total for Investment {
+    fn total(&self) -> u64 {
+        self.fund.price * self.shares
+    }
 }
 
 struct Fund {
