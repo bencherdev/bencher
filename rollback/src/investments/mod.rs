@@ -1,5 +1,17 @@
 use url::Url;
 
+trait Total {
+    fn total(&self) -> u64;
+}
+
+type Accounts = Vec<Account>;
+
+impl Total for Accounts {
+    fn total(&self) -> u64 {
+        self.iter().fold(0, |acc, account| acc + account.total())
+    }
+}
+
 struct Institution {
     name: String,
     url: Url,
@@ -32,10 +44,6 @@ enum BucketKind {
     PreTax,
     Roth,
     AfterTax,
-}
-
-trait Total {
-    fn total(&self) -> u64;
 }
 
 struct Account {
