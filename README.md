@@ -8,3 +8,5 @@ cargo install --locked cargo-udeps --features vendored-openssl
 cargo install --locked cargo-audit --features vendored-openssl
 
 cargo install --locked trunk
+
+cargo install --locked wasm-pack

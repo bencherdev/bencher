@@ -1,12 +1,15 @@
 [package]
-name = "rollback"
+name = "search"
 version = "0.1.0"
 edition = "2021"
-description = "restore to a previously defined state"
-license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-url = "2.2.2"
-search = { path = "../search" }
+wee_alloc = "0.4.5"
+once_cell = "1.8.0"
+tinysearch-shared = "0.6.2"
+
+[dependencies.xorf]
+version = "0.7.2"
+default-features = false
