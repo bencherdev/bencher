@@ -1,8 +1,10 @@
+use crate::investments::ticker::TickerSymbol;
+
 pub struct Fund {
+    kind: FundKind,
     ticker_symbol: TickerSymbol,
     price: u64,
     expense_ratio: u64,
-    fund_type: FundType,
 }
 
 impl Fund {
@@ -11,17 +13,7 @@ impl Fund {
     }
 }
 
-pub enum StockExchange {
-    NASDAQ,
-    NYSE,
-}
-
-pub struct TickerSymbol {
-    stock_exchange: StockExchange,
-    symbol: String,
-}
-
-pub enum FundType {
+pub enum FundKind {
     Mutual,
     Index,
     TargetDate,

@@ -46,7 +46,7 @@ enum BucketKind {
 }
 
 struct Account {
-    account_type: AccountKind,
+    kind: AccountKind,
     investments: Vec<Investment>,
 }
 
