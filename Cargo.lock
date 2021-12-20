@@ -250,6 +250,7 @@ name = "rollback"
 version = "0.1.0"
 dependencies = [
  "search",
+ "tinysearch-shared",
  "url",
 ]
 

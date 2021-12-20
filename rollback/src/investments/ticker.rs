@@ -1,21 +1,27 @@
 use std::collections::HashMap;
+use std::convert::TryFrom;
+
+use tinysearch_shared::PostId;
+
+use search::TICKER;
 
 pub struct TickerSymbols {
     symbols: HashMap<String, TickerSymbol>,
 }
 
 impl TickerSymbols {
-    fn load() -> Self {
-        // TODO read in data from ./data/ticker using serde json
-        // Note that these files should be in a `tinysearch` compliant format
-        Self {
-            symbols: HashMap::new(),
-        }
-    }
-
-    fn search(&self, query: &str) -> Option<&TickerSymbol> {
+    fn search(&self, query: &str, num_results: usize) -> Vec<TickerSymbol> {
         // TODO use a `tinysearch` for the actual operation
-        self.symbols.get(query)
+        let ticker = TICKER.search(query, num_results);
+        Vec::new()
+    }
+}
+
+impl TryFrom<&PostId> for TickerSymbols {
+    type Error = &'static str;
+
+    fn try_from(value: &PostId) -> Result<Self, Self::Error> {
+        Err("")
     }
 }
 

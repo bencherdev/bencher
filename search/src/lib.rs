@@ -13,10 +13,10 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 const TITLE_WEIGHT: usize = 3;
 
-static FILTERS: Lazy<Filters> = Lazy::new(|| {
+pub static TICKER: Search = Search(Lazy::new(|| {
     let bytes = include_bytes!("../../data/ticker.json");
     Storage::from_bytes(bytes).unwrap().filters
-});
+}));
 
 // Wrapper around filter score, that also scores the post title
 // Post title score has a higher weight than post body
@@ -37,16 +37,21 @@ fn tokenize(s: &str) -> Vec<String> {
         .collect()
 }
 
-pub fn search<'p>(query: String, num_results: usize) -> Vec<&'p PostId> {
-    let search_terms: Vec<String> = tokenize(&query);
+pub struct Search(Lazy<Filters>);
 
-    let mut matches: Vec<(&PostId, usize)> = FILTERS
-        .iter()
-        .map(|(post_id, filter)| (post_id, score(&post_id.0, &search_terms, &filter)))
-        .filter(|(_post_id, score)| *score > 0)
-        .collect();
+impl Search {
+    pub fn search<'p>(&'p self, query: &str, num_results: usize) -> Vec<&'p PostId> {
+        let search_terms: Vec<String> = tokenize(query);
 
-    matches.sort_by_key(|k| Reverse(k.1));
+        let mut matches: Vec<(&PostId, usize)> = self
+            .0
+            .iter()
+            .map(|(post_id, filter)| (post_id, score(&post_id.0, &search_terms, &filter)))
+            .filter(|(_post_id, score)| *score > 0)
+            .collect();
 
-    matches.into_iter().take(num_results).map(|p| p.0).collect()
+        matches.sort_by_key(|k| Reverse(k.1));
+
+        matches.into_iter().take(num_results).map(|p| p.0).collect()
+    }
 }

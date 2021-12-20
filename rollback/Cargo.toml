@@ -10,3 +10,4 @@ license = "MIT"
 [dependencies]
 url = "2.2.2"
 search = { path = "../search" }
+tinysearch-shared = "0.6.2"
