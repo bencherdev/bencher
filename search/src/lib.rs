@@ -14,7 +14,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 const TITLE_WEIGHT: usize = 3;
 
 static FILTERS: Lazy<Filters> = Lazy::new(|| {
-    let bytes = include_bytes!("../../data/ticker/nyse.json");
+    let bytes = include_bytes!("../../data/ticker.json");
     Storage::from_bytes(bytes).unwrap().filters
 });
 
