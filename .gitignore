@@ -15,3 +15,6 @@ pkg/
 
 # Ignore swap files on MacOS
 **.DS_Store
+
+# Sycamore
+**/dist/
