@@ -11,3 +11,4 @@ license = "MIT"
 url = "2.2.2"
 search = { path = "../search" }
 tinysearch-shared = "0.6.2"
+anyhow = "1.0.51"
