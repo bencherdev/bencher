@@ -60,6 +60,6 @@ mod test {
 
     #[test]
     fn ticker_symbols_search_vtsax() {
-        assert!(TickerSymbols::search("VTSAX", 5).is_empty());
+        assert_eq!(TickerSymbols::search("VTSAX", 5).len(), 1);
     }
 }
