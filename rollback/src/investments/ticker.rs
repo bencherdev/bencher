@@ -6,12 +6,10 @@ use tinysearch_shared::PostId;
 
 use search::TICKER;
 
-pub struct TickerSymbols {
-    symbols: HashMap<String, TickerSymbol>,
-}
+pub struct TickerSymbols;
 
 impl TickerSymbols {
-    pub fn search(&self, query: &str, num_results: usize) -> Vec<TickerSymbol> {
+    pub fn search(query: &str, num_results: usize) -> Vec<TickerSymbol> {
         let ticker = TICKER.search(query, num_results);
         let mut ticker_symbols = Vec::new();
         for t in ticker {
@@ -51,16 +49,17 @@ impl TryFrom<&PostId> for TickerSymbol {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn ticker_symbols_search_goop() {
-        assert_eq!(TickerSymbols::search("GOOP").len(), 0);
+        assert_eq!(TickerSymbols::search("GOOP", 5).len(), 0);
     }
 
     #[test]
     fn ticker_symbols_search_vtsax() {
-        assert!(TickerSymbols::search("VTSAX").is_none());
+        assert!(TickerSymbols::search("VTSAX", 5).is_empty());
     }
 }

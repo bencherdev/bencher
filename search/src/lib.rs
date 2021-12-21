@@ -5,7 +5,7 @@ use xorf::{HashProxy, Xor8};
 use std::cmp::Reverse;
 use std::collections::hash_map::DefaultHasher;
 
-use tinysearch_shared::{Filters, PostId, Score, Storage};
+use tinysearch_shared::{Filters, PostId, Score};
 pub type Filter = HashProxy<String, DefaultHasher, Xor8>;
 
 #[global_allocator]
@@ -13,9 +13,11 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 const TITLE_WEIGHT: usize = 3;
 
+mod index;
+mod storage;
+
 pub static TICKER: Search = Search(Lazy::new(|| {
-    let bytes = include_bytes!("../../data/ticker.json");
-    Storage::from_bytes(bytes).unwrap().filters
+    storage::load("../../data/ticker.json").unwrap()
 }));
 
 // Wrapper around filter score, that also scores the post title
@@ -53,5 +55,20 @@ impl Search {
         matches.sort_by_key(|k| Reverse(k.1));
 
         matches.into_iter().take(num_results).map(|p| p.0).collect()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn ticker_symbols_search_goop() {
+        assert_eq!(TICKER.search("GOOP", 5).len(), 0);
+    }
+
+    #[test]
+    fn ticker_symbols_search_vtsax() {
+        assert!(TICKER.search("VTSAX", 5).is_empty());
     }
 }
