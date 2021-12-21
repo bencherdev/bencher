@@ -1,8 +1,6 @@
 // https://github.com/tinysearch/tinysearch/blob/master/bin/src/storage.rs
 use anyhow::Error;
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::PathBuf;
 
 use crate::index::Posts;
 use strip_markdown::strip_markdown;
@@ -11,9 +9,8 @@ use strip_markdown::strip_markdown;
 use tinysearch_shared::{Filters, PostId};
 use xorf::HashProxy;
 
-pub fn load(path: &str) -> Result<Filters, Error> {
-    let path = PathBuf::from(path);
-    let posts: Posts = crate::index::read(fs::read_to_string(&path)?)?;
+pub fn load(raw: String) -> Result<Filters, Error> {
+    let posts: Posts = crate::index::read(raw)?;
     build(posts)
 }
 

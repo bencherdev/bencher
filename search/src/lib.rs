@@ -17,7 +17,9 @@ mod index;
 mod storage;
 
 pub static TICKER: Search = Search(Lazy::new(|| {
-    storage::load("../../data/ticker.json").unwrap()
+    let bytes = include_bytes!("../../data/ticker.json");
+    let byte_str = std::str::from_utf8(bytes).unwrap();
+    storage::load(byte_str.into()).unwrap()
 }));
 
 // Wrapper around filter score, that also scores the post title
@@ -69,6 +71,6 @@ mod test {
 
     #[test]
     fn ticker_symbols_search_vtsax() {
-        assert!(TICKER.search("VTSAX", 5).is_empty());
+        assert_eq!(TICKER.search("VTSAX", 5).len(), 1);
     }
 }
