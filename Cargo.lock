@@ -462,6 +462,7 @@ name = "rollback"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "once_cell",
  "search",
  "tinysearch-shared",
  "url",

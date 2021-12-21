@@ -2,6 +2,8 @@
 use once_cell::sync::Lazy;
 use xorf::{HashProxy, Xor8};
 
+use anyhow::Result;
+
 use std::cmp::Reverse;
 use std::collections::hash_map::DefaultHasher;
 
@@ -15,12 +17,6 @@ const TITLE_WEIGHT: usize = 3;
 
 mod index;
 mod storage;
-
-pub static TICKER: Search = Search(Lazy::new(|| {
-    let bytes = include_bytes!("../../data/ticker.json");
-    let byte_str = std::str::from_utf8(bytes).unwrap();
-    storage::load(byte_str.into()).unwrap()
-}));
 
 // Wrapper around filter score, that also scores the post title
 // Post title score has a higher weight than post body
@@ -41,9 +37,13 @@ fn tokenize(s: &str) -> Vec<String> {
         .collect()
 }
 
-pub struct Search(Lazy<Filters>);
+pub struct Search(pub Lazy<Filters>);
 
 impl Search {
+    pub fn load(raw: String) -> Result<Filters> {
+        storage::load(raw)
+    }
+
     pub fn search<'p>(&'p self, query: &str, num_results: usize) -> Vec<&'p PostId> {
         let search_terms: Vec<String> = tokenize(query);
 
@@ -63,6 +63,12 @@ impl Search {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    static TICKER: Search = Search(Lazy::new(|| {
+        let bytes = include_bytes!("../../data/ticker.json");
+        let byte_str = std::str::from_utf8(bytes).unwrap();
+        storage::load(byte_str.into()).unwrap()
+    }));
 
     #[test]
     fn ticker_symbols_search_goop() {
