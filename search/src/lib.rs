@@ -40,8 +40,8 @@ fn tokenize(s: &str) -> Vec<String> {
 pub struct Search(pub Lazy<Filters>);
 
 impl Search {
-    pub fn load(raw: String) -> Result<Filters> {
-        storage::load(raw)
+    pub fn load(bytes: &[u8]) -> Result<Filters> {
+        storage::load(std::str::from_utf8(bytes)?.into())
     }
 
     pub fn search<'p>(&'p self, query: &str, num_results: usize) -> Vec<&'p PostId> {
@@ -65,9 +65,7 @@ mod test {
     use super::*;
 
     static TICKER: Search = Search(Lazy::new(|| {
-        let bytes = include_bytes!("../../data/ticker.json");
-        let byte_str = std::str::from_utf8(bytes).unwrap();
-        storage::load(byte_str.into()).unwrap()
+        Search::load(include_bytes!("../../data/ticker.json")).unwrap()
     }));
 
     #[test]
