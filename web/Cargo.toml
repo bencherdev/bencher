@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 sycamore = "0.7.1"
+rollback = { path = "../rollback" }
