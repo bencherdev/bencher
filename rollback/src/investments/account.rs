@@ -1,11 +1,14 @@
+use std::collections::BTreeMap;
+
 use crate::investments::investment::Investment;
 use crate::investments::ticker::TickerSymbol;
 use crate::investments::total::Total;
 
+/// An account with investments stored by `TickerSymbol`
 pub struct Account {
     id: AccountId,
     kind: AccountKind,
-    investments: Vec<Investment>,
+    investments: BTreeMap<TickerSymbol, Investment>,
 }
 
 impl Account {
@@ -13,13 +16,29 @@ impl Account {
         Self {
             id,
             kind,
-            investments: Vec::new(),
+            investments: BTreeMap::new(),
         }
     }
 
+    pub fn id(&self) -> &AccountId {
+        &self.id
+    }
+
+    pub fn kind(&self) -> &AccountKind {
+        &self.kind
+    }
+
+    pub fn update_kind(&mut self, kind: AccountKind) {
+        self.kind = kind;
+    }
+
     pub fn add_fund(&mut self, ticker_symbol: TickerSymbol) {
-        let inv = Investment::new(ticker_symbol, 0);
-        self.investments.push(inv);
+        let investment = Investment::new(ticker_symbol.clone(), 0);
+        self.investments.insert(ticker_symbol, investment);
+    }
+
+    pub fn remove_fund(&mut self, ticker_symbol: TickerSymbol) -> Option<Investment> {
+        self.investments.remove(&ticker_symbol)
     }
 }
 
@@ -27,7 +46,7 @@ impl Total for Account {
     fn total(&self) -> u64 {
         self.investments
             .iter()
-            .fold(0, |acc, inv| acc + inv.total())
+            .fold(0, |acc, (_, inv)| acc + inv.total())
     }
 }
 
