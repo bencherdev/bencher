@@ -6,15 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-argh = "0.1.5"
 tinysearch-shared = "0.6.2"
 log = "0.4.14"
 serde_json = "1.0.66"
 anyhow = "1.0.43"
 serde = { version = "1.0.127", features = ["derive"] }
 serde_derive = "1.0.127"
-phf = "0.8.0"
-includedir = "0.6.0"
 strip_markdown = "0.2.0"
 xorf = { version = "0.7.2", default-features = false }
 once_cell = "1.9.0"
