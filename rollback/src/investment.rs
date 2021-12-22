@@ -1,6 +1,6 @@
-use crate::investments::fund::Fund;
-use crate::investments::ticker::TickerSymbol;
-use crate::investments::total::Total;
+use crate::fund::Fund;
+use crate::ticker::TickerSymbol;
+use crate::total::Total;
 
 pub struct Investment {
     fund: Fund,

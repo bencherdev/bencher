@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use crate::investments::account::{Account, AccountId};
-use crate::investments::total::Total;
+use crate::account::{Account, AccountId};
+use crate::total::Total;
 use url::Url;
 
 /// An iterable map of all institutions

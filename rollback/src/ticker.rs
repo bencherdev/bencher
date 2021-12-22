@@ -8,7 +8,7 @@ use tinysearch_shared::PostId;
 use search::Search;
 
 pub static TICKER: Search = Search(Lazy::new(|| {
-    Search::load(include_str!("../../../data/ticker.json")).unwrap()
+    Search::load(include_str!("../../data/ticker.json")).unwrap()
 }));
 
 pub struct TickerSymbols;

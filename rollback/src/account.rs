@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::investments::investment::Investment;
-use crate::investments::ticker::TickerSymbol;
-use crate::investments::total::Total;
+use crate::investment::Investment;
+use crate::ticker::TickerSymbol;
+use crate::total::Total;
 
 /// An account with investments stored by `TickerSymbol`
 pub struct Account {

@@ -1,4 +1,4 @@
-use crate::investments::ticker::TickerSymbol;
+use crate::ticker::TickerSymbol;
 
 pub struct Fund {
     ticker_symbol: TickerSymbol,
