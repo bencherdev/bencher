@@ -1,3 +1,4 @@
+use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::convert::TryFrom;
 use url::Url;
@@ -33,7 +34,7 @@ pub struct TickerSymbol {
 impl TryFrom<&PostId> for TickerSymbol {
     type Error = anyhow::Error;
 
-    fn try_from(value: &PostId) -> anyhow::Result<Self> {
+    fn try_from(value: &PostId) -> Result<Self> {
         let (title, url) = value;
         let url = Url::parse(url)?;
         let mut symbol = None;
