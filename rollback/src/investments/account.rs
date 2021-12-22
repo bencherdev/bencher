@@ -3,13 +3,15 @@ use crate::investments::ticker::TickerSymbol;
 use crate::investments::total::Total;
 
 pub struct Account {
+    id: AccountId,
     kind: AccountKind,
     investments: Vec<Investment>,
 }
 
 impl Account {
-    pub fn new(kind: AccountKind) -> Self {
+    pub fn new(id: String, kind: AccountKind) -> Self {
         Self {
+            id,
             kind,
             investments: Vec::new(),
         }
@@ -28,6 +30,8 @@ impl Total for Account {
             .fold(0, |acc, inv| acc + inv.total())
     }
 }
+
+pub type AccountId = String;
 
 pub enum AccountKind {
     Brokerage,
