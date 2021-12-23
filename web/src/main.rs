@@ -4,6 +4,9 @@ use url::Url;
 
 use rollback::institution::{Institution, InstitutionAccounts, Institutions};
 
+mod institution;
+use institution::CoInstitutions;
+
 fn main() {
     sycamore::render(|| {
         let institutions = Signal::new(get_institutions());
@@ -13,15 +16,7 @@ fn main() {
         );
 
         view! {
-            ul {
-                Keyed(KeyedProps {
-                    iterable: institutions_vec,
-                    template: |i| view! {
-                        li { (i) }
-                    },
-                    key: |i| (i.clone()) ,
-                })
-            }
+            CoInstitutions(institutions_vec)
         }
     });
 }
