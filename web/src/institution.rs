@@ -9,14 +9,21 @@ pub fn institutions(institutions_vec: ReadSignal<Vec<Institution>>) -> View<G> {
             div(class="container") {
                 Keyed(KeyedProps {
                     iterable: institutions_vec,
-                    template: |i| view! {
-                        div(class="card") {
-                            (i)
-                        }
-                    },
+                    template: institution,
                     key: |i| (i.clone()) ,
                 })
             }
+        }
+    }
+}
+
+pub fn institution<G>(institution: Institution) -> View<G>
+where
+    G: sycamore::generic_node::GenericNode,
+{
+    view! {
+        div(class="card") {
+            (institution)
         }
     }
 }
