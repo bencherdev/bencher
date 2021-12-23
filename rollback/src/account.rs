@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt;
 
 use crate::investment::Investment;
 use crate::ticker::TickerSymbol;
@@ -67,6 +68,12 @@ pub enum AccountKind {
     Brokerage,
     IRA(IraKind),
     DefinedContribution(DcKind),
+}
+
+impl fmt::Display for AccountKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "AccountKind")
+    }
 }
 
 #[derive(Clone, Hash, Eq, PartialEq)]

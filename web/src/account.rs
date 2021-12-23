@@ -11,7 +11,7 @@ pub fn co_accounts(accounts_vec: ReadSignal<Vec<Account>>) -> View<G> {
                 Keyed(KeyedProps {
                     iterable: accounts_vec,
                     template: account_card,
-                    key: |acc| (acc.id()) ,
+                    key: |acc| (acc.id().clone()) ,
                 })
             }
         }
@@ -22,11 +22,12 @@ fn account_card<G>(account: Account) -> View<G>
 where
     G: sycamore::generic_node::GenericNode,
 {
+    let kind = account.kind().clone();
     view! {
         div(class="card") {
             header(class="card-header") {
                 p(class="card-header-title") {
-                    (account.kind().clone())
+                    (kind)
                 }
 
                 p(class="card-header-icon") {

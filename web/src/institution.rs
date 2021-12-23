@@ -1,6 +1,6 @@
 use sycamore::prelude::*;
 
-use rollback::account::{Account, AccountId, Accounts};
+use rollback::account::{Account, Accounts};
 use rollback::institution::Institution;
 use rollback::total::Total;
 
