@@ -22,6 +22,12 @@ pub struct Institution {
     url: Url,
 }
 
+impl fmt::Display for Institution {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl Institution {
     pub fn new(name: String, url: Url) -> Self {
         Self { name, url }

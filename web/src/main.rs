@@ -14,17 +14,17 @@ fn main() {
         });
 
         let institutions_vec = create_memo(
-            cloned!(institutions => move || institutions.get().values().cloned().collect::<Vec<InstitutionAccounts>>()),
+            cloned!(institutions => move || institutions.get().keys().cloned().collect::<Vec<Institution>>()),
         );
 
         view! {
             ul {
                 Keyed(KeyedProps {
                     iterable: institutions_vec,
-                    template: |ia| view! {
-                        li { (ia) }
+                    template: |i| view! {
+                        li { (i) }
                     },
-                    key: |ia| (ia.clone()) ,
+                    key: |i| (i.clone()) ,
                 })
             }
         }
