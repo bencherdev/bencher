@@ -1,10 +1,10 @@
 use sycamore::prelude::*;
 
-use rollback::account::Accounts;
+use rollback::account::{Account, AccountId, Accounts};
 use rollback::institution::Institution;
 use rollback::total::Total;
 
-use crate::account::accounts;
+use crate::account::CoAccounts;
 
 #[component(CoInstitutions<G>)]
 pub fn co_institutions(institutions_vec: ReadSignal<Vec<(Institution, Accounts)>>) -> View<G> {
@@ -21,11 +21,15 @@ pub fn co_institutions(institutions_vec: ReadSignal<Vec<(Institution, Accounts)>
     }
 }
 
-fn institution_card<G>(institution: (Institution, Accounts)) -> View<G>
+fn institution_card<G>(item: (Institution, Accounts)) -> View<G>
 where
-    G: sycamore::generic_node::GenericNode,
+    G: sycamore::generic_node::GenericNode + sycamore::generic_node::Html,
 {
-    let (institution, accounts) = institution;
+    let (institution, accounts) = item;
+
+    let accounts_vec = create_memo(cloned!(accounts => move ||
+        accounts.iter().map(|(id, acc)| (id.clone(), acc.clone())).collect::<Vec<(AccountId, Account)>>()));
+
     view! {
         div(class="card") {
             header(class="card-header") {
@@ -46,7 +50,7 @@ where
 
             div(class="card-content") {
                 div(class="content") {
-                    accounts()
+                    CoAccounts(accounts_vec)
                 }
             }
         }

@@ -1,15 +1,10 @@
 use sycamore::prelude::*;
 
-use rollback::account::{Account, AccountId, Accounts};
+use rollback::account::{Account, AccountId};
 use rollback::total::Total;
 
-pub fn accounts<G>(accounts: Accounts) -> View<G>
-where
-    G: sycamore::generic_node::GenericNode + sycamore::generic_node::Html,
-{
-    let accounts_vec = create_memo(cloned!(accounts => move ||
-        accounts.iter().map(|(id, acc)| (id.clone(), acc.clone())).collect::<Vec<(AccountId, Account)>>()));
-
+#[component(CoAccounts<G>)]
+pub fn co_accounts(accounts_vec: ReadSignal<Vec<(AccountId, Account)>>) -> View<G> {
     view! {
         div(class="section") {
             div(class="container") {
