@@ -12,7 +12,7 @@ fn main() {
         let institutions = Signal::new(get_institutions());
 
         let institutions_vec = create_memo(
-            cloned!(institutions => move || institutions.get().keys().cloned().collect::<Vec<Institution>>()),
+            cloned!(institutions => move || institutions.get().iter().map(|(inst, accs)| (inst.clone(), accs.clone())).collect::<Vec<(Institution, InstitutionAccounts)>>()),
         );
 
         view! {
