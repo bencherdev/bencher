@@ -1,40 +1,42 @@
 use sycamore::prelude::*;
 
-use rollback::account::Accounts;
-use rollback::institution::Institution;
+use rollback::account::{Account, AccountId, Accounts};
 use rollback::total::Total;
 
-use crate::account::accounts;
+pub fn accounts<G>(accounts: Accounts) -> View<G>
+where
+    G: sycamore::generic_node::GenericNode + sycamore::generic_node::Html,
+{
+    let accounts_vec = create_memo(cloned!(accounts => move ||
+        accounts.iter().map(|(id, acc)| (id.clone(), acc.clone())).collect::<Vec<(AccountId, Account)>>()));
 
-#[component(CoInstitutions<G>)]
-pub fn co_institutions(institutions_vec: ReadSignal<Vec<(Institution, Accounts)>>) -> View<G> {
     view! {
         div(class="section") {
             div(class="container") {
                 Keyed(KeyedProps {
-                    iterable: institutions_vec,
-                    template: institution_card,
-                    key: |i| (i.clone()) ,
+                    iterable: accounts_vec,
+                    template: account_card,
+                    key: |(id, _)| (id.clone()) ,
                 })
             }
         }
     }
 }
 
-fn institution_card<G>(institution: (Institution, Accounts)) -> View<G>
+fn account_card<G>(account: (AccountId, Account)) -> View<G>
 where
     G: sycamore::generic_node::GenericNode,
 {
-    let (institution, accounts) = institution;
+    let (id, account) = account;
     view! {
         div(class="card") {
             header(class="card-header") {
                 p(class="card-header-title") {
-                    (institution)
+                    (id)
                 }
 
                 p(class="card-header-icon") {
-                    (accounts.total())
+                    (account.total())
                 }
 
                 button(class="card-header-icon") {
@@ -46,7 +48,7 @@ where
 
             div(class="card-content") {
                 div(class="content") {
-                    accounts()
+                    "Funds"
                 }
             }
         }

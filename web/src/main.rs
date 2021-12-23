@@ -6,6 +6,7 @@ use rollback::account::Accounts;
 use rollback::institution::{Institution, Institutions};
 
 mod institution;
+mod account;
 use institution::CoInstitutions;
 
 fn main() {
