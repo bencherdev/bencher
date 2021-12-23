@@ -6,12 +6,7 @@ use rollback::institution::{Institution, InstitutionAccounts, Institutions};
 
 fn main() {
     sycamore::render(|| {
-        let institutions = Signal::new({
-            let mut instatutions = Institutions::new();
-            let institution = Institution::new("a".into(), Url::parse("http://goop.com").unwrap());
-            instatutions.insert(institution.clone(), InstitutionAccounts::new());
-            instatutions
-        });
+        let institutions = Signal::new(get_institutions());
 
         let institutions_vec = create_memo(
             cloned!(institutions => move || institutions.get().keys().cloned().collect::<Vec<Institution>>()),
@@ -29,4 +24,24 @@ fn main() {
             }
         }
     });
+}
+
+fn get_institutions() -> Institutions {
+    let mut instatutions = Institutions::new();
+    let institution = Institution::new(
+        "Fidelity".into(),
+        Url::parse("https://fidelity.com").unwrap(),
+    );
+    instatutions.insert(institution.clone(), InstitutionAccounts::new());
+    let institution = Institution::new(
+        "Vangaurd".into(),
+        Url::parse("https://vanguard.com").unwrap(),
+    );
+    instatutions.insert(institution.clone(), InstitutionAccounts::new());
+    let institution = Institution::new(
+        "Charles Schwab".into(),
+        Url::parse("https://schwab.com").unwrap(),
+    );
+    instatutions.insert(institution.clone(), InstitutionAccounts::new());
+    instatutions
 }
