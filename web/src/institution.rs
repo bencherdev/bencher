@@ -1,12 +1,11 @@
 use sycamore::prelude::*;
 
-use rollback::institution::{Institution, InstitutionAccounts};
+use rollback::account::Accounts;
+use rollback::institution::Institution;
 use rollback::total::Total;
 
 #[component(CoInstitutions<G>)]
-pub fn co_institutions(
-    institutions_vec: ReadSignal<Vec<(Institution, InstitutionAccounts)>>,
-) -> View<G> {
+pub fn co_institutions(institutions_vec: ReadSignal<Vec<(Institution, Accounts)>>) -> View<G> {
     view! {
         div(class="section") {
             div(class="container") {
@@ -20,7 +19,7 @@ pub fn co_institutions(
     }
 }
 
-pub fn institution_card<G>(institution: (Institution, InstitutionAccounts)) -> View<G>
+pub fn institution_card<G>(institution: (Institution, Accounts)) -> View<G>
 where
     G: sycamore::generic_node::GenericNode,
 {

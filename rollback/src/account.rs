@@ -4,6 +4,15 @@ use crate::investment::Investment;
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
 
+/// Accounts, stored by `AccountId`
+pub type Accounts = BTreeMap<AccountId, Account>;
+
+impl Total for Accounts {
+    fn total(&self) -> u64 {
+        self.values().fold(0, |acc, account| acc + account.total())
+    }
+}
+
 /// An account with investments stored by `TickerSymbol`
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Account {

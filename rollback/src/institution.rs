@@ -1,12 +1,12 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::account::{Account, AccountId};
+use crate::account::Accounts;
 use crate::total::Total;
 use url::Url;
 
 /// An iterable map of all institutions
-pub type Institutions = BTreeMap<Institution, InstitutionAccounts>;
+pub type Institutions = BTreeMap<Institution, Accounts>;
 
 impl Total for Institutions {
     fn total(&self) -> u64 {
@@ -39,15 +39,5 @@ impl Institution {
 
     pub fn url(&self) -> &Url {
         &self.url
-    }
-}
-
-/// All accounts, stored by `AccountId`, at a particular institution
-pub type InstitutionAccounts = BTreeMap<AccountId, Account>;
-
-impl Total for InstitutionAccounts {
-    fn total(&self) -> u64 {
-        self.iter()
-            .fold(0, |acc, (_, account)| acc + account.total())
     }
 }
