@@ -1,33 +1,32 @@
 use sycamore::prelude::*;
 
-use rollback::account::{Account, AccountId};
+use rollback::account::Account;
 use rollback::total::Total;
 
 #[component(CoAccounts<G>)]
-pub fn co_accounts(accounts_vec: ReadSignal<Vec<(AccountId, Account)>>) -> View<G> {
+pub fn co_accounts(accounts_vec: ReadSignal<Vec<Account>>) -> View<G> {
     view! {
         div(class="section") {
             div(class="container") {
                 Keyed(KeyedProps {
                     iterable: accounts_vec,
                     template: account_card,
-                    key: |(id, _)| (id.clone()) ,
+                    key: |acc| (acc.id()) ,
                 })
             }
         }
     }
 }
 
-fn account_card<G>(account: (AccountId, Account)) -> View<G>
+fn account_card<G>(account: Account) -> View<G>
 where
     G: sycamore::generic_node::GenericNode,
 {
-    let (id, account) = account;
     view! {
         div(class="card") {
             header(class="card-header") {
                 p(class="card-header-title") {
-                    (id)
+                    (account.kind().clone())
                 }
 
                 p(class="card-header-icon") {

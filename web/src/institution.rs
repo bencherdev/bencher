@@ -28,7 +28,7 @@ where
     let (institution, accounts) = item;
 
     let accounts_vec = create_memo(cloned!(accounts => move ||
-        accounts.iter().map(|(id, acc)| (id.clone(), acc.clone())).collect::<Vec<(AccountId, Account)>>()));
+        accounts.values().cloned().collect::<Vec<Account>>()));
 
     view! {
         div(class="card") {
@@ -54,6 +54,7 @@ where
                 }
             }
         }
+
         br()
     }
 }
