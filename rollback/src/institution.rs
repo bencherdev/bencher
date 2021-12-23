@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt;
 
 use crate::account::{Account, AccountId};
 use crate::total::Total;
@@ -15,6 +16,7 @@ impl Total for Institutions {
 }
 
 /// All accounts, stored by `AccountId`, at a particular institution
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct InstitutionAccounts {
     institution: Institution,
     accounts: BTreeMap<AccountId, Account>,
@@ -41,6 +43,12 @@ impl InstitutionAccounts {
     }
 }
 
+impl fmt::Display for InstitutionAccounts {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.institution.name)
+    }
+}
+
 impl Total for InstitutionAccounts {
     fn total(&self) -> u64 {
         self.accounts
@@ -50,6 +58,7 @@ impl Total for InstitutionAccounts {
 }
 
 /// An invesmtment institution
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Institution {
     name: String,
     url: Url,

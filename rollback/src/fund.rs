@@ -1,5 +1,6 @@
 use crate::ticker::TickerSymbol;
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Fund {
     ticker_symbol: TickerSymbol,
     price: u64,

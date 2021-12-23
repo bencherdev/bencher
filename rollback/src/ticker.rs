@@ -26,7 +26,7 @@ impl TickerSymbols {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct TickerSymbol {
     name: String,
     symbol: String,

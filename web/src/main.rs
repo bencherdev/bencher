@@ -1,19 +1,35 @@
 use sycamore::prelude::*;
 
-use rollback::institution::Institutions;
+use url::Url;
+
+use rollback::institution::{Institution, InstitutionAccounts, Institutions};
 
 fn main() {
     sycamore::render(|| {
-        let count = Signal::new(vec![1, 2]);
+        let institutions = Signal::new({
+            let mut instatutions = Institutions::new();
+            instatutions.insert(
+                "a".into(),
+                InstitutionAccounts::new(Institution::new(
+                    "a".into(),
+                    Url::parse("http://goop.com").unwrap(),
+                )),
+            );
+            instatutions
+        });
+
+        let institutions_vec = create_memo(
+            cloned!(institutions => move || institutions.get().values().cloned().collect::<Vec<InstitutionAccounts>>()),
+        );
 
         view! {
             ul {
                 Keyed(KeyedProps {
-                    iterable: count.handle(),
-                    template: |x| view! {
-                        li { (x) }
+                    iterable: institutions_vec,
+                    template: |ia| view! {
+                        li { (ia) }
                     },
-                    key: |x| *x,
+                    key: |ia| (ia.clone()) ,
                 })
             }
         }

@@ -2,6 +2,7 @@ use crate::fund::Fund;
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Investment {
     fund: Fund,
     shares: u64,

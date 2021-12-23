@@ -5,6 +5,7 @@ use crate::ticker::TickerSymbol;
 use crate::total::Total;
 
 /// An account with investments stored by `TickerSymbol`
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Account {
     id: AccountId,
     kind: AccountKind,
@@ -52,12 +53,14 @@ impl Total for Account {
 
 pub type AccountId = String;
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub enum AccountKind {
     Brokerage,
     IRA(IraKind),
     DefinedContribution(DcKind),
 }
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub enum IraKind {
     Traditional,
     Roth,
@@ -66,6 +69,7 @@ pub enum IraKind {
     Conduit,
 }
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub enum DcKind {
     Dc401k(BucketKind),
     Dc403b(BucketKind),
@@ -75,6 +79,7 @@ pub enum DcKind {
     DefinedBenefit,
 }
 
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub enum BucketKind {
     PreTax,
     Roth,
