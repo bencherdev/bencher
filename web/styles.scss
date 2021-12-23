@@ -1,0 +1,61 @@
+html,
+body {
+  margin: 0;
+  /*padding: 20px;*/
+  text-align: center;
+  padding-left: 100px;
+  padding-top: 20px;
+}
+
+body {
+  width: 1000px;
+  height: 1000px;
+}
+
+.table {
+  tr {
+    height: 100px;
+  }
+
+  td {
+    width: 100px;
+  }
+  .square_blue {
+    background-color: #7777d9
+  }
+
+  .square_red{
+    background-color: #aa5555
+  }
+
+  .col_grey{
+    background-color: #4e4d4d
+  }
+
+  .X {
+    background-color: green;
+  }
+
+  .O {
+    background-color: red;
+  }
+}
+
+.hero {
+  &.has-background {
+    position: relative;
+    overflow: hidden;
+  }
+
+  &-background {
+    position: absolute;
+    object-fit: cover;
+    object-position: bottom;
+    width: 100%;
+    height: 100%;
+
+    &.is-transparent {
+      opacity: 0.3;
+    }
+  }
+}
