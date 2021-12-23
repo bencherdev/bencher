@@ -2,11 +2,11 @@ use sycamore::prelude::*;
 
 use url::Url;
 
-use rollback::account::Accounts;
+use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 
-mod institution;
 mod account;
+mod institution;
 use institution::CoInstitutions;
 
 fn main() {
@@ -29,7 +29,10 @@ fn get_institutions() -> Institutions {
         "Fidelity".into(),
         Url::parse("https://fidelity.com").unwrap(),
     );
-    instatutions.insert(institution.clone(), Accounts::new());
+    let mut accounts = Accounts::new();
+    let id = "abc";
+    accounts.insert(id.into(), Account::new(id.into(), AccountKind::Brokerage));
+    instatutions.insert(institution.clone(), accounts);
     let institution = Institution::new(
         "Vangaurd".into(),
         Url::parse("https://vanguard.com").unwrap(),
