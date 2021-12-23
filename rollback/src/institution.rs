@@ -43,43 +43,11 @@ impl Institution {
 }
 
 /// All accounts, stored by `AccountId`, at a particular institution
-#[derive(Clone, Hash, Eq, PartialEq)]
-pub struct InstitutionAccounts {
-    institution: Institution,
-    accounts: BTreeMap<AccountId, Account>,
-}
-
-impl InstitutionAccounts {
-    pub fn new(institution: Institution) -> Self {
-        Self {
-            institution,
-            accounts: BTreeMap::new(),
-        }
-    }
-
-    pub fn institution(&self) -> &Institution {
-        &self.institution
-    }
-
-    pub fn accounts(&self) -> &BTreeMap<AccountId, Account> {
-        &self.accounts
-    }
-
-    pub fn accounts_mut(&mut self) -> &mut BTreeMap<AccountId, Account> {
-        &mut self.accounts
-    }
-}
-
-impl fmt::Display for InstitutionAccounts {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.institution.name)
-    }
-}
+pub type InstitutionAccounts = BTreeMap<AccountId, Account>;
 
 impl Total for InstitutionAccounts {
     fn total(&self) -> u64 {
-        self.accounts
-            .iter()
+        self.iter()
             .fold(0, |acc, (_, account)| acc + account.total())
     }
 }

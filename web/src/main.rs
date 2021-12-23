@@ -9,7 +9,7 @@ fn main() {
         let institutions = Signal::new({
             let mut instatutions = Institutions::new();
             let institution = Institution::new("a".into(), Url::parse("http://goop.com").unwrap());
-            instatutions.insert(institution.clone(), InstitutionAccounts::new(institution));
+            instatutions.insert(institution.clone(), InstitutionAccounts::new());
             instatutions
         });
 
