@@ -6,12 +6,33 @@ use crate::total::Total;
 use url::Url;
 
 /// An iterable map of all institutions
-pub type Institutions = BTreeMap<String, InstitutionAccounts>;
+pub type Institutions = BTreeMap<Institution, InstitutionAccounts>;
 
 impl Total for Institutions {
     fn total(&self) -> u64 {
         self.iter()
             .fold(0, |acc, (_, inst_accs)| acc + inst_accs.total())
+    }
+}
+
+/// An invesmtment institution
+#[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Institution {
+    name: String,
+    url: Url,
+}
+
+impl Institution {
+    pub fn new(name: String, url: Url) -> Self {
+        Self { name, url }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn url(&self) -> &Url {
+        &self.url
     }
 }
 
@@ -54,26 +75,5 @@ impl Total for InstitutionAccounts {
         self.accounts
             .iter()
             .fold(0, |acc, (_, account)| acc + account.total())
-    }
-}
-
-/// An invesmtment institution
-#[derive(Clone, Hash, Eq, PartialEq)]
-pub struct Institution {
-    name: String,
-    url: Url,
-}
-
-impl Institution {
-    pub fn new(name: String, url: Url) -> Self {
-        Self { name, url }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn url(&self) -> &Url {
-        &self.url
     }
 }

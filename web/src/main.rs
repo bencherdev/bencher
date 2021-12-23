@@ -8,13 +8,8 @@ fn main() {
     sycamore::render(|| {
         let institutions = Signal::new({
             let mut instatutions = Institutions::new();
-            instatutions.insert(
-                "a".into(),
-                InstitutionAccounts::new(Institution::new(
-                    "a".into(),
-                    Url::parse("http://goop.com").unwrap(),
-                )),
-            );
+            let institution = Institution::new("a".into(), Url::parse("http://goop.com").unwrap());
+            instatutions.insert(institution.clone(), InstitutionAccounts::new(institution));
             instatutions
         });
 
