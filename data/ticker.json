@@ -1,10 +1,10 @@
 [
     {
-        "title": "VTSAX - Vanguard Total Stock Market Index Fund Admiral Shares",
-        "url": "https://rollback.dev/ticker?symbol=vtsax"
+        "title": "Vanguard Total Stock Market Index Fund Admiral Shares (VTSAX)",
+        "url": "https://rollback.dev/ticker?symbol=VTSAX"
     },
     {
-        "title": "VTIAX - Vanguard Total International Stock Index Fund Admiral Shares",
-        "url": "https://rollback.dev/ticker?symbol=vtiax"
+        "title": "Vanguard Total International Stock Index Fund Admiral Shares (VTIAX)",
+        "url": "https://rollback.dev/ticker?symbol=VTIAX"
     }
 ]

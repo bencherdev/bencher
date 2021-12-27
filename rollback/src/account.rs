@@ -39,6 +39,10 @@ impl Account {
         &self.kind
     }
 
+    pub fn investments(&self) -> &BTreeMap<TickerSymbol, Investment> {
+        &self.investments
+    }
+
     pub fn update_kind(&mut self, kind: AccountKind) {
         self.kind = kind;
     }

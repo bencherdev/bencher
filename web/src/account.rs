@@ -1,7 +1,10 @@
 use sycamore::prelude::*;
 
 use rollback::account::Account;
+use rollback::investment::Investment;
 use rollback::total::Total;
+
+use crate::investment::CoInvestments;
 
 #[component(CoAccounts<G>)]
 pub fn co_accounts(accounts_vec: ReadSignal<Vec<Account>>) -> View<G> {
@@ -20,8 +23,11 @@ pub fn co_accounts(accounts_vec: ReadSignal<Vec<Account>>) -> View<G> {
 
 fn account_card<G>(account: Account) -> View<G>
 where
-    G: sycamore::generic_node::GenericNode,
+    G: sycamore::generic_node::GenericNode + sycamore::generic_node::Html,
 {
+    let investments_vec = create_memo(cloned!(account => move ||
+        account.investments().values().cloned().collect::<Vec<Investment>>()));
+
     let account_kind = account.kind().clone();
     view! {
         div(class="card") {
@@ -43,7 +49,7 @@ where
 
             div(class="card-content") {
                 div(class="content") {
-                    "Funds"
+                    CoInvestments(investments_vec)
                 }
             }
         }

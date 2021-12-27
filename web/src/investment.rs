@@ -22,23 +22,23 @@ fn investment_card<G>(investment: Investment) -> View<G>
 where
     G: sycamore::generic_node::GenericNode,
 {
-    let fund = investment.fund().clone();
     view! {
         div(class="card") {
             header(class="card-header") {
                 p(class="card-header-title") {
-                    (fund)
+                    (investment)
                 }
 
                 p(class="card-header-icon") {
                     (investment.total())
                 }
 
-                button(class="card-header-icon") {
-                    span(class="icon") {
-                        i(class="fas fa-angle-down")
-                    }
-                }
+                // TODO add trades
+                // button(class="card-header-icon") {
+                //     span(class="icon") {
+                //         i(class="fas fa-angle-down")
+                //     }
+                // }
             }
 
             // TODO add trades

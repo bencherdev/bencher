@@ -36,7 +36,7 @@ pub struct TickerSymbol {
 
 impl fmt::Display for TickerSymbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({})", self.name, self.symbol)
+        write!(f, "{}", self.name)
     }
 }
 

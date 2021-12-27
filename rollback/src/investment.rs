@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::fund::Fund;
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
@@ -6,6 +8,12 @@ use crate::total::Total;
 pub struct Investment {
     fund: Fund,
     shares: u64,
+}
+
+impl fmt::Display for Investment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fund.fmt(f)
+    }
 }
 
 impl Investment {
