@@ -76,12 +76,16 @@ pub type AccountId = String;
 pub enum AccountKind {
     Brokerage,
     IRA(IraKind),
-    DefinedContribution(DcKind),
+    DefinedContribution(DefinedContributionPlan),
 }
 
 impl fmt::Display for AccountKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AccountKind")
+        match self {
+            AccountKind::Brokerage => write!(f, "Brokerage"),
+            AccountKind::IRA(ira_kind) => ira_kind.fmt(f),
+            AccountKind::DefinedContribution(dc_plan) => dc_plan.fmt(f),
+        }
     }
 }
 
@@ -94,9 +98,37 @@ pub enum IraKind {
     Conduit,
 }
 
+impl fmt::Display for IraKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} IRA",
+            match self {
+                IraKind::Traditional => "Traditional",
+                IraKind::Roth => "Roth",
+                IraKind::SEP => "SEP",
+                IraKind::SIMPLE => "SIMPLE",
+                IraKind::Conduit => "Conduit",
+            }
+        )
+    }
+}
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub struct DefinedContributionPlan {
+    company: String,
+    kind: DcKind,
+}
+
+impl fmt::Display for DefinedContributionPlan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.company, self.kind)
+    }
+}
+
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub enum DcKind {
-    Dc401k(BucketKind),
+    Dc401k(Dc401kKind),
     Dc403b(BucketKind),
     Dc457b(BucketKind),
     ProfitSharing,
@@ -104,9 +136,54 @@ pub enum DcKind {
     DefinedBenefit,
 }
 
+impl fmt::Display for DcKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DcKind::Dc401k(dc401k_kind) => dc401k_kind.fmt(f),
+            DcKind::Dc403b(bucket_kind) => write!(f, "{} 403(b)", bucket_kind),
+            DcKind::Dc457b(bucket_kind) => write!(f, "{} 457(b)", bucket_kind),
+            DcKind::ProfitSharing => write!(f, "Profit Sharing"),
+            DcKind::MoneyPurchase => write!(f, "Money Purchase"),
+            DcKind::DefinedBenefit => write!(f, "Defined Benefit"),
+        }
+    }
+}
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub enum Dc401kKind {
+    Traditional(BucketKind),
+    SafeHarbor(BucketKind),
+    SIMPLE(BucketKind),
+}
+
+impl fmt::Display for Dc401kKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (dc401k_kind, bucket_kind) = match self {
+            Dc401kKind::Traditional(bucket_kind) => ("", bucket_kind),
+            Dc401kKind::SafeHarbor(bucket_kind) => ("Safe Harbor ", bucket_kind),
+            Dc401kKind::SIMPLE(bucket_kind) => ("SIMPLE ", bucket_kind),
+        };
+        write!(f, "{}{} 401(k)", dc401k_kind, bucket_kind)
+    }
+}
+
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub enum BucketKind {
     PreTax,
     Roth,
     AfterTax,
+}
+
+impl fmt::Display for BucketKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                BucketKind::PreTax => "Pre-Tax",
+                BucketKind::Roth => "Roth",
+                BucketKind::AfterTax => "After-Tax",
+            }
+        )
+    }
 }
