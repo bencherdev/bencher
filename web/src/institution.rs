@@ -17,6 +17,11 @@ pub fn co_institutions(institutions_vec: ReadSignal<Vec<(Institution, Accounts)>
                     key: |i| (i.clone()) ,
                 })
 
+                // TODO make these "Add" cards reactive.
+                // The UI for this should be that the "Add" button becomes the form entry area
+                // This form entry will have a "Cancel" and "Save" option
+                // The "Save" option will only be clickable once all validation is complete
+                // A valid save or "Cancel" will return to displaying a button.
                 div(class="card") {
                     div(class="card-content") {
                         div(class="content") {
