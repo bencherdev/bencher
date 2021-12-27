@@ -16,6 +16,18 @@ pub fn co_accounts(accounts_vec: ReadSignal<Vec<Account>>) -> View<G> {
                     template: account_card,
                     key: |acc| (acc.id().clone()) ,
                 })
+
+                div(class="card") {
+                    div(class="card-content") {
+                        div(class="content") {
+                            button {
+                                ("Add Account")
+                            }
+                        }
+                    }
+                }
+
+                br()
             }
         }
     }
@@ -50,6 +62,12 @@ where
             div(class="card-content") {
                 div(class="content") {
                     CoInvestments(investments_vec)
+                }
+            }
+
+            footer(class="card-footer") {
+                button(class="card-footer-item") {
+                    "Edit"
                 }
             }
         }

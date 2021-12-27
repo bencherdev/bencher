@@ -13,6 +13,18 @@ pub fn co_investments(investments_vec: ReadSignal<Vec<Investment>>) -> View<G> {
                     template: investment_card,
                     key: |inv| (inv.fund().ticker_symbol().clone()) ,
                 })
+
+                div(class="card") {
+                    div(class="card-content") {
+                        div(class="content") {
+                            button {
+                                ("Add Investment")
+                            }
+                        }
+                    }
+                }
+
+                br()
             }
         }
     }
@@ -47,6 +59,12 @@ where
             //         "Trades"
             //     }
             // }
+
+            footer(class="card-footer") {
+                button(class="card-footer-item") {
+                    "Edit"
+                }
+            }
         }
 
         br()

@@ -16,6 +16,18 @@ pub fn co_institutions(institutions_vec: ReadSignal<Vec<(Institution, Accounts)>
                     template: institution_card,
                     key: |i| (i.clone()) ,
                 })
+
+                div(class="card") {
+                    div(class="card-content") {
+                        div(class="content") {
+                            button {
+                                ("Add Institution")
+                            }
+                        }
+                    }
+                }
+
+                br()
             }
         }
     }
@@ -51,6 +63,12 @@ where
             div(class="card-content") {
                 div(class="content") {
                     CoAccounts(accounts_vec)
+                }
+            }
+
+            footer(class="card-footer") {
+                button(class="card-footer-item") {
+                    "Edit"
                 }
             }
         }
