@@ -4,6 +4,7 @@ use url::Url;
 
 use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
+use rollback::ticker::TickerSymbols;
 
 mod account;
 mod institution;
@@ -25,19 +26,30 @@ fn main() {
 
 fn get_institutions() -> Institutions {
     let mut instatutions = Institutions::new();
+
+    // Fidelity
     let institution = Institution::new(
         "Fidelity".into(),
         Url::parse("https://fidelity.com").unwrap(),
     );
     let mut accounts = Accounts::new();
+
+    // Vanguard
     let id = "abc";
-    accounts.insert(id.into(), Account::new(id.into(), AccountKind::Brokerage));
+    let mut account = Account::new(id.into(), AccountKind::Brokerage);
+
+    let tickers = TickerSymbols::search("vtsax", 1);
+    account.add_investment(tickers.first().unwrap().clone(), 10);
+
+    accounts.insert(id.into(), account);
     instatutions.insert(institution.clone(), accounts);
     let institution = Institution::new(
         "Vangaurd".into(),
         Url::parse("https://vanguard.com").unwrap(),
     );
     instatutions.insert(institution.clone(), Accounts::new());
+
+    // Schwab
     let institution = Institution::new(
         "Charles Schwab".into(),
         Url::parse("https://schwab.com").unwrap(),

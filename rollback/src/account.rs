@@ -43,13 +43,22 @@ impl Account {
         self.kind = kind;
     }
 
-    pub fn add_fund(&mut self, ticker_symbol: TickerSymbol) {
-        let investment = Investment::new(ticker_symbol.clone(), 0);
+    pub fn add_investment(&mut self, ticker_symbol: TickerSymbol, shares: u64) {
+        let investment = Investment::new(ticker_symbol.clone(), shares);
         self.investments.insert(ticker_symbol, investment);
     }
 
-    pub fn remove_fund(&mut self, ticker_symbol: TickerSymbol) -> Option<Investment> {
-        self.investments.remove(&ticker_symbol)
+    pub fn update_investment(&mut self, ticker_symbol: &TickerSymbol, shares: u64) -> Option<u64> {
+        if let Some(investment) = self.investments.get_mut(&ticker_symbol) {
+            investment.set_shares(shares);
+            Some(investment.shares())
+        } else {
+            None
+        }
+    }
+
+    pub fn remove_investment(&mut self, ticker_symbol: &TickerSymbol) -> Option<Investment> {
+        self.investments.remove(ticker_symbol)
     }
 }
 

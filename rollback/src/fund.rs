@@ -8,11 +8,12 @@ pub struct Fund {
 }
 
 impl Fund {
+    // TODO reach out and get these prices
     pub fn new(ticker_symbol: TickerSymbol) -> Self {
         Self {
             ticker_symbol,
-            price: 0,
-            expense_ratio: 0,
+            price: 5555,
+            expense_ratio: 5,
         }
     }
 
