@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::convert::TryFrom;
@@ -30,6 +32,12 @@ impl TickerSymbols {
 pub struct TickerSymbol {
     name: String,
     symbol: String,
+}
+
+impl fmt::Display for TickerSymbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({})", self.name, self.symbol)
+    }
 }
 
 impl TryFrom<&PostId> for TickerSymbol {

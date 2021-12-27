@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ticker::TickerSymbol;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -5,6 +7,12 @@ pub struct Fund {
     ticker_symbol: TickerSymbol,
     price: u64,
     expense_ratio: u64,
+}
+
+impl fmt::Display for Fund {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.ticker_symbol.fmt(f)
+    }
 }
 
 impl Fund {
@@ -17,7 +25,7 @@ impl Fund {
         }
     }
 
-    pub fn tickersymbol(&self) -> &TickerSymbol {
+    pub fn ticker_symbol(&self) -> &TickerSymbol {
         &self.ticker_symbol
     }
 

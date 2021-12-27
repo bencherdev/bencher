@@ -8,6 +8,7 @@ use rollback::ticker::TickerSymbols;
 
 mod account;
 mod institution;
+mod investment;
 use institution::CoInstitutions;
 
 fn main() {

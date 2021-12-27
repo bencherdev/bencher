@@ -1,37 +1,37 @@
 use sycamore::prelude::*;
 
-use rollback::account::Account;
+use rollback::investment::Investment;
 use rollback::total::Total;
 
-#[component(CoAccounts<G>)]
-pub fn co_accounts(accounts_vec: ReadSignal<Vec<Account>>) -> View<G> {
+#[component(CoInvestments<G>)]
+pub fn co_investments(investments_vec: ReadSignal<Vec<Investment>>) -> View<G> {
     view! {
         div(class="section") {
             div(class="container") {
                 Keyed(KeyedProps {
-                    iterable: accounts_vec,
-                    template: account_card,
-                    key: |acc| (acc.id().clone()) ,
+                    iterable: investments_vec,
+                    template: investment_card,
+                    key: |inv| (inv.fund().ticker_symbol().clone()) ,
                 })
             }
         }
     }
 }
 
-fn account_card<G>(account: Account) -> View<G>
+fn investment_card<G>(investment: Investment) -> View<G>
 where
     G: sycamore::generic_node::GenericNode,
 {
-    let account_kind = account.kind().clone();
+    let fund = investment.fund().clone();
     view! {
         div(class="card") {
             header(class="card-header") {
                 p(class="card-header-title") {
-                    (account_kind)
+                    (fund)
                 }
 
                 p(class="card-header-icon") {
-                    (account.total())
+                    (investment.total())
                 }
 
                 button(class="card-header-icon") {
@@ -41,11 +41,12 @@ where
                 }
             }
 
-            div(class="card-content") {
-                div(class="content") {
-                    "Funds"
-                }
-            }
+            // TODO add trades
+            // div(class="card-content") {
+            //     div(class="content") {
+            //         "Trades"
+            //     }
+            // }
         }
 
         br()

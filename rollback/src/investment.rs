@@ -14,6 +14,10 @@ impl Investment {
         Self { fund, shares }
     }
 
+    pub fn fund(&self) -> &Fund {
+        &self.fund
+    }
+
     pub fn shares(&self) -> u64 {
         self.shares
     }
