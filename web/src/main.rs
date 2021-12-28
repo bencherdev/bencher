@@ -14,6 +14,7 @@ use institution::CoInstitutions;
 fn main() {
     sycamore::render(|| {
         let counter = Signal::new(0);
+        let add_institution = Signal::new(false);
 
         let institutions = Signal::new(get_institutions());
 
@@ -23,6 +24,9 @@ fn main() {
 
         let increment = cloned!((counter) => move |_| counter.set(*counter.get() + 1));
 
+        let toggle_add_institution =
+            cloned!((add_institution) => move |_| add_institution.set(!(*add_institution.get())));
+
         view! {
             CoInstitutions(institutions_vec)
 
@@ -30,8 +34,16 @@ fn main() {
                 (*counter.get())
             }
 
-            button(class="add-investment", on:click=increment) {
+            button(class="increment", on:click=increment) {
                 "Increment"
+            }
+
+            p {
+                (*add_institution.get())
+            }
+
+            button(class="add-investment", on:click=toggle_add_institution) {
+                "Add Institution"
             }
         }
     });
