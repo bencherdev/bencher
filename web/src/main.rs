@@ -13,14 +13,26 @@ use institution::CoInstitutions;
 
 fn main() {
     sycamore::render(|| {
+        let counter = Signal::new(0);
+
         let institutions = Signal::new(get_institutions());
 
         let institutions_vec = create_memo(
             cloned!(institutions => move || institutions.get().iter().map(|(inst, accs)| (inst.clone(), accs.clone())).collect::<Vec<(Institution, Accounts)>>()),
         );
 
+        let increment = cloned!((counter) => move |_| counter.set(*counter.get() + 1));
+
         view! {
             CoInstitutions(institutions_vec)
+
+            p {
+                (*counter.get())
+            }
+
+            button(class="add-investment", on:click=increment) {
+                "Increment"
+            }
         }
     });
 }
