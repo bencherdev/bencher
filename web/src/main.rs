@@ -46,6 +46,8 @@ fn main() {
                 "Increment"
             }
 
+            br {}
+
             AddInstitutionButton(add_institution)
         }
     });
@@ -95,13 +97,23 @@ where
     let toggle_button_state =
         cloned!((button_state) => move |_| button_state.set(!(*button_state.get())));
 
-    view! {
-        p {
-            (*button_state.get())
-        }
+    if *button_state.get() {
+        view! {
+            p {
+                (*button_state.get())
+            }
 
-        button(class="add-investment", on:click=toggle_button_state) {
-            "Add Institution"
+            "Pressed"
+        }
+    } else {
+        view! {
+            p {
+                (*button_state.get())
+            }
+
+            button(class="add-investment", on:click=toggle_button_state) {
+                "Add Institution"
+            }
         }
     }
 }
