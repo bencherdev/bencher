@@ -17,6 +17,18 @@ fn main() {
 
         let institutions = Signal::new(get_institutions());
 
+        let add_institution = cloned!((institutions) => move |_:()| {
+            // Added
+            let institution = Institution::new(
+                "Added".into(),
+                Url::parse("https://add.com").unwrap(),
+            );
+            let mut institutions = institutions.get();
+            let mut institutions = std::rc::Rc::get_mut(&mut institutions).unwrap();
+            institutions.insert(institution, Accounts::new());
+            // institutions.set();
+        });
+
         let institutions_vec = create_memo(
             cloned!(institutions => move || institutions.get().iter().map(|(inst, accs)| (inst.clone(), accs.clone())).collect::<Vec<(Institution, Accounts)>>()),
         );
@@ -34,7 +46,7 @@ fn main() {
                 "Increment"
             }
 
-            AddInstitutionButton()
+            AddInstitutionButton(add_institution)
         }
     });
 }
@@ -74,7 +86,10 @@ fn get_institutions() -> Institutions {
 }
 
 #[component(AddInstitutionButton<G>)]
-pub fn add_institution_button() -> View<G> {
+pub fn add_institution_button<F>(_a: F) -> View<G>
+where
+    F: Fn(()) -> (),
+{
     let button_state = Signal::new(false);
 
     let toggle_button_state =
