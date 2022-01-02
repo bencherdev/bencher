@@ -97,23 +97,32 @@ where
     let toggle_button_state =
         cloned!((button_state) => move |_| button_state.set(!(*button_state.get())));
 
-    if *button_state.get() {
-        view! {
-            p {
-                (*button_state.get())
-            }
+    view! {
+        (if *button_state.get() {
+            pressed()
+        } else {
+            button(toggle_button_state.clone())
+        })
+    }
+}
 
-            "Pressed"
-        }
-    } else {
-        view! {
-            p {
-                (*button_state.get())
-            }
+fn pressed<G>() -> View<G>
+where
+    G: sycamore::generic_node::GenericNode + sycamore::generic_node::Html,
+{
+    view! {
+        "Pressed"
+    }
+}
 
-            button(class="add-investment", on:click=toggle_button_state) {
-                "Add Institution"
-            }
+fn button<G, F>(toggle_button_state: F) -> View<G>
+where
+    G: sycamore::generic_node::GenericNode + sycamore::generic_node::Html,
+    F: 'static + Fn(sycamore::rt::Event) -> (),
+{
+    view! {
+        button(class="add-investment", on:click=toggle_button_state) {
+            "Add Institution"
         }
     }
 }
