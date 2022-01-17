@@ -5,6 +5,8 @@ use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 use rollback::total::Total;
 
+use crate::institution::InstitutionCard;
+
 #[derive(Properties, PartialEq)]
 pub struct InstitutionsListProps {
     pub institutions: Institutions,
@@ -26,17 +28,18 @@ pub fn institutions_list(props: &InstitutionsListProps) -> Html {
                     props.institutions.iter().map(|(institution, accounts)| {
                         html!{
                             <div>
-                            <InstitutionCard
-                                key={institution.name()}
-                                institution={institution.clone()}
-                                accounts={accounts.clone()}
-                            />
-                            <br/>
+                                <InstitutionCard
+                                    key={institution.name()}
+                                    institution={institution.clone()}
+                                    accounts={accounts.clone()}
+                                />
+                                <br/>
                             </div>
                         }
                     }).collect::<Html>()
                 }
             </div>
+
             <div class="card">
                 <div class="card-content">
                     <div class="content">
@@ -47,35 +50,6 @@ pub fn institutions_list(props: &InstitutionsListProps) -> Html {
                         { *add_institution }
                     </p>
                 </div>
-            </div>
-        </div>
-    }
-}
-
-#[derive(Properties, PartialEq)]
-pub struct InstitutionCardProps {
-    pub institution: Institution,
-    pub accounts: Accounts,
-}
-
-#[function_component(InstitutionCard)]
-pub fn institution_card(props: &InstitutionCardProps) -> Html {
-    html! {
-        <div class="card">
-            <div class="card-header">
-                <p class="card-header-title">
-                    { props.institution.to_string() }
-                </p>
-
-                <p class="card-header-icon">
-                    { props.accounts.total() }
-                </p>
-
-                <button class="card-header-icon" aria-label="See Accounts">
-                    <span class="icon">
-                        <i class="fas fa-angle-down" aria-hidden="true"></i>
-                    </span>
-                </button>
             </div>
         </div>
     }
