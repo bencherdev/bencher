@@ -13,6 +13,11 @@ use institutions::InstitutionsList;
 fn index() -> Html {
     let institutions = use_state(get_institutions);
 
+    // let add_institution = {
+    //     let institutions = institutions.clone();
+    //     Callback::from(move |_| (*institutions).insert())
+    // };
+
     // let onclick = {
     //     let counter = counter.clone();
     //     Callback::from(move |_| counter.set(*counter + 1))
