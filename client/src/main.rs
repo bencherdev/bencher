@@ -11,7 +11,7 @@ fn state() -> Html {
 
     html! {
         <div>
-            <button {onclick}>{ "Increment value" }</button>
+            <button class="button" {onclick}>{ "Increment value" }</button>
             <p>
                 <b>{ "Current value: " }</b>
                 { *counter }
