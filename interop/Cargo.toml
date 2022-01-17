@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "interop"
 version = "0.1.0"
 authors = ["Ivan Schuetz <ivanschuetz@gmail.com>"]
 edition = "2018"
