@@ -5,8 +5,8 @@ use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 use rollback::ticker::TickerSymbols;
 
-#[function_component(UseState)]
-fn state() -> Html {
+#[function_component(Index)]
+fn index() -> Html {
     let counter = use_state(|| 0);
     let institutions = use_state(get_institutions);
 
@@ -23,6 +23,7 @@ fn state() -> Html {
                 { *counter }
             </p>
             <div id="introductions">
+
             {
                 institutions.iter().map(|(institution, _accounts)| {
                     html!{<div key={ institution.name() }>{ institution.name() }</div>}
@@ -34,7 +35,7 @@ fn state() -> Html {
 }
 
 fn main() {
-    yew::start_app::<UseState>();
+    yew::start_app::<Index>();
 }
 
 fn get_institutions() -> Institutions {
