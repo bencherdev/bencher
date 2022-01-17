@@ -1,35 +1,40 @@
 use url::Url;
-use yew::{function_component, html, use_state, Callback, Html};
+use yew::{function_component, html, use_state, Callback, Html, Properties};
 
 use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 use rollback::ticker::TickerSymbols;
 
-#[function_component(Index)]
-fn index() -> Html {
-    let counter = use_state(|| 0);
-    let institutions = use_state(get_institutions);
+#[derive(Properties, PartialEq)]
+pub struct InstitutionsListProps {
+    pub institutions: Institutions,
+}
 
-    let onclick = {
-        let counter = counter.clone();
-        Callback::from(move |_| counter.set(*counter + 1))
-    };
-
+#[function_component(InstitutionsList)]
+fn institutions_list(props: &InstitutionsListProps) -> Html {
     html! {
-        <div>
-            <button class="button" {onclick}>{ "Increment value" }</button>
-            <p>
-                <b>{ "Current value: " }</b>
-                { *counter }
-            </p>
-            <div id="introductions">
-
+        <div id="institutions">
             {
-                institutions.iter().map(|(institution, _accounts)| {
+                props.institutions.iter().map(|(institution, _accounts)| {
                     html!{<div key={ institution.name() }>{ institution.name() }</div>}
                 }).collect::<Html>()
             }
         </div>
+    }
+}
+
+#[function_component(Index)]
+fn index() -> Html {
+    let institutions = use_state(get_institutions);
+
+    // let onclick = {
+    //     let counter = counter.clone();
+    //     Callback::from(move |_| counter.set(*counter + 1))
+    // };
+
+    html! {
+        <div>
+            <InstitutionsList institutions={(*institutions).clone()} />
         </div>
     }
 }
