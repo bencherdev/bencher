@@ -86,6 +86,8 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "client"
 version = "0.1.0"
 dependencies = [
+ "rollback",
+ "url",
  "yew 0.19.3",
 ]
 
