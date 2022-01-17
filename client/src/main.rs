@@ -5,23 +5,9 @@ use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 use rollback::ticker::TickerSymbols;
 
-#[derive(Properties, PartialEq)]
-pub struct InstitutionsListProps {
-    pub institutions: Institutions,
-}
+mod institutions;
 
-#[function_component(InstitutionsList)]
-fn institutions_list(props: &InstitutionsListProps) -> Html {
-    html! {
-        <div id="institutions">
-            {
-                props.institutions.iter().map(|(institution, _accounts)| {
-                    html!{<div key={ institution.name() }>{ institution.name() }</div>}
-                }).collect::<Html>()
-            }
-        </div>
-    }
-}
+use institutions::InstitutionsList;
 
 #[function_component(Index)]
 fn index() -> Html {
@@ -34,7 +20,11 @@ fn index() -> Html {
 
     html! {
         <div>
-            <InstitutionsList institutions={(*institutions).clone()} />
+            <section class="section">
+                <div class="container">
+                    <InstitutionsList institutions={(*institutions).clone()} />
+                </div>
+            </section>
         </div>
     }
 }
