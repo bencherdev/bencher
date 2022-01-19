@@ -5,24 +5,22 @@ use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 use rollback::total::Total;
 
-use crate::accounts::AccountsList;
 #[derive(Properties, PartialEq)]
-pub struct InstitutionCardProps {
-    pub institution: Institution,
-    pub accounts: Accounts,
+pub struct AccountCardProps {
+    pub account: Account,
 }
 
-#[function_component(InstitutionCard)]
-pub fn institution_card(props: &InstitutionCardProps) -> Html {
+#[function_component(AccountCard)]
+pub fn account_card(props: &AccountCardProps) -> Html {
     html! {
         <div class="card">
             <div class="card-header">
                 <p class="card-header-title">
-                    { props.institution.to_string() }
+                    { props.account.to_string() }
                 </p>
 
                 <p class="card-header-icon">
-                    { props.accounts.total() }
+                    { props.account.total() }
                 </p>
 
                 <button class="card-header-icon" aria-label="See Accounts">
@@ -33,7 +31,7 @@ pub fn institution_card(props: &InstitutionCardProps) -> Html {
             </div>
 
             <div class="card-content">
-                <AccountsList accounts={props.accounts.clone()}/>
+                { "TODO Fund List"}
             </div>
 
             <footer class="card-footer">

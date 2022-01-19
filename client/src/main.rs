@@ -5,6 +5,8 @@ use rollback::account::{Account, AccountKind, Accounts};
 use rollback::institution::{Institution, Institutions};
 use rollback::ticker::TickerSymbols;
 
+mod account;
+mod accounts;
 mod institution;
 mod institutions;
 

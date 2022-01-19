@@ -66,6 +66,12 @@ impl Account {
     }
 }
 
+impl fmt::Display for Account {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
 impl Total for Account {
     fn total(&self) -> u64 {
         self.investments
