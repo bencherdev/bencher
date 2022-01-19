@@ -5,18 +5,18 @@ use crate::ticker::TickerSymbol;
 use crate::total::Total;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
-pub struct Investment {
+pub struct Holding {
     fund: Fund,
     shares: u64,
 }
 
-impl fmt::Display for Investment {
+impl fmt::Display for Holding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.fund.fmt(f)
     }
 }
 
-impl Investment {
+impl Holding {
     pub fn new(ticker_symbol: TickerSymbol, shares: u64) -> Self {
         let fund = Fund::new(ticker_symbol);
         Self { fund, shares }
@@ -35,7 +35,7 @@ impl Investment {
     }
 }
 
-impl Total for Investment {
+impl Total for Holding {
     fn total(&self) -> u64 {
         self.fund.price() * self.shares
     }

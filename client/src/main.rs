@@ -56,7 +56,7 @@ fn get_institutions() -> Institutions {
     let mut account = Account::new(id.into(), AccountKind::Brokerage);
 
     let tickers = TickerSymbols::search("vtsax", 1);
-    account.add_investment(tickers.first().unwrap().clone(), 10);
+    account.add_holding(tickers.first().unwrap().clone(), 10);
 
     accounts.insert(id.into(), account);
     institutions.insert(institution.clone(), accounts);

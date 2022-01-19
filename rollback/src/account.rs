@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::investment::Investment;
+use crate::holding::Holding;
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
 
@@ -14,12 +14,12 @@ impl Total for Accounts {
     }
 }
 
-/// An account with investments stored by `TickerSymbol`
+/// An account with holdings stored by `TickerSymbol`
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Account {
     id: AccountId,
     kind: AccountKind,
-    investments: BTreeMap<TickerSymbol, Investment>,
+    holdings: BTreeMap<TickerSymbol, Holding>,
 }
 
 impl Account {
@@ -27,7 +27,7 @@ impl Account {
         Self {
             id,
             kind,
-            investments: BTreeMap::new(),
+            holdings: BTreeMap::new(),
         }
     }
 
@@ -39,30 +39,30 @@ impl Account {
         &self.kind
     }
 
-    pub fn investments(&self) -> &BTreeMap<TickerSymbol, Investment> {
-        &self.investments
+    pub fn holdings(&self) -> &BTreeMap<TickerSymbol, Holding> {
+        &self.holdings
     }
 
     pub fn update_kind(&mut self, kind: AccountKind) {
         self.kind = kind;
     }
 
-    pub fn add_investment(&mut self, ticker_symbol: TickerSymbol, shares: u64) {
-        let investment = Investment::new(ticker_symbol.clone(), shares);
-        self.investments.insert(ticker_symbol, investment);
+    pub fn add_holding(&mut self, ticker_symbol: TickerSymbol, shares: u64) {
+        let holding = Holding::new(ticker_symbol.clone(), shares);
+        self.holdings.insert(ticker_symbol, holding);
     }
 
-    pub fn update_investment(&mut self, ticker_symbol: &TickerSymbol, shares: u64) -> Option<u64> {
-        if let Some(investment) = self.investments.get_mut(&ticker_symbol) {
-            investment.set_shares(shares);
-            Some(investment.shares())
+    pub fn update_holding(&mut self, ticker_symbol: &TickerSymbol, shares: u64) -> Option<u64> {
+        if let Some(holding) = self.holdings.get_mut(&ticker_symbol) {
+            holding.set_shares(shares);
+            Some(holding.shares())
         } else {
             None
         }
     }
 
-    pub fn remove_investment(&mut self, ticker_symbol: &TickerSymbol) -> Option<Investment> {
-        self.investments.remove(ticker_symbol)
+    pub fn remove_holding(&mut self, ticker_symbol: &TickerSymbol) -> Option<Holding> {
+        self.holdings.remove(ticker_symbol)
     }
 }
 
@@ -74,7 +74,7 @@ impl fmt::Display for Account {
 
 impl Total for Account {
     fn total(&self) -> u64 {
-        self.investments
+        self.holdings
             .iter()
             .fold(0, |acc, (_, inv)| acc + inv.total())
     }
