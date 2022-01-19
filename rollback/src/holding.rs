@@ -1,8 +1,11 @@
+use std::collections::BTreeMap;
 use std::fmt;
 
 use crate::fund::Fund;
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
+
+pub type Holdings = BTreeMap<TickerSymbol, Holding>;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Holding {

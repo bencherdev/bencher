@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::holding::Holding;
+use crate::holding::{Holding, Holdings};
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
 
@@ -19,7 +19,7 @@ impl Total for Accounts {
 pub struct Account {
     id: AccountId,
     kind: AccountKind,
-    holdings: BTreeMap<TickerSymbol, Holding>,
+    holdings: Holdings,
 }
 
 impl Account {
@@ -39,12 +39,12 @@ impl Account {
         &self.kind
     }
 
-    pub fn holdings(&self) -> &BTreeMap<TickerSymbol, Holding> {
-        &self.holdings
-    }
-
     pub fn update_kind(&mut self, kind: AccountKind) {
         self.kind = kind;
+    }
+
+    pub fn holdings(&self) -> &Holdings {
+        &self.holdings
     }
 
     pub fn add_holding(&mut self, ticker_symbol: TickerSymbol, shares: u64) {
