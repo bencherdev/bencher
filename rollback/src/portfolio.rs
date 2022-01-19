@@ -17,6 +17,12 @@ impl fmt::Display for User {
     }
 }
 
+impl User {
+    pub fn new(first: String, last: String) -> Self {
+        Self { first, last }
+    }
+}
+
 /// An iterable map of all portfolios
 pub type Portfolios = BTreeMap<User, Portfolio>;
 
