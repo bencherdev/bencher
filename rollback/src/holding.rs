@@ -7,6 +7,7 @@ use crate::total::Total;
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Holding {
     fund: Fund,
+    // TODO shares should be derived/adjudicated by a Transactions type
     shares: u64,
 }
 
