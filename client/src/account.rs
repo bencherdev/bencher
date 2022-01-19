@@ -31,7 +31,7 @@ pub fn account_card(props: &AccountCardProps) -> Html {
             </div>
 
             <div class="card-content">
-                { "TODO Fund List"}
+                { "TODO Holdings"}
             </div>
 
             <footer class="card-footer">

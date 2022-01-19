@@ -4,14 +4,14 @@ use std::fmt;
 use crate::fund::Fund;
 use crate::ticker::TickerSymbol;
 use crate::total::Total;
+use crate::transaction::Transactions;
 
 pub type Holdings = BTreeMap<TickerSymbol, Holding>;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Holding {
     fund: Fund,
-    // TODO shares should be derived/adjudicated by a Transactions type
-    shares: u64,
+    transactions: Transactions,
 }
 
 impl fmt::Display for Holding {
@@ -21,26 +21,27 @@ impl fmt::Display for Holding {
 }
 
 impl Holding {
-    pub fn new(ticker_symbol: TickerSymbol, shares: u64) -> Self {
+    pub fn new(ticker_symbol: TickerSymbol) -> Self {
         let fund = Fund::new(ticker_symbol);
-        Self { fund, shares }
+        let transactions = Transactions::new();
+        Self { fund, transactions }
     }
 
     pub fn fund(&self) -> &Fund {
         &self.fund
     }
 
-    pub fn shares(&self) -> u64 {
-        self.shares
+    pub fn transactions(&self) -> &Transactions {
+        &self.transactions
     }
 
-    pub fn set_shares(&mut self, shares: u64) {
-        self.shares = shares;
+    pub fn transactions_mut(&mut self) -> &mut Transactions {
+        &mut self.transactions
     }
 }
 
 impl Total for Holding {
     fn total(&self) -> u64 {
-        self.fund.price() * self.shares
+        self.fund.price() * self.transactions.quantity()
     }
 }

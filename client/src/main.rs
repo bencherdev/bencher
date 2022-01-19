@@ -2,10 +2,12 @@ use url::Url;
 use yew::{function_component, html, use_state, Callback, Html, Properties};
 
 use rollback::account::{Account, AccountKind, Accounts};
+use rollback::holding::Holding;
 use rollback::institution::{Institution, Institutions};
 use rollback::portfolio::{Portfolio, User};
 use rollback::ticker::TickerSymbols;
 use rollback::total::Total;
+use rollback::transaction::{Transaction, TransactionKind, Transactions};
 
 mod account;
 mod accounts;
@@ -73,7 +75,16 @@ fn get_portfolio() -> Portfolio {
     let mut account = Account::new(id.into(), AccountKind::Brokerage);
 
     let tickers = TickerSymbols::search("vtsax", 1);
-    account.add_holding(tickers.first().unwrap().clone(), 10);
+    let ticker = tickers.first().unwrap();
+    account
+        .holdings_mut()
+        .insert(ticker.clone(), Holding::new(ticker.clone()));
+    account
+        .holdings_mut()
+        .get_mut(ticker)
+        .unwrap()
+        .transactions_mut()
+        .add(Transaction::new(TransactionKind::Buy, 1000));
 
     accounts.insert(id.into(), account);
     portfolio

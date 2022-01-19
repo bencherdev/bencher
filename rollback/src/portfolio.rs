@@ -42,7 +42,7 @@ pub struct Portfolio {
 
 impl fmt::Display for Portfolio {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} Portfolio", self.user)
+        write!(f, "{}'s Portfolio", self.user)
     }
 }
 

@@ -47,22 +47,8 @@ impl Account {
         &self.holdings
     }
 
-    pub fn add_holding(&mut self, ticker_symbol: TickerSymbol, shares: u64) {
-        let holding = Holding::new(ticker_symbol.clone(), shares);
-        self.holdings.insert(ticker_symbol, holding);
-    }
-
-    pub fn update_holding(&mut self, ticker_symbol: &TickerSymbol, shares: u64) -> Option<u64> {
-        if let Some(holding) = self.holdings.get_mut(&ticker_symbol) {
-            holding.set_shares(shares);
-            Some(holding.shares())
-        } else {
-            None
-        }
-    }
-
-    pub fn remove_holding(&mut self, ticker_symbol: &TickerSymbol) -> Option<Holding> {
-        self.holdings.remove(ticker_symbol)
+    pub fn holdings_mut(&mut self) -> &mut Holdings {
+        &mut self.holdings
     }
 }
 
