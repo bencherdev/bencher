@@ -9,6 +9,10 @@ use tinysearch_shared::PostId;
 
 use search::Search;
 
+// TODO use https://query2.finance.yahoo.com/v7/finance/options/vtsax
+// for getting stock quotes
+// https://github.com/ranaroussi/yfinance
+
 pub static TICKER: Search = Search(Lazy::new(|| {
     Search::load(include_str!("../../data/ticker.json")).unwrap()
 }));
