@@ -6,6 +6,8 @@ extern crate test;
 
 use clap::{ArgEnum, Parser};
 
+mod tool;
+
 const WINDOWS_SHELL: &str = "cmd";
 const WINDOWS_FLAG: &str = "/C";
 const UNIX_SHELL: &str = "/bin/sh";
@@ -67,10 +69,14 @@ fn main() {
 
     let output = Command::new(shell).arg(flag).arg(args.cmd).output();
 
-    println!("{:?}", output);
+    let output = if let Ok(output) = output {
+        output
+    } else {
+        return;
+    };
 
     match args.tool {
-        Tool::RustBench => {}
+        Tool::RustBench => tool::rust_bench::parse(output),
     }
 }
 
