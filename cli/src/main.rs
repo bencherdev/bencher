@@ -8,21 +8,21 @@ use clap::{ArgEnum, Parser};
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Number of times to greet
-    #[clap(short, long, arg_enum, default_value = "rust")]
-    lang: Language,
-
-    /// Benchamrk command to execute
+    /// Benchmark command to execute
     #[clap(short = 'x', long = "exec")]
     pub cmd: String,
+
+    /// Benchmark tool ID
+    #[clap(short, long, arg_enum, default_value = "rust_bench")]
+    tool: Tool,
 }
 
 /// Supported Languages
 #[derive(ArgEnum, Clone, Debug)]
-enum Language {
+enum Tool {
     /// Rust 🦀
-    #[clap(alias("Rust"), alias("RUST"))]
-    Rust,
+    #[clap(name = "rust_bench")]
+    RustBench,
 }
 
 fn main() {
