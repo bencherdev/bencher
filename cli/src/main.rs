@@ -1,8 +1,15 @@
 #![feature(test)]
 
+use std::process::Command;
+
 extern crate test;
 
 use clap::{ArgEnum, Parser};
+
+const WINDOWS_SHELL: &str = "cmd";
+const WINDOWS_FLAG: &str = "/C";
+const UNIX_SHELL: &str = "/bin/sh";
+const UNIX_FLAG: &str = "-c";
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -11,6 +18,14 @@ struct Args {
     /// Benchmark command to execute
     #[clap(short = 'x', long = "exec")]
     pub cmd: String,
+
+    /// Shell command path
+    #[clap(short, long)]
+    shell: Option<String>,
+
+    /// Shell command flag
+    #[clap(short, long)]
+    flag: Option<String>,
 
     /// Benchmark tool ID
     #[clap(short, long, arg_enum, default_value = "rust_bench")]
@@ -28,7 +43,35 @@ enum Tool {
 fn main() {
     let args = Args::parse();
 
-    println!("CMD: {}", args.cmd)
+    println!("CMD: {}", args.cmd);
+
+    let shell = if let Some(shell) = args.shell {
+        shell
+    } else if cfg!(target_family = "windows") {
+        WINDOWS_SHELL.into()
+    } else if cfg!(target_family = "unix") {
+        UNIX_SHELL.into()
+    } else {
+        return;
+    };
+
+    let flag = if let Some(flag) = args.flag {
+        flag
+    } else if cfg!(target_family = "windows") {
+        WINDOWS_FLAG.into()
+    } else if cfg!(target_family = "unix") {
+        UNIX_FLAG.into()
+    } else {
+        return;
+    };
+
+    let output = Command::new(shell).arg(flag).arg(args.cmd).output();
+
+    println!("{:?}", output);
+
+    match args.tool {
+        Tool::RustBench => {}
+    }
 }
 
 #[cfg(test)]
