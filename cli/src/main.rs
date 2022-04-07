@@ -6,7 +6,11 @@ extern crate test;
 
 use clap::{ArgEnum, Parser};
 
+mod error;
+mod report;
 mod tool;
+
+use crate::error::CliError;
 
 const WINDOWS_SHELL: &str = "cmd";
 const WINDOWS_FLAG: &str = "/C";
@@ -42,7 +46,7 @@ enum Tool {
     RustBench,
 }
 
-fn main() {
+fn main() -> Result<(), CliError> {
     let args = Args::parse();
 
     println!("CMD: {}", args.cmd);
@@ -54,7 +58,7 @@ fn main() {
     } else if cfg!(target_family = "unix") {
         UNIX_SHELL.into()
     } else {
-        return;
+        return Err(CliError::Shell);
     };
 
     let flag = if let Some(flag) = args.flag {
@@ -64,20 +68,25 @@ fn main() {
     } else if cfg!(target_family = "unix") {
         UNIX_FLAG.into()
     } else {
-        return;
+        return Err(CliError::Flag);
     };
 
-    let output = Command::new(shell).arg(flag).arg(args.cmd).output();
+    let output = Command::new(shell).arg(flag).arg(&args.cmd).output();
 
     let output = if let Ok(output) = output {
         output
     } else {
-        return;
+        return Err(CliError::Benchmark(args.cmd));
     };
 
-    match args.tool {
+    let report = match args.tool {
         Tool::RustBench => tool::rust_bench::parse(output),
-    }
+    }?;
+
+    // TODO this should be the JSON value
+    println!("{report:?}");
+
+    Ok(())
 }
 
 #[cfg(test)]
