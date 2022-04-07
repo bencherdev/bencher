@@ -7,10 +7,12 @@ extern crate test;
 use clap::{ArgEnum, Parser};
 
 mod error;
+mod output;
 mod report;
 mod tool;
 
 use crate::error::CliError;
+use crate::output::Output;
 
 const WINDOWS_SHELL: &str = "cmd";
 const WINDOWS_FLAG: &str = "/C";
@@ -74,7 +76,7 @@ fn main() -> Result<(), CliError> {
     let output = Command::new(shell).arg(flag).arg(&args.cmd).output();
 
     let output = if let Ok(output) = output {
-        output
+        Output::try_from(output)?
     } else {
         return Err(CliError::Benchmark(args.cmd));
     };

@@ -8,4 +8,6 @@ pub enum CliError {
     Flag,
     #[error("Failed to execute benchmark: {0}")]
     Benchmark(String),
+    #[error("Failed to convert from UTF8")]
+    FromUtf8(#[from] std::string::FromUtf8Error),
 }
