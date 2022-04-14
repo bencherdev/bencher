@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::adapter::Report;
 use crate::command::Output;
@@ -8,5 +8,5 @@ pub fn parse(adapter: &str, output: Output) -> Result<Report, CliError> {
     println!("{:?}", adapter);
     println!("{:?}", output);
 
-    Ok(Report::new(HashMap::new()))
+    Ok(Report::new(BTreeMap::new()))
 }

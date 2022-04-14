@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-pub type Metrics = HashMap<String, Metric>;
+pub type Metrics = BTreeMap<String, Metric>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
