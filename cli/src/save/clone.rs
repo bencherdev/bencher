@@ -1,7 +1,8 @@
-use git2::{Cred, Error, RemoteCallbacks, Repository};
 use std::path::Path;
 
-pub fn clone(url: &str, key: Option<&str>) -> Result<Repository, Error> {
+use git2::{Cred, Error, RemoteCallbacks, Repository};
+
+pub fn clone(url: &str, key: Option<&str>, into: &Path) -> Result<Repository, Error> {
     // Prepare fetch options.
     let mut fo = git2::FetchOptions::new();
 
@@ -19,5 +20,5 @@ pub fn clone(url: &str, key: Option<&str>) -> Result<Repository, Error> {
     builder.fetch_options(fo);
 
     // Clone the project.
-    builder.clone(url, Path::new("/tmp/rollback"))
+    builder.clone(url, into)
 }

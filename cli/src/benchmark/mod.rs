@@ -24,7 +24,7 @@ pub struct Benchmark {
     cmd: String,
     adapter: Adapter,
     git: Option<Git>,
-    tag: Option<Vec<String>>,
+    _tag: Option<Vec<String>>,
 }
 
 impl TryFrom<Args> for Benchmark {
@@ -41,7 +41,7 @@ impl TryFrom<Args> for Benchmark {
             } else {
                 None
             },
-            tag: args.tag,
+            _tag: args.tag,
         })
     }
 }
