@@ -38,8 +38,8 @@ struct Args {
     cmd: String,
 
     /// Benchmark output adapter
-    #[clap(short, long, arg_enum, default_value = "rust")]
-    adapter: Adapter,
+    #[clap(short, long, default_value = "rust")]
+    adapter: String,
 
     /// Output tag
     #[clap(short, long)]
@@ -79,9 +79,9 @@ fn main() -> Result<(), CliError> {
         return Err(CliError::Benchmark(args.cmd));
     };
 
-    let report = match args.adapter {
+    let report = match args.adapter.into() {
         Adapter::Rust => adapter::rust::parse(output),
-        // Tool::Custom(_) => todo!(),
+        Adapter::Custom(adapter) => adapter::custom::parse(adapter, output),
     }?;
 
     // TODO this should be the JSON value

@@ -1,12 +1,20 @@
+pub mod custom;
 pub mod rust;
 
-use clap::ArgEnum;
-
-/// Supported Languages
-#[derive(ArgEnum, Clone, Debug)]
+/// Supported Adapters
+#[derive(Clone, Debug)]
 pub enum Adapter {
     /// Rust 🦀
-    #[clap(name = "rust")]
     Rust,
-    // Custom(String),
+    // Custom adapter
+    Custom(String),
+}
+
+impl From<String> for Adapter {
+    fn from(adapter: String) -> Self {
+        match adapter.as_str() {
+            "rust" => Adapter::Rust,
+            _ => Adapter::Custom(adapter),
+        }
+    }
 }
