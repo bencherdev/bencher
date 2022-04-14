@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
@@ -24,7 +25,7 @@ impl Report {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Metric {
-    latency: Option<()>,
+    latency: Option<Latency>,
     throughput: Option<()>,
     total_cpu: Option<()>,
     self_cpu: Option<()>,
@@ -36,4 +37,17 @@ impl Metric {
     pub fn new() -> Self {
         Self::default()
     }
+
+    pub fn from_lateny(latency: Latency) -> Self {
+        Self {
+            latency: Some(latency),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct Latency {
+    pub duration: Duration,
+    pub variance: Duration,
 }
