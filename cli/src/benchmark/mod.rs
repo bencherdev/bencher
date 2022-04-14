@@ -36,8 +36,8 @@ impl TryFrom<Args> for Benchmark {
             flag: Flag::try_from(args.flag)?,
             cmd: args.cmd,
             adapter: Adapter::from(args.adapter),
-            git: if let Some(git) = args.git {
-                Some(Git::try_from(git)?)
+            git: if let Some(url) = args.git {
+                Some(Git::new(url, args.key)?)
             } else {
                 None
             },

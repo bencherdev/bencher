@@ -10,4 +10,6 @@ pub enum CliError {
     Io(#[from] std::io::Error),
     #[error("Failed to convert from UTF8")]
     FromUtf8(#[from] std::string::FromUtf8Error),
+    #[error("Failed git")]
+    Git(#[from] git2::Error),
 }

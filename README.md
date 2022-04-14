@@ -10,3 +10,5 @@ cargo install --locked cargo-audit --features vendored-openssl
 cargo install --locked trunk
 
 cargo install --locked wasm-pack
+
+`cargo run -- -x "cargo bench" -g git@github.com:epompeii/rollback.git -k $HOME/.ssh/id_ed25519`

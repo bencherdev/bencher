@@ -24,6 +24,10 @@ pub struct Args {
     #[clap(short, long)]
     pub git: Option<String>,
 
+    /// Git repo key
+    #[clap(short, long)]
+    pub key: Option<String>,
+
     /// Output tags
     #[clap(short, long)]
     pub tag: Option<Vec<String>>,
