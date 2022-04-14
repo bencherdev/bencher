@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::adapter::Report;
-use crate::cli::Output;
+use crate::command::Output;
 use crate::error::CliError;
 
 pub fn parse(adapter: &str, output: Output) -> Result<Report, CliError> {

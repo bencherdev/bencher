@@ -4,18 +4,17 @@ extern crate test;
 
 mod adapter;
 mod args;
-mod cli;
+mod command;
 mod error;
 
-use crate::cli::Cli;
+use crate::command::Command;
 use crate::error::CliError;
 
 fn main() -> Result<(), CliError> {
-    let cli = Cli::new()?;
-    let output = cli.benchmark()?;
-    let report = cli.convert(output)?;
+    let cmd = Command::new()?;
+    let output = cmd.benchmark()?;
+    let report = cmd.convert(output)?;
 
-    // TODO this should be the JSON value
     println!("{report:?}");
 
     Ok(())

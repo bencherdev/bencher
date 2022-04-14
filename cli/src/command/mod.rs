@@ -1,5 +1,4 @@
 use std::convert::TryFrom;
-use std::process::Command;
 
 use clap::Parser;
 
@@ -11,13 +10,13 @@ use crate::adapter;
 use crate::adapter::Adapter;
 use crate::adapter::Report;
 use crate::args::Args;
-pub use crate::cli::flag::Flag;
-pub use crate::cli::output::Output;
-pub use crate::cli::shell::Shell;
+pub use crate::command::flag::Flag;
+pub use crate::command::output::Output;
+pub use crate::command::shell::Shell;
 use crate::error::CliError;
 
 #[derive(Debug)]
-pub struct Cli {
+pub struct Command {
     shell: Shell,
     flag: Flag,
     cmd: String,
@@ -25,7 +24,7 @@ pub struct Cli {
     tag: Option<Vec<String>>,
 }
 
-impl TryFrom<Args> for Cli {
+impl TryFrom<Args> for Command {
     type Error = CliError;
 
     fn try_from(args: Args) -> Result<Self, Self::Error> {
@@ -39,14 +38,14 @@ impl TryFrom<Args> for Cli {
     }
 }
 
-impl Cli {
+impl Command {
     pub fn new() -> Result<Self, CliError> {
         let args = Args::parse();
         Self::try_from(args)
     }
 
     pub fn benchmark(&self) -> Result<Output, CliError> {
-        let output = Command::new(self.shell.to_string())
+        let output = std::process::Command::new(self.shell.to_string())
             .arg(self.flag.to_string())
             .arg(&self.cmd)
             .output()?;

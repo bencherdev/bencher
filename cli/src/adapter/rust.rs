@@ -17,7 +17,7 @@ use crate::adapter::report::Latency;
 use crate::adapter::report::Metric;
 use crate::adapter::report::Metrics;
 use crate::adapter::report::Report;
-use crate::cli::Output;
+use crate::command::Output;
 use crate::error::CliError;
 
 pub fn parse(output: Output) -> Result<Report, CliError> {
