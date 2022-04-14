@@ -14,19 +14,16 @@ mod tool;
 use crate::error::CliError;
 use crate::output::Output;
 
-const WINDOWS_SHELL: &str = "cmd";
-const WINDOWS_FLAG: &str = "/C";
 const UNIX_SHELL: &str = "/bin/sh";
+const WINDOWS_SHELL: &str = "cmd";
+
 const UNIX_FLAG: &str = "-c";
+const WINDOWS_FLAG: &str = "/C";
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Benchmark command to execute
-    #[clap(short = 'x', long = "exec")]
-    pub cmd: String,
-
     /// Shell command path
     #[clap(short, long)]
     shell: Option<String>,
@@ -35,8 +32,12 @@ struct Args {
     #[clap(short, long)]
     flag: Option<String>,
 
+    /// Benchmark command to execute
+    #[clap(short = 'x', long = "exec")]
+    pub cmd: String,
+
     /// Benchmark tool ID
-    #[clap(short, long, arg_enum, default_value = "rust_bench")]
+    #[clap(short, long, arg_enum, default_value = "rust")]
     tool: Tool,
 }
 
@@ -44,8 +45,9 @@ struct Args {
 #[derive(ArgEnum, Clone, Debug)]
 enum Tool {
     /// Rust 🦀
-    #[clap(name = "rust_bench")]
-    RustBench,
+    #[clap(name = "rust")]
+    Rust,
+    // Custom(String),
 }
 
 fn main() -> Result<(), CliError> {
@@ -55,20 +57,20 @@ fn main() -> Result<(), CliError> {
 
     let shell = if let Some(shell) = args.shell {
         shell
-    } else if cfg!(target_family = "windows") {
-        WINDOWS_SHELL.into()
     } else if cfg!(target_family = "unix") {
         UNIX_SHELL.into()
+    } else if cfg!(target_family = "windows") {
+        WINDOWS_SHELL.into()
     } else {
         return Err(CliError::Shell);
     };
 
     let flag = if let Some(flag) = args.flag {
         flag
-    } else if cfg!(target_family = "windows") {
-        WINDOWS_FLAG.into()
     } else if cfg!(target_family = "unix") {
         UNIX_FLAG.into()
+    } else if cfg!(target_family = "windows") {
+        WINDOWS_FLAG.into()
     } else {
         return Err(CliError::Flag);
     };
@@ -82,7 +84,8 @@ fn main() -> Result<(), CliError> {
     };
 
     let report = match args.tool {
-        Tool::RustBench => tool::rust_bench::parse(output),
+        Tool::Rust => tool::rust_bench::parse(output),
+        // Tool::Custom(_) => todo!(),
     }?;
 
     // TODO this should be the JSON value
