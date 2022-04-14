@@ -20,6 +20,10 @@ pub struct Args {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
+    /// Benchmark output adapter
+    #[clap(short, long)]
+    pub git: Option<String>,
+
     /// Output tags
     #[clap(short, long)]
     pub tag: Option<Vec<String>>,

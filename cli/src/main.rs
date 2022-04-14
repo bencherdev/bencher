@@ -4,22 +4,22 @@ extern crate test;
 
 mod adapter;
 mod args;
-mod command;
+mod benchmark;
 mod error;
 mod save;
 mod tests;
 
-use crate::command::Command;
+use crate::benchmark::Benchmark;
 use crate::error::CliError;
 
 fn main() -> Result<(), CliError> {
-    let cmd = Command::new()?;
-    let output = cmd.benchmark()?;
-    let report = cmd.convert(output)?;
+    let bench = Benchmark::new()?;
+    let output = bench.run()?;
+    let report = bench.convert(output)?;
 
     println!("{report:?}");
 
-    cmd.save(report)?;
+    bench.save(report)?;
 
     Ok(())
 }
