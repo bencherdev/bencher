@@ -1,5 +1,8 @@
 pub mod custom;
+mod report;
 pub mod rust;
+
+pub use report::Report;
 
 /// Supported Adapters
 #[derive(Clone, Debug)]

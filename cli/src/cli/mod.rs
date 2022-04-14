@@ -9,12 +9,12 @@ mod shell;
 
 use crate::adapter;
 use crate::adapter::Adapter;
+use crate::adapter::Report;
 use crate::args::Args;
 pub use crate::cli::flag::Flag;
 pub use crate::cli::output::Output;
 pub use crate::cli::shell::Shell;
 use crate::error::CliError;
-use crate::report::Report;
 
 #[derive(Debug)]
 pub struct Cli {

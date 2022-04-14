@@ -6,7 +6,6 @@ mod adapter;
 mod args;
 mod cli;
 mod error;
-mod report;
 
 use crate::cli::Cli;
 use crate::error::CliError;
