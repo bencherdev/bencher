@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -24,9 +23,9 @@ use crate::report::Report;
 pub fn parse(output: Output) -> Result<Report, CliError> {
     println!("{:?}", output);
 
-    let report = parse_stdout(&output.stdout);
+    let (_, report) = parse_stdout(&output.stdout).unwrap();
 
-    Ok(Report::new(HashMap::new()))
+    Ok(report)
 }
 
 enum Test {
