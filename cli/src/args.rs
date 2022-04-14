@@ -20,7 +20,7 @@ pub struct Args {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
-    /// Benchmark output adapter
+    /// Git repo to store data
     #[clap(short, long)]
     pub git: Option<String>,
 

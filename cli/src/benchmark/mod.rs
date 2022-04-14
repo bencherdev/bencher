@@ -15,6 +15,7 @@ pub use crate::benchmark::flag::Flag;
 pub use crate::benchmark::output::Output;
 pub use crate::benchmark::shell::Shell;
 use crate::error::CliError;
+use crate::save::Git;
 
 #[derive(Debug)]
 pub struct Benchmark {
@@ -22,6 +23,7 @@ pub struct Benchmark {
     flag: Flag,
     cmd: String,
     adapter: Adapter,
+    git: Option<Git>,
     tag: Option<Vec<String>>,
 }
 
@@ -34,6 +36,11 @@ impl TryFrom<Args> for Benchmark {
             flag: Flag::try_from(args.flag)?,
             cmd: args.cmd,
             adapter: Adapter::from(args.adapter),
+            git: if let Some(git) = args.git {
+                Some(Git::try_from(git)?)
+            } else {
+                None
+            },
             tag: args.tag,
         })
     }
@@ -62,6 +69,10 @@ impl Benchmark {
     }
 
     pub fn save(&self, report: Report) -> Result<(), CliError> {
-        crate::save::save(report)
+        if let Some(git) = &self.git {
+            git.save(report)
+        } else {
+            Ok(())
+        }
     }
 }
