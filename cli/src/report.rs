@@ -34,10 +34,6 @@ pub struct Metric {
 }
 
 impl Metric {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn from_lateny(latency: Latency) -> Self {
         Self {
             latency: Some(latency),

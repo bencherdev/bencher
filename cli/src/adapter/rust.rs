@@ -18,6 +18,7 @@ use crate::error::CliError;
 use crate::output::Output;
 use crate::report::Latency;
 use crate::report::Metric;
+use crate::report::Metrics;
 use crate::report::Report;
 
 pub fn parse(output: Output) -> Result<Report, CliError> {
@@ -30,10 +31,9 @@ pub fn parse(output: Output) -> Result<Report, CliError> {
 
 enum Test {
     Ignored,
-    Metric(Metric),
+    Bench(Metric),
 }
 
-// TODO if there is only a single test, it says `test` otherwise it says `tests`
 fn parse_stdout(input: &str) -> IResult<&str, Report> {
     map(
         tuple((
@@ -54,14 +54,30 @@ fn parse_stdout(input: &str) -> IResult<&str, Report> {
                 space1,
                 alt((
                     map(tag("ignored"), |_| Test::Ignored),
-                    map(parse_metric, Test::Metric),
+                    map(parse_bench, Test::Bench),
                 )),
                 line_ending,
             ))),
             line_ending,
         )),
-        |_| todo!(),
+        |(_, _, _, _, _, _, _, benches, _)| {
+            let mut metrics = Metrics::new();
+            for bench in benches {
+                if let Some((key, metric)) = to_metric(bench) {
+                    metrics.insert(key, metric);
+                }
+            }
+            Report::new(metrics)
+        },
     )(input)
+}
+
+fn to_metric(bench: (&str, &str, &str, &str, &str, Test, &str)) -> Option<(String, Metric)> {
+    let (_, key, _, _, _, test, _) = bench;
+    match test {
+        Test::Ignored => None,
+        Test::Bench(metric) => Some((key.into(), metric)),
+    }
 }
 
 pub enum Units {
@@ -83,7 +99,7 @@ impl From<&str> for Units {
     }
 }
 
-fn parse_metric(input: &str) -> IResult<&str, Metric> {
+fn parse_bench(input: &str) -> IResult<&str, Metric> {
     map(
         tuple((
             parse_number,
