@@ -5,17 +5,18 @@ use git2::Repository;
 
 use crate::adapter::Report;
 use crate::error::CliError;
+use crate::save::clone::clone;
 
 pub struct Git {
     source: String,
-    repo: Repository,
+    // repo: Repository,
 }
 
 impl TryFrom<String> for Git {
     type Error = CliError;
 
-    fn try_from(shell: String) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(source: String) -> Result<Self, Self::Error> {
+        Ok(Self { source })
     }
 }
 
@@ -27,6 +28,7 @@ impl fmt::Debug for Git {
 
 impl Git {
     pub fn save(&self, report: Report) -> Result<(), CliError> {
+        clone();
         Ok(())
     }
 }
