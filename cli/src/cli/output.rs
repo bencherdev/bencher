@@ -1,5 +1,7 @@
 use std::convert::TryFrom;
 
+use crate::error::CliError;
+
 #[derive(Debug)]
 pub struct Output {
     pub status: std::process::ExitStatus,
@@ -8,7 +10,7 @@ pub struct Output {
 }
 
 impl TryFrom<std::process::Output> for Output {
-    type Error = std::string::FromUtf8Error;
+    type Error = CliError;
 
     fn try_from(output: std::process::Output) -> Result<Self, Self::Error> {
         Ok(Output {

@@ -1,41 +1,20 @@
 #![feature(test)]
 
-use std::process::Command;
-
 extern crate test;
-
-use clap::Parser;
 
 mod adapter;
 mod args;
 mod cli;
 mod error;
-mod output;
 mod report;
 
-use crate::adapter::Adapter;
-use crate::args::Args;
+use crate::cli::Cli;
 use crate::error::CliError;
-use crate::output::Output;
 
 fn main() -> Result<(), CliError> {
-    let args = Args::parse();
-
-    let shell = args.shell()?;
-    let flag = args.flag()?;
-
-    let output = Command::new(&shell).arg(&flag).arg(args.cmd()).output();
-
-    let output = if let Ok(output) = output {
-        Output::try_from(output)?
-    } else {
-        return Err(CliError::Benchmark(args.cmd().into()));
-    };
-
-    let report = match args.adapter() {
-        Adapter::Rust => adapter::rust::parse(output),
-        Adapter::Custom(adapter) => adapter::custom::parse(adapter, output),
-    }?;
+    let cli = Cli::new()?;
+    let output = cli.benchmark()?;
+    let report = cli.convert(output)?;
 
     // TODO this should be the JSON value
     println!("{report:?}");

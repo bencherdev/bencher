@@ -13,8 +13,8 @@ use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
 
+use crate::cli::Output;
 use crate::error::CliError;
-use crate::output::Output;
 use crate::report::Latency;
 use crate::report::Metric;
 use crate::report::Metrics;
