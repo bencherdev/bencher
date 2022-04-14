@@ -8,6 +8,7 @@ use clap::Parser;
 
 mod adapter;
 mod args;
+mod cli;
 mod error;
 mod output;
 mod report;
@@ -16,12 +17,6 @@ use crate::adapter::Adapter;
 use crate::args::Args;
 use crate::error::CliError;
 use crate::output::Output;
-
-const UNIX_SHELL: &str = "/bin/sh";
-const WINDOWS_SHELL: &str = "cmd";
-
-const UNIX_FLAG: &str = "-c";
-const WINDOWS_FLAG: &str = "/C";
 
 fn main() -> Result<(), CliError> {
     let args = Args::parse();

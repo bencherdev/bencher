@@ -15,23 +15,23 @@ const WINDOWS_FLAG: &str = "/C";
 pub struct Args {
     /// Shell command path
     #[clap(short, long)]
-    shell: Option<String>,
+    pub shell: Option<String>,
 
     /// Shell command flag
     #[clap(short, long)]
-    flag: Option<String>,
+    pub flag: Option<String>,
 
     /// Benchmark command to execute
     #[clap(short = 'x', long = "exec")]
-    cmd: String,
+    pub cmd: String,
 
     /// Benchmark output adapter
     #[clap(short, long, default_value = "rust")]
-    adapter: String,
+    pub adapter: String,
 
     /// Output tags
     #[clap(short, long)]
-    tag: Option<Vec<String>>,
+    pub tag: Option<Vec<String>>,
 }
 
 impl Args {
