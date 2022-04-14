@@ -4,13 +4,14 @@ use std::process::Command;
 
 extern crate test;
 
-use clap::{ArgEnum, Parser};
+use clap::Parser;
 
+mod adapter;
 mod error;
 mod output;
 mod report;
-mod tool;
 
+use crate::adapter::Adapter;
 use crate::error::CliError;
 use crate::output::Output;
 
@@ -34,20 +35,15 @@ struct Args {
 
     /// Benchmark command to execute
     #[clap(short = 'x', long = "exec")]
-    pub cmd: String,
+    cmd: String,
 
-    /// Benchmark tool ID
+    /// Benchmark output adapter
     #[clap(short, long, arg_enum, default_value = "rust")]
-    tool: Tool,
-}
+    adapter: Adapter,
 
-/// Supported Languages
-#[derive(ArgEnum, Clone, Debug)]
-enum Tool {
-    /// Rust 🦀
-    #[clap(name = "rust")]
-    Rust,
-    // Custom(String),
+    /// Output tag
+    #[clap(short, long)]
+    tag: String,
 }
 
 fn main() -> Result<(), CliError> {
@@ -83,8 +79,8 @@ fn main() -> Result<(), CliError> {
         return Err(CliError::Benchmark(args.cmd));
     };
 
-    let report = match args.tool {
-        Tool::Rust => tool::rust_bench::parse(output),
+    let report = match args.adapter {
+        Adapter::Rust => adapter::rust::parse(output),
         // Tool::Custom(_) => todo!(),
     }?;
 
