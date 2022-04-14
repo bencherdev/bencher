@@ -6,8 +6,8 @@ pub enum CliError {
     Shell,
     #[error("No default shell command flag for target family")]
     Flag,
-    #[error("Failed to execute benchmark")]
-    Benchmark(#[from] std::io::Error),
+    #[error("Failed I/O")]
+    Io(#[from] std::io::Error),
     #[error("Failed to convert from UTF8")]
     FromUtf8(#[from] std::string::FromUtf8Error),
 }

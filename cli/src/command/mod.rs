@@ -59,4 +59,8 @@ impl Command {
             Adapter::Custom(adapter) => adapter::custom::parse(&adapter, output),
         }
     }
+
+    pub fn save(&self, report: Report) -> Result<(), CliError> {
+        crate::save::save(report)
+    }
 }

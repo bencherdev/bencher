@@ -6,6 +6,7 @@ mod adapter;
 mod args;
 mod command;
 mod error;
+mod save;
 mod tests;
 
 use crate::command::Command;
@@ -17,6 +18,8 @@ fn main() -> Result<(), CliError> {
     let report = cmd.convert(output)?;
 
     println!("{report:?}");
+
+    cmd.save(report)?;
 
     Ok(())
 }
