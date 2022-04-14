@@ -43,11 +43,12 @@ fn parse_stdout(input: &str) -> IResult<&str, Report> {
             space1,
             digit1,
             space1,
-            alt((tag("test"), tag("tests"))),
+            alt((tag("tests"), tag("test"))),
             line_ending,
             // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
             many1(tuple((
                 tag("test"),
+                space1,
                 take_until1(" "),
                 space1,
                 tag("..."),
@@ -72,8 +73,8 @@ fn parse_stdout(input: &str) -> IResult<&str, Report> {
     )(input)
 }
 
-fn to_metric(bench: (&str, &str, &str, &str, &str, Test, &str)) -> Option<(String, Metric)> {
-    let (_, key, _, _, _, test, _) = bench;
+fn to_metric(bench: (&str, &str, &str, &str, &str, &str, Test, &str)) -> Option<(String, Metric)> {
+    let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
         Test::Bench(metric) => Some((key.into(), metric)),
@@ -102,6 +103,8 @@ impl From<&str> for Units {
 fn parse_bench(input: &str) -> IResult<&str, Metric> {
     map(
         tuple((
+            tag("bench:"),
+            space1,
             parse_number,
             space1,
             take_until1("/"),
@@ -112,7 +115,7 @@ fn parse_bench(input: &str) -> IResult<&str, Metric> {
             parse_number,
             tag(")"),
         )),
-        |(duration, _, units, _, _, _, _, variance, _)| {
+        |(_, _, duration, _, units, _, _, _, _, variance, _)| {
             let units = Units::from(units);
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
