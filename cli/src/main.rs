@@ -7,11 +7,13 @@ extern crate test;
 use clap::Parser;
 
 mod adapter;
+mod args;
 mod error;
 mod output;
 mod report;
 
 use crate::adapter::Adapter;
+use crate::args::Args;
 use crate::error::CliError;
 use crate::output::Output;
 
@@ -21,65 +23,21 @@ const WINDOWS_SHELL: &str = "cmd";
 const UNIX_FLAG: &str = "-c";
 const WINDOWS_FLAG: &str = "/C";
 
-/// Time Series Benchmarking
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Shell command path
-    #[clap(short, long)]
-    shell: Option<String>,
-
-    /// Shell command flag
-    #[clap(short, long)]
-    flag: Option<String>,
-
-    /// Benchmark command to execute
-    #[clap(short = 'x', long = "exec")]
-    cmd: String,
-
-    /// Benchmark output adapter
-    #[clap(short, long, default_value = "rust")]
-    adapter: String,
-
-    /// Output tags
-    #[clap(short, long)]
-    tag: Option<Vec<String>>,
-}
-
 fn main() -> Result<(), CliError> {
     let args = Args::parse();
 
-    println!("CMD: {}", args.cmd);
+    let shell = args.shell()?;
+    let flag = args.flag()?;
 
-    let shell = if let Some(shell) = args.shell {
-        shell
-    } else if cfg!(target_family = "unix") {
-        UNIX_SHELL.into()
-    } else if cfg!(target_family = "windows") {
-        WINDOWS_SHELL.into()
-    } else {
-        return Err(CliError::Shell);
-    };
-
-    let flag = if let Some(flag) = args.flag {
-        flag
-    } else if cfg!(target_family = "unix") {
-        UNIX_FLAG.into()
-    } else if cfg!(target_family = "windows") {
-        WINDOWS_FLAG.into()
-    } else {
-        return Err(CliError::Flag);
-    };
-
-    let output = Command::new(shell).arg(flag).arg(&args.cmd).output();
+    let output = Command::new(&shell).arg(&flag).arg(args.cmd()).output();
 
     let output = if let Ok(output) = output {
         Output::try_from(output)?
     } else {
-        return Err(CliError::Benchmark(args.cmd));
+        return Err(CliError::Benchmark(args.cmd().into()));
     };
 
-    let report = match args.adapter.into() {
+    let report = match args.adapter() {
         Adapter::Rust => adapter::rust::parse(output),
         Adapter::Custom(adapter) => adapter::custom::parse(adapter, output),
     }?;
