@@ -41,9 +41,9 @@ struct Args {
     #[clap(short, long, default_value = "rust")]
     adapter: String,
 
-    /// Output tag
+    /// Output tags
     #[clap(short, long)]
-    tag: String,
+    tag: Option<Vec<String>>,
 }
 
 fn main() -> Result<(), CliError> {
