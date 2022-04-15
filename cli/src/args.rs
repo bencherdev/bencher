@@ -28,6 +28,14 @@ pub struct Args {
     #[clap(short, long)]
     pub key: Option<String>,
 
+    /// Git commit signature name
+    #[clap(short, long)]
+    pub name: Option<String>,
+
+    /// Git commit signature email
+    #[clap(short, long)]
+    pub email: Option<String>,
+
     /// Output tags
     #[clap(short, long)]
     pub tag: Option<Vec<String>>,

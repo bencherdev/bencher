@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use git2::Repository;
+use git2::Signature;
 use tempfile::tempdir;
 
 use crate::adapter::Report;
@@ -14,12 +15,24 @@ const BENCHER_FILE: &str = "bencher.json";
 pub struct Git {
     url: String,
     key: Option<String>,
+    name: Option<String>,
+    email: Option<String>,
     // repo: Repository,
 }
 
 impl Git {
-    pub fn new(url: String, key: Option<String>) -> Result<Self, CliError> {
-        Ok(Self { url, key })
+    pub fn new(
+        url: String,
+        key: Option<String>,
+        name: Option<String>,
+        email: Option<String>,
+    ) -> Result<Self, CliError> {
+        Ok(Self {
+            url,
+            key,
+            name,
+            email,
+        })
     }
 
     pub fn save(&self, report: Report) -> Result<(), CliError> {
@@ -36,6 +49,19 @@ impl Git {
         index.add_path(bencher_file)?;
         index.write()?;
 
+        let signature = self.signature(&repo)?;
+
         Ok(())
+    }
+
+    fn signature(&self, repo: &Repository) -> Result<Signature, git2::Error> {
+        if let Some(name) = &self.name {
+            if let Some(email) = &self.email {
+                if let Ok(signature) = Signature::now(name, email) {
+                    return Ok(signature);
+                }
+            }
+        }
+        repo.signature()
     }
 }
