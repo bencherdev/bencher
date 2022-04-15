@@ -28,10 +28,13 @@ impl Git {
         let repo = clone(&self.url, self.key.as_deref(), &into)?;
         let report = serde_json::to_string(&report)?;
 
-        let path = into.join(BENCHER_FILE);
+        let bencher_file = Path::new(BENCHER_FILE);
+        let path = into.join(&bencher_file);
         fs::write(path, &report)?;
 
         let mut index = repo.index()?;
+        index.add_path(bencher_file)?;
+        index.write()?;
 
         Ok(())
     }
