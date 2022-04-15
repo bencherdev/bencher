@@ -10,6 +10,7 @@ use crate::error::CliError;
 use crate::save::clone::clone;
 
 const BENCHER_FILE: &str = "bencher.json";
+const BENCHER_MESSAGE: &str = "bencher save";
 
 #[derive(Debug)]
 pub struct Git {
@@ -17,6 +18,7 @@ pub struct Git {
     key: Option<String>,
     name: Option<String>,
     email: Option<String>,
+    message: Option<String>,
     // repo: Repository,
 }
 
@@ -26,12 +28,14 @@ impl Git {
         key: Option<String>,
         name: Option<String>,
         email: Option<String>,
+        message: Option<String>,
     ) -> Result<Self, CliError> {
         Ok(Self {
             url,
             key,
             name,
             email,
+            message,
         })
     }
 
@@ -50,6 +54,13 @@ impl Git {
         index.write()?;
 
         let signature = self.signature(&repo)?;
+
+        let message = if let Some(message) = &self.message {
+            message
+        } else {
+            BENCHER_MESSAGE
+        };
+        // repo.commit_create_buffer(&signature, &signature, message)?;
 
         Ok(())
     }

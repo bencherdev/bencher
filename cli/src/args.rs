@@ -36,6 +36,10 @@ pub struct Args {
     #[clap(short, long)]
     pub email: Option<String>,
 
+    /// Git commit message
+    #[clap(short, long)]
+    pub message: Option<String>,
+
     /// Output tags
     #[clap(short, long)]
     pub tag: Option<Vec<String>>,

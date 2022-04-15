@@ -37,7 +37,13 @@ impl TryFrom<Args> for Benchmark {
             cmd: args.cmd,
             adapter: Adapter::from(args.adapter),
             git: if let Some(url) = args.git {
-                Some(Git::new(url, args.key, args.name, args.email)?)
+                Some(Git::new(
+                    url,
+                    args.key,
+                    args.name,
+                    args.email,
+                    args.message,
+                )?)
             } else {
                 None
             },
