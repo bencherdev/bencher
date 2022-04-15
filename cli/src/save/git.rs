@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 
+use git2::Direction;
 use git2::{Commit, ObjectType};
 use git2::{Oid, Repository, Signature};
 use tempfile::tempdir;
@@ -8,6 +9,7 @@ use tempfile::tempdir;
 use crate::adapter::Report;
 use crate::error::CliError;
 use crate::save::clone::clone;
+use crate::save::push::push;
 
 const BENCHER_FILE: &str = "bencher.json";
 const BENCHER_MESSAGE: &str = "bencher save";
@@ -55,6 +57,8 @@ impl Git {
         let oid = Self::add(&repo, &bencher_file)?;
 
         let commit = self.commit(&repo, oid)?;
+
+        push(&self.url, self.key.as_deref(), &repo)?;
 
         Ok(())
     }
