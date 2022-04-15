@@ -12,4 +12,6 @@ pub enum CliError {
     FromUtf8(#[from] std::string::FromUtf8Error),
     #[error("Failed git")]
     Git(#[from] git2::Error),
+    #[error("Failed serde json")]
+    Serde(#[from] serde_json::Error),
 }
