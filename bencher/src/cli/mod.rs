@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use ::clap::Parser;
-use report::Report;
+use report::{Report, Reports};
 
 pub mod adapter;
 pub mod backend;
@@ -52,13 +52,14 @@ impl Bencher {
         self.adapter.convert(output)
     }
 
-    pub fn output(&self, report: Report) -> Result<(), BencherError> {
+    pub fn output(&self, report: Report) -> Result<String, BencherError> {
         if let Some(backend) = &self.backend {
             backend.output(report)
         } else {
-            let report = serde_json::to_string(&report)?;
-            println!("{report}");
-            Ok(())
+            let mut reports = Reports::new();
+            reports.add(report);
+            let reports_str = serde_json::to_string(&reports)?;
+            Ok(reports_str)
         }
     }
 }

@@ -36,19 +36,19 @@ impl From<CliRepo> for Repo {
 }
 
 impl Repo {
-    pub fn save(&self, report: Report) -> Result<(), BencherError> {
+    pub fn save(&self, report: Report) -> Result<String, BencherError> {
         let temp_dir = tempdir()?;
         let bencher_dir = temp_dir.path().join(BENCHER_DIR);
         let repo = self.clone(&bencher_dir)?;
 
         let bencher_file = Path::new(BENCHER_FILE);
-        Self::update(&bencher_dir.join(&bencher_file), report)?;
+        let report_str = Self::update(&bencher_dir.join(&bencher_file), report)?;
         let oid = Self::add(&repo, &bencher_file)?;
         let commit = self.commit(&repo, oid)?;
         println!("Commit added {commit}");
 
         self.push(&repo)?;
-        Ok(())
+        Ok(report_str)
     }
 
     fn clone(&self, into: &Path) -> Result<Repository, git2::Error> {
@@ -64,12 +64,12 @@ impl Repo {
         builder.clone(&self.url, into)
     }
 
-    fn update(path: &Path, report: Report) -> Result<(), BencherError> {
+    fn update(path: &Path, report: Report) -> Result<String, BencherError> {
         let mut reports = load_reports(path);
         reports.add(report);
-        let reports = serde_json::to_string(&reports)?;
-        fs::write(path, &reports)?;
-        Ok(())
+        let reports_str = serde_json::to_string(&reports)?;
+        fs::write(path, &reports_str)?;
+        Ok(reports_str)
     }
 
     fn add(repo: &Repository, path: &Path) -> Result<Oid, git2::Error> {

@@ -21,9 +21,9 @@ impl From<CliBackend> for Backend {
 }
 
 impl Backend {
-    pub fn output(&self, report: Report) -> Result<(), BencherError> {
+    pub fn output(&self, report: Report) -> Result<String, BencherError> {
         match &self {
-            Backend::Repo(git) => git.save(report),
+            Backend::Repo(repo) => repo.save(report),
         }
     }
 }
