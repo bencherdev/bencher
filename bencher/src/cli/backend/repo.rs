@@ -4,7 +4,7 @@ use std::path::Path;
 use git2::Direction;
 use git2::{Commit, Cred, ObjectType, RemoteCallbacks};
 use git2::{Oid, Repository, Signature};
-use report::Report;
+use report::{Report, Reports};
 use tempfile::tempdir;
 
 use crate::cli::clap::CliRepo;
@@ -37,23 +37,17 @@ impl From<CliRepo> for Repo {
 
 impl Repo {
     pub fn save(&self, report: Report) -> Result<(), BencherError> {
-        // todo use tempdir
         let temp_dir = tempdir()?;
         let bencher_dir = temp_dir.path().join(BENCHER_DIR);
-
         let repo = self.clone(&bencher_dir)?;
 
-        let report = serde_json::to_string(&report)?;
-
         let bencher_file = Path::new(BENCHER_FILE);
-        fs::write(bencher_dir.join(&bencher_file), &report)?;
-
+        Self::update(&bencher_dir.join(&bencher_file), report)?;
         let oid = Self::add(&repo, &bencher_file)?;
         let commit = self.commit(&repo, oid)?;
         println!("Commit added {commit}");
 
         self.push(&repo)?;
-
         Ok(())
     }
 
@@ -68,6 +62,14 @@ impl Repo {
 
         // Clone the project.
         builder.clone(&self.url, into)
+    }
+
+    fn update(path: &Path, report: Report) -> Result<(), BencherError> {
+        let mut reports = load_reports(path);
+        reports.as_mut().insert(*report.date_time(), report);
+        let reports = serde_json::to_string(&reports)?;
+        fs::write(path, &reports)?;
+        Ok(())
     }
 
     fn add(repo: &Repository, path: &Path) -> Result<Oid, git2::Error> {
@@ -149,6 +151,16 @@ impl Repo {
         }
         repo.signature()
     }
+}
+
+fn load_reports(path: &Path) -> Reports {
+    if let Ok(contents) = fs::read(path) {
+        let contents = String::from_utf8_lossy(&contents);
+        if let Ok(reports) = serde_json::from_str(&contents) {
+            return reports;
+        }
+    }
+    Reports::new()
 }
 
 fn last_commit(repo: &Repository) -> Result<Commit, git2::Error> {

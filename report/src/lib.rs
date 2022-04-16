@@ -1,11 +1,32 @@
 use std::collections::BTreeMap;
+use std::convert::AsMut;
+use std::convert::AsRef;
 use std::time::Duration;
 
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-pub type Reports = BTreeMap<DateTime<Utc>, Report>;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Reports(BTreeMap<DateTime<Utc>, Report>);
+
+impl AsRef<BTreeMap<DateTime<Utc>, Report>> for Reports {
+    fn as_ref(&self) -> &BTreeMap<DateTime<Utc>, Report> {
+        &self.0
+    }
+}
+
+impl AsMut<BTreeMap<DateTime<Utc>, Report>> for Reports {
+    fn as_mut(&mut self) -> &mut BTreeMap<DateTime<Utc>, Report> {
+        &mut self.0
+    }
+}
+
+impl Reports {
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
@@ -16,8 +37,8 @@ pub struct Report {
 
 pub type Metrics = BTreeMap<String, Metric>;
 
-impl Report {
-    pub fn new(metrics: Metrics) -> Self {
+impl From<Metrics> for Report {
+    fn from(metrics: Metrics) -> Self {
         Self {
             date_time: Utc::now(),
             metrics,
@@ -25,6 +46,11 @@ impl Report {
     }
 }
 
+impl Report {
+    pub fn date_time(&self) -> &DateTime<Utc> {
+        &self.date_time
+    }
+}
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Metric {
     latency: Option<Latency>,

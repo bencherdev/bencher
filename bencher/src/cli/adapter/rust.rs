@@ -63,7 +63,7 @@ fn parse_stdout(input: &str) -> IResult<&str, Report> {
                     metrics.insert(key, metric);
                 }
             }
-            Report::new(metrics)
+            Report::from(metrics)
         },
     )(input)
 }

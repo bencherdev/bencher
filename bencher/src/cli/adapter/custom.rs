@@ -9,5 +9,5 @@ pub fn parse(adapter: &str, output: Output) -> Result<Report, BencherError> {
     println!("{:?}", adapter);
     println!("{:?}", output);
 
-    Ok(Report::new(BTreeMap::new()))
+    Ok(Report::from(BTreeMap::new()))
 }
