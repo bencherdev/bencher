@@ -58,7 +58,7 @@ impl Git {
 
         let commit = self.commit(&repo, oid)?;
 
-        push(&self.url, self.key.as_deref(), &repo)?;
+        push(self.key.as_deref(), &repo)?;
 
         Ok(())
     }
