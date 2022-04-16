@@ -7,7 +7,7 @@ use git2::{Oid, Repository, Signature};
 use tempfile::tempdir;
 
 use crate::cli::adapter::Report;
-use crate::cli::args::CliRepo;
+use crate::cli::clap::CliRepo;
 use crate::error::CliError;
 
 const BENCHER_DIR: &str = "bencherdb";
