@@ -49,10 +49,7 @@ impl Bencher {
     }
 
     pub fn convert(&self, output: Output) -> Result<Report, CliError> {
-        match &self.adapter {
-            Adapter::Rust => adapter::rust::parse(output),
-            Adapter::Custom(adapter) => adapter::custom::parse(&adapter, output),
-        }
+        self.adapter.convert(output)
     }
 
     pub fn output(&self, report: Report) -> Result<(), CliError> {
