@@ -7,6 +7,7 @@ use git2::{Oid, Repository, Signature};
 use tempfile::tempdir;
 
 use crate::cli::adapter::Report;
+use crate::cli::args::CliRepo;
 use crate::error::CliError;
 
 const BENCHER_DIR: &str = "bencherdb";
@@ -14,32 +15,27 @@ const BENCHER_FILE: &str = "bencher.json";
 const BENCHER_MESSAGE: &str = "bencher";
 
 #[derive(Debug)]
-pub struct Git {
+pub struct Repo {
     url: String,
     key: Option<String>,
     name: Option<String>,
     email: Option<String>,
     message: Option<String>,
-    // repo: Repository,
 }
 
-impl Git {
-    pub fn new(
-        url: String,
-        key: Option<String>,
-        name: Option<String>,
-        email: Option<String>,
-        message: Option<String>,
-    ) -> Result<Self, CliError> {
-        Ok(Self {
-            url,
-            key,
-            name,
-            email,
-            message,
-        })
+impl From<CliRepo> for Repo {
+    fn from(repo: CliRepo) -> Self {
+        Repo {
+            url: repo.url,
+            key: repo.key,
+            name: repo.name,
+            email: repo.email,
+            message: repo.message,
+        }
     }
+}
 
+impl Repo {
     pub fn save(&self, report: Report) -> Result<(), CliError> {
         // todo use tempdir
         let temp_dir = tempdir()?;

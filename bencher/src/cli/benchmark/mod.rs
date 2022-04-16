@@ -3,6 +3,7 @@ use std::process::Command;
 
 use clap::Parser;
 
+mod backend;
 mod flag;
 mod output;
 mod shell;
@@ -11,9 +12,8 @@ use crate::cli::adapter;
 use crate::cli::adapter::Adapter;
 use crate::cli::adapter::Report;
 use crate::cli::args::CliArgs;
-use crate::cli::args::CliBackend;
-use crate::cli::save::Git;
 use crate::error::CliError;
+use backend::Backend;
 pub use flag::Flag;
 pub use output::Output;
 pub use shell::Shell;
@@ -27,11 +27,6 @@ pub struct Benchmark {
     backend: Option<Backend>,
 }
 
-#[derive(Debug)]
-pub enum Backend {
-    Repo(Git),
-}
-
 impl TryFrom<CliArgs> for Benchmark {
     type Error = CliError;
 
@@ -42,26 +37,10 @@ impl TryFrom<CliArgs> for Benchmark {
             cmd: args.cmd,
             adapter: Adapter::from(args.adapter),
             backend: if let Some(backend) = args.backend {
-                Some(Backend::try_from(backend)?)
+                Some(Backend::from(backend))
             } else {
                 None
             },
-        })
-    }
-}
-
-impl TryFrom<CliBackend> for Backend {
-    type Error = CliError;
-
-    fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
-        Ok(match backend {
-            CliBackend::Repo(repo) => Backend::Repo(Git::new(
-                repo.url,
-                repo.key,
-                repo.name,
-                repo.email,
-                repo.message,
-            )?),
         })
     }
 }
