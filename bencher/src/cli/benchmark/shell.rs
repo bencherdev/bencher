@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::fmt;
 
-use crate::error::CliError;
+use crate::BencherError;
 
 const UNIX_SHELL: &str = "/bin/sh";
 const WINDOWS_SHELL: &str = "cmd";
@@ -10,21 +10,21 @@ const WINDOWS_SHELL: &str = "cmd";
 pub enum Shell {
     Unix,
     Windows,
-    Other(String),
+    Custom(String),
 }
 
 impl TryFrom<Option<String>> for Shell {
-    type Error = CliError;
+    type Error = BencherError;
 
     fn try_from(shell: Option<String>) -> Result<Self, Self::Error> {
         Ok(if let Some(shell) = shell {
-            Self::Other(shell)
+            Self::Custom(shell)
         } else if cfg!(target_family = "unix") {
             Self::Unix
         } else if cfg!(target_family = "windows") {
             Self::Windows
         } else {
-            return Err(CliError::Shell);
+            return Err(BencherError::Shell);
         })
     }
 }
@@ -37,7 +37,7 @@ impl fmt::Display for Shell {
             match self {
                 Self::Unix => UNIX_SHELL,
                 Self::Windows => WINDOWS_SHELL,
-                Self::Other(shell) => shell,
+                Self::Custom(shell) => shell,
             }
         )
     }

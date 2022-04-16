@@ -19,9 +19,9 @@ use crate::cli::adapter::report::Metric;
 use crate::cli::adapter::report::Metrics;
 use crate::cli::adapter::report::Report;
 use crate::cli::benchmark::Output;
-use crate::error::CliError;
+use crate::BencherError;
 
-pub fn parse(output: Output) -> Result<Report, CliError> {
+pub fn parse(output: Output) -> Result<Report, BencherError> {
     println!("{:?}", output);
 
     let (_, report) = parse_stdout(&output.stdout).unwrap();

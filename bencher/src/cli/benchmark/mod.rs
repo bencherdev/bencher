@@ -5,7 +5,7 @@ mod flag;
 mod output;
 mod shell;
 
-use crate::error::CliError;
+use crate::BencherError;
 pub use flag::Flag;
 pub use output::Output;
 pub use shell::Shell;
@@ -18,7 +18,7 @@ pub struct Benchmark {
 }
 
 impl TryFrom<(Option<String>, Option<String>, String)> for Benchmark {
-    type Error = CliError;
+    type Error = BencherError;
 
     fn try_from(cli: (Option<String>, Option<String>, String)) -> Result<Self, Self::Error> {
         let (shell, flag, cmd) = cli;
@@ -31,7 +31,7 @@ impl TryFrom<(Option<String>, Option<String>, String)> for Benchmark {
 }
 
 impl Benchmark {
-    pub fn run(&self) -> Result<Output, CliError> {
+    pub fn run(&self) -> Result<Output, BencherError> {
         let output = Command::new(self.shell.to_string())
             .arg(self.flag.to_string())
             .arg(&self.cmd)

@@ -3,7 +3,7 @@ use crate::cli::clap::CliBackend;
 pub mod repo;
 
 use crate::cli::adapter::Report;
-use crate::error::CliError;
+use crate::BencherError;
 use repo::Repo;
 
 #[derive(Debug)]
@@ -20,7 +20,7 @@ impl From<CliBackend> for Backend {
 }
 
 impl Backend {
-    pub fn output(&self, report: Report) -> Result<(), CliError> {
+    pub fn output(&self, report: Report) -> Result<(), BencherError> {
         match &self {
             Backend::Repo(git) => git.save(report),
         }

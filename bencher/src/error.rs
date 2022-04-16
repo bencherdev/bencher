@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum CliError {
+pub enum BencherError {
     #[error("No default shell command path for target family")]
     Shell,
     #[error("No default shell command flag for target family")]

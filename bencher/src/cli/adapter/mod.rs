@@ -3,7 +3,7 @@ mod report;
 pub mod rust;
 
 use crate::cli::benchmark::Output;
-use crate::error::CliError;
+use crate::BencherError;
 pub use report::Report;
 
 /// Supported Adapters
@@ -25,7 +25,7 @@ impl From<String> for Adapter {
 }
 
 impl Adapter {
-    pub fn convert(&self, output: Output) -> Result<Report, CliError> {
+    pub fn convert(&self, output: Output) -> Result<Report, BencherError> {
         match &self {
             Adapter::Rust => rust::parse(output),
             Adapter::Custom(adapter) => custom::parse(adapter, output),

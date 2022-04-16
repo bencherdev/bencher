@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::error::CliError;
+use crate::BencherError;
 
 #[derive(Debug)]
 pub struct Output {
@@ -10,7 +10,7 @@ pub struct Output {
 }
 
 impl TryFrom<std::process::Output> for Output {
-    type Error = CliError;
+    type Error = BencherError;
 
     fn try_from(output: std::process::Output) -> Result<Self, Self::Error> {
         Ok(Output {

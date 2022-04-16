@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use ::clap::Parser;
 
 use crate::cli::clap::CliBencher;
-use crate::error::CliError;
+use crate::BencherError;
 use adapter::Adapter;
 use adapter::Report;
 use backend::Backend;
@@ -23,7 +23,7 @@ pub struct Bencher {
 }
 
 impl TryFrom<CliBencher> for Bencher {
-    type Error = CliError;
+    type Error = BencherError;
 
     fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -39,20 +39,20 @@ impl TryFrom<CliBencher> for Bencher {
 }
 
 impl Bencher {
-    pub fn new() -> Result<Self, CliError> {
+    pub fn new() -> Result<Self, BencherError> {
         let args = CliBencher::parse();
         Self::try_from(args)
     }
 
-    pub fn run(&self) -> Result<Output, CliError> {
+    pub fn run(&self) -> Result<Output, BencherError> {
         self.benchmark.run()
     }
 
-    pub fn convert(&self, output: Output) -> Result<Report, CliError> {
+    pub fn convert(&self, output: Output) -> Result<Report, BencherError> {
         self.adapter.convert(output)
     }
 
-    pub fn output(&self, report: Report) -> Result<(), CliError> {
+    pub fn output(&self, report: Report) -> Result<(), BencherError> {
         if let Some(backend) = &self.backend {
             backend.output(report)
         } else {

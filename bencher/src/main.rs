@@ -2,13 +2,13 @@
 extern crate test;
 
 mod cli;
-pub mod error;
+mod error;
 mod tests;
 
 use cli::Bencher;
-use error::CliError;
+pub use error::BencherError;
 
-fn main() -> Result<(), CliError> {
+fn main() -> Result<(), BencherError> {
     let bencher = Bencher::new()?;
     let benchmark_output = bencher.run()?;
     let report = bencher.convert(benchmark_output)?;

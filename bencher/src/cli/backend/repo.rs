@@ -8,7 +8,7 @@ use tempfile::tempdir;
 
 use crate::cli::adapter::Report;
 use crate::cli::clap::CliRepo;
-use crate::error::CliError;
+use crate::BencherError;
 
 const BENCHER_DIR: &str = "bencherdb";
 const BENCHER_FILE: &str = "bencher.json";
@@ -36,7 +36,7 @@ impl From<CliRepo> for Repo {
 }
 
 impl Repo {
-    pub fn save(&self, report: Report) -> Result<(), CliError> {
+    pub fn save(&self, report: Report) -> Result<(), BencherError> {
         // todo use tempdir
         let temp_dir = tempdir()?;
         let bencher_dir = temp_dir.path().join(BENCHER_DIR);
