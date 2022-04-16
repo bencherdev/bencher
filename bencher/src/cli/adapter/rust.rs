@@ -22,10 +22,7 @@ use crate::cli::benchmark::Output;
 use crate::BencherError;
 
 pub fn parse(output: Output) -> Result<Report, BencherError> {
-    println!("{:?}", output);
-
     let (_, report) = parse_stdout(&output.stdout).unwrap();
-
     Ok(report)
 }
 
