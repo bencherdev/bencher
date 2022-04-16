@@ -9,8 +9,9 @@ use tempfile::tempdir;
 use crate::adapter::Report;
 use crate::error::CliError;
 
+const BENCHER_DIR: &str = "bencherdb";
 const BENCHER_FILE: &str = "bencher.json";
-const BENCHER_MESSAGE: &str = "bencher save";
+const BENCHER_MESSAGE: &str = "bencher";
 
 #[derive(Debug)]
 pub struct Git {
@@ -41,20 +42,19 @@ impl Git {
 
     pub fn save(&self, report: Report) -> Result<(), CliError> {
         // todo use tempdir
-        let into = Path::new("/tmp/bencher_db");
-        let repo = self.clone(&into)?;
+        let temp_dir = tempdir()?;
+        let bencher_dir = temp_dir.path().join(BENCHER_DIR);
+
+        let repo = self.clone(&bencher_dir)?;
+
         let report = serde_json::to_string(&report)?;
 
         let bencher_file = Path::new(BENCHER_FILE);
-        let path = into.join(&bencher_file);
-        fs::write(path, &report)?;
+        fs::write(bencher_dir.join(&bencher_file), &report)?;
 
-        // let mut index = repo.index()?;
-        // index.add_path(bencher_file)?;
-        // index.write()?;
         let oid = Self::add(&repo, &bencher_file)?;
-
         let commit = self.commit(&repo, oid)?;
+        println!("Commit added {commit}");
 
         self.push(&repo)?;
 
