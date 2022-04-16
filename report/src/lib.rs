@@ -26,6 +26,10 @@ impl Reports {
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }
+
+    pub fn add(&mut self, report: Report) {
+        self.0.insert(*report.date_time(), report);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

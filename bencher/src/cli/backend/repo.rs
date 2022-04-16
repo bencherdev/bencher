@@ -66,7 +66,7 @@ impl Repo {
 
     fn update(path: &Path, report: Report) -> Result<(), BencherError> {
         let mut reports = load_reports(path);
-        reports.as_mut().insert(*report.date_time(), report);
+        reports.add(report);
         let reports = serde_json::to_string(&reports)?;
         fs::write(path, &reports)?;
         Ok(())
