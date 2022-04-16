@@ -88,12 +88,14 @@ impl Benchmark {
         }
     }
 
-    pub fn save(&self, report: Report) -> Result<(), CliError> {
+    pub fn output(&self, report: Report) -> Result<(), CliError> {
         if let Some(backend) = &self.backend {
             match backend {
                 Backend::Repo(git) => git.save(report),
             }
         } else {
+            let report = serde_json::to_string(&report)?;
+            println!("{report}");
             Ok(())
         }
     }

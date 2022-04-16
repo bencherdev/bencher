@@ -16,10 +16,5 @@ fn main() -> Result<(), CliError> {
     let bench = Benchmark::new()?;
     let output = bench.run()?;
     let report = bench.convert(output)?;
-
-    println!("{report:?}");
-
-    bench.save(report)?;
-
-    Ok(())
+    bench.output(report)
 }
