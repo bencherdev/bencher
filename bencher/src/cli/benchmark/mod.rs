@@ -11,7 +11,7 @@ mod shell;
 use crate::cli::adapter;
 use crate::cli::adapter::Adapter;
 use crate::cli::adapter::Report;
-use crate::cli::args::CliArgs;
+use crate::cli::args::CliBencher;
 use crate::error::CliError;
 use backend::Backend;
 pub use flag::Flag;
@@ -19,7 +19,7 @@ pub use output::Output;
 pub use shell::Shell;
 
 #[derive(Debug)]
-pub struct Benchmark {
+pub struct Bencher {
     shell: Shell,
     flag: Flag,
     cmd: String,
@@ -27,16 +27,16 @@ pub struct Benchmark {
     backend: Option<Backend>,
 }
 
-impl TryFrom<CliArgs> for Benchmark {
+impl TryFrom<CliBencher> for Bencher {
     type Error = CliError;
 
-    fn try_from(args: CliArgs) -> Result<Self, Self::Error> {
+    fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
-            shell: Shell::try_from(args.shell)?,
-            flag: Flag::try_from(args.flag)?,
-            cmd: args.cmd,
-            adapter: Adapter::from(args.adapter),
-            backend: if let Some(backend) = args.backend {
+            shell: Shell::try_from(bencher.shell)?,
+            flag: Flag::try_from(bencher.flag)?,
+            cmd: bencher.cmd,
+            adapter: Adapter::from(bencher.adapter),
+            backend: if let Some(backend) = bencher.backend {
                 Some(Backend::from(backend))
             } else {
                 None
@@ -45,9 +45,9 @@ impl TryFrom<CliArgs> for Benchmark {
     }
 }
 
-impl Benchmark {
+impl Bencher {
     pub fn new() -> Result<Self, CliError> {
-        let args = CliArgs::parse();
+        let args = CliBencher::parse();
         Self::try_from(args)
     }
 

@@ -97,17 +97,6 @@ impl Repo {
         )
     }
 
-    fn signature(&self, repo: &Repository) -> Result<Signature, git2::Error> {
-        if let Some(name) = &self.name {
-            if let Some(email) = &self.email {
-                if let Ok(signature) = Signature::now(name, email) {
-                    return Ok(signature);
-                }
-            }
-        }
-        repo.signature()
-    }
-
     fn push(&self, repo: &Repository) -> Result<(), git2::Error> {
         // Connect remote.
         let mut remote = repo.find_remote("origin")?;
@@ -148,6 +137,17 @@ impl Repo {
             });
         }
         callbacks
+    }
+
+    fn signature(&self, repo: &Repository) -> Result<Signature, git2::Error> {
+        if let Some(name) = &self.name {
+            if let Some(email) = &self.email {
+                if let Ok(signature) = Signature::now(name, email) {
+                    return Ok(signature);
+                }
+            }
+        }
+        repo.signature()
     }
 }
 

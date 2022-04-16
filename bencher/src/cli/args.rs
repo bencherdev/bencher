@@ -5,7 +5,7 @@ use clap::Subcommand;
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-pub struct CliArgs {
+pub struct CliBencher {
     /// Shell command path
     #[clap(short, long)]
     pub shell: Option<String>,

@@ -5,12 +5,12 @@ mod cli;
 pub mod error;
 mod tests;
 
-use cli::benchmark::Benchmark;
+use cli::benchmark::Bencher;
 use error::CliError;
 
 fn main() -> Result<(), CliError> {
-    let bench = Benchmark::new()?;
-    let output = bench.run()?;
-    let report = bench.convert(output)?;
-    bench.output(report)
+    let bencher = Bencher::new()?;
+    let output = bencher.run()?;
+    let report = bencher.convert(output)?;
+    bencher.output(report)
 }
