@@ -4,9 +4,9 @@ use std::path::Path;
 use git2::Direction;
 use git2::{Commit, Cred, ObjectType, RemoteCallbacks};
 use git2::{Oid, Repository, Signature};
+use report::Report;
 use tempfile::tempdir;
 
-use crate::cli::adapter::Report;
 use crate::cli::clap::CliRepo;
 use crate::BencherError;
 

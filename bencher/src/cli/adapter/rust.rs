@@ -14,10 +14,8 @@ use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
 
-use crate::cli::adapter::report::Latency;
-use crate::cli::adapter::report::Metric;
-use crate::cli::adapter::report::Metrics;
-use crate::cli::adapter::report::Report;
+use report::{Latency, Metric, Metrics, Report};
+
 use crate::cli::benchmark::Output;
 use crate::BencherError;
 

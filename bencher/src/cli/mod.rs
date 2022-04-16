@@ -1,19 +1,19 @@
 use std::convert::TryFrom;
 
 use ::clap::Parser;
-
-use crate::cli::clap::CliBencher;
-use crate::BencherError;
-use adapter::Adapter;
-use adapter::Report;
-use backend::Backend;
-use benchmark::Benchmark;
-use benchmark::Output;
+use report::Report;
 
 pub mod adapter;
 pub mod backend;
 pub mod benchmark;
 pub mod clap;
+
+use crate::cli::clap::CliBencher;
+use crate::BencherError;
+use adapter::Adapter;
+use backend::Backend;
+use benchmark::Benchmark;
+use benchmark::Output;
 
 #[derive(Debug)]
 pub struct Bencher {

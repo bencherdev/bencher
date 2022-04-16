@@ -5,7 +5,7 @@ use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-pub type Metrics = BTreeMap<String, Metric>;
+pub type Reports = BTreeMap<DateTime<Utc>, Report>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
@@ -13,6 +13,8 @@ pub struct Report {
     date_time: DateTime<Utc>,
     metrics: Metrics,
 }
+
+pub type Metrics = BTreeMap<String, Metric>;
 
 impl Report {
     pub fn new(metrics: Metrics) -> Self {

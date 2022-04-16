@@ -1,10 +1,10 @@
 pub mod custom;
-mod report;
 pub mod rust;
+
+use report::Report;
 
 use crate::cli::benchmark::Output;
 use crate::BencherError;
-pub use report::Report;
 
 /// Supported Adapters
 #[derive(Clone, Debug)]

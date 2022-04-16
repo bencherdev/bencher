@@ -1,8 +1,9 @@
 use crate::cli::clap::CliBackend;
 
+use report::Report;
+
 pub mod repo;
 
-use crate::cli::adapter::Report;
 use crate::BencherError;
 use repo::Repo;
 
