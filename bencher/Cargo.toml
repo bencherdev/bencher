@@ -10,7 +10,14 @@ categories = ["command-line-utilities", "development-tools::profiling", "wasm"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cli = { path = "../cli", version = "0.1.0" }
+chrono = { version = "0.4.19", features = ["serde"] }
+clap = { version = "3.1.8", features = ["derive"] }
+git2 = "0.14.2"
+nom = "7.1.1"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"
+tempfile = "3.3.0"
+thiserror = "1.0.30"
 
 [[bin]]
 name = "bencher"

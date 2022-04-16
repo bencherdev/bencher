@@ -1,6 +1,7 @@
 #![feature(test)]
 extern crate test;
 
+mod cli;
 mod tests;
 
 use cli::benchmark::Benchmark;
