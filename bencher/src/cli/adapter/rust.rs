@@ -14,11 +14,11 @@ use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
 
-use crate::adapter::report::Latency;
-use crate::adapter::report::Metric;
-use crate::adapter::report::Metrics;
-use crate::adapter::report::Report;
-use crate::benchmark::Output;
+use crate::cli::adapter::report::Latency;
+use crate::cli::adapter::report::Metric;
+use crate::cli::adapter::report::Metrics;
+use crate::cli::adapter::report::Report;
+use crate::cli::benchmark::Output;
 use crate::error::CliError;
 
 pub fn parse(output: Output) -> Result<Report, CliError> {

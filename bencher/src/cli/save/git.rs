@@ -6,7 +6,7 @@ use git2::{Commit, Cred, ObjectType, RemoteCallbacks};
 use git2::{Oid, Repository, Signature};
 use tempfile::tempdir;
 
-use crate::adapter::Report;
+use crate::cli::adapter::Report;
 use crate::error::CliError;
 
 const BENCHER_DIR: &str = "bencherdb";

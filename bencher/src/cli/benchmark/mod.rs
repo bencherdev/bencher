@@ -7,16 +7,16 @@ mod flag;
 mod output;
 mod shell;
 
-use crate::adapter;
-use crate::adapter::Adapter;
-use crate::adapter::Report;
-use crate::args::CliArgs;
-use crate::args::CliBackend;
-pub use crate::benchmark::flag::Flag;
-pub use crate::benchmark::output::Output;
-pub use crate::benchmark::shell::Shell;
+use crate::cli::adapter;
+use crate::cli::adapter::Adapter;
+use crate::cli::adapter::Report;
+use crate::cli::args::CliArgs;
+use crate::cli::args::CliBackend;
+use crate::cli::save::Git;
 use crate::error::CliError;
-use crate::save::Git;
+pub use flag::Flag;
+pub use output::Output;
+pub use shell::Shell;
 
 #[derive(Debug)]
 pub struct Benchmark {

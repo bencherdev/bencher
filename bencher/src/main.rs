@@ -2,10 +2,11 @@
 extern crate test;
 
 mod cli;
+pub mod error;
 mod tests;
 
 use cli::benchmark::Benchmark;
-use cli::error::CliError;
+use error::CliError;
 
 fn main() -> Result<(), CliError> {
     let bench = Benchmark::new()?;

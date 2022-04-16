@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use crate::adapter::Report;
-use crate::benchmark::Output;
+use crate::cli::adapter::Report;
+use crate::cli::benchmark::Output;
 use crate::error::CliError;
 
 pub fn parse(adapter: &str, output: Output) -> Result<Report, CliError> {
