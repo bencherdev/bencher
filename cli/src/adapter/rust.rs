@@ -9,6 +9,7 @@ use nom::character::complete::line_ending;
 use nom::character::complete::space1;
 use nom::combinator::map;
 use nom::combinator::success;
+use nom::multi::many0;
 use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
@@ -45,7 +46,7 @@ fn parse_stdout(input: &str) -> IResult<&str, Report> {
             alt((tag("tests"), tag("test"))),
             line_ending,
             // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
-            many1(tuple((
+            many0(tuple((
                 tag("test"),
                 space1,
                 take_until1(" "),
@@ -149,7 +150,21 @@ mod test {
     use super::parse_stdout;
 
     #[test]
-    fn test_adapter_rust() {
+    fn test_adapter_rust_zero() {
+        let input = "\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n";
+        let adapted = parse_stdout(input).unwrap();
+        println!("{:?}", adapted);
+    }
+
+    #[test]
+    fn test_adapter_rust_one() {
+        let input = "\nrunning 1 test\ntest tests::benchmark ... bench:       3,161 ns/iter (+/- 975)\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 1 measured; 0 filtered out; finished in 0.11s\n\n";
+        let adapted = parse_stdout(input).unwrap();
+        println!("{:?}", adapted);
+    }
+
+    #[test]
+    fn test_adapter_rust_two() {
         let input = "\nrunning 2 tests\ntest tests::ignored ... ignored\ntest tests::benchmark ... bench:       3,161 ns/iter (+/- 975)\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 1 measured; 0 filtered out; finished in 0.11s\n\n";
         let adapted = parse_stdout(input).unwrap();
         println!("{:?}", adapted);

@@ -1,7 +1,7 @@
 #![feature(test)]
 extern crate test;
 
-// mod tests;
+mod tests;
 
 use cli::benchmark::Benchmark;
 use cli::error::CliError;
