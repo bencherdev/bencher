@@ -11,6 +11,7 @@ use crate::adapter;
 use crate::adapter::Adapter;
 use crate::adapter::Report;
 use crate::args::CliArgs;
+use crate::args::CliBackend;
 pub use crate::benchmark::flag::Flag;
 pub use crate::benchmark::output::Output;
 pub use crate::benchmark::shell::Shell;
@@ -23,8 +24,12 @@ pub struct Benchmark {
     flag: Flag,
     cmd: String,
     adapter: Adapter,
-    git: Option<Git>,
-    _tag: Option<Vec<String>>,
+    backend: Option<Backend>,
+}
+
+#[derive(Debug)]
+pub enum Backend {
+    Repo(Git),
 }
 
 impl TryFrom<CliArgs> for Benchmark {
@@ -36,18 +41,27 @@ impl TryFrom<CliArgs> for Benchmark {
             flag: Flag::try_from(args.flag)?,
             cmd: args.cmd,
             adapter: Adapter::from(args.adapter),
-            git: if let Some(url) = args.git {
-                Some(Git::new(
-                    url,
-                    args.key,
-                    args.name,
-                    args.email,
-                    args.message,
-                )?)
+            backend: if let Some(backend) = args.backend {
+                Some(Backend::try_from(backend)?)
             } else {
                 None
             },
-            _tag: args.tag,
+        })
+    }
+}
+
+impl TryFrom<CliBackend> for Backend {
+    type Error = CliError;
+
+    fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
+        Ok(match backend {
+            CliBackend::Repo(repo) => Backend::Repo(Git::new(
+                repo.url,
+                repo.key,
+                repo.name,
+                repo.email,
+                repo.message,
+            )?),
         })
     }
 }
@@ -75,8 +89,10 @@ impl Benchmark {
     }
 
     pub fn save(&self, report: Report) -> Result<(), CliError> {
-        if let Some(git) = &self.git {
-            git.save(report)
+        if let Some(backend) = &self.backend {
+            match backend {
+                Backend::Repo(git) => git.save(report),
+            }
         } else {
             Ok(())
         }

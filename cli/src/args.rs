@@ -22,9 +22,23 @@ pub struct CliArgs {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
+    /// Repo subcommand
+    #[clap(subcommand)]
+    pub backend: Option<CliBackend>,
+}
+
+/// Time Series Benchmarking
+#[derive(Subcommand, Debug)]
+pub enum CliBackend {
     /// Git repo to store data
+    Repo(CliRepo),
+}
+
+#[derive(Args, Debug)]
+pub struct CliRepo {
+    /// Git repo url
     #[clap(short, long)]
-    pub git: Option<String>,
+    pub url: String,
 
     /// Git repo key
     #[clap(short, long)]
@@ -41,25 +55,4 @@ pub struct CliArgs {
     /// Git commit message
     #[clap(short, long)]
     pub message: Option<String>,
-
-    /// Output tags
-    #[clap(short, long)]
-    pub tag: Option<Vec<String>>,
-
-    /// Repo subcommand
-    #[clap(subcommand)]
-    pub subcommand: Option<CliSub>,
-}
-
-/// Time Series Benchmarking
-#[derive(Subcommand, Debug)]
-pub enum CliSub {
-    /// Git repo
-    Repo(CliRepo),
-}
-
-#[derive(Args, Debug)]
-pub struct CliRepo {
-    #[clap(short, long)]
-    name: Option<String>,
 }
