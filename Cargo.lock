@@ -23,14 +23,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "bencher"
 version = "0.1.0"
 dependencies = [
- "chrono",
- "clap",
- "git2",
- "nom",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
+ "cli",
 ]
 
 [[package]]
@@ -96,6 +89,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "git2",
+ "nom",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]

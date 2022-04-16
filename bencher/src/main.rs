@@ -1,16 +1,10 @@
 #![feature(test)]
-
 extern crate test;
 
-mod adapter;
-mod args;
-mod benchmark;
-mod error;
-mod save;
-mod tests;
+// mod tests;
 
-use crate::benchmark::Benchmark;
-use crate::error::CliError;
+use cli::benchmark::Benchmark;
+use cli::error::CliError;
 
 fn main() -> Result<(), CliError> {
     let bench = Benchmark::new()?;
