@@ -2,14 +2,12 @@ use std::fs;
 use std::path::Path;
 
 use git2::Direction;
-use git2::{Commit, ObjectType};
+use git2::{Commit, Cred, ObjectType, RemoteCallbacks};
 use git2::{Oid, Repository, Signature};
 use tempfile::tempdir;
 
 use crate::adapter::Report;
 use crate::error::CliError;
-use crate::save::clone::clone;
-use crate::save::push::push;
 
 const BENCHER_FILE: &str = "bencher.json";
 const BENCHER_MESSAGE: &str = "bencher save";
@@ -44,7 +42,7 @@ impl Git {
     pub fn save(&self, report: Report) -> Result<(), CliError> {
         // todo use tempdir
         let into = Path::new("/tmp/bencher_db");
-        let repo = clone(&self.url, self.key.as_deref(), &into)?;
+        let repo = self.clone(&into)?;
         let report = serde_json::to_string(&report)?;
 
         let bencher_file = Path::new(BENCHER_FILE);
@@ -58,9 +56,22 @@ impl Git {
 
         let commit = self.commit(&repo, oid)?;
 
-        push(self.key.as_deref(), &repo)?;
+        self.push(&repo)?;
 
         Ok(())
+    }
+
+    fn clone(&self, into: &Path) -> Result<Repository, git2::Error> {
+        // Prepare fetch options.
+        let mut fo = git2::FetchOptions::new();
+        fo.remote_callbacks(callbacks(self.key.as_deref(), false));
+
+        // Prepare builder.
+        let mut builder = git2::build::RepoBuilder::new();
+        builder.fetch_options(fo);
+
+        // Clone the project.
+        builder.clone(&self.url, into)
     }
 
     fn add(repo: &Repository, path: &Path) -> Result<Oid, git2::Error> {
@@ -106,4 +117,50 @@ impl Git {
         obj.into_commit()
             .map_err(|_| git2::Error::from_str("Couldn't find last commit"))
     }
+
+    fn push(&self, repo: &Repository) -> Result<(), git2::Error> {
+        // Connect remote.
+        let mut remote = repo.find_remote("origin")?;
+        remote.connect_auth(
+            Direction::Push,
+            Some(callbacks(self.key.as_deref(), false)),
+            None,
+        )?;
+
+        // Prepare push options.
+        let mut po = git2::PushOptions::new();
+
+        // Prepare callbacks.
+        po.remote_callbacks(callbacks(self.key.as_deref(), true));
+
+        let url: [&str; 1] = ["refs/heads/master:refs/heads/master"];
+
+        // Push remote.
+        remote.push(&url, Some(&mut po))
+    }
+}
+
+fn callbacks(key: Option<&str>, update_reference: bool) -> RemoteCallbacks<'_> {
+    let mut callbacks = if let Some(key) = key {
+        let mut callbacks = RemoteCallbacks::new();
+        callbacks.credentials(|_url, username_from_url, _allowed_types| {
+            Cred::ssh_key(username_from_url.unwrap(), None, Path::new(key), None)
+        });
+        callbacks
+    } else {
+        RemoteCallbacks::new()
+    };
+    if update_reference {
+        callbacks.push_update_reference(move |name, status| {
+            if let Some(status) = status {
+                Err(git2::Error::from_str(&format!(
+                    "Update reference failed: {status}"
+                )))
+            } else {
+                println!("Push commit for refspec {name} succeeded");
+                Ok(())
+            }
+        });
+    }
+    callbacks
 }
