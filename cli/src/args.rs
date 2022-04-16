@@ -1,9 +1,11 @@
+use clap::Args;
 use clap::Parser;
+use clap::Subcommand;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-pub struct Args {
+pub struct CliArgs {
     /// Shell command path
     #[clap(short, long)]
     pub shell: Option<String>,
@@ -43,4 +45,21 @@ pub struct Args {
     /// Output tags
     #[clap(short, long)]
     pub tag: Option<Vec<String>>,
+
+    /// Repo subcommand
+    #[clap(subcommand)]
+    pub subcommand: Option<CliSub>,
+}
+
+/// Time Series Benchmarking
+#[derive(Subcommand, Debug)]
+pub enum CliSub {
+    /// Git repo
+    Repo(CliRepo),
+}
+
+#[derive(Args, Debug)]
+pub struct CliRepo {
+    #[clap(short, long)]
+    name: Option<String>,
 }

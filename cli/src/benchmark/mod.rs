@@ -10,7 +10,7 @@ mod shell;
 use crate::adapter;
 use crate::adapter::Adapter;
 use crate::adapter::Report;
-use crate::args::Args;
+use crate::args::CliArgs;
 pub use crate::benchmark::flag::Flag;
 pub use crate::benchmark::output::Output;
 pub use crate::benchmark::shell::Shell;
@@ -27,10 +27,10 @@ pub struct Benchmark {
     _tag: Option<Vec<String>>,
 }
 
-impl TryFrom<Args> for Benchmark {
+impl TryFrom<CliArgs> for Benchmark {
     type Error = CliError;
 
-    fn try_from(args: Args) -> Result<Self, Self::Error> {
+    fn try_from(args: CliArgs) -> Result<Self, Self::Error> {
         Ok(Self {
             shell: Shell::try_from(args.shell)?,
             flag: Flag::try_from(args.flag)?,
@@ -54,7 +54,7 @@ impl TryFrom<Args> for Benchmark {
 
 impl Benchmark {
     pub fn new() -> Result<Self, CliError> {
-        let args = Args::parse();
+        let args = CliArgs::parse();
         Self::try_from(args)
     }
 
