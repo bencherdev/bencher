@@ -1,3 +1,11 @@
-import * as wasm from "ui";
+import { Reports } from "ui";
 
-wasm.greet("Bencher");
+const pre = document.getElementById("bencher-chart");
+const reports = Reports.new();
+
+const renderLoop = () => {
+    pre.textContent = reports.render();
+    requestAnimationFrame(renderLoop);
+};
+
+requestAnimationFrame(renderLoop);

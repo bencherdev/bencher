@@ -1,12 +1,15 @@
 use std::collections::BTreeMap;
 use std::convert::AsMut;
 use std::convert::AsRef;
+use std::string::ToString;
 use std::time::Duration;
 
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Reports(BTreeMap<DateTime<Utc>, Report>);
 
@@ -22,6 +25,13 @@ impl AsMut<BTreeMap<DateTime<Utc>, Report>> for Reports {
     }
 }
 
+impl ToString for Reports {
+    fn to_string(&self) -> String {
+        serde_json::to_string(&self).expect("Failed to deserialize JSON")
+    }
+}
+
+#[wasm_bindgen]
 impl Reports {
     pub fn new() -> Self {
         Self(BTreeMap::new())
@@ -30,8 +40,13 @@ impl Reports {
     pub fn add(&mut self, report: Report) {
         self.0.insert(*report.date_time(), report);
     }
+
+    pub fn render(&self) -> String {
+        self.to_string()
+    }
 }
 
+#[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
     #[serde(with = "ts_seconds")]
@@ -55,6 +70,8 @@ impl Report {
         &self.date_time
     }
 }
+
+#[wasm_bindgen]
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Metric {
     latency: Option<Latency>,
