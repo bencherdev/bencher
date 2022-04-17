@@ -1,3 +1,3 @@
 import * as wasm from "ui";
 
-wasm.greet();
+wasm.greet("Bencher");

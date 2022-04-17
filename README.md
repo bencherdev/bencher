@@ -14,3 +14,11 @@ cargo install --locked wasm-pack
 cargo run -- -x "cargo bench" repo --url git@github.com:epompeii/bencher_db.git --key $HOME/.ssh/id_ed25519 
 
 cargo run --bin bencher -- -x "cargo bench" repo --url git@github.com:epompeii/bencher_db.git --key $HOME/.ssh/id_ed25519 
+
+
+cd ui
+wasm-pack build
+
+cd www
+npm run start
+
