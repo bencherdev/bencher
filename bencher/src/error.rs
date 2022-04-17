@@ -8,7 +8,7 @@ pub enum BencherError {
     Flag,
     #[error("Failed I/O")]
     Io(#[from] std::io::Error),
-    #[error("Failed to convert from UTF8")]
+    #[error("Failed to convert from UTF-8")]
     FromUtf8(#[from] std::string::FromUtf8Error),
     #[error("Failed git")]
     Git(#[from] git2::Error),

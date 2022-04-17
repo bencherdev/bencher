@@ -44,6 +44,10 @@ pub struct CliRepo {
     #[clap(short, long)]
     pub key: Option<String>,
 
+    /// Git branch
+    #[clap(short, long)]
+    pub branch: Option<String>,
+
     /// Git commit signature name
     #[clap(short, long)]
     pub name: Option<String>,

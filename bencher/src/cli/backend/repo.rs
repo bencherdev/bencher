@@ -3,7 +3,7 @@ use std::path::Path;
 
 use git2::Direction;
 use git2::{Commit, Cred, ObjectType, RemoteCallbacks};
-use git2::{Oid, Repository, Signature};
+use git2::{Oid, Remote, Repository, Signature};
 use report::{Report, Reports};
 use tempfile::tempdir;
 
@@ -13,11 +13,13 @@ use crate::BencherError;
 const BENCHER_DIR: &str = "bencherdb";
 const BENCHER_FILE: &str = "bencher.json";
 const BENCHER_MESSAGE: &str = "bencher";
+const DEFAULT_BRANCH: &str = "master";
 
 #[derive(Debug)]
 pub struct Repo {
     url: String,
     key: Option<String>,
+    branch: Option<String>,
     name: Option<String>,
     email: Option<String>,
     message: Option<String>,
@@ -28,6 +30,7 @@ impl From<CliRepo> for Repo {
         Repo {
             url: repo.url,
             key: repo.key,
+            branch: repo.branch,
             name: repo.name,
             email: repo.email,
             message: repo.message,
@@ -57,7 +60,12 @@ impl Repo {
         fo.remote_callbacks(self.callbacks(false));
 
         // Prepare builder.
-        let mut builder = git2::build::RepoBuilder::new();
+        let mut repo_builder = git2::build::RepoBuilder::new();
+        let builder = if let Some(branch) = &self.branch {
+            repo_builder.branch(branch)
+        } else {
+            &mut repo_builder
+        };
         builder.fetch_options(fo);
 
         // Clone the project.
@@ -104,16 +112,16 @@ impl Repo {
         let mut remote = repo.find_remote("origin")?;
         remote.connect_auth(Direction::Push, Some(self.callbacks(false)), None)?;
 
-        // Prepare push options.
-        let mut po = git2::PushOptions::new();
+        // Get the branch for the refspec
+        let branch = self.branch(&remote);
+        let refspec: [&str; 1] = [&format!("refs/heads/{branch}:refs/heads/{branch}")];
 
-        // Prepare callbacks.
+        // Prepare push options for the callback
+        let mut po = git2::PushOptions::new();
         po.remote_callbacks(self.callbacks(true));
 
-        let url: [&str; 1] = ["refs/heads/master:refs/heads/master"];
-
         // Push remote.
-        remote.push(&url, Some(&mut po))
+        remote.push(&refspec, Some(&mut po)).map_err(|e| e.into())
     }
 
     fn callbacks(&self, update_reference: bool) -> RemoteCallbacks<'_> {
@@ -150,6 +158,20 @@ impl Repo {
             }
         }
         repo.signature()
+    }
+
+    fn branch(&self, remote: &Remote) -> String {
+        if let Some(branch) = &self.branch {
+            return branch.clone();
+        }
+
+        if let Ok(buf) = remote.default_branch() {
+            if let Some(branch) = buf.as_str() {
+                return branch.into();
+            }
+        }
+
+        DEFAULT_BRANCH.into()
     }
 }
 
