@@ -8,6 +8,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+mod utils;
+
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Reports(BTreeMap<DateTime<Utc>, Report>);
@@ -37,6 +39,7 @@ impl Reports {
 #[wasm_bindgen]
 impl Reports {
     pub fn from_str(reports: &str) -> Self {
+        utils::set_panic_hook();
         Self(serde_json::from_str(reports).expect("Failed to deserialize JSON"))
     }
 
