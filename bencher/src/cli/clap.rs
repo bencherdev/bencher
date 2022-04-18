@@ -6,12 +6,17 @@ use clap::Subcommand;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliBencher {
+    /// Benchmark command
     #[clap(flatten)]
     pub benchmark: CliBenchmark,
 
     /// Benchmark output adapter
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
+
+    /// Benchmark results output location
+    #[clap(flatten)]
+    pub output: CliOutput,
 
     /// Repo subcommand
     #[clap(subcommand)]
@@ -65,4 +70,19 @@ pub struct CliRepo {
     /// Git commit message
     #[clap(short, long)]
     pub message: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct CliOutput {
+    /// Headless output
+    #[clap(short, long, group = "output")]
+    pub headless: bool,
+
+    /// Default: Bencher website (bencher.dev)
+    #[clap(short, long, group = "output")]
+    pub web: bool,
+
+    /// Headless output
+    #[clap(short, long, group = "output")]
+    pub custom: Option<String>,
 }
