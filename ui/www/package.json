@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "dependencies": {
+    "bulma": "^0.9.3",
     "d3": "^7.4.4",
     "query-string": "^7.1.1",
     "ui": "file:../pkg"
