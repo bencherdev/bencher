@@ -82,7 +82,7 @@ pub struct CliOutput {
     #[clap(short, long, group = "output")]
     pub web: bool,
 
-    /// Headless output
+    /// Custom output URL
     #[clap(short, long, group = "output")]
-    pub custom: Option<String>,
+    pub url: Option<String>,
 }

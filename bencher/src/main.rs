@@ -1,3 +1,4 @@
+#![feature(derive_default_enum)]
 #![feature(test)]
 extern crate test;
 

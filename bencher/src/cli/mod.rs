@@ -7,6 +7,7 @@ pub mod adapter;
 pub mod backend;
 pub mod benchmark;
 pub mod clap;
+pub mod output;
 
 use crate::cli::clap::CliBencher;
 use crate::BencherError;
