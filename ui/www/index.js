@@ -1,5 +1,6 @@
 import { Reports } from "ui";
 const queryString = require('query-string');
+import * as d3 from "d3";
 
 
 const pre = document.getElementById("bencher-chart");
