@@ -4,7 +4,7 @@ use std::path::Path;
 use git2::Direction;
 use git2::{Commit, Cred, ObjectType, RemoteCallbacks};
 use git2::{Oid, Remote, Repository, Signature};
-use report::{Report, Reports};
+use reports::{Report, Reports};
 use tempfile::tempdir;
 
 use crate::cli::clap::CliPush;

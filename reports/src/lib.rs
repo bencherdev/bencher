@@ -61,3 +61,12 @@ pub struct Report {
     date_time: DateTime<Utc>,
     metrics: Metrics,
 }
+
+impl From<Metrics> for Report {
+    fn from(metrics: Metrics) -> Self {
+        Self {
+            date_time: Utc::now(),
+            metrics,
+        }
+    }
+}

@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use ::clap::Parser;
-use report::{Report, Reports};
+use reports::{Report, Reports};
 
 pub mod adapter;
 pub mod backend;

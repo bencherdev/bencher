@@ -1,6 +1,6 @@
 use crate::cli::clap::CliBackend;
 
-use report::Report;
+use reports::Report;
 
 pub mod repo;
 

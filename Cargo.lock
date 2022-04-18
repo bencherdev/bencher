@@ -27,7 +27,7 @@ dependencies = [
  "git2",
  "nom",
  "open",
- "report",
+ "reports",
  "serde",
  "serde_json",
  "tempfile",
@@ -468,7 +468,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "report"
+name = "reports"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -617,7 +617,7 @@ name = "ui"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "report",
+ "reports",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "wee_alloc",

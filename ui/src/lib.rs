@@ -1,4 +1,4 @@
-pub use report::{InventoryData, Reports};
+pub use reports::{InventoryData, Reports};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.

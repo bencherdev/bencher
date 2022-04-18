@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use report::Report;
+use reports::Report;
 
 use crate::cli::benchmark::BenchmarkOutput;
 use crate::BencherError;

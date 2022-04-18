@@ -19,7 +19,7 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 tempfile = "3.3.0"
 thiserror = "1.0.30"
-report = { path = "../report" }
+reports = { path = "../reports" }
 open = "2.1.1"
 url = "2.2.2"
 

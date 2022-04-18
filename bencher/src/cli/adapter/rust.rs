@@ -14,7 +14,7 @@ use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
 
-use report::{Latency, Metric, Metrics, Report};
+use reports::{Latency, Metric, Metrics, Report};
 
 use crate::cli::benchmark::BenchmarkOutput;
 use crate::BencherError;
@@ -114,7 +114,7 @@ fn parse_bench(input: &str) -> IResult<&str, Metric> {
             let units = Units::from(units);
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
-            Metric::from_lateny(Latency { duration, variance })
+            Metric::from(Latency { duration, variance })
         },
     )(input)
 }

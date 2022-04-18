@@ -1,7 +1,7 @@
 pub mod custom;
 pub mod rust;
 
-use report::Report;
+use reports::Report;
 
 use crate::cli::benchmark::BenchmarkOutput;
 use crate::BencherError;
