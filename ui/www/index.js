@@ -1,4 +1,4 @@
-import { Reports } from "ui";
+import { InventoryData, Reports } from "ui";
 const queryString = require('query-string');
 import * as d3 from "d3";
 
@@ -6,22 +6,24 @@ import * as d3 from "d3";
 const d3_chart = document.getElementById("d3-chart");
 
 const reports_arg = queryString.parse(location.search).reports;
+var inventory;
 var data;
 var chart;
-if (false && reports_arg) {
+if (true && reports_arg) {
   const reports = Reports.from_str(reports_arg);
-  const latency = reports.latency("tests::benchmark_a");
-  data = JSON.parse(latency);
+  const inv_data = reports.latency();
+  inventory = JSON.parse(inv_data.inventory());
+  data = JSON.parse(inv_data.data());
 
-  chart = BarChart(data, {
-    x: d => d.date_time,
-    y: d => d.duration,
-    xLabel: "Date and Time",
-    yLabel: "Time (ns)",
-    width: 640,
-    height: 500,
-    color: "steelblue"
-  });
+  // chart = BarChart(data, {
+  //   x: d => d.date_time,
+  //   y: d => d.duration,
+  //   xLabel: "Date and Time",
+  //   yLabel: "Time (ns)",
+  //   width: 640,
+  //   height: 500,
+  //   color: "steelblue"
+  // });
 } else {
   data = [
     {"date_time":"AL","name":"<10","duration":598478},
@@ -62,20 +64,32 @@ if (false && reports_arg) {
     {"date_time":"AR","name":"≥80","duration":113468},
   ];
 
-  var ages = ["<10","10-19","20-29","30-39","40-49","50-59","60-69","70-79","≥80"];
+  var inventory = ["<10","10-19","20-29","30-39","40-49","50-59","60-69","70-79","≥80"];
 
-  chart = GroupedBarChart(data, {
-    x: d => d.date_time,
-    y: d => d.duration,
-    z: d => d.name,
-    xLabel: "Date and Time",
-    yLabel: "Time (ns)",
-    zDomain: ages,
-    colors: d3.schemeSpectral[ages.length],
-    width: 640,
-    height: 500
-  })
+  // chart = GroupedBarChart(data, {
+  //   x: d => d.date_time,
+  //   y: d => d.duration,
+  //   z: d => d.name,
+  //   xLabel: "Date and Time",
+  //   yLabel: "Time (ns)",
+  //   zDomain: inventory,
+  //   colors: d3.schemeSpectral[inventory.length],
+  //   width: 640,
+  //   height: 500
+  // })
 }
+
+chart = GroupedBarChart(data, {
+  x: d => d.date_time,
+  y: d => d.duration,
+  z: d => d.name,
+  xLabel: "Date and Time",
+  yLabel: "Time (ns)",
+  zDomain: inventory,
+  colors: d3.schemeSpectral[inventory.length],
+  width: 640,
+  height: 500
+})
 
 
 d3.select(d3_chart).node().appendChild(chart);
