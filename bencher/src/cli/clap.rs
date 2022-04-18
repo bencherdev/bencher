@@ -6,6 +6,20 @@ use clap::Subcommand;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliBencher {
+    #[clap(flatten)]
+    pub benchmark: CliBenchmark,
+
+    /// Benchmark output adapter
+    #[clap(short, long, default_value = "rust")]
+    pub adapter: String,
+
+    /// Repo subcommand
+    #[clap(subcommand)]
+    pub backend: Option<CliBackend>,
+}
+
+#[derive(Args, Debug)]
+pub struct CliBenchmark {
     /// Shell command path
     #[clap(short, long)]
     pub shell: Option<String>,
@@ -17,20 +31,12 @@ pub struct CliBencher {
     /// Benchmark command to execute
     #[clap(short = 'x', long = "exec")]
     pub cmd: String,
-
-    /// Benchmark output adapter
-    #[clap(short, long, default_value = "rust")]
-    pub adapter: String,
-
-    /// Repo subcommand
-    #[clap(subcommand)]
-    pub backend: Option<CliBackend>,
 }
 
-/// Time Series Benchmarking
+/// Backend data stores
 #[derive(Subcommand, Debug)]
 pub enum CliBackend {
-    /// Git repo to store data
+    /// Git repo backend
     Repo(CliRepo),
 }
 

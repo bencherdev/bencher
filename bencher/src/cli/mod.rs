@@ -27,7 +27,7 @@ impl TryFrom<CliBencher> for Bencher {
 
     fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
-            benchmark: Benchmark::try_from((bencher.shell, bencher.flag, bencher.cmd))?,
+            benchmark: Benchmark::try_from(bencher.benchmark)?,
             adapter: Adapter::from(bencher.adapter),
             backend: if let Some(backend) = bencher.backend {
                 Some(Backend::from(backend))
