@@ -64,6 +64,7 @@ impl Bencher {
             reports.add(report);
             serde_json::to_string(&reports)?
         };
+        println!("{reports}");
         self.output.open(&reports)
     }
 }

@@ -3,33 +3,37 @@ const queryString = require('query-string');
 import * as d3 from "d3";
 
 
-const pre = document.getElementById("bencher-chart");
-
-const reports_arg = queryString.parse(location.search).reports;
-if (reports_arg) {
-    // pre.textContent = reports_arg;
-    const reports = Reports.from_str(reports_arg);
-    // console.log(reports.to_string());
-    pre.textContent = reports.to_string();
-}
-
 const d3_chart = document.getElementById("d3-chart");
 
-const alphabet = [{"letter":"A","frequency":0.08167},{"letter":"B","frequency":0.01492},{"letter":"C","frequency":0.02782},{"letter":"D","frequency":0.04253},{"letter":"E","frequency":0.12702},{"letter":"F","frequency":0.02288},{"letter":"G","frequency":0.02015},{"letter":"H","frequency":0.06094},{"letter":"I","frequency":0.06966},{"letter":"J","frequency":0.00153},{"letter":"K","frequency":0.00772},{"letter":"L","frequency":0.04025},{"letter":"M","frequency":0.02406},{"letter":"N","frequency":0.06749},{"letter":"O","frequency":0.07507},{"letter":"P","frequency":0.01929},{"letter":"Q","frequency":0.00095},{"letter":"R","frequency":0.05987},{"letter":"S","frequency":0.06327},{"letter":"T","frequency":0.09056},{"letter":"U","frequency":0.02758},{"letter":"V","frequency":0.00978},{"letter":"W","frequency":0.0236},{"letter":"X","frequency":0.0015},{"letter":"Y","frequency":0.01974},{"letter":"Z","frequency":0.00074}];
+const reports_arg = queryString.parse(location.search).reports;
+var data;
+if (true && reports_arg) {
+  const reports = Reports.from_str(reports_arg);
+  const latency = reports.latency("tests::benchmark_a");
+  data = JSON.parse(latency);
+} else {
+  data = [
+    {"date_time":"2022-04-16T15:19:20.037778Z","duration":3},
+    {"date_time":"2022-04-16T15:24:17.383569Z","duration":4},
+    {"date_time":"2022-04-16T15:31:44.288966Z","duration":4},
+    {"date_time":"2022-04-17T23:25:23.843782Z","duration":5},
+    {"date_time":"2022-04-17T23:36:52.095595Z","duration":3},
+  ];
+}
 
-const chart = BarChart(alphabet, {
-    x: d => d.letter,
-    y: d => d.frequency,
-    xDomain: d3.groupSort(alphabet, ([d]) => -d.frequency, d => d.letter), // sort by descending frequency
-    yFormat: "%",
-    yLabel: "↑ Frequency",
-    width: 640,
-    height: 500,
-    color: "steelblue"
-  });
-
+const chart = BarChart(data, {
+  x: d => d.date_time,
+  y: d => d.duration,
+  yLabel: "Date and Time",
+  yLabel: "Time (ns)",
+  width: 640,
+  height: 500,
+  color: "steelblue"
+});
 
 d3.select(d3_chart).node().appendChild(chart);
+
+
 
 function BarChart(data, {
     x = (d, i) => i, // given d in data, returns the (ordinal) x-value

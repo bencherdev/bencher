@@ -44,13 +44,14 @@ impl Reports {
     }
 
     pub fn to_string(&self) -> String {
-        serde_json::to_string(&self).expect("Failed to serialize JSON")
+        serde_json::to_string(&self).expect("Failed to serialize JSON for Reports")
     }
 
-    // TODO use this function in the UI
-    pub fn latency(&self) -> String {
-        let latency_metrics: Vec<LatencyMetric> = Vec::new();
-        String::new()
+    pub fn latency(&self, metric_name: &str) -> String {
+        let data = Data::latency(&self, metric_name);
+        serde_json::to_string(&data).expect(&format!(
+            "Failed to serialize latency JSON for {metric_name}"
+        ))
     }
 }
 
@@ -104,7 +105,35 @@ pub struct Latency {
 }
 
 #[derive(Debug, Serialize)]
-pub struct LatencyMetric {
-    name: String,
+struct Data(Vec<Datum>);
+
+#[derive(Debug, Serialize)]
+struct Datum {
+    date_time: DateTime<Utc>,
     duration: u64,
+}
+
+impl From<Vec<Datum>> for Data {
+    fn from(data: Vec<Datum>) -> Self {
+        Data(data)
+    }
+}
+
+impl Data {
+    fn latency(reports: &Reports, metric_name: &str) -> Self {
+        let mut data = Vec::new();
+        for (date_time, report) in reports.as_ref().iter() {
+            for (name, metric) in report.metrics.iter() {
+                if name == metric_name {
+                    if let Some(latency) = &metric.latency {
+                        data.push(Datum {
+                            date_time: date_time.clone(),
+                            duration: latency.duration.as_micros() as u64,
+                        })
+                    }
+                }
+            }
+        }
+        data.into()
+    }
 }
