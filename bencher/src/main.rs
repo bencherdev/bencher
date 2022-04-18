@@ -13,7 +13,5 @@ fn main() -> Result<(), BencherError> {
     let bencher = Bencher::new()?;
     let benchmark_output = bencher.run()?;
     let report = bencher.convert(benchmark_output)?;
-    let reports_str = bencher.output(report)?;
-
-    Ok(())
+    bencher.output(report)
 }

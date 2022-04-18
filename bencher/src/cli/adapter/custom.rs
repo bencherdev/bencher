@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 
 use report::Report;
 
-use crate::cli::benchmark::Output;
+use crate::cli::benchmark::BenchmarkOutput;
 use crate::BencherError;
 
-pub fn parse(adapter: &str, output: Output) -> Result<Report, BencherError> {
+pub fn parse(adapter: &str, output: BenchmarkOutput) -> Result<Report, BencherError> {
     println!("{:?}", adapter);
     println!("{:?}", output);
 

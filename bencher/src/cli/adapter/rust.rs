@@ -16,10 +16,10 @@ use nom::IResult;
 
 use report::{Latency, Metric, Metrics, Report};
 
-use crate::cli::benchmark::Output;
+use crate::cli::benchmark::BenchmarkOutput;
 use crate::BencherError;
 
-pub fn parse(output: Output) -> Result<Report, BencherError> {
+pub fn parse(output: BenchmarkOutput) -> Result<Report, BencherError> {
     let (_, report) = parse_stdout(&output.stdout).unwrap();
     Ok(report)
 }

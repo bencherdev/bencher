@@ -14,13 +14,13 @@ pub struct CliBencher {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
-    /// Benchmark results output location
-    #[clap(flatten)]
-    pub output: CliOutput,
-
     /// Repo subcommand
     #[clap(subcommand)]
     pub backend: Option<CliBackend>,
+
+    /// Benchmark results output location
+    #[clap(flatten)]
+    pub output: CliOutput,
 }
 
 #[derive(Args, Debug)]

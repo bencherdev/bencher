@@ -1,6 +1,6 @@
 use crate::cli::clap::CliOutput;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub enum Output {
     Headless,
     #[default]
@@ -20,5 +20,15 @@ impl From<CliOutput> for Output {
             return Self::Url(url);
         }
         Self::Web
+    }
+}
+
+impl Output {
+    pub fn open(&self, report_str: &str) {
+        match &self {
+            Self::Headless => println!("{report_str}"),
+            Self::Web => println!("{report_str}"),
+            Self::Url(url) => println!("{report_str}"),
+        }
     }
 }

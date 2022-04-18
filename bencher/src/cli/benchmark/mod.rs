@@ -8,7 +8,7 @@ mod shell;
 use crate::cli::clap::CliBenchmark;
 use crate::BencherError;
 pub use flag::Flag;
-pub use output::Output;
+pub use output::Output as BenchmarkOutput;
 pub use shell::Shell;
 
 #[derive(Debug)]
@@ -31,12 +31,12 @@ impl TryFrom<CliBenchmark> for Benchmark {
 }
 
 impl Benchmark {
-    pub fn run(&self) -> Result<Output, BencherError> {
+    pub fn run(&self) -> Result<BenchmarkOutput, BencherError> {
         let output = Command::new(self.shell.to_string())
             .arg(self.flag.to_string())
             .arg(&self.cmd)
             .output()?;
 
-        Output::try_from(output)
+        BenchmarkOutput::try_from(output)
     }
 }
