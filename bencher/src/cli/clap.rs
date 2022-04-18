@@ -59,16 +59,26 @@ pub struct CliRepo {
     #[clap(short, long)]
     pub branch: Option<String>,
 
-    /// Git commit signature name
+    #[clap(flatten)]
+    pub push: CliPush,
+}
+
+#[derive(Args, Debug)]
+pub struct CliPush {
+    /// Git add, commit, and push updates
     #[clap(short, long)]
+    pub push: bool,
+
+    /// Git commit signature name
+    #[clap(short, long, requires = "push")]
     pub name: Option<String>,
 
     /// Git commit signature email
-    #[clap(short, long)]
+    #[clap(short, long, requires = "push")]
     pub email: Option<String>,
 
     /// Git commit message
-    #[clap(short, long)]
+    #[clap(short, long, requires = "push")]
     pub message: Option<String>,
 }
 
