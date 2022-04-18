@@ -3,14 +3,11 @@ const queryString = require('query-string');
 
 
 const pre = document.getElementById("bencher-chart");
-const reports = Reports.new();
 
-const renderLoop = () => {
-    pre.textContent = reports.render();
-    requestAnimationFrame(renderLoop);
-};
-
-requestAnimationFrame(renderLoop);
-
-const parsed = queryString.parse(location.search);
-console.log(parsed);
+const reports_arg = queryString.parse(location.search).reports;
+if (reports_arg) {
+    // pre.textContent = reports_arg;
+    const reports = Reports.from_str(reports_arg);
+    // console.log(reports.to_string());
+    pre.textContent = reports.to_string();
+}

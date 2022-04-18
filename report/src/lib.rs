@@ -25,12 +25,6 @@ impl AsMut<BTreeMap<DateTime<Utc>, Report>> for Reports {
     }
 }
 
-impl ToString for Reports {
-    fn to_string(&self) -> String {
-        serde_json::to_string(&self).expect("Failed to deserialize JSON")
-    }
-}
-
 #[wasm_bindgen]
 impl Reports {
     pub fn new() -> Self {
@@ -41,8 +35,12 @@ impl Reports {
         self.0.insert(*report.date_time(), report);
     }
 
-    pub fn render(&self) -> String {
-        self.to_string()
+    pub fn from_str(reports: &str) -> Self {
+        Self(serde_json::from_str(reports).expect("Failed to deserialize JSON"))
+    }
+
+    pub fn to_string(&self) -> String {
+        serde_json::to_string(&self).expect("Failed to serialize JSON")
     }
 }
 
