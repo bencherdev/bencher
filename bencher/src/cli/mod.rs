@@ -10,7 +10,6 @@ pub mod clap;
 pub mod output;
 
 use crate::cli::clap::CliBencher;
-use crate::cli::clap::CliOutput;
 use crate::BencherError;
 use adapter::Adapter;
 use backend::Backend;
@@ -65,6 +64,6 @@ impl Bencher {
             reports.add(report);
             serde_json::to_string(&reports)?
         };
-        Ok(self.output.open(&report_str))
+        self.output.open(&report_str).map_err(|e| e.into())
     }
 }

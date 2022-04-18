@@ -1,5 +1,7 @@
 use crate::cli::clap::CliOutput;
 
+const BENCHER_URL: &str = "https://bencher.dev";
+
 #[derive(Debug, Default)]
 pub enum Output {
     Headless,
@@ -24,11 +26,15 @@ impl From<CliOutput> for Output {
 }
 
 impl Output {
-    pub fn open(&self, report_str: &str) {
+    pub fn open(&self, report_str: &str) -> Result<(), std::io::Error> {
         match &self {
-            Self::Headless => println!("{report_str}"),
-            Self::Web => println!("{report_str}"),
-            Self::Url(url) => println!("{report_str}"),
+            Self::Headless => Ok(println!("{report_str}")),
+            Self::Web => open_url(BENCHER_URL, report_str),
+            Self::Url(url) => open_url(url, report_str),
         }
     }
+}
+
+fn open_url(url: &str, report_str: &str) -> Result<(), std::io::Error> {
+    open::that(url)
 }
