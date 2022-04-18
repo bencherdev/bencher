@@ -14,4 +14,6 @@ pub enum BencherError {
     Git(#[from] git2::Error),
     #[error("Failed serde json")]
     Serde(#[from] serde_json::Error),
+    #[error("Failed to parse URL")]
+    Url(#[from] url::ParseError),
 }

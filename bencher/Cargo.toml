@@ -21,6 +21,7 @@ tempfile = "3.3.0"
 thiserror = "1.0.30"
 report = { path = "../report" }
 open = "2.1.1"
+url = "2.2.2"
 
 [[bin]]
 name = "bencher"

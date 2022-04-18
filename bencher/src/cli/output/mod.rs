@@ -1,4 +1,7 @@
+use url::Url;
+
 use crate::cli::clap::CliOutput;
+use crate::BencherError;
 
 const BENCHER_URL: &str = "https://bencher.dev";
 
@@ -26,15 +29,16 @@ impl From<CliOutput> for Output {
 }
 
 impl Output {
-    pub fn open(&self, report_str: &str) -> Result<(), std::io::Error> {
+    pub fn open(&self, reports: &str) -> Result<(), BencherError> {
         match &self {
-            Self::Headless => Ok(println!("{report_str}")),
-            Self::Web => open_url(BENCHER_URL, report_str),
-            Self::Url(url) => open_url(url, report_str),
+            Self::Headless => Ok(println!("{reports}")),
+            Self::Web => open_url(BENCHER_URL, reports),
+            Self::Url(url) => open_url(url, reports),
         }
     }
 }
 
-fn open_url(url: &str, report_str: &str) -> Result<(), std::io::Error> {
-    open::that(url)
+fn open_url(url: &str, reports: &str) -> Result<(), BencherError> {
+    let url = Url::parse_with_params(url, &[("reports", reports)])?;
+    open::that(url.as_str()).map_err(|e| e.into())
 }

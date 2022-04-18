@@ -57,13 +57,13 @@ impl Bencher {
     }
 
     pub fn output(&self, report: Report) -> Result<(), BencherError> {
-        let report_str = if let Some(backend) = &self.backend {
+        let reports = if let Some(backend) = &self.backend {
             backend.output(report)?
         } else {
             let mut reports = Reports::new();
             reports.add(report);
             serde_json::to_string(&reports)?
         };
-        self.output.open(&report_str).map_err(|e| e.into())
+        self.output.open(&reports)
     }
 }

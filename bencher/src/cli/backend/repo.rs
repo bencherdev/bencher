@@ -45,13 +45,13 @@ impl Repo {
         let repo = self.clone(&bencher_dir)?;
 
         let bencher_file = Path::new(BENCHER_FILE);
-        let report_str = Self::update(&bencher_dir.join(&bencher_file), report)?;
+        let reports = Self::update(&bencher_dir.join(&bencher_file), report)?;
         let oid = Self::add(&repo, &bencher_file)?;
         let commit = self.commit(&repo, oid)?;
         println!("Commit added {commit}");
 
         self.push(&repo)?;
-        Ok(report_str)
+        Ok(reports)
     }
 
     fn clone(&self, into: &Path) -> Result<Repository, git2::Error> {
