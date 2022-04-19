@@ -2,24 +2,21 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Hello wasm-pack!</title>
-    <style>
-      body {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bencher</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
   </head>
   <body>
-    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-    <pre id="d3-chart"></pre>
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column">
+            <pre id="d3-chart"></pre>
+            <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+          </div>
+        </div>
+      </div>
+    </section>
     <script src="./bootstrap.js"></script>
   </body>
 </html>
