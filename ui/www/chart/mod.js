@@ -15,7 +15,7 @@ export function chart() {
     data = JSON.parse(inv_data.data());
   }
 
-  const d3_chart = document.getElementById("d3-chart");
+  const d3_chart = document.getElementById("bencher-chart");
   const chart = GroupedBarChart(data, {
     x: d => d.date_time,
     y: d => d.duration,
