@@ -11,8 +11,8 @@ export function chart() {
   if (reports_arg) {
     const reports = Reports.from_str(reports_arg);
     const inv_data = reports.latency();
-    inventory = JSON.parse(inv_data.inventory());
-    data = JSON.parse(inv_data.data());
+    inventory = inv_data.inventory();
+    data = inv_data.data();
   }
 
   const d3_chart = document.getElementById("bencher-chart");

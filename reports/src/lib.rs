@@ -46,8 +46,8 @@ impl Reports {
         Self(serde_json::from_str(reports).expect("Failed to deserialize JSON"))
     }
 
-    pub fn to_string(&self) -> String {
-        serde_json::to_string(&self).expect("Failed to serialize JSON for Reports")
+    pub fn to_string(&self) -> JsValue {
+        JsValue::from_serde(&self).expect("Failed to serialize JSON for Reports")
     }
 
     pub fn latency(&self) -> InventoryData {

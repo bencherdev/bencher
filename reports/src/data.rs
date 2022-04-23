@@ -8,8 +8,8 @@ use crate::Reports;
 
 #[wasm_bindgen]
 pub struct InventoryData {
-    inventory: String,
-    data: String,
+    inventory: JsValue,
+    data: JsValue,
 }
 
 type Inventory = HashSet<String>;
@@ -26,9 +26,9 @@ impl InventoryData {
     pub(crate) fn new_latency(reports: &Reports) -> Self {
         let (inventory, data) = Self::latency(reports);
         Self {
-            inventory: serde_json::to_string(&inventory)
+            inventory: JsValue::from_serde(&inventory)
                 .expect(&format!("Failed to serialize latency inventory JSON")),
-            data: serde_json::to_string(&data)
+            data: JsValue::from_serde(&data)
                 .expect(&format!("Failed to serialize latency data JSON")),
         }
     }
@@ -54,11 +54,11 @@ impl InventoryData {
 
 #[wasm_bindgen]
 impl InventoryData {
-    pub fn inventory(&self) -> String {
+    pub fn inventory(&self) -> JsValue {
         self.inventory.clone()
     }
 
-    pub fn data(&self) -> String {
+    pub fn data(&self) -> JsValue {
         self.data.clone()
     }
 }
