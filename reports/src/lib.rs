@@ -14,7 +14,7 @@ pub use data::InventoryData;
 pub use metrics::{Latency, Metric, Metrics};
 
 #[wasm_bindgen]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Reports(BTreeMap<DateTime<Utc>, Report>);
 
 impl AsRef<BTreeMap<DateTime<Utc>, Report>> for Reports {
@@ -30,10 +30,6 @@ impl AsMut<BTreeMap<DateTime<Utc>, Report>> for Reports {
 }
 
 impl Reports {
-    pub fn new() -> Self {
-        Self(BTreeMap::new())
-    }
-
     pub fn add(&mut self, report: Report) {
         self.0.insert(report.date_time, report);
     }
@@ -41,6 +37,10 @@ impl Reports {
 
 #[wasm_bindgen]
 impl Reports {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn from_str(reports: &str) -> Self {
         utils::set_panic_hook();
         Self(serde_json::from_str(reports).expect("Failed to deserialize JSON"))

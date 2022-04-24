@@ -3,17 +3,14 @@ import { GroupedBarChart } from "./grouped_bar_chart";
 import * as d3 from "d3";
 const queryString = require('query-string');
 
-export function chart() {
-  var inventory = [];
-  var data = [];
-
-  const reports_arg = queryString.parse(location.search).reports;
-  if (reports_arg) {
-    const reports = Reports.from_str(reports_arg);
-    const inv_data = reports.latency();
-    inventory = inv_data.inventory();
-    data = inv_data.data();
+export function chart(reports) {
+  if (reports === undefined) {
+    return;
   }
+
+  const inv_data = reports.latency();
+  const inventory = inv_data.inventory();
+  const data = inv_data.data();
 
   const d3_chart = document.getElementById("bencher-chart");
   const chart = GroupedBarChart(data, {
