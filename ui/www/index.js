@@ -6,12 +6,15 @@ main();
 
 function main() {
   const reports = get_reports();
-
   if (reports === undefined) {
     return;
   }
 
-  panel();
-  chart(reports);
+  const latency = reports.latency();
+  const inventory = latency.inventory();
+  const data = latency.data();
+
+  panel(inventory);
+  chart(inventory, data);
 }
 

@@ -12,7 +12,7 @@ pub struct InventoryData {
     data: JsValue,
 }
 
-type Inventory = HashSet<String>;
+type Inventory = Vec<String>;
 type Data = Vec<Datum>;
 
 #[derive(Debug, Serialize)]
@@ -34,12 +34,12 @@ impl InventoryData {
     }
 
     fn latency(reports: &Reports) -> (Inventory, Data) {
-        let mut names = HashSet::new();
+        let mut names_set = HashSet::new();
         let mut data = Vec::new();
         for (date_time, report) in reports.as_ref().iter() {
             for (name, metric) in report.metrics.iter() {
                 if let Some(latency) = &metric.latency() {
-                    names.insert(name.clone());
+                    names_set.insert(name.clone());
                     data.push(Datum {
                         date_time: date_time.clone(),
                         duration: latency.duration.as_micros() as u64,
@@ -48,6 +48,8 @@ impl InventoryData {
                 }
             }
         }
+        let mut names = Vec::from_iter(names_set);
+        names.sort_unstable();
         (names, data)
     }
 }

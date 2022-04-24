@@ -1,4 +1,4 @@
-export function panel() {
+export function panel(inventory) {
   const bencher_panel = document.getElementById("bencher-panel");
   bencher_panel.innerHTML = `
   <nav class="panel">
