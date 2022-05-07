@@ -40,13 +40,15 @@ impl Reports {
     }
 }
 
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
 impl Reports {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl Reports {
     pub fn from_str(reports: &str) -> Self {
         Self(serde_json::from_str(reports).expect("Failed to deserialize JSON"))
     }

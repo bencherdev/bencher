@@ -14,7 +14,7 @@ pub struct CliBencher {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
-    /// Repo subcommand
+    /// Backend subcommand
     #[clap(subcommand)]
     pub backend: Option<CliBackend>,
 
