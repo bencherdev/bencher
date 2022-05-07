@@ -10,7 +10,7 @@ wasm = ["wasm-bindgen"]
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
-schemars = { version = "0.8.8", optional = true }
+schemars = { version = "0.8.8", optional = true, features = ["chrono"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 wasm-bindgen = { version = "0.2.63", optional = true, features = [

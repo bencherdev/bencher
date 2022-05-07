@@ -2,10 +2,11 @@ use std::collections::BTreeMap;
 use std::convert::AsMut;
 use std::convert::AsRef;
 
-use chrono::{serde::ts_seconds, DateTime, Utc};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "wasm")]
@@ -17,7 +18,7 @@ pub use data::InventoryData;
 pub use metrics::{Latency, Metric, Metrics};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-#[cfg_attr(features = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Reports(BTreeMap<DateTime<Utc>, Report>);
 
@@ -39,7 +40,8 @@ impl Reports {
     }
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
 impl Reports {
     pub fn new() -> Self {
         Self::default()
@@ -61,7 +63,6 @@ impl Reports {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Report {
-    #[serde(with = "ts_seconds")]
     date_time: DateTime<Utc>,
     metrics: Metrics,
 }
