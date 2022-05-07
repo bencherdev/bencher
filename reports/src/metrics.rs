@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+#[cfg(features = "schema")]
+use schemars::JsonSchema;
+
 use serde::{Deserialize, Serialize};
 
 pub type Metrics = BTreeMap<String, Metric>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(features = "schema", derive(JsonSchema))]
 pub struct Metric {
     #[serde(skip_serializing_if = "Option::is_none")]
     latency: Option<Latency>,
@@ -37,6 +41,7 @@ impl Metric {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(features = "schema", derive(JsonSchema))]
 pub struct Latency {
     pub duration: Duration,
     pub variance: Duration,
