@@ -3,21 +3,22 @@ use std::convert::AsMut;
 use std::convert::AsRef;
 
 use chrono::{serde::ts_seconds, DateTime, Utc};
-#[cfg(features = "schema")]
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "wasm")]
 mod data;
 mod metrics;
-mod utils;
 
+#[cfg(feature = "wasm")]
 pub use data::InventoryData;
 pub use metrics::{Latency, Metric, Metrics};
 
-#[wasm_bindgen]
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(features = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Reports(BTreeMap<DateTime<Utc>, Report>);
 
 impl AsRef<BTreeMap<DateTime<Utc>, Report>> for Reports {
@@ -38,14 +39,13 @@ impl Reports {
     }
 }
 
-#[wasm_bindgen]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Reports {
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn from_str(reports: &str) -> Self {
-        utils::set_panic_hook();
         Self(serde_json::from_str(reports).expect("Failed to deserialize JSON"))
     }
 
@@ -59,7 +59,7 @@ impl Reports {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(features = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Report {
     #[serde(with = "ts_seconds")]
     date_time: DateTime<Utc>,
