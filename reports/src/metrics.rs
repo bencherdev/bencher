@@ -7,11 +7,17 @@ pub type Metrics = BTreeMap<String, Metric>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Metric {
+    #[serde(skip_serializing_if = "Option::is_none")]
     latency: Option<Latency>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     throughput: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     total_cpu: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     self_cpu: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     total_memory: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     self_memory: Option<()>,
 }
 
