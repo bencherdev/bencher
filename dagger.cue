@@ -3,7 +3,7 @@ package main
 import (
 	"dagger.io/dagger"
 	"bencher.dev/hello"
-	"bencher.dev/alpine"
+	"bencher.dev/rust"
 	"universe.dagger.io/bash"
 	"universe.dagger.io/docker"
 )
@@ -35,10 +35,9 @@ dagger.#Plan & {
 
 		deps: docker.#Build & {
 			steps: [
-				alpine.#Build & {
+				rust.#Build & {
 					packages: {
 						bash: {}
-						yarn: {}
 						git: {}
 					}
 				},
