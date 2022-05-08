@@ -22,6 +22,8 @@ struct Datum {
     name: String,
 }
 
+// TODO all that D3 js needs is three arrays of values.
+// Update the D3 code and this code to simply just pass an x, y, and z array
 impl InventoryData {
     pub(crate) fn new_latency(reports: &Reports) -> Self {
         let (inventory, data) = Self::latency(reports);
