@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
-#[cfg(feature = "wasm")]
 mod data;
 mod metrics;
 
+pub use data::Data;
 #[cfg(feature = "wasm")]
 pub use data::InventoryData;
 pub use metrics::{Latency, Metric, Metrics};

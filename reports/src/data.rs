@@ -1,43 +1,52 @@
+#[cfg(feature = "wasm")]
 use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
 use serde::Serialize;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "wasm")]
 use crate::Reports;
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub struct InventoryData {
-    inventory: JsValue,
-    data: JsValue,
-}
-
-type Inventory = Vec<String>;
-
 #[derive(Debug, Default, Serialize)]
-struct Data {
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct Data {
     x: Vec<DateTime<Utc>>,
     y: Vec<u64>,
     z: Vec<String>,
 }
 
+#[cfg(feature = "wasm")]
 struct Datum {
     x: DateTime<Utc>,
     y: u64,
     z: String,
 }
 
+#[cfg(feature = "wasm")]
 impl Data {
-    pub fn push(&mut self, datum: Datum) {
+    fn push(&mut self, datum: Datum) {
         self.x.push(datum.x);
         self.y.push(datum.y);
         self.z.push(datum.z);
     }
 }
 
-// TODO all that D3 js needs is three arrays of values.
-// Update the D3 code and this code to simply just pass an x, y, and z array
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub struct InventoryData {
+    inventory: JsValue,
+    data: JsValue,
+}
+
+#[cfg(feature = "wasm")]
+type Inventory = Vec<String>;
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
 impl InventoryData {
     pub(crate) fn new_latency(reports: &Reports) -> Self {
         let (inventory, data) = Self::latency(reports);
@@ -70,7 +79,8 @@ impl InventoryData {
     }
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
 impl InventoryData {
     pub fn inventory(&self) -> JsValue {
         self.inventory.clone()
