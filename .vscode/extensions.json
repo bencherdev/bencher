@@ -13,5 +13,6 @@
     "dtsvet.vscode-wasm",
     "nickgo.cuelang",
     "jallen7usa.vscode-cue-fmt",
+    "ms-azuretools.vscode-docker",
   ]
 }
