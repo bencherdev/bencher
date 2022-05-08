@@ -2,24 +2,38 @@ use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+#[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
 use crate::Reports;
 
-#[wasm_bindgen]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct InventoryData {
     inventory: JsValue,
     data: JsValue,
 }
 
 type Inventory = Vec<String>;
-type Data = Vec<Datum>;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
+struct Data {
+    x: Vec<DateTime<Utc>>,
+    y: Vec<u64>,
+    z: Vec<String>,
+}
+
 struct Datum {
-    date_time: DateTime<Utc>,
-    duration: u64,
-    name: String,
+    x: DateTime<Utc>,
+    y: u64,
+    z: String,
+}
+
+impl Data {
+    pub fn push(&mut self, datum: Datum) {
+        self.x.push(datum.x);
+        self.y.push(datum.y);
+        self.z.push(datum.z);
+    }
 }
 
 // TODO all that D3 js needs is three arrays of values.
@@ -37,15 +51,15 @@ impl InventoryData {
 
     fn latency(reports: &Reports) -> (Inventory, Data) {
         let mut names_set = HashSet::new();
-        let mut data = Vec::new();
-        for (date_time, report) in reports.as_ref().iter() {
+        let mut data = Data::default();
+        for (_, report) in reports.as_ref().iter() {
             for (name, metric) in report.metrics.iter() {
                 if let Some(latency) = &metric.latency() {
                     names_set.insert(name.clone());
                     data.push(Datum {
-                        date_time: date_time.clone(),
-                        duration: latency.duration.as_micros() as u64,
-                        name: name.clone(),
+                        x: report.date_time.clone(),
+                        y: latency.duration.as_micros() as u64,
+                        z: name.clone(),
                     })
                 }
             }
@@ -56,7 +70,7 @@ impl InventoryData {
     }
 }
 
-#[wasm_bindgen]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl InventoryData {
     pub fn inventory(&self) -> JsValue {
         self.inventory.clone()

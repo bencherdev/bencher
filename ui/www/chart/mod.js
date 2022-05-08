@@ -4,6 +4,8 @@ import { LineChart } from "./multi_line_chart";
 import * as d3 from "d3";
 const queryString = require('query-string');
 
+// TODO move over to Plot and use line chart:
+// https://observablehq.com/@observablehq/plot-line?collection=@observablehq/plot
 export function chart(inventory, data) {
   if (inventory === undefined || data === undefined) {
     return;

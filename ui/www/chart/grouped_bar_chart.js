@@ -4,9 +4,9 @@ import * as d3 from "d3";
 // Released under the ISC license.
 // https://observablehq.com/@d3/grouped-bar-chart
 export function GroupedBarChart(data, {
-  x = (d, i) => i, // given d in data, returns the (ordinal) x-value
-  y = d => d, // given d in data, returns the (quantitative) y-value
-  z = () => 1, // given d in data, returns the (categorical) z-value
+  // x = (d, i) => i, // given d in data, returns the (ordinal) x-value
+  // y = d => d, // given d in data, returns the (quantitative) y-value
+  // z = () => 1, // given d in data, returns the (categorical) z-value
   title, // given d in data, returns the title text
   marginTop = 30, // top margin, in pixels
   marginRight = 0, // right margin, in pixels
@@ -27,9 +27,9 @@ export function GroupedBarChart(data, {
   colors = d3.schemeTableau10, // array of colors
 } = {}) {
   // Compute values.
-  const X = d3.map(data, x);
-  const Y = d3.map(data, y);
-  const Z = d3.map(data, z);
+  const X = data.x;
+  const Y = data.y;
+  const Z = data.z;
 
   // Compute default domains, and unique the x- and z-domains.
   if (xDomain === undefined) xDomain = X;
