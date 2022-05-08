@@ -6,3 +6,13 @@ services:
       dockerfile: rust.Dockerfile
     image: bencher-cli
     container_name: bencher_cli
+
+  envoy:
+      build:
+        context: ./envoy
+        dockerfile: Dockerfile
+      restart: always
+      ports:
+        - 80:10000
+      depends_on:
+        - cli
