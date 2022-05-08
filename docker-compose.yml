@@ -1,8 +1,6 @@
 version: "3.9"
 services:
 
-  
-
   nginx:
     build:
       context: ./local/nginx
