@@ -8,7 +8,7 @@ import (
 // Build a Debian Rust container image
 #Build: {
 
-	// Alpine version to install.
+	// Rust version to install.
 	version: string | *"1.60.0-buster"
 
 	// List of packages to install

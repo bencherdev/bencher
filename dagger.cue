@@ -3,7 +3,8 @@ package main
 import (
 	"dagger.io/dagger"
 	"bencher.dev/hello"
-	"bencher.dev/rust"
+	"bencher.dev/dagger/rust"
+	"bencher.dev/dagger/envoy"
 	"universe.dagger.io/bash"
 	"universe.dagger.io/docker"
 )
@@ -33,7 +34,7 @@ dagger.#Plan & {
 			dir: client.filesystem."./bencher".read.contents
 		}
 
-		deps: docker.#Build & {
+		docker_bencher_cli: docker.#Build & {
 			steps: [
 				rust.#Build & {
 					packages: {
@@ -52,8 +53,22 @@ dagger.#Plan & {
 			]
 		}
 
+		docker_envoy: docker.#Build & {
+			steps: [
+				envoy.#Build & {},
+				docker.#Copy & {
+					contents: client.filesystem."./bencher".read.contents
+					dest:     "/src/bencher"
+				},
+				docker.#Copy & {
+					contents: client.filesystem."./reports".read.contents
+					dest:     "/src/reports"
+				},
+			]
+		}
+
 		test: bash.#Run & {
-			input:   deps.output
+			input:   docker_bencher_cli.output
 			workdir: "/src/bencher"
 			script: contents: #"""
 				cargo test
