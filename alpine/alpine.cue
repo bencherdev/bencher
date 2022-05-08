@@ -9,7 +9,7 @@ import (
 #Build: {
 
 	// Alpine version to install.
-	version: string | *"3.15.0@sha256:21a3deaa0d32a8057914f36584b5288d2e5ecc984380bc0118285c70fa8c9300"
+	version: string | *"1.60.0-alpine"
 
 	// List of packages to install
 	packages: [pkgName=string]: {
@@ -23,7 +23,7 @@ import (
 	docker.#Build & {
 		steps: [
 			docker.#Pull & {
-				source: "index.docker.io/alpine:\(version)"
+				source: "index.docker.io/rust:\(version)"
 			},
 			for pkgName, pkg in packages {
 				docker.#Run & {

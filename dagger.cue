@@ -10,14 +10,21 @@ import (
 
 dagger.#Plan & {
 	client: {
-		filesystem: "./bencher": {
-			read: {
-				contents: dagger.#FS
-				exclude: [
-					"README.md",
-				]
+		filesystem: {
+			"./bencher": {
+				read: {
+					contents: dagger.#FS
+					exclude: [
+						"README.md",
+					]
+				}
+				write: contents: actions.bencher_cli.result
 			}
-			write: contents: actions.bencher_cli.result
+			"./reports": {
+				read: {
+					contents: dagger.#FS
+				}
+			}
 		}
 	}
 
@@ -37,16 +44,20 @@ dagger.#Plan & {
 				},
 				docker.#Copy & {
 					contents: client.filesystem."./bencher".read.contents
-					dest:     "/src"
+					dest:     "/src/bencher"
+				},
+				docker.#Copy & {
+					contents: client.filesystem."./reports".read.contents
+					dest:     "/src/reports"
 				},
 			]
 		}
 
 		test: bash.#Run & {
 			input:   deps.output
-			workdir: "/src"
+			workdir: "/src/bencher"
 			script: contents: #"""
-				exit 0
+				cargo test
 				"""#
 		}
 
