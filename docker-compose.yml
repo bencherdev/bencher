@@ -1,18 +1,19 @@
 version: "3.9"
 services:
-  cli:
-    build:
-      context: .
-      dockerfile: rust.Dockerfile
-    image: bencher-cli
-    container_name: bencher_cli
 
   envoy:
       build:
-        context: ./envoy
+        context: ./local/envoy
         dockerfile: Dockerfile
       restart: always
       ports:
         - 80:10000
       depends_on:
         - cli
+
+  cli:
+    build:
+      context: .
+      dockerfile: ./local/rust.Dockerfile
+    image: bencher-cli
+    container_name: bencher_cli
