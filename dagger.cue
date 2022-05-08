@@ -6,13 +6,22 @@ import (
 )
 
 dagger.#Plan & {
-	// Say hello by writing to a file
-	actions: hello: #AddHello & {
-		dir: client.filesystem."./todoapp".read.contents
+	client: {
+		filesystem: "./bencher": {
+			read: {
+				contents: dagger.#FS
+				exclude: [
+					"README.md",
+				]
+			}
+			write: contents: actions.bencher_cli.result
+		}
 	}
-	client: filesystem: "./todoapp": {
-		read: contents:  dagger.#FS
-		write: contents: actions.hello.result
+
+	actions: {
+		bencher_cli: #AddHello & {
+			dir: client.filesystem."./bencher".read.contents
+		}
 	}
 }
 
