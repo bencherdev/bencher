@@ -7,9 +7,20 @@ services:
         dockerfile: Dockerfile
       restart: always
       ports:
-        - 80:10000
+        - 800:10000
       depends_on:
         - cli
+
+  nginx:
+    build:
+      context: ./local/nginx
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 80:80
+    depends_on:
+      - cli 
+      - fn_demo
 
   cli:
     build:
@@ -18,7 +29,7 @@ services:
     image: bencher-cli
     container_name: bencher_cli
 
-  demo:
+  fn_demo:
     build:
       context: .
       dockerfile: ./functions/demo/Dockerfile

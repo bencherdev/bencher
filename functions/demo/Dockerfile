@@ -10,5 +10,4 @@ COPY functions/demo/Cargo.toml Cargo.toml
 RUN cargo test --no-run
 COPY functions/demo/src src
 
-EXPOSE 8080
 CMD cargo run
