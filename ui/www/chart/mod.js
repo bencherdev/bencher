@@ -10,7 +10,7 @@ export function chart(inventory, data) {
   }
   console.log(data);
   const d3_chart = document.getElementById("bencher-chart");
-  if (false) {
+  if (true) {
     const chart = GroupedBarChart(data, {
       x: d => d.date_time,
       y: d => d.duration,
