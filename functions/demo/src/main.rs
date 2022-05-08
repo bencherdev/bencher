@@ -24,14 +24,19 @@ async fn main() -> Result<(), String> {
      * request port 0, which allows the operating system to pick any available
      * port.
      */
-    let config_dropshot: ConfigDropshot = Default::default();
+    let config_dropshot = ConfigDropshot {
+        bind_address: "0.0.0.0:8080".parse().unwrap(),
+        request_body_max_bytes: 1024,
+        tls: None,
+    };
 
     /*
      * For simplicity, we'll configure an "info"-level logger that writes to
      * stderr assuming that it's a terminal.
      */
-    let config_logging =
-        ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
+    let config_logging = ConfigLogging::StderrTerminal {
+        level: ConfigLoggingLevel::Info,
+    };
     let log = config_logging
         .to_logger("example-basic")
         .map_err(|error| format!("failed to create logger: {}", error))?;
@@ -51,10 +56,9 @@ async fn main() -> Result<(), String> {
     /*
      * Set up the server.
      */
-    let server =
-        HttpServerStarter::new(&config_dropshot, api, api_context, &log)
-            .map_err(|error| format!("failed to create server: {}", error))?
-            .start();
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
+        .map_err(|error| format!("failed to create server: {}", error))?
+        .start();
 
     /*
      * Wait for the server to stop.  Note that there's not any code to shut down
@@ -76,7 +80,9 @@ impl ExampleContext {
      * Return a new ExampleContext.
      */
     pub fn new() -> ExampleContext {
-        ExampleContext { counter: AtomicU64::new(0) }
+        ExampleContext {
+            counter: AtomicU64::new(0),
+        }
     }
 }
 
@@ -132,7 +138,9 @@ async fn example_api_put_counter(
             format!("do not like the number {}", updated_value.counter),
         ))
     } else {
-        api_context.counter.store(updated_value.counter, Ordering::SeqCst);
+        api_context
+            .counter
+            .store(updated_value.counter, Ordering::SeqCst);
         Ok(HttpResponseUpdatedNoContent())
     }
 }

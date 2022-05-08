@@ -17,3 +17,12 @@ services:
       dockerfile: ./local/rust.Dockerfile
     image: bencher-cli
     container_name: bencher_cli
+
+  demo:
+    build:
+      context: .
+      dockerfile: ./functions/demo/Dockerfile
+    image: bencher-demo
+    container_name: bencher_demo
+    ports:
+        - 2000:8080
