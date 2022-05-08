@@ -4,7 +4,7 @@ import (
 	"dagger.io/dagger"
 	"bencher.dev/hello"
 	"bencher.dev/dagger/rust"
-	"bencher.dev/dagger/envoy"
+	"bencher.dev/envoy"
 	"universe.dagger.io/bash"
 	"universe.dagger.io/docker"
 )

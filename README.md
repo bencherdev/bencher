@@ -22,3 +22,4 @@ wasm-pack build
 cd www
 npm run start
 
+docker run --rm -it -p 9901:9901 -p 10000:10000  -v $(pwd)/envoy/config.yml:/config.yml envoyproxy/envoy:v1.21.2 -c /config.yml
