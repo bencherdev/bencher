@@ -26,6 +26,14 @@ dagger.#Plan & {
 					contents: dagger.#FS
 				}
 			}
+			"./envoy": {
+				read: {
+					contents: dagger.#FS
+					exclude: [
+						"envoy.cue",
+					]
+				}
+			}
 		}
 	}
 
@@ -57,12 +65,8 @@ dagger.#Plan & {
 			steps: [
 				envoy.#Build & {},
 				docker.#Copy & {
-					contents: client.filesystem."./bencher".read.contents
-					dest:     "/src/bencher"
-				},
-				docker.#Copy & {
-					contents: client.filesystem."./reports".read.contents
-					dest:     "/src/reports"
+					contents: client.filesystem."./envoy".read.contents
+					dest:     "/"
 				},
 			]
 		}
