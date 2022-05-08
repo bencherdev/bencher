@@ -11,5 +11,7 @@
     "TabNine.tabnine-vscode",
     "esbenp.prettier-vscode",
     "dtsvet.vscode-wasm",
+    "nickgo.cuelang",
+    "jallen7usa.vscode-cue-fmt",
   ]
 }
