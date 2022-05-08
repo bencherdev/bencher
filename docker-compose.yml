@@ -21,9 +21,9 @@ services:
 
   fn_demo:
     build:
-      context: .
-      dockerfile: ./functions/demo/Dockerfile
-    image: bencher-demo
-    container_name: bencher_demo
+      context: ./functions/demo
+      dockerfile: Dockerfile
+    image: fn-demo
+    container_name: fn_demo
     ports:
         - 2000:8080

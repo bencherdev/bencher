@@ -1,13 +1,18 @@
+# Use the official Rust image.
 # https://hub.docker.com/_/rust
 FROM rust:1.60.0-buster
 
-RUN rustup toolchain install nightly
-RUN rustup override set nightly
-WORKDIR /usr/src
-RUN cargo new demo
-WORKDIR /usr/src/demo
-COPY functions/demo/Cargo.toml Cargo.toml
-RUN cargo test --no-run
-COPY functions/demo/src src
+# Copy local code to the container image.
+WORKDIR /usr/src/app
+COPY . .
 
-CMD cargo run
+# Install production dependencies and build a release artifact.
+
+RUN cargo install --path .
+
+# Service must listen to $PORT environment variable.
+# This default value facilitates local development.
+ENV PORT 8080
+
+# Run the web service on container startup.
+CMD ["demo"]
