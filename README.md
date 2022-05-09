@@ -43,6 +43,9 @@ Build Artifact:
 Deploy to Cloud Run:
 `gcloud run deploy fn-demo --image us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest`
 
+Create Network Endpoint Groups:
+`gcloud compute network-endpoint-groups create bencher-neg --region=us-central1 --network-endpoint-type=serverless --cloud-run-service=fn-demo`
+
 Old Container Registry way:
 `gcloud auth configure-docker`
 `docker tag fn-demo us-docker.pkg.dev/us.gcr.io/learned-stone-349519/fn-demo`

@@ -1,18 +1,14 @@
-# Use the official Rust image.
+# Build Stage
 # https://hub.docker.com/_/rust
-FROM rust:1.60.0-buster
+FROM rust:1.60.0-bullseye as builder
 
-# Copy local code to the container image.
+RUN rustup target add x86_64-unknown-linux-musl
 WORKDIR /usr/src/app
 COPY . .
+RUN cargo build --release
 
-# Install production dependencies and build a release artifact.
-
-RUN cargo install --path .
-
-# Service must listen to $PORT environment variable.
-# This default value facilitates local development.
-ENV PORT 8080
-
-# Run the web service on container startup.
-CMD ["demo"]
+# Bundle Stage
+FROM scratch
+COPY --from=builder /usr/src/app/target/release/demo .
+USER 1000
+CMD ["./demo"]
