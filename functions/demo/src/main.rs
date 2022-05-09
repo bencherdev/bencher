@@ -16,8 +16,15 @@ use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+const PORT_KEY: &str = "PORT";
+const DEFAULT_IP: &str = "0.0.0.0";
+const DEFAULT_PORT: &str = "8080";
+
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    let port = std::env::var(PORT_KEY).unwrap_or(DEFAULT_PORT.into());
+    let address = format!("{DEFAULT_IP}:{port}");
+
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
@@ -25,7 +32,7 @@ async fn main() -> Result<(), String> {
      * port.
      */
     let config_dropshot = ConfigDropshot {
-        bind_address: "0.0.0.0:8080".parse().unwrap(),
+        bind_address: address.parse().unwrap(),
         request_body_max_bytes: 1024,
         tls: None,
     };

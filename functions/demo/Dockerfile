@@ -10,5 +10,6 @@ RUN cargo build --release
 # Bundle Stage
 FROM scratch
 COPY --from=builder /usr/src/app/target/release/demo .
+ENV PORT 8080
 USER 1000
 CMD ["./demo"]
