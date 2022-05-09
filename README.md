@@ -65,4 +65,5 @@ gcloud builds submit --region=us-central1 --source . --tag us-central1-docker.pk
 
 
 
-gcloud builds submit --tag us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest .
+gcloud builds submit --timeout 1200 --tag us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest .
+gcloud run deploy fn-demo --image us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest
