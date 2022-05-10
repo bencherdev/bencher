@@ -356,6 +356,7 @@ dependencies = [
  "serde",
  "slog",
  "tokio",
+ "util",
 ]
 
 [[package]]
@@ -1711,6 +1712,14 @@ dependencies = [
  "serde_tokenstream",
  "syn",
  "usdt-impl",
+]
+
+[[package]]
+name = "util"
+version = "0.1.0"
+dependencies = [
+ "dropshot",
+ "slog",
 ]
 
 [[package]]
