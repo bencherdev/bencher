@@ -12,3 +12,7 @@ dropshot = "0.7.0"
 schemars = "0.8.8"
 serde = "1.0.137"
 tokio = "1.18.1"
+slog = "2.7.0"
+
+[[bin]]
+name = "fn_reports"
