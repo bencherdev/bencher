@@ -3,7 +3,7 @@ services:
 
   nginx:
     build:
-      context: ./local/nginx
+      context: ./services/local/nginx
       dockerfile: Dockerfile
     restart: always
     ports:
@@ -15,14 +15,14 @@ services:
 
   cli:
     build:
-      context: .
-      dockerfile: ./local/cli.Dockerfile
+      context: ./services
+      dockerfile: ./cli/Dockerfile
     image: bencher-cli
     container_name: bencher_cli
 
   fn_demo:
     build:
-      context: ./functions
+      context: ./services/functions
       dockerfile: ./demo/dev.Dockerfile
     image: fn-demo
     container_name: fn_demo
@@ -31,8 +31,8 @@ services:
 
   fn_reports:
     build:
-      context: ./functions
-      dockerfile: ./reports/dev.Dockerfile
+      context: ./services
+      dockerfile: ./functions/reports/dev.Dockerfile
     image: fn-reports
     container_name: fn_reports
     ports:

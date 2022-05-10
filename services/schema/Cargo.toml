@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reports = { path = "../reports", features = ["schema"] }
+reports = { path = "../lib/reports", features = ["schema"] }
 schemars = "0.8.8"
 serde_json = "1.0.81"

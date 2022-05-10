@@ -2,11 +2,12 @@
 FROM rust:1.60.0-bullseye
 
 RUN rustup toolchain install nightly
+RUN rustup override set nightly
 WORKDIR /usr/src
-RUN cargo new reports 
-WORKDIR /usr/src/reports
-COPY reports/Cargo.toml Cargo.toml
+RUN cargo new demo
+WORKDIR /usr/src/demo
+COPY demo/Cargo.toml Cargo.toml
 RUN cargo test --no-run
-COPY reports/src src
+COPY demo/src src
 
-CMD cargo +nightly run
+CMD cargo run

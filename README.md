@@ -53,3 +53,5 @@ Old Container Registry way:
 
 NEW PROJECT:
 `bencher` instead of `learned-stone-349519`
+Setup `api.bencher.dev` to hit the load balancer.
+This will make things much simpler for DNS purposes and separate hosting of the front and backend.
