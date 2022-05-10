@@ -1,7 +1,6 @@
 use clap::ArgGroup;
 use clap::Args;
 use clap::Parser;
-use clap::Subcommand;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -15,17 +14,9 @@ pub struct CliBencher {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
-    /// Benchmark results output location
+    /// Benchmark reporting backend
     #[clap(flatten)]
-    pub new_backend: NewCliBackend,
-
-    /// Backend subcommand
-    #[clap(subcommand)]
-    pub backend: Option<CliBackend>,
-
-    /// Benchmark results output location
-    #[clap(flatten)]
-    pub output: CliOutput,
+    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]
@@ -43,77 +34,18 @@ pub struct CliBenchmark {
     pub cmd: String,
 }
 
-/// Backend data stores
-#[derive(Subcommand, Debug)]
-pub enum CliBackend {
-    /// Git repo backend
-    Repo(CliRepo),
-}
-
-#[derive(Args, Debug)]
-pub struct CliRepo {
-    /// Git repo url
-    #[clap(short, long)]
-    pub url: String,
-
-    /// Git repo key
-    #[clap(short, long)]
-    pub key: Option<String>,
-
-    /// Git branch
-    #[clap(short, long)]
-    pub branch: Option<String>,
-
-    #[clap(flatten)]
-    pub push: CliPush,
-}
-
-#[derive(Args, Debug)]
-pub struct CliPush {
-    /// Git add, commit, and push updates
-    #[clap(short, long)]
-    pub push: bool,
-
-    /// Git commit signature name
-    #[clap(short, long, requires = "push")]
-    pub name: Option<String>,
-
-    /// Git commit signature email
-    #[clap(short, long, requires = "push")]
-    pub email: Option<String>,
-
-    /// Git commit message
-    #[clap(short, long, requires = "push")]
-    pub message: Option<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct CliOutput {
-    /// Headless output
-    #[clap(short, long, group = "output")]
-    pub headless: bool,
-
-    /// Default: Bencher website (bencher.dev)
-    #[clap(short, long, group = "output")]
-    pub web: bool,
-
-    /// Custom output URL
-    #[clap(short, long, group = "output")]
-    pub url: Option<String>,
-}
-
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("backend")
         .required(true)
         .args(&["url", "cloud"]),
 ))]
-pub struct NewCliBackend {
-    /// Headless output
+pub struct CliBackend {
+    /// Custom reporting backend URL
     #[clap(short, long)]
-    pub url: Option<String>,
+    pub url: String,
 
-    /// Default: Bencher cloud (bencher.dev)
+    /// Default: Bencher cloud backend (https:bencher.dev)
     #[clap(flatten)]
     pub cloud: CliCloud,
 }

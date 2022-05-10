@@ -7,7 +7,6 @@ pub mod adapter;
 pub mod backend;
 pub mod benchmark;
 pub mod clap;
-pub mod output;
 
 use crate::cli::clap::CliBencher;
 use crate::BencherError;
@@ -15,14 +14,12 @@ use adapter::Adapter;
 use backend::Backend;
 use benchmark::Benchmark;
 use benchmark::BenchmarkOutput;
-use output::Output;
 
 #[derive(Debug)]
 pub struct Bencher {
     benchmark: Benchmark,
     adapter: Adapter,
-    backend: Option<Backend>,
-    output: Output,
+    backend: Backend,
 }
 
 impl TryFrom<CliBencher> for Bencher {
@@ -32,12 +29,7 @@ impl TryFrom<CliBencher> for Bencher {
         Ok(Self {
             benchmark: Benchmark::try_from(bencher.benchmark)?,
             adapter: Adapter::from(bencher.adapter),
-            backend: if let Some(backend) = bencher.backend {
-                Some(Backend::from(backend))
-            } else {
-                None
-            },
-            output: Output::from(bencher.output),
+            backend: Backend::from(bencher.backend),
         })
     }
 }
@@ -56,18 +48,7 @@ impl Bencher {
         self.adapter.convert(output)
     }
 
-    pub fn output(&self, report: Report) -> Result<(), BencherError> {
-        // let reports = if let Some(backend) = &self.backend {
-        //     backend.output(report)?
-        // } else {
-        //     let mut reports = Reports::new();
-        //     reports.add(report);
-        //     serde_json::to_string(&reports)?
-        // };
-        // println!("{reports}");
-        // self.output.open(&reports)
-        let report_str = serde_json::to_string(&report)?;
-        println!("{report_str}");
-        Ok(())
+    pub fn send(&self, report: Report) -> Result<(), BencherError> {
+        self.backend.send(report)
     }
 }
