@@ -2,13 +2,14 @@
 # https://hub.docker.com/_/rust
 FROM rust:1.60.0-bullseye as builder
 
-RUN rustup target add x86_64-unknown-linux-musl
 WORKDIR /usr/src/app
-COPY . .
+COPY Cargo.toml Cargo.toml
+COPY ./src ./src
 RUN cargo build --release
 
 # Bundle Stage
-FROM scratch
+# https://hub.docker.com/_/debian
+FROM debian:bullseye-slim
 COPY --from=builder /usr/src/app/target/release/demo .
 ENV PORT 8080
 USER 1000
