@@ -2,10 +2,11 @@
 # https://hub.docker.com/_/rust
 FROM rust:1.60.0-bullseye as builder
 
+RUN rustup toolchain install nightly
 WORKDIR /usr/src/app
 COPY Cargo.toml Cargo.toml
 COPY ./src ./src
-RUN cargo build --release
+RUN cargo +nightly build --release
 
 # Bundle Stage
 # https://hub.docker.com/_/debian

@@ -49,15 +49,7 @@ async fn main() -> Result<(), String> {
         .write(&mut std::io::stdout())
         .map_err(|e| e.to_string())?;
 
-    /*
-     * The functions that implement our API endpoints will share this context.
-     */
-    let api_context = ExampleContext::new();
-
-    /*
-     * Set up the server.
-     */
-    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
+    let server = HttpServerStarter::new(&config_dropshot, api, (), &log)
         .map_err(|error| format!("Failed to create server for {API_NAME}: {error}"))?
         .start();
 
@@ -66,25 +58,6 @@ async fn main() -> Result<(), String> {
      * this server, so we should never get past this point.
      */
     server.await
-}
-
-/**
- * Application-specific example context (state shared by handler functions)
- */
-struct ExampleContext {
-    /** counter that can be manipulated by requests to the HTTP API */
-    counter: AtomicU64,
-}
-
-impl ExampleContext {
-    /**
-     * Return a new ExampleContext.
-     */
-    pub fn new() -> ExampleContext {
-        ExampleContext {
-            counter: AtomicU64::new(0),
-        }
-    }
 }
 
 /*
@@ -106,16 +79,12 @@ struct CounterValue {
  */
 #[endpoint {
     method = GET,
-    path = "/counter",
+    path = "/reports",
 }]
 async fn example_api_get_counter(
-    rqctx: Arc<RequestContext<ExampleContext>>,
+    _rqctx: Arc<RequestContext<()>>,
 ) -> Result<HttpResponseOk<CounterValue>, HttpError> {
-    let api_context = rqctx.context();
-
-    Ok(HttpResponseOk(CounterValue {
-        counter: api_context.counter.load(Ordering::SeqCst),
-    }))
+    Ok(HttpResponseOk(CounterValue { counter: 0 }))
 }
 
 /**
@@ -127,10 +96,9 @@ async fn example_api_get_counter(
     path = "/counter",
 }]
 async fn example_api_put_counter(
-    rqctx: Arc<RequestContext<ExampleContext>>,
+    _rqctx: Arc<RequestContext<()>>,
     update: TypedBody<CounterValue>,
 ) -> Result<HttpResponseUpdatedNoContent, HttpError> {
-    let api_context = rqctx.context();
     let updated_value = update.into_inner();
 
     if updated_value.counter == 10 {
@@ -139,9 +107,6 @@ async fn example_api_put_counter(
             format!("do not like the number {}", updated_value.counter),
         ))
     } else {
-        api_context
-            .counter
-            .store(updated_value.counter, Ordering::SeqCst);
         Ok(HttpResponseUpdatedNoContent())
     }
 }

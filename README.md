@@ -50,3 +50,6 @@ Old Container Registry way:
 `gcloud auth configure-docker`
 `docker tag fn-demo us-docker.pkg.dev/us.gcr.io/learned-stone-349519/fn-demo`
 `docker push us-docker.pkg.dev/us.gcr.io/learned-stone-349519/fn-demo`
+
+NEW PROJECT:
+`bencher` instead of `learned-stone-349519`

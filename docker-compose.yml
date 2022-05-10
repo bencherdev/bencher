@@ -11,6 +11,7 @@ services:
     depends_on:
       - cli 
       - fn_demo
+      - fn_reports
 
   cli:
     build:
@@ -21,9 +22,18 @@ services:
 
   fn_demo:
     build:
-      context: ./functions/demo
-      dockerfile: Dockerfile
+      context: ./functions
+      dockerfile: ./demo/dev.Dockerfile
     image: fn-demo
     container_name: fn_demo
     ports:
         - 2000:8080
+
+  fn_reports:
+    build:
+      context: ./functions
+      dockerfile: ./reports/dev.Dockerfile
+    image: fn-reports
+    container_name: fn_reports
+    ports:
+        - 2001:8080
