@@ -1,3 +1,4 @@
+use clap::ArgGroup;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
@@ -13,6 +14,10 @@ pub struct CliBencher {
     /// Benchmark output adapter
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
+
+    /// Benchmark results output location
+    #[clap(flatten)]
+    pub new_backend: NewCliBackend,
 
     /// Backend subcommand
     #[clap(subcommand)]
@@ -95,4 +100,71 @@ pub struct CliOutput {
     /// Custom output URL
     #[clap(short, long, group = "output")]
     pub url: Option<String>,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("backend")
+        .required(true)
+        .args(&["url", "cloud"]),
+))]
+pub struct NewCliBackend {
+    /// Headless output
+    #[clap(short, long)]
+    pub url: Option<String>,
+
+    /// Default: Bencher cloud (bencher.dev)
+    #[clap(flatten)]
+    pub cloud: CliCloud,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("testbed")
+        .required(false)
+        .args(&["testbed_id", "testbed"]),
+))]
+pub struct CliCloud {
+    /// User email
+    #[clap(short, long)]
+    pub email: String,
+
+    /// User project
+    #[clap(short, long)]
+    pub project: Option<String>,
+
+    /// Testbed ID
+    #[clap(short, long)]
+    pub testbed_id: Option<String>,
+
+    /// Testbed
+    #[clap(flatten)]
+    pub testbed: CliTestbed,
+}
+
+#[derive(Args, Debug)]
+pub struct CliTestbed {
+    /// Testbed OS
+    #[clap(short, long)]
+    pub os: Option<String>,
+
+    /// Testbed OS Version
+    #[clap(short, long)]
+    pub version: Option<String>,
+
+    /// Testbed CPU
+    #[clap(short, long)]
+    pub cpu: Option<String>,
+
+    /// Testbed RAM
+    #[clap(short, long)]
+    pub ram: Option<String>,
+
+    /// Testbed Disk Size
+    #[clap(short, long)]
+    pub disk: Option<String>,
+
+    /// Testbed Architecture
+    #[clap(short, long)]
+    pub arch: Option<String>,
 }
