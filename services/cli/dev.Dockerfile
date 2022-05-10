@@ -14,4 +14,4 @@ WORKDIR /usr/src/cli
 COPY cli/Cargo.toml Cargo.toml
 RUN cargo test --no-run
 COPY lib/reports/src reports/src
-COPY cli/src bencher/src
+COPY cli/src cli/src

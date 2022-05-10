@@ -9,25 +9,25 @@ services:
     ports:
       - 80:80
     depends_on:
-      - cli 
-      - fn_demo
+      # - cli 
+      # - fn_demo
       - fn_reports
 
-  cli:
-    build:
-      context: ./services
-      dockerfile: ./cli/Dockerfile
-    image: bencher-cli
-    container_name: bencher_cli
+  # cli:
+  #   build:
+  #     context: ./services
+  #     dockerfile: ./cli/Dockerfile
+  #   image: bencher-cli
+  #   container_name: bencher_cli
 
-  fn_demo:
-    build:
-      context: ./services/functions
-      dockerfile: ./demo/dev.Dockerfile
-    image: fn-demo
-    container_name: fn_demo
-    ports:
-        - 2000:8080
+  # fn_demo:
+  #   build:
+  #     context: ./services/functions
+  #     dockerfile: ./demo/dev.Dockerfile
+  #   image: fn-demo
+  #   container_name: fn_demo
+  #   ports:
+  #       - 2000:8080
 
   fn_reports:
     build:
