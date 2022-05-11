@@ -13,6 +13,10 @@ pub struct CliBencher {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
+    /// Testbed
+    #[clap(flatten)]
+    pub testbed: CliTestbed,
+
     /// Benchmark reporting backend
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -31,25 +35,6 @@ pub struct CliBenchmark {
     /// Benchmark command to execute
     #[clap(short = 'x', long = "exec")]
     pub cmd: String,
-}
-
-#[derive(Args, Debug)]
-pub struct CliBackend {
-    /// Custom reporting backend URL
-    #[clap(short, long)]
-    pub url: Option<String>,
-
-    /// User email
-    #[clap(short, long)]
-    pub email: String,
-
-    /// User project
-    #[clap(short, long)]
-    pub project: Option<String>,
-
-    /// Testbed
-    #[clap(flatten)]
-    pub testbed: CliTestbed,
 }
 
 #[derive(Args, Debug)]
@@ -81,4 +66,19 @@ pub struct CliTestbed {
     /// Testbed Architecture
     #[clap(long)]
     pub arch: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct CliBackend {
+    /// Custom reporting backend URL
+    #[clap(short, long)]
+    pub url: Option<String>,
+
+    /// User email
+    #[clap(short, long)]
+    pub email: String,
+
+    /// User project
+    #[clap(short, long)]
+    pub project: Option<String>,
 }

@@ -13,6 +13,6 @@ pub use error::BencherError;
 async fn main() -> Result<(), BencherError> {
     let bencher = Bencher::new()?;
     let benchmark_output = bencher.run()?;
-    let report = bencher.convert(benchmark_output)?;
-    bencher.send(report).await
+    let metrics = bencher.convert(benchmark_output)?;
+    bencher.send(metrics).await
 }

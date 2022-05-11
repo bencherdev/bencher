@@ -14,12 +14,12 @@ use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
 
-use reports::{Latency, Metric, Metrics, Report};
+use reports::{Latency, Metric, Metrics};
 
 use crate::cli::benchmark::BenchmarkOutput;
 use crate::BencherError;
 
-pub fn parse(output: BenchmarkOutput) -> Result<Report, BencherError> {
+pub fn parse(output: BenchmarkOutput) -> Result<Metrics, BencherError> {
     let (_, report) = parse_stdout(&output.stdout).unwrap();
     Ok(report)
 }
@@ -29,7 +29,7 @@ enum Test {
     Bench(Metric),
 }
 
-fn parse_stdout(input: &str) -> IResult<&str, Report> {
+fn parse_stdout(input: &str) -> IResult<&str, Metrics> {
     map(
         tuple((
             line_ending,
@@ -63,7 +63,7 @@ fn parse_stdout(input: &str) -> IResult<&str, Report> {
                     metrics.insert(key, metric);
                 }
             }
-            Report::from(metrics)
+            metrics
         },
     )(input)
 }

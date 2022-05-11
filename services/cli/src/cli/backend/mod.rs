@@ -10,16 +10,11 @@ use reports::Report;
 use crate::cli::BENCHER_URL;
 use crate::BencherError;
 
-mod testbed;
-
-use testbed::Testbed;
-
 #[derive(Debug)]
 pub struct Backend {
-    url: Option<Url>,
-    email: EmailAddress,
-    project: Option<String>,
-    testbed: Testbed,
+    pub url: Option<Url>,
+    pub email: EmailAddress,
+    pub project: Option<String>,
 }
 
 impl TryFrom<CliBackend> for Backend {
@@ -30,7 +25,6 @@ impl TryFrom<CliBackend> for Backend {
             url: map_url(backend.url)?,
             email: map_email(backend.email)?,
             project: backend.project,
-            testbed: Testbed::from(backend.testbed),
         })
     }
 }

@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
 
 use ::clap::Parser;
+use reports::Metrics;
 use reports::Report;
+use reports::Testbed;
 
 pub mod adapter;
 pub mod backend;
@@ -9,6 +11,7 @@ pub mod benchmark;
 pub mod clap;
 
 use crate::cli::clap::CliBencher;
+use crate::cli::clap::CliTestbed;
 use crate::BencherError;
 use adapter::Adapter;
 use backend::Backend;
@@ -21,6 +24,7 @@ pub const BENCHER_URL: &str = "https://api.bencher.dev";
 pub struct Bencher {
     benchmark: Benchmark,
     adapter: Adapter,
+    testbed: Testbed,
     backend: Backend,
 }
 
@@ -31,6 +35,7 @@ impl TryFrom<CliBencher> for Bencher {
         Ok(Self {
             benchmark: Benchmark::try_from(bencher.benchmark)?,
             adapter: Adapter::from(bencher.adapter),
+            testbed: bencher.testbed.into(),
             backend: Backend::try_from(bencher.backend)?,
         })
     }
@@ -46,11 +51,31 @@ impl Bencher {
         self.benchmark.run()
     }
 
-    pub fn convert(&self, output: BenchmarkOutput) -> Result<Report, BencherError> {
+    pub fn convert(&self, output: BenchmarkOutput) -> Result<Metrics, BencherError> {
         self.adapter.convert(output)
     }
 
-    pub async fn send(&self, report: Report) -> Result<(), BencherError> {
+    pub async fn send(&self, metrics: Metrics) -> Result<(), BencherError> {
+        let report = Report::new(
+            self.backend.email.to_string(),
+            self.backend.project.clone(),
+            self.testbed.clone(),
+            metrics,
+        );
         self.backend.send(report).await
+    }
+}
+
+impl Into<Testbed> for CliTestbed {
+    fn into(self) -> Testbed {
+        Testbed {
+            name: self.testbed,
+            os: self.os,
+            os_version: self.os_version,
+            cpu: self.cpu,
+            ram: self.ram,
+            disk: self.disk,
+            arch: self.arch,
+        }
     }
 }

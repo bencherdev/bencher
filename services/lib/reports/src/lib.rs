@@ -11,11 +11,13 @@ use wasm_bindgen::prelude::*;
 
 mod data;
 mod metrics;
+mod testbed;
 
 pub use data::Data;
 #[cfg(feature = "wasm")]
 pub use data::InventoryData;
 pub use metrics::{Latency, Metric, Metrics};
+pub use testbed::Testbed;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -65,13 +67,20 @@ impl Reports {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Report {
-    date_time: DateTime<Utc>,
-    metrics: Metrics,
+    pub email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    pub testbed: Testbed,
+    pub date_time: DateTime<Utc>,
+    pub metrics: Metrics,
 }
 
-impl From<Metrics> for Report {
-    fn from(metrics: Metrics) -> Self {
+impl Report {
+    pub fn new(email: String, project: Option<String>, testbed: Testbed, metrics: Metrics) -> Self {
         Self {
+            email,
+            project,
+            testbed,
             date_time: Utc::now(),
             metrics,
         }
