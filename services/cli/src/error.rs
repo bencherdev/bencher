@@ -20,4 +20,6 @@ pub enum BencherError {
     Email(String),
     #[error("Failed to send report to backend: {0}")]
     Client(#[from] reqwest::Error),
+    #[error("Failed to find Bencher API token")]
+    Token,
 }

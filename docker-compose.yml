@@ -32,7 +32,7 @@ services:
   fn_reports:
     build:
       context: ./services
-      dockerfile: ./functions/reports/Dockerfile
+      dockerfile: ./functions/reports/dev.Dockerfile
     image: fn-reports
     container_name: fn_reports
     ports:

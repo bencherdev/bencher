@@ -18,7 +18,7 @@ pub struct CliBencher {
     pub email: String,
 
     /// User API token
-    #[clap(short, long)]
+    #[clap(long)]
     pub token: Option<String>,
 
     /// Benchmark project
