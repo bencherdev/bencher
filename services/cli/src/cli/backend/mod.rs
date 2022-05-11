@@ -1,31 +1,21 @@
 use std::convert::TryFrom;
 
-use email_address_parser::EmailAddress;
-use url::{Host, Position, Url};
-
-use crate::cli::clap::CliBackend;
-
 use reports::Report;
+use url::Url;
 
 use crate::cli::BENCHER_URL;
 use crate::BencherError;
 
 #[derive(Debug)]
 pub struct Backend {
-    pub url: Option<Url>,
-    pub email: EmailAddress,
-    pub project: Option<String>,
+    url: Option<Url>,
 }
 
-impl TryFrom<CliBackend> for Backend {
+impl TryFrom<Option<String>> for Backend {
     type Error = BencherError;
 
-    fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
-        Ok(Self {
-            url: map_url(backend.url)?,
-            email: map_email(backend.email)?,
-            project: backend.project,
-        })
+    fn try_from(url: Option<String>) -> Result<Self, Self::Error> {
+        Ok(Self { url: map_url(url)? })
     }
 }
 
@@ -35,10 +25,6 @@ fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
     } else {
         None
     })
-}
-
-fn map_email(email: String) -> Result<EmailAddress, BencherError> {
-    EmailAddress::parse(&email, None).ok_or(BencherError::Email(email))
 }
 
 impl Backend {

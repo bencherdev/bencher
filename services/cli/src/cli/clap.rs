@@ -13,13 +13,21 @@ pub struct CliBencher {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
-    /// Testbed
+    /// User email
+    #[clap(short, long)]
+    pub email: String,
+
+    /// Benchmark project
+    #[clap(short, long)]
+    pub project: Option<String>,
+
+    /// Benchmark testbed
     #[clap(flatten)]
     pub testbed: CliTestbed,
 
-    /// Benchmark reporting backend
-    #[clap(flatten)]
-    pub backend: CliBackend,
+    /// Custom backend URL
+    #[clap(short, long)]
+    pub url: Option<String>,
 }
 
 #[derive(Args, Debug)]
@@ -40,45 +48,30 @@ pub struct CliBenchmark {
 #[derive(Args, Debug)]
 pub struct CliTestbed {
     /// Testbed ID
-    #[clap(short, long)]
+    #[clap(long)]
     pub testbed: Option<String>,
 
     /// Testbed OS
-    #[clap(long)]
+    #[clap(long, requires = "testbed")]
     pub os: Option<String>,
 
     /// Testbed OS Version
-    #[clap(long)]
+    #[clap(long, requires = "testbed")]
     pub os_version: Option<String>,
 
     /// Testbed CPU
-    #[clap(long)]
+    #[clap(long, requires = "testbed")]
     pub cpu: Option<String>,
 
     /// Testbed RAM
-    #[clap(long)]
+    #[clap(long, requires = "testbed")]
     pub ram: Option<String>,
 
     /// Testbed Disk Size
-    #[clap(long)]
+    #[clap(long, requires = "testbed")]
     pub disk: Option<String>,
 
     /// Testbed Architecture
-    #[clap(long)]
+    #[clap(long, requires = "testbed")]
     pub arch: Option<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct CliBackend {
-    /// Custom reporting backend URL
-    #[clap(short, long)]
-    pub url: Option<String>,
-
-    /// User email
-    #[clap(short, long)]
-    pub email: String,
-
-    /// User project
-    #[clap(short, long)]
-    pub project: Option<String>,
 }

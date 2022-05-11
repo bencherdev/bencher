@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use ::clap::Parser;
+use email_address_parser::EmailAddress;
 use reports::Metrics;
 use reports::Report;
 use reports::Testbed;
@@ -24,6 +25,8 @@ pub const BENCHER_URL: &str = "https://api.bencher.dev";
 pub struct Bencher {
     benchmark: Benchmark,
     adapter: Adapter,
+    email: EmailAddress,
+    project: Option<String>,
     testbed: Testbed,
     backend: Backend,
 }
@@ -35,10 +38,16 @@ impl TryFrom<CliBencher> for Bencher {
         Ok(Self {
             benchmark: Benchmark::try_from(bencher.benchmark)?,
             adapter: Adapter::from(bencher.adapter),
+            email: map_email(bencher.email)?,
+            project: bencher.project,
             testbed: bencher.testbed.into(),
-            backend: Backend::try_from(bencher.backend)?,
+            backend: Backend::try_from(bencher.url)?,
         })
     }
+}
+
+fn map_email(email: String) -> Result<EmailAddress, BencherError> {
+    EmailAddress::parse(&email, None).ok_or(BencherError::Email(email))
 }
 
 impl Bencher {
@@ -57,8 +66,8 @@ impl Bencher {
 
     pub async fn send(&self, metrics: Metrics) -> Result<(), BencherError> {
         let report = Report::new(
-            self.backend.email.to_string(),
-            self.backend.project.clone(),
+            self.email.to_string(),
+            self.project.clone(),
             self.testbed.clone(),
             metrics,
         );
