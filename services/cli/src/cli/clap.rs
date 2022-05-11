@@ -35,28 +35,11 @@ pub struct CliBenchmark {
 }
 
 #[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("backend")
-        .required(true)
-        .args(&["url", "cloud"]),
-))]
 pub struct CliBackend {
     /// Custom reporting backend URL
     #[clap(short, long)]
-    pub url: String,
+    pub url: Option<String>,
 
-    /// Default: Bencher cloud backend (https:bencher.dev)
-    #[clap(flatten)]
-    pub cloud: CliCloud,
-}
-
-#[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("testbed")
-        .required(false)
-        .args(&["testbed_id", "testbed"]),
-))]
-pub struct CliCloud {
     /// User email
     #[clap(short, long)]
     pub email: String,
@@ -65,10 +48,6 @@ pub struct CliCloud {
     #[clap(short, long)]
     pub project: Option<String>,
 
-    /// Testbed ID
-    #[clap(short, long)]
-    pub testbed_id: Option<String>,
-
     /// Testbed
     #[clap(flatten)]
     pub testbed: CliTestbed,
@@ -76,27 +55,31 @@ pub struct CliCloud {
 
 #[derive(Args, Debug)]
 pub struct CliTestbed {
-    /// Testbed OS
+    /// Testbed ID
     #[clap(short, long)]
+    pub testbed: Option<String>,
+
+    /// Testbed OS
+    #[clap(long)]
     pub os: Option<String>,
 
     /// Testbed OS Version
-    #[clap(short, long)]
-    pub version: Option<String>,
+    #[clap(long)]
+    pub os_version: Option<String>,
 
     /// Testbed CPU
-    #[clap(short, long)]
+    #[clap(long)]
     pub cpu: Option<String>,
 
     /// Testbed RAM
-    #[clap(short, long)]
+    #[clap(long)]
     pub ram: Option<String>,
 
     /// Testbed Disk Size
-    #[clap(short, long)]
+    #[clap(long)]
     pub disk: Option<String>,
 
     /// Testbed Architecture
-    #[clap(short, long)]
+    #[clap(long)]
     pub arch: Option<String>,
 }

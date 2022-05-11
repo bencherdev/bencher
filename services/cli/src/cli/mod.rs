@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use ::clap::Parser;
-use reports::{Report, Reports};
+use reports::Report;
 
 pub mod adapter;
 pub mod backend;
@@ -48,7 +48,7 @@ impl Bencher {
         self.adapter.convert(output)
     }
 
-    pub fn send(&self, report: Report) -> Result<(), BencherError> {
-        self.backend.send(report)
+    pub async fn send(&self, report: Report) -> Result<(), BencherError> {
+        self.backend.send(report).await
     }
 }
