@@ -15,6 +15,8 @@ use backend::Backend;
 use benchmark::Benchmark;
 use benchmark::BenchmarkOutput;
 
+pub const BENCHER_URL: &str = "https://api.bencher.dev";
+
 #[derive(Debug)]
 pub struct Bencher {
     benchmark: Benchmark,
@@ -29,7 +31,7 @@ impl TryFrom<CliBencher> for Bencher {
         Ok(Self {
             benchmark: Benchmark::try_from(bencher.benchmark)?,
             adapter: Adapter::from(bencher.adapter),
-            backend: Backend::from(bencher.backend),
+            backend: Backend::try_from(bencher.backend)?,
         })
     }
 }
