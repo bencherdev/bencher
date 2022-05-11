@@ -8,20 +8,20 @@ WORKDIR /usr/src/lib/reports
 COPY lib/reports/Cargo.toml Cargo.toml
 COPY lib/reports/src src
 
-WORKDIR /usr/src/functions/util
-COPY functions/util/Cargo.toml Cargo.toml
-COPY functions/util/src src
+WORKDIR /usr/src/api/util
+COPY api/util/Cargo.toml Cargo.toml
+COPY api/util/src src
 
-WORKDIR /usr/src/functions/reports
-COPY functions/reports/Cargo.toml Cargo.toml
-COPY functions/reports/src src
+WORKDIR /usr/src/api/reports
+COPY api/reports/Cargo.toml Cargo.toml
+COPY api/reports/src src
 
 RUN cargo +nightly build --release
 
 # Bundle Stage
 # https://hub.docker.com/_/debian
 FROM debian:bullseye-slim
-COPY --from=builder /usr/src/functions/reports/target/release/fn_reports .
+COPY --from=builder /usr/src/api/reports/target/release/fn_reports .
 ENV PORT 8080
 USER 1000
 CMD ["./fn_reports"]

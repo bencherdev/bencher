@@ -35,7 +35,7 @@ Repository: `bencher`
 `gcloud artifacts repositories list`
 
 Working Dir:
-`cd functions/demo`
+`cd api/demo`
 
 Build Artifact:
 `gcloud builds submit --timeout 1200 --tag us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest .`

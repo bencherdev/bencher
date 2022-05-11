@@ -2,7 +2,7 @@
 
 members = [
     "services/cli",
-    "services/functions/*",
+    "services/api/*",
     "services/lib/*",
     "services/schema",
 ]

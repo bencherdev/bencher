@@ -22,7 +22,7 @@ services:
 
   # fn_demo:
   #   build:
-  #     context: ./services/functions
+  #     context: ./services/api
   #     dockerfile: ./demo/dev.Dockerfile
   #   image: fn-demo
   #   container_name: fn_demo
@@ -32,7 +32,7 @@ services:
   fn_reports:
     build:
       context: ./services
-      dockerfile: ./functions/reports/dev.Dockerfile
+      dockerfile: ./api/reports/dev.Dockerfile
     image: fn-reports
     container_name: fn_reports
     ports:
