@@ -26,6 +26,7 @@ pub struct Bencher {
     benchmark: Benchmark,
     adapter: Adapter,
     email: EmailAddress,
+    token: String,
     project: Option<String>,
     testbed: Testbed,
     backend: Backend,
@@ -39,15 +40,21 @@ impl TryFrom<CliBencher> for Bencher {
             benchmark: Benchmark::try_from(bencher.benchmark)?,
             adapter: Adapter::from(bencher.adapter),
             email: map_email(bencher.email)?,
+            token: map_token(bencher.token)?,
             project: bencher.project,
             testbed: bencher.testbed.into(),
-            backend: Backend::try_from(bencher.url)?,
+            backend: Backend::try_from(bencher.backend)?,
         })
     }
 }
 
 fn map_email(email: String) -> Result<EmailAddress, BencherError> {
     EmailAddress::parse(&email, None).ok_or(BencherError::Email(email))
+}
+
+fn map_token(token: Option<String>) -> Result<String, BencherError> {
+    // TODO either unwrap token or get it from env var BENCHER_TOKEN
+    todo!()
 }
 
 impl Bencher {
@@ -67,6 +74,7 @@ impl Bencher {
     pub async fn send(&self, metrics: Metrics) -> Result<(), BencherError> {
         let report = Report::new(
             self.email.to_string(),
+            self.token.clone(),
             self.project.clone(),
             self.testbed.clone(),
             metrics,

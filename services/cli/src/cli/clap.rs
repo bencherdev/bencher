@@ -17,6 +17,10 @@ pub struct CliBencher {
     #[clap(short, long)]
     pub email: String,
 
+    /// User API token
+    #[clap(short, long)]
+    pub token: Option<String>,
+
     /// Benchmark project
     #[clap(short, long)]
     pub project: Option<String>,
@@ -25,9 +29,9 @@ pub struct CliBencher {
     #[clap(flatten)]
     pub testbed: CliTestbed,
 
-    /// Custom backend URL
-    #[clap(short, long)]
-    pub url: Option<String>,
+    /// Backend
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]
@@ -74,4 +78,11 @@ pub struct CliTestbed {
     /// Testbed Architecture
     #[clap(long, requires = "testbed")]
     pub arch: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct CliBackend {
+    /// Custom backend URL
+    #[clap(short, long)]
+    pub url: Option<String>,
 }

@@ -68,6 +68,7 @@ impl Reports {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Report {
     pub email: String,
+    pub token: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project: Option<String>,
     pub testbed: Testbed,
@@ -76,13 +77,22 @@ pub struct Report {
 }
 
 impl Report {
-    pub fn new(email: String, project: Option<String>, testbed: Testbed, metrics: Metrics) -> Self {
+    pub fn new(
+        email: String,
+        token: String,
+        project: Option<String>,
+        testbed: Testbed,
+        metrics: Metrics,
+    ) -> Self {
         Self {
             email,
+            token,
             project,
             testbed,
             date_time: Utc::now(),
             metrics,
         }
     }
+
+    // TOOD add a static token validation function, that does not need the secret key
 }

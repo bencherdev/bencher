@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use reports::Report;
 use url::Url;
 
+use crate::cli::clap::CliBackend;
 use crate::cli::BENCHER_URL;
 use crate::BencherError;
 
@@ -11,11 +12,13 @@ pub struct Backend {
     url: Option<Url>,
 }
 
-impl TryFrom<Option<String>> for Backend {
+impl TryFrom<CliBackend> for Backend {
     type Error = BencherError;
 
-    fn try_from(url: Option<String>) -> Result<Self, Self::Error> {
-        Ok(Self { url: map_url(url)? })
+    fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
+        Ok(Self {
+            url: map_url(backend.url)?,
+        })
     }
 }
 
