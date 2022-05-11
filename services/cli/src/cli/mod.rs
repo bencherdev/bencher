@@ -20,6 +20,7 @@ use benchmark::Benchmark;
 use benchmark::BenchmarkOutput;
 
 pub const BENCHER_URL: &str = "https://api.bencher.dev";
+const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
 
 #[derive(Debug)]
 pub struct Bencher {
@@ -53,8 +54,14 @@ fn map_email(email: String) -> Result<EmailAddress, BencherError> {
 }
 
 fn map_token(token: Option<String>) -> Result<String, BencherError> {
-    // TODO either unwrap token or get it from env var BENCHER_TOKEN
-    todo!()
+    // TODO add first pass token validation
+    if let Some(token) = token {
+        return Ok(token);
+    }
+    if let Ok(token) = std::env::var(BENCHER_TOKEN) {
+        return Ok(token);
+    };
+    Err(BencherError::Token)
 }
 
 impl Bencher {
