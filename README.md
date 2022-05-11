@@ -12,7 +12,7 @@ cargo install --locked trunk
 cargo install --locked wasm-pack
 
 cd bencher
-cargo run -- -x "cargo bench" --url http://localhost:8080/ repo --url git@github.com:epompeii/bencher_db.git --key $HOME/.ssh/id_ed25519 --push
+cargo run -- -x "cargo bench" --url http://localhost/v0/reports --email epompeii@protonmail.com
 
 cargo run --bin bencher -- ...
 

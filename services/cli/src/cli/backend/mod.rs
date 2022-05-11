@@ -53,7 +53,7 @@ impl Backend {
             .url
             .as_ref()
             .map(|url| url.to_string())
-            .unwrap_or(BENCHER_URL.into());
+            .unwrap_or(format!("{BENCHER_URL}/reports"));
 
         let client = reqwest::Client::new();
         let res = client.put(&url).json(&report).send().await?;
