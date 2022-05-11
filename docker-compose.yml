@@ -10,7 +10,7 @@ services:
       - 80:80
     depends_on:
       # - cli 
-      # - fn_demo
+      - postgres
       - fn_reports
 
   # cli:
@@ -20,14 +20,17 @@ services:
   #   image: bencher-cli
   #   container_name: bencher_cli
 
-  # fn_demo:
-  #   build:
-  #     context: ./services/api
-  #     dockerfile: ./demo/dev.Dockerfile
-  #   image: fn-demo
-  #   container_name: fn_demo
-  #   ports:
-  #       - 2000:8080
+  postgres:
+    build:
+      context: ./services/local/db
+      dockerfile: Dockerfile
+    image: bencher-postgres
+    container_name: bencher_postgres
+    ports:
+      - 5435:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
 
   fn_reports:
     build:
