@@ -261,6 +261,7 @@ dependencies = [
  "byteorder",
  "diesel_derives",
  "pq-sys",
+ "serde_json",
 ]
 
 [[package]]
@@ -431,6 +432,7 @@ dependencies = [
 name = "fn_dba"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "diesel",
  "dotenv",
  "dropshot",
