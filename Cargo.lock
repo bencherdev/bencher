@@ -403,6 +403,7 @@ name = "fn_reports"
 version = "0.1.0"
 dependencies = [
  "dropshot",
+ "reports",
  "schemars",
  "serde",
  "slog",

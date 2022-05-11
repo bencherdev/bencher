@@ -6,14 +6,16 @@ use dropshot::HttpResponseAccepted;
 use dropshot::RequestContext;
 use dropshot::TypedBody;
 
+use reports::Report;
+
 #[endpoint {
     method = PUT,
     path = "/v0/reports",
 }]
 pub async fn api_put_reports(
     _rqctx: Arc<RequestContext<()>>,
-    body: TypedBody<String>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
+    body: TypedBody<Report>,
+) -> Result<HttpResponseAccepted<Report>, HttpError> {
     let body = body.into_inner();
     Ok(HttpResponseAccepted(body))
 }
