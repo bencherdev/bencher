@@ -27,7 +27,7 @@ services:
     image: bencher-postgres
     container_name: bencher_postgres
     ports:
-      - 5435:5432
+      - 5432:5432
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
