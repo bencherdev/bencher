@@ -14,7 +14,6 @@ slog = "2.7.0"
 diesel = { version = "1.4.4", features = ["postgres", "chrono", "serde_json"] }
 dotenv = "0.15.0"
 util = { path = "../util", features = ["db"] }
-chrono = "0.4.19"
 
 [[bin]]
 name = "fn_dba"

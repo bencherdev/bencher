@@ -433,7 +433,6 @@ dependencies = [
 name = "fn_dba"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "diesel",
  "dotenv",
  "dropshot",
@@ -1998,6 +1997,7 @@ dependencies = [
 name = "util"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "diesel",
  "dropshot",
  "slog",
