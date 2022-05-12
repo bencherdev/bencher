@@ -18,6 +18,7 @@ cargo run --bin bencher -- ...
 
 diesel setup
 diesel migration run
+diesel migration revert
 diesel migration redo
 
 cd ui
