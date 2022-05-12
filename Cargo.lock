@@ -262,7 +262,6 @@ dependencies = [
  "chrono",
  "diesel_derives",
  "pq-sys",
- "serde_json",
 ]
 
 [[package]]
@@ -433,6 +432,7 @@ dependencies = [
 name = "fn_dba"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "diesel",
  "dotenv",
  "dropshot",
@@ -447,6 +447,7 @@ dependencies = [
 name = "fn_reports"
 version = "0.1.0"
 dependencies = [
+ "diesel",
  "dropshot",
  "email-address-parser",
  "reports",
@@ -1997,7 +1998,6 @@ dependencies = [
 name = "util"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "diesel",
  "dropshot",
  "slog",

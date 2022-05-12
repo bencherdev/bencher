@@ -14,8 +14,9 @@ serde = "1.0.137"
 tokio = "1.18.1"
 slog = "2.7.0"
 reports = { path = "../../lib/reports", features = ["schema"] }
-util = { path = "../util" }
+util = { path = "../util", features = ["db"] }
 email-address-parser = "1.0.3"
+diesel = { version = "1.4.4", features = ["postgres"] }
 
 [[bin]]
 name = "fn_reports"

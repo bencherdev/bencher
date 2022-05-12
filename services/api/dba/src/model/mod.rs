@@ -7,5 +7,5 @@ pub struct Report {
     pub id: u64,
     pub date_time: DateTime<Utc>,
     pub hash: u64,
-    pub len: u64,
+    pub length: u64,
 }

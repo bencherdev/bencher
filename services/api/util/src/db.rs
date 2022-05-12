@@ -3,8 +3,6 @@ use diesel::prelude::ConnectionResult;
 use diesel::prelude::*;
 use std::env;
 
-pub mod model;
-
 pub fn get_db_connection() -> ConnectionResult<PgConnection> {
     let username = env::var("DB_USER").unwrap_or("postgres".into());
     let password = env::var("DB_PASSWORD").unwrap_or("postgres".into());

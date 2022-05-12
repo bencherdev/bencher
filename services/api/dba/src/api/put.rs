@@ -18,3 +18,14 @@ pub async fn api_put_migrate(
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     Ok(HttpResponseAccepted(()))
 }
+
+#[endpoint {
+    method = PUT,
+    path = "/v0/dba/rollback",
+}]
+pub async fn api_put_rollback(
+    _rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
+    _body: TypedBody<()>,
+) -> Result<HttpResponseAccepted<()>, HttpError> {
+    Ok(HttpResponseAccepted(()))
+}

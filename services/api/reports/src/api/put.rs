@@ -1,5 +1,7 @@
 use std::sync::Arc;
+use std::sync::Mutex;
 
+use diesel::pg::PgConnection;
 use dropshot::endpoint;
 use dropshot::HttpError;
 use dropshot::HttpResponseAccepted;
@@ -14,7 +16,7 @@ use reports::Report;
     path = "/v0/reports",
 }]
 pub async fn api_put_reports(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
     body: TypedBody<Report>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let report = body.into_inner();
