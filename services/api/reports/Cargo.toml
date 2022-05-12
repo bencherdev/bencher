@@ -17,6 +17,7 @@ reports = { path = "../../lib/reports", features = ["schema"] }
 util = { path = "../util", features = ["db"] }
 email-address-parser = "1.0.3"
 diesel = { version = "1.4.4", features = ["postgres"] }
+chrono = "0.4.19"
 
 [[bin]]
 name = "fn_reports"
