@@ -1,0 +1,6 @@
+CREATE TABLE report (
+  id SERIAL PRIMARY KEY,
+  date_time TIMESTAMPTZ NOT NULL,
+  hash INTEGER NOT NULL,
+  length INTEGER NOT NULL
+);

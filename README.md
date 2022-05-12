@@ -17,6 +17,8 @@ cargo run -- -x "cargo bench" --url http://localhost/v0/reports --email epompeii
 cargo run --bin bencher -- ...
 
 diesel setup
+diesel migration run
+diesel migration redo
 
 cd ui
 wasm-pack build

@@ -12,6 +12,6 @@ pub fn get_db_connection() -> ConnectionResult<PgConnection> {
     PgConnection::establish(&url)
 }
 
-fn postgres_url(username: &str, password: &str, host: &str, db_name: &str) -> String {
+pub fn postgres_url(username: &str, password: &str, host: &str, db_name: &str) -> String {
     format!("postgres://{username}:{password}@{host}/{db_name}")
 }
