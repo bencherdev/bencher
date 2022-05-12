@@ -1,5 +1,7 @@
 use std::sync::Arc;
+use std::sync::Mutex;
 
+use diesel::pg::PgConnection;
 use dropshot::endpoint;
 use dropshot::HttpError;
 use dropshot::HttpResponseAccepted;
@@ -11,7 +13,7 @@ use dropshot::TypedBody;
     path = "/v0/dba/migrate",
 }]
 pub async fn api_put_migrate(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
     _body: TypedBody<()>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     Ok(HttpResponseAccepted(()))

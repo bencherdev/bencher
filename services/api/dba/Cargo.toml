@@ -13,7 +13,7 @@ tokio = "1.18.1"
 slog = "2.7.0"
 diesel = { version = "1.4.4", features = ["postgres", "serde_json"] }
 dotenv = "0.15.0"
-util = { path = "../util" }
+util = { path = "../util", features = ["db"] }
 chrono = "0.4.19"
 
 [[bin]]

@@ -1,6 +1,8 @@
 use dropshot::ApiDescription;
 use dropshot::ServerContext;
 
+#[cfg(feature = "db")]
+pub mod db;
 pub mod server;
 
 pub trait Registrar<Context> {
