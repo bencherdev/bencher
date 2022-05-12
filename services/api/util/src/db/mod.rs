@@ -4,6 +4,7 @@ use diesel::prelude::*;
 use std::env;
 
 pub mod model;
+pub mod schema;
 
 pub fn get_db_connection() -> ConnectionResult<PgConnection> {
     let username = env::var("DB_USER").unwrap_or("postgres".into());
