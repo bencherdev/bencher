@@ -66,7 +66,7 @@ pub async fn api_put_reports(
         let report: DbReport = diesel::insert_into(report::table)
             .values(&new_report)
             .get_result(db_conn)
-            .expect("Error saving new post");
+            .expect("Error saving new report");
         println!("{report:?}")
     }
 
