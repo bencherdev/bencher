@@ -16,6 +16,8 @@ cargo run -- -x "cargo bench" --url http://localhost/v0/reports --email epompeii
 
 cargo run --bin bencher -- ...
 
+cargo install diesel_cli --no-default-features --features postgres
+diesel migration generate $MIGRATION_NAME
 diesel setup
 diesel migration run
 diesel migration revert

@@ -262,6 +262,7 @@ dependencies = [
  "chrono",
  "diesel_derives",
  "pq-sys",
+ "serde_json",
 ]
 
 [[package]]
@@ -1981,6 +1982,8 @@ dependencies = [
  "chrono",
  "diesel",
  "dropshot",
+ "reports",
+ "serde_json",
  "slog",
 ]
 
