@@ -10,7 +10,7 @@ db = ["diesel", "chrono"]
 [dependencies]
 dropshot = "0.7.0"
 slog = "2.7.0"
-diesel = { version = "1.4.4", optional = true, features = [
+diesel = { version = "1.4.8", optional = true, features = [
     "postgres",
     "chrono",
     "serde_json",

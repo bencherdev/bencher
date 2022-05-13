@@ -11,12 +11,12 @@ schema = []
 dropshot = "0.7.0"
 schemars = "0.8.8"
 serde = "1.0.137"
-tokio = "1.18.1"
+tokio = "1.18.2"
 slog = "2.7.0"
 reports = { path = "../../lib/reports", features = ["schema"] }
 util = { path = "../util", features = ["db"] }
 email-address-parser = "1.0.3"
-diesel = { version = "1.4.4", features = ["postgres"] }
+diesel = { version = "1.4.8", features = ["postgres"] }
 chrono = "0.4.19"
 jsonwebtoken = "8.1.0"
 slug = "0.1.4"
