@@ -1,4 +1,5 @@
 import * as Plot from "@observablehq/plot";
+import axios from "axios";
 
 const aapl = [
   {
@@ -54,10 +55,34 @@ const plot = Plot.plot({
   marks: [Plot.line(aapl, { x: "Date", y: "Close" })],
 });
 
+const BENCHER_API_URL: String = "http://localhost"; 
+
+const options = {
+  url: `${BENCHER_API_URL}/v0/metrics`,
+  method: "get",
+  headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${window.localStorage.authToken}`
+  }
+};
+
+async function getMetrics() {
+  try {
+    const response = await axios(options);
+    console.log(response);
+    return response;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+const metrics = await getMetrics();
+
 export function LinePlot(prop) {
   return (
     <div>
       {plot}  
+      <em>{metrics}</em>
     </div>
   );
 }
