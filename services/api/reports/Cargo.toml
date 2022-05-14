@@ -10,7 +10,7 @@ schema = []
 [dependencies]
 dropshot = "0.7.0"
 schemars = "0.8.8"
-serde = "1.0.137"
+serde = { version = "1.0.137", features = ["derive"] }
 tokio = "1.18.2"
 slog = "2.7.0"
 reports = { path = "../../lib/reports", features = ["schema"] }

@@ -55,14 +55,13 @@ const plot = Plot.plot({
   marks: [Plot.line(aapl, { x: "Date", y: "Close" })],
 });
 
-const BENCHER_API_URL: String = "http://localhost"; 
+const BENCHER_API_URL: String = "http://localhost:8080"; 
 
 const options = {
   url: `${BENCHER_API_URL}/v0/metrics`,
   method: "get",
   headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${window.localStorage.authToken}`
   }
 };
 
@@ -82,7 +81,7 @@ export function LinePlot(prop) {
   return (
     <div>
       {plot}  
-      <em>{metrics}</em>
+      {/* <em>{metrics}</em> */}
     </div>
   );
 }
