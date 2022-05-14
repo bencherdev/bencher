@@ -23,19 +23,19 @@ const aapl = [
   {"Date":"2013-05-16T00:00:00.000Z","Open":60.462856,"High":62.549999,"Low":59.842857,"Close":62.082859,"Adj Close":48.702328,"Volume":150801000},
   {"Date":"2013-05-17T00:00:00.000Z","Open":62.721428,"High":62.869999,"Low":61.572857,"Close":61.894287,"Adj Close":48.554409,"Volume":106976100},
 ];
-// const plot = Plot.plot({
-//   y: {
-//     grid: true
-//   },
-//   marks: [
-//     Plot.line(aapl, {x: "Date", y: "Close"})
-//   ]
-// });
+const plot = Plot.plot({
+  y: {
+    grid: true
+  },
+  marks: [
+    Plot.line(aapl, {x: "Date", y: "Close"})
+  ]
+});
 
 const App = () => (
   <CounterProvider count={7}>
     <div>Hello {name}!</div>
-    {/* <div>{plot}</div> */}
+    <div>{plot}</div>
     <MiddleComponent />
   </CounterProvider>
 );

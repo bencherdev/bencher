@@ -23,7 +23,7 @@
     "webpack-dev-server": "^3.11.3"
   },
   "dependencies": {
-    "@observablehq/plot": "^0.4.3",
+    "@observablehq/plot": "^0.3.2",
     "solid-js": "^1.0.0"
   }
 }
