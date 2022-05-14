@@ -62,6 +62,8 @@ const options = {
   method: "get",
   headers: {
       "Content-Type": "application/json",
+      // Only use with explicit CORS
+      // Authorization: `Bearer ${window.localStorage.authToken}`
   }
 };
 
