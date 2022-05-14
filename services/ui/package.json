@@ -2,6 +2,7 @@
   "name": "bencher-ui",
   "version": "0.0.1",
   "description": "Application Benchmark Monitoring",
+  "type": "module",
   "scripts": {
     "build": "webpack",
     "start": "webpack serve --config webpack.config.js --open",
@@ -22,6 +23,7 @@
     "webpack-dev-server": "^3.11.3"
   },
   "dependencies": {
+    "@observablehq/plot": "^0.4.3",
     "solid-js": "^1.0.0"
   }
 }
