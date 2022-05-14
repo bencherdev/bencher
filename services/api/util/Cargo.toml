@@ -18,3 +18,4 @@ diesel = { version = "1.4.8", optional = true, features = [
 chrono = { version = "0.4.19", optional = true }
 serde_json = "1.0.81"
 serde = { version = "1.0.137", optional = true, features = ["derive"] }
+reports = { path = "../../lib/reports" }

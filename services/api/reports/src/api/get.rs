@@ -7,7 +7,8 @@ use dropshot::HttpError;
 use dropshot::HttpResponseOk;
 use dropshot::RequestContext;
 
-// use reports::MetaMetrics;
+use reports::MetaMetrics;
+
 use diesel::prelude::*;
 use util::db::model::Report as DbReport;
 use util::db::schema::report;
@@ -18,7 +19,7 @@ use util::db::schema::report;
 }]
 pub async fn api_get_metrics(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
-) -> Result<HttpResponseOk<Vec<String>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<MetaMetrics>>, HttpError> {
     let db_connection = rqctx.context();
 
     if let Ok(db_conn) = db_connection.lock() {
@@ -27,12 +28,9 @@ pub async fn api_get_metrics(
             .load::<DbReport>(db_conn)
             .expect("Error loading reports");
 
-        let reports = reports
-            .iter()
-            .map(|report| serde_json::to_string(report).unwrap())
-            .collect();
+        let metrics: Vec<MetaMetrics> = reports.into_iter().map(|report| report.into()).collect();
 
-        Ok(HttpResponseOk(reports))
+        Ok(HttpResponseOk(metrics))
     } else {
         Err(HttpError::for_bad_request(
             Some(String::from("BadInput")),

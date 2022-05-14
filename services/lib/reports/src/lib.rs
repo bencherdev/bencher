@@ -96,3 +96,14 @@ impl Report {
 
     // TOOD add a static token validation function, that does not need the secret key
 }
+
+// This is just for testing purposes
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct MetaMetrics {
+    pub id: usize,
+    pub date_time: DateTime<Utc>,
+    pub metrics: Metrics,
+    pub hash: u64,
+    pub length: usize,
+}

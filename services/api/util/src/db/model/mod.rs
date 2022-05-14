@@ -4,6 +4,8 @@ use diesel::Insertable;
 use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
+use reports::MetaMetrics;
+
 use crate::db::schema::report;
 
 #[derive(Queryable, Debug, Deserialize, Serialize)]
@@ -22,4 +24,17 @@ pub struct NewReport {
     pub metrics: serde_json::Value,
     pub hash: i64,
     pub length: i32,
+}
+
+// This is just for testing purposes
+impl Into<MetaMetrics> for Report {
+    fn into(self) -> MetaMetrics {
+        MetaMetrics {
+            id: self.id as usize,
+            date_time: self.date_time,
+            metrics: serde_json::from_str(&serde_json::to_string(&self.metrics).unwrap()).unwrap(),
+            hash: self.hash as u64,
+            length: self.length as usize,
+        }
+    }
 }
