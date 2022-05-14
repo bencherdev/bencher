@@ -64,3 +64,11 @@ Setup `api.bencher.dev` to hit the load balancer.
 This will make things much simpler for DNS purposes and separate hosting of the front and backend.
 
 https://github.com/ryansolid/solid-ts-webpack
+npm install
+{
+  "scripts": {
+    "dev": "vite", // start dev server, aliases: `vite dev`, `vite serve`
+    "build": "vite build", // build for production
+    "preview": "vite preview" // locally preview production build
+  }
+}
