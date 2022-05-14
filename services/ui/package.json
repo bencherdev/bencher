@@ -9,6 +9,8 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "bulma": "^0.9.4",
+    "node-sass": "^7.0.1",
     "sass": "^1.49.9",
     "typescript": "^4.6.3",
     "vite": "^2.8.6",

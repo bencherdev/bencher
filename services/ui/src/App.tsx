@@ -1,7 +1,7 @@
+import './styles/styles.scss';
 import { Component, createSignal } from 'solid-js';
-import './App.scss';
-import Counter from './Counter';
 import * as Plot from "@observablehq/plot";
+import Counter from './Counter';
 
 const aapl = [
   {"Date":"2013-05-13T00:00:00.000Z","Open":64.501427,"High":65.414284,"Low":64.5,"Close":64.96286,"Adj Close":50.961628,"Volume":79237200},
