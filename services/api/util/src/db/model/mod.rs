@@ -2,10 +2,11 @@ use chrono::DateTime;
 use chrono::Utc;
 use diesel::Insertable;
 use diesel::Queryable;
+use serde::{Deserialize, Serialize};
 
 use crate::db::schema::report;
 
-#[derive(Queryable, Debug)]
+#[derive(Queryable, Debug, Deserialize, Serialize)]
 pub struct Report {
     pub id: i32,
     pub date_time: DateTime<Utc>,

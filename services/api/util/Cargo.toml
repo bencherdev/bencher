@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-db = ["diesel", "chrono"]
+db = ["diesel", "chrono", "serde"]
 
 [dependencies]
 dropshot = "0.7.0"
@@ -17,3 +17,4 @@ diesel = { version = "1.4.8", optional = true, features = [
 ] }
 chrono = { version = "0.4.19", optional = true }
 serde_json = "1.0.81"
+serde = { version = "1.0.137", optional = true, features = ["derive"] }

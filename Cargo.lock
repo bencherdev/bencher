@@ -2074,6 +2074,7 @@ dependencies = [
  "chrono",
  "diesel",
  "dropshot",
+ "serde",
  "serde_json",
  "slog",
 ]

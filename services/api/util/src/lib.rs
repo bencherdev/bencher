@@ -1,4 +1,5 @@
-#[cfg_attr(feature = "db", macro_use)]
+#[cfg(feature = "db")]
+#[macro_use]
 extern crate diesel;
 
 use dropshot::ApiDescription;
