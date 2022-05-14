@@ -72,3 +72,6 @@ npm install
     "preview": "vite preview" // locally preview production build
   }
 }
+
+npx prettier --write .
+npx prettier --check .

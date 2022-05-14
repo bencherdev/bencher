@@ -2,5 +2,10 @@
   "workbench.colorTheme": "Default Dark+",
   "files.eol": "\n",
   "editor.wordWrap": "on",
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "rust-analyzer.cargo.allFeatures": false,
+  "rust-analyzer.cargo.features": [],
+  "prettier.configPath": "./services/ui/.prettierrc.json",
+  "prettier.ignorePath": "./services/ui/.prettierignore",
+  "prettier.prettierPath": "./services/ui/node_modules/prettier"
 }
