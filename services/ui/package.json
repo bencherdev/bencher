@@ -1,7 +1,7 @@
 {
-  "name": "vite-template-solid",
-  "version": "0.0.0",
-  "description": "",
+  "name": "bencher-ui",
+  "version": "0.0.1",
+  "description": "Application Benchmark Monitoring",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
