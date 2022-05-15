@@ -1,8 +1,3 @@
 [workspace]
 
-members = [
-    "services/cli",
-    "services/api/*",
-    "services/lib/*",
-    "services/schema",
-]
+members = ["services/cli", "services/api/*", "services/lib/*"]
