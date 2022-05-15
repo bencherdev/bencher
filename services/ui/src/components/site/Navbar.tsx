@@ -8,7 +8,14 @@ export function Navbar() {
             <img src="/bencher_rabbit_navbar.png" width="152" height="28"/>
           </a>
       
-          <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+          <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="bencherNavbar"
+            onClick={() => {
+              let toggle = document.querySelector(".navbar-burger");
+              let menu = document.querySelector(".navbar-menu");
+              toggle.classList.toggle("is-active");
+              menu.classList.toggle("is-active");
+            }} 
+          >
             <span aria-hidden="true"></span>
             <span aria-hidden="true"></span>
             <span aria-hidden="true"></span>
@@ -29,10 +36,10 @@ export function Navbar() {
           <div class="navbar-end">
             <div class="navbar-item">
               <div class="buttons">
-                <a class="button is-light">
+                <a class="button is-light" href={BENCHER_UI_URL}>
                   Log in
                 </a>
-                <a class="button is-primary">
+                <a class="button is-primary" href={BENCHER_UI_URL}>
                   <strong>Sign up</strong>
                 </a>
               </div>
