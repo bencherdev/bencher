@@ -1,3 +1,3 @@
-# Bencher
+# Bencher CLI
 
-A command line utility for application benchmark monitoring.
+A command line utility for tracking your benchmarks.
