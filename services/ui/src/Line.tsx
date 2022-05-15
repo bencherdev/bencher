@@ -1,4 +1,5 @@
 import { createSignal, createEffect } from "solid-js";
+import * as d3 from "d3";
 
 const [metaMetrics, setMetaMetrics] = createSignal([]);
 
@@ -32,6 +33,7 @@ await fetchMetaMetrics();
 const intoDataArrays = () => {
   const meta_metrics_array = metaMetrics();
   var data_arrays = {};
+
   for (let i = 0; i < meta_metrics_array.length; i++) {
     let meta_metrics_data = meta_metrics_array[i];
 
@@ -49,6 +51,7 @@ const intoDataArrays = () => {
       }
     }
   }
+
   return data_arrays;
 }
 
@@ -56,9 +59,14 @@ const intoPlotMarks = () => {
   let data_arrays = intoDataArrays();  
   let plot_arrays = [];
 
+  let colors = d3.schemeTableau10;
+  let index = 0;
   for (const [key, value] of Object.entries(data_arrays)) {
-    plot_arrays.push(Plot.line(value));
+    let color = colors[index % 10];
+    plot_arrays.push(Plot.line(value, {stroke: color}));
+    index++;
   }
+
   return plot_arrays;
 }
 
