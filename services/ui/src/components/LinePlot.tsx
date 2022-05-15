@@ -37,7 +37,7 @@ const intoDataArrays = () => {
   for (let i = 0; i < meta_metrics_array.length; i++) {
     let meta_metrics_data = meta_metrics_array[i];
 
-    let date_time = meta_metrics_data.date_time;
+    let date_time = new Date(meta_metrics_data.date_time);
     let metrics_obj = meta_metrics_data?.metrics;
 
     for (const [key, value] of Object.entries(metrics_obj)) {
