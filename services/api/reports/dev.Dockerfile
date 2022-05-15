@@ -27,6 +27,9 @@ RUN echo "fn main() {}" > /usr/src/api/reports/src/bin/fn_reports.rs
 # Cache all dependencies
 RUN cargo test --no-run
 
+# Add entrypoint.sh
+COPY api/reports/entrypoint.sh /usr/src/api/reports/entrypoint.sh
+RUN chmod +x /usr/src/api/reports/entrypoint.sh
 
 # Copy over lib code
 WORKDIR /usr/src/lib/reports
@@ -40,4 +43,4 @@ COPY api/util/src src
 WORKDIR /usr/src/api/reports
 COPY api/reports/src src
 
-CMD cargo run
+CMD ["/usr/src/api/reports/entrypoint.sh"]
