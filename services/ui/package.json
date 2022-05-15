@@ -10,6 +10,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^17.0.33",
     "bulma": "^0.9.4",
     "node-sass": "^7.0.1",
     "prettier": "2.6.2",

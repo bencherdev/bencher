@@ -23,10 +23,6 @@ services:
       - "/usr/src/ui/node_modules"
     ports:
       - 6000:3000
-    environment:
-      - NODE_ENV=development
-      - BENCHER_UI_URL=http://localhost
-      - BENCHER_API_URL=http://localhost
     depends_on:
       - fn_dba
       - fn_reports

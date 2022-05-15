@@ -6,7 +6,7 @@ const [metaMetrics, setMetaMetrics] = createSignal([]);
 import * as Plot from "@observablehq/plot";
 import axios from "axios";
 
-const BENCHER_API_URL: String = "http://localhost"; 
+const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 const options = {
   url: `${BENCHER_API_URL}/v0/metrics`,

@@ -1,4 +1,4 @@
-const BENCHER_UI_URL = "http://localhost:3000";
+const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
 
 export function Navbar() {
     return (
