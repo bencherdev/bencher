@@ -5,7 +5,7 @@ export function Navbar() {
         <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
           <a class="navbar-item" href={BENCHER_UI_URL}>
-            <img src="/bencher_rabbit_navbar.png" width="152" height="28"/>
+            <img src="/bencher_navbar.png" width="152" height="28"/>
           </a>
       
           <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="bencherNavbar"

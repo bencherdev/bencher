@@ -21,7 +21,6 @@ const options = {
 async function fetchMetaMetrics() {
   try {
     const response = await axios(options);
-    console.log(response?.data);
     setMetaMetrics(response?.data);
   } catch (error) {
     console.error(error);

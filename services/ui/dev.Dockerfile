@@ -13,4 +13,4 @@ RUN npm config set unsafe-perm true
 RUN npm install
 
 # Start dev vite server
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "host"]
