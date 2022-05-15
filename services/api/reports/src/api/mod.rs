@@ -4,8 +4,8 @@ use diesel::pg::PgConnection;
 use dropshot::ApiDescription;
 use util::Registrar;
 
-mod get;
-mod put;
+pub mod get;
+pub mod put;
 
 pub struct Api;
 

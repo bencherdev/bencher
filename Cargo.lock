@@ -1467,9 +1467,15 @@ dependencies = [
 name = "schema"
 version = "0.1.0"
 dependencies = [
- "reports",
+ "diesel",
+ "dropshot",
+ "fn_dba",
+ "fn_reports",
  "schemars",
+ "serde",
  "serde_json",
+ "tokio",
+ "util",
 ]
 
 [[package]]
