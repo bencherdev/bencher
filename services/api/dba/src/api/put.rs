@@ -1,124 +1,65 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::io::BufWriter;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use chrono::DateTime;
-use chrono::Utc;
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use diesel::RunQueryDsl;
+use diesel_migrations::run_pending_migrations_in_directory;
 use dropshot::endpoint;
 use dropshot::HttpError;
-use dropshot::HttpResponseAccepted;
+use dropshot::HttpResponseHeaders;
+use dropshot::HttpResponseOk;
 use dropshot::RequestContext;
-use dropshot::TypedBody;
-use email_address_parser::EmailAddress;
+use util::server::headers::CorsHeaders;
 
-use reports::Metrics;
-use reports::Report;
-
-use util::db::model::{NewReport as NewDbReport, Report as DbReport};
-use util::db::schema::report;
-
-pub const DEFAULT_PROJECT: &str = "default";
+diesel_migrations::embed_migrations!("../util/migrations");
 
 #[endpoint {
     method = PUT,
-    path = "/v0/reports",
+    path = "/v0/dba/migrate",
 }]
-pub async fn api_put_reports(
+pub async fn api_put_dba_migrate(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
-    body: TypedBody<Report>,
-) -> Result<HttpResponseAccepted<()>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
-
-    let report = body.into_inner();
-    let Report {
-        email,
-        token,
-        project,
-        testbed,
-        date_time,
-        metrics,
-    } = report;
-
-    // TODO actually use these values
-    let email = map_email(email)?;
-    let claims = map_token(token)?;
-    let project = map_project(project.as_deref());
-
-    let MetricsForDb {
-        value,
-        hash,
-        length,
-    } = map_metrics(metrics)?;
-
-    let new_report = NewDbReport {
-        date_time,
-        metrics: value,
-        hash: hash as i64,
-        length: length as i32,
-    };
 
     if let Ok(db_conn) = db_connection.lock() {
         let db_conn = &*db_conn;
-        let report: DbReport = diesel::insert_into(report::table)
-            .values(&new_report)
-            .get_result(db_conn)
-            .expect("Error saving new report");
-        println!("{report:?}")
-    }
 
-    Ok(HttpResponseAccepted(()))
-}
+        let migrations_dir = PathBuf::from("../util/migrations");
+        let mut output = BufWriter::new(Vec::new());
+        run_pending_migrations_in_directory(db_conn, &migrations_dir, &mut output).map_err(
+            |e| {
+                HttpError::for_bad_request(
+                    Some(String::from("BadInput")),
+                    format!("Failed to run migration: {e}"),
+                )
+            },
+        )?;
 
-fn map_email(email: String) -> Result<EmailAddress, HttpError> {
-    EmailAddress::parse(&email, None).ok_or(HttpError::for_bad_request(
-        Some(String::from("BadInput")),
-        format!("Failed to parse email: {email}"),
-    ))
-}
+        let bytes = output.into_inner().map_err(|e| {
+            HttpError::for_bad_request(
+                Some(String::from("BadInput")),
+                format!("Failed to run migration: {e}"),
+            )
+        })?;
+        let contents = String::from_utf8(bytes).map_err(|e| {
+            HttpError::for_bad_request(
+                Some(String::from("BadInput")),
+                format!("Failed to run migration: {e}"),
+            )
+        })?;
 
-// TODO return Claims from jsonwebtoken::decode()
-fn map_token(token: String) -> Result<(), HttpError> {
-    Ok(())
-}
+        let resp = HttpResponseHeaders::new(
+            HttpResponseOk(contents),
+            CorsHeaders::new_origin_all("PUT".into(), "Content-Type".into()),
+        );
 
-fn map_project(project: Option<&str>) -> String {
-    if let Some(project) = project {
-        slug::slugify(project)
+        Ok(resp)
     } else {
-        DEFAULT_PROJECT.into()
-    }
-}
-
-struct MetricsForDb {
-    value: serde_json::Value,
-    hash: u64,
-    length: usize,
-}
-
-fn map_metrics(metrics: Metrics) -> Result<MetricsForDb, HttpError> {
-    let err = |e| {
-        HttpError::for_bad_request(
+        Err(HttpError::for_bad_request(
             Some(String::from("BadInput")),
-            format!("Failed to parse metrics {metrics:?}: {e}"),
-        )
-    };
-    let metrics_str = serde_json::to_string(&metrics).map_err(err)?;
-    let value: serde_json::Value = serde_json::from_str(&metrics_str).map_err(err)?;
-    let hash = calculate_hash(&metrics_str);
-    let length = metrics_str.len();
-    Ok(MetricsForDb {
-        value,
-        hash,
-        length,
-    })
-}
-
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
+            format!("Failed to run query"),
+        ))
+    }
 }

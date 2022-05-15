@@ -11,6 +11,7 @@ services:
     depends_on:
       # - cli 
       - postgres
+      - fn_dba
       - fn_reports
 
   # cli:
@@ -32,6 +33,19 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
+  fn_dba:
+    build:
+      context: ./services
+      dockerfile: ./api/dba/dev.Dockerfile
+    image: fn-dba
+    container_name: fn_dba
+    ports:
+        - 2000:8080
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@localhost/bencher
+    depends_on:
+      - postgres
+
   fn_reports:
     build:
       context: ./services
@@ -40,3 +54,6 @@ services:
     container_name: fn_reports
     ports:
         - 2001:8080
+    depends_on:
+      - postgres
+      - fn_dba

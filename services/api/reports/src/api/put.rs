@@ -3,10 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use chrono::DateTime;
-use chrono::Utc;
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use dropshot::endpoint;
 use dropshot::HttpError;

@@ -7,27 +7,13 @@ use dropshot::HttpError;
 use dropshot::HttpResponseHeaders;
 use dropshot::HttpResponseOk;
 use dropshot::RequestContext;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use reports::MetaMetrics;
 
 use diesel::prelude::*;
 use util::db::model::Report as DbReport;
 use util::db::schema::report;
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CorsHeaders {
-    #[serde(rename = "Access-Control-Allow-Origin")]
-    pub access_control_allow_origin: String,
-    #[serde(rename = "Access-Control-Allow-Methods")]
-    pub access_control_allow_methods: String,
-    #[serde(rename = "Access-Control-Allow-Headers")]
-    pub access_control_allow_headers: String,
-    #[serde(rename = "Access-Control-Allow-Credentials")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub access_control_allow_credentials: Option<bool>,
-}
+use util::server::headers::CorsHeaders;
 
 #[endpoint {
     method = GET,
@@ -48,12 +34,7 @@ pub async fn api_get_metrics(
 
         let resp = HttpResponseHeaders::new(
             HttpResponseOk(metrics),
-            CorsHeaders {
-                access_control_allow_origin: "*".into(),
-                access_control_allow_methods: "PUT".into(),
-                access_control_allow_headers: "Content-Type".into(),
-                access_control_allow_credentials: None,
-            },
+            CorsHeaders::new_origin_all("PUT".into(), "Content-Type".into()),
         );
 
         Ok(resp)

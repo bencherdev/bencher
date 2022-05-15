@@ -16,13 +16,13 @@ RUN cargo new util
 WORKDIR /usr/src/api/util
 COPY api/util/Cargo.toml Cargo.toml
 
-# Create reports
+# Create dba
 WORKDIR /usr/src/api
-RUN cargo new --lib reports 
-WORKDIR /usr/src/api/reports
-COPY api/reports/Cargo.toml Cargo.toml
-RUN mkdir /usr/src/api/reports/src/bin
-RUN echo "fn main() {}" > /usr/src/api/reports/src/bin/fn_reports.rs
+RUN cargo new --lib dba 
+WORKDIR /usr/src/api/dba
+COPY api/dba/Cargo.toml Cargo.toml
+RUN mkdir /usr/src/api/dba/src/bin
+RUN echo "fn main() {}" > /usr/src/api/dba/src/bin/fn_dba.rs
 
 # Cache all dependencies
 RUN cargo test --no-run
@@ -35,9 +35,10 @@ COPY lib/reports/src src
 # Copy over util code
 WORKDIR /usr/src/api/util
 COPY api/util/src src
+COPY api/util/migrations migrations
 
-# Copy over reports code
-WORKDIR /usr/src/api/reports
-COPY api/reports/src src
+# Copy over dba code
+WORKDIR /usr/src/api/dba
+COPY api/dba/src src
 
 CMD cargo run

@@ -11,6 +11,8 @@ const DEFAULT_PORT: &str = "8080";
 
 use crate::Registrar;
 
+pub mod headers;
+
 pub async fn get_server<Context>(
     api_name: &str,
     registrar: &mut impl Registrar<Context>,

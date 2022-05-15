@@ -1,5 +1,5 @@
 [package]
-name = "fn_reports"
+name = "fn_dba"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,6 +21,7 @@ chrono = "0.4.19"
 jsonwebtoken = "8.1.0"
 slug = "0.1.4"
 serde_json = "1.0.81"
+diesel_migrations = "1.4.0"
 
 [[bin]]
-name = "fn_reports"
+name = "fn_dba"
