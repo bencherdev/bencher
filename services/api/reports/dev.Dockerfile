@@ -1,6 +1,9 @@
 # https://hub.docker.com/_/rust
 FROM rust:1.60.0-bullseye
 
+RUN apt-get update \
+    && apt-get install -y netcat
+
 RUN rustup toolchain install nightly
 RUN rustup override set nightly
 
