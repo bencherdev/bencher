@@ -1,9 +1,11 @@
+const BENCHER_UI_URL = "http://localhost:3000";
+
 export function Navbar() {
     return (
         <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
-          <a class="navbar-item" href="https://bulma.io">
-            <img src="/bencher_navbar.png" width="152" height="28"/>
+          <a class="navbar-item" href={BENCHER_UI_URL}>
+            <img src="/bencher_rabbit_navbar.png" width="152" height="28"/>
           </a>
       
           <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
@@ -15,45 +17,23 @@ export function Navbar() {
       
         <div id="navbarBasicExample" class="navbar-menu">
           <div class="navbar-start">
-            <a class="navbar-item">
-              Home
+            <a class="navbar-item" href={BENCHER_UI_URL}>
+              Docs
             </a>
-      
-            <a class="navbar-item">
-              Documentation
+
+            <a class="navbar-item" href={BENCHER_UI_URL}>
+              API
             </a>
-      
-            <div class="navbar-item has-dropdown is-hoverable">
-              <a class="navbar-link">
-                More
-              </a>
-      
-              <div class="navbar-dropdown">
-                <a class="navbar-item">
-                  About
-                </a>
-                <a class="navbar-item">
-                  Jobs
-                </a>
-                <a class="navbar-item">
-                  Contact
-                </a>
-                <hr class="navbar-divider"/>
-                <a class="navbar-item">
-                  Report an issue
-                </a>
-              </div>
-            </div>
           </div>
       
           <div class="navbar-end">
             <div class="navbar-item">
               <div class="buttons">
-                <a class="button is-primary">
-                  <strong>Sign up</strong>
-                </a>
                 <a class="button is-light">
                   Log in
+                </a>
+                <a class="button is-primary">
+                  <strong>Sign up</strong>
                 </a>
               </div>
             </div>
