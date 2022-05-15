@@ -42,6 +42,7 @@ COPY lib/reports/src src
 WORKDIR /usr/src/api/util
 COPY api/util/src src
 COPY api/util/migrations migrations
+COPY api/util/diesel.toml diesel.toml
 
 # Copy over dba code
 WORKDIR /usr/src/api/dba

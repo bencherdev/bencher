@@ -11,6 +11,8 @@ COPY lib/reports/src src
 WORKDIR /usr/src/api/util
 COPY api/util/Cargo.toml Cargo.toml
 COPY api/util/src src
+COPY api/util/migrations migrations
+COPY api/util/diesel.toml diesel.toml
 
 WORKDIR /usr/src/api/reports
 COPY api/reports/Cargo.toml Cargo.toml

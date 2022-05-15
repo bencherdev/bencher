@@ -7,14 +7,7 @@ pub mod model;
 pub mod schema;
 
 pub fn get_db_connection() -> ConnectionResult<PgConnection> {
-    let username = env::var("DB_USER").unwrap_or("postgres".into());
-    let password = env::var("DB_PASSWORD").unwrap_or("postgres".into());
-    let host = env::var("DB_HOST").unwrap_or("localhost".into());
-    let db_name = env::var("DB_NAME").unwrap_or("bencher".into());
-    let url = postgres_url(&username, &password, &host, &db_name);
-    PgConnection::establish(&url)
-}
-
-pub fn postgres_url(username: &str, password: &str, host: &str, db_name: &str) -> String {
-    format!("postgres://{username}:{password}@{host}/{db_name}")
+    let database_url =
+        env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost/bencher".into());
+    PgConnection::establish(&database_url)
 }

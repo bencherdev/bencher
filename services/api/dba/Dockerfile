@@ -12,6 +12,7 @@ WORKDIR /usr/src/api/util
 COPY api/util/Cargo.toml Cargo.toml
 COPY api/util/src src
 COPY api/util/migrations migrations
+COPY api/util/diesel.toml diesel.toml
 
 WORKDIR /usr/src/api/dba
 COPY api/dba/Cargo.toml Cargo.toml
