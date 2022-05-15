@@ -1,3 +1,7 @@
+import { createSignal, createEffect } from "solid-js";
+
+const [metrics, setMetrics] = createSignal(null);
+
 import * as Plot from "@observablehq/plot";
 import axios from "axios";
 
@@ -48,14 +52,8 @@ const aapl = [
     Volume: 106976100,
   },
 ];
-const plot = Plot.plot({
-  y: {
-    grid: true,
-  },
-  marks: [Plot.line(aapl, { x: "Date", y: "Close" })],
-});
 
-const BENCHER_API_URL: String = "http://localhost:8080"; 
+const BENCHER_API_URL: String = "http://localhost"; 
 
 const options = {
   url: `${BENCHER_API_URL}/v0/metrics`,
@@ -67,17 +65,40 @@ const options = {
   }
 };
 
-async function getMetrics() {
+async function fetchMetrics() {
   try {
     const response = await axios(options);
-    console.log(response);
-    return response;
+    console.log(response?.data);
+    setMetrics(response?.data);
   } catch (error) {
     console.error(error);
   }
 }
 
-const metrics = await getMetrics();
+await fetchMetrics();
+
+
+const intoData = () => {
+  const metrics_array = metrics();
+  var data_array = [];
+  for (let i = 0; i < metrics_array.length; i++) {
+    let metrics_data = metrics_array[i];
+    let date_time = metrics_data.date_time;
+    let latency = metrics_data?.metrics["tests::benchmark_a"]?.latency?.duration;
+    let nanos = latency?.secs * 1_000_000_000 + latency?.nanos;
+    data_array.push([date_time, nanos]);
+  }
+  return data_array;
+}
+
+const plot_data = intoData();
+
+const plot = Plot.plot({
+  y: {
+    grid: true,
+  },
+  marks: [Plot.line(plot_data)],
+});
 
 export function LinePlot(prop) {
   return (
