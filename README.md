@@ -38,6 +38,10 @@ Region: `us-central1`
 Project: `learned-stone-349519`
 `gcloud config get-value project`
 
+`gcloud config set project bencher`
+`gcloud config get-value project`
+`bencher`
+
 Repository: `bencher`
 `gcloud artifacts repositories list`
 
@@ -47,11 +51,17 @@ Working Dir:
 Build Artifact:
 `gcloud builds submit --timeout 1200 --tag us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest .`
 
+`gcloud builds submit --timeout 1200 --tag us-central1-docker.pkg.dev/bencher/bencher/fn-demo:latest .`
+
 Deploy to Cloud Run:
 `gcloud run deploy fn-demo --image us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest`
 
+`gcloud run deploy fn-demo --image us-central1-docker.pkg.dev/bencher/bencher/fn-demo:latest`
+
 Create Network Endpoint Groups:
 `gcloud compute network-endpoint-groups create bencher-neg --region=us-central1 --network-endpoint-type=serverless --cloud-run-service=fn-demo`
+
+`gcloud compute network-endpoint-groups create bencher --region=us-central1 --network-endpoint-type=serverless --cloud-run-service=fn-demo`
 
 Old Container Registry way:
 `gcloud auth configure-docker`
