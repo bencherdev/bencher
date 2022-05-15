@@ -79,11 +79,10 @@ const plot = Plot.plot({
   marks: plot_marks,
 });
 
-export function LinePlot(prop) {
+export function LinePlot() {
   return (
     <div>
       {plot}  
-      {/* <em>{metrics}</em> */}
     </div>
   );
 }
