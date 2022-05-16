@@ -78,4 +78,4 @@ services:
       context: ./services/api/schema
       dockerfile: dev.Dockerfile
     ports:
-      - 2999:80
+      - 2999:8080

@@ -1,3 +1,4 @@
+# TODO move to multistage build
 # https://hub.docker.com/r/swaggerapi/swagger-ui
 FROM swaggerapi/swagger-ui:v4.11.1
 
