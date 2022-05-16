@@ -440,7 +440,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fn_dba"
+name = "fn_admin"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -1736,7 +1736,7 @@ version = "0.1.0"
 dependencies = [
  "diesel",
  "dropshot",
- "fn_dba",
+ "fn_admin",
  "fn_reports",
  "literally",
  "schemars",

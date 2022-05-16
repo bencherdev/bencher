@@ -16,10 +16,10 @@ diesel_migrations::embed_migrations!("../util/migrations");
 
 #[endpoint {
     method = PUT,
-    path = "/v0/dba/migrate",
-    tags = ["dba"]
+    path = "/v0/admin/migrate",
+    tags = ["admin"]
 }]
-pub async fn api_put_dba_migrate(
+pub async fn api_put_admin_migrate(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();

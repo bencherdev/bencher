@@ -14,9 +14,9 @@ COPY api/util/src src
 COPY api/util/migrations migrations
 COPY api/util/diesel.toml diesel.toml
 
-WORKDIR /usr/src/api/dba
-COPY api/dba/Cargo.toml Cargo.toml
-COPY api/dba/src src
+WORKDIR /usr/src/api/admin
+COPY api/admin/Cargo.toml Cargo.toml
+COPY api/admin/src src
 
 WORKDIR /usr/src/api/reports
 COPY api/reports/Cargo.toml Cargo.toml

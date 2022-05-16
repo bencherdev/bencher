@@ -19,20 +19,20 @@ RUN cargo new util
 WORKDIR /usr/src/api/util
 COPY api/util/Cargo.toml Cargo.toml
 
-# Create dba
+# Create admin
 WORKDIR /usr/src/api
-RUN cargo new --lib dba 
-WORKDIR /usr/src/api/dba
-COPY api/dba/Cargo.toml Cargo.toml
-RUN mkdir /usr/src/api/dba/src/bin
-RUN echo "fn main() {}" > /usr/src/api/dba/src/bin/fn_dba.rs
+RUN cargo new --lib admin 
+WORKDIR /usr/src/api/admin
+COPY api/admin/Cargo.toml Cargo.toml
+RUN mkdir /usr/src/api/admin/src/bin
+RUN echo "fn main() {}" > /usr/src/api/admin/src/bin/fn_admin.rs
 
 # Cache all dependencies
 RUN cargo test --no-run
 
 # Add entrypoint.sh
-COPY api/reports/entrypoint.sh /usr/src/api/dba/entrypoint.sh
-RUN chmod +x /usr/src/api/dba/entrypoint.sh
+COPY api/reports/entrypoint.sh /usr/src/api/admin/entrypoint.sh
+RUN chmod +x /usr/src/api/admin/entrypoint.sh
 
 # Copy over lib code
 WORKDIR /usr/src/lib/reports
@@ -44,8 +44,8 @@ COPY api/util/src src
 COPY api/util/migrations migrations
 COPY api/util/diesel.toml diesel.toml
 
-# Copy over dba code
-WORKDIR /usr/src/api/dba
-COPY api/dba/src src
+# Copy over admin code
+WORKDIR /usr/src/api/admin
+COPY api/admin/src src
 
-CMD ["/usr/src/api/dba/entrypoint.sh"]
+CMD ["/usr/src/api/admin/entrypoint.sh"]

@@ -10,7 +10,7 @@ pub struct Api;
 
 impl Registrar<Mutex<PgConnection>> for Api {
     fn register(&self, api: &mut ApiDescription<Mutex<PgConnection>>) -> Result<(), String> {
-        api.register(put::api_put_dba_migrate)?;
+        api.register(put::api_put_admin_migrate)?;
         Ok(())
     }
 }

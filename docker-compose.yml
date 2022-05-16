@@ -11,7 +11,7 @@ services:
     depends_on:
       # - cli 
       - ui
-      - fn_dba
+      - fn_admin
       - fn_reports
 
   ui:
@@ -24,7 +24,7 @@ services:
     ports:
       - 6000:3000
     depends_on:
-      - fn_dba
+      - fn_admin
       - fn_reports
 
   # cli:
@@ -46,12 +46,12 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
-  fn_dba:
+  fn_admin:
     build:
       context: ./services
-      dockerfile: ./api/dba/dev.Dockerfile
-    image: fn-dba
-    container_name: fn_dba
+      dockerfile: ./api/admin/dev.Dockerfile
+    image: fn-admin
+    container_name: fn_admin
     ports:
         - 2000:8080
     environment:
@@ -71,7 +71,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/bencher
     depends_on:
       - postgres
-      - fn_dba
+      - fn_admin
 
   swagger:
     build:

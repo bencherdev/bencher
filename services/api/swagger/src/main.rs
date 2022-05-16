@@ -17,7 +17,7 @@ fn main() -> Result<(), String> {
         allow_other_tags: false,
         endpoint_tag_policy: EndpointTagPolicy::ExactlyOne,
         tag_definitions: literally::hmap!{
-            "dba" => TagDetails { description: Some("Database operations".into()), external_docs: None},
+            "admin" => TagDetails { description: Some("Database operations".into()), external_docs: None},
             "report" => TagDetails { description: Some("Benchmark reports".into()), external_docs: None},
             "metrics" => TagDetails { description: Some("Benchmark metrics".into()), external_docs: None},
     }})
@@ -29,7 +29,7 @@ fn main() -> Result<(), String> {
 }
 
 fn register(api: &mut ApiDescription<Mutex<PgConnection>>) -> Result<(), String> {
-    api.register(fn_dba::api::put::api_put_dba_migrate)?;
+    api.register(fn_admin::api::put::api_put_admin_migrate)?;
     api.register(fn_reports::api::put::api_put_reports)?;
     api.register(fn_reports::api::get::api_get_metrics)?;
     Ok(())

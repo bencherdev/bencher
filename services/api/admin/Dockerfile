@@ -14,16 +14,16 @@ COPY api/util/src src
 COPY api/util/migrations migrations
 COPY api/util/diesel.toml diesel.toml
 
-WORKDIR /usr/src/api/dba
-COPY api/dba/Cargo.toml Cargo.toml
-COPY api/dba/src src
+WORKDIR /usr/src/api/admin
+COPY api/admin/Cargo.toml Cargo.toml
+COPY api/admin/src src
 
 RUN cargo +nightly build --release
 
 # Bundle Stage
 # https://hub.docker.com/_/debian
 FROM debian:bullseye-slim
-COPY --from=builder /usr/src/api/dba/target/release/fn_dba .
+COPY --from=builder /usr/src/api/admin/target/release/fn_admin .
 ENV PORT 8080
 USER 1000
-CMD ["./fn_dba"]
+CMD ["./fn_admin"]

@@ -12,6 +12,6 @@ schemars = "0.8.8"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
 tokio = "1.18.2"
-fn_dba = { path = "../dba" }
+fn_admin = { path = "../admin" }
 fn_reports = { path = "../reports" }
 literally = "0.1.3"

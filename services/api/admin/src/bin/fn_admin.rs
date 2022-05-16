@@ -2,9 +2,9 @@
 
 use std::sync::Mutex;
 
-use fn_dba::api::Api;
+use fn_admin::api::Api;
 
-const API_NAME: &str = "dba";
+const API_NAME: &str = "admin";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
