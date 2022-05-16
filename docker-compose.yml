@@ -72,3 +72,10 @@ services:
     depends_on:
       - postgres
       - fn_dba
+
+  swagger:
+    build:
+      context: ./services/api/schema
+      dockerfile: dev.Dockerfile
+    ports:
+      - 2999:80
