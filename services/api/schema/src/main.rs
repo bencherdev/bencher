@@ -8,8 +8,6 @@ const API_NAME: &str = "Bencher";
 const API_VERSION: &str = "0.1.0";
 
 fn main() -> Result<(), String> {
-    let db_connection = util::db::get_db_connection().map_err(|e| e.to_string())?;
-
     let mut api = ApiDescription::new();
     register(&mut api)?;
 
