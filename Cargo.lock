@@ -1464,21 +1464,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "schema"
-version = "0.1.0"
-dependencies = [
- "diesel",
- "dropshot",
- "fn_dba",
- "fn_reports",
- "schemars",
- "serde",
- "serde_json",
- "tokio",
- "util",
-]
-
-[[package]]
 name = "schemars"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1738,6 +1723,20 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "swagger"
+version = "0.1.0"
+dependencies = [
+ "diesel",
+ "dropshot",
+ "fn_dba",
+ "fn_reports",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
+]
 
 [[package]]
 name = "syn"

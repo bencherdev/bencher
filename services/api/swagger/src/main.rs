@@ -2,7 +2,6 @@ use std::sync::Mutex;
 
 use diesel::pg::PgConnection;
 use dropshot::ApiDescription;
-use util::Registrar;
 
 const API_NAME: &str = "Bencher";
 const API_VERSION: &str = "0.1.0";

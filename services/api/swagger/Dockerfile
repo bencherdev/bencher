@@ -22,15 +22,15 @@ WORKDIR /usr/src/api/reports
 COPY api/reports/Cargo.toml Cargo.toml
 COPY api/reports/src src
 
-WORKDIR /usr/src/api/schema
-COPY api/schema/Cargo.toml Cargo.toml
-COPY api/schema/src src
+WORKDIR /usr/src/api/swagger
+COPY api/swagger/Cargo.toml Cargo.toml
+COPY api/swagger/src src
 
-RUN cargo +nightly run > /usr/src/api/schema/swagger.json
+RUN cargo +nightly run > /usr/src/api/swagger/swagger.json
 
 # https://hub.docker.com/r/swaggerapi/swagger-ui
 FROM swaggerapi/swagger-ui:v4.11.1
 
-COPY --from=builder /usr/src/api/schema/swagger.json /swagger.json
+COPY --from=builder /usr/src/api/swagger/swagger.json /swagger.json
 ENV SWAGGER_JSON /swagger.json
 ENV BASE_URL /v0

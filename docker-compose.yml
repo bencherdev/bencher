@@ -76,6 +76,6 @@ services:
   swagger:
     build:
       context: ./services
-      dockerfile: ./api/schema/Dockerfile
+      dockerfile: ./api/swagger/Dockerfile
     ports:
       - 2999:8080

@@ -1,5 +1,5 @@
 [package]
-name = "schema"
+name = "swagger"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,4 +14,3 @@ serde_json = "1.0.81"
 tokio = "1.18.2"
 fn_dba = { path = "../dba" }
 fn_reports = { path = "../reports" }
-util = { path = "../util", features = ["db"] }
