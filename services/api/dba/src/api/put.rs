@@ -17,6 +17,7 @@ diesel_migrations::embed_migrations!("../util/migrations");
 #[endpoint {
     method = PUT,
     path = "/v0/dba/migrate",
+    tags = ["dba"]
 }]
 pub async fn api_put_dba_migrate(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,

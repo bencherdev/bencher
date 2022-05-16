@@ -18,6 +18,7 @@ use util::server::headers::CorsHeaders;
 #[endpoint {
     method = GET,
     path = "/v0/metrics",
+    tags = ["metrics"]
 }]
 pub async fn api_get_metrics(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,

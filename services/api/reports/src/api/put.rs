@@ -23,6 +23,7 @@ pub const DEFAULT_PROJECT: &str = "default";
 #[endpoint {
     method = PUT,
     path = "/v0/reports",
+    tags = ["report"]
 }]
 pub async fn api_put_reports(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
