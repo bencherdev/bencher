@@ -53,6 +53,9 @@ Build Artifact:
 
 `gcloud builds submit --timeout 1200 --tag us-central1-docker.pkg.dev/bencher/bencher/fn-demo:latest .`
 
+
+`gcloud builds submit --timeout 1200 --tag us-central1-docker.pkg.dev/bencher/bencher/fn-demo:latest .`
+
 Deploy to Cloud Run:
 `gcloud run deploy fn-demo --image us-central1-docker.pkg.dev/learned-stone-349519/bencher/fn-demo:latest`
 
@@ -62,6 +65,32 @@ Create Network Endpoint Groups:
 `gcloud compute network-endpoint-groups create bencher-neg --region=us-central1 --network-endpoint-type=serverless --cloud-run-service=fn-demo`
 
 `gcloud compute network-endpoint-groups create bencher --region=us-central1 --network-endpoint-type=serverless --cloud-run-service=fn-demo`
+
+
+`cloud_sql_proxy`
+`./cloud_sql_proxy -dir ./Code/db `
+
+
+Run from repo root:
+Note that the `--ignore-file` path is relative to the context `./services`
+`gcloud builds submit --config ./services/api/swagger/cloudbuild.yaml --ignore-file ./api/swagger/.gcloudignore ./services` 
+
+--ignore-file
+
+
+Connect via port `3307`
+
+Update CLI:
+`gcloud components update`
+
+`gcloud compute forwarding-rules list`
+
+`gcloud compute backend-services list`
+
+`gcloud compute network-endpoint-groups list`
+
+
+
 
 Old Container Registry way:
 `gcloud auth configure-docker`
@@ -85,3 +114,4 @@ npm install
 
 npx prettier --write .
 npx prettier --check .
+
