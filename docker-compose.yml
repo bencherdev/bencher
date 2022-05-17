@@ -72,10 +72,3 @@ services:
     depends_on:
       - postgres
       - fn_admin
-
-  swagger:
-    build:
-      context: ./services
-      dockerfile: ./api/swagger/Dockerfile
-    ports:
-      - 2999:8080

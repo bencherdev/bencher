@@ -8,6 +8,6 @@ pub mod schema;
 
 pub fn get_db_connection() -> ConnectionResult<PgConnection> {
     let database_url =
-        env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost/bencher".into());
+        env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost:5432/bencher".into());
     PgConnection::establish(&database_url)
 }

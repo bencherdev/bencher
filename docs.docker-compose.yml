@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+
+  swagger:
+    build:
+      context: ./services
+      dockerfile: ./api/swagger/Dockerfile
+    ports:
+      - 5000:8080
