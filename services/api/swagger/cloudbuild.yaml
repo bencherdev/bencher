@@ -13,12 +13,3 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     timeout: 300s
     args: ["push", "us-central1-docker.pkg.dev/${PROJECT_ID}/bencher/fn-swagger:latest"]
-
-  # Entrypoint, timeout and environment variables
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    timeout: 300s
-    entrypoint: "gcloud"
-    args: [
-      "run", "deploy", "fn-swagger",
-      "--image", "us-central1-docker.pkg.dev/${PROJECT_ID}/bencher/fn-swagger:latest"
-    ]

@@ -73,9 +73,34 @@ Create Network Endpoint Groups:
 
 Run from repo root:
 Note that the `--ignore-file` path is relative to the context `./services`
-`gcloud builds submit --config ./services/api/swagger/cloudbuild.yaml --ignore-file ./api/swagger/.gcloudignore ./services` 
 
---ignore-file
+`gcloud builds submit --timeout 1800 --config ./services/api/swagger/cloudbuild.yaml --ignore-file ./api/swagger/.gcloudignore ./services` 
+
+`gcloud run deploy fn-swagger --image us-central1-docker.pkg.dev/bencher/bencher/fn-swagger:latest --allow-unauthenticated`
+
+`gcloud compute network-endpoint-groups create fn-swagger --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-swagger`
+
+https://cloud.google.com/sdk/gcloud/reference/compute/backend-services
+
+`gcloud compute backend-services describe bencher --global`
+
+`gcloud compute backend-services create fn-swagger --global --load-balancing-scheme EXTERNAL_MANAGED`
+`gcloud compute backend-services describe fn-swagger --global`
+
+`gcloud compute backend-services add-backend fn-swagger --global --network-endpoint-group-region us-central1 --network-endpoint-group fn-swagger`
+
+add-backend | update-backend | remove-backend
+
+
+`gcloud compute url-maps list`
+
+`gcloud compute url-maps describe bencher`
+
+`gcloud compute url-maps export bencher --destination ./url-map.yaml --global`
+
+`gcloud compute url-maps validate --source ./url-map.yaml --load-balancing-scheme EXTERNAL_MANAGED`
+
+`gcloud compute url-maps import bencher --source ./url-map.yaml --global --quiet`
 
 
 Connect via port `3307`
@@ -115,3 +140,4 @@ npm install
 npx prettier --write .
 npx prettier --check .
 
+docker compose --file docs.docker-compose.yml up --build -d 
