@@ -29,7 +29,7 @@ const count_page_view = (analytics: AnalyticsInstance | null) => {
   if (analytics === undefined) {
     return;
   } else {
-    analytics?.id.page()
+    analytics?.page()
   }
 }
 
