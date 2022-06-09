@@ -2,7 +2,7 @@
   "recommendations": [
     "eamodio.gitlens",
     "vscodevim.vim",
-    "matklad.rust-analyzer",
+    "rust-lang.rust-analyzer",
     "wcrichton.flowistry",
     "tamasfe.even-better-toml",
     "serayuzgur.crates",
