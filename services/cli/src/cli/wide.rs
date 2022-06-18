@@ -65,14 +65,25 @@ fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
 }
 
 impl Wide {
-    pub async fn send(&self, report: Report) -> Result<(), BencherError> {
-        let url = self
+    fn get_url(&self, path: &str) -> Result<String, BencherError> {
+        Ok(self
             .url
             .as_ref()
             .map(|url| url.to_string())
-            .unwrap_or(format!("{BENCHER_URL}/reports"));
+            .unwrap_or(format!("{BENCHER_URL}{path}")))
+    }
 
+    pub async fn ping(&self) -> Result<(), BencherError> {
         let client = reqwest::Client::new();
+        let url = self.get_url("/ping")?;
+        let res = client.get(&url).send().await?;
+        println!("{res:?}");
+        Ok(())
+    }
+
+    pub async fn send(&self, report: Report) -> Result<(), BencherError> {
+        let client = reqwest::Client::new();
+        let url = self.get_url("/reports")?;
         let res = client.put(&url).json(&report).send().await?;
         println!("{res:?}");
         Ok(())

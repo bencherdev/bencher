@@ -44,7 +44,7 @@ impl Bencher {
         if let Some(sub) = &self.sub {
             sub.run(&self.wide).await
         } else {
-            Ok(())
+            self.wide.ping().await
         }
     }
 }
