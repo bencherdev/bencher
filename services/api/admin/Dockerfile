@@ -23,6 +23,7 @@ RUN cargo +nightly build --release
 # Bundle Stage
 # https://hub.docker.com/_/debian
 FROM debian:bullseye-slim
+RUN apt-get update && apt-get install -y libpq5
 COPY --from=builder /usr/src/api/admin/target/release/fn_admin .
 ENV PORT 8080
 USER 1000

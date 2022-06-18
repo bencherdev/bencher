@@ -155,3 +155,12 @@ docker compose --file docs.docker-compose.yml up --build -d
 
 gcloud sql connect bencher --project=bencher --user=postgres --quiet
 
+Create secret:
+
+gcloud secrets create BENCHER_DB_URL --replication-policy="automatic"
+
+echo -n "my_secret" | gcloud secrets versions add BENCHER_DB_URL --data-file=-
+
+gcloud secrets describe BENCHER_DB_URL
+
+gcloud secrets versions access 1 --secret=BENCHER_DB_URL
