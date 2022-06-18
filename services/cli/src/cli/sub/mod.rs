@@ -1,11 +1,16 @@
 use std::convert::TryFrom;
 
-mod run;
+use async_trait::async_trait;
 
 use crate::cli::clap::CliSub;
 use crate::cli::wide::Wide;
 use crate::BencherError;
+
+mod run;
+mod subcmd;
+
 use run::Run;
+pub use subcmd::SubCmd;
 
 #[derive(Debug)]
 pub enum Sub {
@@ -30,8 +35,9 @@ pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, BencherError> {
     }
 }
 
-impl Sub {
-    pub async fn run(&self, wide: &Wide) -> Result<(), BencherError> {
+#[async_trait]
+impl SubCmd for Sub {
+    async fn run(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
             Sub::Run(run) => run.run(wide).await,
         }

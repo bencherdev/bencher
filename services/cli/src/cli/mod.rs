@@ -2,6 +2,9 @@ use std::convert::TryFrom;
 
 use ::clap::Parser;
 
+use crate::cli::clap::CliBencher;
+use crate::BencherError;
+
 pub mod adapter;
 pub mod benchmark;
 pub mod clap;
@@ -9,10 +12,9 @@ pub mod sub;
 pub mod testbed;
 pub mod wide;
 
-use crate::cli::clap::CliBencher;
-use crate::BencherError;
 use sub::map_sub;
 use sub::Sub;
+use sub::SubCmd;
 use wide::Wide;
 
 #[derive(Debug)]

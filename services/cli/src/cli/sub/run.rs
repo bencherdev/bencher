@@ -1,13 +1,14 @@
 use std::convert::TryFrom;
 
-use reports::{Metrics, Report, Testbed};
+use async_trait::async_trait;
+use reports::{ Report, Testbed};
 
 use crate::cli::adapter::Adapter;
 use crate::cli::benchmark::Benchmark;
-use crate::cli::benchmark::BenchmarkOutput;
 use crate::cli::clap::CliRun;
 use crate::cli::wide::Wide;
 use crate::BencherError;
+use crate::cli::sub::SubCmd;
 
 #[derive(Debug)]
 pub struct Run {
@@ -30,8 +31,9 @@ impl TryFrom<CliRun> for Run {
     }
 }
 
-impl Run {
-    pub async fn run(&self, wide: &Wide) -> Result<(), BencherError> {
+#[async_trait]
+impl SubCmd for Run {
+    async fn run(&self, wide: &Wide) -> Result<(), BencherError> {
         let output = self.benchmark.run()?;
         let metrics = self.adapter.convert(output)?;
         let report = Report::new(
