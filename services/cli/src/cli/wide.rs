@@ -8,7 +8,8 @@ use crate::BencherError;
 
 pub const BENCHER_EMAIL: &str = "BENCHER_EMAIL";
 pub const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
-pub const BENCHER_URL: &str = "https://api.bencher.dev";
+pub const BENCHER_URL: &str = "BENCHER_URL";
+pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 
 #[derive(Debug)]
 pub struct Wide {
@@ -30,14 +31,13 @@ impl TryFrom<CliWide> for Wide {
 }
 
 fn map_email(email: Option<String>) -> Result<EmailAddress, BencherError> {
-    // TODO add first pass token validation
     if let Some(email) = email {
-        return map_email_str(email);
+        map_email_str(email)
+    } else if let Ok(email) = std::env::var(BENCHER_EMAIL) {
+        map_email_str(email)
+    } else {
+        Err(BencherError::EmailNotFound)
     }
-    if let Ok(email) = std::env::var(BENCHER_EMAIL) {
-        return map_email_str(email);
-    };
-    Err(BencherError::EmailNotFound)
 }
 
 fn map_email_str(email: String) -> Result<EmailAddress, BencherError> {
@@ -47,18 +47,21 @@ fn map_email_str(email: String) -> Result<EmailAddress, BencherError> {
 fn map_token(token: Option<String>) -> Result<String, BencherError> {
     // TODO add first pass token validation
     if let Some(token) = token {
-        return Ok(token);
+        Ok(token)
+    } else if let Ok(token) = std::env::var(BENCHER_TOKEN) {
+        Ok(token)
+    } else {
+        Err(BencherError::TokenNotFound)
     }
-    if let Ok(token) = std::env::var(BENCHER_TOKEN) {
-        return Ok(token);
-    };
-    Err(BencherError::TokenNotFound)
 }
 
 fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
-    Ok(Url::parse(if let Some(ref url) = url {
+    let url = if let Some(url) = url {
+        url
+    } else if let Ok(url) = std::env::var(BENCHER_URL) {
         url
     } else {
-        BENCHER_URL
-    })?)
+        DEFAULT_URL.into()
+    };
+    Ok(Url::parse(&url)?)
 }
