@@ -18,10 +18,12 @@ pub enum BencherError {
     Serde(#[from] serde_json::Error),
     #[error("Failed to parse URL")]
     Url(#[from] url::ParseError),
+    #[error("Failed to find Bencher user email")]
+    EmailNotFound,
     #[error("Failed to parse email: {0}")]
     Email(String),
     #[error("Failed to send report to backend: {0}")]
     Client(#[from] reqwest::Error),
-    #[error("Failed to find Bencher API token")]
-    Token,
+    #[error("Failed to find Bencher user API token")]
+    TokenNotFound,
 }
