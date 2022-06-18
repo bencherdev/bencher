@@ -36,11 +36,11 @@ pub enum CliSub {
     Run(CliRun),
 }
 
-#[derive(Args, Debug)]
+#[derive(Parser, Debug)]
 pub struct CliRun {
-    /// Benchmark command
+    /// Shell to run benchmark command
     #[clap(flatten)]
-    pub benchmark: CliBenchmark,
+    pub shell: CliShell,
 
     /// Benchmark output adapter
     #[clap(short, long, default_value = "rust")]
@@ -53,10 +53,13 @@ pub struct CliRun {
     /// Benchmark testbed
     #[clap(flatten)]
     pub testbed: CliTestbed,
+
+    /// Benchmark command
+    pub cmd: String,
 }
 
 #[derive(Args, Debug)]
-pub struct CliBenchmark {
+pub struct CliShell {
     /// Shell command path
     #[clap(short, long)]
     pub shell: Option<String>,
@@ -64,10 +67,6 @@ pub struct CliBenchmark {
     /// Shell command flag
     #[clap(short, long)]
     pub flag: Option<String>,
-
-    /// Benchmark command to execute
-    #[clap(short = 'x', long = "exec")]
-    pub cmd: String,
 }
 
 #[derive(Args, Debug)]

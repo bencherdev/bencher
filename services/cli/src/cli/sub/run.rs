@@ -1,14 +1,14 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use reports::{ Report, Testbed};
+use reports::{Report, Testbed};
 
 use crate::cli::adapter::Adapter;
 use crate::cli::benchmark::Benchmark;
 use crate::cli::clap::CliRun;
+use crate::cli::sub::SubCmd;
 use crate::cli::wide::Wide;
 use crate::BencherError;
-use crate::cli::sub::SubCmd;
 
 #[derive(Debug)]
 pub struct Run {
@@ -23,7 +23,7 @@ impl TryFrom<CliRun> for Run {
 
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         Ok(Self {
-            benchmark: Benchmark::try_from(run.benchmark)?,
+            benchmark: Benchmark::try_from((run.shell, run.cmd))?,
             adapter: Adapter::from(run.adapter),
             project: run.project,
             testbed: run.testbed.into(),
