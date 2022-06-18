@@ -44,7 +44,16 @@ impl Bencher {
         if let Some(sub) = &self.sub {
             sub.exec(&self.wide).await
         } else {
-            self.wide.ping().await
+            self.ping().await
         }
+    }
+
+    // TODO actually implement this ping / check auth endpoint
+    pub async fn ping(&self) -> Result<(), BencherError> {
+        let client = reqwest::Client::new();
+        let url = self.wide.url.join("/v0/ping")?.to_string();
+        let res = client.get(&url).send().await?;
+        println!("{res:?}");
+        Ok(())
     }
 }

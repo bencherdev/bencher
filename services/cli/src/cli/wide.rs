@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use email_address_parser::EmailAddress;
-use reports::Report;
 use url::Url;
 
 use crate::cli::clap::CliWide;
@@ -15,7 +14,7 @@ pub const BENCHER_URL: &str = "https://api.bencher.dev";
 pub struct Wide {
     pub email: EmailAddress,
     pub token: String,
-    pub url: Option<Url>,
+    pub url: Url,
 }
 
 impl TryFrom<CliWide> for Wide {
@@ -56,36 +55,10 @@ fn map_token(token: Option<String>) -> Result<String, BencherError> {
     Err(BencherError::TokenNotFound)
 }
 
-fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
-    Ok(if let Some(url) = url {
-        Some(Url::parse(&url)?)
+fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
+    Ok(Url::parse(if let Some(ref url) = url {
+        url
     } else {
-        None
-    })
-}
-
-impl Wide {
-    fn get_url(&self, path: &str) -> Result<String, BencherError> {
-        Ok(self
-            .url
-            .as_ref()
-            .map(|url| url.to_string())
-            .unwrap_or(format!("{BENCHER_URL}{path}")))
-    }
-
-    pub async fn ping(&self) -> Result<(), BencherError> {
-        let client = reqwest::Client::new();
-        let url = self.get_url("/ping")?;
-        let res = client.get(&url).send().await?;
-        println!("{res:?}");
-        Ok(())
-    }
-
-    pub async fn send(&self, report: Report) -> Result<(), BencherError> {
-        let client = reqwest::Client::new();
-        let url = self.get_url("/reports")?;
-        let res = client.put(&url).json(&report).send().await?;
-        println!("{res:?}");
-        Ok(())
-    }
+        BENCHER_URL
+    })?)
 }

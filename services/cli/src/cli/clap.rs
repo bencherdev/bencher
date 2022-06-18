@@ -23,7 +23,7 @@ pub struct CliWide {
     #[clap(short, long)]
     pub token: Option<String>,
 
-    /// Backend URL
+    /// Backend host URL (default http://api.bencher.dev)
     #[clap(short, long)]
     pub url: Option<String>,
 }

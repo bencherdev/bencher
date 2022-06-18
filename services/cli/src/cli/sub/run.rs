@@ -44,6 +44,16 @@ impl SubCmd for Run {
             self.testbed.clone(),
             metrics,
         );
-        wide.send(report).await
+        self.send(wide, &report).await
+    }
+}
+
+impl Run {
+    pub async fn send(&self, wide: &Wide, report: &Report) -> Result<(), BencherError> {
+        let client = reqwest::Client::new();
+        let url = wide.url.join("/v0/reports")?.to_string();
+        let res = client.put(&url).json(report).send().await?;
+        println!("{res:?}");
+        Ok(())
     }
 }
