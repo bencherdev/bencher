@@ -1,10 +1,43 @@
 use clap::Args;
 use clap::Parser;
+use clap::Subcommand;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliBencher {
+    /// Bencher CLI wide flags
+    #[clap(flatten)]
+    pub wide: CliWide,
+
+    /// Bencher subcommands
+    #[clap(subcommand)]
+    pub sub: Option<CliSub>,
+}
+
+#[derive(Args, Debug)]
+pub struct CliWide {
+    /// User email
+    #[clap(short, long)]
+    pub email: String,
+
+    /// User API token
+    #[clap(short, long)]
+    pub token: Option<String>,
+
+    /// Backend URL
+    #[clap(short, long)]
+    pub url: Option<String>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CliSub {
+    /// Run a benchmark
+    Run(CliRun),
+}
+
+#[derive(Args, Debug)]
+pub struct CliRun {
     /// Benchmark command
     #[clap(flatten)]
     pub benchmark: CliBenchmark,
@@ -13,25 +46,13 @@ pub struct CliBencher {
     #[clap(short, long, default_value = "rust")]
     pub adapter: String,
 
-    /// User email
-    #[clap(short, long)]
-    pub email: String,
-
-    /// User API token
-    #[clap(long)]
-    pub token: Option<String>,
-
-    /// Benchmark project
+    /// Benchmark project name
     #[clap(short, long)]
     pub project: Option<String>,
 
     /// Benchmark testbed
     #[clap(flatten)]
     pub testbed: CliTestbed,
-
-    /// Backend
-    #[clap(flatten)]
-    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]
@@ -78,11 +99,4 @@ pub struct CliTestbed {
     /// Testbed Architecture
     #[clap(long, requires = "testbed")]
     pub arch: Option<String>,
-}
-
-#[derive(Args, Debug)]
-pub struct CliBackend {
-    /// Custom backend URL
-    #[clap(short, long)]
-    pub url: Option<String>,
 }

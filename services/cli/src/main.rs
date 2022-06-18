@@ -16,7 +16,5 @@ async fn main() -> Result<(), String> {
 
 async fn run() -> Result<(), BencherError> {
     let bencher = Bencher::new()?;
-    let benchmark_output = bencher.run()?;
-    let metrics = bencher.convert(benchmark_output)?;
-    bencher.send(metrics).await
+    bencher.run().await
 }
