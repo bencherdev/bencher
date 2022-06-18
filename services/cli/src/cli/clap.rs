@@ -69,7 +69,7 @@ pub struct CliShell {
 
 /// Supported Adapters
 #[derive(ValueEnum, Debug, Clone)]
-#[clap(rename_all = snake_case)]
+#[clap(rename_all = "snake_case")]
 pub enum CliAdapter {
     /// JSON (default)
     Json,
