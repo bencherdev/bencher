@@ -6,6 +6,8 @@ pub enum BencherError {
     Shell,
     #[error("No default shell command flag for target family")]
     Flag,
+    #[error("Invalid adapter")]
+    Adapter,
     #[error("Failed I/O")]
     Io(#[from] std::io::Error),
     #[error("Failed to convert from UTF-8")]

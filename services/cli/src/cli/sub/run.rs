@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 use reports::{Report, Testbed};
 
+use crate::cli::adapter::map_adapter;
 use crate::cli::adapter::Adapter;
 use crate::cli::benchmark::Benchmark;
 use crate::cli::clap::CliRun;
@@ -24,7 +25,7 @@ impl TryFrom<CliRun> for Run {
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         Ok(Self {
             benchmark: Benchmark::try_from((run.shell, run.cmd))?,
-            adapter: Adapter::from(run.adapter),
+            adapter: map_adapter(run.adapter)?,
             project: run.project,
             testbed: run.testbed.into(),
         })

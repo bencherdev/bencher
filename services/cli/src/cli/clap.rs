@@ -1,6 +1,4 @@
-use clap::Args;
-use clap::Parser;
-use clap::Subcommand;
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -43,8 +41,8 @@ pub struct CliRun {
     pub shell: CliShell,
 
     /// Benchmark output adapter
-    #[clap(short, long, default_value = "rust")]
-    pub adapter: String,
+    #[clap(value_enum, short, long)]
+    pub adapter: Option<CliAdapter>,
 
     /// Benchmark project name
     #[clap(short, long)]
@@ -67,6 +65,18 @@ pub struct CliShell {
     /// Shell command flag
     #[clap(short, long)]
     pub flag: Option<String>,
+}
+
+/// Supported Adapters
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = snake_case)]
+pub enum CliAdapter {
+    /// JSON (default)
+    Json,
+    /// Rust `cargo bench` 🦀
+    Rust,
+    // #[clap(alias("rust"), alias("rust_cargo"))]
+    // RustCargoBench,
 }
 
 #[derive(Args, Debug)]
