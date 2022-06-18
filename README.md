@@ -76,9 +76,19 @@ Note that the `--ignore-file` path is relative to the context `./services`
 
 `gcloud builds submit --timeout 1800 --config ./services/api/swagger/cloudbuild.yaml --ignore-file ./api/swagger/.gcloudignore ./services` 
 
+`gcloud builds submit --timeout 1800 --config ./services/api/admin/cloudbuild.yaml --ignore-file ./api/admin/.gcloudignore ./services` 
+
+---
+
 `gcloud run deploy fn-swagger --image us-central1-docker.pkg.dev/bencher/bencher/fn-swagger:latest --allow-unauthenticated`
 
+`gcloud run deploy fn-admin --image us-central1-docker.pkg.dev/bencher/bencher/fn-admin:latest --allow-unauthenticated`
+
+---
+
 `gcloud compute network-endpoint-groups create fn-swagger --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-swagger`
+
+`gcloud compute network-endpoint-groups create fn-admin --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-admin`
 
 https://cloud.google.com/sdk/gcloud/reference/compute/backend-services
 
@@ -141,3 +151,7 @@ npx prettier --write .
 npx prettier --check .
 
 docker compose --file docs.docker-compose.yml up --build -d 
+
+
+gcloud sql connect bencher --project=bencher --user=postgres --quiet
+
