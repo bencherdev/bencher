@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from "solid-js";
+import { createSignal, createEffect, createResource } from "solid-js";
 import * as d3 from "d3";
 
 const [metaMetrics, setMetaMetrics] = createSignal([]);
@@ -7,6 +7,39 @@ import * as Plot from "@observablehq/plot";
 import axios from "axios";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+
+export function LinePlot() {
+  const [metricsId, setMetricsId] = createSignal();
+  const [plot] = createResource(metricsId, fetchPlot);
+
+  createEffect(() => {
+    // TODO this should actually updated via a prop for the plot parameters
+    setMetricsId("");
+  });
+
+  return (
+    <div>
+      {plot()}
+    </div>
+  );
+}
+
+const fetchPlot = async (metrics_id) => {
+  try {
+    let meta_metrics_array = await axios(options);
+    let data_arrays = intoDataArrays(meta_metrics_array?.data); 
+    let plot_marks = intoPlotMarks(data_arrays);
+    let plot = Plot.plot({
+      y: {
+        grid: true,
+      },
+      marks: plot_marks,
+    });
+    return plot; 
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 const options = {
   url: `${BENCHER_API_URL}/v0/metrics`,
@@ -18,19 +51,7 @@ const options = {
   }
 };
 
-async function fetchMetaMetrics() {
-  try {
-    const response = await axios(options);
-    setMetaMetrics(response?.data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-await fetchMetaMetrics();
-
-const intoDataArrays = () => {
-  const meta_metrics_array = metaMetrics();
+const intoDataArrays = (meta_metrics_array) => {
   var data_arrays = {};
 
   for (let i = 0; i < meta_metrics_array.length; i++) {
@@ -54,8 +75,7 @@ const intoDataArrays = () => {
   return data_arrays;
 }
 
-const intoPlotMarks = () => {
-  let data_arrays = intoDataArrays();  
+const intoPlotMarks = (data_arrays) => {
   let plot_arrays = [];
 
   let colors = d3.schemeTableau10;
@@ -67,21 +87,4 @@ const intoPlotMarks = () => {
   }
 
   return plot_arrays;
-}
-
-const plot_marks = intoPlotMarks();
-
-const plot = Plot.plot({
-  y: {
-    grid: true,
-  },
-  marks: plot_marks,
-});
-
-export function LinePlot() {
-  return (
-    <div>
-      {plot}  
-    </div>
-  );
 }

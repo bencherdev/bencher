@@ -4,7 +4,7 @@ import { Component } from "solid-js";
 import { Analytics, AnalyticsInstance} from 'analytics'
 import googleAnalytics from '@analytics/google-analytics'
 
-import { LinePlot } from "./components/LinePlot";
+import { LinePlot } from "./components/plot/LinePlot";
 import { Navbar } from "./components/site/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 
