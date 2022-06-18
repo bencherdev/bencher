@@ -32,6 +32,8 @@ pub struct CliWide {
 pub enum CliSub {
     /// Run a benchmark
     Run(CliRun),
+    /// Manage testbeds
+    Testbed(CliTestbed),
 }
 
 #[derive(Parser, Debug)]
@@ -44,13 +46,13 @@ pub struct CliRun {
     #[clap(value_enum, short, long)]
     pub adapter: Option<CliAdapter>,
 
-    /// Benchmark project name
+    /// Bencher project name or ID
     #[clap(short, long)]
     pub project: Option<String>,
 
-    /// Benchmark testbed
-    #[clap(flatten)]
-    pub testbed: CliTestbed,
+    /// Bencher testbed name or ID
+    #[clap(short, long)]
+    pub testbed: Option<String>,
 
     /// Benchmark command
     pub cmd: String,
@@ -78,11 +80,13 @@ pub enum CliAdapter {
     RustCargoBench,
 }
 
-#[derive(Args, Debug)]
+// TODO flesh this out as a subcommand with its own subcommands
+// `bencher testbed ls`, `add`, `update`, `delete`, etc
+#[derive(Parser, Debug)]
 pub struct CliTestbed {
     /// Testbed ID
     #[clap(long)]
-    pub testbed: Option<String>,
+    pub name: Option<String>,
 
     /// Testbed OS
     #[clap(long, requires = "testbed")]

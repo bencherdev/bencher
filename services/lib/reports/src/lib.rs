@@ -71,7 +71,7 @@ pub struct Report {
     pub token: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project: Option<String>,
-    pub testbed: Testbed,
+    pub testbed: Option<String>,
     pub date_time: DateTime<Utc>,
     pub metrics: Metrics,
 }
@@ -81,7 +81,7 @@ impl Report {
         email: String,
         token: String,
         project: Option<String>,
-        testbed: Testbed,
+        testbed: Option<String>,
         metrics: Metrics,
     ) -> Self {
         Self {

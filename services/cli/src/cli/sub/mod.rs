@@ -23,6 +23,7 @@ impl TryFrom<CliSub> for Sub {
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             CliSub::Run(run) => Sub::Run(Run::try_from(run)?),
+            CliSub::Testbed(testbed) => todo!("Handle testbed subcommand: {testbed:?}"),
         })
     }
 }

@@ -5,7 +5,7 @@ use crate::cli::clap::CliTestbed;
 impl Into<Testbed> for CliTestbed {
     fn into(self) -> Testbed {
         Testbed {
-            name: self.testbed,
+            name: self.name,
             os: self.os,
             os_version: self.os_version,
             cpu: self.cpu,

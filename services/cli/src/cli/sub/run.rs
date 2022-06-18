@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use reports::{Report, Testbed};
+use reports::Report;
 
 use crate::cli::adapter::map_adapter;
 use crate::cli::adapter::Adapter;
@@ -16,7 +16,7 @@ pub struct Run {
     benchmark: Benchmark,
     adapter: Adapter,
     project: Option<String>,
-    testbed: Testbed,
+    testbed: Option<String>,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -27,7 +27,7 @@ impl TryFrom<CliRun> for Run {
             benchmark: Benchmark::try_from((run.shell, run.cmd))?,
             adapter: map_adapter(run.adapter)?,
             project: run.project,
-            testbed: run.testbed.into(),
+            testbed: run.testbed,
         })
     }
 }
