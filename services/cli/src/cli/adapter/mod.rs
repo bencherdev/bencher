@@ -10,14 +10,14 @@ use reports::Metrics;
 #[derive(Clone, Debug)]
 pub enum Adapter {
     Json,
-    Rust,
+    RustCargoBench,
 }
 
 impl From<CliAdapter> for Adapter {
     fn from(adapter: CliAdapter) -> Self {
         match adapter {
             CliAdapter::Json => Adapter::Json,
-            CliAdapter::Rust => Adapter::Rust,
+            CliAdapter::RustCargoBench => Adapter::RustCargoBench,
         }
     }
 }
@@ -34,7 +34,7 @@ impl Adapter {
     pub fn convert(&self, output: BenchmarkOutput) -> Result<Metrics, BencherError> {
         match &self {
             Adapter::Json => json::parse(output),
-            Adapter::Rust => rust::parse(output),
+            Adapter::RustCargoBench => rust::parse(output),
         }
     }
 }

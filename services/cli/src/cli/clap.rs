@@ -74,9 +74,8 @@ pub enum CliAdapter {
     /// JSON (default)
     Json,
     /// Rust `cargo bench` 🦀
-    Rust,
-    // #[clap(alias("rust"), alias("rust_cargo"))]
-    // RustCargoBench,
+    #[clap(alias("rust"), alias("rust_cargo"))]
+    RustCargoBench,
 }
 
 #[derive(Args, Debug)]
