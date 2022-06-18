@@ -34,7 +34,7 @@ impl TryFrom<CliRun> for Run {
 
 #[async_trait]
 impl SubCmd for Run {
-    async fn run(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         let output = self.benchmark.run()?;
         let metrics = self.adapter.convert(output)?;
         let report = Report::new(

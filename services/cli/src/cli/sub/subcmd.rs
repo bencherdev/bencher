@@ -5,5 +5,5 @@ use crate::BencherError;
 
 #[async_trait]
 pub trait SubCmd {
-    async fn run(&self, wide: &Wide) -> Result<(), BencherError>;
+    async fn exec(&self, wide: &Wide) -> Result<(), BencherError>;
 }

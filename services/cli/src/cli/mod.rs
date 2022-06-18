@@ -40,9 +40,9 @@ impl Bencher {
         Self::try_from(args)
     }
 
-    pub async fn run(&self) -> Result<(), BencherError> {
+    pub async fn exec(&self) -> Result<(), BencherError> {
         if let Some(sub) = &self.sub {
-            sub.run(&self.wide).await
+            sub.exec(&self.wide).await
         } else {
             self.wide.ping().await
         }

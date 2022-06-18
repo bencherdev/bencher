@@ -11,10 +11,10 @@ pub use error::BencherError;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    run().await.map_err(|e| format!("{e}"))
+    exec().await.map_err(|e| format!("{e}"))
 }
 
-async fn run() -> Result<(), BencherError> {
+async fn exec() -> Result<(), BencherError> {
     let bencher = Bencher::new()?;
-    bencher.run().await
+    bencher.exec().await
 }

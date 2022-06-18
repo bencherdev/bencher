@@ -38,9 +38,9 @@ pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, BencherError> {
 
 #[async_trait]
 impl SubCmd for Sub {
-    async fn run(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
-            Sub::Run(run) => run.run(wide).await,
+            Sub::Run(run) => run.exec(wide).await,
         }
     }
 }
