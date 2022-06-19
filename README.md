@@ -86,6 +86,8 @@ Note that the `--ignore-file` path is relative to the context `./services`
 
 ---
 
+`gcloud compute network-endpoint-groups list`
+
 `gcloud compute network-endpoint-groups create fn-swagger --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-swagger`
 
 `gcloud compute network-endpoint-groups create fn-admin --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-admin`
@@ -96,8 +98,11 @@ https://cloud.google.com/sdk/gcloud/reference/compute/backend-services
 
 `gcloud compute backend-services create fn-swagger --global --load-balancing-scheme EXTERNAL_MANAGED`
 `gcloud compute backend-services describe fn-swagger --global`
-
 `gcloud compute backend-services add-backend fn-swagger --global --network-endpoint-group-region us-central1 --network-endpoint-group fn-swagger`
+
+`gcloud compute backend-services create fn-admin --global --load-balancing-scheme EXTERNAL_MANAGED`
+`gcloud compute backend-services describe fn-admin --global`
+`gcloud compute backend-services add-backend fn-admin --global --network-endpoint-group-region us-central1 --network-endpoint-group fn-admin`
 
 add-backend | update-backend | remove-backend
 
@@ -183,3 +188,7 @@ Hot Reloading
 
 https://github.com/vitejs/vite/issues/4116
 https://github.com/jonathan-f-silva/vite-docker-hmr-dev-base
+
+Migrate:
+
+https://api.bencher.dev/v0/admin/migrate
