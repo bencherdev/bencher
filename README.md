@@ -152,10 +152,18 @@ npx prettier --check .
 
 docker compose --file docs.docker-compose.yml up --build -d 
 
-
 gcloud sql connect bencher --project=bencher --user=postgres --quiet
 
+https://cloud.google.com/sql/docs/postgres/connect-run
+https://stackoverflow.com/questions/60544602/postgrest-on-google-cloud-sql-unix-socket-uri-format
+
 Create secret:
+
+This works:
+postgres://<pg_user>:<pg_pass>@/<db_name>?host=/cloudsql/<cloud_sql_instance_connection_name>
+
+May be necessary for some frameworks (/.s.PGSQL.5432):
+postgres://<pg_user>:<pg_pass>@/<db_name>?host=/cloudsql/<cloud_sql_instance_connection_name>/.s.PGSQL.5432
 
 gcloud secrets create BENCHER_DB_URL --replication-policy="automatic"
 
@@ -164,3 +172,9 @@ echo -n "my_secret" | gcloud secrets versions add BENCHER_DB_URL --data-file=-
 gcloud secrets describe BENCHER_DB_URL
 
 gcloud secrets versions access 1 --secret=BENCHER_DB_URL
+
+Cloud Run GUI -> Variables & Secrets -> Secrets -> Add secret as environment variable BENCHER_DB_URL as latest
+
+gcloud sql instances describe bencher
+
+Cloud Run GUI -> Connections -> Cloud SQL Connections -> Add db as a connection
