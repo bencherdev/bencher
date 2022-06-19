@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use diesel::pg::PgConnection;
-use diesel_migrations::run_pending_migrations_in_directory;
+use diesel_migrations::embed_migrations;
 use dropshot::endpoint;
 use dropshot::HttpError;
 use dropshot::HttpResponseHeaders;
@@ -12,7 +12,7 @@ use dropshot::HttpResponseOk;
 use dropshot::RequestContext;
 use util::server::headers::CorsHeaders;
 
-diesel_migrations::embed_migrations!("../util/migrations");
+embed_migrations!("../util/migrations");
 
 #[endpoint {
     method = PUT,
@@ -27,16 +27,13 @@ pub async fn api_put_admin_migrate(
     if let Ok(db_conn) = db_connection.lock() {
         let db_conn = &*db_conn;
 
-        let migrations_dir = PathBuf::from("../util/migrations");
         let mut output = BufWriter::new(Vec::new());
-        run_pending_migrations_in_directory(db_conn, &migrations_dir, &mut output).map_err(
-            |e| {
-                HttpError::for_bad_request(
-                    Some(String::from("BadInput")),
-                    format!("Failed to run migration: {e}"),
-                )
-            },
-        )?;
+        embedded_migrations::run_with_output(db_conn, &mut output).map_err(|e| {
+            HttpError::for_bad_request(
+                Some(String::from("BadInput")),
+                format!("Failed to run migration: {e}"),
+            )
+        })?;
 
         let bytes = output.into_inner().map_err(|e| {
             HttpError::for_bad_request(
