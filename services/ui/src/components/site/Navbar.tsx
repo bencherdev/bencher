@@ -1,4 +1,6 @@
 const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
+const BENCHER_DOCS_URL: string = import.meta.env.VITE_BENCHER_DOCS_URL;
+const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 export function Navbar() {
     return (
@@ -24,11 +26,11 @@ export function Navbar() {
       
         <div id="navbarBasicExample" class="navbar-menu">
           <div class="navbar-start">
-            <a class="navbar-item" href={BENCHER_UI_URL}>
+            <a class="navbar-item" href={BENCHER_DOCS_URL}>
               Docs
             </a>
 
-            <a class="navbar-item" href={BENCHER_UI_URL}>
+            <a class="navbar-item" href={BENCHER_API_URL}>
               API
             </a>
           </div>
