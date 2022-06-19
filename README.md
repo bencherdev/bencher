@@ -178,3 +178,8 @@ Cloud Run GUI -> Variables & Secrets -> Secrets -> Add secret as environment var
 gcloud sql instances describe bencher
 
 Cloud Run GUI -> Connections -> Cloud SQL Connections -> Add db as a connection
+
+Hot Reloading 
+
+https://github.com/vitejs/vite/issues/4116
+https://github.com/jonathan-f-silva/vite-docker-hmr-dev-base

@@ -8,6 +8,7 @@ services:
     restart: always
     ports:
       - 80:80
+      - 3001:3001
     depends_on:
       # - cli 
       - ui
@@ -23,6 +24,7 @@ services:
       - "/usr/src/ui/node_modules"
     ports:
       - 6000:3000
+      - 3101:3101
     depends_on:
       - fn_admin
       - fn_reports
