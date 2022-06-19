@@ -1,4 +1,4 @@
-creationTimestamp: '2022-05-15T16:12:23.849-07:00'
+creationTimestamp: "2022-05-15T16:12:23.849-07:00"
 fingerprint: -3RfulQcpm8=
 id: 2398103587108173368
 kind: compute#urlMap
@@ -18,8 +18,11 @@ pathMatchers:
   pathRules:
   - paths:
     - /
-    - /v0
     service: https://www.googleapis.com/compute/v1/projects/bencher/global/backendServices/fn-swagger
+  - paths:
+    - /v0/admin
+    - /v0/admin/*
+    service: https://www.googleapis.com/compute/v1/projects/bencher/global/backendServices/fn-admin
 
 # TODO add tests once available
 # https://cloud.google.com/load-balancing/docs/url-map#gcloud_1

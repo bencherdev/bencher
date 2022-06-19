@@ -33,4 +33,4 @@ FROM swaggerapi/swagger-ui:v4.11.1
 
 COPY --from=builder /usr/src/api/swagger/swagger.json /swagger.json
 ENV SWAGGER_JSON /swagger.json
-ENV BASE_URL /v0
+ENV BASE_URL /
