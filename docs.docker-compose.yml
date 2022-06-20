@@ -12,13 +12,13 @@ services:
     ports:
       - 9000:3000
 
-  # swagger:
-  #   build:
-  #     context: ./services
-  #     dockerfile: ./api/swagger/Dockerfile
-  #   image: bencher-swagger
-  #   container_name: bencher_swagger
-  #   ports:
-  #     - 5000:8080
+  swagger:
+    build:
+      context: ./services
+      dockerfile: ./api/swagger/Dockerfile
+    image: bencher-swagger
+    container_name: bencher_swagger
+    ports:
+      - 5000:8080
 
   
