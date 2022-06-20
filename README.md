@@ -192,3 +192,8 @@ https://github.com/jonathan-f-silva/vite-docker-hmr-dev-base
 Migrate:
 
 https://api.bencher.dev/v0/admin/migrate
+
+Docs:
+https://dev.solidjs.com/guides/server#getting-started-with-static-site-generation
+https://github.com/solidjs/solid/issues/477
+https://github.com/olgam4/bat
