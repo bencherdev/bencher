@@ -12,7 +12,13 @@ pub const BENCHER_URL: &str = "BENCHER_URL";
 pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 
 #[derive(Debug)]
-pub struct Wide {
+pub enum Wide {
+    Local,
+    Backend(Backend),
+}
+
+#[derive(Debug)]
+pub struct Backend {
     pub email: EmailAddress,
     pub token: String,
     pub url: Url,
@@ -22,10 +28,17 @@ impl TryFrom<CliWide> for Wide {
     type Error = BencherError;
 
     fn try_from(wide: CliWide) -> Result<Self, Self::Error> {
-        Ok(Self {
-            email: map_email(wide.email)?,
-            token: map_token(wide.token)?,
-            url: map_url(wide.url)?,
+        let email = map_email(wide.email);
+        let token = map_token(wide.token);
+        let url = map_url(wide.url);
+        Ok(if wide.local {
+            Self::Local
+        } else {
+            Self::Backend(Backend {
+                email: email?,
+                token: token?,
+                url: url?,
+            })
         })
     }
 }

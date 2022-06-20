@@ -50,10 +50,6 @@ impl Bencher {
 
     // TODO actually implement this ping / check auth endpoint
     pub async fn ping(&self) -> Result<(), BencherError> {
-        let client = reqwest::Client::new();
-        let url = self.wide.url.join("/v0/ping")?.to_string();
-        let res = client.get(&url).send().await?;
-        println!("{res:?}");
         Ok(())
     }
 }

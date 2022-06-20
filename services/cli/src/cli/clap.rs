@@ -15,6 +15,10 @@ pub struct CliBencher {
 
 #[derive(Args, Debug)]
 pub struct CliWide {
+    /// Run local only
+    #[clap(short, long)]
+    pub local: bool,
+
     /// User email
     #[clap(short, long)]
     pub email: Option<String>,
