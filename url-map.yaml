@@ -4,15 +4,24 @@ id: 2398103587108173368
 kind: compute#urlMap
 name: bencher
 selfLink: https://www.googleapis.com/compute/v1/projects/bencher/global/urlMaps/bencher
-defaultService: https://www.googleapis.com/compute/v1/projects/bencher/global/backendServices/fn-swagger
+defaultService: https://www.googleapis.com/compute/v1/projects/bencher/global/backendBuckets/docs
 hostRules:
   - hosts:
     - "*"
-    pathMatcher: api
+    pathMatcher: docs
+  - hosts:
+    - "docs.bencher.dev"
+    pathMatcher: docs
   - hosts:
     - "api.bencher.dev"
     pathMatcher: api
 pathMatchers:
+- defaultService: https://www.googleapis.com/compute/v1/projects/bencher/global/backendBuckets/docs
+  name: docs 
+  pathRules:
+  - paths:
+    - /
+    service: https://www.googleapis.com/compute/v1/projects/bencher/global/backendBuckets/docs
 - defaultService: https://www.googleapis.com/compute/v1/projects/bencher/global/backendServices/fn-swagger
   name: api 
   pathRules:

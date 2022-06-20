@@ -104,8 +104,10 @@ https://cloud.google.com/sdk/gcloud/reference/compute/backend-services
 `gcloud compute backend-services describe fn-admin --global`
 `gcloud compute backend-services add-backend fn-admin --global --network-endpoint-group-region us-central1 --network-endpoint-group fn-admin`
 
-add-backend | update-backend | remove-backend
+`gcloud compute backend-buckets create docs --gcs-bucket-name docs.bencher.dev`
+`gcloud compute backend-buckets describe docs`
 
+add-backend | update-backend | remove-backend
 
 `gcloud compute url-maps list`
 
@@ -198,4 +200,7 @@ https://dev.solidjs.com/guides/server#getting-started-with-static-site-generatio
 https://github.com/solidjs/solid/issues/477
 https://github.com/olgam4/bat
 
-mdbook serve --open
+`mdbook serve --open`
+
+`gsutil cp -r ./services/docs/book/* gs://docs.bencher.dev/`
+`gsutil iam ch allUsers:objectViewer gs://docs.bencher.dev/`
