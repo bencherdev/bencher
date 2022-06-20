@@ -5,4 +5,4 @@ Let’s start your Bencher journey! There’s a lot to learn, but every journey 
 - Installing `bencher` CLI on Linux, macOS, and Windows
 - Running your first benchmark with the `bencher` CLI
 - Creating an account using the Bencher Web GUI
-- Store your benchmark results with the `bencher` CLI
+- Storing your benchmark results with the `bencher` CLI

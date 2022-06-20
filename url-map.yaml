@@ -32,6 +32,12 @@ pathMatchers:
     - /v0/admin
     - /v0/admin/*
     service: https://www.googleapis.com/compute/v1/projects/bencher/global/backendServices/fn-admin
+  - paths:
+    - /v0/reports
+    - /v0/reports/*
+    - /v0/metrics
+    - /v0/metrics/*
+    service: https://www.googleapis.com/compute/v1/projects/bencher/global/backendServices/fn-reports
 
 # TODO add tests once available
 # https://cloud.google.com/load-balancing/docs/url-map#gcloud_1

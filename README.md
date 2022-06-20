@@ -78,11 +78,15 @@ Note that the `--ignore-file` path is relative to the context `./services`
 
 `gcloud builds submit --timeout 1800 --config ./services/api/admin/cloudbuild.yaml --ignore-file ./api/admin/.gcloudignore ./services` 
 
+`gcloud builds submit --timeout 1800 --config ./services/api/reports/cloudbuild.yaml --ignore-file ./api/reports/.gcloudignore ./services` 
+
 ---
 
 `gcloud run deploy fn-swagger --image us-central1-docker.pkg.dev/bencher/bencher/fn-swagger:latest --allow-unauthenticated`
 
-`gcloud run deploy fn-admin --image us-central1-docker.pkg.dev/bencher/bencher/fn-admin:latest --allow-unauthenticated`
+`gcloud run deploy fn-admin --image us-central1-docker.pkg.dev/bencher/bencher/fn-admin:latest --allow-unauthenticated --add-cloudsql-instances INSTANCE_CONNECTION_NAME --update-secrets BENCHER_DB_URL=SECRET/RESOURCE/ID:latest`
+
+`gcloud run deploy fn-reports --image us-central1-docker.pkg.dev/bencher/bencher/fn-reports:latest --allow-unauthenticated --add-cloudsql-instances INSTANCE_CONNECTION_NAME --update-secrets BENCHER_DB_URL=SECRET/RESOURCE/ID:latest`
 
 ---
 
@@ -91,6 +95,8 @@ Note that the `--ignore-file` path is relative to the context `./services`
 `gcloud compute network-endpoint-groups create fn-swagger --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-swagger`
 
 `gcloud compute network-endpoint-groups create fn-admin --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-admin`
+
+`gcloud compute network-endpoint-groups create fn-reports --network-endpoint-type=serverless --region=us-central1 --cloud-run-service=fn-reports`
 
 https://cloud.google.com/sdk/gcloud/reference/compute/backend-services
 
@@ -103,6 +109,10 @@ https://cloud.google.com/sdk/gcloud/reference/compute/backend-services
 `gcloud compute backend-services create fn-admin --global --load-balancing-scheme EXTERNAL_MANAGED`
 `gcloud compute backend-services describe fn-admin --global`
 `gcloud compute backend-services add-backend fn-admin --global --network-endpoint-group-region us-central1 --network-endpoint-group fn-admin`
+
+`gcloud compute backend-services create fn-reports --global --load-balancing-scheme EXTERNAL_MANAGED`
+`gcloud compute backend-services describe fn-reports --global`
+`gcloud compute backend-services add-backend fn-reports --global --network-endpoint-group-region us-central1 --network-endpoint-group fn-reports`
 
 `gcloud compute backend-buckets create docs --gcs-bucket-name docs.bencher.dev`
 `gcloud compute backend-buckets describe docs`
@@ -179,6 +189,7 @@ echo -n "my_secret" | gcloud secrets versions add BENCHER_DB_URL --data-file=-
 gcloud secrets describe BENCHER_DB_URL
 
 gcloud secrets versions access 1 --secret=BENCHER_DB_URL
+gcloud secrets versions access latest --secret=BENCHER_DB_URL
 
 Cloud Run GUI -> Variables & Secrets -> Secrets -> Add secret as environment variable BENCHER_DB_URL as latest
 

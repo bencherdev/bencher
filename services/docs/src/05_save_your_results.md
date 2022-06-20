@@ -23,4 +23,4 @@ After you run your benchmarks with credentials, you can now got to your [Bencher
 bencher --email info@bencher.dev --token 123JWT run --adapter rust_cargo_bench --project my_first_project "cargo bench"
 ```
 
-`--project my_first_project` sets the project name to `my_first_project`, so if you refresh your dashboard, you should now see a new project named `my_first_project` with your results. See [managing_projects](managing_projects.md) for more details on on how to manage your projects.
+`--project my_first_project` sets the project name to `my_first_project`, so if you refresh your dashboard, you should now see a new project named `my_first_project` with your results. See [managing projects](managing_projects.md) for more details on on how to manage your projects.
