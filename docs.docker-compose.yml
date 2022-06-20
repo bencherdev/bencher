@@ -1,9 +1,24 @@
 version: "3.9"
 services:
 
-  swagger:
+  docs:
     build:
       context: ./services
-      dockerfile: ./api/swagger/Dockerfile
+      dockerfile: ./docs/dev.Dockerfile
+    image: bencher-docs
+    container_name: bencher_docs
+    volumes:
+      - "./services/docs:/usr/src/docs"
     ports:
-      - 5000:8080
+      - 9000:3000
+
+  # swagger:
+  #   build:
+  #     context: ./services
+  #     dockerfile: ./api/swagger/Dockerfile
+  #   image: bencher-swagger
+  #   container_name: bencher_swagger
+  #   ports:
+  #     - 5000:8080
+
+  

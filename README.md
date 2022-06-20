@@ -197,3 +197,5 @@ Docs:
 https://dev.solidjs.com/guides/server#getting-started-with-static-site-generation
 https://github.com/solidjs/solid/issues/477
 https://github.com/olgam4/bat
+
+mdbook serve --open
