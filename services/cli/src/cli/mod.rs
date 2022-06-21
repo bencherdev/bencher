@@ -6,8 +6,10 @@ use crate::cli::clap::CliBencher;
 use crate::BencherError;
 
 pub mod adapter;
+pub mod backend;
 pub mod benchmark;
 pub mod clap;
+pub mod locality;
 pub mod sub;
 pub mod testbed;
 pub mod wide;
@@ -28,7 +30,7 @@ impl TryFrom<CliBencher> for Bencher {
 
     fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
-            wide: Wide::try_from(bencher.wide)?,
+            wide: Wide::from(bencher.wide),
             sub: map_sub(bencher.sub)?,
         })
     }

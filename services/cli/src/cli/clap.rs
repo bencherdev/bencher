@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -14,23 +14,7 @@ pub struct CliBencher {
 }
 
 #[derive(Args, Debug)]
-pub struct CliWide {
-    /// Run local only
-    #[clap(short, long)]
-    pub local: bool,
-
-    /// User email
-    #[clap(short, long)]
-    pub email: Option<String>,
-
-    /// User API token
-    #[clap(short, long)]
-    pub token: Option<String>,
-
-    /// Backend host URL (default http://api.bencher.dev)
-    #[clap(short, long)]
-    pub url: Option<String>,
-}
+pub struct CliWide {}
 
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
@@ -42,6 +26,10 @@ pub enum CliSub {
 
 #[derive(Parser, Debug)]
 pub struct CliRun {
+    /// Shell to run benchmark command
+    #[clap(flatten)]
+    pub locality: CliLocality,
+
     /// Shell to run benchmark command
     #[clap(flatten)]
     pub shell: CliShell,
@@ -60,6 +48,38 @@ pub struct CliRun {
 
     /// Benchmark command
     pub cmd: String,
+}
+
+#[derive(Args, Debug)]
+pub struct CliLocality {
+    /// Run local only
+    #[clap(short, long)]
+    pub local: bool,
+
+    /// Backend config
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("backend")
+        .multiple(true)
+        .conflicts_with("local")
+        .args(&["email", "token", "url"]),
+))]
+pub struct CliBackend {
+    /// User email
+    #[clap(long)]
+    pub email: Option<String>,
+
+    /// User API token
+    #[clap(long)]
+    pub token: Option<String>,
+
+    /// Backend host URL (default http://api.bencher.dev)
+    #[clap(long)]
+    pub url: Option<String>,
 }
 
 #[derive(Args, Debug)]

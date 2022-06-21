@@ -5,15 +5,17 @@ use reports::Report;
 
 use crate::cli::adapter::map_adapter;
 use crate::cli::adapter::Adapter;
+use crate::cli::backend::Backend;
 use crate::cli::benchmark::Benchmark;
 use crate::cli::clap::CliRun;
+use crate::cli::locality::Locality;
 use crate::cli::sub::SubCmd;
-use crate::cli::wide::Backend;
 use crate::cli::wide::Wide;
 use crate::BencherError;
 
 #[derive(Debug)]
 pub struct Run {
+    locality: Locality,
     benchmark: Benchmark,
     adapter: Adapter,
     project: Option<String>,
@@ -25,6 +27,7 @@ impl TryFrom<CliRun> for Run {
 
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         Ok(Self {
+            locality: Locality::try_from(run.locality)?,
             benchmark: Benchmark::try_from((run.shell, run.cmd))?,
             adapter: map_adapter(run.adapter)?,
             project: run.project,
@@ -35,27 +38,30 @@ impl TryFrom<CliRun> for Run {
 
 #[async_trait]
 impl SubCmd for Run {
-    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let output = self.benchmark.run()?;
         let metrics = self.adapter.convert(output)?;
-        if let Wide::Backend(backend) = wide {
-            let report = Report::new(
-                backend.email.to_string(),
-                backend.token.clone(),
-                self.project.clone(),
-                self.testbed.clone(),
-                metrics,
-            );
-            self.send(backend, &report).await
-        } else {
-            let report = Report::new(
-                "".into(),
-                "".into(),
-                self.project.clone(),
-                self.testbed.clone(),
-                metrics,
-            );
-            Ok(println!("{}", serde_json::to_string(&report)?))
+        match &self.locality {
+            Locality::Local => {
+                let report = Report::new(
+                    "".into(),
+                    "".into(),
+                    self.project.clone(),
+                    self.testbed.clone(),
+                    metrics,
+                );
+                Ok(println!("{}", serde_json::to_string(&report)?))
+            }
+            Locality::Backend(backend) => {
+                let report = Report::new(
+                    backend.email.to_string(),
+                    backend.token.clone(),
+                    self.project.clone(),
+                    self.testbed.clone(),
+                    metrics,
+                );
+                self.send(backend, &report).await
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ cargo install --locked trunk
 cargo install --locked wasm-pack
 
 cd bencher
-cargo run -- --email epompeii@protonmail.com --token 123JWT --url http://localhost run --adapter rust "cargo bench" 
+cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://localhost --adapter rust "cargo bench" 
 
 cargo run --bin bencher -- ...
 
