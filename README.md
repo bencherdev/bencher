@@ -218,3 +218,8 @@ https://cloud.google.com/storage/docs/hosting-static-website
 `gsutil cp -r ./services/docs/book/* gs://docs.bencher.dev/`
 `gsutil iam ch allUsers:objectViewer gs://docs.bencher.dev/`
 `gsutil web set -m index.html gs://docs.bencher.dev/`
+
+Auth - ORY
+https://www.ory.sh/docs/guides/cli/installation
+https://www.ory.sh/docs/kratos/concepts/ui-user-interface
+https://www.ory.sh/docs/guides/social-signin/github
