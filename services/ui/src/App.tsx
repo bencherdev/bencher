@@ -1,27 +1,23 @@
 import "./styles/styles.scss";
+
 import { Component } from "solid-js";
+import { Routes, Route } from "solid-app-router";
 
-import { Analytics, AnalyticsInstance} from 'analytics'
-import googleAnalytics from '@analytics/google-analytics'
-
-import { LinePlot } from "./components/plot/LinePlot";
 import { Navbar } from "./components/site/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
+import { AuthFormPage } from "./components/auth/AuthFormPage";
+import { LandingPage } from "./components/LandingPage";
 
 const App: Component = () => {
   return (
     <>
       <GoogleAnalytics />
       <Navbar />
-      <section class="section">
-        <div class="container">
-          <div class="columns">
-            <div class="column">
-              <LinePlot />
-            </div>
-          </div>
-        </div>
-      </section>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/auth/signup" element={<AuthFormPage kind="signup" />} />
+        <Route path="/auth/login" element={<AuthFormPage kind="login" />} />
+      </Routes>
     </>
   );
 };
