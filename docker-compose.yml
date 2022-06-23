@@ -48,17 +48,18 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
-  kratos:
-    build:
-      context: ./services/local/kratos
-      dockerfile: Dockerfile
-    image: bencher-kratos
-    container_name: bencher_kratos
-    ports:
-      - 4433:4433
-      - 4434:4434
-    environment:
-      - DSN=memory
+  # kratos:
+  #   build:
+  #     context: ./services/local/kratos
+  #     dockerfile: Dockerfile
+  #   image: bencher-kratos
+  #   container_name: bencher_kratos
+  #   ports:
+  #     - 4433:4433
+  #     - 4434:4434
+  #     - 4436:4436
+  #   environment:
+  #     - DSN=memory
 
   fn_admin:
     build:
