@@ -32,6 +32,9 @@ npm run start
 Dev Setup:
 `docker compose -f docker-compose.yml up -d --build --remove-orphans`
 
+If UI deps added:
+`docker compose -f docker-compose.yml build --no-cache`
+
 Region: `us-central1`
 `gcloud config set run/region us-central1`
 
