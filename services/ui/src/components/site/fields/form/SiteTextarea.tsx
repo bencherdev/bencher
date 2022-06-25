@@ -5,7 +5,7 @@ const SiteTextarea = (props) => {
       placeholder={props.config.placeholder}
       value={props.value}
       required
-      onChange={(e) => props.handleField(e)}
+      onInput={(e) => props.handleField(e)}
     ></textarea>
   );
 };

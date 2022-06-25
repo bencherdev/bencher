@@ -12,7 +12,7 @@ const SiteInput = (props) => {
         placeholder={props.config.placeholder}
         value={props.value}
         disabled={props.config.disabled}
-        onChange={(e) => props.handleField(e)}
+        onInput={(e) => props.handleField(e)}
       />
       <InputCheckMark fieldValid={props.valid} />
     </div>

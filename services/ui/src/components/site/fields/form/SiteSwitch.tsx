@@ -7,7 +7,7 @@ const SiteSwitch = (props) => {
         name={props.config.label}
         class="switch"
         checked={props.value}
-        onChange={(e) => props.handleField(e)}
+        onInput={(e) => props.handleField(e)}
       />
       <label for={props.config.label}></label>
     </div>

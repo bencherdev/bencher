@@ -7,7 +7,7 @@ const SiteCheckbox = (props) => {
         name={props.config.label}
         class="is-checkradio is-small"
         checked={props.value}
-        onChange={(e) => props.handleField(e)}
+        onInput={(e) => props.handleField(e)}
       />
       <label for={props.config.label}>
         <small>{props.config.placeholder}</small>

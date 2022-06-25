@@ -12,6 +12,7 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
   });
 
   const handleField = (key, value, valid) => {
+    console.log(`${key} ${value} ${valid}`);
     setForm({
       ...form(),
       [key]: {
@@ -68,55 +69,43 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
 
   return (
     <form class="box">
-      {props?.kind == "signup" && (
-        <div class="field">
-          <label class="label">Username</label>
-          <div class="control">
-            <input class="input" type="text" placeholder="user_name" />
-          </div>
-        </div>
-      )}
-
-      <div class="field">
-        <label class="label">Email</label>
-        <div class="control">
-          <input
-            class="input"
-            type="email"
-            placeholder="first.last@example.com"
-          />
-        </div>
-      </div>
-
-      <br />
-
-      {props?.kind == "signup" && (
-        <div class="field">
-          <label class="checkbox">
-            <input
-              type="checkbox"
-              checked={form()?.consent?.value}
-              onChange={(event) => handleCheckbox(event)}
-            />{" "}
-            I agree to the{" "}
-            <Link href="/terms" target="_blank">
-              terms and conditions
-            </Link>
-          </label>
-        </div>
-      )}
-
-      {props?.kind == "signup" && (
+      {props.kind === "signup" && (
         <SiteField
-          type="checkbox"
-          fieldKey="consent"
-          label={false}
-          value={form()?.consent?.value}
-          valid={form()?.consent?.valid}
-          config={userFieldsConfig.consent}
+          type="input"
+          fieldKey="username"
+          label={true}
+          value={form()?.username?.value}
+          valid={form()?.username?.valid}
+          config={userFieldsConfig.username}
           handleField={handleField}
         />
       )}
+
+      <SiteField
+        type="input"
+        fieldKey="email"
+        label={true}
+        value={form()?.email?.value}
+        valid={form()?.email?.valid}
+        config={userFieldsConfig.email}
+        handleField={handleField}
+      />
+
+      <br />
+
+      {props?.kind == "signup" &&
+        form()?.username?.valid &&
+        form()?.email?.valid && (
+          <SiteField
+            type="checkbox"
+            fieldKey="consent"
+            label={false}
+            value={form()?.consent?.value}
+            valid={form()?.consent?.valid}
+            config={userFieldsConfig.consent}
+            handleField={handleField}
+          />
+        )}
 
       <button
         class="button is-primary is-fullwidth"
