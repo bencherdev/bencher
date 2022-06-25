@@ -1,8 +1,46 @@
-import { createSignal, createEffect } from "solid-js";
+import { createSignal, createEffect, createMemo } from "solid-js";
 import { Link } from "solid-app-router";
 
 export const AuthForm = (props: { kind: "signup" | "login" }) => {
   const [form, setForm] = createSignal(initForm());
+
+  createEffect(() => {
+    handleFormValid();
+  });
+
+  const handleCheckbox = (_event) => {
+    let constent = form()?.consent;
+    setForm({
+      ...form(),
+      consent: {
+        value: !constent.value,
+        valid: constent.valid,
+      },
+    });
+  };
+
+  const handleFormValid = () => {
+    var valid = validateForm();
+    if (valid !== form()?.valid) {
+      setForm({ ...form(), valid: valid });
+    }
+  };
+
+  const validateForm = () => {
+    if (form()?.email?.valid) {
+      if (props?.kind === "login") {
+        return true;
+      }
+      if (
+        props?.kind === "signup" &&
+        form()?.username?.valid &&
+        form()?.consent?.value
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   return (
     <form class="box">
@@ -31,7 +69,12 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
       {props?.kind == "signup" && (
         <div class="field">
           <label class="checkbox">
-            <input type="checkbox" /> I agree to the{" "}
+            <input
+              type="checkbox"
+              checked={form()?.consent?.value}
+              onChange={(event) => handleCheckbox(event)}
+            />{" "}
+            I agree to the{" "}
             <Link href="/terms" target="_blank">
               terms and conditions
             </Link>
@@ -39,7 +82,12 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
         </div>
       )}
 
-      <button class="button is-primary is-fullwidth">Submit</button>
+      <button
+        class="button is-primary is-fullwidth"
+        disabled={!form()?.valid || form()?.submitting}
+      >
+        Submit
+      </button>
     </form>
   );
 };
