@@ -42,6 +42,17 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
     return false;
   };
 
+  const handleAuthFormSubmit = (event) => {
+    event.preventDefault();
+    handleFormSubmitting(true);
+    // TODO send request to backend
+    handleFormSubmitting(false);
+  };
+
+  const handleFormSubmitting = (submitting) => {
+    setForm({ ...form(), submitting: submitting });
+  };
+
   return (
     <form class="box">
       {props?.kind == "signup" && (
@@ -85,6 +96,7 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
       <button
         class="button is-primary is-fullwidth"
         disabled={!form()?.valid || form()?.submitting}
+        onClick={(e) => handleAuthFormSubmit(e)}
       >
         Submit
       </button>
