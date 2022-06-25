@@ -1,12 +1,25 @@
 import { createSignal, createEffect, createMemo } from "solid-js";
 import { Link } from "solid-app-router";
 
+import SiteField from "../site/fields/SiteField";
+import userFieldsConfig from "../fields/user/userFieldsConfig";
+
 export const AuthForm = (props: { kind: "signup" | "login" }) => {
   const [form, setForm] = createSignal(initForm());
 
   createEffect(() => {
     handleFormValid();
   });
+
+  const handleField = (key, value, valid) => {
+    setForm({
+      ...form(),
+      [key]: {
+        value: value,
+        valid: valid,
+      },
+    });
+  };
 
   const handleCheckbox = (_event) => {
     let constent = form()?.consent;
@@ -91,6 +104,18 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
             </Link>
           </label>
         </div>
+      )}
+
+      {props?.kind == "signup" && (
+        <SiteField
+          type="checkbox"
+          fieldKey="consent"
+          label={false}
+          value={form()?.consent?.value}
+          valid={form()?.consent?.valid}
+          config={userFieldsConfig.consent}
+          handleField={handleField}
+        />
       )}
 
       <button
