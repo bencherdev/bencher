@@ -1,4 +1,4 @@
-export const authForms = {
+const authForms = {
     signup: {
         title: "Sign up - Bencher",
         heading: "Sign up",
@@ -24,3 +24,5 @@ export const authForms = {
         }
     },
 };
+
+export default authForms;

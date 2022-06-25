@@ -1,6 +1,8 @@
-import { LinePlot } from "./plot/LinePlot";
+import { LinePlot } from "../../plot/LinePlot";
 
-export const LandingPage = () => {
+const LandingPage = (props) => {
+  props.handleTitle("Bencher - Track Your Benchmarks");
+
   return (
     <section class="section">
       <div class="container">
@@ -13,3 +15,5 @@ export const LandingPage = () => {
     </section>
   );
 };
+
+export default LandingPage;

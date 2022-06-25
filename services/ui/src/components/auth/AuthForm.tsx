@@ -3,13 +3,19 @@ import { Link } from "solid-app-router";
 
 import SiteField from "../site/fields/SiteField";
 import userFieldsConfig from "../fields/user/userFieldsConfig";
+import authForms from "./authForms";
 
-export const AuthForm = (props: { kind: "signup" | "login" }) => {
+const AuthForm = (props: {
+  kind: "signup" | "login";
+  handleTitle: Function;
+}) => {
   const [form, setForm] = createSignal(initForm());
 
   createEffect(() => {
     handleFormValid();
   });
+
+  props.handleTitle(authForms[props.kind]?.title, false);
 
   const handleField = (key, value, valid) => {
     console.log(`${key} ${value} ${valid}`);
@@ -42,11 +48,11 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
 
   const validateForm = () => {
     if (form()?.email?.valid) {
-      if (props?.kind === "login") {
+      if (props.kind === "login") {
         return true;
       }
       if (
-        props?.kind === "signup" &&
+        props.kind === "signup" &&
         form()?.username?.valid &&
         form()?.consent?.value
       ) {
@@ -93,7 +99,7 @@ export const AuthForm = (props: { kind: "signup" | "login" }) => {
 
       <br />
 
-      {props?.kind == "signup" &&
+      {props.kind == "signup" &&
         form()?.username?.valid &&
         form()?.email?.valid && (
           <SiteField
@@ -136,3 +142,5 @@ const initForm = () => {
     submitting: false,
   };
 };
+
+export default AuthForm;
