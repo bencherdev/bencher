@@ -6,15 +6,25 @@
     "dev": "vite",
     "host": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "start-storybook"
   },
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "7.16.7",
+    "@storybook/addon-actions": "6.4.12",
+    "@storybook/addon-essentials": "6.4.12",
+    "@storybook/addon-links": "6.4.12",
+    "@storybook/cli": "^6.5.9",
+    "@storybook/html": "6.4.12",
     "@types/node": "^17.0.33",
+    "babel-loader": "8.2.3",
     "bulma": "^0.9.4",
     "node-sass": "^7.0.1",
     "prettier": "2.6.2",
     "sass": "^1.49.9",
+    "storybook": "^6.5.9",
+    "storybook-builder-vite": "0.1.13",
     "typescript": "^4.6.3",
     "vite": "^2.8.6",
     "vite-plugin-solid": "^2.2.6"
