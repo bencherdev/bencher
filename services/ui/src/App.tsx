@@ -3,7 +3,7 @@ import "./styles/styles.scss";
 import { createSignal, createEffect, createMemo, Component } from "solid-js";
 import { Routes, Route } from "solid-app-router";
 
-import { Navbar } from "./components/site/Navbar";
+import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import { AuthFormPage } from "./components/auth/AuthFormPage";
 import LandingPage from "./components/site/pages/LandingPage";

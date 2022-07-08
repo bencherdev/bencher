@@ -3,6 +3,25 @@
 version = 3
 
 [[package]]
+name = "api"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "diesel",
+ "dotenv",
+ "dropshot",
+ "email-address-parser",
+ "jsonwebtoken",
+ "report",
+ "schemars",
+ "serde",
+ "serde_json",
+ "slog",
+ "slug",
+ "tokio",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -58,16 +77,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
-name = "bencher-cli"
+name = "bencher_cli"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "clap",
  "email-address-parser",
  "git2",
  "nom",
  "open",
- "reports",
+ "report",
  "reqwest",
  "serde",
  "serde_json",
@@ -268,6 +288,7 @@ dependencies = [
  "byteorder",
  "chrono",
  "diesel_derives",
+ "libsqlite3-sys",
  "pq-sys",
  "serde_json",
 ]
@@ -332,6 +353,12 @@ dependencies = [
  "thiserror",
  "zerocopy",
 ]
+
+[[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "dropshot"
@@ -858,6 +885,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "libsqlite3-sys"
+version = "0.22.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290b64917f8b0cb885d9de0f9959fe1f775d7fa12f1da2db9001c1c8ab60f89d"
+dependencies = [
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "libssh2-sys"
 version = "0.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1366,6 +1403,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "report"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "reports"
 version = "0.1.0"
 dependencies = [
@@ -1598,14 +1645,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "setup"
-version = "0.1.0"
-dependencies = [
- "reqwest",
- "tokio",
 ]
 
 [[package]]

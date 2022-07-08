@@ -3,7 +3,6 @@ use std::time::Duration;
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-
 use serde::{Deserialize, Serialize};
 
 pub type Metrics = BTreeMap<String, Metric>;

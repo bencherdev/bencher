@@ -5,7 +5,17 @@
   "editor.formatOnSave": true,
   "rust-analyzer.cargo.allFeatures": false,
   "rust-analyzer.cargo.features": [],
+  "rust-analyzer.imports.granularity.group": "crate",
   "prettier.configPath": "./services/ui/.prettierrc.json",
   "prettier.ignorePath": "./services/ui/.prettierignore",
-  "prettier.prettierPath": "./services/ui/node_modules/prettier"
+  "prettier.prettierPath": "./services/ui/node_modules/prettier",
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "name": "bencher",
+      "database": "${workspaceFolder:bencher}/services/api/bencher.db"
+    }
+  ],
+  "sqltools.useNodeRuntime": true
 }

@@ -11,7 +11,6 @@ pub mod benchmark;
 pub mod clap;
 pub mod locality;
 pub mod sub;
-pub mod testbed;
 pub mod wide;
 
 use sub::map_sub;

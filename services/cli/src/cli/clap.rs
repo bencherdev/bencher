@@ -26,13 +26,8 @@ pub enum CliSub {
 
 #[derive(Parser, Debug)]
 pub struct CliRun {
-    /// Shell to run benchmark command
     #[clap(flatten)]
     pub locality: CliLocality,
-
-    /// Shell to run benchmark command
-    #[clap(flatten)]
-    pub shell: CliShell,
 
     /// Benchmark output adapter
     #[clap(value_enum, short, long)]
@@ -46,8 +41,8 @@ pub struct CliRun {
     #[clap(short, long)]
     pub testbed: Option<String>,
 
-    /// Benchmark command
-    pub cmd: String,
+    #[clap(flatten)]
+    pub command: CliCommand,
 }
 
 #[derive(Args, Debug)]
@@ -56,7 +51,6 @@ pub struct CliLocality {
     #[clap(short, long)]
     pub local: bool,
 
-    /// Backend config
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -83,13 +77,22 @@ pub struct CliBackend {
 }
 
 #[derive(Args, Debug)]
+pub struct CliCommand {
+    #[clap(flatten)]
+    pub shell: CliShell,
+
+    /// Benchmark command
+    pub cmd: Option<String>,
+}
+
+#[derive(Args, Debug)]
 pub struct CliShell {
     /// Shell command path
-    #[clap(short, long)]
+    #[clap(short, long, requires = "cmd")]
     pub shell: Option<String>,
 
     /// Shell command flag
-    #[clap(short, long)]
+    #[clap(short, long, requires = "cmd")]
     pub flag: Option<String>,
 }
 

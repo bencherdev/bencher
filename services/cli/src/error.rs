@@ -16,6 +16,8 @@ pub enum BencherError {
     Shell,
     #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `-f`/`--flag` flag.")]
     Flag,
+    #[error("The subcommand `run` requires either a command argument to run or the result of a run via stdin.")]
+    Benchmark,
     #[error("Failed I/O")]
     Io(#[from] std::io::Error),
     #[error("Failed to convert from UTF-8")]

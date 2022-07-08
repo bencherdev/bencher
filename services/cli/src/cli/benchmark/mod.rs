@@ -1,43 +1,54 @@
 use std::convert::TryFrom;
-use std::process::Command;
+use std::convert::TryInto;
 
+use chrono::Utc;
+
+use crate::cli::clap::CliCommand;
+use crate::BencherError;
+
+mod command;
 mod flag;
+mod input;
 mod output;
 mod shell;
 
-use crate::cli::clap::CliShell;
-use crate::BencherError;
-pub use flag::Flag;
-pub use output::Output as BenchmarkOutput;
-pub use shell::Shell;
+use command::Command;
+use input::Input;
+pub use output::Output;
 
 #[derive(Debug)]
-pub struct Benchmark {
-    shell: Shell,
-    flag: Flag,
-    cmd: String,
+pub enum Benchmark {
+    Input(Input),
+    Command(Command),
 }
 
-impl TryFrom<(CliShell, String)> for Benchmark {
+impl TryFrom<CliCommand> for Benchmark {
     type Error = BencherError;
 
-    fn try_from(shell_cmd: (CliShell, String)) -> Result<Self, Self::Error> {
-        let (shell, cmd) = shell_cmd;
-        Ok(Self {
-            shell: Shell::try_from(shell.shell)?,
-            flag: Flag::try_from(shell.flag)?,
-            cmd,
+    fn try_from(command: CliCommand) -> Result<Self, Self::Error> {
+        Ok(if let Some(cmd) = command.cmd {
+            Self::Command(Command::try_from((command.shell, cmd))?)
+        } else {
+            let input = Input::new()?;
+            if input.is_empty() {
+                return Err(BencherError::Benchmark);
+            }
+            Self::Input(input)
         })
     }
 }
 
 impl Benchmark {
-    pub fn run(&self) -> Result<BenchmarkOutput, BencherError> {
-        let output = Command::new(self.shell.to_string())
-            .arg(self.flag.to_string())
-            .arg(&self.cmd)
-            .output()?;
-
-        BenchmarkOutput::try_from(output)
+    pub fn run(&self) -> Result<Output, BencherError> {
+        Ok(match self {
+            Self::Input(input) => Output {
+                start: None,
+                result: input.to_string(),
+            },
+            Self::Command(command) => Output {
+                start: Some(Utc::now()),
+                result: command.try_into()?,
+            },
+        })
     }
 }

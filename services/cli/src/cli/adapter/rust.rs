@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -13,20 +14,19 @@ use nom::multi::many0;
 use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
+use report::{Latency, Metrics};
 
-use reports::{Latency, Metric, Metrics};
-
-use crate::cli::benchmark::BenchmarkOutput;
+use crate::cli::benchmark::Output;
 use crate::BencherError;
 
-pub fn parse(output: BenchmarkOutput) -> Result<Metrics, BencherError> {
-    let (_, report) = parse_stdout(&output.stdout).unwrap();
+pub fn parse(output: &Output) -> Result<Metrics, BencherError> {
+    let (_, report) = parse_stdout(output.as_str()).unwrap();
     Ok(report)
 }
 
 enum Test {
     Ignored,
-    Bench(Metric),
+    Bench(Latency),
 }
 
 fn parse_stdout(input: &str) -> IResult<&str, Metrics> {
@@ -57,22 +57,27 @@ fn parse_stdout(input: &str) -> IResult<&str, Metrics> {
             line_ending,
         )),
         |(_, _, _, _, _, _, _, benches, _)| {
-            let mut metrics = Metrics::new();
+            let mut latencies = BTreeMap::new();
             for bench in benches {
-                if let Some((key, metric)) = to_metric(bench) {
-                    metrics.insert(key, metric);
+                if let Some((key, latency)) = to_latency(bench) {
+                    latencies.insert(key, latency);
                 }
             }
-            metrics
+            Metrics {
+                latency: Some(latencies),
+                ..Default::default()
+            }
         },
     )(input)
 }
 
-fn to_metric(bench: (&str, &str, &str, &str, &str, &str, Test, &str)) -> Option<(String, Metric)> {
+fn to_latency(
+    bench: (&str, &str, &str, &str, &str, &str, Test, &str),
+) -> Option<(String, Latency)> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
-        Test::Bench(metric) => Some((key.into(), metric)),
+        Test::Bench(latency) => Some((key.into(), latency)),
     }
 }
 
@@ -95,7 +100,7 @@ impl From<&str> for Units {
     }
 }
 
-fn parse_bench(input: &str) -> IResult<&str, Metric> {
+fn parse_bench(input: &str) -> IResult<&str, Latency> {
     map(
         tuple((
             tag("bench:"),
@@ -114,7 +119,11 @@ fn parse_bench(input: &str) -> IResult<&str, Metric> {
             let units = Units::from(units);
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
-            Metric::from(Latency { duration, variance })
+            Latency {
+                duration,
+                upper_variance: variance.clone(),
+                lower_variance: variance,
+            }
         },
     )(input)
 }
