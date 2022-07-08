@@ -1,1 +1,4 @@
 bencher.db
+.bencher.db-litestream
+bencher.db-shm
+bencher.db-wal

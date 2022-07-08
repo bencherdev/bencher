@@ -9,7 +9,11 @@ export const Navbar = () => {
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
         <Link class="navbar-item" href="/">
-          <img src="/bencher_navbar.png" width="152" height="28" />
+          <img
+            src="https://s3.amazonaws.com/static.bencher.dev/bencher_navbar.png"
+            width="152"
+            height="28"
+          />
         </Link>
 
         <a
