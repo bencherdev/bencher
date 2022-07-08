@@ -1,4 +1,4 @@
-import { Link } from "solid-app-router";
+// import { Link } from "solid-app-router";
 
 const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
 const BENCHER_DOCS_URL: string = import.meta.env.VITE_BENCHER_DOCS_URL;
@@ -8,9 +8,9 @@ export const Navbar = () => {
   return (
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
-        <Link class="navbar-item" href="/">
+        <a class="navbar-item" href="/">
           <img src="/bencher_navbar.png" width="152" height="28" />
-        </Link>
+        </a>
 
         <a
           role="button"
@@ -45,12 +45,12 @@ export const Navbar = () => {
         <div class="navbar-end">
           <div class="navbar-item">
             <div class="buttons">
-              <Link class="button is-light" href="/auth/login">
+              <a class="button is-light" href="/auth/login">
                 Log in
-              </Link>
-              <Link class="button is-primary" href="/auth/signup">
+              </a>
+              <a class="button is-primary" href="/auth/signup">
                 <strong>Sign up</strong>
-              </Link>
+              </a>
             </div>
           </div>
         </div>

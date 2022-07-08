@@ -226,3 +226,7 @@ Auth - ORY
 https://www.ory.sh/docs/guides/cli/installation
 https://www.ory.sh/docs/kratos/concepts/ui-user-interface
 https://www.ory.sh/docs/guides/social-signin/github
+
+Storybook
+npm x start-storybook
+npm run start

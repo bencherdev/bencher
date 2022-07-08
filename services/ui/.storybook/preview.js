@@ -1,5 +1,6 @@
 import {createRoot} from "solid-js"
 import {insert, template, createComponent} from "solid-js/web"
+import { Router } from "solid-app-router";
 
 
 export const decorators = [
