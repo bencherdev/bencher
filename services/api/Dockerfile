@@ -27,5 +27,6 @@ COPY api/litestream.yml /etc/litestream.yml
 
 COPY api/entrypoint.sh /entrypoint.sh
 ENV PORT 8080
+# USER 1000
 
 CMD ["/entrypoint.sh"]
