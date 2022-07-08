@@ -1,0 +1,6 @@
+access-key-id: $LITESTREAM_KEY_ID
+secret-access-key: $LITESTREAM_SECRET_ACCESS_KEY
+dbs:
+  - path: /bencher
+    replicas:
+      - url: s3://bencher.dev/bencher
