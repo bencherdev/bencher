@@ -235,3 +235,19 @@ https://www.ory.sh/docs/guides/social-signin/github
 Storybook
 npm x start-storybook
 npm run start
+
+Litestream
+cd services/api
+export LITESTREAM_ACCESS_KEY_ID=***
+export LITESTREAM_SECRET_ACCESS_KEY=***
+export LITESTREAM_DB_PATH=bencher.db
+export LITESTREAM_REPLICA_URL=s3://db.bencher.dev/bencher.db
+
+litestream restore -o $LITESTREAM_DB_PATH $LITESTREAM_REPLICA_URL
+litestream replicate $LITESTREAM_DB_PATH $LITESTREAM_REPLICA_URL
+
+litestream replicate --config ./litestream.yml
+
+docker build -f Dockerfile --tag api-lite ..
+
+docker run -p 8080:8080 -e LITESTREAM_ACCESS_KEY_ID=$LITESTREAM_ACCESS_KEY_ID -e LITESTREAM_SECRET_ACCESS_KEY=$LITESTREAM_SECRET_ACCESS_KEY -e LITESTREAM_DB_PATH=$LITESTREAM_DB_PATH -e LITESTREAM_REPLICA_URL=$LITESTREAM_REPLICA_URL --name api_lite --rm api-lite

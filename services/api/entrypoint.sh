@@ -1,11 +1,6 @@
 #!/bin/sh
 
-echo "Waiting for postgres..."
-
-while ! nc -z postgres 5432; do
-  sleep 0.1
-done
-
-echo "PostgreSQL started"
-
-cargo run
+litestream restore -o $LITESTREAM_DB_PATH $LITESTREAM_REPLICA_URL
+sudo systemctl enable litestream
+sudo systemctl start litestream
+./api
