@@ -1,7 +1,10 @@
-use chrono::{DateTime, Utc};
+use chrono::{
+    DateTime,
+    Utc,
+};
 
 pub struct Output {
-    pub start: Option<DateTime<Utc>>,
+    pub start:  DateTime<Utc>,
     pub result: String,
 }
 

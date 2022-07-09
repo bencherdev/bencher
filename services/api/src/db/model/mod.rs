@@ -1,16 +1,32 @@
 use chrono::NaiveDateTime;
 use diesel::{
     Insertable,
+    QueryDsl,
     Queryable,
+    RunQueryDsl,
+    SqliteConnection,
 };
-use report::Report as JsonReport;
+use report::{
+    Adapter as JsonAdapter,
+    Report as JsonReport,
+};
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
     Serialize,
 };
+use tokio::sync::{
+    Mutex,
+    MutexGuard,
+};
 
-use crate::db::schema::report as report_table;
+use crate::{
+    db::schema::{
+        adapter as adapter_table,
+        report as report_table,
+    },
+    diesel::ExpressionMethods,
+};
 
 pub const DEFAULT_PROJECT: &str = "default";
 
@@ -19,8 +35,15 @@ pub struct Report {
     pub id:         i32,
     pub project:    Option<String>,
     pub testbed:    Option<String>,
-    pub start_time: Option<NaiveDateTime>,
+    pub adapter_id: i32,
+    pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
+}
+
+#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+pub struct Adapter {
+    pub id:   i32,
+    pub name: String,
 }
 
 #[derive(Insertable)]
@@ -28,33 +51,7 @@ pub struct Report {
 pub struct NewReport {
     pub project:    String,
     pub testbed:    Option<String>,
-    pub start_time: Option<NaiveDateTime>,
+    pub adapter_id: i32,
+    pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
-}
-
-// todo -> add validation here and switch to `try_from`.
-impl From<JsonReport> for NewReport {
-    fn from(report: JsonReport) -> Self {
-        let JsonReport {
-            project,
-            testbed,
-            start_time,
-            end_time,
-            metrics: _,
-        } = report;
-        Self {
-            project: unwrap_project(project.as_deref()),
-            testbed,
-            start_time: start_time.map(|dt| dt.naive_utc()),
-            end_time: end_time.naive_utc(),
-        }
-    }
-}
-
-fn unwrap_project(project: Option<&str>) -> String {
-    if let Some(project) = project {
-        slug::slugify(project)
-    } else {
-        DEFAULT_PROJECT.into()
-    }
 }

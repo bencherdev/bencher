@@ -51,6 +51,7 @@ impl SubCmd for Run {
         let report = Report::new(
             self.project.clone(),
             self.testbed.clone(),
+            self.adapter.into(),
             output.start,
             Utc::now(),
             metrics,

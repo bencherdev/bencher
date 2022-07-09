@@ -1,10 +1,14 @@
-use std::convert::TryFrom;
-use std::convert::TryInto;
+use std::convert::{
+    TryFrom,
+    TryInto,
+};
 
 use chrono::Utc;
 
-use crate::cli::clap::CliCommand;
-use crate::BencherError;
+use crate::{
+    cli::clap::CliCommand,
+    BencherError,
+};
 
 mod command;
 mod flag;
@@ -40,15 +44,11 @@ impl TryFrom<CliCommand> for Benchmark {
 
 impl Benchmark {
     pub fn run(&self) -> Result<Output, BencherError> {
-        Ok(match self {
-            Self::Input(input) => Output {
-                start: None,
-                result: input.to_string(),
-            },
-            Self::Command(command) => Output {
-                start: Some(Utc::now()),
-                result: command.try_into()?,
-            },
-        })
+        let start = Utc::now();
+        let result = match self {
+            Self::Input(input) => input.to_string(),
+            Self::Command(command) => command.try_into()?,
+        };
+        Ok(Output { start, result })
     }
 }

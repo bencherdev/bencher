@@ -1,36 +1,47 @@
-use std::collections::BTreeMap;
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    time::Duration,
+};
 
-use chrono::{DateTime, Utc};
+use chrono::{
+    DateTime,
+    Utc,
+};
+use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Report {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub project: Option<String>,
+    pub project:    Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub testbed: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: DateTime<Utc>,
+    pub testbed:    Option<String>,
+    pub adapter:    Adapter,
+    pub start_time: DateTime<Utc>,
+    pub end_time:   DateTime<Utc>,
     #[serde(flatten)]
-    pub metrics: Metrics,
+    pub metrics:    Metrics,
 }
 
 impl Report {
     pub fn new(
         project: Option<String>,
         testbed: Option<String>,
-        start_time: Option<DateTime<Utc>>,
+        adapter: Adapter,
+        start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
         metrics: Metrics,
     ) -> Self {
         Self {
             project,
             testbed,
+            adapter,
             start_time,
             end_time,
             metrics,
@@ -38,21 +49,30 @@ impl Report {
     }
 }
 
+#[derive(Display, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub enum Adapter {
+    Json,
+    #[display(fmt = "rust")]
+    #[serde(rename = "rust")]
+    RustCargoBench,
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Metrics {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latency: Option<BTreeMap<Benchmark, Latency>>,
+    pub latency:      Option<BTreeMap<Benchmark, Latency>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub throughput: Option<BTreeMap<Benchmark, ()>>,
+    pub throughput:   Option<BTreeMap<Benchmark, ()>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_cpu: Option<BTreeMap<Benchmark, ()>>,
+    pub total_cpu:    Option<BTreeMap<Benchmark, ()>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub self_cpu: Option<BTreeMap<Benchmark, ()>>,
+    pub self_cpu:     Option<BTreeMap<Benchmark, ()>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_memory: Option<BTreeMap<Benchmark, ()>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub self_memory: Option<BTreeMap<Benchmark, ()>>,
+    pub self_memory:  Option<BTreeMap<Benchmark, ()>>,
 }
 
 pub type Benchmark = String;
@@ -60,7 +80,7 @@ pub type Benchmark = String;
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Latency {
-    pub duration: Duration,
+    pub duration:       Duration,
     pub upper_variance: Duration,
     pub lower_variance: Duration,
 }

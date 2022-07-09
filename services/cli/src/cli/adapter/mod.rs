@@ -1,13 +1,17 @@
 use report::Metrics;
 
-use crate::cli::benchmark::Output;
-use crate::cli::clap::CliAdapter;
-use crate::BencherError;
+use crate::{
+    cli::{
+        benchmark::Output,
+        clap::CliAdapter,
+    },
+    BencherError,
+};
 
 pub mod json;
 pub mod rust;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Adapter {
     Json,
     RustCargoBench,
@@ -18,6 +22,15 @@ impl From<CliAdapter> for Adapter {
         match adapter {
             CliAdapter::Json => Adapter::Json,
             CliAdapter::RustCargoBench => Adapter::RustCargoBench,
+        }
+    }
+}
+
+impl Into<report::Adapter> for Adapter {
+    fn into(self) -> report::Adapter {
+        match self {
+            Self::Json => report::Adapter::Json,
+            Self::RustCargoBench => report::Adapter::RustCargoBench,
         }
     }
 }

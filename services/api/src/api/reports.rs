@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
+use chrono::NaiveDateTime;
 use diesel::{
-    sqlite::SqliteConnection,
+    Insertable,
+    QueryDsl,
+    Queryable,
     RunQueryDsl,
+    SqliteConnection,
 };
 use dropshot::{
     endpoint,
@@ -13,8 +17,19 @@ use dropshot::{
     RequestContext,
     TypedBody,
 };
-use report::Report as JsonReport;
-use tokio::sync::Mutex;
+use report::{
+    Adapter as JsonAdapter,
+    Report as JsonReport,
+};
+use schemars::JsonSchema;
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use tokio::sync::{
+    Mutex,
+    MutexGuard,
+};
 
 use crate::{
     api::headers::CorsHeaders,
@@ -23,8 +38,13 @@ use crate::{
             NewReport,
             Report,
         },
-        schema::report as report_table,
+        schema,
+        schema::{
+            adapter as adapter_table,
+            report as report_table,
+        },
     },
+    diesel::ExpressionMethods,
 };
 
 pub const DEFAULT_PROJECT: &str = "default";
@@ -62,13 +82,46 @@ pub async fn api_put_report(
     let db_connection = rqctx.context();
 
     let json_report = body.into_inner();
-    let new_report = NewReport::from(json_report);
-
     let conn = db_connection.lock().await;
+    let new_report = map_report(&*conn, json_report);
     diesel::insert_into(report_table::table)
         .values(&new_report)
         .execute(&*conn)
         .expect("Error saving new report to database.");
 
     Ok(HttpResponseAccepted(()))
+}
+
+pub fn map_report(conn: &SqliteConnection, report: JsonReport) -> NewReport {
+    let JsonReport {
+        project,
+        testbed,
+        adapter,
+        start_time,
+        end_time,
+        metrics: _,
+    } = report;
+    NewReport {
+        project: unwrap_project(project.as_deref()),
+        testbed,
+        adapter_id: map_adapter(conn, adapter),
+        start_time: start_time.naive_utc(),
+        end_time: end_time.naive_utc(),
+    }
+}
+
+pub fn map_adapter(conn: &SqliteConnection, adapter: JsonAdapter) -> i32 {
+    adapter_table::table
+        .filter(schema::adapter::name.eq(adapter.to_string()))
+        .select(schema::adapter::id)
+        .first(conn)
+        .unwrap()
+}
+
+fn unwrap_project(project: Option<&str>) -> String {
+    if let Some(project) = project {
+        slug::slugify(project)
+    } else {
+        DEFAULT_PROJECT.into()
+    }
 }
