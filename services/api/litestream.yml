@@ -4,3 +4,4 @@ dbs:
   - path: $LITESTREAM_DB_PATH
     replicas:
       - url: $LITESTREAM_REPLICA_URL
+    exec: /api
