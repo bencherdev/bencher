@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "diesel",
+ "diesel_migrations",
  "dotenv",
  "dropshot",
  "email-address-parser",
