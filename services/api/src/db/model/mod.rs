@@ -6,10 +6,6 @@ use diesel::{
     RunQueryDsl,
     SqliteConnection,
 };
-use report::{
-    Adapter as JsonAdapter,
-    Report as JsonReport,
-};
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
@@ -29,33 +25,5 @@ use crate::{
     diesel::ExpressionMethods,
 };
 
-pub const DEFAULT_PROJECT: &str = "default";
-
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct Report {
-    pub id:         i32,
-    pub uuid:       String,
-    pub project:    Option<String>,
-    pub testbed:    Option<String>,
-    pub adapter_id: i32,
-    pub start_time: NaiveDateTime,
-    pub end_time:   NaiveDateTime,
-}
-
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct Adapter {
-    pub id:   i32,
-    pub uuid: String,
-    pub name: String,
-}
-
-#[derive(Insertable)]
-#[table_name = "report_table"]
-pub struct NewReport {
-    pub uuid:       String,
-    pub project:    String,
-    pub testbed:    Option<String>,
-    pub adapter_id: i32,
-    pub start_time: NaiveDateTime,
-    pub end_time:   NaiveDateTime,
-}
+pub mod adapter;
+pub mod report;

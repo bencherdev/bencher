@@ -37,14 +37,13 @@ use crate::{
     api::headers::CorsHeaders,
     db::{
         model::{
-            NewReport,
-            Report as DbReport,
+            adapter::QueryAdapter,
+            report::{
+                InsertReport,
+                QueryReport,
+            },
         },
         schema,
-        schema::{
-            adapter as adapter_table,
-            report as report_table,
-        },
     },
     diesel::ExpressionMethods,
 };
@@ -62,8 +61,8 @@ pub struct Report {
 }
 
 impl Report {
-    fn new(conn: &SqliteConnection, db_report: DbReport) -> Self {
-        let DbReport {
+    fn new(conn: &SqliteConnection, db_report: QueryReport) -> Self {
+        let QueryReport {
             id: _,
             uuid,
             project,
@@ -76,7 +75,7 @@ impl Report {
             uuid,
             project,
             testbed,
-            adapter_uuid: map_adapter_id(conn, adapter_id),
+            adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id),
             start_time,
             end_time,
         }
@@ -94,8 +93,8 @@ pub async fn api_get_reports(
     let db_connection = rqctx.context();
 
     let conn = db_connection.lock().await;
-    let reports: Vec<Report> = report_table::table
-        .load::<DbReport>(&*conn)
+    let reports: Vec<Report> = schema::report::table
+        .load::<QueryReport>(&*conn)
         .expect("Error loading reports.")
         .into_iter()
         .map(|db_report| Report::new(&*conn, db_report))
@@ -125,9 +124,9 @@ pub async fn api_get_report(
 
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
-    let db_report = report_table::table
+    let db_report = schema::report::table
         .filter(schema::report::uuid.eq(path_params.report_uuid))
-        .first::<DbReport>(&*conn)
+        .first::<QueryReport>(&*conn)
         .unwrap();
     let report = Report::new(&*conn, db_report);
 
@@ -150,54 +149,11 @@ pub async fn api_post_report(
 
     let json_report = body.into_inner();
     let conn = db_connection.lock().await;
-    let new_report = map_report(&*conn, json_report);
-    diesel::insert_into(report_table::table)
-        .values(&new_report)
+    let insert_report = InsertReport::new(&*conn, json_report);
+    diesel::insert_into(schema::report::table)
+        .values(&insert_report)
         .execute(&*conn)
         .expect("Error saving new report to database.");
 
     Ok(HttpResponseAccepted(()))
-}
-
-pub fn map_report(conn: &SqliteConnection, report: JsonReport) -> NewReport {
-    let JsonReport {
-        project,
-        testbed,
-        adapter,
-        start_time,
-        end_time,
-        metrics: _,
-    } = report;
-    NewReport {
-        uuid: Uuid::new_v4().to_string(),
-        project: unwrap_project(project.as_deref()),
-        testbed,
-        adapter_id: map_adapter_name(conn, adapter),
-        start_time: start_time.naive_utc(),
-        end_time: end_time.naive_utc(),
-    }
-}
-
-pub fn map_adapter_name(conn: &SqliteConnection, adapter: JsonAdapter) -> i32 {
-    adapter_table::table
-        .filter(schema::adapter::name.eq(adapter.to_string()))
-        .select(schema::adapter::id)
-        .first(conn)
-        .unwrap()
-}
-
-pub fn map_adapter_id(conn: &SqliteConnection, adapter_id: i32) -> String {
-    adapter_table::table
-        .filter(schema::adapter::id.eq(adapter_id))
-        .select(schema::adapter::uuid)
-        .first(conn)
-        .unwrap()
-}
-
-fn unwrap_project(project: Option<&str>) -> String {
-    if let Some(project) = project {
-        slug::slugify(project)
-    } else {
-        DEFAULT_PROJECT.into()
-    }
 }

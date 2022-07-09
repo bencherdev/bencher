@@ -35,16 +35,8 @@ use tokio::sync::{
 use crate::{
     api::headers::CorsHeaders,
     db::{
-        model::{
-            Adapter as DbAdapter,
-            NewReport,
-            Report,
-        },
+        model::adapter::QueryAdapter,
         schema,
-        schema::{
-            adapter as adapter_table,
-            report as report_table,
-        },
     },
     diesel::ExpressionMethods,
 };
@@ -55,9 +47,9 @@ pub struct Adapter {
     pub name: String,
 }
 
-impl From<DbAdapter> for Adapter {
-    fn from(adapter: DbAdapter) -> Self {
-        let DbAdapter { id: _, uuid, name } = adapter;
+impl From<QueryAdapter> for Adapter {
+    fn from(adapter: QueryAdapter) -> Self {
+        let QueryAdapter { id: _, uuid, name } = adapter;
         Self { uuid, name }
     }
 }
@@ -73,8 +65,8 @@ pub async fn api_get_adapters(
     let db_connection = rqctx.context();
 
     let conn = db_connection.lock().await;
-    let adapters: Vec<Adapter> = adapter_table::table
-        .load::<DbAdapter>(&*conn)
+    let adapters: Vec<Adapter> = schema::adapter::table
+        .load::<QueryAdapter>(&*conn)
         .expect("Error loading adapters.")
         .into_iter()
         .map(Into::into)
@@ -104,9 +96,9 @@ pub async fn api_get_adapter(
 
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
-    let adapter = adapter_table::table
+    let adapter = schema::adapter::table
         .filter(schema::adapter::uuid.eq(path_params.adapter_uuid))
-        .first::<DbAdapter>(&*conn)
+        .first::<QueryAdapter>(&*conn)
         .unwrap()
         .into();
 
