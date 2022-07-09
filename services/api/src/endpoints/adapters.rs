@@ -21,12 +21,12 @@ use serde::{
 use tokio::sync::Mutex;
 
 use crate::{
-    api::headers::CorsHeaders,
     db::{
         model::adapter::QueryAdapter,
         schema,
     },
     diesel::ExpressionMethods,
+    util::headers::CorsHeaders,
 };
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]

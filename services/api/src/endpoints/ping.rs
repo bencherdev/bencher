@@ -10,7 +10,7 @@ use dropshot::{
 };
 use tokio::sync::Mutex;
 
-use crate::api::headers::CorsHeaders;
+use crate::util::headers::CorsHeaders;
 
 #[endpoint {
     method = GET,

@@ -25,7 +25,6 @@ use serde::{
 use tokio::sync::Mutex;
 
 use crate::{
-    api::headers::CorsHeaders,
     db::{
         model::{
             adapter::QueryAdapter,
@@ -37,6 +36,7 @@ use crate::{
         schema,
     },
     diesel::ExpressionMethods,
+    util::headers::CorsHeaders,
 };
 
 pub const DEFAULT_PROJECT: &str = "default";
