@@ -1,6 +1,7 @@
 table! {
     adapter (id) {
         id -> Integer,
+        uuid -> Text,
         name -> Text,
     }
 }
@@ -8,6 +9,7 @@ table! {
 table! {
     report (id) {
         id -> Integer,
+        uuid -> Text,
         project -> Nullable<Text>,
         testbed -> Nullable<Text>,
         adapter_id -> Integer,

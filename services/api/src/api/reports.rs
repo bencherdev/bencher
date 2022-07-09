@@ -30,6 +30,7 @@ use tokio::sync::{
     Mutex,
     MutexGuard,
 };
+use uuid::Uuid;
 
 use crate::{
     api::headers::CorsHeaders,
@@ -62,7 +63,7 @@ pub async fn api_get_reports(
     let conn = db_connection.lock().await;
     let reports: Vec<Report> = report_table::table
         .load::<Report>(&*conn)
-        .expect("Error loading reports");
+        .expect("Error loading reports.");
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(reports),
@@ -102,6 +103,7 @@ pub fn map_report(conn: &SqliteConnection, report: JsonReport) -> NewReport {
         metrics: _,
     } = report;
     NewReport {
+        uuid: Uuid::new_v4().to_string(),
         project: unwrap_project(project.as_deref()),
         testbed,
         adapter_id: map_adapter(conn, adapter),
