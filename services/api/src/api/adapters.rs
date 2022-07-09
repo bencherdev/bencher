@@ -1,36 +1,24 @@
 use std::sync::Arc;
 
-use chrono::NaiveDateTime;
 use diesel::{
-    Insertable,
     QueryDsl,
-    Queryable,
     RunQueryDsl,
     SqliteConnection,
 };
 use dropshot::{
     endpoint,
     HttpError,
-    HttpResponseAccepted,
     HttpResponseHeaders,
     HttpResponseOk,
     Path,
     RequestContext,
-    TypedBody,
-};
-use report::{
-    Adapter as JsonAdapter,
-    Report as JsonReport,
 };
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
     Serialize,
 };
-use tokio::sync::{
-    Mutex,
-    MutexGuard,
-};
+use tokio::sync::Mutex;
 
 use crate::{
     api::headers::CorsHeaders,

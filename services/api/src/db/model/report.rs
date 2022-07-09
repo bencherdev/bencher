@@ -1,38 +1,19 @@
 use chrono::NaiveDateTime;
 use diesel::{
     Insertable,
-    QueryDsl,
     Queryable,
-    RunQueryDsl,
     SqliteConnection,
 };
-use report::{
-    Adapter as JsonAdapter,
-    Report as JsonReport,
-};
+use report::Report as JsonReport;
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
     Serialize,
 };
-use tokio::sync::{
-    Mutex,
-    MutexGuard,
-};
 use uuid::Uuid;
 
 use super::adapter::QueryAdapter;
-use crate::{
-    api::headers::CorsHeaders,
-    db::{
-        schema,
-        schema::{
-            adapter as adapter_table,
-            report as report_table,
-        },
-    },
-    diesel::ExpressionMethods,
-};
+use crate::db::schema::report as report_table;
 
 pub const DEFAULT_PROJECT: &str = "default";
 

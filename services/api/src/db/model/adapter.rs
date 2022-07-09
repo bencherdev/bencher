@@ -1,34 +1,17 @@
-use chrono::NaiveDateTime;
 use diesel::{
-    Insertable,
     QueryDsl,
     Queryable,
     RunQueryDsl,
     SqliteConnection,
-};
-use report::{
-    Adapter as JsonAdapter,
-    Report as JsonReport,
 };
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
     Serialize,
 };
-use tokio::sync::{
-    Mutex,
-    MutexGuard,
-};
-use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::{
-            adapter as adapter_table,
-            report as report_table,
-        },
-    },
+    db::schema,
     diesel::ExpressionMethods,
 };
 
