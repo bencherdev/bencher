@@ -56,9 +56,9 @@ pub struct Adapter {
 }
 
 impl From<DbAdapter> for Adapter {
-    fn from(adapter: DbAdapter) -> Adapter {
+    fn from(adapter: DbAdapter) -> Self {
         let DbAdapter { id: _, uuid, name } = adapter;
-        Adapter { uuid, name }
+        Self { uuid, name }
     }
 }
 

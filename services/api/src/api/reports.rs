@@ -14,6 +14,7 @@ use dropshot::{
     HttpResponseAccepted,
     HttpResponseHeaders,
     HttpResponseOk,
+    Path,
     RequestContext,
     TypedBody,
 };
@@ -37,7 +38,7 @@ use crate::{
     db::{
         model::{
             NewReport,
-            Report,
+            Report as DbReport,
         },
         schema,
         schema::{
@@ -49,6 +50,38 @@ use crate::{
 };
 
 pub const DEFAULT_PROJECT: &str = "default";
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct Report {
+    pub uuid:         String,
+    pub project:      Option<String>,
+    pub testbed:      Option<String>,
+    pub adapter_uuid: String,
+    pub start_time:   NaiveDateTime,
+    pub end_time:     NaiveDateTime,
+}
+
+impl Report {
+    fn new(conn: &SqliteConnection, db_report: DbReport) -> Self {
+        let DbReport {
+            id: _,
+            uuid,
+            project,
+            testbed,
+            adapter_id,
+            start_time,
+            end_time,
+        } = db_report;
+        Report {
+            uuid,
+            project,
+            testbed,
+            adapter_uuid: map_adapter_id(conn, adapter_id),
+            start_time,
+            end_time,
+        }
+    }
+}
 
 #[endpoint {
     method = GET,
@@ -62,11 +95,44 @@ pub async fn api_get_reports(
 
     let conn = db_connection.lock().await;
     let reports: Vec<Report> = report_table::table
-        .load::<Report>(&*conn)
-        .expect("Error loading reports.");
+        .load::<DbReport>(&*conn)
+        .expect("Error loading reports.")
+        .into_iter()
+        .map(|db_report| Report::new(&*conn, db_report))
+        .collect();
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(reports),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+    ))
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct PathParams {
+    pub report_uuid: String,
+}
+
+#[endpoint {
+    method = GET,
+    path = "/v0/reports/{report_uuid}",
+    tags = ["reports"]
+}]
+pub async fn api_get_report(
+    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    path_params: Path<PathParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<Report>, CorsHeaders>, HttpError> {
+    let db_connection = rqctx.context();
+
+    let path_params = path_params.into_inner();
+    let conn = db_connection.lock().await;
+    let db_report = report_table::table
+        .filter(schema::report::uuid.eq(path_params.report_uuid))
+        .first::<DbReport>(&*conn)
+        .unwrap();
+    let report = Report::new(&*conn, db_report);
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseOk(report),
         CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
     ))
 }
@@ -76,7 +142,7 @@ pub async fn api_get_reports(
     path = "/v0/reports",
     tags = ["reports"]
 }]
-pub async fn api_put_report(
+pub async fn api_post_report(
     rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
     body: TypedBody<JsonReport>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
@@ -106,16 +172,24 @@ pub fn map_report(conn: &SqliteConnection, report: JsonReport) -> NewReport {
         uuid: Uuid::new_v4().to_string(),
         project: unwrap_project(project.as_deref()),
         testbed,
-        adapter_id: map_adapter(conn, adapter),
+        adapter_id: map_adapter_name(conn, adapter),
         start_time: start_time.naive_utc(),
         end_time: end_time.naive_utc(),
     }
 }
 
-pub fn map_adapter(conn: &SqliteConnection, adapter: JsonAdapter) -> i32 {
+pub fn map_adapter_name(conn: &SqliteConnection, adapter: JsonAdapter) -> i32 {
     adapter_table::table
         .filter(schema::adapter::name.eq(adapter.to_string()))
         .select(schema::adapter::id)
+        .first(conn)
+        .unwrap()
+}
+
+pub fn map_adapter_id(conn: &SqliteConnection, adapter_id: i32) -> String {
+    adapter_table::table
+        .filter(schema::adapter::id.eq(adapter_id))
+        .select(schema::adapter::uuid)
         .first(conn)
         .unwrap()
 }

@@ -17,7 +17,7 @@ or
 cargo bench | cargo run -- run --local --adapter rust
 
 
-cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --adapter rust "cargo bench" 
+cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --adapter rust "cargo bench"
 
 cargo run --bin bencher -- ...
 
