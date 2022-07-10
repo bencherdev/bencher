@@ -14,6 +14,7 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -21,7 +22,7 @@ pub struct Report {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project:    Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub testbed:    Option<String>,
+    pub testbed:    Option<Uuid>,
     pub adapter:    Adapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
@@ -32,7 +33,7 @@ pub struct Report {
 impl Report {
     pub fn new(
         project: Option<String>,
-        testbed: Option<String>,
+        testbed: Option<Uuid>,
         adapter: Adapter,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,

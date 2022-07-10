@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    str::FromStr,
+    sync::Arc,
+};
 
 use diesel::{
     QueryDsl,
@@ -19,6 +22,7 @@ use serde::{
     Serialize,
 };
 use tokio::sync::Mutex;
+use uuid::Uuid;
 
 use crate::{
     db::{
@@ -31,14 +35,17 @@ use crate::{
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Adapter {
-    pub uuid: String,
+    pub uuid: Uuid,
     pub name: String,
 }
 
 impl From<QueryAdapter> for Adapter {
     fn from(adapter: QueryAdapter) -> Self {
         let QueryAdapter { id: _, uuid, name } = adapter;
-        Self { uuid, name }
+        Self {
+            uuid: Uuid::from_str(&uuid).unwrap(),
+            name,
+        }
     }
 }
 

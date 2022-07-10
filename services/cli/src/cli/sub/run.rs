@@ -1,8 +1,15 @@
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    str::FromStr,
+};
 
 use async_trait::async_trait;
 use chrono::Utc;
 use report::Report;
+use uuid::{
+    uuid,
+    Uuid,
+};
 
 use crate::{
     cli::{
@@ -48,9 +55,18 @@ impl SubCmd for Run {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let output = self.benchmark.run()?;
         let metrics = self.adapter.convert(&output)?;
+        let testbed = if let Some(testbed) = &self.testbed {
+            if let Ok(uuid) = Uuid::from_str(testbed) {
+                Some(uuid)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         let report = Report::new(
             self.project.clone(),
-            self.testbed.clone(),
+            testbed,
             self.adapter.into(),
             output.start,
             Utc::now(),

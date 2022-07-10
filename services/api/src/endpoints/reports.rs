@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    str::FromStr,
+    sync::Arc,
+};
 
 use chrono::NaiveDateTime;
 use diesel::{
@@ -23,6 +26,7 @@ use serde::{
     Serialize,
 };
 use tokio::sync::Mutex;
+use uuid::Uuid;
 
 use crate::{
     db::{
@@ -32,6 +36,7 @@ use crate::{
                 InsertReport,
                 QueryReport,
             },
+            testbed::QueryTestbed,
         },
         schema,
     },
@@ -43,9 +48,9 @@ pub const DEFAULT_PROJECT: &str = "default";
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Report {
-    pub uuid:         String,
+    pub uuid:         Uuid,
     pub project:      Option<String>,
-    pub testbed:      Option<String>,
+    pub testbed_uuid: Option<Uuid>,
     pub adapter_uuid: String,
     pub start_time:   NaiveDateTime,
     pub end_time:     NaiveDateTime,
@@ -57,15 +62,15 @@ impl Report {
             id: _,
             uuid,
             project,
-            testbed,
+            testbed_id,
             adapter_id,
             start_time,
             end_time,
         } = db_report;
         Report {
-            uuid,
+            uuid: Uuid::from_str(&uuid).unwrap(),
             project,
-            testbed,
+            testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id),
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id),
             start_time,
             end_time,

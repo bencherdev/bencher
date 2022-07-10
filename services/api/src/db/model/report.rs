@@ -12,7 +12,10 @@ use serde::{
 };
 use uuid::Uuid;
 
-use super::adapter::QueryAdapter;
+use super::{
+    adapter::QueryAdapter,
+    testbed::QueryTestbed,
+};
 use crate::db::schema::report as report_table;
 
 pub const DEFAULT_PROJECT: &str = "default";
@@ -22,7 +25,7 @@ pub struct QueryReport {
     pub id:         i32,
     pub uuid:       String,
     pub project:    Option<String>,
-    pub testbed:    Option<String>,
+    pub testbed_id: Option<i32>,
     pub adapter_id: i32,
     pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
@@ -33,7 +36,7 @@ pub struct QueryReport {
 pub struct InsertReport {
     pub uuid:       String,
     pub project:    String,
-    pub testbed:    Option<String>,
+    pub testbed_id: Option<i32>,
     pub adapter_id: i32,
     pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
@@ -50,12 +53,12 @@ impl InsertReport {
             metrics: _,
         } = report;
         Self {
-            uuid: Uuid::new_v4().to_string(),
-            project: unwrap_project(project.as_deref()),
-            testbed,
+            uuid:       Uuid::new_v4().to_string(),
+            project:    unwrap_project(project.as_deref()),
+            testbed_id: QueryTestbed::get_id(conn, testbed),
             adapter_id: QueryAdapter::get_id(conn, adapter.to_string()),
             start_time: start_time.naive_utc(),
-            end_time: end_time.naive_utc(),
+            end_time:   end_time.naive_utc(),
         }
     }
 }

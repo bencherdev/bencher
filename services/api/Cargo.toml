@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 report = { path = "../lib/report", features = ["schema"] }
 dropshot = "0.7.0"
-schemars = { version = "0.8.10", features = ["uuid"] }
+schemars = { version = "0.8.10", features = ["uuid1"] }
 tokio = "1.18.2"
 slog = "2.7.0"
 email-address-parser = "1.0.3"
@@ -19,7 +19,7 @@ serde_json = "1.0.81"
 diesel = { version = "1.4.8", features = ["sqlite", "chrono"] }
 diesel_migrations = "1.4.0"
 dotenv = "0.15.0"
-uuid = { version = "1.1.2", features = ["v4"] }
+uuid = { version = "1.1.2", features = ["v4", "serde"] }
 
 [[bin]]
 name = "api"

@@ -1,5 +1,15 @@
 -- https://sqlite.org/datatype3.html#storage_classes_and_datatypes
 -- https://www.sqlite.org/autoinc.html
+CREATE TABLE testbed (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    os_name TEXT,
+    os_version TEXT,
+    cpu TEXT,
+    ram TEXT,
+    disk TEXT
+);
 CREATE TABLE adapter (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -12,9 +22,10 @@ CREATE TABLE report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project TEXT,
-    testbed TEXT,
+    testbed_id INTEGER,
     adapter_id INTEGER NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (adapter_id) REFERENCES adapter (id)
 );
