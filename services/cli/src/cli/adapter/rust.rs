@@ -14,7 +14,7 @@ use nom::multi::many0;
 use nom::multi::many1;
 use nom::sequence::tuple;
 use nom::IResult;
-use report::{Latency, Metrics};
+use bencher_json::{Latency, Metrics};
 
 use crate::cli::benchmark::Output;
 use crate::BencherError;

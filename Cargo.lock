@@ -6,6 +6,7 @@ version = 3
 name = "api"
 version = "0.1.0"
 dependencies = [
+ "bencher_json",
  "chrono",
  "diesel",
  "diesel_migrations",
@@ -13,7 +14,6 @@ dependencies = [
  "dropshot",
  "email-address-parser",
  "jsonwebtoken",
- "report",
  "schemars",
  "serde",
  "serde_json",
@@ -83,13 +83,13 @@ name = "bencher_cli"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "bencher_json",
  "chrono",
  "clap",
  "email-address-parser",
  "git2",
  "nom",
  "open",
- "report",
  "reqwest",
  "serde",
  "serde_json",
@@ -97,6 +97,18 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
+ "uuid 1.1.2",
+]
+
+[[package]]
+name = "bencher_json"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "derive_more",
+ "schemars",
+ "serde",
+ "serde_json",
  "uuid 1.1.2",
 ]
 
@@ -1422,18 +1434,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
 dependencies = [
  "winapi",
-]
-
-[[package]]
-name = "report"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "derive_more",
- "schemars",
- "serde",
- "serde_json",
- "uuid 1.1.2",
 ]
 
 [[package]]

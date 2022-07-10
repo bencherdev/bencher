@@ -100,7 +100,7 @@ pub struct PathParams {
 
 #[endpoint {
     method = GET,
-    path = "/v0/testbeds/{tesbed_uuid}",
+    path = "/v0/testbeds/{testbed_uuid}",
     tags = ["testbeds"]
 }]
 pub async fn api_get_testbed(

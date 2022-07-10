@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use bencher_json::Report as JsonReport;
 use chrono::NaiveDateTime;
 use diesel::{
     QueryDsl,
@@ -19,7 +20,6 @@ use dropshot::{
     RequestContext,
     TypedBody,
 };
-use report::Report as JsonReport;
 use schemars::JsonSchema;
 use serde::{
     Deserialize,

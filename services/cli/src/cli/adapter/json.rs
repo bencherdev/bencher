@@ -1,4 +1,4 @@
-use report::Metrics;
+use bencher_json::Metrics;
 
 use crate::cli::benchmark::Output;
 use crate::BencherError;

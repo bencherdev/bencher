@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-report = { path = "../lib/report", features = ["schema"] }
+bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
 dropshot = "0.7.0"
 schemars = { version = "0.8.10", features = ["uuid1"] }
 tokio = "1.18.2"

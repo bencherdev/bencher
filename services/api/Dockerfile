@@ -5,7 +5,7 @@ FROM rust:1.60.0-bullseye as builder
 RUN rustup toolchain install nightly
 
 WORKDIR /usr/src/lib
-COPY lib/report report
+COPY lib/bencher_json bencher_json
 
 WORKDIR /usr/src/api
 COPY api/src src

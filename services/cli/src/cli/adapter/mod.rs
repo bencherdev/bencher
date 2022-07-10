@@ -1,4 +1,7 @@
-use report::Metrics;
+use bencher_json::{
+    Adapter as JsonAdapter,
+    Metrics,
+};
 
 use crate::{
     cli::{
@@ -26,11 +29,11 @@ impl From<CliAdapter> for Adapter {
     }
 }
 
-impl Into<report::Adapter> for Adapter {
-    fn into(self) -> report::Adapter {
+impl Into<JsonAdapter> for Adapter {
+    fn into(self) -> JsonAdapter {
         match self {
-            Self::Json => report::Adapter::Json,
-            Self::RustCargoBench => report::Adapter::RustCargoBench,
+            Self::Json => JsonAdapter::Json,
+            Self::RustCargoBench => JsonAdapter::RustCargoBench,
         }
     }
 }
