@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use diesel::{
     QueryDsl,
     Queryable,
@@ -9,6 +11,7 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use uuid::Uuid;
 
 use crate::{
     db::schema,
@@ -31,11 +34,12 @@ impl QueryAdapter {
             .unwrap()
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> String {
-        schema::adapter::table
+    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Uuid {
+        let uuid: String = schema::adapter::table
             .filter(schema::adapter::id.eq(id))
             .select(schema::adapter::uuid)
             .first(conn)
-            .unwrap()
+            .unwrap();
+        Uuid::from_str(&uuid).unwrap()
     }
 }

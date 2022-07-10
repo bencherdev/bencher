@@ -1,12 +1,10 @@
 use std::str::FromStr;
 
-use chrono::NaiveDateTime;
 use diesel::{
     Insertable,
     Queryable,
     SqliteConnection,
 };
-use report::Report as JsonReport;
 use schemars::JsonSchema;
 use serde::{
     Deserialize,

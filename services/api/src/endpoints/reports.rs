@@ -51,7 +51,7 @@ pub struct Report {
     pub uuid:         Uuid,
     pub project:      Option<String>,
     pub testbed_uuid: Option<Uuid>,
-    pub adapter_uuid: String,
+    pub adapter_uuid: Uuid,
     pub start_time:   NaiveDateTime,
     pub end_time:     NaiveDateTime,
 }

@@ -75,7 +75,7 @@ pub async fn api_get_adapters(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct PathParams {
-    pub adapter_uuid: String,
+    pub adapter_uuid: Uuid,
 }
 
 #[endpoint {
@@ -92,7 +92,7 @@ pub async fn api_get_adapter(
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
     let adapter = schema::adapter::table
-        .filter(schema::adapter::uuid.eq(path_params.adapter_uuid))
+        .filter(schema::adapter::uuid.eq(path_params.adapter_uuid.to_string()))
         .first::<QueryAdapter>(&*conn)
         .unwrap()
         .into();
