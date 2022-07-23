@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use bencher_json::Report as JsonReport;
+use bencher_json::NewReport;
 use chrono::NaiveDateTime;
 use diesel::{
     QueryDsl,
@@ -139,7 +139,7 @@ pub async fn api_get_report(
 }]
 pub async fn api_post_report(
     rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
-    body: TypedBody<JsonReport>,
+    body: TypedBody<NewReport>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let db_connection = rqctx.context();
 

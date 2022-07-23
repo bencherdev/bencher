@@ -4,12 +4,9 @@ use std::{
 };
 
 use async_trait::async_trait;
+use bencher_json::NewReport;
 use chrono::Utc;
-use bencher_json::Report;
-use uuid::{
-    uuid,
-    Uuid,
-};
+use uuid::Uuid;
 
 use crate::{
     cli::{
@@ -64,7 +61,7 @@ impl SubCmd for Run {
         } else {
             None
         };
-        let report = Report::new(
+        let report = NewReport::new(
             self.project.clone(),
             testbed,
             self.adapter.into(),
@@ -80,7 +77,7 @@ impl SubCmd for Run {
 }
 
 impl Run {
-    pub async fn send(&self, backend: &Backend, report: &Report) -> Result<(), BencherError> {
+    pub async fn send(&self, backend: &Backend, report: &NewReport) -> Result<(), BencherError> {
         let client = reqwest::Client::new();
         let url = backend.url.join("/v0/reports")?.to_string();
         let res = client.post(&url).json(report).send().await?;

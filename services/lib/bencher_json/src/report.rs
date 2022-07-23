@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct Report {
+pub struct NewReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project:    Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -30,7 +30,7 @@ pub struct Report {
     pub metrics:    Metrics,
 }
 
-impl Report {
+impl NewReport {
     pub fn new(
         project: Option<String>,
         testbed: Option<Uuid>,

@@ -1,8 +1,13 @@
 pub mod report;
+pub mod testbed;
 
 pub use report::{
     Adapter,
     Latency,
     Metrics,
-    Report,
+    NewReport,
+};
+pub use testbed::{
+    NewTestbed,
+    Testbed,
 };
