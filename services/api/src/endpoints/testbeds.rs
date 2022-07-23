@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use bencher_json::NewTestbed;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
@@ -11,6 +12,7 @@ use diesel::{
 use dropshot::{
     endpoint,
     HttpError,
+    HttpResponseAccepted,
     HttpResponseHeaders,
     HttpResponseOk,
     Path,
@@ -27,7 +29,10 @@ use uuid::Uuid;
 
 use crate::{
     db::{
-        model::testbed::QueryTestbed,
+        model::testbed::{
+            InsertTestbed,
+            QueryTestbed,
+        },
         schema,
     },
     diesel::ExpressionMethods,
@@ -123,24 +128,24 @@ pub async fn api_get_testbed(
     ))
 }
 
-// #[endpoint {
-//     method = POST,
-//     path = "/v0/testbeds",
-//     tags = ["testbeds"]
-// }]
-// pub async fn api_post_testbed(
-//     rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
-//     body: TypedBody<JsonTestbed>,
-// ) -> Result<HttpResponseAccepted<()>, HttpError> {
-//     let db_connection = rqctx.context();
+#[endpoint {
+    method = POST,
+    path = "/v0/testbeds",
+    tags = ["testbeds"]
+}]
+pub async fn api_post_testbed(
+    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    body: TypedBody<NewTestbed>,
+) -> Result<HttpResponseAccepted<()>, HttpError> {
+    let db_connection = rqctx.context();
 
-//     let json_report = body.into_inner();
-//     let conn = db_connection.lock().await;
-//     let insert_report = InsertReport::new(&*conn, json_report);
-//     diesel::insert_into(schema::report::table)
-//         .values(&insert_report)
-//         .execute(&*conn)
-//         .expect("Error saving new report to database.");
+    let json_testbed = body.into_inner();
+    let conn = db_connection.lock().await;
+    let insert_testbed = InsertTestbed::new(json_testbed);
+    diesel::insert_into(schema::testbed::table)
+        .values(&insert_testbed)
+        .execute(&*conn)
+        .expect("Error saving new testbed to database.");
 
-//     Ok(HttpResponseAccepted(()))
-// }
+    Ok(HttpResponseAccepted(()))
+}

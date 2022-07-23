@@ -17,7 +17,7 @@ impl Registrar<Mutex<SqliteConnection>> for Api {
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
         api.register(testbeds::api_get_testbed)?;
-        // api.register(testbeds::api_post_testbed)?;
+        api.register(testbeds::api_post_testbed)?;
         // Adapters
         api.register(adapters::api_get_adapters)?;
         api.register(adapters::api_get_adapter)?;

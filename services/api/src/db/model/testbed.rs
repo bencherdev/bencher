@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use bencher_json::NewTestbed;
 use diesel::{
     Insertable,
     Queryable,
@@ -76,4 +77,26 @@ pub struct InsertTestbed {
     pub cpu:        Option<String>,
     pub ram:        Option<String>,
     pub disk:       Option<String>,
+}
+
+impl InsertTestbed {
+    pub fn new(testbed: NewTestbed) -> Self {
+        let NewTestbed {
+            name,
+            os_name,
+            os_version,
+            cpu,
+            ram,
+            disk,
+        } = testbed;
+        Self {
+            uuid: Uuid::new_v4().to_string(),
+            name,
+            os_name,
+            os_version,
+            cpu,
+            ram,
+            disk,
+        }
+    }
 }
