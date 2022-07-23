@@ -1,4 +1,10 @@
-use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
+use clap::{
+    ArgGroup,
+    Args,
+    Parser,
+    Subcommand,
+    ValueEnum,
+};
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -21,6 +27,7 @@ pub enum CliSub {
     /// Run a benchmark
     Run(CliRun),
     /// Manage testbeds
+    #[clap(subcommand)]
     Testbed(CliTestbed),
 }
 
@@ -107,35 +114,35 @@ pub enum CliAdapter {
     RustCargoBench,
 }
 
-// TODO flesh this out as a subcommand with its own subcommands
+#[derive(Subcommand, Debug)]
+pub enum CliTestbed {
+    /// Create a testbed
+    Create(CliTestbedCreate),
+}
+
 // `bencher testbed ls`, `add`, `update`, `delete`, etc
 #[derive(Parser, Debug)]
-pub struct CliTestbed {
-    /// Testbed ID
-    #[clap(long)]
-    pub name: Option<String>,
+pub struct CliTestbedCreate {
+    /// Testbed name
+    pub name: String,
 
     /// Testbed OS
-    #[clap(long, requires = "testbed")]
+    #[clap(long)]
     pub os: Option<String>,
 
     /// Testbed OS Version
-    #[clap(long, requires = "testbed")]
+    #[clap(long)]
     pub os_version: Option<String>,
 
     /// Testbed CPU
-    #[clap(long, requires = "testbed")]
+    #[clap(long)]
     pub cpu: Option<String>,
 
     /// Testbed RAM
-    #[clap(long, requires = "testbed")]
+    #[clap(long)]
     pub ram: Option<String>,
 
-    /// Testbed Disk Size
-    #[clap(long, requires = "testbed")]
+    /// Testbed Disk
+    #[clap(long)]
     pub disk: Option<String>,
-
-    /// Testbed Architecture
-    #[clap(long, requires = "testbed")]
-    pub arch: Option<String>,
 }
