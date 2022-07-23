@@ -145,4 +145,7 @@ pub struct CliTestbedCreate {
     /// Testbed Disk
     #[clap(long)]
     pub disk: Option<String>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }

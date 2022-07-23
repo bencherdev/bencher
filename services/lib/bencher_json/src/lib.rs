@@ -7,7 +7,4 @@ pub use report::{
     Metrics,
     NewReport,
 };
-pub use testbed::{
-    NewTestbed,
-    Testbed,
-};
+pub use testbed::NewTestbed;

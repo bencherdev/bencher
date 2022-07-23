@@ -1,10 +1,13 @@
 use std::convert::TryFrom;
 
 use email_address_parser::EmailAddress;
+use serde::Serialize;
 use url::Url;
 
-use crate::cli::clap::CliBackend;
-use crate::BencherError;
+use crate::{
+    cli::clap::CliBackend,
+    BencherError,
+};
 
 pub const BENCHER_EMAIL: &str = "BENCHER_EMAIL";
 pub const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
@@ -15,7 +18,7 @@ pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 pub struct Backend {
     pub email: EmailAddress,
     pub token: String,
-    pub url: Url,
+    pub url:   Url,
 }
 
 impl TryFrom<CliBackend> for Backend {
@@ -25,7 +28,7 @@ impl TryFrom<CliBackend> for Backend {
         Ok(Backend {
             email: map_email(backend.email)?,
             token: map_token(backend.token)?,
-            url: map_url(backend.url)?,
+            url:   map_url(backend.url)?,
         })
     }
 }
@@ -64,4 +67,17 @@ fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
         DEFAULT_URL.into()
     };
     Ok(Url::parse(&url)?)
+}
+
+impl Backend {
+    pub async fn post<T>(&self, path: &str, json: &T) -> Result<(), BencherError>
+    where
+        T: Serialize + ?Sized,
+    {
+        let client = reqwest::Client::new();
+        let url = self.url.join(path)?.to_string();
+        let res = client.post(&url).json(json).send().await?;
+        println!("{res:?}");
+        Ok(())
+    }
 }

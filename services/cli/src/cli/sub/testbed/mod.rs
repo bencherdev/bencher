@@ -21,7 +21,7 @@ impl TryFrom<CliTestbed> for Testbed {
 
     fn try_from(testbed: CliTestbed) -> Result<Self, Self::Error> {
         Ok(match testbed {
-            CliTestbed::Create(create) => Self::Create(create.into()),
+            CliTestbed::Create(create) => Self::Create(create.try_into()?),
         })
     }
 }
@@ -30,7 +30,7 @@ impl TryFrom<CliTestbed> for Testbed {
 impl SubCmd for Testbed {
     async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
-            Self::Create(testbed) => testbed.exec(wide).await,
+            Self::Create(create) => create.exec(wide).await,
         }
     }
 }

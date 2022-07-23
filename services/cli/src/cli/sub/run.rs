@@ -14,7 +14,6 @@ use crate::{
             map_adapter,
             Adapter,
         },
-        backend::Backend,
         benchmark::Benchmark,
         clap::CliRun,
         locality::Locality,
@@ -23,6 +22,8 @@ use crate::{
     },
     BencherError,
 };
+
+const REPORTS_PATH: &str = "/v0/reports";
 
 #[derive(Debug)]
 pub struct Run {
@@ -71,17 +72,7 @@ impl SubCmd for Run {
         );
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string(&report)?)),
-            Locality::Backend(backend) => self.send(backend, &report).await,
+            Locality::Backend(backend) => backend.post(REPORTS_PATH, &report).await,
         }
-    }
-}
-
-impl Run {
-    pub async fn send(&self, backend: &Backend, report: &NewReport) -> Result<(), BencherError> {
-        let client = reqwest::Client::new();
-        let url = backend.url.join("/v0/reports")?.to_string();
-        let res = client.post(&url).json(report).send().await?;
-        println!("{res:?}");
-        Ok(())
     }
 }
