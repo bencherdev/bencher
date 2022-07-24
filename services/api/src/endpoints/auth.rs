@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use bencher_json::JsonTestbed;
+use bencher_json::JsonUser;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
@@ -29,10 +29,7 @@ use uuid::Uuid;
 
 use crate::{
     db::{
-        model::testbed::{
-            InsertTestbed,
-            QueryTestbed,
-        },
+        model::user::InsertUser,
         schema,
     },
     diesel::ExpressionMethods,
@@ -46,17 +43,17 @@ use crate::{
 }]
 pub async fn api_post_signup(
     rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
-    body: TypedBody<JsonTestbed>,
+    body: TypedBody<JsonUser>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let db_connection = rqctx.context();
 
-    let json_testbed = body.into_inner();
+    let json_user = body.into_inner();
     let conn = db_connection.lock().await;
-    let insert_testbed = InsertTestbed::new(json_testbed);
-    diesel::insert_into(schema::testbed::table)
-        .values(&insert_testbed)
+    let insert_user = InsertUser::new(json_user)?;
+    diesel::insert_into(schema::user::table)
+        .values(&insert_user)
         .execute(&*conn)
-        .expect("Error saving new testbed to database.");
+        .expect("Error saving new user to database.");
 
     Ok(HttpResponseAccepted(()))
 }
