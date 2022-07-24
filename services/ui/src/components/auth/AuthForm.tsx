@@ -1,14 +1,15 @@
-import { createSignal, createEffect, createMemo } from "solid-js";
-import { Link } from "solid-app-router";
+import { createSignal, createEffect } from "solid-js";
 
 import SiteField from "../site/fields/SiteField";
 import userFieldsConfig from "../fields/user/userFieldsConfig";
 import authForms from "./authForms";
 
-const AuthForm = (props: {
+export interface Props {
   kind: "signup" | "login";
   handleTitle: Function;
-}) => {
+}
+
+export const AuthForm = (props: Props) => {
   const [form, setForm] = createSignal(initForm());
 
   createEffect(() => {
@@ -18,23 +19,11 @@ const AuthForm = (props: {
   props.handleTitle(authForms[props.kind]?.title, false);
 
   const handleField = (key, value, valid) => {
-    console.log(`${key} ${value} ${valid}`);
     setForm({
       ...form(),
       [key]: {
         value: value,
         valid: valid,
-      },
-    });
-  };
-
-  const handleCheckbox = (_event) => {
-    let constent = form()?.consent;
-    setForm({
-      ...form(),
-      consent: {
-        value: !constent.value,
-        valid: constent.valid,
       },
     });
   };
@@ -142,5 +131,3 @@ const initForm = () => {
     submitting: false,
   };
 };
-
-export default AuthForm;

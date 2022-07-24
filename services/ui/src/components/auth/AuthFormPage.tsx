@@ -1,7 +1,7 @@
 import { Link } from "solid-app-router";
 
 import authForms from "./authForms";
-import AuthForm from "./AuthForm";
+import { AuthForm } from "./AuthForm";
 
 const SIGNUP = "signup";
 const LOGIN = "login";
