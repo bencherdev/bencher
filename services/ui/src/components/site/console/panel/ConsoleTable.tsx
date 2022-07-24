@@ -34,6 +34,11 @@ const getDate = (datum) => {
   return date.toUTCString();
 };
 
+const handleRowButton = (event, datum, handleRedirect) => {
+  event.preventDefault();
+  handleRedirect(`/console/reports/${datum?.uuid}`);
+};
+
 const ConsoleTable = (props) => {
   const [page, setPage] = createSignal(1);
   const [table_data] = createResource(page, fetchData);
@@ -54,7 +59,14 @@ const ConsoleTable = (props) => {
                 <div class="plan-item">-</div>
               </div>
               <div class="plan-footer">
-                <button class="button is-fullwidth">View</button>
+                <button
+                  class="button is-fullwidth"
+                  onClick={(e) =>
+                    handleRowButton(e, datum, props.handleRedirect)
+                  }
+                >
+                  View
+                </button>
               </div>
             </div>
           )}

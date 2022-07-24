@@ -10,12 +10,10 @@ const LOGIN = "login";
 const AuthFormPage = (props: {
   kind: "signup" | "login";
   handleTitle: Function;
+  handleRedirect: Function;
 }) => {
-  const [redirect, setRedirect] = createSignal(false);
-
   return (
     <section class="section">
-      {redirect() && <Navigate href="/console" />}
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
@@ -26,7 +24,7 @@ const AuthFormPage = (props: {
             <AuthForm
               kind={props.kind}
               handleTitle={props.handleTitle}
-              handleRedirect={setRedirect}
+              handleRedirect={props.handleRedirect}
             />
 
             <hr />

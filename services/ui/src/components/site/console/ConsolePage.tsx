@@ -12,7 +12,7 @@ const ConsolePage = (props) => {
             <ConsoleMenu />
           </div>
           <div class="column">
-            <ConsoleTable />
+            <ConsoleTable handleRedirect={props.handleRedirect} />
           </div>
         </div>
       </div>

@@ -1,7 +1,13 @@
 import "./styles/styles.scss";
 
-import { createSignal, createEffect, lazy, Component } from "solid-js";
-import { Routes, Route } from "solid-app-router";
+import {
+  createSignal,
+  createEffect,
+  lazy,
+  Component,
+  createMemo,
+} from "solid-js";
+import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
@@ -14,6 +20,10 @@ const BENCHER_TITLE = "Bencher";
 
 const App: Component = () => {
   const [title, setTitle] = createSignal(BENCHER_TITLE);
+  const [redirect, setRedirect] = createSignal();
+
+  const location = useLocation();
+  const current_pathname = createMemo(() => location.pathname);
 
   createEffect(() => {
     if (document.title !== title()) {
@@ -27,28 +37,69 @@ const App: Component = () => {
     }
   };
 
+  const getRedirect = () => {
+    console.log(current_pathname());
+    const new_pathname = redirect();
+    if (new_pathname === undefined) {
+      return;
+    }
+    if (new_pathname !== current_pathname()) {
+      setRedirect();
+      return <Navigate href={new_pathname} />;
+    }
+  };
+
   return (
     <>
       <GoogleAnalytics />
       <Navbar />
+      {getRedirect()}
       <Routes>
         <Route path="/" element={<LandingPage handleTitle={handleTitle} />} />
         <Route path="/auth">
           <Route
             path="/signup"
-            element={<AuthFormPage kind="signup" handleTitle={handleTitle} />}
+            element={
+              <AuthFormPage
+                kind="signup"
+                handleTitle={handleTitle}
+                handleRedirect={setRedirect}
+              />
+            }
           />
           <Route
             path="/login"
-            element={<AuthFormPage kind="login" handleTitle={handleTitle} />}
+            element={
+              <AuthFormPage
+                kind="login"
+                handleTitle={handleTitle}
+                handleRedirect={setRedirect}
+              />
+            }
           />
         </Route>
         <Route path="/console">
           <Route path="/" element={<ConsolePage handleTitle={handleTitle} />} />
-          <Route
-            path="/reports"
-            element={<ConsolePage handleTitle={handleTitle} />}
-          />
+          <Route path="/reports">
+            <Route
+              path="/"
+              element={
+                <ConsolePage
+                  handleTitle={handleTitle}
+                  handleRedirect={setRedirect}
+                />
+              }
+            />
+            <Route
+              path="/:uuid"
+              element={
+                <ConsolePage
+                  handleTitle={handleTitle}
+                  handleRedirect={setRedirect}
+                />
+              }
+            />
+          </Route>
         </Route>
       </Routes>
     </>

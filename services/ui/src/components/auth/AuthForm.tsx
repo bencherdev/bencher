@@ -56,7 +56,7 @@ export const AuthForm = (props: Props) => {
     event.preventDefault();
     handleFormSubmitting(true);
     // TODO send request to backend
-    props.handleRedirect(true);
+    props.handleRedirect("/console");
     handleFormSubmitting(false);
   };
 
