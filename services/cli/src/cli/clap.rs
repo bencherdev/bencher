@@ -24,11 +24,20 @@ pub struct CliWide {}
 
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
+    /// Backend authentication
+    #[clap(subcommand)]
+    Auth(CliAuth),
     /// Run a benchmark
     Run(CliRun),
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CliAuth {
+    // Create a user account
+    // Signup(CliAuthSignup),
 }
 
 #[derive(Parser, Debug)]
@@ -120,7 +129,6 @@ pub enum CliTestbed {
     Create(CliTestbedCreate),
 }
 
-// `bencher testbed ls`, `add`, `update`, `delete`, etc
 #[derive(Parser, Debug)]
 pub struct CliTestbedCreate {
     /// Testbed name
@@ -128,7 +136,7 @@ pub struct CliTestbedCreate {
 
     /// Testbed OS
     #[clap(long)]
-    pub os: Option<String>,
+    pub os_name: Option<String>,
 
     /// Testbed OS Version
     #[clap(long)]

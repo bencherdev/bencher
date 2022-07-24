@@ -3,6 +3,7 @@ use dropshot::ApiDescription;
 use tokio::sync::Mutex;
 
 pub mod adapters;
+pub mod auth;
 pub mod ping;
 pub mod reports;
 pub mod testbeds;
@@ -14,6 +15,8 @@ pub struct Api;
 impl Registrar<Mutex<SqliteConnection>> for Api {
     fn register(&self, api: &mut ApiDescription<Mutex<SqliteConnection>>) -> Result<(), String> {
         api.register(ping::api_get_ping)?;
+        // Auth
+        api.register(auth::api_post_signup)?;
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
         api.register(testbeds::api_get_testbed)?;

@@ -29,26 +29,6 @@ pub struct JsonReport {
     pub benchmarks: JsonBenchmarks,
 }
 
-impl JsonReport {
-    pub fn new(
-        project: Option<String>,
-        testbed: Option<Uuid>,
-        adapter: JsonAdapter,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
-        benchmarks: JsonBenchmarks,
-    ) -> Self {
-        Self {
-            project,
-            testbed,
-            adapter,
-            start_time,
-            end_time,
-            benchmarks,
-        }
-    }
-}
-
 #[derive(Display, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub enum JsonAdapter {

@@ -52,7 +52,7 @@ impl TryFrom<CliRun> for Run {
 impl SubCmd for Run {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let output = self.benchmark.run()?;
-        let metrics = self.adapter.convert(&output)?;
+        let benchmarks = self.adapter.convert(&output)?;
         let testbed = if let Some(testbed) = &self.testbed {
             if let Ok(uuid) = Uuid::from_str(testbed) {
                 Some(uuid)
@@ -62,14 +62,14 @@ impl SubCmd for Run {
         } else {
             None
         };
-        let report = JsonReport::new(
-            self.project.clone(),
+        let report = JsonReport {
+            project: self.project.clone(),
             testbed,
-            self.adapter.into(),
-            output.start,
-            Utc::now(),
-            metrics,
-        );
+            adapter: self.adapter.into(),
+            start_time: output.start,
+            end_time: Utc::now(),
+            benchmarks,
+        };
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string(&report)?)),
             Locality::Backend(backend) => backend.post(REPORTS_PATH, &report).await,

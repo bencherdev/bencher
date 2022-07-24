@@ -47,8 +47,9 @@ table! {
     user (id) {
         id -> Integer,
         uuid -> Text,
+        name -> Text,
         slug -> Text,
-        name -> Nullable<Text>,
+        email -> Text,
     }
 }
 
