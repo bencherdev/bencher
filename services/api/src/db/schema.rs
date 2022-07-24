@@ -7,6 +7,18 @@ table! {
 }
 
 table! {
+    project (id) {
+        id -> Integer,
+        uuid -> Text,
+        owner_id -> Integer,
+        owner_default -> Bool,
+        name -> Text,
+        description -> Nullable<Text>,
+        url -> Nullable<Text>,
+    }
+}
+
+table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
@@ -31,11 +43,23 @@ table! {
     }
 }
 
+table! {
+    user (id) {
+        id -> Integer,
+        uuid -> Text,
+        slug -> Text,
+        name -> Nullable<Text>,
+    }
+}
+
+joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
 joinable!(report -> testbed (testbed_id));
 
 allow_tables_to_appear_in_same_query!(
     adapter,
+    project,
     report,
     testbed,
+    user,
 );

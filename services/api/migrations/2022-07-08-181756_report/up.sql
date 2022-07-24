@@ -1,5 +1,22 @@
 -- https://sqlite.org/datatype3.html#storage_classes_and_datatypes
 -- https://www.sqlite.org/autoinc.html
+CREATE TABLE user (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT
+);
+CREATE TABLE project (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    owner_id INTEGER NOT NULL,
+    owner_default BOOLEAN NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    url TEXT,
+    FOREIGN KEY (owner_id) REFERENCES user (id),
+    UNIQUE(owner_id, name)
+);
 CREATE TABLE testbed (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -22,10 +39,12 @@ CREATE TABLE report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project TEXT,
+    --  project_id INTEGER NOT NULL,
     testbed_id INTEGER,
     adapter_id INTEGER NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
+    -- FOREIGN KEY (project_id) REFERENCES project (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (adapter_id) REFERENCES adapter (id)
 );
