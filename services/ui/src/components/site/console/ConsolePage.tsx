@@ -4,8 +4,9 @@ const ConsolePage = (props) => {
   return (
     <section class="section">
       <div class="container">
-        <div class="columns">
-          <div class="column">TODO</div>
+        <div class="columns is-reverse-mobile">
+          <div class="column is-one-fifth">menu</div>
+          <div class="column">panel</div>
         </div>
       </div>
     </section>
