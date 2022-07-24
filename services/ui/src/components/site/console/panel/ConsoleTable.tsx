@@ -1,84 +1,66 @@
+import axios from "axios";
+import {
+  createSignal,
+  createResource,
+  createEffect,
+  Suspense,
+  For,
+} from "solid-js";
+
+const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+
+const options = {
+  url: `${BENCHER_API_URL}/v0/reports`,
+  method: "get",
+  headers: {
+    "Content-Type": "application/json",
+    // Only use with explicit CORS
+    // Authorization: `Bearer ${window.localStorage.authToken}`
+  },
+};
+
+const fetchData = async (page) => {
+  try {
+    let reports = await axios(options);
+    console.log(reports);
+    return reports.data;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const getDate = (datum) => {
+  const date = new Date(datum?.start_time);
+  return date.toUTCString();
+};
+
 const ConsoleTable = (props) => {
+  const [page, setPage] = createSignal(1);
+  const [table_data] = createResource(page, fetchData);
+
   return (
-    <div class="pricing-table is-horizontal">
-      <div class="pricing-plan">
-        <div class="plan-header">Starter</div>
-        <div class="plan-items">
-          <div class="plan-item">20GB Storage</div>
-          <div class="plan-item">100 Domains</div>
-          <div class="plan-item">-</div>
-          <div class="plan-item">-</div>
-        </div>
-        <div class="plan-footer">
-          <div class="plan-price">
-            <span class="plan-price-amount">
-              <span class="plan-price-currency">$</span>20
-            </span>
-            /month
-          </div>
-          <button class="button is-fullwidth" disabled={true}>
-            Current plan
-          </button>
-        </div>
+    <Suspense fallback={<p>Loading...</p>}>
+      <div class="pricing-table is-horizontal">
+        <For each={table_data()}>
+          {(datum, i) => (
+            <div class="pricing-plan is-warning">
+              <div class="plan-header">{getDate(datum)}</div>
+              <div class="plan-items">
+                <div class="plan-item">{datum?.project}</div>
+                <div class="plan-item">{datum?.adapter_uuid}</div>
+                <div class="plan-item">
+                  {datum?.testbed_uuid || "No testbed"}
+                </div>
+                <div class="plan-item">-</div>
+              </div>
+              <div class="plan-footer">
+                <button class="button is-fullwidth">View</button>
+              </div>
+            </div>
+          )}
+        </For>
       </div>
-
-      <div class="pricing-plan is-warning">
-        <div class="plan-header">Startups</div>
-        <div class="plan-items">
-          <div class="plan-item">20GB Storage</div>
-          <div class="plan-item">25 Domains</div>
-          <div class="plan-item">1TB Bandwidth</div>
-          <div class="plan-item">-</div>
-        </div>
-        <div class="plan-footer">
-          <div class="plan-price">
-            <span class="plan-price-amount">
-              <span class="plan-price-currency">$</span>40
-            </span>
-            /month
-          </div>
-          <button class="button is-fullwidth">Choose</button>
-        </div>
-      </div>
-
-      <div class="pricing-plan is-active">
-        <div class="plan-header">Growing Team</div>
-        <div class="plan-items">
-          <div class="plan-item">200GB Storage</div>
-          <div class="plan-item">50 Domains</div>
-          <div class="plan-item">1TB Bandwidth</div>
-          <div class="plan-item">100 Email Boxes</div>
-        </div>
-        <div class="plan-footer">
-          <div class="plan-price">
-            <span class="plan-price-amount">
-              <span class="plan-price-currency">$</span>60
-            </span>
-            /month
-          </div>
-          <button class="button is-fullwidth">Choose</button>
-        </div>
-      </div>
-
-      <div class="pricing-plan is-danger">
-        <div class="plan-header">Enterprise</div>
-        <div class="plan-items">
-          <div class="plan-item">2TB Storage</div>
-          <div class="plan-item">100 Domains</div>
-          <div class="plan-item">1TB Bandwidth</div>
-          <div class="plan-item">1000 Email Boxes</div>
-        </div>
-        <div class="plan-footer">
-          <div class="plan-price">
-            <span class="plan-price-amount">
-              <span class="plan-price-currency">$</span>100
-            </span>
-            /month
-          </div>
-          <button class="button is-fullwidth">Choose</button>
-        </div>
-      </div>
-    </div>
+    </Suspense>
   );
 };
 
