@@ -7,6 +7,7 @@ import authForms from "./authForms";
 export interface Props {
   kind: "signup" | "login";
   handleTitle: Function;
+  handleRedirect: Function;
 }
 
 export const AuthForm = (props: Props) => {
@@ -55,6 +56,7 @@ export const AuthForm = (props: Props) => {
     event.preventDefault();
     handleFormSubmitting(true);
     // TODO send request to backend
+    props.handleRedirect(true);
     handleFormSubmitting(false);
   };
 

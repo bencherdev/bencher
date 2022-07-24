@@ -1,12 +1,14 @@
 import "./styles/styles.scss";
 
-import { createSignal, createEffect, createMemo, Component } from "solid-js";
+import { createSignal, createEffect, lazy, Component } from "solid-js";
 import { Routes, Route } from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
-import { AuthFormPage } from "./components/auth/AuthFormPage";
-import LandingPage from "./components/site/pages/LandingPage";
+
+const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
+const ConsolePage = lazy(() => import("./components/site/console/ConsolePage"));
+const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 
 const BENCHER_TITLE = "Bencher";
 
@@ -38,6 +40,10 @@ const App: Component = () => {
         <Route
           path="/auth/login"
           element={<AuthFormPage kind="login" handleTitle={handleTitle} />}
+        />
+        <Route
+          path="/console"
+          element={<ConsolePage handleTitle={handleTitle} />}
         />
       </Routes>
     </>

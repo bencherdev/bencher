@@ -1,4 +1,5 @@
-import { Link } from "solid-app-router";
+import { Link, Navigate } from "solid-app-router";
+import { createSignal, createEffect } from "solid-js";
 
 import authForms from "./authForms";
 import { AuthForm } from "./AuthForm";
@@ -6,12 +7,15 @@ import { AuthForm } from "./AuthForm";
 const SIGNUP = "signup";
 const LOGIN = "login";
 
-export const AuthFormPage = (props: {
+const AuthFormPage = (props: {
   kind: "signup" | "login";
   handleTitle: Function;
 }) => {
+  const [redirect, setRedirect] = createSignal(false);
+
   return (
     <section class="section">
+      {redirect() && <Navigate href="/console" />}
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
@@ -19,7 +23,11 @@ export const AuthFormPage = (props: {
               <span>{authForms[props.kind]?.heading}</span>
             </h2>
 
-            <AuthForm kind={props.kind} handleTitle={props.handleTitle} />
+            <AuthForm
+              kind={props.kind}
+              handleTitle={props.handleTitle}
+              handleRedirect={setRedirect}
+            />
 
             <hr />
 
@@ -40,3 +48,5 @@ export const AuthFormPage = (props: {
     </section>
   );
 };
+
+export default AuthFormPage;
