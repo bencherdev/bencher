@@ -1,5 +1,6 @@
 import { Match, Switch } from "solid-js";
 import TablePanel from "./TablePanel";
+import DeckPanel from "./DeckPanel";
 
 const isSection = (current_location, section: string) => {
   if (
@@ -10,6 +11,11 @@ const isSection = (current_location, section: string) => {
   }
   return false;
 };
+
+const isSubSection = (current_location, section: string) => {
+  return current_location.pathname.includes(`/console/${section}`);
+};
+
 const ConsolePanel = (props) => {
   props.handleTitle("Bencher Console - Track Your Benchmarks");
 
@@ -24,6 +30,12 @@ const ConsolePanel = (props) => {
       </Match>
       <Match when={isSection(props.current_location(), "reports")}>
         <TablePanel
+          current_location={props.current_location}
+          handleRedirect={props.handleRedirect}
+        />
+      </Match>
+      <Match when={isSubSection(props.current_location(), "reports")}>
+        <DeckPanel
           current_location={props.current_location}
           handleRedirect={props.handleRedirect}
         />
