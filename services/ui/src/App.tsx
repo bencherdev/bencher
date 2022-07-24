@@ -33,18 +33,23 @@ const App: Component = () => {
       <Navbar />
       <Routes>
         <Route path="/" element={<LandingPage handleTitle={handleTitle} />} />
-        <Route
-          path="/auth/signup"
-          element={<AuthFormPage kind="signup" handleTitle={handleTitle} />}
-        />
-        <Route
-          path="/auth/login"
-          element={<AuthFormPage kind="login" handleTitle={handleTitle} />}
-        />
-        <Route
-          path="/console"
-          element={<ConsolePage handleTitle={handleTitle} />}
-        />
+        <Route path="/auth">
+          <Route
+            path="/signup"
+            element={<AuthFormPage kind="signup" handleTitle={handleTitle} />}
+          />
+          <Route
+            path="/login"
+            element={<AuthFormPage kind="login" handleTitle={handleTitle} />}
+          />
+        </Route>
+        <Route path="/console">
+          <Route path="/" element={<ConsolePage handleTitle={handleTitle} />} />
+          <Route
+            path="/reports"
+            element={<ConsolePage handleTitle={handleTitle} />}
+          />
+        </Route>
       </Routes>
     </>
   );

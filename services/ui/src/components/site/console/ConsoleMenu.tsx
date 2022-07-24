@@ -1,3 +1,5 @@
+import { Link } from "solid-app-router";
+
 const ConsoleMenu = (props) => {
   return (
     <aside class="menu">
@@ -38,7 +40,7 @@ const ConsoleMenu = (props) => {
           <a>Testbeds</a>
         </li>
         <li>
-          <a>Reports</a>
+          <Link href="/console/reports">Reports</Link>
         </li>
         <li>
           <a>Connections</a>
