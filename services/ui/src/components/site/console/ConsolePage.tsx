@@ -1,3 +1,5 @@
+import ConsoleMenu from "./ConsoleMenu";
+
 const ConsolePage = (props) => {
   props.handleTitle("Bencher Console - Track Your Benchmarks");
 
@@ -5,7 +7,9 @@ const ConsolePage = (props) => {
     <section class="section">
       <div class="container">
         <div class="columns is-reverse-mobile">
-          <div class="column is-one-fifth">menu</div>
+          <div class="column is-one-fifth">
+            <ConsoleMenu />
+          </div>
           <div class="column">panel</div>
         </div>
       </div>
