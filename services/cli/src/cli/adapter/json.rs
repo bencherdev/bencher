@@ -1,8 +1,10 @@
-use bencher_json::Metrics;
+use bencher_json::JsonBenchmarks;
 
-use crate::cli::benchmark::Output;
-use crate::BencherError;
+use crate::{
+    cli::benchmark::Output,
+    BencherError,
+};
 
-pub fn parse(output: &Output) -> Result<Metrics, BencherError> {
+pub fn parse(output: &Output) -> Result<JsonBenchmarks, BencherError> {
     serde_json::from_str(output.as_str()).map_err(BencherError::Serde)
 }

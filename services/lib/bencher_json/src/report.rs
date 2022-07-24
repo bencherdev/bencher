@@ -18,26 +18,25 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct NewReport {
+pub struct JsonReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project:    Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub testbed:    Option<Uuid>,
-    pub adapter:    Adapter,
+    pub adapter:    JsonAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
-    #[serde(flatten)]
-    pub metrics:    Metrics,
+    pub benchmarks: JsonBenchmarks,
 }
 
-impl NewReport {
+impl JsonReport {
     pub fn new(
         project: Option<String>,
         testbed: Option<Uuid>,
-        adapter: Adapter,
+        adapter: JsonAdapter,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
-        metrics: Metrics,
+        benchmarks: JsonBenchmarks,
     ) -> Self {
         Self {
             project,
@@ -45,43 +44,61 @@ impl NewReport {
             adapter,
             start_time,
             end_time,
-            metrics,
+            benchmarks,
         }
     }
 }
 
 #[derive(Display, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub enum Adapter {
+pub enum JsonAdapter {
     Json,
     #[display(fmt = "rust")]
     #[serde(rename = "rust")]
     RustCargoBench,
 }
 
+pub type JsonBenchmarks = BTreeMap<String, JsonBenchmark>;
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct Metrics {
+pub struct JsonBenchmark {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latency:      Option<BTreeMap<Benchmark, Latency>>,
+    pub latency:    Option<JsonLatency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub throughput:   Option<BTreeMap<Benchmark, ()>>,
+    pub throughput: Option<JsonThroughput>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_cpu:    Option<BTreeMap<Benchmark, ()>>,
+    pub cpu:        Option<JsonCpu>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub self_cpu:     Option<BTreeMap<Benchmark, ()>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_memory: Option<BTreeMap<Benchmark, ()>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub self_memory:  Option<BTreeMap<Benchmark, ()>>,
+    pub memory:     Option<JsonMemory>,
 }
 
-pub type Benchmark = String;
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonLatency {
+    pub duration:       Duration,
+    pub lower_variance: Duration,
+    pub upper_variance: Duration,
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct Latency {
-    pub duration:       Duration,
-    pub upper_variance: Duration,
-    pub lower_variance: Duration,
+pub struct JsonThroughput {
+    pub lower_events: f64,
+    pub upper_events: f64,
+    pub unit_time:    Duration,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCpu {
+    pub min: f64,
+    pub max: f64,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonMemory {
+    pub min: f64,
+    pub max: f64,
 }

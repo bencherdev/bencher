@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use bencher_json::NewReport;
+use bencher_json::JsonReport;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -62,7 +62,7 @@ impl SubCmd for Run {
         } else {
             None
         };
-        let report = NewReport::new(
+        let report = JsonReport::new(
             self.project.clone(),
             testbed,
             self.adapter.into(),

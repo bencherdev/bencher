@@ -1,35 +1,53 @@
-use std::collections::BTreeMap;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    str::FromStr,
+    time::Duration,
+};
 
-use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::bytes::complete::take_until1;
-use nom::character::complete::digit1;
-use nom::character::complete::line_ending;
-use nom::character::complete::space1;
-use nom::combinator::map;
-use nom::combinator::success;
-use nom::multi::many0;
-use nom::multi::many1;
-use nom::sequence::tuple;
-use nom::IResult;
-use bencher_json::{Latency, Metrics};
+use bencher_json::{
+    JsonBenchmark,
+    JsonBenchmarks,
+    JsonLatency,
+};
+use nom::{
+    branch::alt,
+    bytes::complete::{
+        tag,
+        take_until1,
+    },
+    character::complete::{
+        digit1,
+        line_ending,
+        space1,
+    },
+    combinator::{
+        map,
+        success,
+    },
+    multi::{
+        many0,
+        many1,
+    },
+    sequence::tuple,
+    IResult,
+};
 
-use crate::cli::benchmark::Output;
-use crate::BencherError;
+use crate::{
+    cli::benchmark::Output,
+    BencherError,
+};
 
-pub fn parse(output: &Output) -> Result<Metrics, BencherError> {
+pub fn parse(output: &Output) -> Result<JsonBenchmarks, BencherError> {
     let (_, report) = parse_stdout(output.as_str()).unwrap();
     Ok(report)
 }
 
 enum Test {
     Ignored,
-    Bench(Latency),
+    Bench(JsonLatency),
 }
 
-fn parse_stdout(input: &str) -> IResult<&str, Metrics> {
+fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarks> {
     map(
         tuple((
             line_ending,
@@ -57,23 +75,24 @@ fn parse_stdout(input: &str) -> IResult<&str, Metrics> {
             line_ending,
         )),
         |(_, _, _, _, _, _, _, benches, _)| {
-            let mut latencies = BTreeMap::new();
+            let mut benchmarks = BTreeMap::new();
             for bench in benches {
                 if let Some((key, latency)) = to_latency(bench) {
-                    latencies.insert(key, latency);
+                    let benchmark = JsonBenchmark {
+                        latency: Some(latency),
+                        ..Default::default()
+                    };
+                    benchmarks.insert(key, benchmark);
                 }
             }
-            Metrics {
-                latency: Some(latencies),
-                ..Default::default()
-            }
+            benchmarks
         },
     )(input)
 }
 
 fn to_latency(
     bench: (&str, &str, &str, &str, &str, &str, Test, &str),
-) -> Option<(String, Latency)> {
+) -> Option<(String, JsonLatency)> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
@@ -95,12 +114,12 @@ impl From<&str> for Units {
             "μs" => Self::Micro,
             "ms" => Self::Milli,
             "s" => Self::Sec,
-            _ => panic!("Inexpected time abbreviation"),
+            _ => panic!("Unexpected time abbreviation"),
         }
     }
 }
 
-fn parse_bench(input: &str) -> IResult<&str, Latency> {
+fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
     map(
         tuple((
             tag("bench:"),
@@ -119,10 +138,10 @@ fn parse_bench(input: &str) -> IResult<&str, Latency> {
             let units = Units::from(units);
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
-            Latency {
+            JsonLatency {
                 duration,
-                upper_variance: variance.clone(),
-                lower_variance: variance,
+                lower_variance: variance.clone(),
+                upper_variance: variance,
             }
         },
     )(input)

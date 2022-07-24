@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use bencher_json::NewTestbed;
+use bencher_json::JsonTestbed;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
@@ -135,7 +135,7 @@ pub async fn api_get_testbed(
 }]
 pub async fn api_post_testbed(
     rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
-    body: TypedBody<NewTestbed>,
+    body: TypedBody<JsonTestbed>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let db_connection = rqctx.context();
 

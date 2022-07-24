@@ -1,6 +1,6 @@
 use bencher_json::{
-    Adapter as JsonAdapter,
-    Metrics,
+    JsonAdapter,
+    JsonBenchmarks,
 };
 
 use crate::{
@@ -47,7 +47,7 @@ pub fn map_adapter(adapter: Option<CliAdapter>) -> Result<Adapter, BencherError>
 }
 
 impl Adapter {
-    pub fn convert(&self, output: &Output) -> Result<Metrics, BencherError> {
+    pub fn convert(&self, output: &Output) -> Result<JsonBenchmarks, BencherError> {
         match &self {
             Adapter::Json => json::parse(output),
             Adapter::RustCargoBench => rust::parse(output),

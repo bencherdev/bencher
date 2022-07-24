@@ -2,9 +2,10 @@ pub mod report;
 pub mod testbed;
 
 pub use report::{
-    Adapter,
-    Latency,
-    Metrics,
-    NewReport,
+    JsonAdapter,
+    JsonBenchmark,
+    JsonBenchmarks,
+    JsonLatency,
+    JsonReport,
 };
-pub use testbed::NewTestbed;
+pub use testbed::JsonTestbed;

@@ -1,4 +1,4 @@
-use bencher_json::NewReport;
+use bencher_json::JsonReport;
 use chrono::NaiveDateTime;
 use diesel::{
     Insertable,
@@ -43,14 +43,15 @@ pub struct InsertReport {
 }
 
 impl InsertReport {
-    pub fn new(conn: &SqliteConnection, report: NewReport) -> Self {
-        let NewReport {
+    pub fn new(conn: &SqliteConnection, report: JsonReport) -> Self {
+        let JsonReport {
             project,
             testbed,
             adapter,
             start_time,
             end_time,
-            metrics: _,
+            // TODO actually insert benchmarks
+            benchmarks,
         } = report;
         Self {
             uuid:       Uuid::new_v4().to_string(),

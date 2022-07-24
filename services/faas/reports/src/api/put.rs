@@ -1,20 +1,38 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{
+        Hash,
+        Hasher,
+    },
+    sync::{
+        Arc,
+        Mutex,
+    },
+};
 
-use diesel::pg::PgConnection;
-use diesel::RunQueryDsl;
-use dropshot::endpoint;
-use dropshot::HttpError;
-use dropshot::HttpResponseAccepted;
-use dropshot::RequestContext;
-use dropshot::TypedBody;
+use diesel::{
+    pg::PgConnection,
+    RunQueryDsl,
+};
+use dropshot::{
+    endpoint,
+    HttpError,
+    HttpResponseAccepted,
+    RequestContext,
+    TypedBody,
+};
 use email_address_parser::EmailAddress;
-use reports::Metrics;
-use reports::Report;
-use util::db::model::{NewReport as NewDbReport, Report as DbReport};
-use util::db::schema::report;
+use reports::{
+    Metrics,
+    Report,
+};
+use util::db::{
+    model::{
+        JsonReport as NewDbReport,
+        Report as DbReport,
+    },
+    schema::report,
+};
 
 pub const DEFAULT_PROJECT: &str = "default";
 
@@ -90,8 +108,8 @@ fn map_project(project: Option<&str>) -> String {
 }
 
 struct MetricsForDb {
-    value: serde_json::Value,
-    hash: u64,
+    value:  serde_json::Value,
+    hash:   u64,
     length: usize,
 }
 

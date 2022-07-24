@@ -7,7 +7,7 @@ use serde::{
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct NewTestbed {
+pub struct JsonTestbed {
     pub name:       String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub os_name:    Option<String>,
@@ -21,7 +21,7 @@ pub struct NewTestbed {
     pub disk:       Option<String>,
 }
 
-impl NewTestbed {
+impl JsonTestbed {
     pub fn new(
         name: String,
         os_name: Option<String>,

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::NewTestbed;
+use bencher_json::JsonTestbed;
 use diesel::{
     Insertable,
     Queryable,
@@ -80,8 +80,8 @@ pub struct InsertTestbed {
 }
 
 impl InsertTestbed {
-    pub fn new(testbed: NewTestbed) -> Self {
-        let NewTestbed {
+    pub fn new(testbed: JsonTestbed) -> Self {
+        let JsonTestbed {
             name,
             os_name,
             os_version,
