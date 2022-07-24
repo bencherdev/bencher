@@ -1,9 +1,7 @@
 import ConsoleMenu from "./ConsoleMenu";
-import ConsoleTable from "./panel/ConsoleTable";
+import ConsolePanel from "./panel/ConsolePanel";
 
 const ConsolePage = (props) => {
-  props.handleTitle("Bencher Console - Track Your Benchmarks");
-
   return (
     <section class="section">
       <div class="container">
@@ -12,7 +10,11 @@ const ConsolePage = (props) => {
             <ConsoleMenu />
           </div>
           <div class="column">
-            <ConsoleTable handleRedirect={props.handleRedirect} />
+            <ConsolePanel
+              current_location={props.current_location}
+              handleTitle={props.handleTitle}
+              handleRedirect={props.handleRedirect}
+            />
           </div>
         </div>
       </div>

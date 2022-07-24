@@ -23,7 +23,7 @@ const App: Component = () => {
   const [redirect, setRedirect] = createSignal();
 
   const location = useLocation();
-  const current_pathname = createMemo(() => location.pathname);
+  const current_location = createMemo(() => location);
 
   createEffect(() => {
     if (document.title !== title()) {
@@ -38,12 +38,11 @@ const App: Component = () => {
   };
 
   const getRedirect = () => {
-    console.log(current_pathname());
     const new_pathname = redirect();
     if (new_pathname === undefined) {
       return;
     }
-    if (new_pathname !== current_pathname()) {
+    if (new_pathname !== current_location()?.pathname) {
       setRedirect();
       return <Navigate href={new_pathname} />;
     }
@@ -79,12 +78,21 @@ const App: Component = () => {
           />
         </Route>
         <Route path="/console">
-          <Route path="/" element={<ConsolePage handleTitle={handleTitle} />} />
+          <Route
+            path="/"
+            element={
+              <ConsolePage
+                current_location={current_location}
+                handleTitle={handleTitle}
+              />
+            }
+          />
           <Route path="/reports">
             <Route
               path="/"
               element={
                 <ConsolePage
+                  current_location={current_location}
                   handleTitle={handleTitle}
                   handleRedirect={setRedirect}
                 />
@@ -94,6 +102,7 @@ const App: Component = () => {
               path="/:uuid"
               element={
                 <ConsolePage
+                  current_location={current_location}
                   handleTitle={handleTitle}
                   handleRedirect={setRedirect}
                 />
