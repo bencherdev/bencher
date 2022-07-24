@@ -22,12 +22,16 @@ const ConsoleMenu = (props) => {
         </div>
         <div class="dropdown-menu" id="dropdown-menu" role="menu">
           <div class="dropdown-content">
-            <a href="#" class="dropdown-item is-active">
+            <Link
+              class="dropdown-item"
+              href="/console/projects/default_project_uuid"
+            >
               Default Project
-            </a>
-            <a href="#" class="dropdown-item">
-              TODO List projects
-            </a>
+            </Link>
+            <hr class="dropdown-divider" />
+            <Link class="dropdown-item" href="/console/projects">
+              View All
+            </Link>
           </div>
         </div>
       </div>

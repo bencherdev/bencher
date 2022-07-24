@@ -1,5 +1,5 @@
 import { Match, Switch } from "solid-js";
-import ConsoleTable from "./ConsoleTable";
+import TablePanel from "./TablePanel";
 
 const isSection = (current_location, section: string) => {
   if (
@@ -23,7 +23,7 @@ const ConsolePanel = (props) => {
         TODO Project Dashboard
       </Match>
       <Match when={isSection(props.current_location(), "reports")}>
-        <ConsoleTable
+        <TablePanel
           current_location={props.current_location}
           handleRedirect={props.handleRedirect}
         />

@@ -39,7 +39,7 @@ const handleRowButton = (event, datum, handleRedirect) => {
   handleRedirect(`/console/reports/${datum?.uuid}`);
 };
 
-const ConsoleTable = (props) => {
+const TablePanel = (props) => {
   const [page, setPage] = createSignal(1);
   const [table_data] = createResource(page, fetchData);
 
@@ -76,4 +76,4 @@ const ConsoleTable = (props) => {
   );
 };
 
-export default ConsoleTable;
+export default TablePanel;
