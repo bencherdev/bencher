@@ -3,7 +3,7 @@
 extern crate test;
 
 mod bencher;
-mod cmd;
+mod cli;
 mod error;
 mod tests;
 

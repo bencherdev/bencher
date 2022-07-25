@@ -8,7 +8,7 @@ use super::{
     shell::Shell,
 };
 use crate::{
-    cmd::CliShell,
+    cli::CliShell,
     BencherError,
 };
 

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::{
     bencher::backend::Backend,
-    cmd::CliLocality,
+    cli::CliLocality,
     BencherError,
 };
 

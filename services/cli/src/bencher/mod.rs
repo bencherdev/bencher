@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use clap::Parser;
 
 use crate::{
-    cmd::CliBencher,
+    cli::CliBencher,
     BencherError,
 };
 

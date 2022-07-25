@@ -19,7 +19,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cmd::CliRun,
+    cli::CliRun,
     BencherError,
 };
 

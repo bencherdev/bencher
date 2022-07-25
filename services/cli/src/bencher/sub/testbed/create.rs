@@ -9,7 +9,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cmd::CliTestbedCreate,
+    cli::CliTestbedCreate,
     BencherError,
 };
 
