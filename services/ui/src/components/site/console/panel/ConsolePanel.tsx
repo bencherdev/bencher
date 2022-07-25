@@ -1,6 +1,7 @@
 import { Match, Switch } from "solid-js";
 import TablePanel from "./TablePanel";
 import DeckPanel from "./DeckPanel";
+import { JsonTestbed } from "bencher_json";
 
 const isSection = (current_location, section: string) => {
   if (
@@ -18,6 +19,9 @@ const isSubSection = (current_location, section: string) => {
 
 const ConsolePanel = (props) => {
   props.handleTitle("Bencher Console - Track Your Benchmarks");
+
+  const testbed: JsonTestbed = { name: "five" };
+  console.log(testbed.name);
 
   return (
     <Switch

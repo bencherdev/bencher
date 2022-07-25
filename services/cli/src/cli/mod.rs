@@ -9,7 +9,10 @@ mod auth;
 mod run;
 mod testbed;
 
-pub use auth::CliAuth;
+pub use auth::{
+    CliAuth,
+    CliAuthSignup,
+};
 pub use run::{
     CliAdapter,
     CliCommand,

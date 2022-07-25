@@ -1,7 +1,8 @@
+pub mod auth;
 pub mod report;
 pub mod testbed;
-pub mod user;
 
+pub use auth::JsonSignup;
 pub use report::{
     JsonAdapter,
     JsonBenchmark,
@@ -10,4 +11,3 @@ pub use report::{
     JsonReport,
 };
 pub use testbed::JsonTestbed;
-pub use user::JsonUser;

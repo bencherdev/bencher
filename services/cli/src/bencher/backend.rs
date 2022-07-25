@@ -17,7 +17,7 @@ pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 #[derive(Debug)]
 pub struct Backend {
     pub email: EmailAddress,
-    pub token: String,
+    pub token: Option<String>,
     pub url:   Url,
 }
 
@@ -25,9 +25,9 @@ impl TryFrom<CliBackend> for Backend {
     type Error = BencherError;
 
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
-        Ok(Backend {
+        Ok(Self {
             email: map_email(backend.email)?,
-            token: map_token(backend.token)?,
+            token: Some(map_token(backend.token)?),
             url:   map_url(backend.url)?,
         })
     }
@@ -58,7 +58,7 @@ fn map_token(token: Option<String>) -> Result<String, BencherError> {
     }
 }
 
-fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
+pub fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
     let url = if let Some(url) = url {
         url
     } else if let Ok(url) = std::env::var(BENCHER_URL) {
@@ -70,6 +70,18 @@ fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
 }
 
 impl Backend {
+    pub fn new(
+        email: String,
+        token: Option<String>,
+        url: Option<String>,
+    ) -> Result<Self, BencherError> {
+        Ok(Self {
+            email: map_email_str(email)?,
+            token,
+            url: map_url(url)?,
+        })
+    }
+
     pub async fn post<T>(&self, path: &str, json: &T) -> Result<(), BencherError>
     where
         T: Serialize + ?Sized,

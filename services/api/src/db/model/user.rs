@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::JsonUser;
+use bencher_json::JsonSignup;
 use diesel::{
     Insertable,
     Queryable,
@@ -37,26 +37,31 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn new(user: JsonUser) -> Result<Self, HttpError> {
-        let JsonUser { name, slug, email } = user;
+    pub fn new(signup: JsonSignup) -> Result<Self, HttpError> {
+        let JsonSignup { name, slug, email } = signup;
+        let slug = validate_slug(&name, slug)?;
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,
-            slug: validate_slug(slug)?,
+            slug,
             email: validate_email(email)?,
         })
     }
 }
 
-fn validate_slug(slug: String) -> Result<String, HttpError> {
-    let true_slug = slug::slugify(&slug);
-    if slug != true_slug {
-        return Err(HttpError::for_bad_request(
-            Some(String::from("BadInput")),
-            format!("Slug was not valid: {slug}"),
-        ));
-    }
-    Ok(slug)
+fn validate_slug(name: &str, slug: Option<String>) -> Result<String, HttpError> {
+    Ok(if let Some(slug) = slug {
+        let true_slug = slug::slugify(&slug);
+        if slug != true_slug {
+            return Err(HttpError::for_bad_request(
+                Some(String::from("BadInput")),
+                format!("Slug was not valid: {slug}"),
+            ));
+        }
+        slug
+    } else {
+        slug::slugify(name)
+    })
 }
 
 fn validate_email(email: String) -> Result<String, HttpError> {

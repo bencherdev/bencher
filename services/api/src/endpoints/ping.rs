@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use diesel::sqlite::SqliteConnection;
 use dropshot::{
     endpoint,
     HttpError,
@@ -8,9 +7,11 @@ use dropshot::{
     HttpResponseOk,
     RequestContext,
 };
-use tokio::sync::Mutex;
 
-use crate::util::headers::CorsHeaders;
+use crate::util::{
+    headers::CorsHeaders,
+    Context,
+};
 
 #[endpoint {
     method = GET,
@@ -18,7 +19,7 @@ use crate::util::headers::CorsHeaders;
     tags = ["ping"]
 }]
 pub async fn api_get_ping(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 

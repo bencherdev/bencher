@@ -6,7 +6,6 @@ use std::{
 use diesel::{
     QueryDsl,
     RunQueryDsl,
-    SqliteConnection,
 };
 use dropshot::{
     endpoint,
@@ -21,7 +20,6 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
@@ -30,7 +28,10 @@ use crate::{
         schema,
     },
     diesel::ExpressionMethods,
-    util::headers::CorsHeaders,
+    util::{
+        headers::CorsHeaders,
+        Context,
+    },
 };
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -55,7 +56,7 @@ impl From<QueryAdapter> for Adapter {
     tags = ["adapters"]
 }]
 pub async fn api_get_adapters(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<Adapter>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
@@ -84,7 +85,7 @@ pub struct PathParams {
     tags = ["adapters"]
 }]
 pub async fn api_get_adapter(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Adapter>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();

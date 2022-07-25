@@ -1,39 +1,25 @@
-use std::{
-    str::FromStr,
-    sync::Arc,
-};
+use std::sync::Arc;
 
-use bencher_json::JsonUser;
-use diesel::{
-    QueryDsl,
-    RunQueryDsl,
-    SqliteConnection,
-};
+use bencher_json::JsonSignup;
+use diesel::RunQueryDsl;
 use dropshot::{
     endpoint,
     HttpError,
     HttpResponseAccepted,
     HttpResponseHeaders,
-    HttpResponseOk,
-    Path,
     RequestContext,
     TypedBody,
 };
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use tokio::sync::Mutex;
-use uuid::Uuid;
 
 use crate::{
     db::{
         model::user::InsertUser,
         schema,
     },
-    diesel::ExpressionMethods,
-    util::headers::CorsHeaders,
+    util::{
+        headers::CorsHeaders,
+        Context,
+    },
 };
 
 #[endpoint {
@@ -42,9 +28,9 @@ use crate::{
     tags = ["auth"]
 }]
 pub async fn api_post_signup(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
-    body: TypedBody<JsonUser>,
-) -> Result<HttpResponseAccepted<()>, HttpError> {
+    rqctx: Arc<RequestContext<Context>>,
+    body: TypedBody<JsonSignup>,
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
     let json_user = body.into_inner();
@@ -55,5 +41,8 @@ pub async fn api_post_signup(
         .execute(&*conn)
         .expect("Error saving new user to database.");
 
-    Ok(HttpResponseAccepted(()))
+    Ok(HttpResponseHeaders::new(
+        HttpResponseAccepted(()),
+        CorsHeaders::new_origin_all("POST".into(), "Content-Type".into()),
+    ))
 }

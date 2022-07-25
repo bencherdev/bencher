@@ -21,8 +21,16 @@ pub struct CliTestbedCreate {
     pub os_name: Option<String>,
 
     /// Testbed OS Version
-    #[clap(long)]
+    #[clap(long, requires = "os-name")]
     pub os_version: Option<String>,
+
+    /// Testbed Runtime
+    #[clap(long)]
+    pub runtime_name: Option<String>,
+
+    /// Testbed Runtime Version
+    #[clap(long, requires = "runtime-name")]
+    pub runtime_version: Option<String>,
 
     /// Testbed CPU
     #[clap(long)]

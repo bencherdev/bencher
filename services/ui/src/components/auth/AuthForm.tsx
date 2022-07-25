@@ -1,8 +1,12 @@
 import { createSignal, createEffect } from "solid-js";
+import axios from "axios";
 
 import SiteField from "../site/fields/SiteField";
 import userFieldsConfig from "../fields/user/userFieldsConfig";
 import authForms from "./authForms";
+import { JsonSignup } from "bencher_json";
+
+const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 export interface Props {
   kind: "signup" | "login";
@@ -55,13 +59,47 @@ export const AuthForm = (props: Props) => {
   const handleAuthFormSubmit = (event) => {
     event.preventDefault();
     handleFormSubmitting(true);
-    // TODO send request to backend
-    props.handleRedirect("/console");
+    if (props.kind === "signup") {
+      const signup_form = form();
+      const signup_json: JsonSignup = {
+        name: signup_form.username.value,
+        slug: null,
+        email: signup_form.email.value,
+        free: null,
+      };
+      fetchData(signup_json);
+    } else {
+      props.handleRedirect("/console");
+    }
     handleFormSubmitting(false);
   };
 
   const handleFormSubmitting = (submitting) => {
     setForm({ ...form(), submitting: submitting });
+  };
+
+  const request_config = (data: JsonSignup) => {
+    return {
+      url: `${BENCHER_API_URL}/v0/auth/${props.kind}`,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Only use with explicit CORS
+        // Authorization: `Bearer ${window.localStorage.authToken}`
+      },
+      data: data,
+    };
+  };
+
+  const fetchData = async (auth_json: JsonSignup) => {
+    try {
+      const config = request_config(auth_json);
+      let resp = await axios(config);
+      console.log(resp);
+      props.handleRedirect("/console");
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (

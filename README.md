@@ -21,7 +21,7 @@ cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://loc
 
 cargo run -- testbed create --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --os-name macos --ram 32GB nemo
 
-cargo run -- auth signup
+cargo run -- auth signup --name "Gwenith Paltrow" --email "gwen@goop.com" --url http://localhost:8080
 
 cargo run --bin bencher -- ...
 
@@ -255,3 +255,6 @@ litestream replicate --config ./litestream.yml
 docker build -f Dockerfile --tag api-lite ..
 
 docker run -p 8080:8080 -e LITESTREAM_ACCESS_KEY_ID=$LITESTREAM_ACCESS_KEY_ID -e LITESTREAM_SECRET_ACCESS_KEY=$LITESTREAM_SECRET_ACCESS_KEY -e LITESTREAM_DB_PATH=$LITESTREAM_DB_PATH -e LITESTREAM_REPLICA_URL=$LITESTREAM_REPLICA_URL --name api_lite --rm api-lite
+
+# WASM
+wasm-pack build . --target web --features wasm

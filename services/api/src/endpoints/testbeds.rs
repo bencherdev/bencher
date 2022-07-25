@@ -7,7 +7,6 @@ use bencher_json::JsonTestbed;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
-    SqliteConnection,
 };
 use dropshot::{
     endpoint,
@@ -24,7 +23,6 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
@@ -36,18 +34,23 @@ use crate::{
         schema,
     },
     diesel::ExpressionMethods,
-    util::headers::CorsHeaders,
+    util::{
+        headers::CorsHeaders,
+        Context,
+    },
 };
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Testbed {
-    pub uuid:       Uuid,
-    pub name:       String,
-    pub os_name:    Option<String>,
+    pub uuid: Uuid,
+    pub name: String,
+    pub os_name: Option<String>,
     pub os_version: Option<String>,
-    pub cpu:        Option<String>,
-    pub ram:        Option<String>,
-    pub disk:       Option<String>,
+    pub runtime_name: Option<String>,
+    pub runtime_version: Option<String>,
+    pub cpu: Option<String>,
+    pub ram: Option<String>,
+    pub disk: Option<String>,
 }
 
 impl From<QueryTestbed> for Testbed {
@@ -58,6 +61,8 @@ impl From<QueryTestbed> for Testbed {
             name,
             os_name,
             os_version,
+            runtime_name,
+            runtime_version,
             cpu,
             ram,
             disk,
@@ -67,6 +72,8 @@ impl From<QueryTestbed> for Testbed {
             name,
             os_name,
             os_version,
+            runtime_name,
+            runtime_version,
             cpu,
             ram,
             disk,
@@ -80,7 +87,7 @@ impl From<QueryTestbed> for Testbed {
     tags = ["testbeds"]
 }]
 pub async fn api_get_testbeds(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<Testbed>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
@@ -109,7 +116,7 @@ pub struct PathParams {
     tags = ["testbeds"]
 }]
 pub async fn api_get_testbed(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Testbed>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
@@ -134,7 +141,7 @@ pub async fn api_get_testbed(
     tags = ["testbeds"]
 }]
 pub async fn api_post_testbed(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonTestbed>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let db_connection = rqctx.context();

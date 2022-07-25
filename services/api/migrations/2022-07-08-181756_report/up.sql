@@ -24,6 +24,8 @@ CREATE TABLE testbed (
     name TEXT NOT NULL,
     os_name TEXT,
     os_version TEXT,
+    runtime_name TEXT,
+    runtime_version TEXT,
     cpu TEXT,
     ram TEXT,
     disk TEXT

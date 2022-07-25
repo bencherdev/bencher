@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [features]
 schema = ["schemars"]
+wasm = ["wasm-bindgen", "uuid/js"]
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
@@ -17,3 +21,13 @@ schemars = { version = "0.8.10", optional = true, features = [
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
 uuid = { version = "1.1.2", features = ["v4", "serde"] }
+wasm-bindgen = { version = "0.2.80", optional = true, features = [
+    "serde-serialize",
+] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.13"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"

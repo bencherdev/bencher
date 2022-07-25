@@ -27,14 +27,16 @@ use crate::{
 
 #[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct QueryTestbed {
-    pub id:         i32,
-    pub uuid:       String,
-    pub name:       String,
-    pub os_name:    Option<String>,
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub os_name: Option<String>,
     pub os_version: Option<String>,
-    pub cpu:        Option<String>,
-    pub ram:        Option<String>,
-    pub disk:       Option<String>,
+    pub runtime_name: Option<String>,
+    pub runtime_version: Option<String>,
+    pub cpu: Option<String>,
+    pub ram: Option<String>,
+    pub disk: Option<String>,
 }
 
 impl QueryTestbed {
@@ -70,13 +72,15 @@ impl QueryTestbed {
 #[derive(Insertable)]
 #[table_name = "testbed_table"]
 pub struct InsertTestbed {
-    pub uuid:       String,
-    pub name:       String,
-    pub os_name:    Option<String>,
+    pub uuid: String,
+    pub name: String,
+    pub os_name: Option<String>,
     pub os_version: Option<String>,
-    pub cpu:        Option<String>,
-    pub ram:        Option<String>,
-    pub disk:       Option<String>,
+    pub runtime_name: Option<String>,
+    pub runtime_version: Option<String>,
+    pub cpu: Option<String>,
+    pub ram: Option<String>,
+    pub disk: Option<String>,
 }
 
 impl InsertTestbed {
@@ -85,6 +89,8 @@ impl InsertTestbed {
             name,
             os_name,
             os_version,
+            runtime_name,
+            runtime_version,
             cpu,
             ram,
             disk,
@@ -94,6 +100,8 @@ impl InsertTestbed {
             name,
             os_name,
             os_version,
+            runtime_name,
+            runtime_version,
             cpu,
             ram,
             disk,

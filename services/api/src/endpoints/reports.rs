@@ -25,7 +25,6 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
@@ -41,7 +40,10 @@ use crate::{
         schema,
     },
     diesel::ExpressionMethods,
-    util::headers::CorsHeaders,
+    util::{
+        headers::CorsHeaders,
+        Context,
+    },
 };
 
 pub const DEFAULT_PROJECT: &str = "default";
@@ -84,7 +86,7 @@ impl Report {
     tags = ["reports"]
 }]
 pub async fn api_get_reports(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<Report>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
@@ -113,7 +115,7 @@ pub struct PathParams {
     tags = ["reports"]
 }]
 pub async fn api_get_report(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Report>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
@@ -138,7 +140,7 @@ pub async fn api_get_report(
     tags = ["reports"]
 }]
 pub async fn api_post_report(
-    rqctx: Arc<RequestContext<Mutex<SqliteConnection>>>,
+    rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonReport>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let db_connection = rqctx.context();
