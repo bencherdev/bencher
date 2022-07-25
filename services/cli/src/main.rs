@@ -2,12 +2,12 @@
 #![feature(test)]
 extern crate test;
 
-mod cli;
+mod bencher;
 mod cmd;
 mod error;
 mod tests;
 
-use cli::Bencher;
+use bencher::Bencher;
 pub use error::BencherError;
 
 #[tokio::main]

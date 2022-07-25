@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 
-use crate::cli::wide::Wide;
-use crate::BencherError;
+use crate::{
+    bencher::wide::Wide,
+    BencherError,
+};
 
 #[async_trait]
 pub trait SubCmd {

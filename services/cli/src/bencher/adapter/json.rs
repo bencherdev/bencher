@@ -1,7 +1,7 @@
 use bencher_json::JsonBenchmarks;
 
 use crate::{
-    cli::benchmark::Output,
+    bencher::benchmark::Output,
     BencherError,
 };
 

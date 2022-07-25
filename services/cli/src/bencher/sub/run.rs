@@ -9,7 +9,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::{
-    cli::{
+    bencher::{
         adapter::{
             map_adapter,
             Adapter,

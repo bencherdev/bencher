@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use crate::{
-    cli::{
+    bencher::{
         sub::SubCmd,
         wide::Wide,
     },

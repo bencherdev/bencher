@@ -33,7 +33,7 @@ use nom::{
 };
 
 use crate::{
-    cli::benchmark::Output,
+    bencher::benchmark::Output,
     BencherError,
 };
 

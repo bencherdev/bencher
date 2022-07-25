@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::JsonTestbed;
 
 use crate::{
-    cli::{
+    bencher::{
         backend::Backend,
         sub::SubCmd,
         wide::Wide,
