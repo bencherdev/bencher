@@ -7,9 +7,7 @@ use crate::{
     BencherError,
 };
 
-pub mod adapter;
 pub mod backend;
-pub mod benchmark;
 pub mod locality;
 pub mod sub;
 pub mod wide;

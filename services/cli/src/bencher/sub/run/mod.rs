@@ -10,18 +10,23 @@ use uuid::Uuid;
 
 use crate::{
     bencher::{
-        adapter::{
-            map_adapter,
-            Adapter,
-        },
-        benchmark::Benchmark,
         locality::Locality,
-        sub::SubCmd,
         wide::Wide,
     },
     cli::CliRun,
     BencherError,
 };
+
+mod adapter;
+mod benchmark;
+
+use adapter::{
+    map_adapter,
+    Adapter,
+};
+use benchmark::Benchmark;
+
+use super::SubCmd;
 
 const REPORTS_PATH: &str = "/v0/reports";
 
