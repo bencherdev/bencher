@@ -15,7 +15,7 @@ use crate::{
             Adapter,
         },
         benchmark::Benchmark,
-        clap::CliRun,
+        cmd::CliRun,
         locality::Locality,
         sub::SubCmd,
         wide::Wide,

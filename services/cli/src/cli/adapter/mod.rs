@@ -6,7 +6,7 @@ use bencher_json::{
 use crate::{
     cli::{
         benchmark::Output,
-        clap::CliAdapter,
+        cmd::CliAdapter,
     },
     BencherError,
 };

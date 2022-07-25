@@ -1,4 +1,4 @@
-use crate::cli::clap::CliWide;
+use crate::cli::cmd::CliWide;
 
 #[derive(Debug)]
 pub struct Wide {}

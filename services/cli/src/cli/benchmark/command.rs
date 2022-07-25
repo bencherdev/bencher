@@ -1,14 +1,22 @@
-use std::convert::TryFrom;
-use std::convert::TryInto;
+use std::convert::{
+    TryFrom,
+    TryInto,
+};
 
-use super::{flag::Flag, shell::Shell};
-use crate::{cli::clap::CliShell, BencherError};
+use super::{
+    flag::Flag,
+    shell::Shell,
+};
+use crate::{
+    cli::cmd::CliShell,
+    BencherError,
+};
 
 #[derive(Debug)]
 pub struct Command {
     shell: Shell,
-    flag: Flag,
-    cmd: String,
+    flag:  Flag,
+    cmd:   String,
 }
 
 impl TryFrom<(CliShell, String)> for Command {

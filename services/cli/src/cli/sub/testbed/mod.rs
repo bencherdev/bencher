@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     cli::{
-        clap::CliTestbed,
+        cmd::CliTestbed,
         sub::SubCmd,
         wide::Wide,
     },

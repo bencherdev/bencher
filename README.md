@@ -19,7 +19,9 @@ cargo bench | cargo run -- run --local --adapter rust
 
 cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --adapter rust "cargo bench"
 
-cargo run -- testbed create --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --os macos --ram 32GB nemo
+cargo run -- testbed create --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --os-name macos --ram 32GB nemo
+
+cargo run -- auth signup
 
 cargo run --bin bencher -- ...
 

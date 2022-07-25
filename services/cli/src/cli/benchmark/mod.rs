@@ -6,7 +6,7 @@ use std::convert::{
 use chrono::Utc;
 
 use crate::{
-    cli::clap::CliCommand,
+    cli::cmd::CliCommand,
     BencherError,
 };
 

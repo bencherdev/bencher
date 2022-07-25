@@ -1,8 +1,12 @@
 use std::convert::TryFrom;
 
-use crate::cli::backend::Backend;
-use crate::cli::clap::CliLocality;
-use crate::BencherError;
+use crate::{
+    cli::{
+        backend::Backend,
+        cmd::CliLocality,
+    },
+    BencherError,
+};
 
 #[derive(Debug)]
 pub enum Locality {

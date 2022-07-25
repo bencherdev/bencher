@@ -1,27 +1,31 @@
 use std::convert::TryFrom;
 
-use ::clap::Parser;
+use clap::Parser;
 
-use crate::cli::clap::CliBencher;
-use crate::BencherError;
+use crate::{
+    cli::cmd::CliBencher,
+    BencherError,
+};
 
 pub mod adapter;
 pub mod backend;
 pub mod benchmark;
-pub mod clap;
+pub mod cmd;
 pub mod locality;
 pub mod sub;
 pub mod wide;
 
-use sub::map_sub;
-use sub::Sub;
-use sub::SubCmd;
+use sub::{
+    map_sub,
+    Sub,
+    SubCmd,
+};
 use wide::Wide;
 
 #[derive(Debug)]
 pub struct Bencher {
     wide: Wide,
-    sub: Option<Sub>,
+    sub:  Option<Sub>,
 }
 
 impl TryFrom<CliBencher> for Bencher {
@@ -30,7 +34,7 @@ impl TryFrom<CliBencher> for Bencher {
     fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
             wide: Wide::from(bencher.wide),
-            sub: map_sub(bencher.sub)?,
+            sub:  map_sub(bencher.sub)?,
         })
     }
 }

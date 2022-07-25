@@ -6,7 +6,7 @@ use bencher_json::JsonTestbed;
 use crate::{
     cli::{
         backend::Backend,
-        clap::CliTestbedCreate,
+        cmd::CliTestbedCreate,
         sub::SubCmd,
         wide::Wide,
     },

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use crate::{
     cli::{
-        clap::CliSub,
+        cmd::CliSub,
         wide::Wide,
     },
     BencherError,
