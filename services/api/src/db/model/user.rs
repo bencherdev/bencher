@@ -1,10 +1,12 @@
 use std::str::FromStr;
 
-use bencher_json::JsonSignup;
+use bencher_json::{
+    JsonSignup,
+    JsonUser,
+};
 use diesel::{
     Insertable,
     Queryable,
-    SqliteConnection,
 };
 use dropshot::HttpError;
 use email_address_parser::EmailAddress;
@@ -15,17 +17,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::{
-    db::{
-        schema,
-        schema::user as user_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
-};
+use crate::db::schema::user as user_table;
 
 #[derive(Insertable)]
 #[table_name = "user_table"]
@@ -71,4 +63,38 @@ fn validate_email(email: String) -> Result<String, HttpError> {
             format!("Failed to parse email: {email}"),
         ))
         .map(|email| email.to_string())
+}
+
+#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+pub struct QueryUser {
+    pub id:    i32,
+    pub uuid:  String,
+    pub name:  String,
+    pub slug:  String,
+    pub email: String,
+}
+
+impl TryInto<JsonUser> for QueryUser {
+    type Error = HttpError;
+
+    fn try_into(self) -> Result<JsonUser, Self::Error> {
+        let Self {
+            id: _,
+            uuid,
+            name,
+            slug,
+            email,
+        } = self;
+        Ok(JsonUser {
+            uuid: Uuid::from_str(&uuid).map_err(|e| {
+                HttpError::for_bad_request(
+                    Some(String::from("BadInput")),
+                    format!("Error getting UUID: {e}"),
+                )
+            })?,
+            name,
+            slug,
+            email,
+        })
+    }
 }
