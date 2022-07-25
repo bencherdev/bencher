@@ -5,7 +5,7 @@ use serde::Serialize;
 use url::Url;
 
 use crate::{
-    cli::cmd::CliBackend,
+    cmd::CliBackend,
     BencherError,
 };
 

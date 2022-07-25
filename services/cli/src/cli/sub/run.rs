@@ -15,11 +15,11 @@ use crate::{
             Adapter,
         },
         benchmark::Benchmark,
-        cmd::CliRun,
         locality::Locality,
         sub::SubCmd,
         wide::Wide,
     },
+    cmd::CliRun,
     BencherError,
 };
 

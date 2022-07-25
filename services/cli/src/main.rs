@@ -3,6 +3,7 @@
 extern crate test;
 
 mod cli;
+mod cmd;
 mod error;
 mod tests;
 

@@ -2,10 +2,10 @@ use async_trait::async_trait;
 
 use crate::{
     cli::{
-        cmd::CliTestbed,
         sub::SubCmd,
         wide::Wide,
     },
+    cmd::CliTestbed,
     BencherError,
 };
 

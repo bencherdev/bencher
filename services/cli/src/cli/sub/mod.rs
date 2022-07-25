@@ -3,10 +3,8 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 
 use crate::{
-    cli::{
-        cmd::CliSub,
-        wide::Wide,
-    },
+    cli::wide::Wide,
+    cmd::CliSub,
     BencherError,
 };
 

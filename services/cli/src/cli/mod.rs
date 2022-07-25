@@ -3,14 +3,13 @@ use std::convert::TryFrom;
 use clap::Parser;
 
 use crate::{
-    cli::cmd::CliBencher,
+    cmd::CliBencher,
     BencherError,
 };
 
 pub mod adapter;
 pub mod backend;
 pub mod benchmark;
-pub mod cmd;
 pub mod locality;
 pub mod sub;
 pub mod wide;

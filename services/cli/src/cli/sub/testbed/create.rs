@@ -6,10 +6,10 @@ use bencher_json::JsonTestbed;
 use crate::{
     cli::{
         backend::Backend,
-        cmd::CliTestbedCreate,
         sub::SubCmd,
         wide::Wide,
     },
+    cmd::CliTestbedCreate,
     BencherError,
 };
 

@@ -1,10 +1,8 @@
 use std::convert::TryFrom;
 
 use crate::{
-    cli::{
-        backend::Backend,
-        cmd::CliLocality,
-    },
+    cli::backend::Backend,
+    cmd::CliLocality,
     BencherError,
 };
 
