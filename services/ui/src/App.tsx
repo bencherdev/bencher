@@ -16,6 +16,7 @@ import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 
 const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
+const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
 const ConsolePage = lazy(() => import("./components/site/console/ConsolePage"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 
@@ -55,7 +56,7 @@ const App: Component = () => {
   return (
     <>
       <GoogleAnalytics />
-      <Navbar />
+      <Navbar user={user} />
       {getRedirect()}
       <Routes>
         <Route path="/" element={<LandingPage handleTitle={handleTitle} />} />
@@ -80,6 +81,16 @@ const App: Component = () => {
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
                 user={user}
+                handleUser={setUser}
+              />
+            }
+          />
+          <Route
+            path="/logout"
+            element={
+              <AuthLogoutPage
+                handleTitle={handleTitle}
+                handleRedirect={setRedirect}
                 handleUser={setUser}
               />
             }
