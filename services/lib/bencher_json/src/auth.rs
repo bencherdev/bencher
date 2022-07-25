@@ -25,7 +25,8 @@ pub struct JsonSignup {
     email: String,
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
 impl JsonSignup {
     #[cfg_attr(feature = "wasm", wasm_bindgen(getter))]
     pub fn name(&self) -> String {
@@ -56,16 +57,17 @@ pub struct JsonUser {
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub struct JsonUser {
-    uuid:  Uuid,
+    uuid:  String,
     name:  String,
     slug:  String,
     email: String,
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
 impl JsonUser {
     #[cfg_attr(feature = "wasm", wasm_bindgen(getter))]
-    pub fn uuid(&self) -> Uuid {
+    pub fn uuid(&self) -> String {
         self.uuid.clone()
     }
 

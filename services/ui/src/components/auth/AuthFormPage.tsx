@@ -1,5 +1,6 @@
 import { Link, Navigate } from "solid-app-router";
-import { createSignal, createEffect } from "solid-js";
+import { createSignal, createEffect, Accessor } from "solid-js";
+import { JsonSignup } from "bencher_json";
 
 import authForms from "./authForms";
 import { AuthForm } from "./AuthForm";
@@ -11,6 +12,8 @@ const AuthFormPage = (props: {
   kind: "signup" | "login";
   handleTitle: Function;
   handleRedirect: Function;
+  user: Accessor<JsonSignup>;
+  handleUser: Function;
 }) => {
   return (
     <section class="section">
@@ -25,6 +28,8 @@ const AuthFormPage = (props: {
               kind={props.kind}
               handleTitle={props.handleTitle}
               handleRedirect={props.handleRedirect}
+              user={props.user}
+              handleUser={props.handleUser}
             />
 
             <hr />

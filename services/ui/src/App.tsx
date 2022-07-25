@@ -6,8 +6,11 @@ import {
   lazy,
   Component,
   createMemo,
+  Accessor,
+  Signal,
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
+import { JsonUser } from "bencher_json";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
@@ -19,8 +22,9 @@ const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const BENCHER_TITLE = "Bencher";
 
 const App: Component = () => {
-  const [title, setTitle] = createSignal(BENCHER_TITLE);
-  const [redirect, setRedirect] = createSignal();
+  const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
+  const [redirect, setRedirect] = createSignal<null | string>();
+  const [user, setUser] = createSignal<null | JsonUser>();
 
   const location = useLocation();
   const current_location = createMemo(() => location);
@@ -63,6 +67,8 @@ const App: Component = () => {
                 kind="signup"
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
+                user={user}
+                handleUser={setUser}
               />
             }
           />
@@ -73,6 +79,8 @@ const App: Component = () => {
                 kind="login"
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
+                user={user}
+                handleUser={setUser}
               />
             }
           />

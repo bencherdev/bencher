@@ -41,7 +41,8 @@ pub struct JsonTestbed {
     disk: Option<String>,
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
 impl JsonTestbed {
     #[cfg_attr(feature = "wasm", wasm_bindgen(getter))]
     pub fn name(&self) -> String {

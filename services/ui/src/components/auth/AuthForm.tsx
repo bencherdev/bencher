@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from "solid-js";
+import { createSignal, createEffect, Accessor } from "solid-js";
 import axios from "axios";
 
 import SiteField from "../site/fields/SiteField";
@@ -12,6 +12,8 @@ export interface Props {
   kind: "signup" | "login";
   handleTitle: Function;
   handleRedirect: Function;
+  user: Accessor<JsonSignup>;
+  handleUser: Function;
 }
 
 export const AuthForm = (props: Props) => {
@@ -67,7 +69,10 @@ export const AuthForm = (props: Props) => {
         email: signup_form.email.value,
         free: null,
       };
-      fetchData(signup_json);
+      fetchData(signup_json).then((resp) => {
+        props.handleUser(resp.data);
+        props.handleRedirect("/console");
+      });
     } else {
       props.handleRedirect("/console");
     }
@@ -95,8 +100,7 @@ export const AuthForm = (props: Props) => {
     try {
       const config = request_config(auth_json);
       let resp = await axios(config);
-      console.log(resp);
-      props.handleRedirect("/console");
+      return resp;
     } catch (error) {
       console.error(error);
     }
