@@ -26,6 +26,10 @@ const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [redirect, setRedirect] = createSignal<null | string>();
   const [user, setUser] = createSignal<null | JsonUser>();
+  const [notification, setNotification] = createSignal({
+    status: null,
+    text: null,
+  });
 
   const location = useLocation();
   const current_location = createMemo(() => location);
@@ -53,11 +57,51 @@ const App: Component = () => {
     }
   };
 
+  const removeNotification = () => {
+    setNotification({ status: null, text: null });
+  };
+
+  const getNotification = () => {
+    let color: string;
+    switch (notification().status) {
+      case "ok":
+        color = "is-success";
+        break;
+      case "alert":
+        color = "is-primary";
+        break;
+      case "error":
+        color = "is-danger";
+        break;
+      default:
+        color = "";
+    }
+    return (
+      <div class={`notification ${color}`}>
+        {notification().text}
+        <button
+          class="delete"
+          onClick={(e) => {
+            e.preventDefault();
+            removeNotification();
+          }}
+        ></button>
+      </div>
+    );
+  };
+
   return (
     <>
       <GoogleAnalytics />
       <Navbar user={user} />
       {getRedirect()}
+
+      {notification().text !== null && (
+        <section class="section">
+          <div class="container">{getNotification()}</div>
+        </section>
+      )}
+
       <Routes>
         <Route path="/" element={<LandingPage handleTitle={handleTitle} />} />
         <Route path="/auth">
@@ -70,6 +114,7 @@ const App: Component = () => {
                 handleRedirect={setRedirect}
                 user={user}
                 handleUser={setUser}
+                handleNotification={setNotification}
               />
             }
           />
@@ -82,6 +127,7 @@ const App: Component = () => {
                 handleRedirect={setRedirect}
                 user={user}
                 handleUser={setUser}
+                handleNotification={setNotification}
               />
             }
           />
@@ -92,6 +138,7 @@ const App: Component = () => {
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
                 handleUser={setUser}
+                handleNotification={setNotification}
               />
             }
           />

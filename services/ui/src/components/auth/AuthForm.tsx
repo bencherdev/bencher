@@ -14,6 +14,7 @@ export interface Props {
   handleRedirect: Function;
   user: Accessor<JsonSignup>;
   handleUser: Function;
+  handleNotification: Function;
 }
 
 export const AuthForm = (props: Props) => {
@@ -62,6 +63,7 @@ export const AuthForm = (props: Props) => {
     event.preventDefault();
     handleFormSubmitting(true);
     let json_data: JsonSignup | JsonLogin;
+    let notification: string;
     if (props.kind === "signup") {
       const signup_form = form();
       json_data = {
@@ -70,17 +72,27 @@ export const AuthForm = (props: Props) => {
         email: signup_form.email.value,
         free: null,
       };
+      notification = "Successful signup!";
     } else if (props.kind === "login") {
       const login_form = form();
       json_data = {
         email: login_form.email.value,
         free: null,
       };
+      notification = "Welcome back!";
     }
-    fetchData(json_data).then((resp) => {
-      props.handleUser(resp.data);
-      props.handleRedirect("/console");
-    });
+    fetchData(json_data)
+      .then((resp) => {
+        props.handleUser(resp.data);
+        props.handleNotification({ status: "ok", text: notification });
+        props.handleRedirect("/console");
+      })
+      .catch((e) => {
+        props.handleNotification({
+          status: "error",
+          text: `Failed to ${props.kind}: ${e}`,
+        });
+      });
     handleFormSubmitting(false);
   };
 

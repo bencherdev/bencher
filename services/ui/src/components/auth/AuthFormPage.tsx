@@ -14,6 +14,7 @@ const AuthFormPage = (props: {
   handleRedirect: Function;
   user: Accessor<JsonSignup>;
   handleUser: Function;
+  handleNotification: Function;
 }) => {
   return (
     <section class="section">
@@ -30,6 +31,7 @@ const AuthFormPage = (props: {
               handleRedirect={props.handleRedirect}
               user={props.user}
               handleUser={props.handleUser}
+              handleNotification={props.handleNotification}
             />
 
             <hr />
