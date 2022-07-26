@@ -11,6 +11,7 @@ mod testbed;
 
 pub use auth::{
     CliAuth,
+    CliAuthLogin,
     CliAuthSignup,
 };
 pub use run::{

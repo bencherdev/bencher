@@ -3,6 +3,7 @@ pub mod report;
 pub mod testbed;
 
 pub use auth::{
+    JsonLogin,
     JsonSignup,
     JsonUser,
 };

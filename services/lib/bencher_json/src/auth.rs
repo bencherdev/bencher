@@ -47,6 +47,28 @@ impl JsonSignup {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg(not(feature = "wasm"))]
+pub struct JsonLogin {
+    pub email: String,
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub struct JsonLogin {
+    email: String,
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl JsonLogin {
+    #[cfg_attr(feature = "wasm", wasm_bindgen(getter))]
+    pub fn email(&self) -> String {
+        self.email.clone()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg(not(feature = "wasm"))]
 pub struct JsonUser {
     pub uuid:  Uuid,
     pub name:  String,

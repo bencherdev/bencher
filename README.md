@@ -21,7 +21,9 @@ cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://loc
 
 cargo run -- testbed create --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --os-name macos --ram 32GB nemo
 
-cargo run -- auth signup --name "Gwenith Paltrow" --email "gwen@goop.com" --url http://localhost:8080
+cargo run -- auth signup --name "Gwenith Paltrow" --url http://localhost:8080 gwen@goop.com
+
+cargo run -- auth login --url http://localhost:8080 gwen@goop.com
 
 cargo run --bin bencher -- ...
 

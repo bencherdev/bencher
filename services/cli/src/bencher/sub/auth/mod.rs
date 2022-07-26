@@ -9,13 +9,16 @@ use crate::{
     BencherError,
 };
 
+mod login;
 mod signup;
 
+use login::Login;
 use signup::Signup;
 
 #[derive(Debug)]
 pub enum Auth {
     Signup(Signup),
+    Login(Login),
 }
 
 impl TryFrom<CliAuth> for Auth {
@@ -24,6 +27,7 @@ impl TryFrom<CliAuth> for Auth {
     fn try_from(auth: CliAuth) -> Result<Self, Self::Error> {
         Ok(match auth {
             CliAuth::Signup(signup) => Self::Signup(signup.try_into()?),
+            CliAuth::Login(login) => Self::Login(login.try_into()?),
         })
     }
 }
@@ -33,6 +37,7 @@ impl SubCmd for Auth {
     async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
             Self::Signup(signup) => signup.exec(wide).await,
+            Self::Login(login) => login.exec(wide).await,
         }
     }
 }
