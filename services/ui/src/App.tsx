@@ -22,14 +22,33 @@ const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 
 const BENCHER_TITLE = "Bencher";
 
+const initUser = () => {
+  return {
+    id: null,
+    username: null,
+    email: null,
+    isAuth: false,
+    isConf: false,
+    permissions: {},
+    role: {
+      value: null,
+      permissions: 0,
+    },
+  };
+};
+
+const initNotification = () => {
+  return {
+    status: null,
+    text: null,
+  };
+};
+
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [redirect, setRedirect] = createSignal<null | string>();
-  const [user, setUser] = createSignal<null | JsonUser>();
-  const [notification, setNotification] = createSignal({
-    status: null,
-    text: null,
-  });
+  const [user, setUser] = createSignal(initUser());
+  const [notification, setNotification] = createSignal(initNotification());
 
   const location = useLocation();
   const current_location = createMemo(() => location);
@@ -39,6 +58,29 @@ const App: Component = () => {
       document.title = title();
     }
   });
+
+  const removeNotification = () => {
+    setNotification(initNotification());
+  };
+
+  const handleNotification = (notification: {
+    status: string;
+    text: string;
+  }) => {
+    setNotification(notification);
+    setTimeout(() => {
+      removeNotification();
+    }, 4000);
+  };
+
+  // setInterval(() => setCount(count() + 1), 1000);
+
+  // setInterval(() => {
+  //   if (!user.isAuth && window.localStorage.getItem("authToken")) {
+  //     getStatus();
+  //   }
+  //   setCount(count + 1);
+  // }, 5000);
 
   const handleTitle = (new_title) => {
     if (title() !== new_title) {
@@ -55,10 +97,6 @@ const App: Component = () => {
       setRedirect();
       return <Navigate href={new_pathname} />;
     }
-  };
-
-  const removeNotification = () => {
-    setNotification({ status: null, text: null });
   };
 
   const getNotification = () => {
@@ -114,7 +152,7 @@ const App: Component = () => {
                 handleRedirect={setRedirect}
                 user={user}
                 handleUser={setUser}
-                handleNotification={setNotification}
+                handleNotification={handleNotification}
               />
             }
           />
@@ -127,7 +165,7 @@ const App: Component = () => {
                 handleRedirect={setRedirect}
                 user={user}
                 handleUser={setUser}
-                handleNotification={setNotification}
+                handleNotification={handleNotification}
               />
             }
           />
@@ -138,7 +176,7 @@ const App: Component = () => {
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
                 handleUser={setUser}
-                handleNotification={setNotification}
+                handleNotification={handleNotification}
               />
             }
           />
