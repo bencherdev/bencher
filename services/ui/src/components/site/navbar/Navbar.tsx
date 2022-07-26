@@ -61,7 +61,7 @@ export const Navbar = (props) => {
         <div class="navbar-end">
           <div class="navbar-item">
             <div class="buttons">
-              {props.user() === undefined ? (
+              {props.user()?.uuid === null ? (
                 <>
                   <Link class="button is-light" href="/auth/login">
                     Log in

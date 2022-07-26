@@ -11,10 +11,10 @@ const LOGIN = "login";
 const AuthLogoutPage = (props: {
   handleTitle: Function;
   handleRedirect: Function;
-  handleUser: Function;
+  removeUser: Function;
 }) => {
   props.handleTitle("Log out");
-  props.handleUser();
+  props.removeUser();
   props.handleRedirect("/");
   return <></>;
 };

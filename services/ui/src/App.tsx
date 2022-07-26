@@ -24,16 +24,11 @@ const BENCHER_TITLE = "Bencher";
 
 const initUser = () => {
   return {
-    id: null,
-    username: null,
+    uuid: null,
+    name: null,
+    slug: null,
     email: null,
-    isAuth: false,
-    isConf: false,
-    permissions: {},
-    role: {
-      value: null,
-      permissions: 0,
-    },
+    free: null,
   };
 };
 
@@ -47,7 +42,7 @@ const initNotification = () => {
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [redirect, setRedirect] = createSignal<null | string>();
-  const [user, setUser] = createSignal(initUser());
+  const [user, setUser] = createSignal<JsonUser>(initUser());
   const [notification, setNotification] = createSignal(initNotification());
 
   const location = useLocation();
@@ -58,6 +53,16 @@ const App: Component = () => {
       document.title = title();
     }
   });
+
+  const handleUser = (user: JsonUser) => {
+    window.localStorage.setItem("user", JSON.stringify(user));
+    setUser(user);
+  };
+
+  const removeUser = (user: JsonUser) => {
+    window.localStorage.clear();
+    setUser(initUser());
+  };
 
   const removeNotification = () => {
     setNotification(initNotification());
@@ -73,14 +78,14 @@ const App: Component = () => {
     }, 4000);
   };
 
-  // setInterval(() => setCount(count() + 1), 1000);
-
-  // setInterval(() => {
-  //   if (!user.isAuth && window.localStorage.getItem("authToken")) {
-  //     getStatus();
-  //   }
-  //   setCount(count + 1);
-  // }, 5000);
+  setInterval(() => {
+    if (user()?.uuid === null) {
+      const user = JSON.parse(window.localStorage.getItem("user"));
+      if (typeof user?.uuid === "string") {
+        setUser(user);
+      }
+    }
+  }, 1000);
 
   const handleTitle = (new_title) => {
     if (title() !== new_title) {
@@ -151,7 +156,7 @@ const App: Component = () => {
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
                 user={user}
-                handleUser={setUser}
+                handleUser={handleUser}
                 handleNotification={handleNotification}
               />
             }
@@ -164,7 +169,7 @@ const App: Component = () => {
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
                 user={user}
-                handleUser={setUser}
+                handleUser={handleUser}
                 handleNotification={handleNotification}
               />
             }
@@ -175,8 +180,7 @@ const App: Component = () => {
               <AuthLogoutPage
                 handleTitle={handleTitle}
                 handleRedirect={setRedirect}
-                handleUser={setUser}
-                handleNotification={handleNotification}
+                removeUser={removeUser}
               />
             }
           />
