@@ -20,9 +20,6 @@ const isSubSection = (current_location, section: string) => {
 const ConsolePanel = (props) => {
   props.handleTitle("Bencher Console - Track Your Benchmarks");
 
-  const testbed: JsonTestbed = { name: "five" };
-  console.log(testbed.name);
-
   return (
     <Switch
       fallback={

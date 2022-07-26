@@ -19,6 +19,7 @@ const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
 const ConsolePage = lazy(() => import("./components/site/console/ConsolePage"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
+const AccountPage = lazy(() => import("./components/site/account/AccountPage"));
 
 const BENCHER_TITLE = "Bencher";
 
@@ -217,6 +218,7 @@ const App: Component = () => {
               }
             />
           </Route>
+          <Route path="/account" element={<AccountPage />} />
         </Route>
       </Routes>
     </>

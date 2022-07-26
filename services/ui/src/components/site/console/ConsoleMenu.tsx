@@ -56,7 +56,7 @@ const ConsoleMenu = (props) => {
       <p class="menu-label">User</p>
       <ul class="menu-list">
         <li>
-          <a>Account</a>
+          <Link href="/console/account">Account</Link>
         </li>
         <li>
           <a>Settings</a>
