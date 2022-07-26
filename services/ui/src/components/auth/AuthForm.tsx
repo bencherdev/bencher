@@ -4,7 +4,7 @@ import axios from "axios";
 import SiteField from "../site/fields/SiteField";
 import userFieldsConfig from "../fields/user/userFieldsConfig";
 import authForms from "./authForms";
-import { JsonSignup } from "bencher_json";
+import { JsonSignup, JsonLogin } from "bencher_json";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
@@ -61,21 +61,26 @@ export const AuthForm = (props: Props) => {
   const handleAuthFormSubmit = (event) => {
     event.preventDefault();
     handleFormSubmitting(true);
+    let json_data: JsonSignup | JsonLogin;
     if (props.kind === "signup") {
       const signup_form = form();
-      const signup_json: JsonSignup = {
+      json_data = {
         name: signup_form.username.value,
         slug: null,
         email: signup_form.email.value,
         free: null,
       };
-      fetchData(signup_json).then((resp) => {
-        props.handleUser(resp.data);
-        props.handleRedirect("/console");
-      });
-    } else {
-      props.handleRedirect("/console");
+    } else if (props.kind === "login") {
+      const login_form = form();
+      json_data = {
+        email: login_form.email.value,
+        free: null,
+      };
     }
+    fetchData(json_data).then((resp) => {
+      props.handleUser(resp.data);
+      props.handleRedirect("/console");
+    });
     handleFormSubmitting(false);
   };
 
@@ -83,7 +88,7 @@ export const AuthForm = (props: Props) => {
     setForm({ ...form(), submitting: submitting });
   };
 
-  const request_config = (data: JsonSignup) => {
+  const request_config = (data: JsonSignup | JsonLogin) => {
     return {
       url: `${BENCHER_API_URL}/v0/auth/${props.kind}`,
       method: "POST",
@@ -96,7 +101,7 @@ export const AuthForm = (props: Props) => {
     };
   };
 
-  const fetchData = async (auth_json: JsonSignup) => {
+  const fetchData = async (auth_json: JsonSignup | JsonLogin) => {
     try {
       const config = request_config(auth_json);
       let resp = await axios(config);
