@@ -101,7 +101,7 @@ pub async fn api_get_testbeds(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(testbeds),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
 
@@ -124,14 +124,14 @@ pub async fn api_get_testbed(
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
     let adapter = schema::testbed::table
-        .filter(schema::testbed::uuid.eq(path_params.testbed_uuid.to_string()))
+        .filter(schema::testbed::uuid.eq(&path_params.testbed_uuid.to_string()))
         .first::<QueryTestbed>(&*conn)
         .unwrap()
         .into();
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(adapter),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
 

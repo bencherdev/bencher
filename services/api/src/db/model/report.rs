@@ -15,6 +15,7 @@ use uuid::Uuid;
 use super::{
     adapter::QueryAdapter,
     testbed::QueryTestbed,
+    user::QueryUser,
 };
 use crate::db::schema::report as report_table;
 
@@ -24,6 +25,7 @@ pub const DEFAULT_PROJECT: &str = "default";
 pub struct QueryReport {
     pub id:         i32,
     pub uuid:       String,
+    pub user_id:    i32,
     pub project:    Option<String>,
     pub testbed_id: Option<i32>,
     pub adapter_id: i32,
@@ -35,6 +37,7 @@ pub struct QueryReport {
 #[table_name = "report_table"]
 pub struct InsertReport {
     pub uuid:       String,
+    pub user_id:    i32,
     pub project:    String,
     pub testbed_id: Option<i32>,
     pub adapter_id: i32,
@@ -43,7 +46,7 @@ pub struct InsertReport {
 }
 
 impl InsertReport {
-    pub fn new(conn: &SqliteConnection, report: JsonReport) -> Self {
+    pub fn new(conn: &SqliteConnection, user_uuid: &Uuid, report: JsonReport) -> Self {
         let JsonReport {
             project,
             testbed,
@@ -55,6 +58,7 @@ impl InsertReport {
         } = report;
         Self {
             uuid:       Uuid::new_v4().to_string(),
+            user_id:    QueryUser::get_id(conn, user_uuid),
             project:    unwrap_project(project.as_deref()),
             testbed_id: QueryTestbed::get_id(conn, testbed),
             adapter_id: QueryAdapter::get_id(conn, adapter.to_string()),

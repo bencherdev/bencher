@@ -70,7 +70,7 @@ pub async fn api_get_adapters(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(adapters),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
 
@@ -93,13 +93,13 @@ pub async fn api_get_adapter(
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
     let adapter = schema::adapter::table
-        .filter(schema::adapter::uuid.eq(path_params.adapter_uuid.to_string()))
+        .filter(schema::adapter::uuid.eq(&path_params.adapter_uuid.to_string()))
         .first::<QueryAdapter>(&*conn)
         .unwrap()
         .into();
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(adapter),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }

@@ -13,22 +13,29 @@ CREATE TABLE project (
     owner_id INTEGER NOT NULL,
     owner_default BOOLEAN NOT NULL,
     name TEXT NOT NULL,
+    slug TEXT NOT NULL,
     description TEXT,
     url TEXT,
     FOREIGN KEY (owner_id) REFERENCES user (id),
-    UNIQUE(owner_id, name)
+    UNIQUE(owner_id, name),
+    UNIQUE(owner_id, slug)
 );
 CREATE TABLE testbed (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
+    -- project_id INTEGER NOT NULL,
+    -- project_default BOOLEAN NOT NULL,
     name TEXT NOT NULL,
+    -- slug TEXT NOT NULL,
     os_name TEXT,
     os_version TEXT,
     runtime_name TEXT,
     runtime_version TEXT,
     cpu TEXT,
     ram TEXT,
-    disk TEXT
+    disk TEXT -- FOREIGN KEY (project_id) REFERENCES project (id),
+    -- UNIQUE(project_id, name),
+    -- UNIQUE(project_id, slug)
 );
 CREATE TABLE adapter (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -41,12 +48,14 @@ VALUES("55e0af45-48df-420e-a0eb-134ea1e806db", "json"),
 CREATE TABLE report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL,
     project TEXT,
-    --  project_id INTEGER NOT NULL,
+    -- project_id INTEGER NOT NULL,
     testbed_id INTEGER,
     adapter_id INTEGER NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
     -- FOREIGN KEY (project_id) REFERENCES project (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (adapter_id) REFERENCES adapter (id)

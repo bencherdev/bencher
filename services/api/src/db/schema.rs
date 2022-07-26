@@ -13,6 +13,7 @@ table! {
         owner_id -> Integer,
         owner_default -> Bool,
         name -> Text,
+        slug -> Text,
         description -> Nullable<Text>,
         url -> Nullable<Text>,
     }
@@ -22,6 +23,7 @@ table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
+        user_id -> Integer,
         project -> Nullable<Text>,
         testbed_id -> Nullable<Integer>,
         adapter_id -> Integer,
@@ -58,6 +60,7 @@ table! {
 joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
 joinable!(report -> testbed (testbed_id));
+joinable!(report -> user (user_id));
 
 allow_tables_to_appear_in_same_query!(
     adapter,

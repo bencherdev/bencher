@@ -6,7 +6,10 @@ use bencher_json::{
 };
 use diesel::{
     Insertable,
+    QueryDsl,
     Queryable,
+    RunQueryDsl,
+    SqliteConnection,
 };
 use dropshot::HttpError;
 use email_address_parser::EmailAddress;
@@ -17,7 +20,13 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::db::schema::user as user_table;
+use crate::{
+    db::schema::{
+        self,
+        user as user_table,
+    },
+    diesel::ExpressionMethods,
+};
 
 #[derive(Insertable)]
 #[table_name = "user_table"]
@@ -29,9 +38,9 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn new(signup: JsonSignup) -> Result<Self, HttpError> {
+    pub fn new(conn: &SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup { name, slug, email } = signup;
-        let slug = validate_slug(&name, slug)?;
+        let slug = validate_slug(conn, &name, slug)?;
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,
@@ -41,8 +50,12 @@ impl InsertUser {
     }
 }
 
-fn validate_slug(name: &str, slug: Option<String>) -> Result<String, HttpError> {
-    Ok(if let Some(slug) = slug {
+fn validate_slug(
+    conn: &SqliteConnection,
+    name: &str,
+    slug: Option<String>,
+) -> Result<String, HttpError> {
+    let mut slug = if let Some(slug) = slug {
         let true_slug = slug::slugify(&slug);
         if slug != true_slug {
             return Err(HttpError::for_bad_request(
@@ -53,7 +66,19 @@ fn validate_slug(name: &str, slug: Option<String>) -> Result<String, HttpError> 
         slug
     } else {
         slug::slugify(name)
-    })
+    };
+
+    if schema::user::table
+        .filter(schema::user::slug.eq(&slug))
+        .first::<QueryUser>(conn)
+        .is_ok()
+    {
+        let rand_suffix = rand::random::<u16>().to_string();
+        slug.push_str(&rand_suffix);
+        Ok(slug)
+    } else {
+        Ok(slug)
+    }
 }
 
 fn validate_email(email: String) -> Result<String, HttpError> {
@@ -96,5 +121,15 @@ impl TryInto<JsonUser> for QueryUser {
             slug,
             email,
         })
+    }
+}
+
+impl QueryUser {
+    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> i32 {
+        schema::user::table
+            .filter(schema::user::uuid.eq(&uuid.to_string()))
+            .select(schema::user::id)
+            .first(conn)
+            .unwrap()
     }
 }

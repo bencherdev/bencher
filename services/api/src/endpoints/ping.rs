@@ -26,7 +26,7 @@ pub async fn api_get_ping(
     let _conn = db_connection.lock().await;
     let resp = HttpResponseHeaders::new(
         HttpResponseOk("PONG".into()),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     );
 
     Ok(resp)

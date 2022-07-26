@@ -28,7 +28,7 @@ pub struct QueryAdapter {
 impl QueryAdapter {
     pub fn get_id(conn: &SqliteConnection, name: String) -> i32 {
         schema::adapter::table
-            .filter(schema::adapter::name.eq(name))
+            .filter(schema::adapter::name.eq(&name))
             .select(schema::adapter::id)
             .first(conn)
             .unwrap()

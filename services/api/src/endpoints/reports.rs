@@ -63,6 +63,7 @@ impl Report {
         let QueryReport {
             id: _,
             uuid,
+            user_id,
             project,
             testbed_id,
             adapter_id,
@@ -100,7 +101,7 @@ pub async fn api_get_reports(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(reports),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
 
@@ -123,14 +124,14 @@ pub async fn api_get_report(
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
     let db_report = schema::report::table
-        .filter(schema::report::uuid.eq(path_params.report_uuid))
+        .filter(schema::report::uuid.eq(&path_params.report_uuid))
         .first::<QueryReport>(&*conn)
         .unwrap();
     let report = Report::new(&*conn, db_report);
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(report),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into()),
+        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
 
@@ -143,11 +144,20 @@ pub async fn api_post_report(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonReport>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
+    let headers = rqctx.request.lock().await;
+    let headers = headers
+        .headers()
+        .get("Authorization")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let (_, uuid) = headers.split_once("Bearer ").unwrap();
+    let uuid = Uuid::from_str(uuid).unwrap();
     let db_connection = rqctx.context();
 
     let json_report = body.into_inner();
     let conn = db_connection.lock().await;
-    let insert_report = InsertReport::new(&*conn, json_report);
+    let insert_report = InsertReport::new(&*conn, &uuid, json_report);
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(&*conn)

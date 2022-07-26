@@ -92,7 +92,11 @@ impl Backend {
     {
         let client = reqwest::Client::new();
         let url = self.url.join(path)?.to_string();
-        let res = client.post(&url).json(json).send().await?.json().await?;
+        let mut builder = client.post(&url);
+        if let Some(token) = &self.token {
+            builder = builder.header("Authorization", format!("Bearer {token}"));
+        }
+        let res = builder.json(json).send().await?.json().await?;
         Ok(res)
     }
 }

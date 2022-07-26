@@ -18,12 +18,12 @@ pub struct CorsHeaders {
 }
 
 impl CorsHeaders {
-    pub fn new_origin_all(methods: String, headers: String) -> Self {
+    pub fn new_origin_all(methods: String, headers: String, credentials: Option<bool>) -> Self {
         CorsHeaders {
             access_control_allow_origin:      "*".into(),
             access_control_allow_methods:     methods,
             access_control_allow_headers:     headers,
-            access_control_allow_credentials: None,
+            access_control_allow_credentials: credentials,
         }
     }
 }

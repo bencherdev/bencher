@@ -8,12 +8,14 @@ import {
   createMemo,
   Accessor,
   Signal,
+  For,
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { JsonUser } from "bencher_json";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
+import SiteFooter from "./components/site/pages/SiteFooter";
 
 const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
@@ -221,6 +223,9 @@ const App: Component = () => {
           <Route path="/account" element={<AccountPage />} />
         </Route>
       </Routes>
+
+      <For each={[...Array(9).keys()]}>{(_k, _i) => <br />}</For>
+      <SiteFooter />
     </>
   );
 };

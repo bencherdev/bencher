@@ -44,7 +44,7 @@ impl QueryTestbed {
         if let Some(uuid) = uuid {
             Some(
                 schema::testbed::table
-                    .filter(schema::testbed::uuid.eq(uuid.to_string()))
+                    .filter(schema::testbed::uuid.eq(&uuid.to_string()))
                     .select(schema::testbed::id)
                     .first(conn)
                     .unwrap(),
