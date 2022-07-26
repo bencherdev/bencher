@@ -1,7 +1,10 @@
 use std::convert::TryFrom;
 
 use email_address_parser::EmailAddress;
-use serde::Serialize;
+use serde::{
+    de::DeserializeOwned,
+    Serialize,
+};
 use url::Url;
 
 use crate::{
@@ -82,14 +85,14 @@ impl Backend {
         })
     }
 
-    pub async fn post<T>(&self, path: &str, json: &T) -> Result<(), BencherError>
+    pub async fn post<T, R>(&self, path: &str, json: &T) -> Result<R, BencherError>
     where
         T: Serialize + ?Sized,
+        R: DeserializeOwned,
     {
         let client = reqwest::Client::new();
         let url = self.url.join(path)?.to_string();
-        let res = client.post(&url).json(json).send().await?;
-        println!("{res:?}");
-        Ok(())
+        let res = client.post(&url).json(json).send().await?.json().await?;
+        Ok(res)
     }
 }

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
+    JsonLogin,
     JsonSignup,
     JsonUser,
 };
@@ -59,6 +60,31 @@ pub async fn api_post_signup(
 
     let query_user = schema::user::table
         .filter(schema::user::email.eq(email))
+        .first::<QueryUser>(&*conn)
+        .unwrap();
+    let json_user = query_user.try_into()?;
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseAccepted(json_user),
+        CorsHeaders::new_origin_all("POST".into(), "Content-Type".into()),
+    ))
+}
+
+#[endpoint {
+    method = POST,
+    path = "/v0/auth/login",
+    tags = ["auth"]
+}]
+pub async fn api_post_login(
+    rqctx: Arc<RequestContext<Context>>,
+    body: TypedBody<JsonLogin>,
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
+    let db_connection = rqctx.context();
+
+    let json_login = body.into_inner();
+    let conn = db_connection.lock().await;
+    let query_user = schema::user::table
+        .filter(schema::user::email.eq(json_login.email))
         .first::<QueryUser>(&*conn)
         .unwrap();
     let json_user = query_user.try_into()?;

@@ -1,7 +1,10 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonSignup;
+use bencher_json::{
+    JsonSignup,
+    JsonUser,
+};
 
 use crate::{
     bencher::{
@@ -51,6 +54,8 @@ impl SubCmd for Signup {
             slug:  self.slug.clone(),
             email: self.email.clone(),
         };
-        self.backend.post(SIGNUP_PATH, &signup).await
+        let res: JsonUser = self.backend.post(SIGNUP_PATH, &signup).await?;
+        println!("{}", serde_json::to_string(&res)?);
+        Ok(())
     }
 }

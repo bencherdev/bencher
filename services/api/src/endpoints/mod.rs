@@ -30,6 +30,7 @@ impl Registrar<Context> for Api {
         api.register(ping::api_get_ping)?;
         // Auth
         Self::register(api, auth::api_post_signup)?;
+        Self::register(api, auth::api_post_login)?;
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
         api.register(testbeds::api_get_testbed)?;

@@ -77,7 +77,10 @@ impl SubCmd for Run {
         };
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string(&report)?)),
-            Locality::Backend(backend) => backend.post(REPORTS_PATH, &report).await,
+            Locality::Backend(backend) => {
+                backend.post(REPORTS_PATH, &report).await?;
+                Ok(())
+            },
         }
     }
 }

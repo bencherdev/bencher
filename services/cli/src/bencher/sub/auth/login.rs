@@ -1,7 +1,10 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonLogin;
+use bencher_json::{
+    JsonLogin,
+    JsonUser,
+};
 
 use crate::{
     bencher::{
@@ -25,15 +28,9 @@ impl TryFrom<CliAuthLogin> for Login {
     type Error = BencherError;
 
     fn try_from(login: CliAuthLogin) -> Result<Self, Self::Error> {
-        let CliAuthLogin {
-            email,
-            url,
-        } = login;
+        let CliAuthLogin { email, url } = login;
         let backend = Backend::new(email.clone(), None, url)?;
-        Ok(Self {
-            email,
-            backend,
-        })
+        Ok(Self { email, backend })
     }
 }
 
@@ -43,6 +40,8 @@ impl SubCmd for Login {
         let login = JsonLogin {
             email: self.email.clone(),
         };
-        self.backend.post(LOGIN_PATH, &login).await
+        let res: JsonUser = self.backend.post(LOGIN_PATH, &login).await?;
+        println!("{}", serde_json::to_string(&res)?);
+        Ok(())
     }
 }
