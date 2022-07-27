@@ -6,6 +6,7 @@ use clap::{
 };
 
 mod auth;
+mod project;
 mod run;
 mod testbed;
 
@@ -13,6 +14,10 @@ pub use auth::{
     CliAuth,
     CliAuthLogin,
     CliAuthSignup,
+};
+pub use project::{
+    CliProject,
+    CliProjectCreate,
 };
 pub use run::{
     CliAdapter,
@@ -46,8 +51,11 @@ pub enum CliSub {
     /// Backend authentication
     #[clap(subcommand)]
     Auth(CliAuth),
-    /// Run a benchmark
+    /// Run benchmarks
     Run(CliRun),
+    /// Manage projects
+    #[clap(subcommand)]
+    Project(CliProject),
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),
@@ -56,7 +64,7 @@ pub enum CliSub {
 #[derive(Args, Debug)]
 pub struct CliLocality {
     /// Run local only
-    #[clap(short, long)]
+    #[clap(long)]
     pub local: bool,
 
     #[clap(flatten)]
@@ -68,18 +76,14 @@ pub struct CliLocality {
     ArgGroup::new("backend")
         .multiple(true)
         .conflicts_with("local")
-        .args(&["email", "token", "url"]),
+        .args(&["token", "host"]),
 ))]
 pub struct CliBackend {
-    /// User email
-    #[clap(long)]
-    pub email: Option<String>,
-
     /// User API token
     #[clap(long)]
     pub token: Option<String>,
 
     /// Backend host URL (default http://api.bencher.dev)
     #[clap(long)]
-    pub url: Option<String>,
+    pub host: Option<String>,
 }

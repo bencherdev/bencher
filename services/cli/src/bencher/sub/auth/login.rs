@@ -29,7 +29,7 @@ impl TryFrom<CliAuthLogin> for Login {
 
     fn try_from(login: CliAuthLogin) -> Result<Self, Self::Error> {
         let CliAuthLogin { email, url } = login;
-        let backend = Backend::new(email.clone(), None, url)?;
+        let backend = Backend::new(None, url)?;
         Ok(Self { email, backend })
     }
 }

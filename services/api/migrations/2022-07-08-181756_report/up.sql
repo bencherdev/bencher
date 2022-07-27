@@ -16,6 +16,7 @@ CREATE TABLE project (
     slug TEXT NOT NULL,
     description TEXT,
     url TEXT,
+    public BOOLEAN NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES user (id),
     UNIQUE(owner_id, name),
     UNIQUE(owner_id, slug)

@@ -17,13 +17,15 @@ or
 cargo bench | cargo run -- run --local --adapter rust
 
 
-cargo run -- run --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --adapter rust "cargo bench"
+cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
 
-cargo run -- testbed create --email epompeii@protonmail.com --token 123JWT --url http://localhost:8080 --os-name macos --ram 32GB nemo
+cargo run -- testbed create --host http://localhost:8080 --os-name macos --ram 32GB nemo
 
-cargo run -- auth signup --name "Gwenith Paltrow" --url http://localhost:8080 gwen@goop.com
+cargo run -- auth signup --host http://localhost:8080 --name "Gwenith Paltrow" gwen@goop.com
 
-cargo run -- auth login --url http://localhost:8080 gwen@goop.com
+cargo run -- auth login --host http://localhost:8080 gwen@goop.com
+
+cargo run -- project create --host http://localhost:8080 "Hazel River"
 
 cargo run --bin bencher -- ...
 

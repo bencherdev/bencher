@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod project;
 pub mod report;
 pub mod testbed;
 
@@ -7,6 +8,7 @@ pub use auth::{
     JsonSignup,
     JsonUser,
 };
+pub use project::JsonProject;
 pub use report::{
     JsonAdapter,
     JsonBenchmark,

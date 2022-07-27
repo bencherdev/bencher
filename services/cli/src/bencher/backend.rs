@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use email_address_parser::EmailAddress;
 use serde::{
     de::DeserializeOwned,
     Serialize,
@@ -12,16 +11,15 @@ use crate::{
     BencherError,
 };
 
-pub const BENCHER_EMAIL: &str = "BENCHER_EMAIL";
 pub const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
 pub const BENCHER_URL: &str = "BENCHER_URL";
+pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 
 #[derive(Debug)]
 pub struct Backend {
-    pub email: EmailAddress,
     pub token: Option<String>,
-    pub url:   Url,
+    pub host:  Url,
 }
 
 impl TryFrom<CliBackend> for Backend {
@@ -29,42 +27,29 @@ impl TryFrom<CliBackend> for Backend {
 
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
         Ok(Self {
-            email: map_email(backend.email)?,
-            token: Some(map_token(backend.token)?),
-            url:   map_url(backend.url)?,
+            token: map_token(backend.token)?,
+            host:  unwrap_host(backend.host)?,
         })
     }
 }
 
-fn map_email(email: Option<String>) -> Result<EmailAddress, BencherError> {
-    if let Some(email) = email {
-        map_email_str(email)
-    } else if let Ok(email) = std::env::var(BENCHER_EMAIL) {
-        map_email_str(email)
-    } else {
-        Err(BencherError::EmailNotFound)
-    }
-}
-
-fn map_email_str(email: String) -> Result<EmailAddress, BencherError> {
-    EmailAddress::parse(&email, None).ok_or(BencherError::Email(email))
-}
-
-fn map_token(token: Option<String>) -> Result<String, BencherError> {
+fn map_token(token: Option<String>) -> Result<Option<String>, BencherError> {
     // TODO add first pass token validation
     if let Some(token) = token {
-        Ok(token)
+        Ok(Some(token))
     } else if let Ok(token) = std::env::var(BENCHER_TOKEN) {
-        Ok(token)
+        Ok(Some(token))
     } else {
         Err(BencherError::TokenNotFound)
     }
 }
 
-pub fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
-    let url = if let Some(url) = url {
+fn unwrap_host(host: Option<String>) -> Result<Url, url::ParseError> {
+    let url = if let Some(url) = host {
         url
     } else if let Ok(url) = std::env::var(BENCHER_URL) {
+        url
+    } else if let Ok(url) = std::env::var(BENCHER_HOST) {
         url
     } else {
         DEFAULT_URL.into()
@@ -73,15 +58,10 @@ pub fn map_url(url: Option<String>) -> Result<Url, url::ParseError> {
 }
 
 impl Backend {
-    pub fn new(
-        email: String,
-        token: Option<String>,
-        url: Option<String>,
-    ) -> Result<Self, BencherError> {
+    pub fn new(token: Option<String>, host: Option<String>) -> Result<Self, BencherError> {
         Ok(Self {
-            email: map_email_str(email)?,
             token,
-            url: map_url(url)?,
+            host: unwrap_host(host)?,
         })
     }
 
@@ -91,7 +71,7 @@ impl Backend {
         R: DeserializeOwned,
     {
         let client = reqwest::Client::new();
-        let url = self.url.join(path)?.to_string();
+        let url = self.host.join(path)?.to_string();
         let mut builder = client.post(&url);
         if let Some(token) = &self.token {
             builder = builder.header("Authorization", format!("Bearer {token}"));

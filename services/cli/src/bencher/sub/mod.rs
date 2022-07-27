@@ -9,11 +9,13 @@ use crate::{
 };
 
 mod auth;
+mod project;
 mod run;
 mod subcmd;
 mod testbed;
 
 use auth::Auth;
+use project::Project;
 use run::Run;
 pub use subcmd::SubCmd;
 use testbed::Testbed;
@@ -22,6 +24,7 @@ use testbed::Testbed;
 pub enum Sub {
     Auth(Auth),
     Run(Run),
+    Project(Project),
     Testbed(Testbed),
 }
 
@@ -32,6 +35,7 @@ impl TryFrom<CliSub> for Sub {
         Ok(match sub {
             CliSub::Auth(auth) => Self::Auth(Auth::try_from(auth)?),
             CliSub::Run(run) => Self::Run(Run::try_from(run)?),
+            CliSub::Project(project) => Self::Project(Project::try_from(project)?),
             CliSub::Testbed(testbed) => Self::Testbed(Testbed::try_from(testbed)?),
         })
     }
@@ -51,6 +55,7 @@ impl SubCmd for Sub {
         match self {
             Self::Auth(auth) => auth.exec(wide).await,
             Self::Run(run) => run.exec(wide).await,
+            Self::Project(project) => project.exec(wide).await,
             Self::Testbed(testbed) => testbed.exec(wide).await,
         }
     }

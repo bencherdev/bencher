@@ -26,6 +26,6 @@ pub enum BencherError {
     Git(#[from] git2::Error),
     #[error("Failed serde json")]
     Serde(#[from] serde_json::Error),
-    #[error("Failed to send report to backend: {0}")]
+    #[error("Failed to send request: {0}")]
     Client(#[from] reqwest::Error),
 }

@@ -36,7 +36,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             email,
             url,
         } = signup;
-        let backend = Backend::new(email.clone(), None, url)?;
+        let backend = Backend::new(None, url)?;
         Ok(Self {
             name,
             slug,
