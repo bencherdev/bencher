@@ -43,6 +43,7 @@ use crate::{
     util::{
         auth::get_token,
         headers::CorsHeaders,
+        http_error,
         Context,
     },
 };
@@ -154,12 +155,7 @@ pub async fn api_post_report(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(&*conn)
-        .map_err(|_e| {
-            HttpError::for_bad_request(
-                Some("BadInput".into()),
-                format!("Failed to add report to the database."),
-            )
-        })?;
+        .map_err(|_| http_error!("Failed to create report."))?;
 
     Ok(HttpResponseAccepted(()))
 }

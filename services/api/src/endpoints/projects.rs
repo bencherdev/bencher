@@ -47,6 +47,7 @@ use crate::{
     util::{
         auth::get_token,
         headers::CorsHeaders,
+        http_error,
         Context,
     },
 };
@@ -69,7 +70,7 @@ pub async fn api_post_project(
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(&*conn)
-        .expect("Error saving new project to database.");
+        .map_err(|_| http_error!("Failed to create project."))?;
 
     Ok(HttpResponseAccepted(()))
 }
