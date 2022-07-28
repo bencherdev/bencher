@@ -41,6 +41,7 @@ use crate::{
     },
     diesel::ExpressionMethods,
     util::{
+        auth::get_token,
         headers::CorsHeaders,
         Context,
     },
@@ -144,15 +145,7 @@ pub async fn api_post_report(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonReport>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
-    let headers = rqctx.request.lock().await;
-    let headers = headers
-        .headers()
-        .get("Authorization")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let (_, uuid) = headers.split_once("Bearer ").unwrap();
-    let uuid = Uuid::from_str(uuid).unwrap();
+    let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
 
     let json_report = body.into_inner();

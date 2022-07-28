@@ -1,4 +1,4 @@
-
+pub mod auth;
 pub mod headers;
 pub mod migrate;
 pub mod registrar;

@@ -14,6 +14,7 @@ use dropshot::{
 pub mod adapters;
 pub mod auth;
 pub mod ping;
+pub mod projects;
 pub mod reports;
 pub mod testbeds;
 
@@ -31,6 +32,8 @@ impl Registrar<Context> for Api {
         // Auth
         Self::register(api, auth::api_post_signup)?;
         Self::register(api, auth::api_post_login)?;
+        // Projects
+        api.register(projects::api_post_project)?;
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
         api.register(testbeds::api_get_testbed)?;

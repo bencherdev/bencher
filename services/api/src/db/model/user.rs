@@ -40,7 +40,7 @@ pub struct InsertUser {
 impl InsertUser {
     pub fn new(conn: &SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup { name, slug, email } = signup;
-        let slug = validate_slug(conn, &name, slug)?;
+        let slug = validate_slug(conn, &name, slug);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,
@@ -50,23 +50,16 @@ impl InsertUser {
     }
 }
 
-fn validate_slug(
-    conn: &SqliteConnection,
-    name: &str,
-    slug: Option<String>,
-) -> Result<String, HttpError> {
-    let mut slug = if let Some(slug) = slug {
-        let true_slug = slug::slugify(&slug);
-        if slug != true_slug {
-            return Err(HttpError::for_bad_request(
-                Some(String::from("BadInput")),
-                format!("Slug was not valid: {slug}"),
-            ));
-        }
-        slug
-    } else {
-        slug::slugify(name)
-    };
+fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> String {
+    let mut slug = slug
+        .map(|s| {
+            if s == slug::slugify(&s) {
+                s
+            } else {
+                slug::slugify(name)
+            }
+        })
+        .unwrap_or_else(|| slug::slugify(name));
 
     if schema::user::table
         .filter(schema::user::slug.eq(&slug))
@@ -75,9 +68,9 @@ fn validate_slug(
     {
         let rand_suffix = rand::random::<u16>().to_string();
         slug.push_str(&rand_suffix);
-        Ok(slug)
+        slug
     } else {
-        Ok(slug)
+        slug
     }
 }
 

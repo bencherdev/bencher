@@ -21,6 +21,7 @@ dependencies = [
  "slog",
  "slug",
  "tokio",
+ "url",
  "uuid 1.1.2",
 ]
 
