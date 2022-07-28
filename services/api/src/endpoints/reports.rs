@@ -154,7 +154,12 @@ pub async fn api_post_report(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(&*conn)
-        .expect("Error saving new report to database.");
+        .map_err(|_e| {
+            HttpError::for_bad_request(
+                Some("BadInput".into()),
+                format!("Failed to add report to the database."),
+            )
+        })?;
 
     Ok(HttpResponseAccepted(()))
 }

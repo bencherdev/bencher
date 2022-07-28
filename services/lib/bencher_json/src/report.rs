@@ -27,6 +27,9 @@ pub struct JsonReport {
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
     pub benchmarks: JsonBenchmarks,
+    // TODO add a tags section, for noting things like code version etc
+    // the CLI could have `--tag-version` flag that would automatically look for the current git
+    // hash and add that under the `version` tag.
 }
 
 #[derive(Display, Debug, Serialize, Deserialize)]

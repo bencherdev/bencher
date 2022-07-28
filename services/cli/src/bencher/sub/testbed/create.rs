@@ -66,10 +66,11 @@ impl SubCmd for Testbed {
             os_version: self.os_version.clone(),
             runtime_name: self.runtime_name.clone(),
             runtime_version: self.runtime_version.clone(),
-            cpu:  self.cpu.clone(),
-            ram:  self.ram.clone(),
+            cpu: self.cpu.clone(),
+            ram: self.ram.clone(),
             disk: self.disk.clone(),
         };
-        self.backend.post(TESTBEDS_PATH, &testbed).await
+        self.backend.post(TESTBEDS_PATH, &testbed).await?;
+        Ok(())
     }
 }

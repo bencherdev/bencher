@@ -1,9 +1,6 @@
 use std::convert::TryFrom;
 
-use serde::{
-    de::DeserializeOwned,
-    Serialize,
-};
+use serde::Serialize;
 use url::Url;
 
 use crate::{
@@ -65,10 +62,9 @@ impl Backend {
         })
     }
 
-    pub async fn post<T, R>(&self, path: &str, json: &T) -> Result<R, BencherError>
+    pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
     where
         T: Serialize + ?Sized,
-        R: DeserializeOwned,
     {
         let client = reqwest::Client::new();
         let url = self.host.join(path)?.to_string();
@@ -76,7 +72,8 @@ impl Backend {
         if let Some(token) = &self.token {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
-        let res = builder.json(json).send().await?.json().await?;
+        let res: serde_json::Value = builder.json(json).send().await?.json().await?;
+        println!("{}", serde_json::to_string(&res)?);
         Ok(res)
     }
 }

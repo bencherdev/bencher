@@ -67,6 +67,7 @@ impl SubCmd for Project {
             url:         self.url.clone(),
             default:     self.default,
         };
-        self.backend.post(PROJECTS_PATH, &project).await
+        self.backend.post(PROJECTS_PATH, &project).await?;
+        Ok(())
     }
 }
