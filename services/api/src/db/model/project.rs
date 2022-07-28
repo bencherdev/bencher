@@ -5,6 +5,7 @@ use std::{
 
 use bencher_json::{
     JsonNewProject,
+    JsonProject,
     JsonSignup,
     JsonUser,
 };
@@ -32,8 +33,10 @@ use crate::{
         project as project_table,
     },
     diesel::ExpressionMethods,
+    util::http_error,
 };
 
+const PROJECT_ERROR: &str = "Failed to get project.";
 #[derive(Insertable)]
 #[table_name = "project_table"]
 pub struct InsertProject {
@@ -47,7 +50,7 @@ pub struct InsertProject {
 }
 
 impl InsertProject {
-    pub fn new(
+    pub fn from_json(
         conn: &SqliteConnection,
         user_uuid: &Uuid,
         project: JsonNewProject,
@@ -62,7 +65,7 @@ impl InsertProject {
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            owner_id: QueryUser::get_id(conn, user_uuid),
+            owner_id: QueryUser::get_id(conn, user_uuid)?,
             owner_default: default,
             name,
             slug,
@@ -96,15 +99,6 @@ fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> S
     }
 }
 
-// fn validate_email(email: String) -> Result<String, HttpError> {
-//     EmailAddress::parse(&email, None)
-//         .ok_or(HttpError::for_bad_request(
-//             Some(String::from("BadInput")),
-//             format!("Failed to parse email: {email}"),
-//         ))
-//         .map(|email| email.to_string())
-// }
-
 #[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct QueryProject {
     pub id: i32,
@@ -117,37 +111,34 @@ pub struct QueryProject {
     pub url: Option<String>,
 }
 
-// impl TryInto<JsonUser> for QueryUser {
-//     type Error = HttpError;
+impl QueryProject {
+    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonProject, HttpError> {
+        let Self {
+            id: _,
+            uuid,
+            owner_id,
+            owner_default,
+            name,
+            slug,
+            description,
+            url,
+        } = self;
+        Ok(JsonProject {
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(PROJECT_ERROR))?,
+            owner_uuid: QueryUser::get_uuid(conn, owner_id)?,
+            owner_default,
+            name,
+            slug,
+            description,
+            url: ok_url(url.as_deref())?,
+        })
+    }
+}
 
-//     fn try_into(self) -> Result<JsonUser, Self::Error> {
-//         let Self {
-//             id: _,
-//             uuid,
-//             name,
-//             slug,
-//             email,
-//         } = self;
-//         Ok(JsonUser {
-//             uuid: Uuid::from_str(&uuid).map_err(|e| {
-//                 HttpError::for_bad_request(
-//                     Some(String::from("BadInput")),
-//                     format!("Error getting UUID: {e}"),
-//                 )
-//             })?,
-//             name,
-//             slug,
-//             email,
-//         })
-//     }
-// }
-
-// impl QueryUser {
-//     pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> i32 {
-//         schema::user::table
-//             .filter(schema::user::uuid.eq(&uuid.to_string()))
-//             .select(schema::user::id)
-//             .first(conn)
-//             .unwrap()
-//     }
-// }
+fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
+    Ok(if let Some(url) = url {
+        Some(Url::parse(url).map_err(|_| http_error!(PROJECT_ERROR))?)
+    } else {
+        None
+    })
+}

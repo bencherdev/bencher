@@ -79,7 +79,11 @@ pub struct InsertReport {
 }
 
 impl InsertReport {
-    pub fn new(conn: &SqliteConnection, user_uuid: &Uuid, report: JsonNewReport) -> Self {
+    pub fn from_json(
+        conn: &SqliteConnection,
+        user_uuid: &Uuid,
+        report: JsonNewReport,
+    ) -> Result<Self, HttpError> {
         let JsonNewReport {
             project,
             testbed,
@@ -89,15 +93,15 @@ impl InsertReport {
             // TODO actually insert benchmarks
             benchmarks,
         } = report;
-        Self {
+        Ok(Self {
             uuid:       Uuid::new_v4().to_string(),
-            user_id:    QueryUser::get_id(conn, user_uuid),
+            user_id:    QueryUser::get_id(conn, user_uuid)?,
             project:    unwrap_project(project.as_deref()),
             testbed_id: QueryTestbed::get_id(conn, testbed),
             adapter_id: QueryAdapter::get_id(conn, adapter.to_string()),
             start_time: start_time.naive_utc(),
             end_time:   end_time.naive_utc(),
-        }
+        })
     }
 }
 

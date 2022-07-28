@@ -29,6 +29,8 @@ use crate::{
     util::http_error,
 };
 
+const USER_ERROR: &str = "Failed to get user";
+
 #[derive(Insertable)]
 #[table_name = "user_table"]
 pub struct InsertUser {
@@ -119,21 +121,20 @@ impl TryInto<JsonUser> for QueryUser {
 }
 
 impl QueryUser {
-    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> i32 {
+    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
         schema::user::table
             .filter(schema::user::uuid.eq(&uuid.to_string()))
             .select(schema::user::id)
             .first(conn)
-            .unwrap()
+            .map_err(|_| http_error!(USER_ERROR))
     }
 
     pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
-        let error = "Failed to get user";
         let uuid: String = schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::uuid)
             .first(conn)
-            .map_err(|_| http_error!(error))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(error))
+            .map_err(|_| http_error!(USER_ERROR))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!(USER_ERROR))
     }
 }

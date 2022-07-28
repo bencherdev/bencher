@@ -8,7 +8,10 @@ pub use auth::{
     JsonSignup,
     JsonUser,
 };
-pub use project::JsonNewProject;
+pub use project::{
+    JsonNewProject,
+    JsonProject,
+};
 pub use report::{
     JsonAdapter,
     JsonBenchmark,

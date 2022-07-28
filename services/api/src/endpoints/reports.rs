@@ -62,17 +62,16 @@ pub async fn api_get_reports(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
-
     let conn = db_connection.lock().await;
-    let reports: Vec<JsonReport> = schema::report::table
+    let json: Vec<JsonReport> = schema::report::table
         .load::<QueryReport>(&*conn)
-        .expect("Error loading reports.")
+        .map_err(|_| http_error!("Failed to get reports."))?
         .into_iter()
-        .filter_map(|query_report| query_report.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json(&*conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseOk(reports),
+        HttpResponseOk(json),
         CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
@@ -92,17 +91,16 @@ pub async fn api_get_report(
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
-
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
-    let query_report = schema::report::table
+    let query = schema::report::table
         .filter(schema::report::uuid.eq(&path_params.report_uuid))
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to get report."))?;
-    let report = query_report.to_json(&*conn)?;
+    let json = query.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseOk(report),
+        HttpResponseOk(json),
         CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
     ))
 }
@@ -118,10 +116,9 @@ pub async fn api_post_report(
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
-
     let json_report = body.into_inner();
     let conn = db_connection.lock().await;
-    let insert_report = InsertReport::new(&*conn, &uuid, json_report);
+    let insert_report = InsertReport::from_json(&*conn, &uuid, json_report)?;
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(&*conn)
