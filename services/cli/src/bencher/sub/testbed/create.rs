@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonTestbed;
+use bencher_json::JsonNewTestbed;
 
 use crate::{
     bencher::{
@@ -60,7 +60,7 @@ impl TryFrom<CliTestbedCreate> for Testbed {
 #[async_trait]
 impl SubCmd for Testbed {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let testbed = JsonTestbed {
+        let testbed = JsonNewTestbed {
             name: self.name.clone(),
             os_name: self.os_name.clone(),
             os_version: self.os_version.clone(),

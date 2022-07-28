@@ -4,8 +4,8 @@ use std::{
 };
 
 use bencher_json::{
-    JsonProject,
-    JsonReport,
+    JsonNewProject,
+    JsonNewReport,
 };
 use chrono::NaiveDateTime;
 use diesel::{
@@ -59,7 +59,7 @@ use crate::{
 }]
 pub async fn api_post_project(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonProject>,
+    body: TypedBody<JsonNewProject>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();

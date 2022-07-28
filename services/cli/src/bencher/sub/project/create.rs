@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonProject;
+use bencher_json::JsonNewProject;
 use url::Url;
 
 use crate::{
@@ -60,7 +60,7 @@ pub fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
 #[async_trait]
 impl SubCmd for Project {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let project = JsonProject {
+        let project = JsonNewProject {
             name:        self.name.clone(),
             slug:        self.slug.clone(),
             description: self.description.clone(),

@@ -9,7 +9,7 @@ use url::Url;
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg(not(feature = "wasm"))]
-pub struct JsonProject {
+pub struct JsonNewProject {
     pub name:        String,
     pub slug:        Option<String>,
     pub description: Option<String>,

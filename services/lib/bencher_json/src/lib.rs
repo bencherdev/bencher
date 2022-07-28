@@ -8,12 +8,12 @@ pub use auth::{
     JsonSignup,
     JsonUser,
 };
-pub use project::JsonProject;
+pub use project::JsonNewProject;
 pub use report::{
     JsonAdapter,
     JsonBenchmark,
     JsonBenchmarks,
     JsonLatency,
-    JsonReport,
+    JsonNewReport,
 };
-pub use testbed::JsonTestbed;
+pub use testbed::JsonNewTestbed;

@@ -25,7 +25,7 @@ pub struct Report {
 
 #[derive(Insertable)]
 #[table_name = "report"]
-pub struct JsonReport {
+pub struct JsonNewReport {
     pub date_time: DateTime<Utc>,
     pub metrics:   serde_json::Value,
     pub hash:      i64,

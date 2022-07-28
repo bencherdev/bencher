@@ -1,7 +1,7 @@
 import { Match, Switch } from "solid-js";
 import TablePanel from "./TablePanel";
 import DeckPanel from "./DeckPanel";
-import { JsonTestbed } from "bencher_json";
+import { JsonNewTestbed } from "bencher_json";
 
 const isSection = (current_location, section: string) => {
   if (

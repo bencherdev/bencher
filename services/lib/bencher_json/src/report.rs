@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReport {
+pub struct JsonNewReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project:    Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

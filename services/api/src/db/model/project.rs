@@ -4,7 +4,7 @@ use std::{
 };
 
 use bencher_json::{
-    JsonProject,
+    JsonNewProject,
     JsonSignup,
     JsonUser,
 };
@@ -50,9 +50,9 @@ impl InsertProject {
     pub fn new(
         conn: &SqliteConnection,
         user_uuid: &Uuid,
-        project: JsonProject,
+        project: JsonNewProject,
     ) -> Result<Self, HttpError> {
-        let JsonProject {
+        let JsonNewProject {
             name,
             slug,
             description,

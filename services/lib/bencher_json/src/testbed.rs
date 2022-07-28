@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg(not(feature = "wasm"))]
-pub struct JsonTestbed {
+pub struct JsonNewTestbed {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub os_name: Option<String>,
@@ -30,7 +30,7 @@ pub struct JsonTestbed {
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
-pub struct JsonTestbed {
+pub struct JsonNewTestbed {
     name: String,
     os_name: Option<String>,
     os_version: Option<String>,
@@ -43,7 +43,7 @@ pub struct JsonTestbed {
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
-impl JsonTestbed {
+impl JsonNewTestbed {
     #[cfg_attr(feature = "wasm", wasm_bindgen(getter))]
     pub fn name(&self) -> String {
         self.name.clone()

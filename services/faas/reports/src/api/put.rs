@@ -28,7 +28,7 @@ use reports::{
 };
 use util::db::{
     model::{
-        JsonReport as NewDbReport,
+        JsonNewReport as NewDbReport,
         Report as DbReport,
     },
     schema::report,

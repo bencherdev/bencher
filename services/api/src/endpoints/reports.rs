@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use bencher_json::JsonReport;
+use bencher_json::JsonNewReport;
 use chrono::NaiveDateTime;
 use diesel::{
     QueryDsl,
@@ -144,7 +144,7 @@ pub async fn api_get_report(
 }]
 pub async fn api_post_report(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonReport>,
+    body: TypedBody<JsonNewReport>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
