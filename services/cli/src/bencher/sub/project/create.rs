@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use bencher_json::JsonNewProject;
 use url::Url;
 
+use super::PROJECTS_PATH;
 use crate::{
     bencher::{
         backend::Backend,
@@ -13,8 +14,6 @@ use crate::{
     cli::CliProjectCreate,
     BencherError,
 };
-
-const PROJECTS_PATH: &str = "/v0/projects";
 
 #[derive(Debug)]
 pub struct Project {

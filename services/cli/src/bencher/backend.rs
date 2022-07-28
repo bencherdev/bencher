@@ -62,6 +62,18 @@ impl Backend {
         })
     }
 
+    pub async fn get_all(&self, path: &str) -> Result<serde_json::Value, BencherError> {
+        let client = reqwest::Client::new();
+        let url = self.host.join(path)?.to_string();
+        let mut builder = client.get(&url);
+        if let Some(token) = &self.token {
+            builder = builder.header("Authorization", format!("Bearer {token}"));
+        }
+        let res: serde_json::Value = builder.send().await?.json().await?;
+        println!("{}", serde_json::to_string(&res)?);
+        Ok(res)
+    }
+
     pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
     where
         T: Serialize + ?Sized,

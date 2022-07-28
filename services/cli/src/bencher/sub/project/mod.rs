@@ -10,10 +10,14 @@ use crate::{
 };
 
 mod create;
+mod list;
+
+pub const PROJECTS_PATH: &str = "/v0/projects";
 
 #[derive(Debug)]
 pub enum Project {
     Create(create::Project),
+    List(list::List),
 }
 
 impl TryFrom<CliProject> for Project {
@@ -22,6 +26,7 @@ impl TryFrom<CliProject> for Project {
     fn try_from(project: CliProject) -> Result<Self, Self::Error> {
         Ok(match project {
             CliProject::Create(create) => Self::Create(create.try_into()?),
+            CliProject::List(list) => Self::List(list.try_into()?),
         })
     }
 }
@@ -31,6 +36,7 @@ impl SubCmd for Project {
     async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
             Self::Create(create) => create.exec(wide).await,
+            Self::List(list) => list.exec(wide).await,
         }
     }
 }

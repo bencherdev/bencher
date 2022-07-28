@@ -18,6 +18,7 @@ pub use auth::{
 pub use project::{
     CliProject,
     CliProjectCreate,
+    CliProjectList,
 };
 pub use run::{
     CliAdapter,
