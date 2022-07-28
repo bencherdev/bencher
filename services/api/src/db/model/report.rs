@@ -1,10 +1,16 @@
-use bencher_json::JsonNewReport;
+use std::str::FromStr;
+
+use bencher_json::{
+    JsonNewReport,
+    JsonReport,
+};
 use chrono::NaiveDateTime;
 use diesel::{
     Insertable,
     Queryable,
     SqliteConnection,
 };
+use dropshot::HttpError;
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
@@ -17,7 +23,10 @@ use super::{
     testbed::QueryTestbed,
     user::QueryUser,
 };
-use crate::db::schema::report as report_table;
+use crate::{
+    db::schema::report as report_table,
+    util::http_error,
+};
 
 pub const DEFAULT_PROJECT: &str = "default";
 
@@ -31,6 +40,30 @@ pub struct QueryReport {
     pub adapter_id: i32,
     pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
+}
+
+impl QueryReport {
+    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonReport, HttpError> {
+        let Self {
+            id: _,
+            uuid,
+            user_id,
+            project,
+            testbed_id,
+            adapter_id,
+            start_time,
+            end_time,
+        } = self;
+        Ok(JsonReport {
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get report."))?,
+            user_uuid: QueryUser::get_uuid(conn, user_id)?,
+            project,
+            testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id),
+            adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id),
+            start_time,
+            end_time,
+        })
+    }
 }
 
 #[derive(Insertable)]

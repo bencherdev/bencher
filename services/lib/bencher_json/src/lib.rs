@@ -15,5 +15,6 @@ pub use report::{
     JsonBenchmarks,
     JsonLatency,
     JsonNewReport,
+    JsonReport,
 };
 pub use testbed::JsonNewTestbed;

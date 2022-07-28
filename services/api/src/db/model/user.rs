@@ -26,6 +26,7 @@ use crate::{
         user as user_table,
     },
     diesel::ExpressionMethods,
+    util::http_error,
 };
 
 #[derive(Insertable)]
@@ -124,5 +125,15 @@ impl QueryUser {
             .select(schema::user::id)
             .first(conn)
             .unwrap()
+    }
+
+    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+        let error = "Failed to get user";
+        let uuid: String = schema::user::table
+            .filter(schema::user::id.eq(id))
+            .select(schema::user::uuid)
+            .first(conn)
+            .map_err(|_| http_error!(error))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!(error))
     }
 }

@@ -5,6 +5,7 @@ use std::{
 
 use chrono::{
     DateTime,
+    NaiveDateTime,
     Utc,
 };
 use derive_more::Display;
@@ -30,6 +31,20 @@ pub struct JsonNewReport {
     // TODO add a tags section, for noting things like code version etc
     // the CLI could have `--tag-version` flag that would automatically look for the current git
     // hash and add that under the `version` tag.
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReport {
+    pub uuid:         Uuid,
+    pub user_uuid:    Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project:      Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub testbed_uuid: Option<Uuid>,
+    pub adapter_uuid: Uuid,
+    pub start_time:   NaiveDateTime,
+    pub end_time:     NaiveDateTime,
 }
 
 #[derive(Display, Debug, Serialize, Deserialize)]

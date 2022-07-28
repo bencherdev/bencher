@@ -3,7 +3,10 @@ use std::{
     sync::Arc,
 };
 
-use bencher_json::JsonNewReport;
+use bencher_json::{
+    JsonNewReport,
+    JsonReport,
+};
 use chrono::NaiveDateTime;
 use diesel::{
     QueryDsl,
@@ -50,39 +53,6 @@ use crate::{
 
 pub const DEFAULT_PROJECT: &str = "default";
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
-pub struct Report {
-    pub uuid:         Uuid,
-    pub project:      Option<String>,
-    pub testbed_uuid: Option<Uuid>,
-    pub adapter_uuid: Uuid,
-    pub start_time:   NaiveDateTime,
-    pub end_time:     NaiveDateTime,
-}
-
-impl Report {
-    fn new(conn: &SqliteConnection, db_report: QueryReport) -> Self {
-        let QueryReport {
-            id: _,
-            uuid,
-            user_id,
-            project,
-            testbed_id,
-            adapter_id,
-            start_time,
-            end_time,
-        } = db_report;
-        Report {
-            uuid: Uuid::from_str(&uuid).unwrap(),
-            project,
-            testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id),
-            adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id),
-            start_time,
-            end_time,
-        }
-    }
-}
-
 #[endpoint {
     method = GET,
     path = "/v0/reports",
@@ -90,15 +60,15 @@ impl Report {
 }]
 pub async fn api_get_reports(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<Report>>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
     let conn = db_connection.lock().await;
-    let reports: Vec<Report> = schema::report::table
+    let reports: Vec<JsonReport> = schema::report::table
         .load::<QueryReport>(&*conn)
         .expect("Error loading reports.")
         .into_iter()
-        .map(|db_report| Report::new(&*conn, db_report))
+        .filter_map(|query_report| query_report.to_json(&*conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -120,16 +90,16 @@ pub struct PathParams {
 pub async fn api_get_report(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Report>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
-    let db_report = schema::report::table
+    let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&path_params.report_uuid))
         .first::<QueryReport>(&*conn)
-        .unwrap();
-    let report = Report::new(&*conn, db_report);
+        .map_err(|_| http_error!("Failed to get report."))?;
+    let report = query_report.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(report),
