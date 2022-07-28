@@ -8,6 +8,7 @@ pub use auth::{
     JsonSignup,
     JsonUser,
 };
+#[cfg(not(feature = "wasm"))]
 pub use project::{
     JsonNewProject,
     JsonProject,

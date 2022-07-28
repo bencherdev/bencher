@@ -1,4 +1,4 @@
-import ConsoleMenu from "./ConsoleMenu";
+import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 
 const ConsolePage = (props) => {

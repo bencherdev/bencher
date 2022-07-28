@@ -1,8 +1,6 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonNewProject;
-use url::Url;
 
 use super::PROJECTS_PATH;
 use crate::{
