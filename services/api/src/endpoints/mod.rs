@@ -34,7 +34,7 @@ impl Registrar<Context> for Api {
         Self::register(api, auth::api_post_login)?;
         // Projects
         Self::register(api, projects::api_get_projects)?;
-        api.register(projects::api_get_project)?;
+        Self::register_options(api, projects::api_get_project, projects::api_get_project)?;
         api.register(projects::api_post_project)?;
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
@@ -64,7 +64,24 @@ impl Api {
         api.register(endpoint)?;
         Ok(())
     }
+
+    fn register_options<T>(
+        api: &mut ApiDescription<Context>,
+        endpoint: T,
+        options: T,
+    ) -> Result<(), String>
+    where
+        T: Into<ApiEndpoint<Context>>,
+    {
+        let endpoint = endpoint.into();
+        let mut options_endpoint: ApiEndpoint<Context> = options.into();
+        options_endpoint.method = Method::OPTIONS;
+        api.register(options_endpoint)?;
+        api.register(endpoint)?;
+        Ok(())
+    }
 }
+
 #[endpoint {
     method = GET,
     path = "/v0",
