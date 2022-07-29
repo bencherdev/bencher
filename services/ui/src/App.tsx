@@ -150,6 +150,7 @@ const App: Component = () => {
 
       <Routes>
         <Route path="/" element={<LandingPage handleTitle={handleTitle} />} />
+        {/* Auth Routes */}
         <Route path="/auth">
           <Route
             path="/signup"
@@ -188,6 +189,7 @@ const App: Component = () => {
             }
           />
         </Route>
+        {/* Console Routes */}
         <Route path="/console">
           <Route
             path="/"
@@ -198,15 +200,29 @@ const App: Component = () => {
               />
             }
           />
-          <Route
-            path="/projects"
-            element={
-              <ConsolePage
-                current_location={current_location}
-                handleTitle={handleTitle}
-              />
-            }
-          />
+          {/* Console Projects Routes */}
+          <Route path="/projects">
+            <Route
+              path="/"
+              element={
+                <ConsolePage
+                  current_location={current_location}
+                  handleTitle={handleTitle}
+                  handleRedirect={setRedirect}
+                />
+              }
+            />
+            <Route
+              path="/:project_slug"
+              element={
+                <ConsolePage
+                  current_location={current_location}
+                  handleTitle={handleTitle}
+                  handleRedirect={setRedirect}
+                />
+              }
+            />
+          </Route>
           <Route path="/reports">
             <Route
               path="/"

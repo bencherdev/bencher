@@ -7,28 +7,21 @@ import {
   For,
 } from "solid-js";
 
-import TableHeader from "./TableHeader";
-
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
-const options = (token: string) => {
-  return {
-    url: `${BENCHER_API_URL}/v0/projects`,
-    method: "get",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
+const options = {
+  url: `${BENCHER_API_URL}/v0/reports`,
+  method: "get",
+  headers: {
+    "Content-Type": "application/json",
+    // Only use with explicit CORS
+    // Authorization: `Bearer ${window.localStorage.authToken}`
+  },
 };
 
 const fetchData = async (page) => {
   try {
-    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-    if (typeof token !== "string") {
-      return;
-    }
-    let reports = await axios(options(token));
+    let reports = await axios(options);
     console.log(reports);
     return reports.data;
   } catch (error) {
@@ -43,26 +36,25 @@ const getDate = (datum) => {
 
 const handleRowButton = (event, datum, handleRedirect) => {
   event.preventDefault();
-  handleRedirect(`/console/projects/${datum?.uuid}`);
+  handleRedirect(`/console/reports/${datum?.uuid}`);
 };
 
-const ProjectsPanel = (props) => {
+const TablePanel = (props) => {
   const [page, setPage] = createSignal(1);
   const [table_data] = createResource(page, fetchData);
 
   return (
     <Suspense fallback={<p>Loading...</p>}>
-      <TableHeader title={"Projects"} />
       <div class="pricing-table is-horizontal">
         <For each={table_data()}>
           {(datum, i) => (
             <div class="pricing-plan is-warning">
-              <div class="plan-header">{datum.name}</div>
+              <div class="plan-header">{getDate(datum)}</div>
               <div class="plan-items">
-                <div class="plan-item">{datum?.slug}</div>
-                <div class="plan-item">-</div>
+                <div class="plan-item">{datum?.project}</div>
+                <div class="plan-item">{datum?.adapter_uuid}</div>
                 <div class="plan-item">
-                  Default: {datum.owner_default ? "true" : "false"}
+                  {datum?.testbed_uuid || "No testbed"}
                 </div>
                 <div class="plan-item">-</div>
               </div>
@@ -84,4 +76,4 @@ const ProjectsPanel = (props) => {
   );
 };
 
-export default ProjectsPanel;
+export default TablePanel;

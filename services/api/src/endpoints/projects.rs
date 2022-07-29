@@ -79,7 +79,7 @@ pub async fn api_get_projects(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
-        CorsHeaders::new_auth("OPTIONS".into()),
+        CorsHeaders::new_auth("GET".into()),
     ))
 }
 
