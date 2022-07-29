@@ -1,5 +1,6 @@
 import { Match, Switch } from "solid-js";
 import TablePanel from "./TablePanel";
+import ProjectsPanel from "./ProjectsPanel";
 import DeckPanel from "./DeckPanel";
 import { JsonNewTestbed } from "bencher_json";
 
@@ -28,6 +29,12 @@ const ConsolePanel = (props) => {
     >
       <Match when={isSection(props.current_location(), null)}>
         TODO Project Dashboard
+      </Match>
+      <Match when={isSection(props.current_location(), "projects")}>
+        <ProjectsPanel
+          current_location={props.current_location}
+          handleRedirect={props.handleRedirect}
+        />
       </Match>
       <Match when={isSection(props.current_location(), "reports")}>
         <TablePanel

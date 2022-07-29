@@ -198,6 +198,15 @@ const App: Component = () => {
               />
             }
           />
+          <Route
+            path="/projects"
+            element={
+              <ConsolePage
+                current_location={current_location}
+                handleTitle={handleTitle}
+              />
+            }
+          />
           <Route path="/reports">
             <Route
               path="/"

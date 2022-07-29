@@ -26,4 +26,9 @@ impl CorsHeaders {
             access_control_allow_credentials: credentials,
         }
     }
+
+    // pub fn new_auth(methods: String, headers: String, credentials: Option<bool>)
+    // -> Self {     Self::new(methods, )
+
+    // }
 }
