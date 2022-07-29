@@ -93,7 +93,7 @@ pub struct PathParams {
     path = "/v0/projects/{project}",
     tags = ["projects"]
 }]
-pub async fn api_get_project_slug(
+pub async fn api_get_project(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
