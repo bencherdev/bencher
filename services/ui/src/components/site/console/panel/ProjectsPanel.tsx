@@ -7,6 +7,8 @@ import {
   For,
 } from "solid-js";
 
+import TableHeader from "./TableHeader";
+
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 const options = (token: string) => {
@@ -50,6 +52,7 @@ const ProjectsPanel = (props) => {
 
   return (
     <Suspense fallback={<p>Loading...</p>}>
+      <TableHeader title={"Projects"} />
       <div class="pricing-table is-horizontal">
         <For each={table_data()}>
           {(datum, i) => (
