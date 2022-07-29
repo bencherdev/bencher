@@ -27,8 +27,7 @@ impl CorsHeaders {
         }
     }
 
-    // pub fn new_auth(methods: String, headers: String, credentials: Option<bool>)
-    // -> Self {     Self::new(methods, )
-
-    // }
+    pub fn new_auth(methods: String) -> Self {
+        Self::new_origin_all(methods, "Content-Type, Authorization".into(), None)
+    }
 }

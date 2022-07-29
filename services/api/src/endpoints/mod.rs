@@ -73,6 +73,6 @@ pub async fn api_options(
 ) -> Result<HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>, HttpError> {
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(()),
-        CorsHeaders::new_origin_all("OPTIONS".into(), "Content-Type, Authorization".into(), None),
+        CorsHeaders::new_auth("OPTIONS".into()),
     ))
 }
