@@ -33,8 +33,9 @@ impl Registrar<Context> for Api {
         Self::register(api, auth::api_post_signup)?;
         Self::register(api, auth::api_post_login)?;
         // Projects
-        api.register(projects::api_get_projects)?;
-        Self::register(api, projects::api_post_project)?;
+        Self::register(api, projects::api_get_projects)?;
+        api.register(projects::api_get_project_slug)?;
+        api.register(projects::api_post_project)?;
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
         api.register(testbeds::api_get_testbed)?;

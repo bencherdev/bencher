@@ -83,6 +83,45 @@ pub async fn api_get_projects(
     ))
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct PathParams {
+    pub project: String,
+}
+
+#[endpoint {
+    method = GET,
+    path = "/v0/projects/{project}",
+    tags = ["projects"]
+}]
+pub async fn api_get_project_slug(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<PathParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
+    let db_connection = rqctx.context();
+    let path_params = path_params.into_inner();
+    let conn = db_connection.lock().await;
+
+    let query = if let Ok(query) = schema::project::table
+        .filter(schema::project::slug.eq(&path_params.project))
+        .first::<QueryProject>(&*conn)
+    {
+        query
+    } else if let Ok(query) = schema::project::table
+        .filter(schema::project::uuid.eq(&path_params.project))
+        .first::<QueryProject>(&*conn)
+    {
+        query
+    } else {
+        return Err(http_error!("Failed to get project."));
+    };
+    let json = query.to_json(&*conn)?;
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseOk(json),
+        CorsHeaders::new_pub("GET".into()),
+    ))
+}
+
 #[endpoint {
     method = POST,
     path = "/v0/projects",
