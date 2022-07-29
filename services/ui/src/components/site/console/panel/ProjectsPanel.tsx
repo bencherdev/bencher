@@ -54,12 +54,12 @@ const ProjectsPanel = (props) => {
         <For each={table_data()}>
           {(datum, i) => (
             <div class="pricing-plan is-warning">
-              <div class="plan-header">{getDate(datum)}</div>
+              <div class="plan-header">{datum.name}</div>
               <div class="plan-items">
-                <div class="plan-item">{datum?.project}</div>
-                <div class="plan-item">{datum?.adapter_uuid}</div>
+                <div class="plan-item">{datum?.slug}</div>
+                <div class="plan-item">-</div>
                 <div class="plan-item">
-                  {datum?.testbed_uuid || "No testbed"}
+                  Default: {datum.owner_default ? "true" : "false"}
                 </div>
                 <div class="plan-item">-</div>
               </div>
