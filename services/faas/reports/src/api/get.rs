@@ -1,17 +1,27 @@
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{
+    Arc,
+    Mutex,
+};
 
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use dropshot::endpoint;
-use dropshot::HttpError;
-use dropshot::HttpResponseHeaders;
-use dropshot::HttpResponseOk;
-use dropshot::RequestContext;
+use diesel::{
+    pg::PgConnection,
+    prelude::*,
+};
+use dropshot::{
+    endpoint,
+    HttpError,
+    HttpResponseHeaders,
+    HttpResponseOk,
+    RequestContext,
+};
 use reports::MetaMetrics;
-use util::db::model::Report as DbReport;
-use util::db::schema::report;
-use util::server::headers::CorsHeaders;
+use util::{
+    db::{
+        model::Report as DbReport,
+        schema::report,
+    },
+    server::headers::CorsHeaders,
+};
 
 #[endpoint {
     method = GET,
@@ -31,10 +41,8 @@ pub async fn api_get_metrics(
 
         let metrics: Vec<MetaMetrics> = reports.into_iter().map(|report| report.into()).collect();
 
-        let resp = HttpResponseHeaders::new(
-            HttpResponseOk(metrics),
-            CorsHeaders::new_origin_all("PUT".into(), "Content-Type".into()),
-        );
+        let resp =
+            HttpResponseHeaders::new(HttpResponseOk(metrics), CorsHeaders::new_pub("PUT".into()));
 
         Ok(resp)
     } else {

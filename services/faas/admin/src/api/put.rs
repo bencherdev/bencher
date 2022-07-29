@@ -1,14 +1,20 @@
-use std::io::BufWriter;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::{
+    io::BufWriter,
+    sync::{
+        Arc,
+        Mutex,
+    },
+};
 
 use diesel::pg::PgConnection;
 use diesel_migrations::embed_migrations;
-use dropshot::endpoint;
-use dropshot::HttpError;
-use dropshot::HttpResponseHeaders;
-use dropshot::HttpResponseOk;
-use dropshot::RequestContext;
+use dropshot::{
+    endpoint,
+    HttpError,
+    HttpResponseHeaders,
+    HttpResponseOk,
+    RequestContext,
+};
 use util::server::headers::CorsHeaders;
 
 embed_migrations!("../util/migrations");
@@ -47,10 +53,8 @@ pub async fn api_put_admin_migrate(
             )
         })?;
 
-        let resp = HttpResponseHeaders::new(
-            HttpResponseOk(contents),
-            CorsHeaders::new_origin_all("PUT".into(), "Content-Type".into()),
-        );
+        let resp =
+            HttpResponseHeaders::new(HttpResponseOk(contents), CorsHeaders::new_pub("PUT".into()));
 
         Ok(resp)
     } else {

@@ -101,7 +101,7 @@ pub async fn api_get_testbeds(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(testbeds),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("GET".into()),
     ))
 }
 
@@ -131,7 +131,7 @@ pub async fn api_get_testbed(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(adapter),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("GET".into()),
     ))
 }
 

@@ -72,7 +72,7 @@ pub async fn api_get_reports(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("GET".into()),
     ))
 }
 
@@ -101,7 +101,7 @@ pub async fn api_get_report(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("GET".into()),
     ))
 }
 

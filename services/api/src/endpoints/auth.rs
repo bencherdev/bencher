@@ -66,7 +66,7 @@ pub async fn api_post_signup(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json_user),
-        CorsHeaders::new_origin_all("POST".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("POST".into()),
     ))
 }
 
@@ -91,6 +91,6 @@ pub async fn api_post_login(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json_user),
-        CorsHeaders::new_origin_all("POST".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("POST".into()),
     ))
 }

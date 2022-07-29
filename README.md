@@ -27,6 +27,8 @@ cargo run -- auth login --host http://localhost:8080 gwen@goop.com
 
 cargo run -- project create --host http://localhost:8080 "Hazel River"
 
+cargo run -- project ls --host http://localhost:8080
+
 cargo run --bin bencher -- ...
 
 cargo install diesel_cli --no-default-features --features postgres

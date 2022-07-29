@@ -27,6 +27,10 @@ impl CorsHeaders {
         }
     }
 
+    pub fn new_pub(methods: String) -> Self {
+        Self::new_origin_all(methods, "Content-Type".into(), None)
+    }
+
     pub fn new_auth(methods: String) -> Self {
         Self::new_origin_all(methods, "Content-Type, Authorization".into(), None)
     }

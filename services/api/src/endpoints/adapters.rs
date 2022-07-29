@@ -70,7 +70,7 @@ pub async fn api_get_adapters(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(adapters),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("GET".into()),
     ))
 }
 
@@ -100,6 +100,6 @@ pub async fn api_get_adapter(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(adapter),
-        CorsHeaders::new_origin_all("GET".into(), "Content-Type".into(), None),
+        CorsHeaders::new_pub("GET".into()),
     ))
 }
