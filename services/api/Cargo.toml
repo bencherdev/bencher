@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
-dropshot = "0.7.0"
+# Work off of repo until OPTIONS is released
+dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 schemars = { version = "0.8.10", features = ["uuid1"] }
 tokio = "1.18.2"
 slog = "2.7.0"

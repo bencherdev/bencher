@@ -11,7 +11,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dotenv",
- "dropshot",
+ "dropshot 0.7.1-dev",
  "email-address-parser",
  "http",
  "jsonwebtoken",
@@ -200,9 +200,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.5"
+version = "3.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d53da17d37dba964b9b3ecb5c5a1f193a2762c700e6829201e645b9381c99dc7"
+checksum = "a3dbbb6653e7c55cc8595ad3e1f7be8f32aba4eb7ff7f0fd1163d4f3d137c0a9"
 dependencies = [
  "atty",
  "bitflags",
@@ -217,9 +217,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "3.2.5"
+version = "3.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c11d40217d16aee8508cc8e5fde8b4ff24639758608e5374e731b53f85749fb9"
+checksum = "9ba52acd3b0a5c33aeada5cdaa3267cdc7c594a98731d4268cdc1532f4264cb4"
 dependencies = [
  "heck",
  "proc-macro-error",
@@ -293,7 +293,7 @@ dependencies = [
 name = "demo"
 version = "0.1.0"
 dependencies = [
- "dropshot",
+ "dropshot 0.7.0",
  "schemars",
  "serde",
  "tokio",
@@ -411,7 +411,7 @@ dependencies = [
  "base64",
  "bytes",
  "chrono",
- "dropshot_endpoint",
+ "dropshot_endpoint 0.7.0",
  "futures",
  "hostname",
  "http",
@@ -441,10 +441,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "dropshot"
+version = "0.7.1-dev"
+source = "git+https://github.com/oxidecomputer/dropshot#367501eb0f89b64f148e7d56e26d59c4f5514dbe"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "base64",
+ "bytes",
+ "chrono",
+ "dropshot_endpoint 0.7.1-dev",
+ "futures",
+ "hostname",
+ "http",
+ "hyper",
+ "indexmap",
+ "openapiv3",
+ "paste",
+ "percent-encoding",
+ "proc-macro2",
+ "rustls",
+ "rustls-pemfile",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "slog",
+ "slog-async",
+ "slog-bunyan",
+ "slog-json",
+ "slog-term",
+ "tokio",
+ "tokio-rustls",
+ "toml",
+ "uuid 1.1.2",
+ "version_check",
+]
+
+[[package]]
 name = "dropshot_endpoint"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb94527d074bb3f2a1ef605643704f13cf54334de5e72bc0308e7ec2e3acf91a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_tokenstream",
+ "syn",
+]
+
+[[package]]
+name = "dropshot_endpoint"
+version = "0.7.1-dev"
+source = "git+https://github.com/oxidecomputer/dropshot#367501eb0f89b64f148e7d56e26d59c4f5514dbe"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -514,7 +564,7 @@ dependencies = [
  "chrono",
  "diesel",
  "diesel_migrations",
- "dropshot",
+ "dropshot 0.7.0",
  "email-address-parser",
  "jsonwebtoken",
  "reports",
@@ -533,7 +583,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "diesel",
- "dropshot",
+ "dropshot 0.7.0",
  "email-address-parser",
  "jsonwebtoken",
  "reports",
@@ -724,9 +774,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.11.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
 name = "heck"
@@ -838,9 +888,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.8.1"
+version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f647032dfaa1f8b6dc29bd3edb7bbef4861b8b8007ebb118d6db284fd59f6ee"
+checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -1369,9 +1419,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.39"
+version = "1.0.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c54b25569025b7fc9651de43004ae593a75ad88543b17178aa5e1b9c4f15f56f"
+checksum = "c278e965f1d8cf32d6e0e96de3d3e79712178ae67986d9cf9151f51e95aac89b"
 dependencies = [
  "unicode-ident",
 ]
@@ -1535,9 +1585,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.20.4"
+version = "0.20.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fbfeb8d0ddb84706bc597a5574ab8912817c52a397f819e5b614e2265206921"
+checksum = "5aab8ee6c7097ed6057f43c187a62418d0c05a4bd5f18b3571db50ee0f9ce033"
 dependencies = [
  "log",
  "ring",
@@ -1657,18 +1707,18 @@ checksum = "a2333e6df6d6598f2b1974829f853c2b4c5f4a6e503c10af918081aa6f8564e1"
 
 [[package]]
 name = "serde"
-version = "1.0.137"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61ea8d54c77f8315140a05f4c7237403bf38b72704d031543aa1d16abbf517d1"
+checksum = "fc855a42c7967b7c369eb5860f7164ef1f6f81c20c7cc1141f2a604e18723b03"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.137"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f26faba0c3959972377d3b2d306ee9f71faee9714294e41bb777f83f88578be"
+checksum = "6f2122636b9fe3b81f1cb25099fcf2d3f542cdb1d45940d56c713158884a05da"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1688,9 +1738,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.81"
+version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b7ce2b32a1aed03c558dc61a5cd328f15aff2dbc17daad8fb8af04d2100e15c"
+checksum = "82c2c1fdcd807d1098552c5b9a36e425e42e9fbd7c6a37a8425f390f781f7fa7"
 dependencies = [
  "itoa",
  "ryu",
@@ -1856,7 +1906,7 @@ name = "swagger"
 version = "0.1.0"
 dependencies = [
  "diesel",
- "dropshot",
+ "dropshot 0.7.0",
  "fn_admin",
  "fn_reports",
  "literally",
@@ -2264,7 +2314,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "diesel",
- "dropshot",
+ "dropshot 0.7.0",
  "reports",
  "schemars",
  "serde",

@@ -13,7 +13,7 @@ categories = ["command-line-utilities", "development-tools::profiling", "wasm"]
 
 [dependencies]
 bencher_json = { path = "../lib/bencher_json" }
-clap = { version = "3.2.5", features = ["derive"] }
+clap = { version = "3.2.16", features = ["derive"] }
 git2 = "0.14.4"
 nom = "7.1.1"
 serde = { version = "1.0.137", features = ["derive"] }

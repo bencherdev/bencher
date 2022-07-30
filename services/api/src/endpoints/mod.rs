@@ -30,8 +30,10 @@ impl Registrar<Context> for Api {
     fn register(&self, api: &mut ApiDescription<Context>) -> Result<(), String> {
         api.register(ping::api_get_ping)?;
         // Auth
-        Self::register(api, auth::api_post_signup)?;
-        Self::register(api, auth::api_post_login)?;
+        api.register(auth::signup::options)?;
+        api.register(auth::signup::post)?;
+        api.register(auth::login::options)?;
+        api.register(auth::login::post)?;
         // Projects
         Self::register(api, projects::api_get_projects)?;
         Self::register_options(api, projects::api_get_project, projects::api_get_project)?;
