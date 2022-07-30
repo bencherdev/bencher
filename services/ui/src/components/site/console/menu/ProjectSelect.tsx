@@ -42,6 +42,14 @@ const ProjectSelect = (props) => {
 
   const handleProject = (e) => {
     const target_slug = e?.target?.value;
+    if (target_slug === BENCHER_SEE_ALL) {
+      setSelected(BENCHER_SEE_ALL);
+      props.handleProject({
+        uuid: null,
+        name: null,
+        slug: null,
+      });
+    }
     console.log(target_slug);
     const p = projects();
     for (let i in p) {
@@ -58,6 +66,10 @@ const ProjectSelect = (props) => {
 
   const isSelected = (slug) => {
     return slug === selected();
+  };
+
+  const isSeeAll = () => {
+    return BENCHER_SEE_ALL === selected();
   };
 
   return (
@@ -87,7 +99,9 @@ const ProjectSelect = (props) => {
                   )}
                 </For>
               </optgroup>
-              <option value={BENCHER_SEE_ALL}>See All</option>
+              <option value={BENCHER_SEE_ALL} selected={isSeeAll()}>
+                See All
+              </option>
             </select>
           </div>
         </div>

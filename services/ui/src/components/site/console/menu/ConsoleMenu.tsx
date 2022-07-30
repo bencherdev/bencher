@@ -11,24 +11,28 @@ const ConsoleMenu = (props) => {
           handleProject={props?.handleProject}
         />
       </div>
-      <p class="menu-label">Project</p>
-      <ul class="menu-list">
-        <li>
-          <a>Benchmarks</a>
-        </li>
-        <li>
-          <a>Testbeds</a>
-        </li>
-        <li>
-          <Link href="/console/reports">Reports</Link>
-        </li>
-        <li>
-          <a>Connections</a>
-        </li>
-        <li>
-          <a>Settings</a>
-        </li>
-      </ul>
+      {typeof props?.project()?.slug === "string" && (
+        <>
+          <p class="menu-label">Project</p>
+          <ul class="menu-list">
+            <li>
+              <a>Benchmarks</a>
+            </li>
+            <li>
+              <a>Testbeds</a>
+            </li>
+            <li>
+              <Link href="/console/reports">Reports</Link>
+            </li>
+            <li>
+              <a>Connections</a>
+            </li>
+            <li>
+              <a>Settings</a>
+            </li>
+          </ul>
+        </>
+      )}
       <p class="menu-label">User</p>
       <ul class="menu-list">
         <li>
