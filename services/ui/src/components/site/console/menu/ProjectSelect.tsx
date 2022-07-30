@@ -62,8 +62,13 @@ const ProjectSelect = (props) => {
 
   return (
     <nav class="level">
-      <div class="level-right">
+      <div class="level-left">
         <div class="control">
+          <button class="button is-outlined is-left">
+            <span class="icon">
+              <i class="fas fa-home" aria-hidden="true"></i>
+            </span>
+          </button>
           <div class="select">
             <select
               onChange={(e) => {
