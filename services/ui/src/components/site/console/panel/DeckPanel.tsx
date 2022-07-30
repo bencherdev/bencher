@@ -7,6 +7,9 @@ import {
   For,
 } from "solid-js";
 
+import DeckHeader from "./DeckHeader";
+import Card from "./Card";
+
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 const options = (token: string, slug: string) => {
@@ -35,24 +38,26 @@ const fetchData = async (panel) => {
 };
 
 const DeckPanel = (props) => {
-  const [deck_data] = createResource(props.panel, fetchData);
+  const [deck_data] = createResource(props?.panel, fetchData);
 
   return (
-    <div class="columns">
-      <div class="column">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-header-title">Report field</div>
-          </div>
-          <div class="card-content">
-            <div class="content">field value</div>
-          </div>
-          <div class="card-footer">
-            <div class="card-footer-item">Update</div>
+    <>
+      <DeckHeader title={deck_data()?.name} />
+      <div class="columns">
+        <div class="column">
+          <div class="card">
+            <Card field={"Project Name"} value={deck_data()?.name} />
           </div>
         </div>
       </div>
-    </div>
+      <div class="columns">
+        <div class="column">
+          <div class="card">
+            <Card field={"Project Slug"} value={deck_data()?.slug} />
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
