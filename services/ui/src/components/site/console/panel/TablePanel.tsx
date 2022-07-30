@@ -5,6 +5,8 @@ import {
   createEffect,
   Suspense,
   For,
+  Switch,
+  Match,
 } from "solid-js";
 
 import TableHeader from "./TableHeader";
@@ -51,36 +53,47 @@ const TablePanel = (props) => {
   const [table_data] = createResource(page, fetchData);
 
   return (
-    <Suspense fallback={<p>Loading...</p>}>
-      <TableHeader title={"Projects"} />
-      <div class="pricing-table is-horizontal">
-        <For each={table_data()}>
-          {(datum, i) => (
-            <div class="pricing-plan is-warning">
-              <div class="plan-header">{datum.name}</div>
-              <div class="plan-items">
-                <div class="plan-item">{datum?.slug}</div>
-                <div class="plan-item">-</div>
-                <div class="plan-item">
-                  Default: {datum.owner_default ? "true" : "false"}
+    <>
+      <TableHeader title={props.config?.title} />
+      <Suspense fallback={<p>Loading...</p>}>
+        <div class="pricing-table is-horizontal">
+          <For each={table_data()}>
+            {(datum, i) => (
+              <div class="pricing-plan is-primary">
+                <div class="plan-header">{datum[props.config?.header]}</div>
+                <div class="plan-items">
+                  <For each={props.config?.items}>
+                    {(item, i) => (
+                      <div class="plan-item">
+                        <Switch fallback="-">
+                          <Match when={item.kind === "text"}>
+                            {datum[item.key]}
+                          </Match>
+                          <Match when={item.kind === "bool"}>
+                            {datum[item.text]}{" "}
+                            {datum[item.key] ? "true" : "false"}
+                          </Match>
+                        </Switch>
+                      </div>
+                    )}
+                  </For>
                 </div>
-                <div class="plan-item">-</div>
+                <div class="plan-footer">
+                  <button
+                    class="button is-fullwidth"
+                    onClick={(e) =>
+                      handleRowButton(e, datum, props.handleRedirect)
+                    }
+                  >
+                    View
+                  </button>
+                </div>
               </div>
-              <div class="plan-footer">
-                <button
-                  class="button is-fullwidth"
-                  onClick={(e) =>
-                    handleRowButton(e, datum, props.handleRedirect)
-                  }
-                >
-                  View
-                </button>
-              </div>
-            </div>
-          )}
-        </For>
-      </div>
-    </Suspense>
+            )}
+          </For>
+        </div>
+      </Suspense>
+    </>
   );
 };
 

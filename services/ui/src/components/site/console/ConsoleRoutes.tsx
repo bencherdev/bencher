@@ -10,10 +10,33 @@ import {
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { JsonUser } from "bencher_json";
-import { Operation } from "./console";
+import { Operation, Resource } from "./console";
 import AccountPage from "../account/AccountPage";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
+
+const config = {
+  [Resource.PROJECTS]: {
+    [Operation.LIST]: {
+      operation: Operation.LIST,
+      title: "Projects",
+      header: "name",
+      items: [
+        {
+          kind: "text",
+          key: "slug",
+        },
+        {},
+        {
+          kind: "bool",
+          key: "owner_default",
+          text: "Default",
+        },
+        {},
+      ],
+    },
+  },
+};
 
 const ConsoleRoutes = (props) => {
   return (
@@ -25,7 +48,7 @@ const ConsoleRoutes = (props) => {
         path="/projects"
         element={
           <ConsolePage
-            operation={Operation.LIST}
+            config={config[Resource.PROJECTS][Operation.LIST]}
             current_location={props.current_location}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -36,7 +59,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug"
         element={
           <ConsolePage
-            operation={Operation.VIEW}
+            config={config[Resource.PROJECTS][Operation.VIEW]}
             current_location={props.current_location}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -47,7 +70,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/perf"
         element={
           <ConsolePage
-            operation={Operation.PERF}
+            config={config[Resource.PROJECTS][Operation.PERF]}
             current_location={props.current_location}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}

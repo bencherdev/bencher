@@ -12,21 +12,22 @@ const ConsolePanel = (props) => {
         <p>Unknown console path: {props.current_location().pathname} </p>
       }
     >
-      <Match when={props.operation === Operation.LIST}>
+      <Match when={props.config?.operation === Operation.LIST}>
         <TablePanel
-          current_location={props.current_location}
+          config={props.config}
           handleRedirect={props.handleRedirect}
         />
       </Match>
-      <Match when={props.operation === Operation.VIEW}>
+      <Match when={props.config?.operation === Operation.VIEW}>
         <DeckPanel
+          config={props.config}
           path_params={props.path_params}
           current_location={props.current_location}
           handleRedirect={props.handleRedirect}
         />
       </Match>
-      <Match when={props.operation === Operation.PERF}>
-        <PerfPanel />
+      <Match when={props.config?.operation === Operation.PERF}>
+        <PerfPanel config={props.config} />
       </Match>
     </Switch>
   );

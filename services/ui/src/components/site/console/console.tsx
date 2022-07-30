@@ -1,8 +1,12 @@
-export const Operation = {
-  LIST: "list",
-  ADD: "add",
-  VIEW: "view",
-  EDIT: "edit",
-  DELETE: "delete",
-  PERF: "perf",
-};
+export enum Operation {
+  LIST,
+  ADD,
+  VIEW,
+  EDIT,
+  DELETE,
+  PERF,
+}
+
+export enum Resource {
+  PROJECTS,
+}
