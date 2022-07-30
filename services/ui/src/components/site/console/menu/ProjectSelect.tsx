@@ -39,6 +39,10 @@ const ProjectSelect = (props) => {
   const [projects] = createResource(props.project, fetchProjects);
   const [selected, setSelected] = createSignal(BENCHER_SEE_ALL);
 
+  const handleSelectedRedirect = () => {
+    props.handleRedirect(`/console/projects/${selected()}/perf`);
+  };
+
   const handleProject = (e) => {
     const target_slug = e?.target?.value;
     if (target_slug === BENCHER_SEE_ALL) {
@@ -56,8 +60,9 @@ const ProjectSelect = (props) => {
       const project = p[i];
       const slug = project?.slug;
       if (slug === target_slug) {
-        setSelected(slug);
         props.handleProject(project);
+        setSelected(slug);
+        handleSelectedRedirect();
         break;
       }
     }
@@ -80,7 +85,7 @@ const ProjectSelect = (props) => {
               class="button is-outlined"
               onClick={(e) => {
                 e.preventDefault();
-                props.handleRedirect(`/console/projects/${selected()}/perf`);
+                handleSelectedRedirect();
               }}
             >
               <span class="icon">

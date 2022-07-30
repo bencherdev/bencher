@@ -213,16 +213,28 @@ const App: Component = () => {
                 />
               }
             />
-            <Route
-              path="/:project_slug"
-              element={
-                <ConsolePage
-                  current_location={current_location}
-                  handleTitle={handleTitle}
-                  handleRedirect={setRedirect}
-                />
-              }
-            />
+            <Route path="/:project_slug">
+              <Route
+                path="/"
+                element={
+                  <ConsolePage
+                    current_location={current_location}
+                    handleTitle={handleTitle}
+                    handleRedirect={setRedirect}
+                  />
+                }
+              />
+              <Route
+                path="/perf"
+                element={
+                  <ConsolePage
+                    current_location={current_location}
+                    handleTitle={handleTitle}
+                    handleRedirect={setRedirect}
+                  />
+                }
+              />
+            </Route>
           </Route>
           <Route path="/reports">
             <Route
