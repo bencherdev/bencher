@@ -12,7 +12,7 @@ const ConsoleMenu = (props) => {
           handleProjectSlug={props?.handleProjectSlug}
         />
       </div>
-      {typeof props.project_slug === "string" && (
+      {typeof props.project_slug() === "string" && (
         <>
           <p class="menu-label">Project</p>
           <ul class="menu-list">
