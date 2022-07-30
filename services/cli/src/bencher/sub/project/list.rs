@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    backend: Backend,
+    pub backend: Backend,
 }
 
 impl TryFrom<CliProjectList> for List {
@@ -32,7 +32,7 @@ impl TryFrom<CliProjectList> for List {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        self.backend.get_all(PROJECTS_PATH).await?;
+        self.backend.get(PROJECTS_PATH).await?;
         Ok(())
     }
 }

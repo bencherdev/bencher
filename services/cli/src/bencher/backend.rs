@@ -62,7 +62,7 @@ impl Backend {
         })
     }
 
-    pub async fn get_all(&self, path: &str) -> Result<serde_json::Value, BencherError> {
+    pub async fn get(&self, path: &str) -> Result<serde_json::Value, BencherError> {
         let client = reqwest::Client::new();
         let url = self.host.join(path)?.to_string();
         let mut builder = client.get(&url);
@@ -85,7 +85,7 @@ impl Backend {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
         let res: serde_json::Value = builder.json(json).send().await?.json().await?;
-        println!("{}", serde_json::to_string(&res)?);
+        println!("{}", serde_json::to_string_pretty(&res)?);
         Ok(res)
     }
 }

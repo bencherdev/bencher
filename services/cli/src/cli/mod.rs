@@ -19,6 +19,7 @@ pub use project::{
     CliProject,
     CliProjectCreate,
     CliProjectList,
+    CliProjectView,
 };
 pub use run::{
     CliAdapter,

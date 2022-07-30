@@ -11,6 +11,7 @@ use crate::{
 
 mod create;
 mod list;
+mod view;
 
 pub const PROJECTS_PATH: &str = "/v0/projects";
 
@@ -18,6 +19,7 @@ pub const PROJECTS_PATH: &str = "/v0/projects";
 pub enum Project {
     Create(create::Project),
     List(list::List),
+    View(view::View),
 }
 
 impl TryFrom<CliProject> for Project {
@@ -27,6 +29,7 @@ impl TryFrom<CliProject> for Project {
         Ok(match project {
             CliProject::Create(create) => Self::Create(create.try_into()?),
             CliProject::List(list) => Self::List(list.try_into()?),
+            CliProject::View(view) => Self::View(view.try_into()?),
         })
     }
 }
@@ -37,6 +40,7 @@ impl SubCmd for Project {
         match self {
             Self::Create(create) => create.exec(wide).await,
             Self::List(list) => list.exec(wide).await,
+            Self::View(view) => view.exec(wide).await,
         }
     }
 }

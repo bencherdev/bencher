@@ -119,6 +119,7 @@ const ConsolePanel = (props) => {
       >
         <DeckPanel
           current_location={props.current_location}
+          panel={panel()}
           handleRedirect={props.handleRedirect}
         />
       </Match>

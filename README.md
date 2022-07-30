@@ -29,6 +29,8 @@ cargo run -- project create --host http://localhost:8080 "Hazel River"
 
 cargo run -- project ls --host http://localhost:8080
 
+cargo run -- project view --host http://localhost:8080 hazel-river
+
 cargo run --bin bencher -- ...
 
 cargo install diesel_cli --no-default-features --features postgres
