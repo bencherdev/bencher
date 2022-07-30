@@ -39,7 +39,7 @@ interface Project {
 }
 
 const ConsolePage = (props) => {
-  const [project_slug, setProjectSlug] = createSignal<String>("");
+  const [project_slug, setProjectSlug] = createSignal<String>(null);
   const [project] = createResource(project_slug, fetchProject);
 
   return (

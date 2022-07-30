@@ -28,7 +28,6 @@ const fetchProjects = async () => {
     }
     const resp = await axios(options(token));
     const data = resp?.data;
-    console.log(data);
     return data;
   } catch (error) {
     console.error(error);
@@ -38,19 +37,15 @@ const fetchProjects = async () => {
 const BENCHER_SEE_ALL = "bencher--see---all";
 
 const ProjectSelect = (props) => {
-  const [projects] = createResource(props.project_slug(), fetchProjects);
-  const [selected, setSelected] = createSignal();
+  const [selected, setSelected] = createSignal(BENCHER_SEE_ALL);
+  const [projects] = createResource(selected, fetchProjects);
 
   createEffect(() => {
-    console.log(selected());
     const slug = props.project_slug();
-    console.log(slug);
-    if (slug !== selected()) {
-      if (slug !== null) {
-        setSelected(slug);
-      } else if (selected() !== BENCHER_SEE_ALL) {
-        setSelected(BENCHER_SEE_ALL);
-      }
+    if (slug === null) {
+      setSelected(BENCHER_SEE_ALL);
+    } else {
+      setSelected(slug);
     }
   });
 
