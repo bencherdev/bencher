@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
+import Deck from "./Deck";
 import Card from "./Card";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
@@ -43,20 +44,7 @@ const DeckPanel = (props) => {
   return (
     <>
       <DeckHeader title={deck_data()?.name} />
-      <div class="columns">
-        <div class="column">
-          <div class="card">
-            <Card field={"Project Name"} value={deck_data()?.name} />
-          </div>
-        </div>
-      </div>
-      <div class="columns">
-        <div class="column">
-          <div class="card">
-            <Card field={"Project Slug"} value={deck_data()?.slug} />
-          </div>
-        </div>
-      </div>
+      <Deck data={deck_data()} />
     </>
   );
 };
