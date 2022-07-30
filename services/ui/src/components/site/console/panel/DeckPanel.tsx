@@ -24,13 +24,13 @@ const options = (token: string, slug: string) => {
   };
 };
 
-const fetchData = async (panel) => {
+const fetchData = async (path_params) => {
   try {
     const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
     if (typeof token !== "string") {
       return;
     }
-    let reports = await axios(options(token, panel?.slug));
+    let reports = await axios(options(token, path_params.project_slug));
     console.log(reports);
     return reports.data;
   } catch (error) {
@@ -39,12 +39,12 @@ const fetchData = async (panel) => {
 };
 
 const DeckPanel = (props) => {
-  const [deck_data] = createResource(props?.panel, fetchData);
+  const [deck_data] = createResource(props.path_params, fetchData);
 
   return (
     <>
       <DeckHeader title={deck_data()?.name} />
-      <Deck data={deck_data()} handleProjectSlug={props.handleProjectSlug} />
+      <Deck data={deck_data()} />
     </>
   );
 };

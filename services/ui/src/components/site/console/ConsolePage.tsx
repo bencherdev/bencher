@@ -1,8 +1,9 @@
-import { createSignal } from "solid-js";
+import { useParams } from "solid-app-router";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 
-const initSlug = (current_location) => {
+const projectSlug = (current_location) => {
   const path = current_location().pathname?.split("/");
   if (
     path.length < 5 ||
@@ -18,8 +19,11 @@ const initSlug = (current_location) => {
 
 const ConsolePage = (props) => {
   const [project_slug, setProjectSlug] = createSignal<String>(
-    initSlug(props.current_location)
+    projectSlug(props.current_location)
   );
+
+  const params = useParams();
+  const path_params = createMemo(() => params);
 
   return (
     <section class="section">
@@ -35,6 +39,7 @@ const ConsolePage = (props) => {
           <div class="column">
             <ConsolePanel
               operation={props.operation}
+              path_params={path_params}
               current_location={props.current_location}
               handleTitle={props.handleTitle}
               handleRedirect={props.handleRedirect}

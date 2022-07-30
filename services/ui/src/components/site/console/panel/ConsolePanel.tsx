@@ -20,9 +20,9 @@ const ConsolePanel = (props) => {
       </Match>
       <Match when={props.operation === Operation.VIEW}>
         <DeckPanel
+          path_params={props.path_params}
           current_location={props.current_location}
           handleRedirect={props.handleRedirect}
-          handleProjectSlug={props.handleProjectSlug}
         />
       </Match>
       <Match when={props.operation === Operation.PERF}>
