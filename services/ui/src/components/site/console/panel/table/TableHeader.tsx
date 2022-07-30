@@ -15,15 +15,21 @@ const TableHeader = (props) => {
           {(button, i) => (
             <p class="level-item">
               <Switch fallback={<></>}>
-                <Match when={button === Button.ADD}>
-                  <button class="button is-outlined">
+                <Match when={button.kind === Button.ADD}>
+                  <button
+                    class="button is-outlined"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      props.handleRedirect(button.path);
+                    }}
+                  >
                     <span class="icon">
                       <i class="fas fa-plus" aria-hidden="true"></i>
                     </span>
                     <span>Add</span>
                   </button>
                 </Match>
-                <Match when={button === Button.REFRESH}>
+                <Match when={button.kind === Button.REFRESH}>
                   <button
                     class="button is-outlined"
                     // disabled={props.refresh() > 0}

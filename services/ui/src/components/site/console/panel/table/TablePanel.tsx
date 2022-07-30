@@ -64,6 +64,7 @@ const TablePanel = (props) => {
         title={props.config?.title}
         buttons={props.config?.buttons}
         refresh={refresh}
+        handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
       />
       <Suspense fallback={<p>Loading...</p>}>

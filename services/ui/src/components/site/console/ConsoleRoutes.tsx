@@ -15,31 +15,37 @@ import AccountPage from "../account/AccountPage";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
-const config = {
-  [Resource.PROJECTS]: {
-    [Operation.LIST]: {
-      operation: Operation.LIST,
-      title: "Projects",
-      header: "name",
-      items: [
-        {
-          kind: "text",
-          key: "slug",
-        },
-        {},
-        {
-          kind: "bool",
-          key: "owner_default",
-          text: "Default",
-        },
-        {},
-      ],
-      buttons: [Button.ADD, Button.REFRESH],
+const getConfig = (path) => {
+  return {
+    [Resource.PROJECTS]: {
+      [Operation.LIST]: {
+        operation: Operation.LIST,
+        title: "Projects",
+        header: "name",
+        items: [
+          {
+            kind: "text",
+            key: "slug",
+          },
+          {},
+          {
+            kind: "bool",
+            key: "owner_default",
+            text: "Default",
+          },
+          {},
+        ],
+        buttons: [
+          { kind: Button.ADD, path: `${path}/add` },
+          { kind: Button.REFRESH },
+        ],
+      },
     },
-  },
+  };
 };
 
 const ConsoleRoutes = (props) => {
+  const config = getConfig(props.current_location().pathname);
   return (
     <>
       {/* Console Routes */}
