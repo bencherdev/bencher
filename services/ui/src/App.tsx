@@ -19,9 +19,11 @@ import SiteFooter from "./components/site/pages/SiteFooter";
 
 const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
-const ConsolePage = lazy(() => import("./components/site/console/ConsolePage"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const AccountPage = lazy(() => import("./components/site/account/AccountPage"));
+const ConsoleRoutes = lazy(
+  () => import("./components/site/console/ConsoleRoutes")
+);
 
 const BENCHER_TITLE = "Bencher";
 
@@ -189,76 +191,13 @@ const App: Component = () => {
             }
           />
         </Route>
-        {/* Console Routes */}
-        <Route path="/console">
-          <Route
-            path="/"
-            element={
-              <ConsolePage
-                current_location={current_location}
-                handleTitle={handleTitle}
-                handleRedirect={setRedirect}
-              />
-            }
+
+        <Route path="/console/*">
+          <ConsoleRoutes
+            current_location={current_location}
+            handleTitle={handleTitle}
+            handleRedirect={setRedirect}
           />
-          {/* Console Projects Routes */}
-          <Route path="/projects">
-            <Route
-              path="/"
-              element={
-                <ConsolePage
-                  current_location={current_location}
-                  handleTitle={handleTitle}
-                  handleRedirect={setRedirect}
-                />
-              }
-            />
-            <Route path="/:project_slug">
-              <Route
-                path="/"
-                element={
-                  <ConsolePage
-                    current_location={current_location}
-                    handleTitle={handleTitle}
-                    handleRedirect={setRedirect}
-                  />
-                }
-              />
-              <Route
-                path="/perf"
-                element={
-                  <ConsolePage
-                    current_location={current_location}
-                    handleTitle={handleTitle}
-                    handleRedirect={setRedirect}
-                  />
-                }
-              />
-            </Route>
-          </Route>
-          <Route path="/reports">
-            <Route
-              path="/"
-              element={
-                <ConsolePage
-                  current_location={current_location}
-                  handleTitle={handleTitle}
-                  handleRedirect={setRedirect}
-                />
-              }
-            />
-            <Route
-              path="/:uuid"
-              element={
-                <ConsolePage
-                  current_location={current_location}
-                  handleTitle={handleTitle}
-                  handleRedirect={setRedirect}
-                />
-              }
-            />
-          </Route>
-          <Route path="/account" element={<AccountPage />} />
         </Route>
       </Routes>
 
