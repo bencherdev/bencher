@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, createMemo } from "solid-js";
 
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
@@ -10,9 +10,16 @@ interface Project {
 }
 
 const ConsolePage = (props) => {
-  const [project, setProject] = createSignal<Project>();
+  const [project, setProject] = createSignal<Project>({
+    uuid: null,
+    name: null,
+    slug: null,
+  });
+
+  const project_memo = createMemo(() => project());
 
   const handleProject = (json_project) => {
+    console.log(json_project);
     setProject({
       uuid: json_project?.uuid,
       name: json_project?.name,
@@ -25,7 +32,7 @@ const ConsolePage = (props) => {
       <div class="container">
         <div class="columns is-reverse-mobile">
           <div class="column is-one-fifth">
-            <ConsoleMenu />
+            <ConsoleMenu project={project_memo} handleProject={handleProject} />
           </div>
           <div class="column">
             <ConsolePanel
