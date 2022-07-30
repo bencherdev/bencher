@@ -13,7 +13,10 @@ import DeckButton from "./DeckButton";
 const Deck = (props) => {
   return (
     <>
-      <DeckButton data={props.data} handleClick={props.handleProject} />
+      <DeckButton
+        data={props.data?.slug}
+        handleClick={props.handleProjectSlug}
+      />
 
       <div class="columns">
         <div class="column">
@@ -31,7 +34,10 @@ const Deck = (props) => {
         </div>
       </div>
 
-      <DeckButton data={props.data} handleClick={props.handleProject} />
+      <DeckButton
+        data={props.data?.slug}
+        handleClick={props.handleProjectSlug}
+      />
     </>
   );
 };

@@ -44,7 +44,7 @@ const DeckPanel = (props) => {
   return (
     <>
       <DeckHeader title={deck_data()?.name} />
-      <Deck data={deck_data()} handleProject={props.handleProject} />
+      <Deck data={deck_data()} handleProjectSlug={props.handleProjectSlug} />
     </>
   );
 };

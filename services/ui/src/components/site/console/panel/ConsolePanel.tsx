@@ -52,24 +52,26 @@ const initPanel = () => {
   };
 };
 
-const handlePanel = (props, setPanel) => {
-  const current_location = props.current_location();
-  const pathname = current_location.pathname?.split("/");
-  const panel: Panel = projectsPath("console", pathname);
-  console.log(panel);
-  setPanel(panel);
-};
-
 const ConsolePanel = (props) => {
   const [pathname, setPathname] = createSignal<string | null>();
   const [panel, setPanel] = createSignal<Panel | null>();
 
   // props.handleTitle("Bencher Console - Track Your Benchmarks");
 
+  const handlePanel = () => {
+    const current_location = props.current_location();
+    const pathname = current_location.pathname?.split("/");
+    const panel: Panel = projectsPath("console", pathname);
+    console.log(panel);
+    setPanel(panel);
+    props.handleProjectSlug(panel.slug);
+  };
+
   createEffect(() => {
-    if (pathname() !== props.current_location().pathname) {
-      setPathname(props.current_location().pathname);
-      handlePanel(props, setPanel);
+    const current_pathname = props.current_location().pathname;
+    if (pathname() !== current_pathname) {
+      setPathname(current_pathname);
+      handlePanel();
     }
   });
 
@@ -121,7 +123,7 @@ const ConsolePanel = (props) => {
           current_location={props.current_location}
           panel={panel()}
           handleRedirect={props.handleRedirect}
-          handleProject={props.handleProject}
+          handleProjectSlug={props.handleProjectSlug}
         />
       </Match>
     </Switch>

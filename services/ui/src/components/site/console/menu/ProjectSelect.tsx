@@ -26,8 +26,10 @@ const fetchProjects = async () => {
     if (typeof token !== "string") {
       return;
     }
-    let reports = await axios(options(token));
-    return reports.data;
+    const resp = await axios(options(token));
+    const data = resp?.data;
+    console.log(data);
+    return data;
   } catch (error) {
     console.error(error);
   }
@@ -36,8 +38,21 @@ const fetchProjects = async () => {
 const BENCHER_SEE_ALL = "bencher--see---all";
 
 const ProjectSelect = (props) => {
-  const [projects] = createResource(props.project, fetchProjects);
-  const [selected, setSelected] = createSignal(BENCHER_SEE_ALL);
+  const [projects] = createResource(props.project_slug(), fetchProjects);
+  const [selected, setSelected] = createSignal();
+
+  createEffect(() => {
+    console.log(selected());
+    const slug = props.project_slug();
+    console.log(slug);
+    if (slug !== selected()) {
+      if (slug !== null) {
+        setSelected(slug);
+      } else if (selected() !== BENCHER_SEE_ALL) {
+        setSelected(BENCHER_SEE_ALL);
+      }
+    }
+  });
 
   const handleSelectedRedirect = () => {
     props.handleRedirect(`/console/projects/${selected()}/perf`);
@@ -47,11 +62,7 @@ const ProjectSelect = (props) => {
     const target_slug = e?.target?.value;
     if (target_slug === BENCHER_SEE_ALL) {
       setSelected(BENCHER_SEE_ALL);
-      props.handleProject({
-        uuid: null,
-        name: null,
-        slug: null,
-      });
+      props.handleProjectSlug(null);
       props.handleRedirect("/console/projects");
     }
 
@@ -60,8 +71,7 @@ const ProjectSelect = (props) => {
       const project = p[i];
       const slug = project?.slug;
       if (slug === target_slug) {
-        props.handleProject(project);
-        setSelected(slug);
+        props.handleProjectSlug(slug);
         handleSelectedRedirect();
         break;
       }

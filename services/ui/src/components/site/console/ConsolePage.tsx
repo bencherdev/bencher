@@ -1,7 +1,36 @@
-import { createSignal, createMemo } from "solid-js";
+import axios from "axios";
+import { createSignal, createMemo, createResource } from "solid-js";
 
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
+
+const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+
+const options = (token: string, slug: string) => {
+  return {
+    url: `${BENCHER_API_URL}/v0/projects/${slug}`,
+    method: "get",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  };
+};
+
+const fetchProject = async (slug) => {
+  try {
+    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+    if (typeof token !== "string") {
+      return;
+    }
+    const resp = await axios(options(token, slug));
+    const data = resp?.data;
+    console.log(data);
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 interface Project {
   uuid: string;
@@ -10,22 +39,8 @@ interface Project {
 }
 
 const ConsolePage = (props) => {
-  const [project, setProject] = createSignal<Project>({
-    uuid: null,
-    name: null,
-    slug: null,
-  });
-
-  const project_memo = createMemo(() => project());
-
-  const handleProject = (json_project) => {
-    console.log(json_project);
-    setProject({
-      uuid: json_project?.uuid,
-      name: json_project?.name,
-      slug: json_project?.slug,
-    });
-  };
+  const [project_slug, setProjectSlug] = createSignal<String>("");
+  const [project] = createResource(project_slug, fetchProject);
 
   return (
     <section class="section">
@@ -33,9 +48,9 @@ const ConsolePage = (props) => {
         <div class="columns is-reverse-mobile">
           <div class="column is-one-fifth">
             <ConsoleMenu
-              project={project_memo}
+              project_slug={project_slug}
               handleRedirect={props.handleRedirect}
-              handleProject={handleProject}
+              handleProjectSlug={setProjectSlug}
             />
           </div>
           <div class="column">
@@ -43,7 +58,7 @@ const ConsolePage = (props) => {
               current_location={props.current_location}
               handleTitle={props.handleTitle}
               handleRedirect={props.handleRedirect}
-              handleProject={handleProject}
+              handleProjectSlug={setProjectSlug}
             />
           </div>
         </div>

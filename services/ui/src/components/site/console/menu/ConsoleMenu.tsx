@@ -7,12 +7,12 @@ const ConsoleMenu = (props) => {
     <aside class="menu">
       <div class="menu-label">
         <ProjectSelect
-          project={props?.project}
-          handleRedirect={props.handleRedirect}
-          handleProject={props?.handleProject}
+          project_slug={props?.project_slug}
+          handleRedirect={props?.handleRedirect}
+          handleProjectSlug={props?.handleProjectSlug}
         />
       </div>
-      {typeof props?.project()?.slug === "string" && (
+      {typeof props.project_slug === "string" && (
         <>
           <p class="menu-label">Project</p>
           <ul class="menu-list">
