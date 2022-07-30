@@ -24,15 +24,16 @@ const options = (token: string) => {
   };
 };
 
-const fetchData = async (page) => {
+const fetchData = async (refresh) => {
   try {
     const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
     if (typeof token !== "string") {
       return;
     }
-    let reports = await axios(options(token));
-    console.log(reports);
-    return reports.data;
+    let resp = await axios(options(token));
+    const data = resp.data;
+    console.log(data);
+    return data;
   } catch (error) {
     console.error(error);
   }
@@ -49,14 +50,21 @@ const handleRowButton = (event, datum, handleRedirect) => {
 };
 
 const TablePanel = (props) => {
+  const [refresh, setRefresh] = createSignal(0);
   const [page, setPage] = createSignal(1);
-  const [table_data] = createResource(page, fetchData);
+  const [table_data] = createResource(refresh, fetchData);
+
+  const handleRefresh = () => {
+    setRefresh(refresh() + 1);
+  };
 
   return (
     <>
       <TableHeader
         title={props.config?.title}
         buttons={props.config?.buttons}
+        refresh={refresh}
+        handleRefresh={handleRefresh}
       />
       <Suspense fallback={<p>Loading...</p>}>
         <div class="pricing-table is-horizontal">

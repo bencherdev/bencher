@@ -14,22 +14,31 @@ const TableHeader = (props) => {
         <For each={props.buttons}>
           {(button, i) => (
             <p class="level-item">
-              <button class="button is-outlined">
-                <Switch fallback={<></>}>
-                  <Match when={button === Button.ADD}>
+              <Switch fallback={<></>}>
+                <Match when={button === Button.ADD}>
+                  <button class="button is-outlined">
                     <span class="icon">
                       <i class="fas fa-plus" aria-hidden="true"></i>
                     </span>
                     <span>Add</span>
-                  </Match>
-                  <Match when={button === Button.REFRESH}>
+                  </button>
+                </Match>
+                <Match when={button === Button.REFRESH}>
+                  <button
+                    class="button is-outlined"
+                    // disabled={props.refresh() > 0}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      props.handleRefresh();
+                    }}
+                  >
                     <span class="icon">
                       <i class="fas fa-sync-alt" aria-hidden="true"></i>
                     </span>
                     <span>Refresh</span>
-                  </Match>
-                </Switch>
-              </button>
+                  </button>
+                </Match>
+              </Switch>
             </p>
           )}
         </For>
