@@ -17,7 +17,16 @@ const ConsolePage = lazy(() => import("./ConsolePage"));
 
 const initSlug = (current_location) => {
   const path = current_location().pathname?.split("/");
-  return path[3] ? path[3] : null;
+  if (
+    path.length < 5 ||
+    path[0] ||
+    path[1] !== "console" ||
+    path[2] !== "projects" ||
+    !path[3]
+  ) {
+    return null;
+  }
+  return path[3];
 };
 
 const ConsoleRoutes = (props) => {
