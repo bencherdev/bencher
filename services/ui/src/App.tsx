@@ -197,6 +197,7 @@ const App: Component = () => {
               <ConsolePage
                 current_location={current_location}
                 handleTitle={handleTitle}
+                handleRedirect={setRedirect}
               />
             }
           />

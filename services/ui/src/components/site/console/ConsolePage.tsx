@@ -32,7 +32,11 @@ const ConsolePage = (props) => {
       <div class="container">
         <div class="columns is-reverse-mobile">
           <div class="column is-one-fifth">
-            <ConsoleMenu project={project_memo} handleProject={handleProject} />
+            <ConsoleMenu
+              project={project_memo}
+              handleRedirect={props.handleRedirect}
+              handleProject={handleProject}
+            />
           </div>
           <div class="column">
             <ConsolePanel

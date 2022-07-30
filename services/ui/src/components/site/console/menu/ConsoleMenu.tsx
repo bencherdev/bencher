@@ -8,6 +8,7 @@ const ConsoleMenu = (props) => {
       <div class="menu-label">
         <ProjectSelect
           project={props?.project}
+          handleRedirect={props.handleRedirect}
           handleProject={props?.handleProject}
         />
       </div>

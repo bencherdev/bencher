@@ -27,7 +27,6 @@ const fetchProjects = async () => {
       return;
     }
     let reports = await axios(options(token));
-    console.log("GET");
     return reports.data;
   } catch (error) {
     console.error(error);
@@ -49,14 +48,14 @@ const ProjectSelect = (props) => {
         name: null,
         slug: null,
       });
+      props.handleRedirect("/console/projects");
     }
-    console.log(target_slug);
+
     const p = projects();
     for (let i in p) {
       const project = p[i];
       const slug = project?.slug;
       if (slug === target_slug) {
-        console.log("MATCH");
         setSelected(slug);
         props.handleProject(project);
         break;
@@ -76,11 +75,19 @@ const ProjectSelect = (props) => {
     <nav class="level">
       <div class="level-left">
         <div class="control">
-          <button class="button is-outlined is-left">
-            <span class="icon">
-              <i class="fas fa-home" aria-hidden="true"></i>
-            </span>
-          </button>
+          {selected() !== BENCHER_SEE_ALL && (
+            <button
+              class="button is-outlined"
+              onClick={(e) => {
+                e.preventDefault();
+                props.handleRedirect(`/console/projects/${selected()}/perf`);
+              }}
+            >
+              <span class="icon">
+                <i class="fas fa-home" aria-hidden="true"></i>
+              </span>
+            </button>
+          )}
           <div class="select">
             <select
               onChange={(e) => {
