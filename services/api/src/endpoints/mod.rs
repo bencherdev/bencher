@@ -1,15 +1,4 @@
-use std::sync::Arc;
-
-use dropshot::{
-    endpoint,
-    ApiDescription,
-    ApiEndpoint,
-    HttpError,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    Method,
-    RequestContext,
-};
+use dropshot::ApiDescription;
 
 pub mod adapters;
 pub mod auth;
@@ -19,7 +8,6 @@ pub mod reports;
 pub mod testbeds;
 
 use crate::util::{
-    headers::CorsHeaders,
     registrar::Registrar,
     Context,
 };
@@ -35,9 +23,12 @@ impl Registrar<Context> for Api {
         api.register(auth::login::options)?;
         api.register(auth::login::post)?;
         // Projects
-        Self::register(api, projects::api_get_projects)?;
-        Self::register_options(api, projects::api_get_project, projects::api_get_project)?;
-        api.register(projects::api_post_project)?;
+        api.register(projects::options)?;
+        api.register(projects::get_ls)?;
+        api.register(projects::post)?;
+        api.register(projects::options_params)?;
+        api.register(projects::get_one)?;
+
         // Testbeds
         api.register(testbeds::api_get_testbeds)?;
         api.register(testbeds::api_get_testbed)?;
@@ -51,48 +42,4 @@ impl Registrar<Context> for Api {
         api.register(reports::api_post_report)?;
         Ok(())
     }
-}
-
-impl Api {
-    fn register<T>(api: &mut ApiDescription<Context>, endpoint: T) -> Result<(), String>
-    where
-        T: Into<ApiEndpoint<Context>>,
-    {
-        let endpoint = endpoint.into();
-        let mut options_endpoint: ApiEndpoint<Context> = api_options.into();
-        options_endpoint.method = Method::OPTIONS;
-        options_endpoint.path = endpoint.path.clone();
-        api.register(options_endpoint)?;
-        api.register(endpoint)?;
-        Ok(())
-    }
-
-    fn register_options<T>(
-        api: &mut ApiDescription<Context>,
-        endpoint: T,
-        options: T,
-    ) -> Result<(), String>
-    where
-        T: Into<ApiEndpoint<Context>>,
-    {
-        let endpoint = endpoint.into();
-        let mut options_endpoint: ApiEndpoint<Context> = options.into();
-        options_endpoint.method = Method::OPTIONS;
-        api.register(options_endpoint)?;
-        api.register(endpoint)?;
-        Ok(())
-    }
-}
-
-#[endpoint {
-    method = GET,
-    path = "/v0",
-}]
-pub async fn api_options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<()>, CorsHeaders>, HttpError> {
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(()),
-        CorsHeaders::new_auth("OPTIONS".into()),
-    ))
 }

@@ -1,18 +1,12 @@
-use std::{
-    str::FromStr,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use bencher_json::{
     JsonNewProject,
-    JsonNewReport,
     JsonProject,
 };
-use chrono::NaiveDateTime;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
-    SqliteConnection,
 };
 use dropshot::{
     endpoint,
@@ -25,25 +19,15 @@ use dropshot::{
     TypedBody,
 };
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use uuid::Uuid;
+use serde::Deserialize;
 
 use crate::{
     db::{
         model::{
-            adapter::QueryAdapter,
             project::{
                 InsertProject,
                 QueryProject,
             },
-            report::{
-                InsertReport,
-                QueryReport,
-            },
-            testbed::QueryTestbed,
             user::QueryUser,
         },
         schema,
@@ -51,6 +35,7 @@ use crate::{
     diesel::ExpressionMethods,
     util::{
         auth::get_token,
+        cors::get_cors,
         headers::CorsHeaders,
         http_error,
         Context,
@@ -58,11 +43,22 @@ use crate::{
 };
 
 #[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects",
+    tags = ["projects"]
+}]
+pub async fn options(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
     method = GET,
     path = "/v0/projects",
     tags = ["projects"]
 }]
-pub async fn api_get_projects(
+pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
     let uuid = get_token(&rqctx).await?;
@@ -83,9 +79,43 @@ pub async fn api_get_projects(
     ))
 }
 
+#[endpoint {
+    method = POST,
+    path = "/v0/projects",
+    tags = ["projects"]
+}]
+pub async fn post(
+    rqctx: Arc<RequestContext<Context>>,
+    body: TypedBody<JsonNewProject>,
+) -> Result<HttpResponseAccepted<()>, HttpError> {
+    let uuid = get_token(&rqctx).await?;
+    let db_connection = rqctx.context();
+    let json_project = body.into_inner();
+    let conn = db_connection.lock().await;
+    let insert_project = InsertProject::from_json(&*conn, &uuid, json_project)?;
+    diesel::insert_into(schema::project::table)
+        .values(&insert_project)
+        .execute(&*conn)
+        .map_err(|_| http_error!("Failed to create project."))?;
+
+    Ok(HttpResponseAccepted(()))
+}
+
 #[derive(Deserialize, JsonSchema)]
 pub struct PathParams {
     pub project: String,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}",
+    tags = ["projects"]
+}]
+pub async fn options_params(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<PathParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
 }
 
 #[endpoint {
@@ -93,7 +123,7 @@ pub struct PathParams {
     path = "/v0/projects/{project}",
     tags = ["projects"]
 }]
-pub async fn api_get_project(
+pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
@@ -120,26 +150,4 @@ pub async fn api_get_project(
         HttpResponseOk(json),
         CorsHeaders::new_pub("GET".into()),
     ))
-}
-
-#[endpoint {
-    method = POST,
-    path = "/v0/projects",
-    tags = ["projects"]
-}]
-pub async fn api_post_project(
-    rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonNewProject>,
-) -> Result<HttpResponseAccepted<()>, HttpError> {
-    let uuid = get_token(&rqctx).await?;
-    let db_connection = rqctx.context();
-    let json_project = body.into_inner();
-    let conn = db_connection.lock().await;
-    let insert_project = InsertProject::from_json(&*conn, &uuid, json_project)?;
-    diesel::insert_into(schema::project::table)
-        .values(&insert_project)
-        .execute(&*conn)
-        .map_err(|_| http_error!("Failed to create project."))?;
-
-    Ok(HttpResponseAccepted(()))
 }
