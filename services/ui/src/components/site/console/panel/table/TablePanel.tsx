@@ -54,7 +54,10 @@ const TablePanel = (props) => {
 
   return (
     <>
-      <TableHeader title={props.config?.title} />
+      <TableHeader
+        title={props.config?.title}
+        buttons={props.config?.buttons}
+      />
       <Suspense fallback={<p>Loading...</p>}>
         <div class="pricing-table is-horizontal">
           <For each={table_data()}>

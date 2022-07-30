@@ -10,7 +10,7 @@ import {
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { JsonUser } from "bencher_json";
-import { Operation, Resource } from "./console";
+import { Operation, Resource, Button } from "./console";
 import AccountPage from "../account/AccountPage";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
@@ -34,6 +34,7 @@ const config = {
         },
         {},
       ],
+      buttons: [Button.ADD, Button.REFRESH],
     },
   },
 };

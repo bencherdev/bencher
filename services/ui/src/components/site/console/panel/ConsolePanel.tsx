@@ -1,5 +1,5 @@
 import { createEffect, createSignal, Match, Switch } from "solid-js";
-import TablePanel from "./TablePanel";
+import TablePanel from "./table/TablePanel";
 import DeckPanel from "./DeckPanel";
 import { JsonNewTestbed } from "bencher_json";
 import { Operation } from "../console";

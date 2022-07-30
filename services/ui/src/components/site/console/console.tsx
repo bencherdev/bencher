@@ -7,6 +7,11 @@ export enum Operation {
   PERF,
 }
 
+export enum Button {
+  ADD,
+  REFRESH,
+}
+
 export enum Resource {
   PROJECTS,
 }
