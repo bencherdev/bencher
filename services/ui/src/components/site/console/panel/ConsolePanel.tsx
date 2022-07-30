@@ -121,6 +121,7 @@ const ConsolePanel = (props) => {
           current_location={props.current_location}
           panel={panel()}
           handleRedirect={props.handleRedirect}
+          handleProject={props.handleProject}
         />
       </Match>
     </Switch>
