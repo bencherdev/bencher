@@ -1,9 +1,9 @@
 import { createEffect, createSignal, Match, Switch } from "solid-js";
 import TablePanel from "./table/TablePanel";
-import DeckPanel from "./DeckPanel";
+import DeckPanel from "./deck/DeckPanel";
 import { JsonNewTestbed } from "bencher_json";
 import { Operation } from "../console";
-import PerfPanel from "./PerfPanel";
+import PerfPanel from "./perf/PerfPanel";
 
 const ConsolePanel = (props) => {
   return (
