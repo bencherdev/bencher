@@ -20,6 +20,7 @@ const initForm = (fields) => {
       newForm[field.key].value = field.value;
       newForm[field.key].valid = field.valid;
       newForm[field.key].validate = field.validate;
+      newForm[field.key].nullify = field.nullify;
     }
   });
   return newForm;

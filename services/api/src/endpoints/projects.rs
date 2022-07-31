@@ -80,18 +80,6 @@ pub async fn get_ls(
     ))
 }
 
-// #[endpoint {
-//     method = OPTIONS,
-//     path =  "/v0/projects",
-//     tags = ["projects"]
-// }]
-// pub async fn post_options(
-//     _rqctx: Arc<RequestContext<Context>>,
-//     _body: UntypedBody,
-// ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
-//     Ok(get_cors::<Context>())
-// }
-
 #[endpoint {
     method = POST,
     path = "/v0/projects",
