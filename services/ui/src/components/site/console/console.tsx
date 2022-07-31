@@ -10,6 +10,7 @@ export enum Operation {
 export enum Button {
   ADD,
   REFRESH,
+  BACK,
 }
 
 export enum Resource {

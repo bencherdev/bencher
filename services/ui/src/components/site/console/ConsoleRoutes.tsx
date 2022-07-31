@@ -38,12 +38,16 @@ const getConfig = (pathname) => {
           {},
         ],
         buttons: [
-          { kind: Button.ADD, path: `${pathname}/add` },
+          { kind: Button.ADD, path: "/console/projects/add" },
           { kind: Button.REFRESH },
         ],
       },
       [Operation.ADD]: {
         operation: Operation.ADD,
+        title: "Add Project",
+        buttons: {
+          [Button.BACK]: { path: "/console/projects" },
+        },
       },
     },
   };
