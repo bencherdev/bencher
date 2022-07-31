@@ -42,6 +42,9 @@ const getConfig = (pathname) => {
           { kind: Button.REFRESH },
         ],
       },
+      [Operation.ADD]: {
+        operation: Operation.ADD,
+      },
     },
   };
 };
@@ -59,6 +62,17 @@ const ConsoleRoutes = (props) => {
         element={
           <ConsolePage
             config={config()?.[Resource.PROJECTS]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/add"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.PROJECTS]?.[Operation.ADD]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}

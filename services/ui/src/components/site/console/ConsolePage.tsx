@@ -18,6 +18,7 @@ const projectSlug = (pathname) => {
 };
 
 const ConsolePage = (props) => {
+  // The project slug can't be a resource because it isn't 100% tied to the URL
   const [project_slug, setProjectSlug] = createSignal<String>(
     projectSlug(props.pathname)
   );
