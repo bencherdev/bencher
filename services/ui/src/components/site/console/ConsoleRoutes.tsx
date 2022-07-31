@@ -7,6 +7,7 @@ import {
   Accessor,
   Signal,
   For,
+  createResource,
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { JsonUser } from "bencher_json";
@@ -15,7 +16,7 @@ import AccountPage from "../account/AccountPage";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
-const getConfig = (path) => {
+const getConfig = (pathname) => {
   return {
     [Resource.PROJECTS]: {
       [Operation.LIST]: {
@@ -36,7 +37,7 @@ const getConfig = (path) => {
           {},
         ],
         buttons: [
-          { kind: Button.ADD, path: `${path}/add` },
+          { kind: Button.ADD, path: `${pathname}/add` },
           { kind: Button.REFRESH },
         ],
       },
@@ -45,7 +46,8 @@ const getConfig = (path) => {
 };
 
 const ConsoleRoutes = (props) => {
-  const config = getConfig(props.current_location().pathname);
+  const [config] = createResource(props.current_location().pathname, getConfig);
+
   return (
     <>
       {/* Console Routes */}
@@ -55,7 +57,7 @@ const ConsoleRoutes = (props) => {
         path="/projects"
         element={
           <ConsolePage
-            config={config[Resource.PROJECTS][Operation.LIST]}
+            config={config()?.[Resource.PROJECTS]?.[Operation.LIST]}
             current_location={props.current_location}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -66,7 +68,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug"
         element={
           <ConsolePage
-            config={config[Resource.PROJECTS][Operation.VIEW]}
+            config={config()?.[Resource.PROJECTS]?.[Operation.VIEW]}
             current_location={props.current_location}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -77,7 +79,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/perf"
         element={
           <ConsolePage
-            config={config[Resource.PROJECTS][Operation.PERF]}
+            config={config()?.[Resource.PROJECTS]?.[Operation.PERF]}
             current_location={props.current_location}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
