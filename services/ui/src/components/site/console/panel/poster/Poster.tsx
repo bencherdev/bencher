@@ -58,21 +58,16 @@ const Poster = (props) => {
         <div class="box">
           <For each={props.config?.fields}>
             {(field, i) => (
-              <Switch fallback={<div>Unknown Field: {field}</div>}>
-                <Match when={field.kind === Field.INPUT}>
-                  <div>TODO</div>
-                  <SiteField
-                    key={i}
-                    type={field.kind}
-                    fieldKey={field.key}
-                    label={field.label}
-                    value={form()[field.key]?.value}
-                    valid={form()[field.key]?.valid}
-                    config={field.config}
-                    handleField={handleField}
-                  />
-                </Match>
-              </Switch>
+              <SiteField
+                key={i}
+                kind={field.kind}
+                fieldKey={field.key}
+                label={field.label}
+                value={form()[field.key]?.value}
+                valid={form()[field.key]?.valid}
+                config={field.config}
+                handleField={handleField}
+              />
             )}
           </For>
         </div>
