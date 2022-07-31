@@ -1,4 +1,5 @@
 import { Button } from "../../console";
+import Poster from "./Poster";
 import PosterHeader from "./PosterHeader";
 
 const PosterPanel = (props) => {
@@ -9,7 +10,7 @@ const PosterPanel = (props) => {
         back_path={props.config?.buttons?.[Button.BACK]?.path}
         handleRedirect={props.handleRedirect}
       />
-      {/* <Deck data={deck_data()} /> */}
+      <Poster config={props.config} handleRedirect={props.handleRedirect} />
     </>
   );
 };
