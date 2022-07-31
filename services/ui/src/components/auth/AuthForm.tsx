@@ -1,11 +1,11 @@
 import { createSignal, createEffect, Accessor } from "solid-js";
 import axios from "axios";
 
-import SiteField from "../site/fields/SiteField";
-import userFieldsConfig from "../fields/user/userFieldsConfig";
+import SiteField from "../fields/SiteField";
+import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import authForms from "./authForms";
 import { JsonSignup, JsonLogin } from "bencher_json";
-import { Field } from "../site/console/console";
+import { Field } from "../console/console";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 

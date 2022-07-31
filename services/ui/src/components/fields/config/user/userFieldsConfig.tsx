@@ -1,4 +1,4 @@
-import validateUsername from "../validators/validateUsername";
+import validateUsername from "../../validators/validateUsername";
 import validator from "validator";
 
 const userFieldsConfig = {

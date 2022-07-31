@@ -13,9 +13,9 @@ import validator from "validator";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { JsonUser } from "bencher_json";
 import { Operation, Resource, Button, Field } from "./console";
-import AccountPage from "../account/AccountPage";
-import validateName from "../../fields/validators/validateName";
-import validateDescription from "../../fields/validators/validateDescription";
+import AccountPage from "../site/account/AccountPage";
+import validateName from "../fields/validators/validateName";
+import validateDescription from "../fields/validators/validateDescription";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 

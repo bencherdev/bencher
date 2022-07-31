@@ -1,5 +1,5 @@
-import validateName from "../validators/validateName";
-import validateDescription from "../validators/validateDescription";
+import validateName from "../../validators/validateName";
+import validateDescription from "../../validators/validateDescription";
 
 const contactFieldsConfig = {
     title: {

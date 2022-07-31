@@ -21,9 +21,7 @@ const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const AccountPage = lazy(() => import("./components/site/account/AccountPage"));
-const ConsoleRoutes = lazy(
-  () => import("./components/site/console/ConsoleRoutes")
-);
+const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 
 const BENCHER_TITLE = "Bencher";
 
