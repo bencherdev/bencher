@@ -6,6 +6,7 @@ const PosterPanel = (props) => {
   return (
     <>
       <PosterHeader
+        config={props.config?.header}
         title={props.config?.title}
         back_path={props.config?.buttons?.[Button.BACK]?.path}
         handleRedirect={props.handleRedirect}

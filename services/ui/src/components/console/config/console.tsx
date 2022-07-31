@@ -2,7 +2,7 @@ import validator from "validator";
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
 import validateDescription from "../../fields/validators/validateDescription";
 import validateName from "../../fields/validators/validateName";
-import { Button, Field, Operation, Resource } from "../console";
+import { Button, Field, Operation, Resource, Row } from "../console";
 
 const consoleConfig = (pathname) => {
   console.log(pathname);
@@ -10,29 +10,36 @@ const consoleConfig = (pathname) => {
     [Resource.PROJECTS]: {
       [Operation.LIST]: {
         operation: Operation.LIST,
-        title: "Projects",
-        header: "name",
-        items: [
-          {
-            kind: "text",
-            key: "slug",
-          },
-          {},
-          {
-            kind: "bool",
-            key: "owner_default",
-            text: "Default",
-          },
-          {},
-        ],
-        buttons: [
-          { kind: Button.ADD, path: "/console/projects/add" },
-          { kind: Button.REFRESH },
-        ],
+        header: {
+          title: "Projects",
+          buttons: [
+            { kind: Button.ADD, path: "/console/projects/add" },
+            { kind: Button.REFRESH },
+          ],
+        },
+        row: {
+          key: "name",
+          items: [
+            {
+              kind: Row.TEXT,
+              key: "slug",
+            },
+            {},
+            {
+              kind: Row.BOOL,
+              key: "owner_default",
+              text: "Default",
+            },
+            {},
+          ],
+        },
       },
       [Operation.ADD]: {
         operation: Operation.ADD,
-        title: "Add Project",
+        header: {
+          title: "Add Project",
+          back: "/console/projects",
+        },
         fields: [
           {
             kind: Field.INPUT,
@@ -65,9 +72,6 @@ const consoleConfig = (pathname) => {
             config: projectFieldsConfig.url,
           },
         ],
-        buttons: {
-          [Button.BACK]: { path: "/console/projects" },
-        },
       },
     },
   };

@@ -24,3 +24,8 @@ export enum Field {
   SWITCH,
   SELECT,
 }
+
+export enum Row {
+  TEXT,
+  BOOL,
+}

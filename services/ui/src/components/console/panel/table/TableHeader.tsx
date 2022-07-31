@@ -6,12 +6,12 @@ const TableHeader = (props) => {
     <nav class="level">
       <div class="level-left">
         <div class="level-item">
-          <h3 class="title is-3">{props.title}</h3>
+          <h3 class="title is-3">{props.config?.title}</h3>
         </div>
       </div>
 
       <div class="level-right">
-        <For each={props.buttons}>
+        <For each={props.config?.buttons}>
           {(button, i) => (
             <p class="level-item">
               <Switch fallback={<></>}>

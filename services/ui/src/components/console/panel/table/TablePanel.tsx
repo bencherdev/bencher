@@ -8,6 +8,7 @@ import {
   Switch,
   Match,
 } from "solid-js";
+import { Row } from "../../console";
 
 import TableHeader from "./TableHeader";
 
@@ -61,8 +62,7 @@ const TablePanel = (props) => {
   return (
     <>
       <TableHeader
-        title={props.config?.title}
-        buttons={props.config?.buttons}
+        config={props.config?.header}
         refresh={refresh}
         handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
@@ -72,18 +72,17 @@ const TablePanel = (props) => {
           <For each={table_data()}>
             {(datum, i) => (
               <div class="pricing-plan is-primary">
-                <div class="plan-header">{datum[props.config?.header]}</div>
+                <div class="plan-header">{datum[props.config?.row?.key]}</div>
                 <div class="plan-items">
-                  <For each={props.config?.items}>
+                  <For each={props.config?.row?.items}>
                     {(item, i) => (
                       <div class="plan-item">
                         <Switch fallback="-">
-                          <Match when={item.kind === "text"}>
+                          <Match when={item.kind === Row.TEXT}>
                             {datum[item.key]}
                           </Match>
-                          <Match when={item.kind === "bool"}>
-                            {datum[item.text]}{" "}
-                            {datum[item.key] ? "true" : "false"}
+                          <Match when={item.kind === Row.BOOL}>
+                            {item.text}: {datum[item.key] ? "true" : "false"}
                           </Match>
                         </Switch>
                       </div>
