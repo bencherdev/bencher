@@ -1,4 +1,5 @@
 import validator from "validator";
+import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
 import validateDescription from "../../fields/validators/validateDescription";
 import validateName from "../../fields/validators/validateName";
 import { Button, Field, Operation, Resource } from "../console";
@@ -41,14 +42,7 @@ const consoleConfig = (pathname) => {
             valid: null,
             validate: true,
             clear: false,
-            config: {
-              label: "Name",
-              type: "text",
-              placeholder: "Project Name",
-              icon: "fas fa-project-diagram",
-              help: "Must be at least four characters or longer.",
-              validate: validateName,
-            },
+            config: projectFieldsConfig.name,
           },
           {
             kind: Field.TEXTAREA,
@@ -58,13 +52,7 @@ const consoleConfig = (pathname) => {
             valid: null,
             validate: true,
             clear: false,
-            config: {
-              label: "Description",
-              type: "textarea",
-              placeholder: "Describe the project",
-              help: "Must be between 25 and 2,500 characters.",
-              validate: validateDescription,
-            },
+            config: projectFieldsConfig.description,
           },
           {
             kind: Field.INPUT,
@@ -74,14 +62,7 @@ const consoleConfig = (pathname) => {
             valid: null,
             validate: true,
             clear: false,
-            config: {
-              label: "URL",
-              type: "text",
-              placeholder: "www.example.com",
-              icon: "far fa-window-maximize",
-              help: "Must be a valid public facing URL.",
-              validate: validator.isURL,
-            },
+            config: projectFieldsConfig.url,
           },
         ],
         buttons: {
