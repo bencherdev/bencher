@@ -48,14 +48,19 @@ const getConfig = (pathname) => {
         fields: [
           {
             kind: Field.INPUT,
-            key: "username",
-            type: "input",
+            key: "name",
             label: true,
             value: "",
             valid: null,
             validate: true,
             clear: false,
-            config: {},
+            config: {
+              label: "Project Name",
+              type: "text",
+              placeholder: "Project Name",
+              icon: "fas fa-project-diagram",
+              disabled: false,
+            },
           },
         ],
         buttons: {

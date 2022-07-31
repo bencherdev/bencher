@@ -61,15 +61,16 @@ const Poster = (props) => {
               <Switch fallback={<div>Unknown Field: {field}</div>}>
                 <Match when={field.kind === Field.INPUT}>
                   <div>TODO</div>
-                  {/* <SiteField
-                    type="input"
-                    fieldKey="username"
-                    label={true}
-                    value={form()?.username?.value}
-                    valid={form()?.username?.valid}
+                  <SiteField
+                    key={i}
+                    type={field.kind}
+                    fieldKey={field.key}
+                    label={field.label}
+                    value={form()[field.key]?.value}
+                    valid={form()[field.key]?.valid}
                     config={field.config}
                     handleField={handleField}
-                  /> */}
+                  />
                 </Match>
               </Switch>
             )}
