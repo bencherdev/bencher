@@ -34,16 +34,16 @@ const fetchProjects = async () => {
   }
 };
 
-const BENCHER_SEE_ALL = "bencher--see---all";
+const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 const ProjectSelect = (props) => {
-  const [selected, setSelected] = createSignal(BENCHER_SEE_ALL);
+  const [selected, setSelected] = createSignal(BENCHER_ALL_PROJECTS);
   const [projects] = createResource(selected, fetchProjects);
 
   createEffect(() => {
     const slug = props.project_slug();
     if (slug === null) {
-      setSelected(BENCHER_SEE_ALL);
+      setSelected(BENCHER_ALL_PROJECTS);
     } else {
       setSelected(slug);
     }
@@ -55,8 +55,8 @@ const ProjectSelect = (props) => {
 
   const handleProject = (e) => {
     const target_slug = e?.target?.value;
-    if (target_slug === BENCHER_SEE_ALL) {
-      setSelected(BENCHER_SEE_ALL);
+    if (target_slug === BENCHER_ALL_PROJECTS) {
+      setSelected(BENCHER_ALL_PROJECTS);
       props.handleProjectSlug(null);
       props.handleRedirect("/console/projects");
     }
@@ -77,15 +77,15 @@ const ProjectSelect = (props) => {
     return slug === selected();
   };
 
-  const isSeeAll = () => {
-    return BENCHER_SEE_ALL === selected();
+  const isAllProjects = () => {
+    return BENCHER_ALL_PROJECTS === selected();
   };
 
   return (
     <nav class="level">
       <div class="level-left">
         <div class="control">
-          {selected() !== BENCHER_SEE_ALL && (
+          {selected() !== BENCHER_ALL_PROJECTS && (
             <button
               class="button is-outlined"
               onClick={(e) => {
@@ -116,8 +116,8 @@ const ProjectSelect = (props) => {
                   )}
                 </For>
               </optgroup>
-              <option value={BENCHER_SEE_ALL} selected={isSeeAll()}>
-                See All
+              <option value={BENCHER_ALL_PROJECTS} selected={isAllProjects()}>
+                All Projects
               </option>
             </select>
           </div>

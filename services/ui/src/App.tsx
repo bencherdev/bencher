@@ -192,7 +192,7 @@ const App: Component = () => {
           />
         </Route>
 
-        <Route path="/console/*">
+        <Route path="/console">
           <ConsoleRoutes
             current_location={current_location}
             handleTitle={handleTitle}
