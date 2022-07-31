@@ -8,7 +8,7 @@ const PosterPanel = (props) => {
       <PosterHeader
         config={props.config?.header}
         title={props.config?.title}
-        back_path={props.config?.buttons?.[Button.BACK]?.path}
+        pathname={props.pathname}
         handleRedirect={props.handleRedirect}
       />
       <Poster config={props.config} handleRedirect={props.handleRedirect} />

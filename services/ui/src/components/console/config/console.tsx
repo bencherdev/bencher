@@ -4,6 +4,8 @@ import validateDescription from "../../fields/validators/validateDescription";
 import validateName from "../../fields/validators/validateName";
 import { Button, Field, Operation, Resource, Row } from "../console";
 
+const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+
 const consoleConfig = (pathname) => {
   console.log(pathname);
   return {
@@ -13,32 +15,44 @@ const consoleConfig = (pathname) => {
         header: {
           title: "Projects",
           buttons: [
-            { kind: Button.ADD, path: "/console/projects/add" },
+            {
+              kind: Button.ADD,
+              path: (pathname) => {
+                return `${pathname}/add`;
+              },
+            },
             { kind: Button.REFRESH },
           ],
         },
-        row: {
-          key: "name",
-          items: [
-            {
-              kind: Row.TEXT,
-              key: "slug",
+        table: {
+          row: {
+            key: "name",
+            items: [
+              {
+                kind: Row.TEXT,
+                key: "slug",
+              },
+              {},
+              {
+                kind: Row.BOOL,
+                key: "owner_default",
+                text: "Default",
+              },
+              {},
+            ],
+            path: (pathname, datum) => {
+              return `${pathname}/${datum?.slug}`;
             },
-            {},
-            {
-              kind: Row.BOOL,
-              key: "owner_default",
-              text: "Default",
-            },
-            {},
-          ],
+          },
         },
       },
       [Operation.ADD]: {
         operation: Operation.ADD,
         header: {
           title: "Add Project",
-          back: "/console/projects",
+          path: (pathname) => {
+            return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
+          },
         },
         fields: [
           {

@@ -8,7 +8,7 @@ const PosterHeader = (props) => {
           class="button is-outlined"
           onClick={(e) => {
             e.preventDefault();
-            props.handleRedirect(props.config?.back);
+            props.handleRedirect(props.config?.path(props.pathname()));
           }}
         >
           <span class="icon">

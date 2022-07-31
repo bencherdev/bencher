@@ -12,12 +12,14 @@ const ConsolePanel = (props) => {
       <Match when={props.config?.operation === Operation.LIST}>
         <TablePanel
           config={props.config}
+          pathname={props.pathname}
           handleRedirect={props.handleRedirect}
         />
       </Match>
       <Match when={props.config?.operation === Operation.ADD}>
         <PosterPanel
           config={props.config}
+          pathname={props.pathname}
           handleRedirect={props.handleRedirect}
         />
       </Match>

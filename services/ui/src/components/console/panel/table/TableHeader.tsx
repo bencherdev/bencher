@@ -20,7 +20,7 @@ const TableHeader = (props) => {
                     class="button is-outlined"
                     onClick={(e) => {
                       e.preventDefault();
-                      props.handleRedirect(button.path);
+                      props.handleRedirect(button.path(props.pathname()));
                     }}
                   >
                     <span class="icon">
