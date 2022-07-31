@@ -17,6 +17,7 @@ $badoge-z-index: 5 !default;
 // @charset "utf-8";
 @import "../node_modules/bulma/bulma.sass";
 @import "../node_modules/bulma-pricingtable/src/sass/index.sass";
+@import "../node_modules/bulma-switch/src/sass/index.sass";
 
 .columns.is-reverse-mobile {
   @include mobile {

@@ -60,9 +60,15 @@ function sendForm(url, form) {
         data[key] = form[key].value.selected;
         break;
       default:
-        data[key] = form[key].value;
+        console.log(form[key]);
+        if (!form[key].value && form[key].nullify) {
+          data[key] = null;
+        } else {
+          data[key] = form[key].value;
+        }
     }
   }
+  console.log(data);
   postData(url, data);
 }
 

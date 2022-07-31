@@ -17,6 +17,7 @@ use dropshot::{
     Path,
     RequestContext,
     TypedBody,
+    UntypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -79,6 +80,18 @@ pub async fn get_ls(
     ))
 }
 
+// #[endpoint {
+//     method = OPTIONS,
+//     path =  "/v0/projects",
+//     tags = ["projects"]
+// }]
+// pub async fn post_options(
+//     _rqctx: Arc<RequestContext<Context>>,
+//     _body: UntypedBody,
+// ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+//     Ok(get_cors::<Context>())
+// }
+
 #[endpoint {
     method = POST,
     path = "/v0/projects",
@@ -87,7 +100,7 @@ pub async fn get_ls(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewProject>,
-) -> Result<HttpResponseAccepted<()>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
     let json_project = body.into_inner();
@@ -98,7 +111,10 @@ pub async fn post(
         .execute(&*conn)
         .map_err(|_| http_error!("Failed to create project."))?;
 
-    Ok(HttpResponseAccepted(()))
+    Ok(HttpResponseHeaders::new(
+        HttpResponseAccepted(()),
+        CorsHeaders::new_auth("POST".into()),
+    ))
 }
 
 #[derive(Deserialize, JsonSchema)]
