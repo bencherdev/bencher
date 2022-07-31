@@ -103,6 +103,9 @@ const consoleConfig = (pathname) => {
               config: projectFieldsConfig.default,
             },
           ],
+          path: (pathname) => {
+            return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
+          },
         },
       },
     },

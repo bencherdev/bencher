@@ -38,44 +38,45 @@ const options = (url: string, token: string, data: any) => {
   };
 };
 
-const postData = async (url, data) => {
-  try {
-    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-    if (typeof token !== "string") {
-      return;
-    }
-    let resp = await axios(options(url, token, data));
-    const resp_data = resp.data;
-    console.log(resp_data);
-    return resp_data;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-function sendForm(url, form) {
-  let data = {};
-  for (let key of Object.keys(form)) {
-    switch (form[key].type) {
-      case "select":
-        data[key] = form[key].value.selected;
-        break;
-      default:
-        console.log(form[key]);
-        if (!form[key].value && form[key].nullify) {
-          data[key] = null;
-        } else {
-          data[key] = form[key].value;
-        }
-    }
-  }
-  console.log(data);
-  postData(url, data);
-}
-
 const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
+
+  const postData = async (url, data) => {
+    try {
+      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+      if (typeof token !== "string") {
+        return;
+      }
+      let resp = await axios(options(url, token, data));
+      const resp_data = resp.data;
+      console.log(resp_data);
+      props.handleRedirect(props.config?.path(props.pathname()));
+      return resp_data;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  function sendForm(url, form) {
+    let data = {};
+    for (let key of Object.keys(form)) {
+      switch (form[key].type) {
+        case "select":
+          data[key] = form[key].value.selected;
+          break;
+        default:
+          console.log(form[key]);
+          if (!form[key].value && form[key].nullify) {
+            data[key] = null;
+          } else {
+            data[key] = form[key].value;
+          }
+      }
+    }
+    console.log(data);
+    postData(url, data);
+  }
 
   const handleField = (key, value, valid) => {
     if (key && form()[key]) {
