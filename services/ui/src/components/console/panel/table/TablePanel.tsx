@@ -15,33 +15,33 @@ import TableHeader from "./TableHeader";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
-const options = (token: string) => {
-  return {
-    url: `${BENCHER_API_URL}/v0/projects`,
-    method: "get",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
-const fetchData = async (refresh) => {
-  try {
-    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-    if (typeof token !== "string") {
-      return;
-    }
-    let resp = await axios(options(token));
-    const data = resp.data;
-    console.log(data);
-    return data;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
 const TablePanel = (props) => {
+  const options = (token: string) => {
+    return {
+      url: props.config?.table?.url,
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
+  const fetchData = async (refresh) => {
+    try {
+      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+      if (typeof token !== "string") {
+        return;
+      }
+      let resp = await axios(options(token));
+      const data = resp.data;
+      console.log(data);
+      return data;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const [refresh, setRefresh] = createSignal(0);
   const [page, setPage] = createSignal(1);
   const [table_data] = createResource(refresh, fetchData);

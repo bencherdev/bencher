@@ -25,6 +25,47 @@ const initForm = (fields) => {
   return newForm;
 };
 
+const options = (url: string, token: string, data: any) => {
+  return {
+    url: url,
+    method: "POST",
+    data: data,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  };
+};
+
+const postData = async (url, data) => {
+  try {
+    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+    if (typeof token !== "string") {
+      return;
+    }
+    let resp = await axios(options(url, token, data));
+    const resp_data = resp.data;
+    console.log(resp_data);
+    return resp_data;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+function sendForm(url, form) {
+  let data = {};
+  for (let key of Object.keys(form)) {
+    switch (form[key].type) {
+      case "select":
+        data[key] = form[key].value.selected;
+        break;
+      default:
+        data[key] = form[key].value;
+    }
+  }
+  postData(url, data);
+}
+
 const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
@@ -70,6 +111,17 @@ const Poster = (props) => {
               />
             )}
           </For>
+          <br />
+          <button
+            class="button is-primary is-fullwidth"
+            disabled={!valid()}
+            onClick={(e) => {
+              e.preventDefault();
+              sendForm(props.config?.url, form());
+            }}
+          >
+            Submit
+          </button>
         </div>
       </div>
     </div>

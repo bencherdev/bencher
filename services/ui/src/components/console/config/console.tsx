@@ -25,6 +25,7 @@ const consoleConfig = (pathname) => {
           ],
         },
         table: {
+          url: `${BENCHER_API_URL}/v0/projects`,
           row: {
             key: "name",
             items: [
@@ -54,38 +55,41 @@ const consoleConfig = (pathname) => {
             return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
           },
         },
-        fields: [
-          {
-            kind: Field.INPUT,
-            key: "name",
-            label: true,
-            value: "",
-            valid: null,
-            validate: true,
-            clear: false,
-            config: projectFieldsConfig.name,
-          },
-          {
-            kind: Field.TEXTAREA,
-            key: "description",
-            label: true,
-            value: "",
-            valid: null,
-            validate: true,
-            clear: false,
-            config: projectFieldsConfig.description,
-          },
-          {
-            kind: Field.INPUT,
-            key: "url",
-            label: true,
-            value: "",
-            valid: null,
-            validate: true,
-            clear: false,
-            config: projectFieldsConfig.url,
-          },
-        ],
+        form: {
+          url: `${BENCHER_API_URL}/v0/projects`,
+          fields: [
+            {
+              kind: Field.INPUT,
+              key: "name",
+              label: true,
+              value: "",
+              valid: null,
+              validate: true,
+              clear: false,
+              config: projectFieldsConfig.name,
+            },
+            {
+              kind: Field.TEXTAREA,
+              key: "description",
+              label: true,
+              value: "",
+              valid: null,
+              validate: false,
+              clear: false,
+              config: projectFieldsConfig.description,
+            },
+            {
+              kind: Field.INPUT,
+              key: "url",
+              label: true,
+              value: "",
+              valid: null,
+              validate: false,
+              clear: false,
+              config: projectFieldsConfig.url,
+            },
+          ],
+        },
       },
     },
   };
