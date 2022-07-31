@@ -5,6 +5,7 @@ import SiteField from "../site/fields/SiteField";
 import userFieldsConfig from "../fields/user/userFieldsConfig";
 import authForms from "./authForms";
 import { JsonSignup, JsonLogin } from "bencher_json";
+import { Field } from "../site/console/console";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
@@ -127,7 +128,7 @@ export const AuthForm = (props: Props) => {
     <form class="box">
       {props.kind === "signup" && (
         <SiteField
-          type="input"
+          kind={Field.INPUT}
           fieldKey="username"
           label={true}
           value={form()?.username?.value}
@@ -138,7 +139,7 @@ export const AuthForm = (props: Props) => {
       )}
 
       <SiteField
-        type="input"
+        kind={Field.INPUT}
         fieldKey="email"
         label={true}
         value={form()?.email?.value}
@@ -153,7 +154,7 @@ export const AuthForm = (props: Props) => {
         form()?.username?.valid &&
         form()?.email?.valid && (
           <SiteField
-            type="checkbox"
+            kind={Field.CHECKBOX}
             fieldKey="consent"
             label={false}
             value={form()?.consent?.value}

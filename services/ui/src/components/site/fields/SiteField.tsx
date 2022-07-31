@@ -4,21 +4,22 @@ import SiteTextarea from "./form/SiteTextarea";
 import SiteCheckbox from "./form/SiteCheckbox";
 import SiteSwitch from "./form/SiteSwitch";
 import SiteSelect from "./form/SiteSelect";
+import { Field } from "../console/console";
 
 const SiteField = (props) => {
   function handleField(event, field = null) {
-    switch (props.type) {
-      case "checkbox":
+    switch (props.kind) {
+      case Field.CHECKBOX:
         props.handleField(
           props.fieldKey,
           event.target.checked,
           event.target.checked
         );
         break;
-      case "switch":
+      case Field.SWITCH:
         props.handleField(props.fieldKey, event.target.checked, true);
         break;
-      case "select":
+      case Field.SELECT:
         props.handleField(
           props.fieldKey,
           { ...props.value, selected: event.target.value },
@@ -37,9 +38,8 @@ const SiteField = (props) => {
   }
 
   function getField() {
-    switch (props.type) {
-      case "textarea":
-      case "code":
+    switch (props.kind) {
+      case Field.TEXTAREA:
         return (
           <SiteTextarea
             value={props.value}
@@ -47,7 +47,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      case "checkbox":
+      case Field.CHECKBOX:
         return (
           <SiteCheckbox
             value={props.value}
@@ -55,7 +55,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      case "switch":
+      case Field.SWITCH:
         return (
           <SiteSwitch
             value={props.value}
@@ -63,7 +63,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      case "select":
+      case Field.SELECT:
         return (
           <SiteSelect
             value={props.value}
@@ -84,10 +84,10 @@ const SiteField = (props) => {
   }
 
   function getValidate() {
-    switch (props.type) {
-      case "checkbox":
-      case "switch":
-      case "select":
+    switch (props.kind) {
+      case Field.CHECKBOX:
+      case Field.SWITCH:
+      case Field.SELECT:
         return false;
       default:
         return true;

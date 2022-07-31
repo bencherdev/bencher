@@ -16,3 +16,11 @@ export enum Button {
 export enum Resource {
   PROJECTS,
 }
+
+export enum Field {
+  INPUT,
+  TEXTAREA,
+  CHECKBOX,
+  SWITCH,
+  SELECT,
+}

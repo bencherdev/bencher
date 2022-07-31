@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { JsonUser } from "bencher_json";
-import { Operation, Resource, Button } from "./console";
+import { Operation, Resource, Button, Field } from "./console";
 import AccountPage from "../account/AccountPage";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
@@ -45,6 +45,19 @@ const getConfig = (pathname) => {
       [Operation.ADD]: {
         operation: Operation.ADD,
         title: "Add Project",
+        fields: [
+          {
+            kind: Field.INPUT,
+            key: "username",
+            type: "input",
+            label: true,
+            value: "",
+            valid: null,
+            validate: true,
+            clear: false,
+            config: {},
+          },
+        ],
         buttons: {
           [Button.BACK]: { path: "/console/projects" },
         },
