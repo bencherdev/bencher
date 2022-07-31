@@ -17,6 +17,7 @@ import AccountPage from "../account/AccountPage";
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
 const getConfig = (pathname) => {
+  console.log(pathname);
   return {
     [Resource.PROJECTS]: {
       [Operation.LIST]: {
@@ -46,7 +47,7 @@ const getConfig = (pathname) => {
 };
 
 const ConsoleRoutes = (props) => {
-  const [config] = createResource(props.current_location().pathname, getConfig);
+  const [config] = createResource(props.pathname, getConfig);
 
   return (
     <>
@@ -58,7 +59,7 @@ const ConsoleRoutes = (props) => {
         element={
           <ConsolePage
             config={config()?.[Resource.PROJECTS]?.[Operation.LIST]}
-            current_location={props.current_location}
+            pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
           />
@@ -69,7 +70,7 @@ const ConsoleRoutes = (props) => {
         element={
           <ConsolePage
             config={config()?.[Resource.PROJECTS]?.[Operation.VIEW]}
-            current_location={props.current_location}
+            pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
           />
@@ -80,7 +81,7 @@ const ConsoleRoutes = (props) => {
         element={
           <ConsolePage
             config={config()?.[Resource.PROJECTS]?.[Operation.PERF]}
-            current_location={props.current_location}
+            pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
           />

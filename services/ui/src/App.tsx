@@ -51,7 +51,7 @@ const App: Component = () => {
   const [notification, setNotification] = createSignal(initNotification());
 
   const location = useLocation();
-  const current_location = createMemo(() => location);
+  const pathname = createMemo(() => location.pathname);
 
   createEffect(() => {
     if (document.title !== title()) {
@@ -103,7 +103,7 @@ const App: Component = () => {
     if (new_pathname === undefined) {
       return;
     }
-    if (new_pathname !== current_location()?.pathname) {
+    if (new_pathname !== pathname()) {
       setRedirect();
       return <Navigate href={new_pathname} />;
     }
@@ -194,7 +194,7 @@ const App: Component = () => {
 
         <Route path="/console">
           <ConsoleRoutes
-            current_location={current_location}
+            pathname={pathname}
             handleTitle={handleTitle}
             handleRedirect={setRedirect}
           />

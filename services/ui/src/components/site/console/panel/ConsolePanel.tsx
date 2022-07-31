@@ -7,11 +7,7 @@ import PerfPanel from "./perf/PerfPanel";
 
 const ConsolePanel = (props) => {
   return (
-    <Switch
-      fallback={
-        <p>Unknown console path: {props.current_location().pathname} </p>
-      }
-    >
+    <Switch fallback={<p>Unknown console path: {props.pathname()} </p>}>
       <Match when={props.config?.operation === Operation.LIST}>
         <TablePanel
           config={props.config}
@@ -22,7 +18,7 @@ const ConsolePanel = (props) => {
         <DeckPanel
           config={props.config}
           path_params={props.path_params}
-          current_location={props.current_location}
+          pathname={props.pathname}
           handleRedirect={props.handleRedirect}
         />
       </Match>

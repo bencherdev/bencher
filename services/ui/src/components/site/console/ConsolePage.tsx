@@ -3,8 +3,8 @@ import { createEffect, createMemo, createSignal } from "solid-js";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 
-const projectSlug = (current_location) => {
-  const path = current_location().pathname?.split("/");
+const projectSlug = (pathname) => {
+  const path = pathname().split("/");
   if (
     path.length < 5 ||
     path[0] ||
@@ -19,7 +19,7 @@ const projectSlug = (current_location) => {
 
 const ConsolePage = (props) => {
   const [project_slug, setProjectSlug] = createSignal<String>(
-    projectSlug(props.current_location)
+    projectSlug(props.pathname)
   );
 
   const params = useParams();
@@ -41,7 +41,7 @@ const ConsolePage = (props) => {
               operation={props.operation}
               config={props.config}
               path_params={path_params}
-              current_location={props.current_location}
+              pathname={props.pathname}
               handleTitle={props.handleTitle}
               handleRedirect={props.handleRedirect}
               handleProjectSlug={setProjectSlug}
