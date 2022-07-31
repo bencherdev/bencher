@@ -92,9 +92,9 @@ const consoleConfig = (pathname) => {
               config: projectFieldsConfig.url,
             },
             {
-              kind: Field.CHECKBOX,
+              kind: Field.SWITCH,
               key: "default",
-              type: "checkbox",
+              type: "switch",
               label: true,
               value: false,
               validate: false,
