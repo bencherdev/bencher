@@ -11,32 +11,46 @@ CREATE TABLE project (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     owner_id INTEGER NOT NULL,
-    owner_default BOOLEAN NOT NULL,
     name TEXT NOT NULL,
-    slug TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
     description TEXT,
     url TEXT,
     public BOOLEAN NOT NULL,
-    FOREIGN KEY (owner_id) REFERENCES user (id),
-    UNIQUE(owner_id, name),
-    UNIQUE(owner_id, slug)
+    FOREIGN KEY (owner_id) REFERENCES user (id)
+);
+CREATE TABLE branch (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    UNIQUE(project_id, slug)
+);
+CREATE TABLE version (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    branch_id INTEGER NOT NULL,
+    count INTEGER NOT NULL,
+    hash TEXT,
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    UNIQUE(branch_id, count)
 );
 CREATE TABLE testbed (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    -- project_id INTEGER NOT NULL,
-    -- project_default BOOLEAN NOT NULL,
+    project_id INTEGER NOT NULL,
     name TEXT NOT NULL,
-    -- slug TEXT NOT NULL,
+    slug TEXT NOT NULL,
     os_name TEXT,
     os_version TEXT,
     runtime_name TEXT,
     runtime_version TEXT,
     cpu TEXT,
     ram TEXT,
-    disk TEXT -- FOREIGN KEY (project_id) REFERENCES project (id),
-    -- UNIQUE(project_id, name),
-    -- UNIQUE(project_id, slug)
+    disk TEXT,
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    UNIQUE(project_id, slug)
 );
 CREATE TABLE adapter (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -50,14 +64,15 @@ CREATE TABLE report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
-    project TEXT,
-    -- project_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    version_id INTEGER,
     testbed_id INTEGER,
     adapter_id INTEGER NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
-    -- FOREIGN KEY (project_id) REFERENCES project (id),
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    FOREIGN KEY (version_id) REFERENCES version (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (adapter_id) REFERENCES adapter (id)
 );

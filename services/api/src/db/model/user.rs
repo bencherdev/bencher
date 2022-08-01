@@ -69,7 +69,7 @@ fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> S
         .first::<QueryUser>(conn)
         .is_ok()
     {
-        let rand_suffix = rand::random::<u16>().to_string();
+        let rand_suffix = rand::random::<u32>().to_string();
         slug.push_str(&rand_suffix);
         slug
     } else {
