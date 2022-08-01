@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 const options = (token: string) => {
   return {
@@ -27,14 +28,16 @@ const fetchProjects = async () => {
       return;
     }
     const resp = await axios(options(token));
-    const data = resp?.data;
+    let data = resp?.data;
+    data.push({
+      name: "All Projects",
+      slug: BENCHER_ALL_PROJECTS,
+    });
     return data;
   } catch (error) {
     console.error(error);
   }
 };
-
-const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 const ProjectSelect = (props) => {
   const getSelected = () => {
@@ -50,9 +53,9 @@ const ProjectSelect = (props) => {
   const [selected, setSelected] = createSignal(getSelected());
   const [projects] = createResource(selected, fetchProjects);
 
-  setInterval(() => {
-    console.log(selected());
-  }, 1000);
+  // setInterval(() => {
+  //   console.log(projects());
+  // }, 1000);
 
   createEffect(() => {
     const slug = props.project_slug();
@@ -69,10 +72,12 @@ const ProjectSelect = (props) => {
 
   const handleProject = (e) => {
     const target_slug = e.currentTarget.value;
+    console.log(target_slug);
     if (target_slug === BENCHER_ALL_PROJECTS) {
       setSelected(target_slug);
       props.handleProjectSlug(null);
       props.handleRedirect("/console/projects");
+      return;
     }
 
     const p = projects();
@@ -104,7 +109,7 @@ const ProjectSelect = (props) => {
               class="button is-outlined"
               onClick={(e) => {
                 e.preventDefault();
-                // handleSelectedRedirect();
+                handleSelectedRedirect();
               }}
             >
               <span class="icon">
@@ -113,44 +118,19 @@ const ProjectSelect = (props) => {
             </button>
           )}
           <div class="select">
-            <select
-              // value={selected()}
-              onInput={(e) => handleProject(e)}
-            >
-              <optgroup label="Projects">
-                <For each={projects()}>
-                  {(project) => (
-                    <option
-                      value={project?.slug}
-                      selected={isSelected(project?.slug)}
-                    >
-                      {project?.name}
-                    </option>
-                  )}
-                </For>
-              </optgroup>
-              {/* <option value={BENCHER_ALL_PROJECTS} selected={isAllProjects()}>
-                All Projects
-              </option> */}
+            <select onInput={(e) => handleProject(e)}>
+              <For each={projects()}>
+                {(project) => (
+                  <option
+                    value={project.slug}
+                    selected={isSelected(project.slug)}
+                  >
+                    {project.name}
+                  </option>
+                )}
+              </For>
             </select>
           </div>
-          {/* <div class="select">
-            <select
-              value={selected()}
-              onInput={(e) => {
-                handleProject(e);
-              }}
-            >
-              <optgroup label="Projects">
-                <For each={projects()}>
-                  {(project) => (
-                    <option value={project?.slug}>{project?.name}</option>
-                  )}
-                </For>
-              </optgroup>
-              <option value={BENCHER_ALL_PROJECTS}>All Projects</option>
-            </select>
-          </div> */}
         </div>
       </div>
     </nav>
