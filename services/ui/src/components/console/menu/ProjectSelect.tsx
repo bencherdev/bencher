@@ -37,8 +37,22 @@ const fetchProjects = async () => {
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 const ProjectSelect = (props) => {
-  const [selected, setSelected] = createSignal(BENCHER_ALL_PROJECTS);
+  const getSelected = () => {
+    const slug = props.project_slug();
+    console.log(slug);
+    if (slug === null) {
+      return BENCHER_ALL_PROJECTS;
+    } else {
+      return slug;
+    }
+  };
+
+  const [selected, setSelected] = createSignal(getSelected());
   const [projects] = createResource(selected, fetchProjects);
+
+  setInterval(() => {
+    console.log(selected());
+  }, 1000);
 
   createEffect(() => {
     const slug = props.project_slug();
@@ -54,9 +68,9 @@ const ProjectSelect = (props) => {
   };
 
   const handleProject = (e) => {
-    const target_slug = e?.target?.value;
+    const target_slug = e.currentTarget.value;
     if (target_slug === BENCHER_ALL_PROJECTS) {
-      setSelected(BENCHER_ALL_PROJECTS);
+      setSelected(target_slug);
       props.handleProjectSlug(null);
       props.handleRedirect("/console/projects");
     }
@@ -90,7 +104,7 @@ const ProjectSelect = (props) => {
               class="button is-outlined"
               onClick={(e) => {
                 e.preventDefault();
-                handleSelectedRedirect();
+                // handleSelectedRedirect();
               }}
             >
               <span class="icon">
@@ -100,13 +114,12 @@ const ProjectSelect = (props) => {
           )}
           <div class="select">
             <select
-              onChange={(e) => {
-                handleProject(e);
-              }}
+              // value={selected()}
+              onInput={(e) => handleProject(e)}
             >
               <optgroup label="Projects">
                 <For each={projects()}>
-                  {(project, i) => (
+                  {(project) => (
                     <option
                       value={project?.slug}
                       selected={isSelected(project?.slug)}
@@ -116,11 +129,28 @@ const ProjectSelect = (props) => {
                   )}
                 </For>
               </optgroup>
-              <option value={BENCHER_ALL_PROJECTS} selected={isAllProjects()}>
+              {/* <option value={BENCHER_ALL_PROJECTS} selected={isAllProjects()}>
                 All Projects
-              </option>
+              </option> */}
             </select>
           </div>
+          {/* <div class="select">
+            <select
+              value={selected()}
+              onInput={(e) => {
+                handleProject(e);
+              }}
+            >
+              <optgroup label="Projects">
+                <For each={projects()}>
+                  {(project) => (
+                    <option value={project?.slug}>{project?.name}</option>
+                  )}
+                </For>
+              </optgroup>
+              <option value={BENCHER_ALL_PROJECTS}>All Projects</option>
+            </select>
+          </div> */}
         </div>
       </div>
     </nav>
