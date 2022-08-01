@@ -132,6 +132,9 @@ const consoleConfig = (pathname) => {
           ],
         },
       },
+      [Operation.PERF]: {
+        operation: Operation.PERF,
+      },
     },
   };
 };
