@@ -13,25 +13,25 @@ import DeckButton from "./DeckButton";
 const Deck = (props) => {
   return (
     <>
-      <DeckButton data={props.data?.slug} handleClick={() => {}} />
-
-      <div class="columns">
-        <div class="column">
-          <div class="card">
-            <Card field={"Project Name"} value={props?.data?.name} />
+      <DeckButton
+        pathname={props.pathname}
+        handleRedirect={props.handleRedirect}
+      />
+      <For each={props.config?.cards}>
+        {(card) => (
+          <div class="columns">
+            <div class="column">
+              <div class="card">
+                <Card field={card.field} value={props.data?.[card.key]} />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div class="columns">
-        <div class="column">
-          <div class="card">
-            <Card field={"Project Slug"} value={props?.data?.slug} />
-          </div>
-        </div>
-      </div>
-
-      <DeckButton data={props.data?.slug} handleClick={() => {}} />
+        )}
+      </For>
+      <DeckButton
+        pathname={props.pathname}
+        handleRedirect={props.handleRedirect}
+      />
     </>
   );
 };

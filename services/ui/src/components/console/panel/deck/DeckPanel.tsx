@@ -13,38 +13,55 @@ import Card from "./Card";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
-const options = (token: string, slug: string) => {
-  return {
-    url: `${BENCHER_API_URL}/v0/projects/${slug}`,
-    method: "get",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
-const fetchData = async (path_params) => {
-  try {
-    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-    if (typeof token !== "string") {
-      return;
-    }
-    let reports = await axios(options(token, path_params.project_slug));
-    console.log(reports);
-    return reports.data;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
 const DeckPanel = (props) => {
-  const [deck_data] = createResource(props.path_params, fetchData);
+  const [refresh, setRefresh] = createSignal(0);
+
+  const options = (token: string) => {
+    return {
+      url: props.config?.deck?.url(props.path_params()?.project_slug),
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
+  const fetchData = async () => {
+    try {
+      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+      if (typeof token !== "string") {
+        return;
+      }
+      let reports = await axios(options(token));
+      console.log(reports);
+      return reports.data;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const [deck_data] = createResource(refresh, fetchData);
+
+  const handleRefresh = () => {
+    setRefresh(refresh() + 1);
+  };
 
   return (
     <>
-      <DeckHeader title={deck_data()?.name} />
-      <Deck data={deck_data()} />
+      <DeckHeader
+        config={props.config?.header}
+        data={deck_data()}
+        pathname={props.pathname}
+        handleRedirect={props.handleRedirect}
+        handleRefresh={handleRefresh}
+      />
+      <Deck
+        config={props.config?.deck}
+        data={deck_data()}
+        pathname={props.pathname}
+        handleRedirect={props.handleRedirect}
+      />
     </>
   );
 };

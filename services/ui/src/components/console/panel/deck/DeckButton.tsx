@@ -9,7 +9,7 @@ const DeckButton = (props) => {
                 class="button is-fullwidth is-primary"
                 onClick={(e) => {
                   e.preventDefault();
-                  props.handleClick(props.data);
+                  props.handleRedirect(`${props.pathname()}/perf`);
                 }}
               >
                 Select

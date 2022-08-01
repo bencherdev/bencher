@@ -59,14 +59,12 @@ const TablePanel = (props) => {
         handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
       />
-      <Suspense fallback={<p>Loading...</p>}>
-        <Table
-          config={props.config?.table}
-          pathname={props.pathname}
-          table_data={table_data}
-          handleRedirect={props.handleRedirect}
-        />
-      </Suspense>
+      <Table
+        config={props.config?.table}
+        pathname={props.pathname}
+        table_data={table_data}
+        handleRedirect={props.handleRedirect}
+      />
     </>
   );
 };

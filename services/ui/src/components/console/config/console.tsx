@@ -108,6 +108,30 @@ const consoleConfig = (pathname) => {
           },
         },
       },
+      [Operation.VIEW]: {
+        operation: Operation.VIEW,
+        header: {
+          key: "name",
+          path: (pathname) => {
+            return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
+          },
+        },
+        deck: {
+          url: (project_slug) => {
+            return `${BENCHER_API_URL}/v0/projects/${project_slug}`;
+          },
+          cards: [
+            {
+              field: "Project Name",
+              key: "name",
+            },
+            {
+              field: "Project Slug",
+              key: "slug",
+            },
+          ],
+        },
+      },
     },
   };
 };
