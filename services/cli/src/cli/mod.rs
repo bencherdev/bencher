@@ -30,6 +30,7 @@ pub use run::{
 pub use testbed::{
     CliTestbed,
     CliTestbedCreate,
+    CliTestbedList,
 };
 
 /// Time Series Benchmarking

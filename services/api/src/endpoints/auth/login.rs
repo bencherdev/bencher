@@ -27,6 +27,7 @@ use crate::{
     util::{
         cors::get_cors,
         headers::CorsHeaders,
+        http_error,
         Context,
     },
 };
@@ -58,7 +59,7 @@ pub async fn post(
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))
         .first::<QueryUser>(&*conn)
-        .unwrap();
+        .map_err(|_| http_error!("Failed to login user."))?;
     let json_user = query_user.try_into()?;
 
     Ok(HttpResponseHeaders::new(

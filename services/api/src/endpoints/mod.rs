@@ -29,11 +29,12 @@ impl Registrar<Context> for Api {
         api.register(projects::post)?;
         api.register(projects::options_params)?;
         api.register(projects::get_one)?;
-
         // Testbeds
+        api.register(testbeds::options)?;
         api.register(testbeds::api_get_testbeds)?;
-        api.register(testbeds::api_get_testbed)?;
-        api.register(testbeds::api_post_testbed)?;
+
+        // api.register(testbeds::api_post_testbed)?;
+        // api.register(testbeds::api_get_testbed)?;
         // Adapters
         api.register(adapters::api_get_adapters)?;
         api.register(adapters::api_get_adapter)?;

@@ -13,6 +13,8 @@ pub enum BencherError {
     Url(#[from] url::ParseError),
     #[error("Failed to parse UUID.")]
     Uuid(#[from] uuid::Error),
+    #[error("Failed to parse resource ID as a slug or UUID: {0}")]
+    ResourceId(String),
 
     #[error("No default shell command path for target family. Try setting a custom shell with the `-s`/`--shell` flag.")]
     Shell,

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use bencher_json::{
     JsonNewProject,
     JsonProject,
+    ResourceId,
 };
 use diesel::{
     QueryDsl,
@@ -88,26 +89,33 @@ pub async fn get_ls(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewProject>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonProject>, CorsHeaders>, HttpError> {
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
     let json_project = body.into_inner();
     let conn = db_connection.lock().await;
     let insert_project = InsertProject::from_json(&*conn, &uuid, json_project)?;
+    let slug = insert_project.slug.clone();
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(&*conn)
         .map_err(|_| http_error!("Failed to create project."))?;
 
+    let query_project = schema::project::table
+        .filter(schema::project::slug.eq(&slug))
+        .first::<QueryProject>(&*conn)
+        .unwrap();
+    let json_project = query_project.to_json(&*conn)?;
+
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(()),
+        HttpResponseAccepted(json_project),
         CorsHeaders::new_auth("POST".into()),
     ))
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct PathParams {
-    pub project: String,
+    pub project: ResourceId,
 }
 
 #[endpoint {
@@ -135,19 +143,7 @@ pub async fn get_one(
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
 
-    let query = if let Ok(query) = schema::project::table
-        .filter(schema::project::slug.eq(&path_params.project))
-        .first::<QueryProject>(&*conn)
-    {
-        query
-    } else if let Ok(query) = schema::project::table
-        .filter(schema::project::uuid.eq(&path_params.project))
-        .first::<QueryProject>(&*conn)
-    {
-        query
-    } else {
-        return Err(http_error!("Failed to get project."));
-    };
+    let query = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     let json = query.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(

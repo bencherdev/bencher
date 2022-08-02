@@ -17,6 +17,7 @@ use serde::{
 };
 use uuid::Uuid;
 
+use super::project::QueryProject;
 use crate::{
     db::{
         schema,
@@ -83,9 +84,9 @@ impl QueryTestbed {
         } = self;
         Ok(JsonTestbed {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(TESTBED_ERROR))?,
-            project_uuid: todo!(),
+            project_uuid: QueryProject::get_uuid(conn, project_id)?,
             name,
-            slug: todo!(),
+            slug,
             os_name,
             os_version,
             runtime_name,

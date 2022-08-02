@@ -16,9 +16,17 @@ cargo run -- run --local --adapter rust "cargo bench"
 or
 cargo bench | cargo run -- run --local --adapter rust
 
-cargo run -- auth signup --host http://localhost:8080 --name "Gwenith Paltrow" goopgoop.com
+cargo run -- auth signup --host http://localhost:8080 --name "Gwenith Paltrow" goop@goop.com
 
 cargo run -- auth login --host http://localhost:8080 goop@goop.com
+
+cargo run -- project ls --host http://localhost:8080
+
+cargo run -- project create --host http://localhost:8080 "Hazel River"
+
+cargo run -- project view --host http://localhost:8080 hazel-river
+
+cargo run -- testbed ls --host http://localhost:8080 --project hazel-river
 
 
 
@@ -28,15 +36,10 @@ cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
 
 cargo run -- testbed create --host http://localhost:8080 --os-name macos --ram 32GB nemo
 
-cargo run -- auth signup --host http://localhost:8080 --name "Gwenith Paltrow" gwen@goop.com
 
-cargo run -- auth login --host http://localhost:8080 gwen@goop.com
 
-cargo run -- project create --host http://localhost:8080 "Hazel River"
 
-cargo run -- project ls --host http://localhost:8080
 
-cargo run -- project view --host http://localhost:8080 hazel-river
 
 cargo run --bin bencher -- ...
 

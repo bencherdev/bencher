@@ -8,6 +8,7 @@ use bencher_json::{
     JsonProject,
     JsonSignup,
     JsonUser,
+    ResourceId,
 };
 use diesel::{
     Insertable,
@@ -37,6 +38,7 @@ use crate::{
 };
 
 const PROJECT_ERROR: &str = "Failed to get project.";
+
 #[derive(Insertable)]
 #[table_name = "project_table"]
 pub struct InsertProject {
@@ -132,6 +134,35 @@ impl QueryProject {
             url: ok_url(url.as_deref())?,
             public,
         })
+    }
+
+    pub fn from_resource_id(
+        conn: &SqliteConnection,
+        project: &ResourceId,
+    ) -> Result<Self, HttpError> {
+        let project = &project.0;
+        if let Ok(query) = schema::project::table
+            .filter(schema::project::slug.eq(project))
+            .first::<QueryProject>(&*conn)
+        {
+            Ok(query)
+        } else if let Ok(query) = schema::project::table
+            .filter(schema::project::uuid.eq(project))
+            .first::<QueryProject>(&*conn)
+        {
+            Ok(query)
+        } else {
+            Err(http_error!("Failed to get project."))
+        }
+    }
+
+    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+        let uuid: String = schema::project::table
+            .filter(schema::project::id.eq(id))
+            .select(schema::project::uuid)
+            .first(conn)
+            .map_err(|_| http_error!(PROJECT_ERROR))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!(PROJECT_ERROR))
     }
 }
 

@@ -70,7 +70,7 @@ impl Backend {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
         let res: serde_json::Value = builder.send().await?.json().await?;
-        println!("{}", serde_json::to_string(&res)?);
+        println!("{}", serde_json::to_string_pretty(&res)?);
         Ok(res)
     }
 

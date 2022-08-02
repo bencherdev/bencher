@@ -7,13 +7,27 @@ use super::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliTestbed {
+    /// List testbeds
+    #[clap(alias = "ls")]
+    List(CliTestbedList),
     /// Create a testbed
+    #[clap(alias = "add")]
     Create(CliTestbedCreate),
 }
 
 #[derive(Parser, Debug)]
+pub struct CliTestbedList {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: String,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
 pub struct CliTestbedCreate {
-    /// Project UUID for the Testbed
+    /// Project slug or UUID
     #[clap(long)]
     pub project: String,
 

@@ -26,6 +26,7 @@ uuid = { version = "1.1.2", features = ["v4", "serde"] }
 wasm-bindgen = { version = "0.2.80", optional = true, features = [
     "serde-serialize",
 ] }
+slug = "0.1.4"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"

@@ -43,11 +43,11 @@ pub struct CliCommand {
 #[derive(Args, Debug)]
 pub struct CliShell {
     /// Shell command path
-    #[clap(short, long, requires = "cmd")]
+    #[clap(long, requires = "cmd")]
     pub shell: Option<String>,
 
     /// Shell command flag
-    #[clap(short, long, requires = "cmd")]
+    #[clap(long, requires = "cmd")]
     pub flag: Option<String>,
 }
 

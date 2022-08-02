@@ -7,14 +7,20 @@ use super::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliProject {
-    // Create a project
-    #[clap(alias = "add")]
-    Create(CliProjectCreate),
     // List projects
     #[clap(alias = "ls")]
     List(CliProjectList),
+    // Create a project
+    #[clap(alias = "add")]
+    Create(CliProjectCreate),
     // View a project
     View(CliProjectView),
+}
+
+#[derive(Parser, Debug)]
+pub struct CliProjectList {
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
@@ -38,12 +44,6 @@ pub struct CliProjectCreate {
     #[clap(long)]
     pub public: bool,
 
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliProjectList {
     #[clap(flatten)]
     pub backend: CliBackend,
 }
