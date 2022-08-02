@@ -11,6 +11,7 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
+    expression_methods::BoolExpressionMethods,
     Insertable,
     QueryDsl,
     Queryable,
@@ -142,12 +143,11 @@ impl QueryProject {
     ) -> Result<Self, HttpError> {
         let project = &project.0;
         if let Ok(query) = schema::project::table
-            .filter(schema::project::slug.eq(project))
-            .first::<QueryProject>(&*conn)
-        {
-            Ok(query)
-        } else if let Ok(query) = schema::project::table
-            .filter(schema::project::uuid.eq(project))
+            .filter(
+                schema::project::slug
+                    .eq(project)
+                    .or(schema::project::uuid.eq(project)),
+            )
             .first::<QueryProject>(&*conn)
         {
             Ok(query)

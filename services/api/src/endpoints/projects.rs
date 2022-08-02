@@ -141,7 +141,6 @@ pub async fn get_one(
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
     let conn = db_connection.lock().await;
-
     let query = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     let json = query.to_json(&*conn)?;
 

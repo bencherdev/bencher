@@ -9,6 +9,7 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
+    expression_methods::BoolExpressionMethods,
     QueryDsl,
     RunQueryDsl,
 };
@@ -50,7 +51,7 @@ use crate::{
 };
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjectPathParams {
+pub struct GetLsParams {
     pub project: ResourceId,
 }
 
@@ -61,7 +62,7 @@ pub struct ProjectPathParams {
 }]
 pub async fn get_ls_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<ProjectPathParams>,
+    _path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -73,7 +74,7 @@ pub async fn get_ls_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<ProjectPathParams>,
+    path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonTestbed>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
@@ -132,44 +133,58 @@ pub async fn post(
     Ok(HttpResponseAccepted(json))
 }
 
-// #[derive(Deserialize, JsonSchema)]
-// pub struct PathParams {
-//     pub testbed_uuid: Uuid,
-// }
+#[derive(Deserialize, JsonSchema)]
+pub struct GetOneParams {
+    pub project: ResourceId,
+    pub testbed: ResourceId,
+}
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}/testbeds/{testbed}",
+    tags = ["projects", "testbeds"]
+}]
 
-// #[endpoint {
-//     method = OPTIONS,
-//     path =  "/v0/testbeds/{testbed_uuid}",
-//     tags = ["testbeds"]
-// }]
-// pub async fn options_params(
-//     _rqctx: Arc<RequestContext<Context>>,
-//     _path_params: Path<PathParams>,
-// ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
-//     Ok(get_cors::<Context>())
-// }
+pub async fn get_one_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GetOneParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
 
-// #[endpoint {
-//     method = GET,
-//     path = "/v0/testbeds/{testbed_uuid}",
-//     tags = ["testbeds"]
-// }]
-// pub async fn api_get_testbed(
-//     rqctx: Arc<RequestContext<Context>>,
-//     path_params: Path<PathParams>,
-// ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>,
-// HttpError> {     let db_connection = rqctx.context();
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects/{project}/testbeds/{testbed}",
+    tags = ["projects", "testbeds"]
+}]
+pub async fn api_get_testbed(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetOneParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>, HttpError> {
+    let db_connection = rqctx.context();
 
-//     let path_params = path_params.into_inner();
-//     let conn = db_connection.lock().await;
-//     let query = schema::testbed::table
-//         .filter(schema::testbed::uuid.eq(&path_params.testbed_uuid.
-// to_string()))         .first::<QueryTestbed>(&*conn)
-//         .map_err(|_| http_error!("Failed to get testebed."))?;
-//     let json = query.to_json(&*conn)?;
+    let path_params = path_params.into_inner();
+    let conn = db_connection.lock().await;
+    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
 
-//     Ok(HttpResponseHeaders::new(
-//         HttpResponseOk(json),
-//         CorsHeaders::new_pub("GET".into()),
-//     ))
-// }
+    let resource_id = &path_params.testbed.0;
+    let query = if let Ok(query) = schema::testbed::table
+        .filter(
+            schema::testbed::project_id.eq(project.id).and(
+                schema::testbed::slug
+                    .eq(resource_id)
+                    .or(schema::testbed::uuid.eq(resource_id)),
+            ),
+        )
+        .first::<QueryTestbed>(&*conn)
+    {
+        Ok(query)
+    } else {
+        Err(http_error!("Failed to get testbed."))
+    }?;
+    let json = query.to_json(&*conn)?;
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseOk(json),
+        CorsHeaders::new_pub("GET".into()),
+    ))
+}
