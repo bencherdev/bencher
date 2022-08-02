@@ -16,6 +16,7 @@ pub struct Api;
 
 impl Registrar<Context> for Api {
     fn register(&self, api: &mut ApiDescription<Context>) -> Result<(), String> {
+        // Ping
         api.register(ping::api_get_ping)?;
         // Auth
         api.register(auth::signup::options)?;

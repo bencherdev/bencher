@@ -15,7 +15,7 @@ use crate::util::{
 
 #[endpoint {
     method = GET,
-    path = "/",
+    path = "/v0/ping",
     tags = ["ping"]
 }]
 pub async fn api_get_ping(
