@@ -3,6 +3,10 @@ import { Link } from "solid-app-router";
 import ProjectSelect from "./ProjectSelect";
 
 const ConsoleMenu = (props) => {
+  const getProjectPath = (section: string) => {
+    return `/console/projects/${props.project_slug()}/${section}`;
+  };
+
   return (
     <aside class="menu">
       <div class="menu-label">
@@ -17,19 +21,19 @@ const ConsoleMenu = (props) => {
           <p class="menu-label">Project</p>
           <ul class="menu-list">
             <li>
-              <a>Benchmarks</a>
+              <Link href={getProjectPath("reports")}>Reports</Link>
             </li>
             <li>
-              <a>Testbeds</a>
+              <Link href={getProjectPath("branches")}>Branches</Link>
             </li>
             <li>
-              <Link href="/console/reports">Reports</Link>
+              <Link href={getProjectPath("testbeds")}>Testbeds</Link>
             </li>
             <li>
-              <a>Connections</a>
+              <Link href={getProjectPath("connections")}>Connections</Link>
             </li>
             <li>
-              <a>Settings</a>
+              <Link href={getProjectPath("settings")}>Settings</Link>
             </li>
           </ul>
         </>
@@ -37,10 +41,10 @@ const ConsoleMenu = (props) => {
       <p class="menu-label">User</p>
       <ul class="menu-list">
         <li>
-          <Link href="/console/account">Account</Link>
+          <Link href="/console/user/account">Account</Link>
         </li>
         <li>
-          <a>Settings</a>
+          <Link href="/console/user/settings">Settings</Link>
         </li>
       </ul>
     </aside>

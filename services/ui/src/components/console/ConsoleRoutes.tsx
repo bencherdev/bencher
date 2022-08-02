@@ -59,7 +59,83 @@ const ConsoleRoutes = (props) => {
           />
         }
       />
-      <Route path="/account" element={<AccountPage />} />
+      <Route
+        path="/projects/:project_slug/reports"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.REPORTS]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/branches"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.BRANCHES]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/testbeds"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.TESTBEDS]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/connections"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.CONNECTIONS]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/settings"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.PROJECT_SETTINGS]?.[Operation.VIEW]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/user/account"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.USER_ACCOUNT]?.[Operation.VIEW]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/user/settings"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.USER_SETTINGS]?.[Operation.VIEW]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
     </>
   );
 };

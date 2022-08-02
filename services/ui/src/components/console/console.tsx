@@ -15,6 +15,13 @@ export enum Button {
 
 export enum Resource {
   PROJECTS,
+  REPORTS,
+  BRANCHES,
+  TESTBEDS,
+  CONNECTIONS,
+  PROJECT_SETTINGS,
+  USER_ACCOUNT,
+  USER_SETTINGS,
 }
 
 export enum Field {
