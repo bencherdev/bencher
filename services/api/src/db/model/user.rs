@@ -29,7 +29,7 @@ use crate::{
     util::http_error,
 };
 
-const USER_ERROR: &str = "Failed to get user";
+const USER_ERROR: &str = "Failed to get user.";
 
 #[derive(Insertable)]
 #[table_name = "user_table"]

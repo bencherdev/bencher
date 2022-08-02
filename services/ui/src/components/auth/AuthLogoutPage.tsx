@@ -1,6 +1,5 @@
 import { Link, Navigate } from "solid-app-router";
 import { createSignal, createEffect, Accessor } from "solid-js";
-import { JsonSignup } from "bencher_json";
 
 import authForms from "./authForms";
 import { AuthForm } from "./AuthForm";

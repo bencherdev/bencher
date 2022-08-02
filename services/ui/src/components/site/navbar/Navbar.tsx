@@ -1,5 +1,4 @@
 import { Link } from "solid-app-router";
-import { JsonUser } from "bencher_json";
 import { Accessor } from "solid-js";
 
 const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
@@ -7,7 +6,7 @@ const BENCHER_DOCS_URL: string = import.meta.env.VITE_BENCHER_DOCS_URL;
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 export interface Props {
-  user: Accessor<JsonUser>;
+  user: Function;
 }
 
 export const Navbar = (props) => {

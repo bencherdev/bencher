@@ -4,7 +4,6 @@ import axios from "axios";
 import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import authForms from "./authForms";
-import { JsonSignup, JsonLogin } from "bencher_json";
 import { Field } from "../console/console";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
@@ -13,7 +12,7 @@ export interface Props {
   kind: "signup" | "login";
   handleTitle: Function;
   handleRedirect: Function;
-  user: Accessor<JsonSignup>;
+  user: Function;
   handleUser: Function;
   handleNotification: Function;
 }
@@ -63,7 +62,7 @@ export const AuthForm = (props: Props) => {
   const handleAuthFormSubmit = (event) => {
     event.preventDefault();
     handleFormSubmitting(true);
-    let json_data: JsonSignup | JsonLogin;
+    let json_data;
     let notification: string;
     if (props.kind === "signup") {
       const signup_form = form();
@@ -101,7 +100,7 @@ export const AuthForm = (props: Props) => {
     setForm({ ...form(), submitting: submitting });
   };
 
-  const request_config = (data: JsonSignup | JsonLogin) => {
+  const request_config = (data) => {
     return {
       url: `${BENCHER_API_URL}/v0/auth/${props.kind}`,
       method: "POST",
@@ -114,7 +113,7 @@ export const AuthForm = (props: Props) => {
     };
   };
 
-  const fetchData = async (auth_json: JsonSignup | JsonLogin) => {
+  const fetchData = async (auth_json) => {
     try {
       const config = request_config(auth_json);
       let resp = await axios(config);

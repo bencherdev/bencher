@@ -11,7 +11,6 @@ import {
   For,
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
-import { JsonUser } from "bencher_json";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
@@ -45,7 +44,7 @@ const initNotification = () => {
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [redirect, setRedirect] = createSignal<null | string>();
-  const [user, setUser] = createSignal<JsonUser>(initUser());
+  const [user, setUser] = createSignal(initUser());
   const [notification, setNotification] = createSignal(initNotification());
 
   const location = useLocation();
@@ -57,12 +56,12 @@ const App: Component = () => {
     }
   });
 
-  const handleUser = (user: JsonUser) => {
+  const handleUser = (user) => {
     window.localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
   };
 
-  const removeUser = (user: JsonUser) => {
+  const removeUser = (user) => {
     window.localStorage.clear();
     setUser(initUser());
   };

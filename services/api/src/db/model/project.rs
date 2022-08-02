@@ -40,13 +40,13 @@ const PROJECT_ERROR: &str = "Failed to get project.";
 #[derive(Insertable)]
 #[table_name = "project_table"]
 pub struct InsertProject {
-    pub uuid:          String,
-    pub owner_id:      i32,
-    pub owner_default: bool,
-    pub name:          String,
-    pub slug:          String,
-    pub description:   Option<String>,
-    pub url:           Option<String>,
+    pub uuid:        String,
+    pub owner_id:    i32,
+    pub name:        String,
+    pub slug:        String,
+    pub description: Option<String>,
+    pub url:         Option<String>,
+    pub public:      bool,
 }
 
 impl InsertProject {
@@ -60,17 +60,17 @@ impl InsertProject {
             slug,
             description,
             url,
-            default,
+            public,
         } = project;
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             owner_id: QueryUser::get_id(conn, user_uuid)?,
-            owner_default: default,
             name,
             slug,
             description,
             url: url.map(|u| u.to_string()),
+            public,
         })
     }
 }
@@ -101,14 +101,14 @@ fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> S
 
 #[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct QueryProject {
-    pub id: i32,
-    pub uuid: String,
-    pub owner_id: i32,
-    pub owner_default: bool,
-    pub name: String,
-    pub slug: String,
+    pub id:          i32,
+    pub uuid:        String,
+    pub owner_id:    i32,
+    pub name:        String,
+    pub slug:        String,
     pub description: Option<String>,
-    pub url: Option<String>,
+    pub url:         Option<String>,
+    pub public:      bool,
 }
 
 impl QueryProject {
@@ -117,20 +117,20 @@ impl QueryProject {
             id: _,
             uuid,
             owner_id,
-            owner_default,
             name,
             slug,
             description,
             url,
+            public,
         } = self;
         Ok(JsonProject {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(PROJECT_ERROR))?,
             owner_uuid: QueryUser::get_uuid(conn, owner_id)?,
-            owner_default,
             name,
             slug,
             description,
             url: ok_url(url.as_deref())?,
+            public,
         })
     }
 }
