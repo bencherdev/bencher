@@ -11,11 +11,13 @@ use crate::{
 
 mod create;
 mod list;
+mod view;
 
 #[derive(Debug)]
 pub enum Testbed {
     List(list::List),
     Create(create::Testbed),
+    View(view::View),
 }
 
 impl TryFrom<CliTestbed> for Testbed {
@@ -25,6 +27,7 @@ impl TryFrom<CliTestbed> for Testbed {
         Ok(match testbed {
             CliTestbed::List(list) => Self::List(list.try_into()?),
             CliTestbed::Create(create) => Self::Create(create.try_into()?),
+            CliTestbed::View(view) => Self::View(view.try_into()?),
         })
     }
 }
@@ -35,6 +38,7 @@ impl SubCmd for Testbed {
         match self {
             Self::List(list) => list.exec(wide).await,
             Self::Create(create) => create.exec(wide).await,
+            Self::View(create) => create.exec(wide).await,
         }
     }
 }

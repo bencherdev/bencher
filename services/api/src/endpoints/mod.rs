@@ -35,6 +35,7 @@ impl Registrar<Context> for Api {
         api.register(testbeds::post_options)?;
         api.register(testbeds::post)?;
         api.register(testbeds::get_one_options)?;
+        api.register(testbeds::get_one)?;
 
         // api.register(testbeds::api_post_testbed)?;
         // api.register(testbeds::api_get_testbed)?;

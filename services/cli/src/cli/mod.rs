@@ -31,6 +31,7 @@ pub use testbed::{
     CliTestbed,
     CliTestbedCreate,
     CliTestbedList,
+    CliTestbedView,
 };
 
 /// Time Series Benchmarking

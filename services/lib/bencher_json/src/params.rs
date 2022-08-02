@@ -21,6 +21,12 @@ use uuid::Uuid;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ResourceId(pub String);
 
+impl ResourceId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl FromStr for ResourceId {
     type Err = String;
 

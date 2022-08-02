@@ -156,7 +156,7 @@ pub async fn get_one_options(
     path =  "/v0/projects/{project}/testbeds/{testbed}",
     tags = ["projects", "testbeds"]
 }]
-pub async fn api_get_testbed(
+pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>, HttpError> {

@@ -6,30 +6,35 @@ use std::{
 use async_trait::async_trait;
 use bencher_json::ResourceId;
 
-use super::PROJECTS_PATH;
 use crate::{
     bencher::{
         backend::Backend,
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliProjectView,
+    cli::CliTestbedView,
     BencherError,
 };
 
 #[derive(Debug)]
 pub struct View {
     pub project: ResourceId,
+    pub testbed: ResourceId,
     pub backend: Backend,
 }
 
-impl TryFrom<CliProjectView> for View {
+impl TryFrom<CliTestbedView> for View {
     type Error = BencherError;
 
-    fn try_from(view: CliProjectView) -> Result<Self, Self::Error> {
-        let CliProjectView { project, backend } = view;
+    fn try_from(view: CliTestbedView) -> Result<Self, Self::Error> {
+        let CliTestbedView {
+            project,
+            testbed,
+            backend,
+        } = view;
         Ok(Self {
             project,
+            testbed,
             backend: Backend::try_from(backend)?,
         })
     }
@@ -38,10 +43,12 @@ impl TryFrom<CliProjectView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let path = Path::new(PROJECTS_PATH);
-        let path = path.join(self.project.as_str());
         self.backend
-            .get(path.to_str().unwrap_or(PROJECTS_PATH))
+            .get(&format!(
+                "/v0/projects/{}/testbeds/{}",
+                self.project.as_str(),
+                self.testbed.as_str()
+            ))
             .await?;
         Ok(())
     }

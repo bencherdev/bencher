@@ -14,6 +14,8 @@ pub enum CliTestbed {
     /// Create a testbed
     #[clap(alias = "add")]
     Create(CliTestbedCreate),
+    /// View a testbed
+    View(CliTestbedView),
 }
 
 #[derive(Parser, Debug)]
@@ -66,6 +68,19 @@ pub struct CliTestbedCreate {
     /// Testbed Disk
     #[clap(long)]
     pub disk: Option<String>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTestbedView {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Testbed slug or UUID
+    pub testbed: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
