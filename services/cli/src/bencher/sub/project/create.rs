@@ -21,7 +21,7 @@ pub struct Project {
     pub slug:        Option<String>,
     pub description: Option<String>,
     pub url:         Option<Url>,
-    pub default:     bool,
+    pub public:      bool,
     pub backend:     Backend,
 }
 
@@ -34,7 +34,7 @@ impl TryFrom<CliProjectCreate> for Project {
             slug,
             description,
             url,
-            default,
+            public,
             backend,
         } = create;
         Ok(Self {
@@ -42,7 +42,7 @@ impl TryFrom<CliProjectCreate> for Project {
             slug,
             description,
             url: map_url(url)?,
-            default,
+            public,
             backend: Backend::try_from(backend)?,
         })
     }
@@ -64,7 +64,7 @@ impl SubCmd for Project {
             slug:        self.slug.clone(),
             description: self.description.clone(),
             url:         self.url.clone(),
-            default:     self.default,
+            public:      self.public,
         };
         self.backend.post(PROJECTS_PATH, &project).await?;
         Ok(())

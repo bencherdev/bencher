@@ -34,9 +34,9 @@ pub struct CliProjectCreate {
     #[clap(long)]
     pub url: Option<String>,
 
-    /// Set as default project
+    /// Set project as public
     #[clap(long)]
-    pub default: bool,
+    pub public: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,

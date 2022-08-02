@@ -11,17 +11,21 @@ pub struct CliRun {
     #[clap(flatten)]
     pub locality: CliLocality,
 
-    /// Benchmark output adapter
-    #[clap(value_enum, short, long)]
-    pub adapter: Option<CliAdapter>,
+    /// Branch UUID
+    #[clap(long)]
+    pub branch: String,
 
-    /// Bencher project name or ID
-    #[clap(short, long)]
-    pub project: Option<String>,
+    /// Software commit hash
+    #[clap(long)]
+    pub hash: Option<String>,
 
-    /// Bencher testbed name or ID
-    #[clap(short, long)]
+    /// Testbed UUID
+    #[clap(long)]
     pub testbed: Option<String>,
+
+    /// Benchmark output adapter
+    #[clap(value_enum, long)]
+    pub adapter: Option<CliAdapter>,
 
     #[clap(flatten)]
     pub command: CliCommand,

@@ -6,6 +6,7 @@ use std::{
 use async_trait::async_trait;
 use bencher_json::JsonNewReport;
 use chrono::Utc;
+use git2::Oid;
 use uuid::Uuid;
 
 use crate::{
@@ -34,9 +35,10 @@ const REPORTS_PATH: &str = "/v0/reports";
 pub struct Run {
     locality:  Locality,
     benchmark: Benchmark,
+    branch:    Uuid,
+    hash:      Option<Oid>,
+    testbed:   Option<Uuid>,
     adapter:   Adapter,
-    project:   Option<String>,
-    testbed:   Option<String>,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -46,9 +48,18 @@ impl TryFrom<CliRun> for Run {
         Ok(Self {
             locality:  Locality::try_from(run.locality)?,
             benchmark: Benchmark::try_from(run.command)?,
+            branch:    Uuid::from_str(&run.branch)?,
+            hash:      if let Some(hash) = run.hash {
+                Some(Oid::from_str(&hash)?)
+            } else {
+                None
+            },
+            testbed:   if let Some(testbed) = run.testbed {
+                Some(Uuid::from_str(&testbed)?)
+            } else {
+                None
+            },
             adapter:   map_adapter(run.adapter)?,
-            project:   run.project,
-            testbed:   run.testbed,
         })
     }
 }
@@ -58,18 +69,10 @@ impl SubCmd for Run {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let output = self.benchmark.run()?;
         let benchmarks = self.adapter.convert(&output)?;
-        let testbed = if let Some(testbed) = &self.testbed {
-            if let Ok(uuid) = Uuid::from_str(testbed) {
-                Some(uuid)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
         let report = JsonNewReport {
-            project: self.project.clone(),
-            testbed,
+            branch: self.branch.clone(),
+            hash: self.hash.clone().map(|hash| hash.to_string()),
+            testbed: self.testbed.clone(),
             adapter: self.adapter.into(),
             start_time: output.start,
             end_time: Utc::now(),

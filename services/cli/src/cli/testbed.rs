@@ -13,8 +13,16 @@ pub enum CliTestbed {
 
 #[derive(Parser, Debug)]
 pub struct CliTestbedCreate {
+    /// Project UUID for the Testbed
+    #[clap(long)]
+    pub project: String,
+
     /// Testbed name
     pub name: String,
+
+    /// Testbed slug
+    #[clap(long)]
+    pub slug: Option<String>,
 
     /// Testbed OS
     #[clap(long)]

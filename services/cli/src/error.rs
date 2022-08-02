@@ -11,6 +11,8 @@ pub enum BencherError {
     TokenNotFound,
     #[error("Failed to parse backend URL.")]
     Url(#[from] url::ParseError),
+    #[error("Failed to parse UUID.")]
+    Uuid(#[from] uuid::Error),
 
     #[error("No default shell command path for target family. Try setting a custom shell with the `-s`/`--shell` flag.")]
     Shell,

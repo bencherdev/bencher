@@ -29,7 +29,8 @@ pub struct JsonNewTestbed {
     pub disk: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbed {
     pub uuid: Uuid,
     pub project_uuid: Uuid,
