@@ -16,6 +16,13 @@ cargo run -- run --local --adapter rust "cargo bench"
 or
 cargo bench | cargo run -- run --local --adapter rust
 
+cargo run -- auth signup --host http://localhost:8080 --name "Gwenith Paltrow" goopgoop.com
+
+cargo run -- auth login --host http://localhost:8080 goop@goop.com
+
+
+
+----
 
 cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
 

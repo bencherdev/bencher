@@ -26,7 +26,7 @@ pub struct CliAuthSignup {
 
     /// Backend host URL (default http://api.bencher.dev)
     #[clap(long)]
-    pub url: Option<String>,
+    pub host: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -36,5 +36,5 @@ pub struct CliAuthLogin {
 
     /// Backend host URL (default http://api.bencher.dev)
     #[clap(long)]
-    pub url: Option<String>,
+    pub host: Option<String>,
 }

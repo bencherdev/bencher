@@ -31,9 +31,9 @@ impl TryFrom<CliAuthSignup> for Signup {
             name,
             slug,
             email,
-            url,
+            host,
         } = signup;
-        let backend = Backend::new(None, url)?;
+        let backend = Backend::new(None, host)?;
         Ok(Self {
             name,
             slug,

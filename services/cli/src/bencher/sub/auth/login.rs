@@ -25,8 +25,8 @@ impl TryFrom<CliAuthLogin> for Login {
     type Error = BencherError;
 
     fn try_from(login: CliAuthLogin) -> Result<Self, Self::Error> {
-        let CliAuthLogin { email, url } = login;
-        let backend = Backend::new(None, url)?;
+        let CliAuthLogin { email, host } = login;
+        let backend = Backend::new(None, host)?;
         Ok(Self { email, backend })
     }
 }
