@@ -1,11 +1,10 @@
-use std::{
-    convert::TryFrom,
-    str::FromStr,
-};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonNewTestbed;
-use uuid::Uuid;
+use bencher_json::{
+    JsonNewTestbed,
+    ResourceId,
+};
 
 use crate::{
     bencher::{
@@ -21,7 +20,7 @@ const TESTBEDS_PATH: &str = "/v0/testbeds";
 
 #[derive(Debug)]
 pub struct Testbed {
-    pub project: Uuid,
+    pub project: ResourceId,
     pub name: String,
     pub slug: Option<String>,
     pub os_name: Option<String>,
@@ -52,7 +51,7 @@ impl TryFrom<CliTestbedCreate> for Testbed {
             backend,
         } = create;
         Ok(Self {
-            project: Uuid::from_str(&project)?,
+            project,
             name,
             slug,
             os_name,

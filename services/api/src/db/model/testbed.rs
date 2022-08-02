@@ -3,6 +3,7 @@ use std::str::FromStr;
 use bencher_json::{
     JsonNewTestbed,
     JsonTestbed,
+    ResourceId,
 };
 use diesel::{
     Insertable,
@@ -115,7 +116,7 @@ pub struct InsertTestbed {
 }
 
 impl InsertTestbed {
-    pub fn from_json(testbed: JsonNewTestbed) -> Self {
+    pub fn from_json(conn: &SqliteConnection, testbed: JsonNewTestbed) -> Result<Self, HttpError> {
         let JsonNewTestbed {
             project,
             name,
@@ -128,12 +129,12 @@ impl InsertTestbed {
             ram,
             disk,
         } = testbed;
-        Self {
+        let slug = validate_slug(conn, &name, slug);
+        Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            // QueryProject::get_uuid(conn, &project)?
-            project_id: todo!(),
+            project_id: QueryProject::from_resource_id(conn, &project)?.id,
             name,
-            slug: todo!(),
+            slug,
             os_name,
             os_version,
             runtime_name,
@@ -141,6 +142,30 @@ impl InsertTestbed {
             cpu,
             ram,
             disk,
-        }
+        })
+    }
+}
+
+fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> String {
+    let mut slug = slug
+        .map(|s| {
+            if s == slug::slugify(&s) {
+                s
+            } else {
+                slug::slugify(name)
+            }
+        })
+        .unwrap_or_else(|| slug::slugify(name));
+
+    if schema::testbed::table
+        .filter(schema::testbed::slug.eq(&slug))
+        .first::<QueryTestbed>(conn)
+        .is_ok()
+    {
+        let rand_suffix = rand::random::<u32>().to_string();
+        slug.push_str(&rand_suffix);
+        slug
+    } else {
+        slug
     }
 }

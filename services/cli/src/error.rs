@@ -28,7 +28,7 @@ pub enum BencherError {
     FromUtf8(#[from] std::string::FromUtf8Error),
     #[error("Failed git")]
     Git(#[from] git2::Error),
-    #[error("Failed serde json")]
+    #[error("Failed serde json: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("Failed to send request: {0}")]
     Client(#[from] reqwest::Error),

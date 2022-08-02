@@ -6,10 +6,12 @@ use serde::{
 };
 use uuid::Uuid;
 
+use crate::ResourceId;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewTestbed {
-    pub project: Uuid,
+    pub project: ResourceId,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slug: Option<String>,

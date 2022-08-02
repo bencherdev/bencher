@@ -59,7 +59,7 @@ pub struct ProjectPathParams {
     path =  "/v0/projects/{project}/testbeds",
     tags = ["projects", "testbeds"]
 }]
-pub async fn options(
+pub async fn get_ls_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<ProjectPathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
@@ -71,7 +71,7 @@ pub async fn options(
     path =  "/v0/projects/{project}/testbeds",
     tags = ["projects", "testbeds"]
 }]
-pub async fn api_get_testbeds(
+pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<ProjectPathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonTestbed>>, CorsHeaders>, HttpError> {
@@ -93,27 +93,44 @@ pub async fn api_get_testbeds(
     ))
 }
 
-// #[endpoint {
-//     method = POST,
-//     path = "/v0/testbeds",
-//     tags = ["testbeds"]
-// }]
-// pub async fn api_post_testbed(
-//     rqctx: Arc<RequestContext<Context>>,
-//     body: TypedBody<JsonNewTestbed>,
-// ) -> Result<HttpResponseAccepted<()>, HttpError> {
-//     let db_connection = rqctx.context();
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/testbeds",
+    tags = ["testbeds"]
+}]
+pub async fn post_options(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
 
-//     let json_testbed = body.into_inner();
-//     let conn = db_connection.lock().await;
-//     let insert_testbed = InsertTestbed::from_json(json_testbed);
-//     diesel::insert_into(schema::testbed::table)
-//         .values(&insert_testbed)
-//         .execute(&*conn)
-//         .map_err(|_| http_error!("Failed to save testebed."))?;
+#[endpoint {
+    method = POST,
+    path = "/v0/testbeds",
+    tags = ["testbeds"]
+}]
+pub async fn post(
+    rqctx: Arc<RequestContext<Context>>,
+    body: TypedBody<JsonNewTestbed>,
+) -> Result<HttpResponseAccepted<JsonTestbed>, HttpError> {
+    let db_connection = rqctx.context();
 
-//     Ok(HttpResponseAccepted(()))
-// }
+    let json_testbed = body.into_inner();
+    let conn = db_connection.lock().await;
+    let insert_testbed = InsertTestbed::from_json(&*conn, json_testbed)?;
+    diesel::insert_into(schema::testbed::table)
+        .values(&insert_testbed)
+        .execute(&*conn)
+        .map_err(|_| http_error!("Failed to create testebed."))?;
+
+    let query_testbed = schema::testbed::table
+        .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
+        .first::<QueryTestbed>(&*conn)
+        .map_err(|_| http_error!("Failed to create testebed."))?;
+    let json = query_testbed.to_json(&*conn)?;
+
+    Ok(HttpResponseAccepted(json))
+}
 
 // #[derive(Deserialize, JsonSchema)]
 // pub struct PathParams {

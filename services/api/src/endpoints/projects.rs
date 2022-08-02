@@ -95,20 +95,19 @@ pub async fn post(
     let json_project = body.into_inner();
     let conn = db_connection.lock().await;
     let insert_project = InsertProject::from_json(&*conn, &uuid, json_project)?;
-    let slug = insert_project.slug.clone();
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(&*conn)
         .map_err(|_| http_error!("Failed to create project."))?;
 
     let query_project = schema::project::table
-        .filter(schema::project::slug.eq(&slug))
+        .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(&*conn)
-        .unwrap();
-    let json_project = query_project.to_json(&*conn)?;
+        .map_err(|_| http_error!("Failed to create project."))?;
+    let json = query_project.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json_project),
+        HttpResponseAccepted(json),
         CorsHeaders::new_auth("POST".into()),
     ))
 }

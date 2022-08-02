@@ -1,3 +1,4 @@
+use bencher_json::ResourceId;
 use clap::{
     Parser,
     Subcommand,
@@ -29,7 +30,7 @@ pub struct CliTestbedList {
 pub struct CliTestbedCreate {
     /// Project slug or UUID
     #[clap(long)]
-    pub project: String,
+    pub project: ResourceId,
 
     /// Testbed name
     pub name: String,

@@ -28,6 +28,8 @@ cargo run -- project view --host http://localhost:8080 hazel-river
 
 cargo run -- testbed ls --host http://localhost:8080 --project hazel-river
 
+cargo run -- testbed create --host http://localhost:8080 --project hazel-river --os-name macos --ram 32GB nemo
+
 
 
 ----
