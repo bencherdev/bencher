@@ -113,7 +113,7 @@ pub async fn post_options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewTestbed>,
-) -> Result<HttpResponseAccepted<JsonTestbed>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonTestbed>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
     let json_testbed = body.into_inner();
@@ -130,7 +130,10 @@ pub async fn post(
         .map_err(|_| http_error!("Failed to create testebed."))?;
     let json = query_testbed.to_json(&*conn)?;
 
-    Ok(HttpResponseAccepted(json))
+    Ok(HttpResponseHeaders::new(
+        HttpResponseAccepted(json),
+        CorsHeaders::new_auth("POST".into()),
+    ))
 }
 
 #[derive(Deserialize, JsonSchema)]
