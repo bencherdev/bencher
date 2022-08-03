@@ -93,6 +93,28 @@ const ConsoleRoutes = (props) => {
         }
       />
       <Route
+        path="/projects/:project_slug/testbeds/add"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.TESTBEDS]?.[Operation.ADD]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/testbeds/:testbed_slug"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.TESTBEDS]?.[Operation.VIEW]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
         path="/projects/:project_slug/connections"
         element={
           <ConsolePage

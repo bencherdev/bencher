@@ -25,6 +25,7 @@ export enum Resource {
 }
 
 export enum Field {
+  FIXED,
   INPUT,
   TEXTAREA,
   CHECKBOX,
