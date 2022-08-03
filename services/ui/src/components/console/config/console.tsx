@@ -7,7 +7,6 @@ import { Button, Field, Operation, Resource, Row } from "../console";
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 const consoleConfig = (pathname) => {
-  console.log(pathname);
   return {
     [Resource.PROJECTS]: {
       [Operation.LIST]: {
@@ -25,7 +24,9 @@ const consoleConfig = (pathname) => {
           ],
         },
         table: {
-          url: `${BENCHER_API_URL}/v0/projects`,
+          url: (_path_params) => {
+            return `${BENCHER_API_URL}/v0/projects`;
+          },
           row: {
             key: "name",
             items: [
@@ -134,6 +135,45 @@ const consoleConfig = (pathname) => {
       },
       [Operation.PERF]: {
         operation: Operation.PERF,
+      },
+    },
+    [Resource.TESTBEDS]: {
+      [Operation.LIST]: {
+        operation: Operation.LIST,
+        header: {
+          title: "Testbeds",
+          buttons: [
+            {
+              kind: Button.ADD,
+              path: (pathname) => {
+                return `${pathname}/add`;
+              },
+            },
+            { kind: Button.REFRESH },
+          ],
+        },
+        table: {
+          url: (path_params) => {
+            return `${BENCHER_API_URL}/v0/projects/${
+              path_params()?.project_slug
+            }/testbeds`;
+          },
+          row: {
+            key: "name",
+            items: [
+              {
+                kind: Row.TEXT,
+                key: "slug",
+              },
+              {},
+              {},
+              {},
+            ],
+            path: (pathname, datum) => {
+              return `${pathname}/${datum?.slug}`;
+            },
+          },
+        },
       },
     },
   };

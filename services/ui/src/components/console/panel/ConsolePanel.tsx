@@ -11,6 +11,7 @@ const ConsolePanel = (props) => {
       <Match when={props.config?.operation === Operation.LIST}>
         <TablePanel
           config={props.config}
+          path_params={props.path_params}
           pathname={props.pathname}
           handleRedirect={props.handleRedirect}
         />
