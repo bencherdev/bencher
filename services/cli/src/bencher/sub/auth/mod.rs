@@ -5,7 +5,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliAuth,
+    cli::auth::CliAuth,
     BencherError,
 };
 

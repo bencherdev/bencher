@@ -14,7 +14,7 @@ use crate::{
         locality::Locality,
         wide::Wide,
     },
-    cli::CliRun,
+    cli::run::CliRun,
     BencherError,
 };
 

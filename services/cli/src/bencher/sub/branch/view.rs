@@ -9,29 +9,29 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::testbed::CliTestbedView,
+    cli::branch::CliBranchView,
     BencherError,
 };
 
 #[derive(Debug)]
 pub struct View {
     pub project: ResourceId,
-    pub testbed: ResourceId,
+    pub branch:  ResourceId,
     pub backend: Backend,
 }
 
-impl TryFrom<CliTestbedView> for View {
+impl TryFrom<CliBranchView> for View {
     type Error = BencherError;
 
-    fn try_from(view: CliTestbedView) -> Result<Self, Self::Error> {
-        let CliTestbedView {
+    fn try_from(view: CliBranchView) -> Result<Self, Self::Error> {
+        let CliBranchView {
             project,
-            testbed,
+            branch,
             backend,
         } = view;
         Ok(Self {
             project,
-            testbed,
+            branch,
             backend: Backend::try_from(backend)?,
         })
     }
@@ -42,9 +42,9 @@ impl SubCmd for View {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         self.backend
             .get(&format!(
-                "/v0/projects/{}/testbeds/{}",
+                "/v0/projects/{}/branches/{}",
                 self.project.as_str(),
-                self.testbed.as_str()
+                self.branch.as_str()
             ))
             .await?;
         Ok(())

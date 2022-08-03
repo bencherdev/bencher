@@ -30,6 +30,13 @@ impl Registrar<Context> for Api {
         api.register(projects::post)?;
         api.register(projects::options_params)?;
         api.register(projects::get_one)?;
+        // Branches
+        api.register(branches::get_ls_options)?;
+        api.register(branches::get_ls)?;
+        api.register(branches::post_options)?;
+        api.register(branches::post)?;
+        api.register(branches::get_one_options)?;
+        api.register(branches::get_one)?;
         // Testbeds
         api.register(testbeds::get_ls_options)?;
         api.register(testbeds::get_ls)?;

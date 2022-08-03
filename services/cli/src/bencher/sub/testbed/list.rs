@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_json::ResourceId;
 
 use crate::{
     bencher::{
@@ -8,13 +9,13 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliTestbedList,
+    cli::testbed::CliTestbedList,
     BencherError,
 };
 
 #[derive(Debug)]
 pub struct List {
-    pub project: String,
+    pub project: ResourceId,
     pub backend: Backend,
 }
 
@@ -34,7 +35,7 @@ impl TryFrom<CliTestbedList> for List {
 impl SubCmd for List {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         self.backend
-            .get(&format!("/v0/projects/{}/testbeds", self.project))
+            .get(&format!("/v0/projects/{}/testbeds", self.project.as_str()))
             .await?;
         Ok(())
     }

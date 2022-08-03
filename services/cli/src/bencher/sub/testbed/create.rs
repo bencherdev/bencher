@@ -12,14 +12,14 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliTestbedCreate,
+    cli::testbed::CliTestbedCreate,
     BencherError,
 };
 
 const TESTBEDS_PATH: &str = "/v0/testbeds";
 
 #[derive(Debug)]
-pub struct Testbed {
+pub struct Create {
     pub project: ResourceId,
     pub name: String,
     pub slug: Option<String>,
@@ -33,7 +33,7 @@ pub struct Testbed {
     pub backend: Backend,
 }
 
-impl TryFrom<CliTestbedCreate> for Testbed {
+impl TryFrom<CliTestbedCreate> for Create {
     type Error = BencherError;
 
     fn try_from(create: CliTestbedCreate) -> Result<Self, Self::Error> {
@@ -67,7 +67,7 @@ impl TryFrom<CliTestbedCreate> for Testbed {
 }
 
 #[async_trait]
-impl SubCmd for Testbed {
+impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let testbed = JsonNewTestbed {
             project: self.project.clone(),

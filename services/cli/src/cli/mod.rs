@@ -5,34 +5,17 @@ use clap::{
     Subcommand,
 };
 
-mod auth;
-mod project;
-mod run;
-mod testbed;
+pub mod auth;
+pub mod branch;
+pub mod project;
+pub mod run;
+pub mod testbed;
 
-pub use auth::{
-    CliAuth,
-    CliAuthLogin,
-    CliAuthSignup,
-};
-pub use project::{
-    CliProject,
-    CliProjectCreate,
-    CliProjectList,
-    CliProjectView,
-};
-pub use run::{
-    CliAdapter,
-    CliCommand,
-    CliRun,
-    CliShell,
-};
-pub use testbed::{
-    CliTestbed,
-    CliTestbedCreate,
-    CliTestbedList,
-    CliTestbedView,
-};
+use auth::CliAuth;
+use branch::CliBranch;
+use project::CliProject;
+use run::CliRun;
+use testbed::CliTestbed;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -60,6 +43,9 @@ pub enum CliSub {
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),
+    /// Manage Branches
+    #[clap(subcommand)]
+    Branch(CliBranch),
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),

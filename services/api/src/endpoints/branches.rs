@@ -116,12 +116,12 @@ pub async fn post(
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(&*conn)
-        .map_err(|_| http_error!("Failed to create testebed."))?;
+        .map_err(|_| http_error!("Failed to create branch."))?;
 
     let query_branch = schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
         .first::<QueryBranch>(&*conn)
-        .map_err(|_| http_error!("Failed to create testebed."))?;
+        .map_err(|_| http_error!("Failed to create branch."))?;
     let json = query_branch.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(

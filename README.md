@@ -26,6 +26,12 @@ cargo run -- project create --host http://localhost:8080 "Hazel River"
 
 cargo run -- project view --host http://localhost:8080 hazel-river
 
+cargo run -- branch ls --host http://localhost:8080 --project hazel-river
+
+cargo run -- branch create --host http://localhost:8080 --project hazel-river master
+
+cargo run -- branch view --host http://localhost:8080 --project hazel-river master
+
 cargo run -- testbed ls --host http://localhost:8080 --project hazel-river
 
 cargo run -- testbed create --host http://localhost:8080 --project hazel-river --os-name macos --ram 32GB nemo

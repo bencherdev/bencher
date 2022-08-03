@@ -6,8 +6,6 @@ use std::{
 use bencher_json::{
     JsonNewProject,
     JsonProject,
-    JsonSignup,
-    JsonUser,
     ResourceId,
 };
 use diesel::{
@@ -19,7 +17,6 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use email_address_parser::EmailAddress;
 use schemars::JsonSchema;
 use serde::{
     Deserialize,

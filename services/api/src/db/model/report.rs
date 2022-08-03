@@ -20,7 +20,6 @@ use uuid::Uuid;
 
 use super::{
     adapter::QueryAdapter,
-    project::QueryProject,
     testbed::QueryTestbed,
     user::QueryUser,
 };

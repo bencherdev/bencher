@@ -11,7 +11,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliProjectCreate,
+    cli::project::CliProjectCreate,
     BencherError,
 };
 

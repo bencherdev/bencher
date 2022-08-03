@@ -9,7 +9,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliAuthLogin,
+    cli::auth::CliAuthLogin,
     BencherError,
 };
 

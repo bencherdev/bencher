@@ -13,7 +13,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliProjectView,
+    cli::project::CliProjectView,
     BencherError,
 };
 

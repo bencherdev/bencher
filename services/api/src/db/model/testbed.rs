@@ -3,7 +3,6 @@ use std::str::FromStr;
 use bencher_json::{
     JsonNewTestbed,
     JsonTestbed,
-    ResourceId,
 };
 use diesel::{
     Insertable,

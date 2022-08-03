@@ -22,7 +22,7 @@ pub enum CliTestbed {
 pub struct CliTestbedList {
     /// Project slug or UUID
     #[clap(long)]
-    pub project: String,
+    pub project: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

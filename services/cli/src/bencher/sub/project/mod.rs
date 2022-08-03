@@ -5,7 +5,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::CliProject,
+    cli::project::CliProject,
     BencherError,
 };
 

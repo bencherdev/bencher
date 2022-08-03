@@ -5,7 +5,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::testbed::CliTestbed,
+    cli::branch::CliBranch,
     BencherError,
 };
 
@@ -14,26 +14,26 @@ mod list;
 mod view;
 
 #[derive(Debug)]
-pub enum Testbed {
+pub enum Branch {
     List(list::List),
     Create(create::Create),
     View(view::View),
 }
 
-impl TryFrom<CliTestbed> for Testbed {
+impl TryFrom<CliBranch> for Branch {
     type Error = BencherError;
 
-    fn try_from(testbed: CliTestbed) -> Result<Self, Self::Error> {
+    fn try_from(testbed: CliBranch) -> Result<Self, Self::Error> {
         Ok(match testbed {
-            CliTestbed::List(list) => Self::List(list.try_into()?),
-            CliTestbed::Create(create) => Self::Create(create.try_into()?),
-            CliTestbed::View(view) => Self::View(view.try_into()?),
+            CliBranch::List(list) => Self::List(list.try_into()?),
+            CliBranch::Create(create) => Self::Create(create.try_into()?),
+            CliBranch::View(view) => Self::View(view.try_into()?),
         })
     }
 }
 
 #[async_trait]
-impl SubCmd for Testbed {
+impl SubCmd for Branch {
     async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
             Self::List(list) => list.exec(wide).await,
