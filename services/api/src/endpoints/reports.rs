@@ -1,17 +1,12 @@
-use std::{
-    str::FromStr,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use bencher_json::{
     JsonNewReport,
     JsonReport,
 };
-use chrono::NaiveDateTime;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
-    SqliteConnection,
 };
 use dropshot::{
     endpoint,
@@ -24,21 +19,13 @@ use dropshot::{
     TypedBody,
 };
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use uuid::Uuid;
+use serde::Deserialize;
 
 use crate::{
     db::{
-        model::{
-            adapter::QueryAdapter,
-            report::{
-                InsertReport,
-                QueryReport,
-            },
-            testbed::QueryTestbed,
+        model::report::{
+            InsertReport,
+            QueryReport,
         },
         schema,
     },

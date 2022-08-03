@@ -2,6 +2,7 @@ use dropshot::ApiDescription;
 
 pub mod adapters;
 pub mod auth;
+pub mod branches;
 pub mod ping;
 pub mod projects;
 pub mod reports;

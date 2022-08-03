@@ -18,7 +18,6 @@ use dropshot::{
     Path,
     RequestContext,
     TypedBody,
-    UntypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -65,6 +64,7 @@ pub async fn get_ls(
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
+
     let conn = db_connection.lock().await;
     let owner_id = QueryUser::get_id(&*conn, &uuid)?;
     let json: Vec<JsonProject> = schema::project::table
@@ -93,6 +93,7 @@ pub async fn post(
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
     let json_project = body.into_inner();
+
     let conn = db_connection.lock().await;
     let insert_project = InsertProject::from_json(&*conn, &uuid, json_project)?;
     diesel::insert_into(schema::project::table)
@@ -140,6 +141,7 @@ pub async fn get_one(
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
+
     let conn = db_connection.lock().await;
     let query = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     let json = query.to_json(&*conn)?;

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    JsonNewTestbed,
-    JsonTestbed,
+    JsonBranch,
+    JsonNewBranch,
     ResourceId,
 };
 use diesel::{
@@ -26,11 +26,11 @@ use serde::Deserialize;
 use crate::{
     db::{
         model::{
-            project::QueryProject,
-            testbed::{
-                InsertTestbed,
-                QueryTestbed,
+            branch::{
+                InsertBranch,
+                QueryBranch,
             },
+            project::QueryProject,
         },
         schema,
     },
@@ -50,8 +50,8 @@ pub struct GetLsParams {
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/testbeds",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/branches",
+    tags = ["projects", "branches"]
 }]
 pub async fn get_ls_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -62,22 +62,22 @@ pub async fn get_ls_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/testbeds",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/branches",
+    tags = ["projects", "branches"]
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonTestbed>>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonBranch>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
     let conn = db_connection.lock().await;
     let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
-    let json: Vec<JsonTestbed> = schema::testbed::table
-        .filter(schema::testbed::project_id.eq(&query_project.id))
-        .load::<QueryTestbed>(&*conn)
-        .map_err(|_| http_error!("Failed to get testbeds."))?
+    let json: Vec<JsonBranch> = schema::branch::table
+        .filter(schema::branch::project_id.eq(&query_project.id))
+        .load::<QueryBranch>(&*conn)
+        .map_err(|_| http_error!("Failed to get branches."))?
         .into_iter()
         .filter_map(|query| query.to_json(&*conn).ok())
         .collect();
@@ -90,8 +90,8 @@ pub async fn get_ls(
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/testbeds",
-    tags = ["testbeds"]
+    path =  "/v0/branches",
+    tags = ["branches"]
 }]
 pub async fn post_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -101,28 +101,28 @@ pub async fn post_options(
 
 #[endpoint {
     method = POST,
-    path = "/v0/testbeds",
-    tags = ["testbeds"]
+    path = "/v0/branches",
+    tags = ["branches"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonNewTestbed>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonTestbed>, CorsHeaders>, HttpError> {
+    body: TypedBody<JsonNewBranch>,
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonBranch>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
-    let json_testbed = body.into_inner();
+    let json_branch = body.into_inner();
 
     let conn = db_connection.lock().await;
-    let insert_testbed = InsertTestbed::from_json(&*conn, json_testbed)?;
-    diesel::insert_into(schema::testbed::table)
-        .values(&insert_testbed)
+    let insert_branch = InsertBranch::from_json(&*conn, json_branch)?;
+    diesel::insert_into(schema::branch::table)
+        .values(&insert_branch)
         .execute(&*conn)
         .map_err(|_| http_error!("Failed to create testebed."))?;
 
-    let query_testbed = schema::testbed::table
-        .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
-        .first::<QueryTestbed>(&*conn)
+    let query_branch = schema::branch::table
+        .filter(schema::branch::uuid.eq(&insert_branch.uuid))
+        .first::<QueryBranch>(&*conn)
         .map_err(|_| http_error!("Failed to create testebed."))?;
-    let json = query_testbed.to_json(&*conn)?;
+    let json = query_branch.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -133,12 +133,12 @@ pub async fn post(
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
     pub project: ResourceId,
-    pub testbed: ResourceId,
+    pub branch:  ResourceId,
 }
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/testbeds/{testbed}",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/branches/{branch}",
+    tags = ["projects", "branches"]
 }]
 
 pub async fn get_one_options(
@@ -150,32 +150,32 @@ pub async fn get_one_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/testbeds/{testbed}",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/branches/{branch}",
+    tags = ["projects", "branches"]
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonBranch>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
-    let resource_id = path_params.testbed.as_str();
+    let resource_id = path_params.branch.as_str();
 
     let conn = db_connection.lock().await;
     let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
-    let query = if let Ok(query) = schema::testbed::table
+    let query = if let Ok(query) = schema::branch::table
         .filter(
-            schema::testbed::project_id.eq(project.id).and(
-                schema::testbed::slug
+            schema::branch::project_id.eq(project.id).and(
+                schema::branch::slug
                     .eq(resource_id)
-                    .or(schema::testbed::uuid.eq(resource_id)),
+                    .or(schema::branch::uuid.eq(resource_id)),
             ),
         )
-        .first::<QueryTestbed>(&*conn)
+        .first::<QueryBranch>(&*conn)
     {
         Ok(query)
     } else {
-        Err(http_error!("Failed to get testbed."))
+        Err(http_error!("Failed to get branch."))
     }?;
     let json = query.to_json(&*conn)?;
 
