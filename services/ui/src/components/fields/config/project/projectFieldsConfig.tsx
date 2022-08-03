@@ -26,8 +26,8 @@ const projectFieldsConfig = {
     help: "Must be a valid public facing URL.",
     validate: validator.isURL,
   },
-  default: {
-    label: "Set as Default",
+  public: {
+    label: "Public Project",
     type: "checkbox",
   },
 };

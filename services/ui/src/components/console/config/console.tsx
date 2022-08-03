@@ -93,14 +93,14 @@ const consoleConfig = (pathname) => {
             },
             {
               kind: Field.SWITCH,
-              key: "default",
+              key: "public",
               type: "switch",
               label: true,
               value: false,
               validate: false,
               nullify: false,
               clear: false,
-              config: projectFieldsConfig.default,
+              config: projectFieldsConfig.public,
             },
           ],
           path: (pathname) => {

@@ -53,10 +53,6 @@ const ProjectSelect = (props) => {
   const [selected, setSelected] = createSignal(getSelected());
   const [projects] = createResource(selected, fetchProjects);
 
-  // setInterval(() => {
-  //   console.log(projects());
-  // }, 1000);
-
   createEffect(() => {
     const slug = props.project_slug();
     if (slug === null) {
@@ -70,7 +66,7 @@ const ProjectSelect = (props) => {
     props.handleRedirect(`/console/projects/${selected()}/perf`);
   };
 
-  const handleProject = (e) => {
+  const handleInput = (e) => {
     const target_slug = e.currentTarget.value;
     console.log(target_slug);
     if (target_slug === BENCHER_ALL_PROJECTS) {
@@ -118,7 +114,7 @@ const ProjectSelect = (props) => {
             </button>
           )}
           <div class="select">
-            <select onInput={(e) => handleProject(e)}>
+            <select onInput={(e) => handleInput(e)}>
               <For each={projects()}>
                 {(project) => (
                   <option
