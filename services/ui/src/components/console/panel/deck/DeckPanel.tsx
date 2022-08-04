@@ -18,7 +18,7 @@ const DeckPanel = (props) => {
 
   const options = (token: string) => {
     return {
-      url: props.config?.deck?.url(props.path_params()?.project_slug),
+      url: props.config?.deck?.url(props.path_params()),
       method: "GET",
       headers: {
         "Content-Type": "application/json",

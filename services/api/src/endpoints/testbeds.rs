@@ -76,6 +76,7 @@ pub async fn get_ls(
     let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     let json: Vec<JsonTestbed> = schema::testbed::table
         .filter(schema::testbed::project_id.eq(&query_project.id))
+        .order(schema::testbed::name)
         .load::<QueryTestbed>(&*conn)
         .map_err(|_| http_error!("Failed to get testbeds."))?
         .into_iter()

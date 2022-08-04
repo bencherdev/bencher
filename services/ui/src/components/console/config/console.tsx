@@ -119,8 +119,8 @@ const consoleConfig = (pathname) => {
           },
         },
         deck: {
-          url: (project_slug) => {
-            return `${BENCHER_API_URL}/v0/projects/${project_slug}`;
+          url: (path_params) => {
+            return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}`;
           },
           cards: [
             {
@@ -132,6 +132,7 @@ const consoleConfig = (pathname) => {
               key: "slug",
             },
           ],
+          buttons: true,
         },
       },
       [Operation.PERF]: {
@@ -155,9 +156,7 @@ const consoleConfig = (pathname) => {
         },
         table: {
           url: (path_params) => {
-            return `${BENCHER_API_URL}/v0/projects/${
-              path_params()?.project_slug
-            }/testbeds`;
+            return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`;
           },
           row: {
             key: "name",
@@ -301,19 +300,20 @@ const consoleConfig = (pathname) => {
           },
         },
         deck: {
-          url: (project_slug) => {
-            return `${BENCHER_API_URL}/v0/projects/${project_slug}`;
+          url: (path_params) => {
+            return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`;
           },
           cards: [
             {
-              field: "Project Name",
+              field: "Testbed Name",
               key: "name",
             },
             {
-              field: "Project Slug",
+              field: "Testbed Slug",
               key: "slug",
             },
           ],
+          buttons: false,
         },
       },
     },

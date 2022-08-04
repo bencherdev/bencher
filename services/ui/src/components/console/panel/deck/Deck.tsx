@@ -13,10 +13,12 @@ import DeckButton from "./DeckButton";
 const Deck = (props) => {
   return (
     <>
-      <DeckButton
-        pathname={props.pathname}
-        handleRedirect={props.handleRedirect}
-      />
+      {props.config?.buttons && (
+        <DeckButton
+          pathname={props.pathname}
+          handleRedirect={props.handleRedirect}
+        />
+      )}
       <For each={props.config?.cards}>
         {(card) => (
           <div class="columns">
@@ -28,10 +30,12 @@ const Deck = (props) => {
           </div>
         )}
       </For>
-      <DeckButton
-        pathname={props.pathname}
-        handleRedirect={props.handleRedirect}
-      />
+      {props.config?.buttons && (
+        <DeckButton
+          pathname={props.pathname}
+          handleRedirect={props.handleRedirect}
+        />
+      )}
     </>
   );
 };

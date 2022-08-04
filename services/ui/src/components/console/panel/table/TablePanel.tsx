@@ -18,7 +18,7 @@ const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 const TablePanel = (props) => {
   const options = (token: string) => {
     return {
-      url: props.config?.table?.url(props.path_params),
+      url: props.config?.table?.url(props.path_params()),
       method: "GET",
       headers: {
         "Content-Type": "application/json",

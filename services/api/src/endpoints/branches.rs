@@ -76,6 +76,7 @@ pub async fn get_ls(
     let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     let json: Vec<JsonBranch> = schema::branch::table
         .filter(schema::branch::project_id.eq(&query_project.id))
+        .order(schema::branch::name)
         .load::<QueryBranch>(&*conn)
         .map_err(|_| http_error!("Failed to get branches."))?
         .into_iter()
