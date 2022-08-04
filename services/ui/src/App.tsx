@@ -152,6 +152,7 @@ const App: Component = () => {
           path="/"
           element={
             <LandingPage
+              user={user}
               handleTitle={handleTitle}
               handleRedirect={setRedirect}
             />

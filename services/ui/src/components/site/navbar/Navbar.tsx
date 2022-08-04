@@ -34,20 +34,14 @@ export const Navbar = (props) => {
             menu.classList.toggle("is-active");
           }}
         >
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
         </a>
       </div>
 
       <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
-          {props.user() !== undefined && (
-            <a class="navbar-item" href="/console">
-              Console
-            </a>
-          )}
-
           <a class="navbar-item" href={BENCHER_DOCS_URL}>
             Docs
           </a>

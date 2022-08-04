@@ -3,6 +3,8 @@ const LandingPage = (props) => {
 
   return (
     <section class="section is-medium">
+      {props.user() && props.handleRedirect("/console")}
+
       <div class="container">
         <div class="content has-text-centered">
           <h1 class="title">Track your benchmarks</h1>
