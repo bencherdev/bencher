@@ -1,17 +1,24 @@
-const Card = (props: { field: string; value: string }) => {
+import { Match, Switch } from "solid-js";
+import { Card } from "../../config/types";
+import FieldCard from "./FieldCard";
+
+const DeckCard = (props: { kind: Card; field: string; value: string }) => {
   return (
-    <div class="card">
-      <div class="card-header">
-        <div class="card-header-title">{props?.field}</div>
-      </div>
-      <div class="card-content">
-        <div class="content">{props?.value}</div>
-      </div>
-      <div class="card-footer">
-        <div class="card-footer-item">Update</div>
-      </div>
-    </div>
+    <Switch
+      fallback={
+        <div>
+          {props.field}: {props.value}
+        </div>
+      }
+    >
+      <Match when={props.kind === Card.FIELD}>
+        <FieldCard field={props.field} value={props.value} />
+      </Match>
+      <Match when={props.kind === Card.TABLE}>
+        <div>Table Card</div>
+      </Match>
+    </Switch>
   );
 };
 
-export default Card;
+export default DeckCard;

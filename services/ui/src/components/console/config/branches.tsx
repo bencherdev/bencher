@@ -1,6 +1,6 @@
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
 import branchFieldsConfig from "../../fields/config/project/branchFieldsConfig";
-import { Button, Field, Operation, Row } from "./types";
+import { Button, Card, Field, Operation, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewPath } from "./util";
 
 const branchesConfig = {
@@ -92,12 +92,19 @@ const branchesConfig = {
       },
       cards: [
         {
+          kind: Card.FIELD,
           field: "Branch Name",
           key: "name",
         },
         {
+          kind: Card.FIELD,
           field: "Branch Slug",
           key: "slug",
+        },
+        {
+          kind: Card.TABLE,
+          field: "Versions",
+          key: "versions",
         },
       ],
       buttons: false,

@@ -1,5 +1,5 @@
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
-import { Button, Field, Operation, Row } from "./types";
+import { Button, Card, Field, Operation, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewPath } from "./util";
 
 const projectsConfig = {
@@ -117,10 +117,12 @@ const projectsConfig = {
       },
       cards: [
         {
+          kind: Card.FIELD,
           field: "Project Name",
           key: "name",
         },
         {
+          kind: Card.FIELD,
           field: "Project Slug",
           key: "slug",
         },

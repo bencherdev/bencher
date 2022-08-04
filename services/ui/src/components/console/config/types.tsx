@@ -37,3 +37,8 @@ export enum Row {
   TEXT,
   BOOL,
 }
+
+export enum Card {
+  FIELD,
+  TABLE,
+}

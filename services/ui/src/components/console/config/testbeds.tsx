@@ -1,6 +1,6 @@
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
 import testbedFieldsConfig from "../../fields/config/project/testbedFieldsConfig";
-import { Button, Field, Operation, Row } from "./types";
+import { Button, Card, Field, Operation, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewPath } from "./util";
 
 const testbedsConfig = {
@@ -169,10 +169,12 @@ const testbedsConfig = {
       },
       cards: [
         {
+          kind: Card.FIELD,
           field: "Testbed Name",
           key: "name",
         },
         {
+          kind: Card.FIELD,
           field: "Testbed Slug",
           key: "slug",
         },

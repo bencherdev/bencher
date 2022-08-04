@@ -24,7 +24,11 @@ const Deck = (props) => {
           <div class="columns">
             <div class="column">
               <div class="card">
-                <Card field={card.field} value={props.data?.[card.key]} />
+                <Card
+                  kind={card.kind}
+                  field={card.field}
+                  value={props.data?.[card.key]}
+                />
               </div>
             </div>
           </div>
