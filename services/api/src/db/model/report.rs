@@ -35,7 +35,6 @@ pub struct QueryReport {
     pub id:         i32,
     pub uuid:       String,
     pub user_id:    i32,
-    pub project_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter_id: i32,
@@ -49,7 +48,6 @@ impl QueryReport {
             id: _,
             uuid,
             user_id,
-            project_id,
             version_id,
             testbed_id,
             adapter_id,
@@ -59,7 +57,6 @@ impl QueryReport {
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get report."))?,
             user_uuid: QueryUser::get_uuid(conn, user_id)?,
-            project_uuid: todo!(),
             version_uuid: todo!(),
             testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id)?,
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
@@ -74,7 +71,6 @@ impl QueryReport {
 pub struct InsertReport {
     pub uuid:       String,
     pub user_id:    i32,
-    pub project_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter_id: i32,
@@ -101,7 +97,6 @@ impl InsertReport {
         Ok(Self {
             uuid:       Uuid::new_v4().to_string(),
             user_id:    QueryUser::get_id(conn, user_uuid)?,
-            project_id: todo!(),
             version_id: todo!(),
             // If Some QueryTestbed::get_id(conn, testbed)? else get default testbed
             testbed_id: todo!(),

@@ -36,7 +36,6 @@ pub struct JsonNewReport {
 pub struct JsonReport {
     pub uuid:         Uuid,
     pub user_uuid:    Uuid,
-    pub project_uuid: Uuid,
     pub version_uuid: Uuid,
     pub testbed_uuid: Uuid,
     pub adapter_uuid: Uuid,

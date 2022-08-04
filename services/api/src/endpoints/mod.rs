@@ -30,6 +30,13 @@ impl Registrar<Context> for Api {
         api.register(projects::post)?;
         api.register(projects::options_params)?;
         api.register(projects::get_one)?;
+        // Reports
+        api.register(reports::get_ls_options)?;
+        api.register(reports::get_ls)?;
+        // api.register(reports::post_options)?;
+        // api.register(reports::post)?;
+        // api.register(reports::get_one_options)?;
+        // api.register(reports::get_one)?;
         // Branches
         api.register(branches::get_ls_options)?;
         api.register(branches::get_ls)?;
@@ -45,15 +52,10 @@ impl Registrar<Context> for Api {
         api.register(testbeds::get_one_options)?;
         api.register(testbeds::get_one)?;
 
-        // api.register(testbeds::api_post_testbed)?;
-        // api.register(testbeds::api_get_testbed)?;
         // Adapters
         api.register(adapters::api_get_adapters)?;
         api.register(adapters::api_get_adapter)?;
-        // Reports
-        api.register(reports::api_get_reports)?;
-        api.register(reports::api_get_report)?;
-        api.register(reports::api_post_report)?;
+
         Ok(())
     }
 }

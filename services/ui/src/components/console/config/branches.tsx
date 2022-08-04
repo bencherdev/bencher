@@ -101,11 +101,11 @@ const branchesConfig = {
           field: "Branch Slug",
           key: "slug",
         },
-        {
-          kind: Card.TABLE,
-          field: "Versions",
-          key: "versions",
-        },
+        // {
+        //   kind: Card.TABLE,
+        //   field: "Versions",
+        //   key: "versions",
+        // },
       ],
       buttons: false,
     },

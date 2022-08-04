@@ -43,13 +43,6 @@ cargo run -- testbed view --host http://localhost:8080 --project hazel-river nem
 
 cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
 
-cargo run -- testbed create --host http://localhost:8080 --os-name macos --ram 32GB nemo
-
-
-
-
-
-
 cargo run --bin bencher -- ...
 
 cargo install diesel_cli --no-default-features --features postgres

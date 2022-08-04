@@ -34,7 +34,6 @@ table! {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
-        project_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
         adapter_id -> Integer,
@@ -75,7 +74,7 @@ table! {
         id -> Integer,
         uuid -> Text,
         branch_id -> Integer,
-        count -> Integer,
+        number -> Integer,
         hash -> Nullable<Text>,
     }
 }
@@ -83,7 +82,6 @@ table! {
 joinable!(branch -> project (project_id));
 joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
-joinable!(report -> project (project_id));
 joinable!(report -> testbed (testbed_id));
 joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
