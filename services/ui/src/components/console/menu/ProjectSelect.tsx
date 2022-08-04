@@ -63,7 +63,13 @@ const ProjectSelect = (props) => {
   });
 
   const handleSelectedRedirect = () => {
-    props.handleRedirect(`/console/projects/${selected()}/perf`);
+    let path: string;
+    if (selected() === BENCHER_ALL_PROJECTS) {
+      path = "/console/projects";
+    } else {
+      path = `/console/projects/${selected()}/perf`;
+    }
+    props.handleRedirect(path);
   };
 
   const handleInput = (e) => {
@@ -100,19 +106,17 @@ const ProjectSelect = (props) => {
     <nav class="level">
       <div class="level-left">
         <div class="control">
-          {selected() !== BENCHER_ALL_PROJECTS && (
-            <button
-              class="button is-outlined"
-              onClick={(e) => {
-                e.preventDefault();
-                handleSelectedRedirect();
-              }}
-            >
-              <span class="icon">
-                <i class="fas fa-home" aria-hidden="true"></i>
-              </span>
-            </button>
-          )}
+          <button
+            class="button is-outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              handleSelectedRedirect();
+            }}
+          >
+            <span class="icon">
+              <i class="fas fa-home" aria-hidden="true"></i>
+            </span>
+          </button>
           <div class="select">
             <select onInput={(e) => handleInput(e)}>
               <For each={projects()}>

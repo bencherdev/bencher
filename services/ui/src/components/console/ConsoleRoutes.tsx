@@ -71,10 +71,54 @@ const ConsoleRoutes = (props) => {
         }
       />
       <Route
+        path="/projects/:project_slug/reports/add"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.REPORTS]?.[Operation.ADD]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/reports/:reports"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.REPORTS]?.[Operation.VIEW]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
         path="/projects/:project_slug/branches"
         element={
           <ConsolePage
             config={config()?.[Resource.BRANCHES]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/branches/add"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.BRANCHES]?.[Operation.ADD]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/branches/:branch_slug"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.BRANCHES]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -119,6 +163,17 @@ const ConsoleRoutes = (props) => {
         element={
           <ConsolePage
             config={config()?.[Resource.CONNECTIONS]?.[Operation.LIST]}
+            pathname={props.pathname}
+            handleTitle={props.handleTitle}
+            handleRedirect={props.handleRedirect}
+          />
+        }
+      />
+      <Route
+        path="/projects/:project_slug/connections/:connection_uuid"
+        element={
+          <ConsolePage
+            config={config()?.[Resource.CONNECTIONS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}

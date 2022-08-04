@@ -69,6 +69,7 @@ pub async fn get_ls(
     let owner_id = QueryUser::get_id(&*conn, &uuid)?;
     let json: Vec<JsonProject> = schema::project::table
         .filter(schema::project::owner_id.eq(owner_id))
+        .order(schema::project::name)
         .load::<QueryProject>(&*conn)
         .map_err(|_| http_error!("Failed to get projects."))?
         .into_iter()
