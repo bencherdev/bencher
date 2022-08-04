@@ -9,6 +9,19 @@ const LandingPage = (props) => {
           <h4 class="subtitle">
             Catch performance regressions before they make it to production
           </h4>
+          <div class="columns is-centered">
+            <div class="column is-half">
+              <button
+                class="button is-primary is-large is-responsive is-fullwidth"
+                onClick={(e) => {
+                  e.preventDefault();
+                  props.handleRedirect("/auth/signup");
+                }}
+              >
+                Start Now
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -40,7 +53,7 @@ const LandingPage = (props) => {
                     <p>
                       Run your benchmarks locally or in CI using your favorite
                       tools. The <code>bencher</code> CLI simply wraps your
-                      existing benchmark framework and stores its results.
+                      existing benchmarking framework and stores its results.
                     </p>
                     <br />
                   </div>
@@ -59,7 +72,7 @@ const LandingPage = (props) => {
                   </div>
                   <div class="content">
                     <p>
-                      Track the results of your benchmarks overtime. Monitor,
+                      Track the results of your benchmarks over time. Monitor,
                       query, and graph the results using the Bencher web console
                       based on the source branch and testbed.
                     </p>

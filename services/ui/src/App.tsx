@@ -130,7 +130,7 @@ const App: Component = () => {
             e.preventDefault();
             removeNotification();
           }}
-        ></button>
+        />
       </div>
     );
   };
@@ -148,7 +148,15 @@ const App: Component = () => {
       )}
 
       <Routes>
-        <Route path="/" element={<LandingPage handleTitle={handleTitle} />} />
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              handleTitle={handleTitle}
+              handleRedirect={setRedirect}
+            />
+          }
+        />
         {/* Auth Routes */}
         <Route path="/auth">
           <Route
