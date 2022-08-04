@@ -1,14 +1,5 @@
-import axios from "axios";
-import {
-  createSignal,
-  createResource,
-  createEffect,
-  Suspense,
-  For,
-  Switch,
-  Match,
-} from "solid-js";
-import { Row } from "../../console";
+import { For, Switch, Match } from "solid-js";
+import { Row } from "../../config/types";
 
 const Table = (props) => {
   const handleRowButton = (event, datum) => {

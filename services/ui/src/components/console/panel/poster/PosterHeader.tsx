@@ -1,5 +1,3 @@
-import { Button } from "../../console";
-
 const PosterHeader = (props) => {
   return (
     <nav class="level">

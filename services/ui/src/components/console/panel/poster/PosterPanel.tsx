@@ -1,4 +1,3 @@
-import { Button } from "../../console";
 import Poster from "./Poster";
 import PosterHeader from "./PosterHeader";
 

@@ -1,8 +1,6 @@
-import validateDescription from "../../validators/validateDescription";
 import validateName from "../../validators/validateName";
-import validator from "validator";
 
-const projectFieldsConfig = {
+const testbedFieldsConfig = {
   name: {
     label: "Name",
     type: "text",
@@ -69,4 +67,4 @@ const projectFieldsConfig = {
   },
 };
 
-export default projectFieldsConfig;
+export default testbedFieldsConfig;

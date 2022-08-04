@@ -1,7 +1,7 @@
-import { createEffect, createSignal, Match, Switch } from "solid-js";
+import { Match, Switch } from "solid-js";
 import TablePanel from "./table/TablePanel";
 import DeckPanel from "./deck/DeckPanel";
-import { Operation } from "../console";
+import { Operation } from "../config/types";
 import PerfPanel from "./perf/PerfPanel";
 import PosterPanel from "./poster/PosterPanel";
 

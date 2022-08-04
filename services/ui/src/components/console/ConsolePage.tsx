@@ -1,5 +1,5 @@
 import { useParams } from "solid-app-router";
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 

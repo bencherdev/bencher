@@ -1,5 +1,5 @@
 import { For, Match, Switch } from "solid-js";
-import { Button } from "../../console";
+import { Button } from "../../config/types";
 
 const TableHeader = (props) => {
   return (

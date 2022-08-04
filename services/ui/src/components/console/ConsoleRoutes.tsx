@@ -1,14 +1,13 @@
-import { lazy, createResource } from "solid-js";
-import { Routes, Route, Navigate, useLocation } from "solid-app-router";
-import { Operation, Resource, Button, Field } from "./console";
-import AccountPage from "../site/account/AccountPage";
+import { lazy } from "solid-js";
+import { Route, Navigate } from "solid-app-router";
+import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
 const ConsoleRoutes = (props) => {
-  const [config] = createResource(props.pathname, consoleConfig);
+  const config = consoleConfig;
 
   return (
     <>
@@ -19,7 +18,7 @@ const ConsoleRoutes = (props) => {
         path="/projects"
         element={
           <ConsolePage
-            config={config()?.[Resource.PROJECTS]?.[Operation.LIST]}
+            config={config?.[Resource.PROJECTS]?.[Operation.LIST]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -30,7 +29,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/add"
         element={
           <ConsolePage
-            config={config()?.[Resource.PROJECTS]?.[Operation.ADD]}
+            config={config?.[Resource.PROJECTS]?.[Operation.ADD]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -41,7 +40,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug"
         element={
           <ConsolePage
-            config={config()?.[Resource.PROJECTS]?.[Operation.VIEW]}
+            config={config?.[Resource.PROJECTS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -52,7 +51,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/perf"
         element={
           <ConsolePage
-            config={config()?.[Resource.PROJECTS]?.[Operation.PERF]}
+            config={config?.[Resource.PROJECTS]?.[Operation.PERF]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -63,7 +62,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/reports"
         element={
           <ConsolePage
-            config={config()?.[Resource.REPORTS]?.[Operation.LIST]}
+            config={config?.[Resource.REPORTS]?.[Operation.LIST]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -74,7 +73,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/reports/add"
         element={
           <ConsolePage
-            config={config()?.[Resource.REPORTS]?.[Operation.ADD]}
+            config={config?.[Resource.REPORTS]?.[Operation.ADD]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -85,7 +84,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/reports/:reports"
         element={
           <ConsolePage
-            config={config()?.[Resource.REPORTS]?.[Operation.VIEW]}
+            config={config?.[Resource.REPORTS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -96,7 +95,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/branches"
         element={
           <ConsolePage
-            config={config()?.[Resource.BRANCHES]?.[Operation.LIST]}
+            config={config?.[Resource.BRANCHES]?.[Operation.LIST]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -107,7 +106,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/branches/add"
         element={
           <ConsolePage
-            config={config()?.[Resource.BRANCHES]?.[Operation.ADD]}
+            config={config?.[Resource.BRANCHES]?.[Operation.ADD]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -118,7 +117,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/branches/:branch_slug"
         element={
           <ConsolePage
-            config={config()?.[Resource.BRANCHES]?.[Operation.VIEW]}
+            config={config?.[Resource.BRANCHES]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -129,7 +128,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/testbeds"
         element={
           <ConsolePage
-            config={config()?.[Resource.TESTBEDS]?.[Operation.LIST]}
+            config={config?.[Resource.TESTBEDS]?.[Operation.LIST]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -140,7 +139,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/testbeds/add"
         element={
           <ConsolePage
-            config={config()?.[Resource.TESTBEDS]?.[Operation.ADD]}
+            config={config?.[Resource.TESTBEDS]?.[Operation.ADD]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -151,7 +150,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/testbeds/:testbed_slug"
         element={
           <ConsolePage
-            config={config()?.[Resource.TESTBEDS]?.[Operation.VIEW]}
+            config={config?.[Resource.TESTBEDS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -162,7 +161,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/connections"
         element={
           <ConsolePage
-            config={config()?.[Resource.CONNECTIONS]?.[Operation.LIST]}
+            config={config?.[Resource.CONNECTIONS]?.[Operation.LIST]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -173,7 +172,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/connections/:connection_uuid"
         element={
           <ConsolePage
-            config={config()?.[Resource.CONNECTIONS]?.[Operation.VIEW]}
+            config={config?.[Resource.CONNECTIONS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -184,7 +183,7 @@ const ConsoleRoutes = (props) => {
         path="/projects/:project_slug/settings"
         element={
           <ConsolePage
-            config={config()?.[Resource.PROJECT_SETTINGS]?.[Operation.VIEW]}
+            config={config?.[Resource.PROJECT_SETTINGS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -195,7 +194,7 @@ const ConsoleRoutes = (props) => {
         path="/user/account"
         element={
           <ConsolePage
-            config={config()?.[Resource.USER_ACCOUNT]?.[Operation.VIEW]}
+            config={config?.[Resource.USER_ACCOUNT]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -206,7 +205,7 @@ const ConsoleRoutes = (props) => {
         path="/user/settings"
         element={
           <ConsolePage
-            config={config()?.[Resource.USER_SETTINGS]?.[Operation.VIEW]}
+            config={config?.[Resource.USER_SETTINGS]?.[Operation.VIEW]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}

@@ -1,15 +1,6 @@
 import axios from "axios";
-import {
-  createSignal,
-  createResource,
-  createEffect,
-  Suspense,
-  For,
-  Switch,
-  Match,
-} from "solid-js";
+import { createSignal, For } from "solid-js";
 import SiteField from "../../../fields/SiteField";
-import { Field } from "../../console";
 
 const initForm = (fields) => {
   let newForm = {};

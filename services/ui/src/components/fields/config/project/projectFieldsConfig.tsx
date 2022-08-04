@@ -1,5 +1,6 @@
 import validateDescription from "../../validators/validateDescription";
 import validateName from "../../validators/validateName";
+import validateSlug from "../../validators/validateSlug";
 import validator from "validator";
 
 const projectFieldsConfig = {
@@ -10,6 +11,14 @@ const projectFieldsConfig = {
     icon: "fas fa-project-diagram",
     help: "Must be at least four characters or longer.",
     validate: validateName,
+  },
+  slug: {
+    label: "Name",
+    type: "text",
+    placeholder: "Project Slug",
+    icon: "fas fa-exclamation-triangle",
+    help: "Must be at least four characters or longer.",
+    validate: validateSlug,
   },
   description: {
     label: "Description",
@@ -22,7 +31,7 @@ const projectFieldsConfig = {
     label: "URL",
     type: "text",
     placeholder: "www.example.com",
-    icon: "far fa-window-maximize",
+    icon: "far fa-link",
     help: "Must be a valid public facing URL.",
     validate: validator.isURL,
   },

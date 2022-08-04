@@ -4,7 +4,7 @@ import SiteTextarea from "./form/SiteTextarea";
 import SiteCheckbox from "./form/SiteCheckbox";
 import SiteSwitch from "./form/SiteSwitch";
 import SiteSelect from "./form/SiteSelect";
-import { Field } from "../console/console";
+import { Field } from "../console/config/types";
 
 const SiteField = (props) => {
   function handleField(event, field = null) {

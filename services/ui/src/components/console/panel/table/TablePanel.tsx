@@ -1,14 +1,5 @@
 import axios from "axios";
-import {
-  createSignal,
-  createResource,
-  createEffect,
-  Suspense,
-  For,
-  Switch,
-  Match,
-} from "solid-js";
-import { Row } from "../../console";
+import { createSignal, createResource } from "solid-js";
 import Table from "./Table";
 
 import TableHeader from "./TableHeader";
