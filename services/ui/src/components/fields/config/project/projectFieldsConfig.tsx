@@ -31,7 +31,7 @@ const projectFieldsConfig = {
     label: "URL",
     type: "text",
     placeholder: "www.example.com",
-    icon: "far fa-link",
+    icon: "fas fa-link",
     help: "Must be a valid public facing URL.",
     validate: validator.isURL,
   },

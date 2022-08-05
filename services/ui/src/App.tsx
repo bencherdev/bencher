@@ -15,6 +15,7 @@ import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
+import { projectSlug } from "./components/console/ConsolePage";
 
 const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
@@ -49,6 +50,11 @@ const App: Component = () => {
 
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
+
+  // The project slug can't be a resource because it isn't 100% tied to the URL
+  const [project_slug, setProjectSlug] = createSignal<String>(
+    projectSlug(pathname)
+  );
 
   createEffect(() => {
     if (document.title !== title()) {
@@ -138,7 +144,12 @@ const App: Component = () => {
   return (
     <>
       <GoogleAnalytics />
-      <Navbar user={user} />
+      <Navbar
+        user={user}
+        project_slug={project_slug}
+        handleRedirect={setRedirect}
+        handleProjectSlug={setProjectSlug}
+      />
       {getRedirect()}
 
       {notification().text !== null && (
@@ -202,8 +213,10 @@ const App: Component = () => {
           <ConsoleRoutes
             user={user}
             pathname={pathname}
+            project_slug={project_slug}
             handleTitle={handleTitle}
             handleRedirect={setRedirect}
+            handleProjectSlug={setProjectSlug}
           />
         </Route>
       </Routes>

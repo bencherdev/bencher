@@ -9,15 +9,23 @@ const ConsoleMenu = (props) => {
 
   return (
     <aside class="menu">
-      <div class="menu-label">
-        <ProjectSelect
-          project_slug={props?.project_slug}
-          handleRedirect={props?.handleRedirect}
-          handleProjectSlug={props?.handleProjectSlug}
-        />
-      </div>
       {typeof props.project_slug() === "string" && (
         <>
+          <div class="menu-label">
+            <button
+              class="button is-outlined is-fullwidth"
+              onClick={(e) => {
+                e.preventDefault();
+                props.handleRedirect(
+                  `/console/projects/${props.project_slug()}/perf`
+                );
+              }}
+            >
+              <span class="icon">
+                <i class="fas fa-home" aria-hidden="true" />
+              </span>
+            </button>
+          </div>
           <p class="menu-label">Project</p>
           <ul class="menu-list">
             <li>

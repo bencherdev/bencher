@@ -1,9 +1,9 @@
 import { useParams } from "solid-app-router";
-import { createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 
-const projectSlug = (pathname) => {
+export const projectSlug = (pathname) => {
   const path = pathname().split("/");
   if (
     path.length < 5 ||
@@ -19,14 +19,15 @@ const projectSlug = (pathname) => {
 
 const ConsolePage = (props) => {
   const [count, setCount] = createSignal(0);
-  // The project slug can't be a resource because it isn't 100% tied to the URL
-  const [project_slug, setProjectSlug] = createSignal<String>(
-    projectSlug(props.pathname)
-  );
 
   const params = useParams();
   const path_params = createMemo(() => params);
   console.log(path_params);
+
+  createEffect(() => {
+    const slug = projectSlug(props.pathname);
+    props.handleProjectSlug(slug);
+  });
 
   setInterval(() => {
     if (props.user()?.uuid === null) {
@@ -45,9 +46,9 @@ const ConsolePage = (props) => {
         <div class="columns is-reverse-mobile">
           <div class="column is-one-fifth">
             <ConsoleMenu
-              project_slug={project_slug}
+              project_slug={props.project_slug}
               handleRedirect={props.handleRedirect}
-              handleProjectSlug={setProjectSlug}
+              handleProjectSlug={props.handleProjectSlug}
             />
           </div>
           <div class="column">
@@ -58,7 +59,7 @@ const ConsolePage = (props) => {
               pathname={props.pathname}
               handleTitle={props.handleTitle}
               handleRedirect={props.handleRedirect}
-              handleProjectSlug={setProjectSlug}
+              handleProjectSlug={props.handleProjectSlug}
             />
           </div>
         </div>

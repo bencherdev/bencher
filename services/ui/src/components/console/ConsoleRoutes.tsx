@@ -15,8 +15,10 @@ const ConsoleRoutes = (props) => {
         user={props.user}
         config={config}
         pathname={props.pathname}
+        project_slug={props.project_slug}
         handleTitle={props.handleTitle}
         handleRedirect={props.handleRedirect}
+        handleProjectSlug={props.handleProjectSlug}
       />
     );
   };

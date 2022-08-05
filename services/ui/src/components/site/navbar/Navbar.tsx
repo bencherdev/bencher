@@ -1,5 +1,6 @@
 import { Link } from "solid-app-router";
 import { Accessor } from "solid-js";
+import ProjectSelect from "./ProjectSelect";
 
 const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
 const BENCHER_DOCS_URL: string = import.meta.env.VITE_BENCHER_DOCS_URL;
@@ -49,6 +50,16 @@ export const Navbar = (props) => {
           <a class="navbar-item" href={BENCHER_API_URL}>
             API
           </a>
+
+          {props.user()?.uuid && (
+            <div class="navbar-item">
+              <ProjectSelect
+                project_slug={props?.project_slug}
+                handleRedirect={props?.handleRedirect}
+                handleProjectSlug={props?.handleProjectSlug}
+              />
+            </div>
+          )}
         </div>
 
         <div class="navbar-end">
