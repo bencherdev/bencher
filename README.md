@@ -41,6 +41,8 @@ cargo run -- testbed view --host http://localhost:8080 --project hazel-river nem
 
 ----
 
+cargo test --features seed --test seed
+
 cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
 
 cargo run --bin bencher -- ...

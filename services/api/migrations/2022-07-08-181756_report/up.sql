@@ -34,8 +34,7 @@ CREATE TABLE version (
     number INTEGER NOT NULL,
     hash TEXT,
     FOREIGN KEY (branch_id) REFERENCES branch (id),
-    UNIQUE(branch_id, number),
-    UNIQUE(branch_id, hash)
+    UNIQUE(branch_id, number)
 );
 CREATE TABLE testbed (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -65,7 +64,7 @@ CREATE TABLE report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
-    version_id INTEGER NOT NULL UNIQUE,
+    version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
     adapter_id INTEGER NOT NULL,
     start_time DATETIME NOT NULL,

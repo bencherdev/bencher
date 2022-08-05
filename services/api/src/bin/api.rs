@@ -1,4 +1,4 @@
-use api::{
+use bencher_api::{
     db::get_db_connection,
     endpoints::Api,
     util::{

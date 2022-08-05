@@ -6,6 +6,7 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
+    dsl::Desc,
     expression_methods::BoolExpressionMethods,
     JoinOnDsl,
     QueryDsl,
@@ -76,9 +77,8 @@ pub async fn get_ls(
     let conn = db_connection.lock().await;
     let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     let json: Vec<JsonReport> = schema::report::table
-        .left_join(schema::version::table.on(schema::report::version_id.eq(schema::version::id)))
-        .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
-        .filter(schema::branch::project_id.eq(&query_project.id))
+        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
+        .filter(schema::testbed::project_id.eq(&query_project.id))
         .select((
             schema::report::id,
             schema::report::uuid,
@@ -89,8 +89,7 @@ pub async fn get_ls(
             schema::report::start_time,
             schema::report::end_time,
         ))
-        // .order(schema::report::start_time)
-        // .desc()
+        .order(schema::report::start_time.desc())
         .load::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to get reports."))?
         .into_iter()
@@ -102,6 +101,28 @@ pub async fn get_ls(
         CorsHeaders::new_pub("GET".into()),
     ))
 }
+
+// let json: Vec<JsonReport> = schema::report::table
+//         .left_join(schema::version::table.on(schema::report::version_id.
+// eq(schema::version::id)))         .left_join(schema::branch::table.on(schema:
+// :version::branch_id.eq(schema::branch::id)))         .filter(schema::branch::
+// project_id.eq(&query_project.id))         .select((
+//             schema::report::id,
+//             schema::report::uuid,
+//             schema::report::user_id,
+//             schema::report::version_id,
+//             schema::report::testbed_id,
+//             schema::report::adapter_id,
+//             schema::report::start_time,
+//             schema::report::end_time,
+//         ))
+//         // .order(schema::report::start_time)
+//         // .desc()
+//         .load::<QueryReport>(&*conn)
+//         .map_err(|_| http_error!("Failed to get reports."))?
+//         .into_iter()
+//         .filter_map(|query| query.to_json(&*conn).ok())
+//         .collect();
 
 // #[endpoint {
 //     method = OPTIONS,
@@ -122,8 +143,8 @@ pub async fn get_ls(
 // pub async fn post(
 //     rqctx: Arc<RequestContext<Context>>,
 //     body: TypedBody<JsonNewReport>,
-// ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
-//     let db_connection = rqctx.context();
+// ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>,
+// CorsHeaders>, HttpError> {     let db_connection = rqctx.context();
 //     let json_report = body.into_inner();
 
 //     let conn = db_connection.lock().await;
