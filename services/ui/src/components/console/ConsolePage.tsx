@@ -18,6 +18,7 @@ const projectSlug = (pathname) => {
 };
 
 const ConsolePage = (props) => {
+  const [count, setCount] = createSignal(0);
   // The project slug can't be a resource because it isn't 100% tied to the URL
   const [project_slug, setProjectSlug] = createSignal<String>(
     projectSlug(props.pathname)
@@ -26,6 +27,17 @@ const ConsolePage = (props) => {
   const params = useParams();
   const path_params = createMemo(() => params);
   console.log(path_params);
+
+  setInterval(() => {
+    if (props.user()?.uuid === null) {
+      setCount(count() + 1);
+      if (count() === 2) {
+        props.handleRedirect("/auth/login");
+      }
+    } else if (count() !== 0) {
+      setCount(0);
+    }
+  }, 1000);
 
   return (
     <section class="section">

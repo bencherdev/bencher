@@ -9,6 +9,18 @@ const ConsolePage = lazy(() => import("./ConsolePage"));
 const ConsoleRoutes = (props) => {
   const config = consoleConfig;
 
+  const consolePage = (config) => {
+    return (
+      <ConsolePage
+        user={props.user}
+        config={config}
+        pathname={props.pathname}
+        handleTitle={props.handleTitle}
+        handleRedirect={props.handleRedirect}
+      />
+    );
+  };
+
   return (
     <>
       {/* Console Routes */}
@@ -16,201 +28,79 @@ const ConsoleRoutes = (props) => {
       {/* Console Projects Routes */}
       <Route
         path="/projects"
-        element={
-          <ConsolePage
-            config={config?.[Resource.PROJECTS]?.[Operation.LIST]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.LIST])}
       />
       <Route
         path="/projects/add"
-        element={
-          <ConsolePage
-            config={config?.[Resource.PROJECTS]?.[Operation.ADD]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.ADD])}
       />
       <Route
         path="/projects/:project_slug"
-        element={
-          <ConsolePage
-            config={config?.[Resource.PROJECTS]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/perf"
-        element={
-          <ConsolePage
-            config={config?.[Resource.PROJECTS]?.[Operation.PERF]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.PERF])}
       />
       <Route
         path="/projects/:project_slug/reports"
-        element={
-          <ConsolePage
-            config={config?.[Resource.REPORTS]?.[Operation.LIST]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.REPORTS]?.[Operation.LIST])}
       />
       <Route
         path="/projects/:project_slug/reports/add"
-        element={
-          <ConsolePage
-            config={config?.[Resource.REPORTS]?.[Operation.ADD]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.REPORTS]?.[Operation.ADD])}
       />
       <Route
         path="/projects/:project_slug/reports/:reports"
-        element={
-          <ConsolePage
-            config={config?.[Resource.REPORTS]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.REPORTS]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/branches"
-        element={
-          <ConsolePage
-            config={config?.[Resource.BRANCHES]?.[Operation.LIST]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.BRANCHES]?.[Operation.LIST])}
       />
       <Route
         path="/projects/:project_slug/branches/add"
-        element={
-          <ConsolePage
-            config={config?.[Resource.BRANCHES]?.[Operation.ADD]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.BRANCHES]?.[Operation.ADD])}
       />
       <Route
         path="/projects/:project_slug/branches/:branch_slug"
-        element={
-          <ConsolePage
-            config={config?.[Resource.BRANCHES]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.BRANCHES]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/testbeds"
-        element={
-          <ConsolePage
-            config={config?.[Resource.TESTBEDS]?.[Operation.LIST]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.TESTBEDS]?.[Operation.LIST])}
       />
       <Route
         path="/projects/:project_slug/testbeds/add"
-        element={
-          <ConsolePage
-            config={config?.[Resource.TESTBEDS]?.[Operation.ADD]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.TESTBEDS]?.[Operation.ADD])}
       />
       <Route
         path="/projects/:project_slug/testbeds/:testbed_slug"
-        element={
-          <ConsolePage
-            config={config?.[Resource.TESTBEDS]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.TESTBEDS]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/connections"
-        element={
-          <ConsolePage
-            config={config?.[Resource.CONNECTIONS]?.[Operation.LIST]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.LIST])}
       />
       <Route
         path="/projects/:project_slug/connections/:connection_uuid"
-        element={
-          <ConsolePage
-            config={config?.[Resource.CONNECTIONS]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/settings"
-        element={
-          <ConsolePage
-            config={config?.[Resource.PROJECT_SETTINGS]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(
+          config?.[Resource.PROJECT_SETTINGS]?.[Operation.VIEW]
+        )}
       />
       <Route
         path="/user/account"
-        element={
-          <ConsolePage
-            config={config?.[Resource.USER_ACCOUNT]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(config?.[Resource.USER_ACCOUNT]?.[Operation.VIEW])}
       />
       <Route
         path="/user/settings"
-        element={
-          <ConsolePage
-            config={config?.[Resource.USER_SETTINGS]?.[Operation.VIEW]}
-            pathname={props.pathname}
-            handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
-          />
-        }
+        element={consolePage(
+          config?.[Resource.USER_SETTINGS]?.[Operation.VIEW]
+        )}
       />
     </>
   );

@@ -14,7 +14,7 @@ const AuthLogoutPage = (props: {
 }) => {
   props.handleTitle("Log out");
   props.removeUser();
-  props.handleRedirect("/");
+  props.handleRedirect("/auth/login");
   return <></>;
 };
 

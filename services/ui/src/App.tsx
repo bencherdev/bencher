@@ -200,6 +200,7 @@ const App: Component = () => {
 
         <Route path="/console">
           <ConsoleRoutes
+            user={user}
             pathname={pathname}
             handleTitle={handleTitle}
             handleRedirect={setRedirect}
