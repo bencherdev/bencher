@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use super::Run as Create;
 use crate::{
     bencher::{
         sub::SubCmd,
@@ -16,7 +17,7 @@ mod list;
 #[derive(Debug)]
 pub enum Report {
     List(list::List),
-    // Create(create::Create),
+    Create(Create),
     // View(view::View),
 }
 
@@ -26,7 +27,7 @@ impl TryFrom<CliReport> for Report {
     fn try_from(report: CliReport) -> Result<Self, Self::Error> {
         Ok(match report {
             CliReport::List(list) => Self::List(list.try_into()?),
-            // CliReport::Create(create) => Self::Create(create.try_into()?),
+            CliReport::Create(create) => Self::Create(create.try_into()?),
             // CliReport::View(view) => Self::View(view.try_into()?),
         })
     }
@@ -37,7 +38,7 @@ impl SubCmd for Report {
     async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
             Self::List(list) => list.exec(wide).await,
-            // Self::Create(create) => create.exec(wide).await,
+            Self::Create(create) => create.exec(wide).await,
             // Self::View(create) => create.exec(wide).await,
         }
     }

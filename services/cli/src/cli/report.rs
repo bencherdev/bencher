@@ -4,16 +4,19 @@ use clap::{
     Subcommand,
 };
 
-use super::CliBackend;
+use super::{
+    run::CliRun,
+    CliBackend,
+};
 
 #[derive(Subcommand, Debug)]
 pub enum CliReport {
-    /// List reportes
+    /// List reports
     #[clap(alias = "ls")]
     List(CliReportList),
-    // Create a report
-    // #[clap(alias = "add")]
-    // Create(CliReportCreate),
+    /// Create a report (alias to `bencher run`)
+    #[clap(alias = "add")]
+    Create(CliRun),
     // View a report
     // View(CliReportView),
 }
