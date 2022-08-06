@@ -49,11 +49,7 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.REPORTS]?.[Operation.LIST])}
       />
       <Route
-        path="/projects/:project_slug/reports/add"
-        element={consolePage(config?.[Resource.REPORTS]?.[Operation.ADD])}
-      />
-      <Route
-        path="/projects/:project_slug/reports/:reports"
+        path="/projects/:project_slug/reports/:report_uuid"
         element={consolePage(config?.[Resource.REPORTS]?.[Operation.VIEW])}
       />
       <Route

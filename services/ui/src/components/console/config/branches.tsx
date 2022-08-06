@@ -1,7 +1,7 @@
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
 import branchFieldsConfig from "../../fields/config/project/branchFieldsConfig";
 import { Button, Card, Field, Operation, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewPath } from "./util";
+import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 
 const branchesConfig = {
   [Operation.LIST]: {
@@ -34,7 +34,7 @@ const branchesConfig = {
           {},
         ],
         path: (pathname, datum) => {
-          return viewPath(pathname, datum);
+          return viewSlugPath(pathname, datum);
         },
       },
     },

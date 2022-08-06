@@ -1,6 +1,6 @@
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
 import { Button, Card, Field, Operation, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewPath } from "./util";
+import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 
 const projectsConfig = {
   [Operation.LIST]: {
@@ -37,7 +37,7 @@ const projectsConfig = {
           {},
         ],
         path: (pathname, datum) => {
-          return viewPath(pathname, datum);
+          return viewSlugPath(pathname, datum);
         },
       },
     },
