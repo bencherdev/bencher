@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    JsonNewReport,
-    JsonReport,
-};
+use bencher_json::JsonReport;
 use chrono::NaiveDateTime;
 use diesel::{
     Insertable,

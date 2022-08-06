@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use bencher_json::JsonAdapter;
 use diesel::{
     expression_methods::BoolExpressionMethods,
     QueryDsl,

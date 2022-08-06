@@ -37,10 +37,7 @@ use crate::{
             },
             testbed::QueryTestbed,
             user::QueryUser,
-            version::{
-                InsertVersion,
-                QueryVersion,
-            },
+            version::InsertVersion,
         },
         schema,
     },
@@ -80,14 +77,18 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
+    let user_uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
     let conn = db_connection.lock().await;
+    // Verify that the user has access to the project
     let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    QueryUser::has_access(&*conn, query_project.id, user_uuid)?;
+
     let json: Vec<JsonReport> = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(&query_project.id))
+        .filter(schema::testbed::project_id.eq(query_project.id))
         .select((
             schema::report::id,
             schema::report::uuid,
@@ -110,28 +111,6 @@ pub async fn get_ls(
         CorsHeaders::new_pub("GET".into()),
     ))
 }
-
-// let json: Vec<JsonReport> = schema::report::table
-//         .left_join(schema::version::table.on(schema::report::version_id.
-// eq(schema::version::id)))         .left_join(schema::branch::table.on(schema:
-// :version::branch_id.eq(schema::branch::id)))         .filter(schema::branch::
-// project_id.eq(&query_project.id))         .select((
-//             schema::report::id,
-//             schema::report::uuid,
-//             schema::report::user_id,
-//             schema::report::version_id,
-//             schema::report::testbed_id,
-//             schema::report::adapter_id,
-//             schema::report::start_time,
-//             schema::report::end_time,
-//         ))
-//         // .order(schema::report::start_time)
-//         // .desc()
-//         .load::<QueryReport>(&*conn)
-//         .map_err(|_| http_error!("Failed to get reports."))?
-//         .into_iter()
-//         .filter_map(|query| query.to_json(&*conn).ok())
-//         .collect();
 
 #[endpoint {
     method = OPTIONS,
@@ -177,16 +156,7 @@ pub async fn post(
         return Err(http_error!(ERROR));
     }
     // Verify that the user has access to the project
-    let user_id = QueryUser::get_id(&*conn, &user_uuid)?;
-    schema::project::table
-        .filter(
-            schema::project::id
-                .eq(branch_project_id)
-                .and(schema::project::owner_id.eq(user_id)),
-        )
-        .select(schema::project::id)
-        .first::<i32>(&*conn)
-        .map_err(|_| http_error!(ERROR))?;
+    let user_id = QueryUser::has_access(&*conn, branch_project_id, user_uuid)?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -236,58 +206,70 @@ pub async fn post(
     ))
 }
 
-// #[derive(Deserialize, JsonSchema)]
-// pub struct GetOneParams {
-//     pub project:        ResourceId,
-//     pub branch:         ResourceId,
-//     pub version_number: ResourceId,
-// }
-// #[endpoint {
-//     method = OPTIONS,
-//     path =  "/v0/projects/{project}/branches/{branch}/{version_number}",
-//     tags = ["projects", "branches", "reports"]
-// }]
+#[derive(Deserialize, JsonSchema)]
+pub struct GetOneParams {
+    pub project:     ResourceId,
+    pub report_uuid: Uuid,
+}
 
-// pub async fn get_one_options(
-//     _rqctx: Arc<RequestContext<Context>>,
-//     _path_params: Path<GetOneParams>,
-// ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
-//     Ok(get_cors::<Context>())
-// }
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}/reports/{report_uuid}",
+    tags = ["projects", "reports"]
+}]
+pub async fn get_one_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GetOneParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
 
-// #[endpoint {
-//     method = GET,
-//     path =  "/v0/projects/{project}/branches/{branch}/{version_number}",
-//     tags = ["projects", "branches",  "reports"]
-// }]
-// pub async fn get_one(
-//     rqctx: Arc<RequestContext<Context>>,
-//     path_params: Path<GetOneParams>,
-// ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>,
-// HttpError> {     let db_connection = rqctx.context();
-//     let path_params = path_params.into_inner();
-//     let resource_id = path_params.report.as_str();
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects/{project}/reports/{report_uuid}",
+    tags = ["projects", "reports"]
+}]
+pub async fn get_one(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetOneParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
+    let user_uuid = get_token(&rqctx).await?;
+    let db_connection = rqctx.context();
+    let path_params = path_params.into_inner();
+    let report_uuid = path_params.report_uuid.to_string();
 
-//     let conn = db_connection.lock().await;
-//     let project = QueryProject::from_resource_id(&*conn,
-// &path_params.project)?;     let query = if let Ok(query) =
-// schema::report::table         .filter(
-//             schema::report::project_id.eq(project.id).and(
-//                 schema::report::version_id
-//                     .eq(version_id)
-//                     .or(schema::report::uuid.eq(resource_id)),
-//             ),
-//         )
-//         .first::<QueryReport>(&*conn)
-//     {
-//         Ok(query)
-//     } else {
-//         Err(http_error!("Failed to get report."))
-//     }?;
-//     let json = query.to_json(&*conn)?;
+    let conn = db_connection.lock().await;
+    // Verify that the user has access to the project
+    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    QueryUser::has_access(&*conn, query_project.id, user_uuid)?;
 
-//     Ok(HttpResponseHeaders::new(
-//         HttpResponseOk(json),
-//         CorsHeaders::new_pub("GET".into()),
-//     ))
-// }
+    let query = if let Ok(query) = schema::report::table
+        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
+        .filter(
+            schema::testbed::project_id
+                .eq(query_project.id)
+                .and(schema::report::uuid.eq(report_uuid)),
+        )
+        .select((
+            schema::report::id,
+            schema::report::uuid,
+            schema::report::user_id,
+            schema::report::version_id,
+            schema::report::testbed_id,
+            schema::report::adapter_id,
+            schema::report::start_time,
+            schema::report::end_time,
+        ))
+        .first::<QueryReport>(&*conn)
+    {
+        Ok(query)
+    } else {
+        Err(http_error!("Failed to get report."))
+    }?;
+    let json = query.to_json(&*conn)?;
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseOk(json),
+        CorsHeaders::new_pub("GET".into()),
+    ))
+}

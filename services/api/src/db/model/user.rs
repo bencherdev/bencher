@@ -5,6 +5,7 @@ use bencher_json::{
     JsonUser,
 };
 use diesel::{
+    expression_methods::BoolExpressionMethods,
     Insertable,
     QueryDsl,
     Queryable,
@@ -41,7 +42,7 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn new(conn: &SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
+    pub fn from_json(conn: &SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup { name, slug, email } = signup;
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
@@ -136,5 +137,23 @@ impl QueryUser {
             .first(conn)
             .map_err(|_| http_error!(USER_ERROR))?;
         Uuid::from_str(&uuid).map_err(|_| http_error!(USER_ERROR))
+    }
+
+    pub fn has_access(
+        conn: &SqliteConnection,
+        project_id: i32,
+        user_uuid: Uuid,
+    ) -> Result<i32, HttpError> {
+        let user_id = QueryUser::get_id(conn, &user_uuid)?;
+        schema::project::table
+            .filter(
+                schema::project::id
+                    .eq(project_id)
+                    .and(schema::project::owner_id.eq(user_id)),
+            )
+            .select(schema::project::id)
+            .first::<i32>(conn)
+            .map_err(|_| http_error!("Failed to get user."))?;
+        Ok(user_id)
     }
 }

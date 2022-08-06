@@ -59,7 +59,7 @@ pub async fn post(
 
     let json_signup = body.into_inner();
     let conn = db_connection.lock().await;
-    let insert_user = InsertUser::new(&conn, json_signup)?;
+    let insert_user = InsertUser::from_json(&conn, json_signup)?;
     let email = insert_user.email.clone();
     diesel::insert_into(schema::user::table)
         .values(&insert_user)

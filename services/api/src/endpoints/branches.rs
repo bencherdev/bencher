@@ -136,12 +136,12 @@ pub struct GetOneParams {
     pub project: ResourceId,
     pub branch:  ResourceId,
 }
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches/{branch}",
     tags = ["projects", "branches"]
 }]
-
 pub async fn get_one_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<GetOneParams>,
