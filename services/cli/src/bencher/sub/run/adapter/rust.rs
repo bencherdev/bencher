@@ -1,13 +1,12 @@
 use std::{
-    collections::HashMap,
     str::FromStr,
     time::Duration,
 };
 
 use bencher_json::report::{
-    JsonBenchmark,
     JsonBenchmarks,
     JsonLatency,
+    JsonPerf,
 };
 use nom::{
     branch::alt,
@@ -75,14 +74,14 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarks> {
             line_ending,
         )),
         |(_, _, _, _, _, _, _, benches, _)| {
-            let mut benchmarks = HashMap::new();
+            let mut benchmarks = JsonBenchmarks::new();
             for bench in benches {
-                if let Some((key, latency)) = to_latency(bench) {
-                    let benchmark = JsonBenchmark {
+                if let Some((benchmark, latency)) = to_latency(bench) {
+                    let perf = JsonPerf {
                         latency: Some(latency),
                         ..Default::default()
                     };
-                    benchmarks.insert(key, benchmark);
+                    benchmarks.insert(benchmark, perf);
                 }
             }
             benchmarks

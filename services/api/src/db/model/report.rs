@@ -1,4 +1,7 @@
-use std::str::FromStr;
+use std::{
+    collections::HashMap,
+    str::FromStr,
+};
 
 use bencher_json::JsonReport;
 use chrono::NaiveDateTime;
@@ -60,6 +63,7 @@ impl QueryReport {
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
             start_time,
             end_time,
+            benchmarks: HashMap::new(),
         })
     }
 }

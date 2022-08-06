@@ -34,7 +34,7 @@ table! {
 }
 
 table! {
-    performance (id) {
+    perf (id) {
         id -> Integer,
         uuid -> Text,
         report_id -> Integer,
@@ -124,8 +124,8 @@ joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
 joinable!(branch_benchmark -> benchmark (benchmark_id));
 joinable!(branch_benchmark -> branch (branch_id));
-joinable!(performance -> branch_benchmark (branch_benchmark_id));
-joinable!(performance -> report (report_id));
+joinable!(perf -> branch_benchmark (branch_benchmark_id));
+joinable!(perf -> report (report_id));
 joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
 joinable!(report -> testbed (testbed_id));
@@ -139,7 +139,7 @@ allow_tables_to_appear_in_same_query!(
     benchmark,
     branch,
     branch_benchmark,
-    performance,
+    perf,
     project,
     report,
     testbed,

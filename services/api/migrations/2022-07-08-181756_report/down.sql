@@ -1,5 +1,5 @@
 -- This file should undo anything in `up.sql`
-DROP TABLE performance;
+DROP TABLE perf;
 DROP TABLE branch_benchmark;
 DROP TABLE benchmark;
 DROP TABLE report;

@@ -89,7 +89,7 @@ CREATE TABLE branch_benchmark (
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
     UNIQUE(branch_id, benchmark_id)
 );
-CREATE TABLE performance (
+CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,

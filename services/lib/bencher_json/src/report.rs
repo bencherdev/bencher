@@ -40,6 +40,7 @@ pub struct JsonReport {
     pub adapter_uuid: Uuid,
     pub start_time:   NaiveDateTime,
     pub end_time:     NaiveDateTime,
+    pub benchmarks:   JsonBenchmarks,
 }
 
 #[derive(Display, Debug, Serialize, Deserialize)]
@@ -51,11 +52,11 @@ pub enum JsonAdapter {
     RustCargoBench,
 }
 
-pub type JsonBenchmarks = HashMap<String, JsonBenchmark>;
+pub type JsonBenchmarks = HashMap<String, JsonPerf>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonBenchmark {
+pub struct JsonPerf {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub latency:    Option<JsonLatency>,
     #[serde(skip_serializing_if = "Option::is_none")]
