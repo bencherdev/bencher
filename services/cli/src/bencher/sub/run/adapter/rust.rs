@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::HashMap,
     str::FromStr,
     time::Duration,
 };
@@ -75,7 +75,7 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarks> {
             line_ending,
         )),
         |(_, _, _, _, _, _, _, benches, _)| {
-            let mut benchmarks = BTreeMap::new();
+            let mut benchmarks = HashMap::new();
             for bench in benches {
                 if let Some((key, latency)) = to_latency(bench) {
                     let benchmark = JsonBenchmark {

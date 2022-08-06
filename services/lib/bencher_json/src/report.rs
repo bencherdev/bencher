@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::HashMap,
     time::Duration,
 };
 
@@ -51,7 +51,7 @@ pub enum JsonAdapter {
     RustCargoBench,
 }
 
-pub type JsonBenchmarks = BTreeMap<String, JsonBenchmark>;
+pub type JsonBenchmarks = HashMap<String, JsonBenchmark>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -61,9 +61,11 @@ pub struct JsonBenchmark {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub throughput: Option<JsonThroughput>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cpu:        Option<JsonCpu>,
+    pub cpu:        Option<JsonMinMaxAvg>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory:     Option<JsonMemory>,
+    pub memory:     Option<JsonMinMaxAvg>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disk:       Option<JsonMinMaxAvg>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -84,14 +86,8 @@ pub struct JsonThroughput {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonCpu {
+pub struct JsonMinMaxAvg {
     pub min: f64,
     pub max: f64,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonMemory {
-    pub min: f64,
-    pub max: f64,
+    pub avg: f64,
 }

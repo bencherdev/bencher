@@ -7,12 +7,53 @@ table! {
 }
 
 table! {
+    benchmark (id) {
+        id -> Integer,
+        uuid -> Text,
+        project_id -> Integer,
+        name -> Text,
+    }
+}
+
+table! {
     branch (id) {
         id -> Integer,
         uuid -> Text,
         project_id -> Integer,
         name -> Text,
         slug -> Text,
+    }
+}
+
+table! {
+    branch_benchmark (id) {
+        id -> Integer,
+        branch_id -> Integer,
+        benchmark_id -> Integer,
+    }
+}
+
+table! {
+    performance (id) {
+        id -> Integer,
+        uuid -> Text,
+        report_id -> Integer,
+        branch_benchmark_id -> Integer,
+        duration -> Nullable<Integer>,
+        lower_variance -> Nullable<Integer>,
+        upper_variance -> Nullable<Integer>,
+        lower_events -> Nullable<Float>,
+        upper_events -> Nullable<Float>,
+        unit_time -> Nullable<Integer>,
+        min_cpu -> Nullable<Float>,
+        max_cpu -> Nullable<Float>,
+        average_cpu -> Nullable<Float>,
+        min_memory -> Nullable<Float>,
+        max_memory -> Nullable<Float>,
+        average_memory -> Nullable<Float>,
+        min_disk -> Nullable<Float>,
+        max_disk -> Nullable<Float>,
+        average_disk -> Nullable<Float>,
     }
 }
 
@@ -79,7 +120,12 @@ table! {
     }
 }
 
+joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
+joinable!(branch_benchmark -> benchmark (benchmark_id));
+joinable!(branch_benchmark -> branch (branch_id));
+joinable!(performance -> branch_benchmark (branch_benchmark_id));
+joinable!(performance -> report (report_id));
 joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
 joinable!(report -> testbed (testbed_id));
@@ -90,7 +136,10 @@ joinable!(version -> branch (branch_id));
 
 allow_tables_to_appear_in_same_query!(
     adapter,
+    benchmark,
     branch,
+    branch_benchmark,
+    performance,
     project,
     report,
     testbed,
