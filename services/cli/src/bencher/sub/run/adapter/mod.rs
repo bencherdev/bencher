@@ -12,8 +12,9 @@ use crate::{
 pub mod json;
 pub mod rust;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum Adapter {
+    #[default]
     Json,
     RustCargoBench,
 }
@@ -33,14 +34,6 @@ impl Into<JsonAdapter> for Adapter {
             Self::Json => JsonAdapter::Json,
             Self::RustCargoBench => JsonAdapter::RustCargoBench,
         }
-    }
-}
-
-pub fn map_adapter(adapter: Option<CliAdapter>) -> Result<Adapter, BencherError> {
-    if let Some(adapter) = adapter {
-        Ok(adapter.into())
-    } else {
-        Ok(Adapter::Json)
     }
 }
 

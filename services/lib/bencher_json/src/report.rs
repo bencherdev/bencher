@@ -23,8 +23,7 @@ pub struct JsonNewReport {
     pub branch:     Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hash:       Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub testbed:    Option<Uuid>,
+    pub testbed:    Uuid,
     pub adapter:    JsonAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,

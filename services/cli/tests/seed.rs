@@ -58,6 +58,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
+    // export BENCHER_TOKEN=[USER_TOKEN]
     let login = cmd.output().unwrap().stdout;
     let login: JsonUser = serde_json::from_slice(&login).unwrap();
     let token = login.uuid.to_string();
@@ -72,10 +73,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "project",
         "create",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         "--slug",
         PROJECT_SLUG,
         "The Computer",
@@ -87,10 +88,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "project",
         "view",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_SLUG,
     ]);
     cmd.assert().success();
@@ -100,10 +101,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "branch",
         "ls",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
     ]);
@@ -114,10 +115,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "branch",
         "create",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
         "--slug",
@@ -131,16 +132,17 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "branch",
         "view",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
         BRANCH_SLUG,
     ]);
     cmd.assert().success();
 
+    // export BENCHER_BRANCH=[BRANCH_UUID]
     let branch = cmd.output().unwrap().stdout;
     let branch: JsonBranch = serde_json::from_slice(&branch).unwrap();
     let branch = branch.uuid.to_string();
@@ -150,10 +152,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "testbed",
         "ls",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
     ]);
@@ -164,10 +166,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "testbed",
         "create",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
         "--slug",
@@ -181,16 +183,17 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "testbed",
         "view",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
         TESTBED_SLUG,
     ]);
     cmd.assert().success();
 
+    // export BENCHER_TESTBED=[TESTBED_UUID]
     let testbed = cmd.output().unwrap().stdout;
     let testbed: JsonTestbed = serde_json::from_slice(&testbed).unwrap();
     let testbed = testbed.uuid.to_string();
@@ -200,10 +203,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args([
         "report",
         "ls",
-        TOKEN_ARG,
-        &token,
         HOST_ARG,
         LOCALHOST,
+        TOKEN_ARG,
+        &token,
         PROJECT_ARG,
         PROJECT_SLUG,
     ]);
@@ -211,7 +214,20 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
 
     // cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args(["run", TOKEN_ARG, &token, HOST_ARG, LOCALHOST]);
+    cmd.args([
+        "run",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        &token,
+        "--branch",
+        &branch,
+        "--testbed",
+        &testbed,
+        "--adapter",
+        "rust",
+        r#""cargo bench"#,
+    ]);
     cmd.assert().success();
 
     Ok(())

@@ -13,7 +13,7 @@ pub struct CliRun {
 
     /// Branch UUID
     #[clap(long)]
-    pub branch: String,
+    pub branch: Option<String>,
 
     /// Software commit hash
     #[clap(long)]
