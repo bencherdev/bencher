@@ -22,6 +22,7 @@ use super::{
     adapter::QueryAdapter,
     testbed::QueryTestbed,
     user::QueryUser,
+    version::QueryVersion,
 };
 use crate::{
     db::schema::report as report_table,
@@ -57,7 +58,7 @@ impl QueryReport {
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get report."))?,
             user_uuid: QueryUser::get_uuid(conn, user_id)?,
-            version_uuid: todo!(),
+            version_uuid: QueryVersion::get_uuid(conn, version_id)?,
             testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id)?,
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
             start_time,
@@ -76,41 +77,4 @@ pub struct InsertReport {
     pub adapter_id: i32,
     pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
-}
-
-impl InsertReport {
-    pub fn from_json(
-        conn: &SqliteConnection,
-        user_uuid: &Uuid,
-        report: JsonNewReport,
-    ) -> Result<Self, HttpError> {
-        let JsonNewReport {
-            branch,
-            hash,
-            testbed,
-            adapter,
-            start_time,
-            end_time,
-            // TODO actually insert benchmarks
-            benchmarks,
-        } = report;
-        Ok(Self {
-            uuid:       Uuid::new_v4().to_string(),
-            user_id:    QueryUser::get_id(conn, user_uuid)?,
-            version_id: todo!(),
-            // If Some QueryTestbed::get_id(conn, testbed)? else get default testbed
-            testbed_id: todo!(),
-            adapter_id: QueryAdapter::get_id(conn, adapter.to_string())?,
-            start_time: start_time.naive_utc(),
-            end_time:   end_time.naive_utc(),
-        })
-    }
-}
-
-fn unwrap_project(project: Option<&str>) -> String {
-    if let Some(project) = project {
-        slug::slugify(project)
-    } else {
-        DEFAULT_PROJECT.into()
-    }
 }

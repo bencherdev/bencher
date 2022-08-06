@@ -36,6 +36,17 @@ pub struct QueryVersion {
     pub hash:      Option<String>,
 }
 
+impl QueryVersion {
+    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+        let uuid: String = schema::version::table
+            .filter(schema::version::id.eq(id))
+            .select(schema::version::uuid)
+            .first(conn)
+            .map_err(|_| http_error!(VERSION_ERROR))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!(VERSION_ERROR))
+    }
+}
+
 #[derive(Insertable)]
 #[table_name = "version_table"]
 pub struct InsertVersion {
