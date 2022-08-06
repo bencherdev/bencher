@@ -53,8 +53,10 @@ impl Registrar<Context> for Api {
         api.register(testbeds::get_one)?;
 
         // Adapters
-        api.register(adapters::api_get_adapters)?;
-        api.register(adapters::api_get_adapter)?;
+        api.register(adapters::get_ls_options)?;
+        api.register(adapters::get_ls)?;
+        api.register(adapters::get_one_options)?;
+        api.register(adapters::get_one)?;
 
         Ok(())
     }

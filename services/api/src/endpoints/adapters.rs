@@ -1,8 +1,6 @@
-use std::{
-    str::FromStr,
-    sync::Arc,
-};
+use std::sync::Arc;
 
+use bencher_json::JsonAdapter;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
@@ -16,10 +14,7 @@ use dropshot::{
     RequestContext,
 };
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
@@ -29,25 +24,22 @@ use crate::{
     },
     diesel::ExpressionMethods,
     util::{
+        cors::get_cors,
         headers::CorsHeaders,
+        http_error,
         Context,
     },
 };
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
-pub struct Adapter {
-    pub uuid: Uuid,
-    pub name: String,
-}
-
-impl From<QueryAdapter> for Adapter {
-    fn from(adapter: QueryAdapter) -> Self {
-        let QueryAdapter { id: _, uuid, name } = adapter;
-        Self {
-            uuid: Uuid::from_str(&uuid).unwrap(),
-            name,
-        }
-    }
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}/branches",
+    tags = ["projects", "branches"]
+}]
+pub async fn get_ls_options(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
 }
 
 #[endpoint {
@@ -55,21 +47,21 @@ impl From<QueryAdapter> for Adapter {
     path = "/v0/adapters",
     tags = ["adapters"]
 }]
-pub async fn api_get_adapters(
+pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<Adapter>>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonAdapter>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
     let conn = db_connection.lock().await;
-    let adapters: Vec<Adapter> = schema::adapter::table
+    let json: Vec<JsonAdapter> = schema::adapter::table
         .load::<QueryAdapter>(&*conn)
-        .expect("Error loading adapters.")
+        .map_err(|_| http_error!("Failed to get adapters."))?
         .into_iter()
-        .map(Into::into)
+        .filter_map(|query| query.to_json(&*conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseOk(adapters),
+        HttpResponseOk(json),
         CorsHeaders::new_pub("GET".into()),
     ))
 }
@@ -80,26 +72,38 @@ pub struct PathParams {
 }
 
 #[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}",
+    tags = ["projects"]
+}]
+pub async fn get_one_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<PathParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
     method = GET,
     path = "/v0/adapters/{adapter_uuid}",
     tags = ["adapters"]
 }]
-pub async fn api_get_adapter(
+pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Adapter>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonAdapter>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
-
     let path_params = path_params.into_inner();
+
     let conn = db_connection.lock().await;
-    let adapter = schema::adapter::table
+    let query = schema::adapter::table
         .filter(schema::adapter::uuid.eq(&path_params.adapter_uuid.to_string()))
         .first::<QueryAdapter>(&*conn)
-        .unwrap()
-        .into();
+        .map_err(|_| http_error!("Failed to get adapter."))?;
+    let json = query.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseOk(adapter),
+        HttpResponseOk(json),
         CorsHeaders::new_pub("GET".into()),
     ))
 }

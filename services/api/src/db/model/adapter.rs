@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use bencher_json::JsonAdapter;
 use diesel::{
     QueryDsl,
     Queryable,
@@ -45,5 +46,13 @@ impl QueryAdapter {
             .first(conn)
             .map_err(|_| http_error!(ADAPTER_ERROR))?;
         Uuid::from_str(&uuid).map_err(|_| http_error!(ADAPTER_ERROR))
+    }
+
+    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonAdapter, HttpError> {
+        let Self { id: _, uuid, name } = self;
+        Ok(JsonAdapter {
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(ADAPTER_ERROR))?,
+            name,
+        })
     }
 }

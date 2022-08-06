@@ -139,18 +139,14 @@ impl QueryProject {
         project: &ResourceId,
     ) -> Result<Self, HttpError> {
         let project = &project.0;
-        if let Ok(query) = schema::project::table
+        schema::project::table
             .filter(
                 schema::project::slug
                     .eq(project)
                     .or(schema::project::uuid.eq(project)),
             )
             .first::<QueryProject>(&*conn)
-        {
-            Ok(query)
-        } else {
-            Err(http_error!("Failed to get project."))
-        }
+            .map_err(|_| http_error!(PROJECT_ERROR))
     }
 
     pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {

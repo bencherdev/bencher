@@ -1,3 +1,4 @@
+pub mod adapter;
 pub mod auth;
 pub mod branch;
 pub mod params;
@@ -5,6 +6,7 @@ pub mod project;
 pub mod report;
 pub mod testbed;
 
+pub use adapter::JsonAdapter;
 pub use auth::{
     JsonLogin,
     JsonSignup,
@@ -20,10 +22,6 @@ pub use project::{
     JsonProject,
 };
 pub use report::{
-    JsonAdapter,
-    JsonBenchmark,
-    JsonBenchmarks,
-    JsonLatency,
     JsonNewReport,
     JsonReport,
 };
