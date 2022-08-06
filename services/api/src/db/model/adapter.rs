@@ -48,7 +48,7 @@ impl QueryAdapter {
         Uuid::from_str(&uuid).map_err(|_| http_error!(ADAPTER_ERROR))
     }
 
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonAdapter, HttpError> {
+    pub fn to_json(self) -> Result<JsonAdapter, HttpError> {
         let Self { id: _, uuid, name } = self;
         Ok(JsonAdapter {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(ADAPTER_ERROR))?,

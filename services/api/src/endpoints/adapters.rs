@@ -57,7 +57,7 @@ pub async fn get_ls(
         .load::<QueryAdapter>(&*conn)
         .map_err(|_| http_error!("Failed to get adapters."))?
         .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json().ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -100,7 +100,7 @@ pub async fn get_one(
         .filter(schema::adapter::uuid.eq(&path_params.adapter_uuid.to_string()))
         .first::<QueryAdapter>(&*conn)
         .map_err(|_| http_error!("Failed to get adapter."))?;
-    let json = query.to_json(&*conn)?;
+    let json = query.to_json()?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
