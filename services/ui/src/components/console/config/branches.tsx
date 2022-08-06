@@ -101,6 +101,11 @@ const branchesConfig = {
           field: "Branch Slug",
           key: "slug",
         },
+        {
+          kind: Card.FIELD,
+          field: "Branch UUID",
+          key: "uuid",
+        },
         // {
         //   kind: Card.TABLE,
         //   field: "Versions",

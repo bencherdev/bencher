@@ -180,6 +180,11 @@ const testbedsConfig = {
         },
         {
           kind: Card.FIELD,
+          field: "Testbed UUID",
+          key: "uuid",
+        },
+        {
+          kind: Card.FIELD,
           field: "OS Name",
           key: "os_name",
         },

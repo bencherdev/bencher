@@ -227,7 +227,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         &testbed,
         "--adapter",
         "rust",
-        r#""cargo bench"#,
+        r#""cargo bench""#,
     ]);
     cmd.assert().success();
 

@@ -47,13 +47,13 @@ table! {
         unit_time -> Nullable<Integer>,
         min_cpu -> Nullable<Float>,
         max_cpu -> Nullable<Float>,
-        average_cpu -> Nullable<Float>,
+        avg_cpu -> Nullable<Float>,
         min_memory -> Nullable<Float>,
         max_memory -> Nullable<Float>,
-        average_memory -> Nullable<Float>,
+        avg_memory -> Nullable<Float>,
         min_disk -> Nullable<Float>,
         max_disk -> Nullable<Float>,
-        average_disk -> Nullable<Float>,
+        avg_disk -> Nullable<Float>,
     }
 }
 
