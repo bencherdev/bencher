@@ -5,6 +5,7 @@ use std::process::Command;
 use assert_cmd::prelude::*;
 use bencher_json::{
     JsonBranch,
+    JsonReport,
     JsonTestbed,
     JsonUser,
 };
@@ -227,6 +228,26 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "--adapter",
         "rust",
         r#""cargo bench"#,
+    ]);
+    cmd.assert().success();
+
+    // export REPORT_UUID=[REPORT_UUID]
+    let report = cmd.output().unwrap().stdout;
+    let report: JsonReport = serde_json::from_slice(&report).unwrap();
+    let report = report.uuid.to_string();
+
+    // cargo run -- report view --host http://localhost:8080 --project the-computer $REPORT_UUID
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "report",
+        "view",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        &token,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        &report,
     ]);
     cmd.assert().success();
 

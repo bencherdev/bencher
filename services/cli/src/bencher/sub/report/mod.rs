@@ -10,15 +10,14 @@ use crate::{
     BencherError,
 };
 
-// mod create;
 mod list;
-// mod view;
+mod view;
 
 #[derive(Debug)]
 pub enum Report {
     List(list::List),
     Create(Create),
-    // View(view::View),
+    View(view::View),
 }
 
 impl TryFrom<CliReport> for Report {
@@ -28,7 +27,7 @@ impl TryFrom<CliReport> for Report {
         Ok(match report {
             CliReport::List(list) => Self::List(list.try_into()?),
             CliReport::Create(create) => Self::Create(create.try_into()?),
-            // CliReport::View(view) => Self::View(view.try_into()?),
+            CliReport::View(view) => Self::View(view.try_into()?),
         })
     }
 }
@@ -39,7 +38,7 @@ impl SubCmd for Report {
         match self {
             Self::List(list) => list.exec(wide).await,
             Self::Create(create) => create.exec(wide).await,
-            // Self::View(create) => create.exec(wide).await,
+            Self::View(create) => create.exec(wide).await,
         }
     }
 }

@@ -3,6 +3,7 @@ use clap::{
     Parser,
     Subcommand,
 };
+use uuid::Uuid;
 
 use super::{
     run::CliRun,
@@ -17,8 +18,8 @@ pub enum CliReport {
     /// Create a report (alias to `bencher run`)
     #[clap(alias = "add")]
     Create(CliRun),
-    // View a report
-    // View(CliReportView),
+    /// View a report
+    View(CliReportView),
 }
 
 #[derive(Parser, Debug)]
@@ -26,6 +27,19 @@ pub struct CliReportList {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliReportView {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Report UUID
+    pub report: Uuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
