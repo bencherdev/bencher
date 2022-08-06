@@ -1,4 +1,4 @@
-use bencher_json::{
+use bencher_json::report::{
     JsonAdapter,
     JsonBenchmarks,
 };

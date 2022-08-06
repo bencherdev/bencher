@@ -1,4 +1,4 @@
-use bencher_json::JsonBenchmarks;
+use bencher_json::report::JsonBenchmarks;
 
 use crate::{
     bencher::sub::run::benchmark::Output,

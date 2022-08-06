@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use bencher_json::{
+use bencher_json::report::{
     JsonBenchmark,
     JsonBenchmarks,
     JsonLatency,
