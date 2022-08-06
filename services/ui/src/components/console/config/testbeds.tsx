@@ -178,6 +178,41 @@ const testbedsConfig = {
           field: "Testbed Slug",
           key: "slug",
         },
+        {
+          kind: Card.FIELD,
+          field: "OS Name",
+          key: "os_name",
+        },
+        {
+          kind: Card.FIELD,
+          field: "OS Version",
+          key: "os_version",
+        },
+        {
+          kind: Card.FIELD,
+          field: "Runtime Name",
+          key: "runtime_name",
+        },
+        {
+          kind: Card.FIELD,
+          field: "Runtime Version",
+          key: "runtime_version",
+        },
+        {
+          kind: Card.FIELD,
+          field: "CPU",
+          key: "cpu",
+        },
+        {
+          kind: Card.FIELD,
+          field: "RAM",
+          key: "ram",
+        },
+        {
+          kind: Card.FIELD,
+          field: "Disk",
+          key: "disk",
+        },
       ],
       buttons: false,
     },

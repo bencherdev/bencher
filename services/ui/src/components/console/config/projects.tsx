@@ -126,6 +126,21 @@ const projectsConfig = {
           field: "Project Slug",
           key: "slug",
         },
+        {
+          kind: Card.FIELD,
+          field: "Project Description",
+          key: "description",
+        },
+        {
+          kind: Card.FIELD,
+          field: "Project URL",
+          key: "url",
+        },
+        {
+          kind: Card.FIELD,
+          field: "Public Project",
+          key: "public",
+        },
       ],
       buttons: true,
     },
