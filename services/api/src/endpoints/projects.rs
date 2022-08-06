@@ -91,12 +91,12 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonProject>, CorsHeaders>, HttpError> {
-    let uuid = get_token(&rqctx).await?;
+    let user_uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
     let json_project = body.into_inner();
 
     let conn = db_connection.lock().await;
-    let insert_project = InsertProject::from_json(&*conn, &uuid, json_project)?;
+    let insert_project = InsertProject::from_json(&*conn, &user_uuid, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(&*conn)

@@ -23,16 +23,20 @@ use dropshot::{
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
     db::{
         model::{
+            adapter::QueryAdapter,
             branch::QueryBranch,
             project::QueryProject,
             report::{
                 InsertReport,
                 QueryReport,
             },
+            testbed::QueryTestbed,
+            user::QueryUser,
             version::{
                 InsertVersion,
                 QueryVersion,
@@ -42,6 +46,7 @@ use crate::{
     },
     diesel::ExpressionMethods,
     util::{
+        auth::get_token,
         cors::get_cors,
         headers::CorsHeaders,
         http_error,
@@ -150,31 +155,42 @@ pub async fn post(
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
     const ERROR: &str = "Failed to create report.";
 
+    let user_uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
     let json_report = body.into_inner();
-    let branch_uuid = json_report.branch.to_string();
-    let testbed_uuid = json_report.testbed.to_string();
 
     let conn = db_connection.lock().await;
     // Verify that the branch and testbed are part of the same project
+    let branch_id = QueryBranch::get_id(&*conn, json_report.branch)?;
+    let testbed_id = QueryTestbed::get_id(&*conn, json_report.testbed)?;
     let branch_project_id = schema::branch::table
-        .filter(schema::branch::uuid.eq(&branch_uuid))
+        .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
         .first::<i32>(&*conn)
         .map_err(|_| http_error!(ERROR))?;
     let testbed_project_id = schema::testbed::table
-        .filter(schema::testbed::uuid.eq(&testbed_uuid))
+        .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
         .first::<i32>(&*conn)
         .map_err(|_| http_error!(ERROR))?;
     if branch_project_id != testbed_project_id {
         return Err(http_error!(ERROR));
     }
+    // Verify that the user has access to the project
+    let user_id = QueryUser::get_id(&*conn, &user_uuid)?;
+    schema::project::table
+        .filter(
+            schema::project::id
+                .eq(branch_project_id)
+                .and(schema::project::owner_id.eq(user_id)),
+        )
+        .select(schema::project::id)
+        .first::<i32>(&*conn)
+        .map_err(|_| http_error!(ERROR))?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
     // Otherwise, create a new code version for this branch with/without the hash.
-    let branch_id = QueryBranch::get_id(&*conn, json_report.branch)?;
     let version_id = if let Some(hash) = json_report.hash {
         if let Ok(version_id) = schema::version::table
             .filter(
@@ -193,24 +209,31 @@ pub async fn post(
         InsertVersion::increment(&*conn, branch_id, None)?
     };
 
-    // let insert_report = InsertReport::from_json(&*conn, json_report)?;
-    // diesel::insert_into(schema::report::table)
-    //     .values(&insert_report)
-    //     .execute(&*conn)
-    //     .map_err(|_| http_error!("Failed to create report."))?;
+    let insert_report = InsertReport {
+        uuid: Uuid::new_v4().to_string(),
+        user_id,
+        version_id,
+        testbed_id,
+        adapter_id: QueryAdapter::get_id(&*conn, json_report.adapter.to_string())?,
+        start_time: json_report.start_time.naive_utc(),
+        end_time: json_report.end_time.naive_utc(),
+    };
 
-    // let query_report = schema::report::table
-    //     .filter(schema::report::uuid.eq(&insert_report.uuid))
-    //     .first::<QueryReport>(&*conn)
-    //     .map_err(|_| http_error!("Failed to create report."))?;
-    // let json = query_report.to_json(&*conn)?;
+    diesel::insert_into(schema::report::table)
+        .values(&insert_report)
+        .execute(&*conn)
+        .map_err(|_| http_error!("Failed to create report."))?;
 
-    // Ok(HttpResponseHeaders::new(
-    //     HttpResponseAccepted(json),
-    //     CorsHeaders::new_auth("POST".into()),
-    // ))
+    let query_report = schema::report::table
+        .filter(schema::report::uuid.eq(&insert_report.uuid))
+        .first::<QueryReport>(&*conn)
+        .map_err(|_| http_error!("Failed to create report."))?;
+    let json = query_report.to_json(&*conn)?;
 
-    Err(http_error!("Failed to create report."))
+    Ok(HttpResponseHeaders::new(
+        HttpResponseAccepted(json),
+        CorsHeaders::new_auth("POST".into()),
+    ))
 }
 
 // #[derive(Deserialize, JsonSchema)]

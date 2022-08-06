@@ -33,7 +33,7 @@ use crate::{
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/branches",
+    path =  "/v0/adapters",
     tags = ["projects", "branches"]
 }]
 pub async fn get_ls_options(
@@ -73,7 +73,7 @@ pub struct PathParams {
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}",
+    path =  "/v0/adapters/{adapter_uuid}",
     tags = ["projects"]
 }]
 pub async fn get_one_options(
