@@ -48,12 +48,12 @@ impl TryFrom<CliBranchCreate> for Create {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let testbed = JsonNewBranch {
+        let branch = JsonNewBranch {
             project: self.project.clone(),
             name:    self.name.clone(),
             slug:    self.slug.clone(),
         };
-        self.backend.post(BRANCHES_PATH, &testbed).await?;
+        self.backend.post(BRANCHES_PATH, &branch).await?;
         Ok(())
     }
 }

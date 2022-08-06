@@ -23,8 +23,8 @@ pub enum Branch {
 impl TryFrom<CliBranch> for Branch {
     type Error = BencherError;
 
-    fn try_from(testbed: CliBranch) -> Result<Self, Self::Error> {
-        Ok(match testbed {
+    fn try_from(branch: CliBranch) -> Result<Self, Self::Error> {
+        Ok(match branch {
             CliBranch::List(list) => Self::List(list.try_into()?),
             CliBranch::Create(create) => Self::Create(create.try_into()?),
             CliBranch::View(view) => Self::View(view.try_into()?),

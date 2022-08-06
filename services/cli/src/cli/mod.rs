@@ -8,12 +8,14 @@ use clap::{
 pub mod auth;
 pub mod branch;
 pub mod project;
+pub mod report;
 pub mod run;
 pub mod testbed;
 
 use auth::CliAuth;
 use branch::CliBranch;
 use project::CliProject;
+use report::CliReport;
 use run::CliRun;
 use testbed::CliTestbed;
 
@@ -38,17 +40,20 @@ pub enum CliSub {
     /// Backend authentication
     #[clap(subcommand)]
     Auth(CliAuth),
-    /// Run benchmarks
-    Run(CliRun),
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),
+    /// Manage reports
+    #[clap(subcommand)]
+    Report(CliReport),
     /// Manage Branches
     #[clap(subcommand)]
     Branch(CliBranch),
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),
+    /// Run benchmarks
+    Run(CliRun),
 }
 
 #[derive(Args, Debug)]
