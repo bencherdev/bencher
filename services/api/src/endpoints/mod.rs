@@ -33,8 +33,8 @@ impl Registrar<Context> for Api {
         // Reports
         api.register(reports::get_ls_options)?;
         api.register(reports::get_ls)?;
-        // api.register(reports::post_options)?;
-        // api.register(reports::post)?;
+        api.register(reports::post_options)?;
+        api.register(reports::post)?;
         // api.register(reports::get_one_options)?;
         // api.register(reports::get_one)?;
         // Branches

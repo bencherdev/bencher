@@ -6,7 +6,6 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
-    dsl::Desc,
     expression_methods::BoolExpressionMethods,
     JoinOnDsl,
     QueryDsl,
@@ -28,10 +27,15 @@ use serde::Deserialize;
 use crate::{
     db::{
         model::{
+            branch::QueryBranch,
             project::QueryProject,
             report::{
                 InsertReport,
                 QueryReport,
+            },
+            version::{
+                InsertVersion,
+                QueryVersion,
             },
         },
         schema,
@@ -124,47 +128,90 @@ pub async fn get_ls(
 //         .filter_map(|query| query.to_json(&*conn).ok())
 //         .collect();
 
-// #[endpoint {
-//     method = OPTIONS,
-//     path =  "/v0/reports",
-//     tags = ["reports"]
-// }]
-// pub async fn post_options(
-//     _rqctx: Arc<RequestContext<Context>>,
-// ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
-//     Ok(get_cors::<Context>())
-// }
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/reports",
+    tags = ["reports"]
+}]
+pub async fn post_options(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
 
-// #[endpoint {
-//     method = POST,
-//     path = "/v0/reports",
-//     tags = ["reports"]
-// }]
-// pub async fn post(
-//     rqctx: Arc<RequestContext<Context>>,
-//     body: TypedBody<JsonNewReport>,
-// ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>,
-// CorsHeaders>, HttpError> {     let db_connection = rqctx.context();
-//     let json_report = body.into_inner();
+#[endpoint {
+    method = POST,
+    path = "/v0/reports",
+    tags = ["reports"]
+}]
+pub async fn post(
+    rqctx: Arc<RequestContext<Context>>,
+    body: TypedBody<JsonNewReport>,
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
+    const ERROR: &str = "Failed to create report.";
 
-//     let conn = db_connection.lock().await;
-//     let insert_report = InsertReport::from_json(&*conn, json_report)?;
-//     diesel::insert_into(schema::report::table)
-//         .values(&insert_report)
-//         .execute(&*conn)
-//         .map_err(|_| http_error!("Failed to create report."))?;
+    let db_connection = rqctx.context();
+    let json_report = body.into_inner();
+    let branch_uuid = json_report.branch.to_string();
+    let testbed_uuid = json_report.testbed.to_string();
 
-//     let query_report = schema::report::table
-//         .filter(schema::report::uuid.eq(&insert_report.uuid))
-//         .first::<QueryReport>(&*conn)
-//         .map_err(|_| http_error!("Failed to create report."))?;
-//     let json = query_report.to_json(&*conn)?;
+    let conn = db_connection.lock().await;
+    // Verify that the branch and testbed are part of the same project
+    let branch_project_id = schema::branch::table
+        .filter(schema::branch::uuid.eq(&branch_uuid))
+        .select(schema::branch::project_id)
+        .first::<i32>(&*conn)
+        .map_err(|_| http_error!(ERROR))?;
+    let testbed_project_id = schema::testbed::table
+        .filter(schema::testbed::uuid.eq(&testbed_uuid))
+        .select(schema::testbed::project_id)
+        .first::<i32>(&*conn)
+        .map_err(|_| http_error!(ERROR))?;
+    if branch_project_id != testbed_project_id {
+        return Err(http_error!(ERROR));
+    }
 
-//     Ok(HttpResponseHeaders::new(
-//         HttpResponseAccepted(json),
-//         CorsHeaders::new_auth("POST".into()),
-//     ))
-// }
+    // If there is a hash then try to see if there is already a code version for
+    // this branch with that particular hash.
+    // Otherwise, create a new code version for this branch with/without the hash.
+    let branch_id = QueryBranch::get_id(&*conn, json_report.branch)?;
+    let version_id = if let Some(hash) = json_report.hash {
+        if let Ok(version_id) = schema::version::table
+            .filter(
+                schema::version::branch_id
+                    .eq(branch_id)
+                    .and(schema::version::hash.eq(&hash)),
+            )
+            .select(schema::version::id)
+            .first::<i32>(&*conn)
+        {
+            version_id
+        } else {
+            InsertVersion::increment(&*conn, branch_id, Some(hash))?
+        }
+    } else {
+        InsertVersion::increment(&*conn, branch_id, None)?
+    };
+
+    // let insert_report = InsertReport::from_json(&*conn, json_report)?;
+    // diesel::insert_into(schema::report::table)
+    //     .values(&insert_report)
+    //     .execute(&*conn)
+    //     .map_err(|_| http_error!("Failed to create report."))?;
+
+    // let query_report = schema::report::table
+    //     .filter(schema::report::uuid.eq(&insert_report.uuid))
+    //     .first::<QueryReport>(&*conn)
+    //     .map_err(|_| http_error!("Failed to create report."))?;
+    // let json = query_report.to_json(&*conn)?;
+
+    // Ok(HttpResponseHeaders::new(
+    //     HttpResponseAccepted(json),
+    //     CorsHeaders::new_auth("POST".into()),
+    // ))
+
+    Err(http_error!("Failed to create report."))
+}
 
 // #[derive(Deserialize, JsonSchema)]
 // pub struct GetOneParams {
