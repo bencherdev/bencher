@@ -1,5 +1,6 @@
 pub mod adapter;
 pub mod auth;
+pub mod benchmark;
 pub mod branch;
 pub mod params;
 pub mod project;
@@ -12,6 +13,7 @@ pub use auth::{
     JsonSignup,
     JsonUser,
 };
+pub use benchmark::JsonBenchmark;
 pub use branch::{
     JsonBranch,
     JsonNewBranch,

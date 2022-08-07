@@ -294,9 +294,3 @@ pub async fn get_one(
         CorsHeaders::new_pub("GET".into()),
     ))
 }
-
-#[derive(Queryable, Debug)]
-struct Temp {
-    // name: String,
-    uuid: String,
-}
