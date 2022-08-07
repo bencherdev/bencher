@@ -94,21 +94,21 @@ impl InsertPerf {
         report_id: i32,
         benchmark_name: String,
         json_perf: JsonNewPerf,
-    ) -> Result<Uuid, HttpError> {
+    ) -> Result<(Uuid, Uuid), HttpError> {
         let benchmark_id =
-            if let Ok(id) = QueryBenchmark::get_id_from_name(&*conn, project_id, &benchmark_name) {
+            if let Ok(id) = QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name) {
                 id
             } else {
                 let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
                 diesel::insert_into(schema::benchmark::table)
                     .values(&insert_benchmark)
-                    .execute(&*conn)
+                    .execute(conn)
                     .map_err(|_| http_error!("Failed to create benchmark."))?;
 
                 schema::benchmark::table
                     .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
                     .select(schema::benchmark::id)
-                    .first::<i32>(&*conn)
+                    .first::<i32>(conn)
                     .map_err(|_| http_error!("Failed to create benchmark."))?
             };
 
@@ -117,17 +117,19 @@ impl InsertPerf {
             uuid: perf_uuid.to_string(),
             report_id,
             benchmark_id,
-            latency_id: InsertLatency::map_json(&*conn, json_perf.latency)?,
-            throughput_id: InsertThroughput::map_json(&*conn, json_perf.throughput)?,
-            compute_id: InsertMinMaxAvg::map_json(&*conn, json_perf.compute)?,
-            memory_id: InsertMinMaxAvg::map_json(&*conn, json_perf.memory)?,
-            storage_id: InsertMinMaxAvg::map_json(&*conn, json_perf.storage)?,
+            latency_id: InsertLatency::map_json(conn, json_perf.latency)?,
+            throughput_id: InsertThroughput::map_json(conn, json_perf.throughput)?,
+            compute_id: InsertMinMaxAvg::map_json(conn, json_perf.compute)?,
+            memory_id: InsertMinMaxAvg::map_json(conn, json_perf.memory)?,
+            storage_id: InsertMinMaxAvg::map_json(conn, json_perf.storage)?,
         };
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
-            .execute(&*conn)
+            .execute(conn)
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
-        Ok(perf_uuid)
+        let benchmark_uuid = QueryBenchmark::get_uuid(conn, benchmark_id)?;
+
+        Ok((benchmark_uuid, perf_uuid))
     }
 }

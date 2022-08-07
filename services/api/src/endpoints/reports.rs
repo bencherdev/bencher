@@ -29,18 +29,8 @@ use uuid::Uuid;
 use crate::{
     db::{
         model::{
-            adapter::QueryAdapter,
-            benchmark::{
-                InsertBenchmark,
-                QueryBenchmark,
-            },
             branch::QueryBranch,
-            perf::{
-                InsertLatency,
-                InsertMinMaxAvg,
-                InsertPerf,
-                InsertThroughput,
-            },
+            perf::InsertPerf,
             project::QueryProject,
             report::{
                 InsertReport,
@@ -213,14 +203,14 @@ pub async fn post(
 
     let mut benchmarks = JsonBenchmarks::new();
     for (benchmark_name, json_perf) in json_report.benchmarks {
-        let perf_uuid = InsertPerf::from_json(
+        let (benchmark_uuid, perf_uuid) = InsertPerf::from_json(
             &*conn,
             project_id,
             query_report.id,
-            benchmark_name.clone(),
+            benchmark_name,
             json_perf,
         )?;
-        benchmarks.insert(benchmark_name, perf_uuid);
+        benchmarks.insert(benchmark_uuid, perf_uuid);
     }
 
     let json = query_report.to_json_with_benchmarks(&*conn, benchmarks)?;

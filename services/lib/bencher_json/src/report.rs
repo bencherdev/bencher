@@ -93,4 +93,4 @@ pub struct JsonReport {
     pub benchmarks:   JsonBenchmarks,
 }
 
-pub type JsonBenchmarks = HashMap<String, Uuid>;
+pub type JsonBenchmarks = HashMap<Uuid, Uuid>;
