@@ -82,34 +82,44 @@ CREATE TABLE report (
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (adapter_id) REFERENCES adapter (id)
 );
+CREATE TABLE latency (
+    id INTEGER PRIMARY KEY NOT NULL,
+    lower_variance INTEGER NOT NULL,
+    upper_variance INTEGER NOT NULL,
+    duration INTEGER NOT NULL
+);
+CREATE TABLE throughput (
+    id INTEGER PRIMARY KEY NOT NULL,
+    lower_events REAL NOT NULL,
+    upper_events REAL NOT NULL,
+    unit_time INTEGER NOT NULL
+);
+CREATE TABLE min_max_avg (
+    id INTEGER PRIMARY KEY NOT NULL,
+    min REAL NOT NULL,
+    max REAL NOT NULL,
+    avg REAL NOT NULL
+);
 CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
     benchmark_id INTEGER NOT NULL,
-    kind INTEGER NOT NULL,
-    -- latency
-    lower_variance REAL,
-    upper_variance REAL,
-    duration INTEGER,
-    -- throughput
-    lower_events REAL,
-    upper_events REAL,
-    unit_time INTEGER,
-    -- compute
-    min_compute REAL,
-    max_compute REAL,
-    avg_compute REAL,
-    -- memory
-    min_memory REAL,
-    max_memory REAL,
-    avg_memory REAL,
-    -- storage
-    min_storage REAL,
-    max_storage REAL,
-    avg_storage REAL,
+    --
+    latency_id INTEGER,
+    throughput_id INTEGER,
+    compute_id INTEGER,
+    memory_id INTEGER,
+    storage_id INTEGER,
     FOREIGN KEY (report_id) REFERENCES report (id),
-    FOREIGN KEY (benchmark_id) REFERENCES benchmark (id)
+    FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
+    --
+    FOREIGN KEY (latency_id) REFERENCES latency (id),
+    FOREIGN KEY (throughput_id) REFERENCES throughput (id),
+    FOREIGN KEY (compute_id) REFERENCES min_max_avg (id),
+    FOREIGN KEY (memory_id) REFERENCES min_max_avg (id),
+    FOREIGN KEY (storage_id) REFERENCES min_max_avg (id),
+    UNIQUE(report_id, benchmark_id)
 );
 -- https://en.wikipedia.org/wiki/Standard_score
 CREATE TABLE z_score (
@@ -117,7 +127,7 @@ CREATE TABLE z_score (
     uuid TEXT NOT NULL UNIQUE,
     branch_id INTEGER NOT NULL,
     population INTEGER,
-    bounds REAL NOT NULL,
+    deviation REAL NOT NULL,
     FOREIGN KEY (branch_id) REFERENCES branch (id)
 );
 CREATE TABLE z_score_alert (
@@ -126,5 +136,6 @@ CREATE TABLE z_score_alert (
     z_score_id INTEGER NOT NULL,
     perf_id INTEGER NOT NULL,
     FOREIGN KEY (z_score_id) REFERENCES z_score (id),
-    FOREIGN KEY (perf_id) REFERENCES perf (id)
+    FOREIGN KEY (perf_id) REFERENCES perf (id),
+    UNIQUE(z_score_id, perf_id)
 );

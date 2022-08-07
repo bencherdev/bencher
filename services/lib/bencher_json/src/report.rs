@@ -72,23 +72,23 @@ pub struct JsonPerf {
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLatency {
-    pub lower_variance: f32,
-    pub upper_variance: f32,
+    pub lower_variance: Duration,
+    pub upper_variance: Duration,
     pub duration:       Duration,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThroughput {
-    pub lower_events: f32,
-    pub upper_events: f32,
+    pub lower_events: f64,
+    pub upper_events: f64,
     pub unit_time:    Duration,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMinMaxAvg {
-    pub min: f32,
-    pub max: f32,
-    pub avg: f32,
+    pub min: f64,
+    pub max: f64,
+    pub avg: f64,
 }

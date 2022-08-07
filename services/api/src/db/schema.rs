@@ -26,27 +26,34 @@ table! {
 }
 
 table! {
+    latency (id) {
+        id -> Integer,
+        lower_variance -> Integer,
+        upper_variance -> Integer,
+        duration -> Integer,
+    }
+}
+
+table! {
+    min_max_avg (id) {
+        id -> Integer,
+        min -> Float,
+        max -> Float,
+        avg -> Float,
+    }
+}
+
+table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
         report_id -> Integer,
         benchmark_id -> Integer,
-        kind -> Integer,
-        lower_variance -> Nullable<Float>,
-        upper_variance -> Nullable<Float>,
-        duration -> Nullable<Integer>,
-        lower_events -> Nullable<Float>,
-        upper_events -> Nullable<Float>,
-        unit_time -> Nullable<Integer>,
-        min_compute -> Nullable<Float>,
-        max_compute -> Nullable<Float>,
-        avg_compute -> Nullable<Float>,
-        min_memory -> Nullable<Float>,
-        max_memory -> Nullable<Float>,
-        avg_memory -> Nullable<Float>,
-        min_storage -> Nullable<Float>,
-        max_storage -> Nullable<Float>,
-        avg_storage -> Nullable<Float>,
+        latency_id -> Nullable<Integer>,
+        throughput_id -> Nullable<Integer>,
+        compute_id -> Nullable<Integer>,
+        memory_id -> Nullable<Integer>,
+        storage_id -> Nullable<Integer>,
     }
 }
 
@@ -94,6 +101,15 @@ table! {
 }
 
 table! {
+    throughput (id) {
+        id -> Integer,
+        lower_events -> Float,
+        upper_events -> Float,
+        unit_time -> Integer,
+    }
+}
+
+table! {
     user (id) {
         id -> Integer,
         uuid -> Text,
@@ -119,7 +135,7 @@ table! {
         uuid -> Text,
         branch_id -> Integer,
         population -> Nullable<Integer>,
-        bounds -> Float,
+        deviation -> Float,
     }
 }
 
@@ -135,7 +151,9 @@ table! {
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
 joinable!(perf -> benchmark (benchmark_id));
+joinable!(perf -> latency (latency_id));
 joinable!(perf -> report (report_id));
+joinable!(perf -> throughput (throughput_id));
 joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
 joinable!(report -> testbed (testbed_id));
@@ -151,10 +169,13 @@ allow_tables_to_appear_in_same_query!(
     adapter,
     benchmark,
     branch,
+    latency,
+    min_max_avg,
     perf,
     project,
     report,
     testbed,
+    throughput,
     user,
     version,
     z_score,

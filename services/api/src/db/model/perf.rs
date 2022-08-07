@@ -20,7 +20,12 @@ use uuid::Uuid;
 use crate::{
     db::{
         schema,
-        schema::perf as perf_table,
+        schema::{
+            latency as latency_table,
+            min_max_avg as min_max_avg_table,
+            perf as perf_table,
+            throughput as throughput_table,
+        },
     },
     diesel::{
         ExpressionMethods,
@@ -32,48 +37,17 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to get perf.";
 
-// #[derive(Debug, Copy, Clone)]
-// enum PerfKind {
-//     Latency    = 1,
-//     Throughput = 2,
-//     Compute    = 4,
-//     Memory     = 8,
-//     Storage    = 16,
-// }
-
-// impl PerfKind {
-//     fn has_kind(self, kind: u8) -> bool {
-//         self & kind == kind
-//     }
-// }
-
 #[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct QueryPerf {
     pub id: i32,
     pub uuid: String,
     pub report_id: i32,
     pub benchmark_id: i32,
-    pub kind: i32,
-    // latency
-    pub duration: i32,
-    pub lower_variance: i32,
-    pub upper_variance: i32,
-    // throughput
-    pub lower_events: i32,
-    pub upper_events: i32,
-    pub unit_time: i32,
-    // compute
-    pub min_compute: i32,
-    pub max_compute: i32,
-    pub avg_compute: i32,
-    // memory
-    pub min_memory: i32,
-    pub max_memory: i32,
-    pub avg_memory: i32,
-    // storage
-    pub min_storage: i32,
-    pub max_storage: i32,
-    pub avg_storage: i32,
+    pub latency_id: i32,
+    pub throughput_id: i32,
+    pub compute_id: i32,
+    pub memory_id: i32,
+    pub storage_id: i32,
 }
 
 impl QueryPerf {
@@ -98,38 +72,36 @@ impl QueryPerf {
 #[derive(Insertable)]
 #[table_name = "perf_table"]
 pub struct InsertPerf {
-    pub uuid:           String,
-    pub report_id:      i32,
-    pub benchmark_id:   i32,
-    pub kind:           i32,
-    // latency
-    pub lower_variance: Option<f32>,
-    pub upper_variance: Option<f32>,
-    pub duration:       Option<i32>,
-    // throughput
-    pub lower_events:   Option<f32>,
-    pub upper_events:   Option<f32>,
-    pub unit_time:      Option<i32>,
-    // compute
-    pub min_compute:    Option<f32>,
-    pub max_compute:    Option<f32>,
-    pub avg_compute:    Option<f32>,
-    // memory
-    pub min_memory:     Option<f32>,
-    pub max_memory:     Option<f32>,
-    pub avg_memory:     Option<f32>,
-    // storage
-    pub min_storage:    Option<f32>,
-    pub max_storage:    Option<f32>,
-    pub avg_storage:    Option<f32>,
+    pub uuid:          String,
+    pub report_id:     i32,
+    pub benchmark_id:  i32,
+    pub latency_id:    i32,
+    pub throughput_id: i32,
+    pub compute_id:    i32,
+    pub memory_id:     i32,
+    pub storage_id:    i32,
 }
 
-// impl InsertPerf {
-//     pub fn new(project_id: i32, name: String) -> Self {
-//         Self {
-//             uuid: Uuid::new_v4().to_string(),
-//             project_id,
-//             name,
-//         }
-//     }
-// }
+#[derive(Insertable)]
+#[table_name = "latency_table"]
+pub struct InsertLatency {
+    pub lower_variance: i32,
+    pub upper_variance: i32,
+    pub duration:       i32,
+}
+
+#[derive(Insertable)]
+#[table_name = "throughput_table"]
+pub struct InsertThroughput {
+    pub lower_events: f32,
+    pub upper_events: f32,
+    pub unit_time:    i32,
+}
+
+#[derive(Insertable)]
+#[table_name = "min_max_avg_table"]
+pub struct InsertMinMaxAvg {
+    pub min: f32,
+    pub max: f32,
+    pub avg: f32,
+}
