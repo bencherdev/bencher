@@ -48,7 +48,7 @@ use crate::{
     path =  "/v0/projects",
     tags = ["projects"]
 }]
-pub async fn options(
+pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     Ok(get_cors::<Context>())
@@ -124,7 +124,7 @@ pub struct PathParams {
     path =  "/v0/projects/{project}",
     tags = ["projects"]
 }]
-pub async fn options_params(
+pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {

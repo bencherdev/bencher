@@ -93,11 +93,11 @@ pub struct JsonReport {
     pub benchmarks:   JsonBenchmarks,
 }
 
-pub type JsonBenchmarks = Vec<JsonBenchmark>;
+pub type JsonBenchmarks = Vec<JsonBenchmarkPerf>;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonBenchmark {
-    pub uuid:      Uuid,
-    pub perf_uuid: Uuid,
+pub struct JsonBenchmarkPerf {
+    pub benchmark_uuid: Uuid,
+    pub perf_uuid:      Uuid,
 }

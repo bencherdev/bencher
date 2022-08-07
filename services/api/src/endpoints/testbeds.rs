@@ -53,7 +53,7 @@ pub struct GetLsParams {
     path =  "/v0/projects/{project}/testbeds",
     tags = ["projects", "testbeds"]
 }]
-pub async fn get_ls_options(
+pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
@@ -142,7 +142,7 @@ pub struct GetOneParams {
     path =  "/v0/projects/{project}/testbeds/{testbed}",
     tags = ["projects", "testbeds"]
 }]
-pub async fn get_one_options(
+pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {

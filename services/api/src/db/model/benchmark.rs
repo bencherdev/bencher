@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::report::{
-    JsonBenchmark,
+    JsonBenchmarkPerf,
     JsonBenchmarks,
 };
 use diesel::{
@@ -86,14 +86,20 @@ impl QueryBenchmark {
             .map_err(|_| http_error!(BENCHMARK_ERROR))?;
 
         let mut benchmarks = JsonBenchmarks::new();
-        for (uuid, perf_uuid) in uuids {
-            benchmarks.push(JsonBenchmark {
-                uuid:      Uuid::from_str(&uuid).map_err(|_| http_error!(BENCHMARK_ERROR))?,
-                perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(BENCHMARK_ERROR))?,
+        for (benchmark_uuid, perf_uuid) in uuids {
+            benchmarks.push(JsonBenchmarkPerf {
+                benchmark_uuid: Uuid::from_str(&benchmark_uuid)
+                    .map_err(|_| http_error!(BENCHMARK_ERROR))?,
+                perf_uuid:      Uuid::from_str(&perf_uuid)
+                    .map_err(|_| http_error!(BENCHMARK_ERROR))?,
             });
         }
 
         Ok(benchmarks)
+    }
+
+    pub fn to_json(self, conn: &SqliteConnection) -> Result<(), HttpError> {
+        todo!()
     }
 }
 

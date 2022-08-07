@@ -36,7 +36,7 @@ use crate::{
     path =  "/v0/adapters",
     tags = ["projects", "branches"]
 }]
-pub async fn get_ls_options(
+pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     Ok(get_cors::<Context>())
@@ -76,7 +76,7 @@ pub struct PathParams {
     path =  "/v0/adapters/{adapter_uuid}",
     tags = ["projects"]
 }]
-pub async fn get_one_options(
+pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
