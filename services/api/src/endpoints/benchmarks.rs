@@ -5,6 +5,7 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
+    expression_methods::BoolExpressionMethods,
     QueryDsl,
     RunQueryDsl,
 };
@@ -18,6 +19,7 @@ use dropshot::{
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
     db::{
@@ -75,6 +77,59 @@ pub async fn get_ls(
         .into_iter()
         .filter_map(|query| query.to_json(&*conn).ok())
         .collect();
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseOk(json),
+        CorsHeaders::new_pub("GET".into()),
+    ))
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct GetOneParams {
+    pub project:   ResourceId,
+    pub benchmark: Uuid,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}",
+    tags = ["projects", "benchmarks"]
+}]
+pub async fn one_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GetOneParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}",
+    tags = ["projects", "benchmarks"]
+}]
+pub async fn get_one(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetOneParams>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonBenchmark>, CorsHeaders>, HttpError> {
+    let db_connection = rqctx.context();
+    let path_params = path_params.into_inner();
+    let benchmark_uuid = path_params.benchmark.to_string();
+
+    let conn = db_connection.lock().await;
+    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let query = if let Ok(query) = schema::benchmark::table
+        .filter(
+            schema::benchmark::project_id
+                .eq(project.id)
+                .and(schema::benchmark::uuid.eq(&benchmark_uuid)),
+        )
+        .first::<QueryBenchmark>(&*conn)
+    {
+        Ok(query)
+    } else {
+        Err(http_error!("Failed to get benchmark."))
+    }?;
+    let json = query.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

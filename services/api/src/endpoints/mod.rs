@@ -64,6 +64,8 @@ impl Registrar<Context> for Api {
         // Benchmarks
         api.register(benchmarks::dir_options)?;
         api.register(benchmarks::get_ls)?;
+        api.register(benchmarks::one_options)?;
+        api.register(benchmarks::get_one)?;
 
         Ok(())
     }
