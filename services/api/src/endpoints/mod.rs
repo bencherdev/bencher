@@ -34,7 +34,7 @@ impl Registrar<Context> for Api {
         api.register(projects::get_one)?;
         // Perf
         api.register(perf::options)?;
-        api.register(perf::get)?;
+        api.register(perf::put)?;
         // Reports
         api.register(reports::dir_options)?;
         api.register(reports::get_ls)?;

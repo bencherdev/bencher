@@ -3,6 +3,7 @@ pub mod auth;
 pub mod benchmark;
 pub mod branch;
 pub mod params;
+pub mod perf;
 pub mod project;
 pub mod report;
 pub mod testbed;
@@ -19,6 +20,10 @@ pub use branch::{
     JsonNewBranch,
 };
 pub use params::ResourceId;
+pub use perf::{
+    JsonPerf,
+    JsonPerfQuery,
+};
 pub use project::{
     JsonNewProject,
     JsonProject,
