@@ -31,9 +31,9 @@ pub struct QueryAdapter {
 }
 
 impl QueryAdapter {
-    pub fn get_id(conn: &SqliteConnection, name: String) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, name: &str) -> Result<i32, HttpError> {
         schema::adapter::table
-            .filter(schema::adapter::name.eq(&name))
+            .filter(schema::adapter::name.eq(name))
             .select(schema::adapter::id)
             .first(conn)
             .map_err(|_| http_error!(ADAPTER_ERROR))

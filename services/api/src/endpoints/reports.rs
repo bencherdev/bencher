@@ -179,15 +179,15 @@ pub async fn post(
         InsertVersion::increment(&*conn, branch_id, None)?
     };
 
-    let insert_report = InsertReport {
-        uuid: Uuid::new_v4().to_string(),
+    let insert_report = InsertReport::new(
+        &*conn,
         user_id,
         version_id,
         testbed_id,
-        adapter_id: QueryAdapter::get_id(&*conn, json_report.adapter.to_string())?,
-        start_time: json_report.start_time.naive_utc(),
-        end_time: json_report.end_time.naive_utc(),
-    };
+        &json_report.adapter,
+        &json_report.start_time,
+        &json_report.end_time,
+    )?;
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)

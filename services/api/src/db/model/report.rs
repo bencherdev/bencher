@@ -3,8 +3,15 @@ use std::{
     str::FromStr,
 };
 
-use bencher_json::JsonReport;
-use chrono::NaiveDateTime;
+use bencher_json::{
+    report::JsonAdapter,
+    JsonReport,
+};
+use chrono::{
+    DateTime,
+    NaiveDateTime,
+    Utc,
+};
 use diesel::{
     Insertable,
     Queryable,
@@ -78,4 +85,26 @@ pub struct InsertReport {
     pub adapter_id: i32,
     pub start_time: NaiveDateTime,
     pub end_time:   NaiveDateTime,
+}
+
+impl InsertReport {
+    pub fn new(
+        conn: &SqliteConnection,
+        user_id: i32,
+        version_id: i32,
+        testbed_id: i32,
+        adapter: &JsonAdapter,
+        start_time: &DateTime<Utc>,
+        end_time: &DateTime<Utc>,
+    ) -> Result<Self, HttpError> {
+        Ok(Self {
+            uuid: Uuid::new_v4().to_string(),
+            user_id,
+            version_id,
+            testbed_id,
+            adapter_id: QueryAdapter::get_id(conn, &adapter.to_string())?,
+            start_time: start_time.naive_utc(),
+            end_time: end_time.naive_utc(),
+        })
+    }
 }
