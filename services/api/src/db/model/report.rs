@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    str::FromStr,
-};
+use std::str::FromStr;
 
 use bencher_json::{
     report::{
@@ -73,7 +70,7 @@ impl QueryReport {
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
             start_time,
             end_time,
-            benchmarks: HashMap::new(),
+            benchmarks: JsonBenchmarks::new(),
         })
     }
 

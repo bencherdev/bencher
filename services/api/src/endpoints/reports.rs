@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    report::JsonBenchmarks,
+    report::{JsonBenchmarks, JsonBenchmark},
     JsonNewReport,
     JsonReport,
     ResourceId,
@@ -210,7 +210,10 @@ pub async fn post(
             benchmark_name,
             json_perf,
         )?;
-        benchmarks.insert(benchmark_uuid, perf_uuid);
+        benchmarks.push(JsonBenchmark {
+            uuid: benchmark_uuid,
+            perf_uuid,
+        });
     }
 
     let json = query_report.to_json_with_benchmarks(&*conn, benchmarks)?;
