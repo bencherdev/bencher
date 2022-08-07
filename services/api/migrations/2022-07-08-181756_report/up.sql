@@ -84,21 +84,24 @@ CREATE TABLE report (
 );
 CREATE TABLE latency (
     id INTEGER PRIMARY KEY NOT NULL,
-    lower_variance INTEGER NOT NULL,
-    upper_variance INTEGER NOT NULL,
-    duration INTEGER NOT NULL
+    uuid TEXT NOT NULL UNIQUE,
+    lower_variance BIGINT NOT NULL,
+    upper_variance BIGINT NOT NULL,
+    duration BIGINT NOT NULL
 );
 CREATE TABLE throughput (
     id INTEGER PRIMARY KEY NOT NULL,
-    lower_events REAL NOT NULL,
-    upper_events REAL NOT NULL,
-    unit_time INTEGER NOT NULL
+    uuid TEXT NOT NULL UNIQUE,
+    lower_events DOUBLE NOT NULL,
+    upper_events DOUBLE NOT NULL,
+    unit_time BIGINT NOT NULL
 );
 CREATE TABLE min_max_avg (
     id INTEGER PRIMARY KEY NOT NULL,
-    min REAL NOT NULL,
-    max REAL NOT NULL,
-    avg REAL NOT NULL
+    uuid TEXT NOT NULL UNIQUE,
+    min DOUBLE NOT NULL,
+    max DOUBLE NOT NULL,
+    avg DOUBLE NOT NULL
 );
 CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,

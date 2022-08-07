@@ -34,6 +34,12 @@ use crate::{
                 QueryBenchmark,
             },
             branch::QueryBranch,
+            perf::{
+                InsertLatency,
+                InsertMinMaxAvg,
+                InsertPerf,
+                InsertThroughput,
+            },
             project::QueryProject,
             report::{
                 InsertReport,
@@ -207,7 +213,7 @@ pub async fn post(
     // For each benchmark try to see if it already exists for the project.
     // Otherwise, create it.
     for (name, perf) in json_report.benchmarks {
-        let bechmark_id =
+        let benchmark_id =
             if let Ok(query) = QueryBenchmark::get_id_from_name(&*conn, project_id, &name) {
                 query
             } else {
@@ -223,6 +229,27 @@ pub async fn post(
                     .first::<i32>(&*conn)
                     .map_err(|_| http_error!("Failed to create benchmark."))?
             };
+
+        let insert_perf = InsertPerf {
+            uuid: Uuid::new_v4().to_string(),
+            report_id: query_report.id,
+            benchmark_id,
+            latency_id: InsertLatency::map_json(&*conn, perf.latency)?,
+            throughput_id: InsertThroughput::map_json(&*conn, perf.throughput)?,
+            compute_id: InsertMinMaxAvg::map_json(&*conn, perf.compute)?,
+            memory_id: InsertMinMaxAvg::map_json(&*conn, perf.memory)?,
+            storage_id: InsertMinMaxAvg::map_json(&*conn, perf.storage)?,
+        };
+        diesel::insert_into(schema::perf::table)
+            .values(&insert_perf)
+            .execute(&*conn)
+            .map_err(|_| http_error!("Failed to create benchmark data."))?;
+
+        schema::perf::table
+            .filter(schema::perf::uuid.eq(&insert_perf.uuid))
+            .select(schema::perf::id)
+            .first::<i32>(&*conn)
+            .map_err(|_| http_error!("Failed to create benchmark data."))?;
     }
 
     // TODO add benchmarks to JSON

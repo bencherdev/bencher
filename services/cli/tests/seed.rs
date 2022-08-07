@@ -8,7 +8,6 @@ use std::{
 use assert_cmd::prelude::*;
 use bencher_json::{
     JsonBranch,
-    JsonReport,
     JsonTestbed,
     JsonUser,
 };
@@ -229,58 +228,6 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_SLUG,
     ]);
     cmd.assert().success();
-
-    // // cargo run -- report ls --host http://localhost:8080 --project the-computer
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "report",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     &token,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // cmd.assert().success();
-
-    // // cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "run",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     &token,
-    //     "--branch",
-    //     &branch,
-    //     "--testbed",
-    //     &testbed,
-    //     "--adapter",
-    //     "rust",
-    //     r#""cargo bench""#,
-    // ]);
-    // cmd.assert().success();
-
-    // // export REPORT_UUID=[REPORT_UUID]
-    // let report = cmd.output().unwrap().stdout;
-    // let report: JsonReport = serde_json::from_slice(&report).unwrap();
-    // let report = report.uuid.to_string();
-
-    // // cargo run -- report view --host http://localhost:8080 --project the-computer $REPORT_UUID
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "report",
-    //     "view",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     &token,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    //     &report,
-    // ]);
-    // cmd.assert().success();
 
     Ok(())
 }

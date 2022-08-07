@@ -28,18 +28,20 @@ table! {
 table! {
     latency (id) {
         id -> Integer,
-        lower_variance -> Integer,
-        upper_variance -> Integer,
-        duration -> Integer,
+        uuid -> Text,
+        lower_variance -> BigInt,
+        upper_variance -> BigInt,
+        duration -> BigInt,
     }
 }
 
 table! {
     min_max_avg (id) {
         id -> Integer,
-        min -> Float,
-        max -> Float,
-        avg -> Float,
+        uuid -> Text,
+        min -> Double,
+        max -> Double,
+        avg -> Double,
     }
 }
 
@@ -103,9 +105,10 @@ table! {
 table! {
     throughput (id) {
         id -> Integer,
-        lower_events -> Float,
-        upper_events -> Float,
-        unit_time -> Integer,
+        uuid -> Text,
+        lower_events -> Double,
+        upper_events -> Double,
+        unit_time -> BigInt,
     }
 }
 
