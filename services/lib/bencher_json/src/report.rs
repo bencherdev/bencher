@@ -62,11 +62,11 @@ pub struct JsonPerf {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub throughput: Option<JsonThroughput>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cpu:        Option<JsonMinMaxAvg>,
+    pub compute:    Option<JsonMinMaxAvg>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory:     Option<JsonMinMaxAvg>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub disk:       Option<JsonMinMaxAvg>,
+    pub storage:    Option<JsonMinMaxAvg>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

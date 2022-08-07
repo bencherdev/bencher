@@ -1,4 +1,6 @@
 # run as `source ./seed.sh` or `. ./seed.sh`
+cargo test --features seed --test seed
+
 LOGIN=$(cargo run -- auth login --host http://localhost:8080 muriel.bagge@nowhere.com)
 LOGIN_UUID=$(echo "$LOGIN" | sed -n -e 's/^.*"uuid": //p')
 LOGIN_UUID=$(echo "$LOGIN_UUID" | tr -d '"')
@@ -17,4 +19,4 @@ TESTBED_UUID=$(echo "$TESTBED_UUID" | tr -d '"')
 echo $TESTBED_UUID
 export BENCHER_TESTBED=$TESTBED_UUID
 
-# cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"
+cargo run -- run --host http://localhost:8080 --adapter rust "cargo bench"

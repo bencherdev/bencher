@@ -96,18 +96,18 @@ CREATE TABLE perf (
     lower_events REAL,
     upper_events REAL,
     unit_time INTEGER,
-    -- cpu
-    min_cpu REAL,
-    max_cpu REAL,
-    avg_cpu REAL,
+    -- compute
+    min_compute REAL,
+    max_compute REAL,
+    avg_compute REAL,
     -- memory
     min_memory REAL,
     max_memory REAL,
     avg_memory REAL,
-    -- disk
-    min_disk REAL,
-    max_disk REAL,
-    avg_disk REAL,
+    -- storage
+    min_storage REAL,
+    max_storage REAL,
+    avg_storage REAL,
     FOREIGN KEY (report_id) REFERENCES report (id),
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id)
 );

@@ -38,15 +38,15 @@ table! {
         lower_events -> Nullable<Float>,
         upper_events -> Nullable<Float>,
         unit_time -> Nullable<Integer>,
-        min_cpu -> Nullable<Float>,
-        max_cpu -> Nullable<Float>,
-        avg_cpu -> Nullable<Float>,
+        min_compute -> Nullable<Float>,
+        max_compute -> Nullable<Float>,
+        avg_compute -> Nullable<Float>,
         min_memory -> Nullable<Float>,
         max_memory -> Nullable<Float>,
         avg_memory -> Nullable<Float>,
-        min_disk -> Nullable<Float>,
-        max_disk -> Nullable<Float>,
-        avg_disk -> Nullable<Float>,
+        min_storage -> Nullable<Float>,
+        max_storage -> Nullable<Float>,
+        avg_storage -> Nullable<Float>,
     }
 }
 
