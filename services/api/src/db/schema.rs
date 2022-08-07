@@ -26,19 +26,12 @@ table! {
 }
 
 table! {
-    branch_benchmark (id) {
-        id -> Integer,
-        branch_id -> Integer,
-        benchmark_id -> Integer,
-    }
-}
-
-table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
         report_id -> Integer,
-        branch_benchmark_id -> Integer,
+        benchmark_id -> Integer,
+        kind -> Integer,
         duration -> Nullable<Integer>,
         lower_variance -> Nullable<Integer>,
         upper_variance -> Nullable<Integer>,
@@ -120,11 +113,28 @@ table! {
     }
 }
 
+table! {
+    z_score (id) {
+        id -> Integer,
+        uuid -> Text,
+        branch_id -> Integer,
+        population -> Nullable<Integer>,
+        bounds -> Float,
+    }
+}
+
+table! {
+    z_score_alert (id) {
+        id -> Integer,
+        uuid -> Text,
+        z_score_id -> Integer,
+        perf_id -> Integer,
+    }
+}
+
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
-joinable!(branch_benchmark -> benchmark (benchmark_id));
-joinable!(branch_benchmark -> branch (branch_id));
-joinable!(perf -> branch_benchmark (branch_benchmark_id));
+joinable!(perf -> benchmark (benchmark_id));
 joinable!(perf -> report (report_id));
 joinable!(project -> user (owner_id));
 joinable!(report -> adapter (adapter_id));
@@ -133,16 +143,20 @@ joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
 joinable!(testbed -> project (project_id));
 joinable!(version -> branch (branch_id));
+joinable!(z_score -> branch (branch_id));
+joinable!(z_score_alert -> perf (perf_id));
+joinable!(z_score_alert -> z_score (z_score_id));
 
 allow_tables_to_appear_in_same_query!(
     adapter,
     benchmark,
     branch,
-    branch_benchmark,
     perf,
     project,
     report,
     testbed,
     user,
     version,
+    z_score,
+    z_score_alert,
 );

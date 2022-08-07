@@ -52,6 +52,14 @@ CREATE TABLE testbed (
     FOREIGN KEY (project_id) REFERENCES project (id),
     UNIQUE(project_id, slug)
 );
+CREATE TABLE benchmark (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    UNIQUE(project_id, name)
+);
 CREATE TABLE adapter (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -74,26 +82,12 @@ CREATE TABLE report (
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (adapter_id) REFERENCES adapter (id)
 );
-CREATE TABLE benchmark (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    project_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id)
-);
-CREATE TABLE branch_benchmark (
-    id INTEGER PRIMARY KEY NOT NULL,
-    branch_id INTEGER NOT NULL,
-    benchmark_id INTEGER NOT NULL,
-    FOREIGN KEY (branch_id) REFERENCES branch (id),
-    FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
-    UNIQUE(branch_id, benchmark_id)
-);
 CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
-    branch_benchmark_id INTEGER NOT NULL,
+    benchmark_id INTEGER NOT NULL,
+    kind INTEGER NOT NULL,
     -- latency
     duration INTEGER,
     lower_variance INTEGER,
@@ -115,5 +109,22 @@ CREATE TABLE perf (
     max_disk REAL,
     avg_disk REAL,
     FOREIGN KEY (report_id) REFERENCES report (id),
-    FOREIGN KEY (branch_benchmark_id) REFERENCES branch_benchmark (id)
+    FOREIGN KEY (benchmark_id) REFERENCES benchmark (id)
+);
+-- https://en.wikipedia.org/wiki/Standard_score
+CREATE TABLE z_score (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    branch_id INTEGER NOT NULL,
+    population INTEGER,
+    bounds REAL NOT NULL,
+    FOREIGN KEY (branch_id) REFERENCES branch (id)
+);
+CREATE TABLE z_score_alert (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    z_score_id INTEGER NOT NULL,
+    perf_id INTEGER NOT NULL,
+    FOREIGN KEY (z_score_id) REFERENCES z_score (id),
+    FOREIGN KEY (perf_id) REFERENCES perf (id)
 );
