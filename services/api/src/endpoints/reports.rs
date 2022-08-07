@@ -29,6 +29,10 @@ use crate::{
     db::{
         model::{
             adapter::QueryAdapter,
+            benchmark::{
+                InsertBenchmark,
+                QueryBenchmark,
+            },
             branch::QueryBranch,
             project::QueryProject,
             report::{
@@ -140,8 +144,8 @@ pub async fn post(
 
     let conn = db_connection.lock().await;
     // Verify that the branch and testbed are part of the same project
-    let branch_id = QueryBranch::get_id(&*conn, json_report.branch)?;
-    let testbed_id = QueryTestbed::get_id(&*conn, json_report.testbed)?;
+    let branch_id = QueryBranch::get_id(&*conn, &json_report.branch)?;
+    let testbed_id = QueryTestbed::get_id(&*conn, &json_report.testbed)?;
     let branch_project_id = schema::branch::table
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
@@ -155,8 +159,9 @@ pub async fn post(
     if branch_project_id != testbed_project_id {
         return Err(http_error!(ERROR));
     }
+    let project_id = branch_project_id;
     // Verify that the user has access to the project
-    let user_id = QueryUser::has_access(&*conn, branch_project_id, user_uuid)?;
+    let user_id = QueryUser::has_access(&*conn, project_id, user_uuid)?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -198,6 +203,29 @@ pub async fn post(
         .filter(schema::report::uuid.eq(&insert_report.uuid))
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
+
+    // For each benchmark try to see if it already exists for the project.
+    // Otherwise, create it.
+    for (name, perf) in json_report.benchmarks {
+        let bechmark_id =
+            if let Ok(query) = QueryBenchmark::get_id_from_name(&*conn, project_id, &name) {
+                query
+            } else {
+                let insert_benchmark = InsertBenchmark::new(project_id, name);
+                diesel::insert_into(schema::benchmark::table)
+                    .values(&insert_benchmark)
+                    .execute(&*conn)
+                    .map_err(|_| http_error!("Failed to create benchmark."))?;
+
+                schema::benchmark::table
+                    .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
+                    .first::<QueryBenchmark>(&*conn)
+                    .map_err(|_| http_error!("Failed to create benchmark."))?
+                    .id
+            };
+    }
+
+    // TODO add benchmarks to JSON
     let json = query_report.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(

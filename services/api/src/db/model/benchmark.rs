@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use diesel::{
+    expression_methods::BoolExpressionMethods,
     Insertable,
     Queryable,
     SqliteConnection,
@@ -37,9 +38,25 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    pub fn get_id(conn: &SqliteConnection, uuid: Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
         schema::benchmark::table
-            .filter(schema::benchmark::uuid.eq(&uuid.to_string()))
+            .filter(schema::benchmark::uuid.eq(uuid.to_string()))
+            .select(schema::benchmark::id)
+            .first(conn)
+            .map_err(|_| http_error!(BENCHMARK_ERROR))
+    }
+
+    pub fn get_id_from_name(
+        conn: &SqliteConnection,
+        project_id: i32,
+        name: &str,
+    ) -> Result<i32, HttpError> {
+        schema::benchmark::table
+            .filter(
+                schema::benchmark::project_id
+                    .eq(project_id)
+                    .and(schema::benchmark::name.eq(name)),
+            )
             .select(schema::benchmark::id)
             .first(conn)
             .map_err(|_| http_error!(BENCHMARK_ERROR))

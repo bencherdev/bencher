@@ -102,7 +102,7 @@ impl InsertReport {
             user_id,
             version_id,
             testbed_id,
-            adapter_id: QueryAdapter::get_id(conn, &adapter.to_string())?,
+            adapter_id: QueryAdapter::get_id_from_name(conn, &adapter.to_string())?,
             start_time: start_time.naive_utc(),
             end_time: end_time.naive_utc(),
         })

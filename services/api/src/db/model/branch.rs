@@ -43,9 +43,9 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
-    pub fn get_id(conn: &SqliteConnection, uuid: Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
         schema::branch::table
-            .filter(schema::branch::uuid.eq(&uuid.to_string()))
+            .filter(schema::branch::uuid.eq(uuid.to_string()))
             .select(schema::branch::id)
             .first(conn)
             .map_err(|_| http_error!(BRANCH_ERROR))

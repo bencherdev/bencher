@@ -50,9 +50,9 @@ pub struct QueryTestbed {
 }
 
 impl QueryTestbed {
-    pub fn get_id(conn: &SqliteConnection, uuid: Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
         schema::testbed::table
-            .filter(schema::testbed::uuid.eq(&uuid.to_string()))
+            .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .select(schema::testbed::id)
             .first(conn)
             .map_err(|_| http_error!(TESTBED_ERROR))
