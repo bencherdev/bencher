@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
+    perf::JsonPerfKind,
     JsonBranch,
     JsonPerf,
     JsonPerfQuery,
@@ -9,6 +10,7 @@ use bencher_json::{
 use chrono::NaiveDateTime;
 use diesel::{
     JoinOnDsl,
+    NullableExpressionMethods,
     QueryDsl,
     RunQueryDsl,
 };
@@ -82,24 +84,24 @@ pub async fn put(
         start_time,
         end_time,
     } = body.into_inner();
-    let branches = branches.into_iter().map(|uuid| uuid.to_string()).collect();
-    let testbeds = testbeds.into_iter().map(|uuid| uuid.to_string()).collect();
-    let benchmarks = benchmarks
+    let branches: Vec<String> = branches.into_iter().map(|uuid| uuid.to_string()).collect();
+    let testbeds: Vec<String> = testbeds.into_iter().map(|uuid| uuid.to_string()).collect();
+    let benchmarks: Vec<String> = benchmarks
         .into_iter()
         .map(|uuid| uuid.to_string())
         .collect();
 
     let conn = db_connection.lock().await;
-    let mut perf_data = Vec::new();
-    for branch in branches {
-        for testbed in testbeds {
-            for benchmark in benchmarks {
-                let data = schema::perf::table
+    // let mut perf_data = Vec::new();
+    for branch in &branches {
+        for testbed in &testbeds {
+            for benchmark in &benchmarks {
+                let query = schema::perf::table
                     .left_join(
                         schema::benchmark::table
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
                     )
-                    .filter(schema::benchmark::uuid.eq(&benchmark))
+                    .filter(schema::benchmark::uuid.eq(benchmark))
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
@@ -107,38 +109,65 @@ pub async fn put(
                         schema::testbed::table
                             .on(schema::report::testbed_id.eq(schema::testbed::id)),
                     )
-                    .filter(schema::testbed::uuid.eq(&testbed))
+                    .filter(schema::testbed::uuid.eq(testbed))
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
                     )
                     .inner_join(
-                        schema::branch::table
-                            .on(schema::version::branch_id.eq(schema::branch::id)),
+                        schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
                     )
-                    .filter(schema::branch::uuid.eq(&branch))
-                    .select((schema::perf::uuid))
-                    .load::<(String)>(&*conn)
-                    .map_err(|_| http_error!(PERF_ERROR))?;
+                    .filter(schema::branch::uuid.eq(branch));
 
-                perf_data.push(data);
+                let query = match kind {
+                    JsonPerfKind::Latency => query
+                        .inner_join(
+                            schema::latency::table
+                                .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
+                        )
+                        .select((
+                            schema::perf::uuid,
+                            schema::report::start_time,
+                            schema::version::number,
+                        ))
+                        .load::<(String, String, i32)>(&*conn)
+                        .map_err(|_| http_error!(PERF_ERROR))?,
+                    JsonPerfKind::Throughput => {
+                        todo!()
+                    },
+                    JsonPerfKind::Compute => {
+                        todo!()
+                    },
+                    JsonPerfKind::Memory => {
+                        todo!()
+                    },
+                    JsonPerfKind::Storage => {
+                        todo!()
+                    },
+                };
+
+                //     .select((schema::perf::uuid))
+                //     .load::<(String)>(&*conn)
+                //     .map_err(|_| http_error!(PERF_ERROR))?;
+
+                // perf_data.push(data);
             }
         }
     }
 
-    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
-    let json: Vec<JsonBranch> = schema::branch::table
-        .filter(schema::branch::project_id.eq(&query_project.id))
-        .order(schema::branch::name)
-        .load::<QueryBranch>(&*conn)
-        .map_err(|_| http_error!("Failed to get branches."))?
-        .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
-        .collect();
+    // let query_project = QueryProject::from_resource_id(&*conn,
+    // &path_params.project)?; let json: Vec<JsonBranch> = schema::branch::table
+    //     .filter(schema::branch::project_id.eq(&query_project.id))
+    //     .order(schema::branch::name)
+    //     .load::<QueryBranch>(&*conn)
+    //     .map_err(|_| http_error!("Failed to get branches."))?
+    //     .into_iter()
+    //     .filter_map(|query| query.to_json(&*conn).ok())
+    //     .collect();
 
     todo!();
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("PUT".into()),
-    ))
+    // Ok(HttpResponseHeaders::new(
+    //     HttpResponseOk(json),
+    //     CorsHeaders::new_pub("PUT".into()),
+    // ))
 }
