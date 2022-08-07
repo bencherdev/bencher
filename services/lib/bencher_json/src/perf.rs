@@ -7,6 +7,12 @@ use serde::{
 };
 use uuid::Uuid;
 
+use crate::report::{
+    JsonLatency,
+    JsonMinMaxAvg,
+    JsonThroughput,
+};
+
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQuery {
@@ -30,28 +36,39 @@ pub enum JsonPerfKind {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPerf<T>(Vec<JsonPerfData<T>>);
-
-
-#[derive(Debug, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPerfData<T> {
-    pub branch_uuid: Uuid,
-    pub testbed_uuid: Uuid,
-    pub benchmark_uuid: Uuid,
+pub struct JsonPerf {
     pub kind:       JsonPerfKind,
     pub start_time: Option<NaiveDateTime>,
     pub end_time:   Option<NaiveDateTime>,
-    pub data: Vec<JsonPerfDatum<T>>,
+    pub data:       Vec<JsonPerfData>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPerfDatum<T> {
-    pub perf_uuid: Uuid,
-    pub start_time: NaiveDateTime,
-    pub end_time: NaiveDateTime,
+pub struct JsonPerfData {
+    pub branch_uuid:    Uuid,
+    pub testbed_uuid:   Uuid,
+    pub benchmark_uuid: Uuid,
+    pub data:           Vec<JsonPerfDatum>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPerfDatum {
+    pub perf_uuid:      Uuid,
+    pub start_time:     NaiveDateTime,
+    pub end_time:       NaiveDateTime,
     pub version_number: u32,
-    pub version_hash: String,
-    pub perf: T
+    pub version_hash:   Option<String>,
+    pub datum:          JsonPerfDatumKind,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub enum JsonPerfDatumKind {
+    Latency(JsonLatency),
+    Throughput(JsonThroughput),
+    Compute(JsonMinMaxAvg),
+    Memory(JsonMinMaxAvg),
+    Storage(JsonMinMaxAvg),
 }
