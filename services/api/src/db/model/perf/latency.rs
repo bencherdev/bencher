@@ -1,4 +1,4 @@
-use bencher_json::report::JsonLatency;
+use bencher_json::report::JsonNewLatency;
 use diesel::{
     Insertable,
     SqliteConnection,
@@ -28,9 +28,9 @@ pub struct InsertLatency {
     pub duration:       i64,
 }
 
-impl From<JsonLatency> for InsertLatency {
-    fn from(latency: JsonLatency) -> Self {
-        let JsonLatency {
+impl From<JsonNewLatency> for InsertLatency {
+    fn from(latency: JsonNewLatency) -> Self {
+        let JsonNewLatency {
             lower_variance,
             upper_variance,
             duration,
@@ -47,7 +47,7 @@ impl From<JsonLatency> for InsertLatency {
 impl InsertLatency {
     pub fn map_json(
         conn: &SqliteConnection,
-        latency: Option<JsonLatency>,
+        latency: Option<JsonNewLatency>,
     ) -> Result<Option<i32>, HttpError> {
         Ok(if let Some(json_latency) = latency {
             let insert_latency: InsertLatency = json_latency.into();

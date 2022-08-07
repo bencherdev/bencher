@@ -1,4 +1,4 @@
-use bencher_json::report::JsonMinMaxAvg;
+use bencher_json::report::JsonNewMinMaxAvg;
 use diesel::{
     Insertable,
     SqliteConnection,
@@ -28,9 +28,9 @@ pub struct InsertMinMaxAvg {
     pub avg:  f64,
 }
 
-impl From<JsonMinMaxAvg> for InsertMinMaxAvg {
-    fn from(min_max_avg: JsonMinMaxAvg) -> Self {
-        let JsonMinMaxAvg { min, max, avg } = min_max_avg;
+impl From<JsonNewMinMaxAvg> for InsertMinMaxAvg {
+    fn from(min_max_avg: JsonNewMinMaxAvg) -> Self {
+        let JsonNewMinMaxAvg { min, max, avg } = min_max_avg;
         Self {
             uuid: Uuid::new_v4().to_string(),
             min,
@@ -43,7 +43,7 @@ impl From<JsonMinMaxAvg> for InsertMinMaxAvg {
 impl InsertMinMaxAvg {
     pub fn map_json(
         conn: &SqliteConnection,
-        min_max_avg: Option<JsonMinMaxAvg>,
+        min_max_avg: Option<JsonNewMinMaxAvg>,
     ) -> Result<Option<i32>, HttpError> {
         Ok(if let Some(json_min_max_avg) = min_max_avg {
             let insert_min_max_avg: InsertMinMaxAvg = json_min_max_avg.into();

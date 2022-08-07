@@ -4,7 +4,7 @@ use std::{
 };
 
 use bencher_json::{
-    report::JsonAdapter,
+    report::JsonNewAdapter,
     JsonReport,
 };
 use chrono::{
@@ -93,7 +93,7 @@ impl InsertReport {
         user_id: i32,
         version_id: i32,
         testbed_id: i32,
-        adapter: &JsonAdapter,
+        adapter: &JsonNewAdapter,
         start_time: &DateTime<Utc>,
         end_time: &DateTime<Utc>,
     ) -> Result<Self, HttpError> {

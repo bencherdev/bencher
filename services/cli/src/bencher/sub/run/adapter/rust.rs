@@ -4,9 +4,9 @@ use std::{
 };
 
 use bencher_json::report::{
-    JsonBenchmarks,
-    JsonLatency,
-    JsonPerf,
+    JsonNewBenchmarks,
+    JsonNewLatency,
+    JsonNewPerf,
 };
 use nom::{
     branch::alt,
@@ -36,17 +36,17 @@ use crate::{
     BencherError,
 };
 
-pub fn parse(output: &Output) -> Result<JsonBenchmarks, BencherError> {
+pub fn parse(output: &Output) -> Result<JsonNewBenchmarks, BencherError> {
     let (_, report) = parse_stdout(output.as_str()).unwrap();
     Ok(report)
 }
 
 enum Test {
     Ignored,
-    Bench(JsonLatency),
+    Bench(JsonNewLatency),
 }
 
-fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarks> {
+fn parse_stdout(input: &str) -> IResult<&str, JsonNewBenchmarks> {
     map(
         tuple((
             line_ending,
@@ -74,10 +74,10 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarks> {
             line_ending,
         )),
         |(_, _, _, _, _, _, _, benches, _)| {
-            let mut benchmarks = JsonBenchmarks::new();
+            let mut benchmarks = JsonNewBenchmarks::new();
             for bench in benches {
                 if let Some((benchmark, latency)) = to_latency(bench) {
-                    let perf = JsonPerf {
+                    let perf = JsonNewPerf {
                         latency: Some(latency),
                         ..Default::default()
                     };
@@ -91,7 +91,7 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarks> {
 
 fn to_latency(
     bench: (&str, &str, &str, &str, &str, &str, Test, &str),
-) -> Option<(String, JsonLatency)> {
+) -> Option<(String, JsonNewLatency)> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
@@ -118,7 +118,7 @@ impl From<&str> for Units {
     }
 }
 
-fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
+fn parse_bench(input: &str) -> IResult<&str, JsonNewLatency> {
     map(
         tuple((
             tag("bench:"),
@@ -137,7 +137,7 @@ fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
             let units = Units::from(units);
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
-            JsonLatency {
+            JsonNewLatency {
                 duration,
                 lower_variance: variance.clone(),
                 upper_variance: variance,

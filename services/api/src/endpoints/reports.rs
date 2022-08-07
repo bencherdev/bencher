@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
+    report::JsonBenchmarks,
     JsonNewReport,
     JsonReport,
     ResourceId,
@@ -212,44 +213,16 @@ pub async fn post(
 
     // For each benchmark try to see if it already exists for the project.
     // Otherwise, create it.
-    for (name, perf) in json_report.benchmarks {
-        let benchmark_id =
-            if let Ok(query) = QueryBenchmark::get_id_from_name(&*conn, project_id, &name) {
-                query
-            } else {
-                let insert_benchmark = InsertBenchmark::new(project_id, name);
-                diesel::insert_into(schema::benchmark::table)
-                    .values(&insert_benchmark)
-                    .execute(&*conn)
-                    .map_err(|_| http_error!("Failed to create benchmark."))?;
-
-                schema::benchmark::table
-                    .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-                    .select(schema::benchmark::id)
-                    .first::<i32>(&*conn)
-                    .map_err(|_| http_error!("Failed to create benchmark."))?
-            };
-
-        let insert_perf = InsertPerf {
-            uuid: Uuid::new_v4().to_string(),
-            report_id: query_report.id,
-            benchmark_id,
-            latency_id: InsertLatency::map_json(&*conn, perf.latency)?,
-            throughput_id: InsertThroughput::map_json(&*conn, perf.throughput)?,
-            compute_id: InsertMinMaxAvg::map_json(&*conn, perf.compute)?,
-            memory_id: InsertMinMaxAvg::map_json(&*conn, perf.memory)?,
-            storage_id: InsertMinMaxAvg::map_json(&*conn, perf.storage)?,
-        };
-        diesel::insert_into(schema::perf::table)
-            .values(&insert_perf)
-            .execute(&*conn)
-            .map_err(|_| http_error!("Failed to create benchmark data."))?;
-
-        schema::perf::table
-            .filter(schema::perf::uuid.eq(&insert_perf.uuid))
-            .select(schema::perf::id)
-            .first::<i32>(&*conn)
-            .map_err(|_| http_error!("Failed to create benchmark data."))?;
+    let mut benchmarks = JsonBenchmarks::new();
+    for (benchmark_name, json_perf) in json_report.benchmarks {
+        let perf_uuid = InsertPerf::from_json(
+            &*conn,
+            project_id,
+            query_report.id,
+            benchmark_name.clone(),
+            json_perf,
+        )?;
+        benchmarks.insert(benchmark_name, perf_uuid);
     }
 
     // TODO add benchmarks to JSON
