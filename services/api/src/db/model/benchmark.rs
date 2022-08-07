@@ -1,17 +1,17 @@
 use std::str::FromStr;
 
+use bencher_json::report::{
+    JsonBenchmark,
+    JsonBenchmarks,
+};
 use diesel::{
     expression_methods::BoolExpressionMethods,
     Insertable,
+    JoinOnDsl,
     Queryable,
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use crate::{
@@ -29,7 +29,7 @@ use crate::{
 
 const BENCHMARK_ERROR: &str = "Failed to get benchmark.";
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryBenchmark {
     pub id:         i32,
     pub uuid:       String,
@@ -71,8 +71,29 @@ impl QueryBenchmark {
         Uuid::from_str(&uuid).map_err(|_| http_error!(BENCHMARK_ERROR))
     }
 
-    pub fn to_json(self) -> String {
-        self.name
+    pub fn get_benchmarks(
+        conn: &SqliteConnection,
+        report_id: i32,
+    ) -> Result<JsonBenchmarks, HttpError> {
+        let uuids: Vec<(String, String)> = schema::perf::table
+            .inner_join(
+                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            )
+            .filter(schema::perf::report_id.eq(report_id))
+            .select((schema::benchmark::uuid, schema::perf::uuid))
+            .order(schema::benchmark::name)
+            .load::<(String, String)>(conn)
+            .map_err(|_| http_error!(BENCHMARK_ERROR))?;
+
+        let mut benchmarks = JsonBenchmarks::new();
+        for (uuid, perf_uuid) in uuids {
+            benchmarks.push(JsonBenchmark {
+                uuid:      Uuid::from_str(&uuid).map_err(|_| http_error!(BENCHMARK_ERROR))?,
+                perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(BENCHMARK_ERROR))?,
+            });
+        }
+
+        Ok(benchmarks)
     }
 }
 

@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     time::Duration,
 };
 
@@ -39,7 +39,7 @@ pub enum JsonNewAdapter {
     RustCargoBench,
 }
 
-pub type JsonNewBenchmarks = HashMap<String, JsonNewPerf>;
+pub type JsonNewBenchmarks = BTreeMap<String, JsonNewPerf>;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

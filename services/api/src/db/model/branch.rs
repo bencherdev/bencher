@@ -10,11 +10,6 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use super::project::QueryProject;
@@ -33,7 +28,7 @@ use crate::{
 
 const BRANCH_ERROR: &str = "Failed to get branch.";
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryBranch {
     pub id:         i32,
     pub uuid:       String,

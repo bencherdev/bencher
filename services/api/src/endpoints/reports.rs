@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    report::{JsonBenchmarks, JsonBenchmark},
+    report::{
+        JsonBenchmark,
+        JsonBenchmarks,
+    },
     JsonNewReport,
     JsonReport,
     ResourceId,
@@ -261,7 +264,7 @@ pub async fn get_one(
     let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     QueryUser::has_access(&*conn, query_project.id, user_uuid)?;
 
-    let query = if let Ok(query) = schema::report::table
+    let query_report = if let Ok(query) = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
@@ -284,10 +287,16 @@ pub async fn get_one(
     } else {
         Err(http_error!("Failed to get report."))
     }?;
-    let json = query.to_json(&*conn)?;
+    let json = query_report.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
         CorsHeaders::new_pub("GET".into()),
     ))
+}
+
+#[derive(Queryable, Debug)]
+struct Temp {
+    // name: String,
+    uuid: String,
 }

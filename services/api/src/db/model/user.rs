@@ -14,11 +14,6 @@ use diesel::{
 };
 use dropshot::HttpError;
 use email_address_parser::EmailAddress;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use crate::{
@@ -87,7 +82,7 @@ fn validate_email(email: String) -> Result<String, HttpError> {
         .map(|email| email.to_string())
 }
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryUser {
     pub id:    i32,
     pub uuid:  String,

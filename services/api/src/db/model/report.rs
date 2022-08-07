@@ -18,15 +18,11 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use super::{
     adapter::QueryAdapter,
+    benchmark::QueryBenchmark,
     testbed::QueryTestbed,
     user::QueryUser,
     version::QueryVersion,
@@ -38,7 +34,7 @@ use crate::{
 
 pub const DEFAULT_PROJECT: &str = "default";
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryReport {
     pub id:         i32,
     pub uuid:       String,
@@ -53,7 +49,7 @@ pub struct QueryReport {
 impl QueryReport {
     pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonReport, HttpError> {
         let Self {
-            id: _,
+            id,
             uuid,
             user_id,
             version_id,
@@ -70,7 +66,7 @@ impl QueryReport {
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
             start_time,
             end_time,
-            benchmarks: JsonBenchmarks::new(),
+            benchmarks: QueryBenchmark::get_benchmarks(conn, id)?,
         })
     }
 

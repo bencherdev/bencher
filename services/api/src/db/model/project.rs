@@ -17,11 +17,6 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use url::Url;
 use uuid::Uuid;
 
@@ -99,7 +94,7 @@ fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> S
     }
 }
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryProject {
     pub id:          i32,
     pub uuid:        String,

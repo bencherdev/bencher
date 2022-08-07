@@ -7,11 +7,6 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use crate::{
@@ -42,17 +37,17 @@ use super::benchmark::{
 
 const PERF_ERROR: &str = "Failed to get perf.";
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryPerf {
     pub id: i32,
     pub uuid: String,
     pub report_id: i32,
     pub benchmark_id: i32,
-    pub latency_id: i32,
-    pub throughput_id: i32,
-    pub compute_id: i32,
-    pub memory_id: i32,
-    pub storage_id: i32,
+    pub latency_id: Option<i32>,
+    pub throughput_id: Option<i32>,
+    pub compute_id: Option<i32>,
+    pub memory_id: Option<i32>,
+    pub storage_id: Option<i32>,
 }
 
 impl QueryPerf {

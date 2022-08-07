@@ -8,11 +8,6 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use crate::{
@@ -23,7 +18,7 @@ use crate::{
 
 const ADAPTER_ERROR: &str = "Failed to get adapter.";
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryAdapter {
     pub id:   i32,
     pub uuid: String,

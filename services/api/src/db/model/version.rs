@@ -8,11 +8,6 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use uuid::Uuid;
 
 use crate::{
@@ -26,7 +21,7 @@ use crate::{
 
 const VERSION_ERROR: &str = "Failed to get version.";
 
-#[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Queryable)]
 pub struct QueryVersion {
     pub id:        i32,
     pub uuid:      String,
