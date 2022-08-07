@@ -6,3 +6,4 @@ pub mod report;
 pub mod testbed;
 pub mod user;
 pub mod version;
+pub mod perf;

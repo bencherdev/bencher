@@ -219,9 +219,9 @@ pub async fn post(
 
                 schema::benchmark::table
                     .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-                    .first::<QueryBenchmark>(&*conn)
+                    .select(schema::benchmark::id)
+                    .first::<i32>(&*conn)
                     .map_err(|_| http_error!("Failed to create benchmark."))?
-                    .id
             };
     }
 

@@ -1,4 +1,7 @@
-use std::str::FromStr;
+use std::{
+    ops::BitAnd,
+    str::FromStr,
+};
 
 use diesel::{
     expression_methods::BoolExpressionMethods,
@@ -29,13 +32,28 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to get perf.";
 
+// #[derive(Debug, Copy, Clone)]
+// enum PerfKind {
+//     Latency    = 1,
+//     Throughput = 2,
+//     Compute    = 4,
+//     Memory     = 8,
+//     Storage    = 16,
+// }
+
+// impl PerfKind {
+//     fn has_kind(self, kind: u8) -> bool {
+//         self & kind == kind
+//     }
+// }
+
 #[derive(Queryable, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct QueryPerf {
     pub id: i32,
     pub uuid: String,
     pub report_id: i32,
     pub benchmark_id: i32,
-    pub kind: u8,
+    pub kind: i32,
     // latency
     pub duration: i32,
     pub lower_variance: i32,
@@ -50,7 +68,7 @@ pub struct QueryPerf {
     pub avg_compute: i32,
     // memory
     pub min_memory: i32,
-    pub min_memory: i32,
+    pub max_memory: i32,
     pub avg_memory: i32,
     // storage
     pub min_storage: i32,
@@ -62,22 +80,6 @@ impl QueryPerf {
     pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
         schema::perf::table
             .filter(schema::perf::uuid.eq(uuid.to_string()))
-            .select(schema::perf::id)
-            .first(conn)
-            .map_err(|_| http_error!(PERF_ERROR))
-    }
-
-    pub fn get_id_from_name(
-        conn: &SqliteConnection,
-        project_id: i32,
-        name: &str,
-    ) -> Result<i32, HttpError> {
-        schema::perf::table
-            .filter(
-                schema::perf::project_id
-                    .eq(project_id)
-                    .and(schema::perf::name.eq(name)),
-            )
             .select(schema::perf::id)
             .first(conn)
             .map_err(|_| http_error!(PERF_ERROR))
@@ -96,17 +98,38 @@ impl QueryPerf {
 #[derive(Insertable)]
 #[table_name = "perf_table"]
 pub struct InsertPerf {
-    pub uuid:       String,
-    pub project_id: i32,
-    pub name:       String,
+    pub uuid:           String,
+    pub report_id:      i32,
+    pub benchmark_id:   i32,
+    pub kind:           i32,
+    // latency
+    pub lower_variance: Option<f32>,
+    pub upper_variance: Option<f32>,
+    pub duration:       Option<i32>,
+    // throughput
+    pub lower_events:   Option<f32>,
+    pub upper_events:   Option<f32>,
+    pub unit_time:      Option<i32>,
+    // compute
+    pub min_compute:    Option<f32>,
+    pub max_compute:    Option<f32>,
+    pub avg_compute:    Option<f32>,
+    // memory
+    pub min_memory:     Option<f32>,
+    pub max_memory:     Option<f32>,
+    pub avg_memory:     Option<f32>,
+    // storage
+    pub min_storage:    Option<f32>,
+    pub max_storage:    Option<f32>,
+    pub avg_storage:    Option<f32>,
 }
 
-impl InsertPerf {
-    pub fn new(project_id: i32, name: String) -> Self {
-        Self {
-            uuid: Uuid::new_v4().to_string(),
-            project_id,
-            name,
-        }
-    }
-}
+// impl InsertPerf {
+//     pub fn new(project_id: i32, name: String) -> Self {
+//         Self {
+//             uuid: Uuid::new_v4().to_string(),
+//             project_id,
+//             name,
+//         }
+//     }
+// }

@@ -89,9 +89,9 @@ CREATE TABLE perf (
     benchmark_id INTEGER NOT NULL,
     kind INTEGER NOT NULL,
     -- latency
+    lower_variance REAL,
+    upper_variance REAL,
     duration INTEGER,
-    lower_variance INTEGER,
-    upper_variance INTEGER,
     -- throughput
     lower_events REAL,
     upper_events REAL,
