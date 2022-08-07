@@ -4,7 +4,10 @@ use std::{
 };
 
 use bencher_json::{
-    report::JsonNewAdapter,
+    report::{
+        JsonBenchmarks,
+        JsonNewAdapter,
+    },
     JsonReport,
 };
 use chrono::{
@@ -71,6 +74,33 @@ impl QueryReport {
             start_time,
             end_time,
             benchmarks: HashMap::new(),
+        })
+    }
+
+    pub fn to_json_with_benchmarks(
+        self,
+        conn: &SqliteConnection,
+        benchmarks: JsonBenchmarks,
+    ) -> Result<JsonReport, HttpError> {
+        let Self {
+            id: _,
+            uuid,
+            user_id,
+            version_id,
+            testbed_id,
+            adapter_id,
+            start_time,
+            end_time,
+        } = self;
+        Ok(JsonReport {
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get report."))?,
+            user_uuid: QueryUser::get_uuid(conn, user_id)?,
+            version_uuid: QueryVersion::get_uuid(conn, version_id)?,
+            testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id)?,
+            adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
+            start_time,
+            end_time,
+            benchmarks,
         })
     }
 }

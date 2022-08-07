@@ -211,8 +211,6 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    // For each benchmark try to see if it already exists for the project.
-    // Otherwise, create it.
     let mut benchmarks = JsonBenchmarks::new();
     for (benchmark_name, json_perf) in json_report.benchmarks {
         let perf_uuid = InsertPerf::from_json(
@@ -225,8 +223,7 @@ pub async fn post(
         benchmarks.insert(benchmark_name, perf_uuid);
     }
 
-    // TODO add benchmarks to JSON
-    let json = query_report.to_json(&*conn)?;
+    let json = query_report.to_json_with_benchmarks(&*conn, benchmarks)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
