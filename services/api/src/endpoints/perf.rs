@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use crate::db::model::project::QueryProject;
 use bencher_json::{
     perf::{
         JsonPerfData,
@@ -30,7 +31,6 @@ use diesel::{
 use dropshot::{
     endpoint,
     HttpError,
-    HttpResponseAccepted,
     HttpResponseHeaders,
     HttpResponseOk,
     Path,
@@ -42,9 +42,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-    },
+    db::schema,
     diesel::ExpressionMethods,
     util::{
         cors::get_cors,
@@ -82,7 +80,7 @@ pub async fn put(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
     body: TypedBody<JsonPerfQuery>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonPerf>>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPerf>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
     let JsonPerfQuery {
@@ -96,6 +94,7 @@ pub async fn put(
 
     let conn = db_connection.lock().await;
     let mut data = Vec::new();
+    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     for branch_uuid in &branches {
         for testbed_uuid in &testbeds {
             for benchmark_uuid in &benchmarks {
@@ -105,6 +104,7 @@ pub async fn put(
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
                     )
                     .filter(schema::benchmark::uuid.eq(benchmark_uuid.to_string()))
+                    .filter(schema::benchmark::project_id.eq(project.id))
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
@@ -113,6 +113,7 @@ pub async fn put(
                             .on(schema::report::testbed_id.eq(schema::testbed::id)),
                     )
                     .filter(schema::testbed::uuid.eq(testbed_uuid.to_string()))
+                    .filter(schema::testbed::project_id.eq(project.id))
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
@@ -120,7 +121,8 @@ pub async fn put(
                     .left_join(
                         schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
                     )
-                    .filter(schema::branch::uuid.eq(branch_uuid.to_string()));
+                    .filter(schema::branch::uuid.eq(branch_uuid.to_string()))
+                    .filter(schema::branch::project_id.eq(project.id));
 
                 let query_perf_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query
@@ -197,14 +199,15 @@ pub async fn put(
         }
     }
 
-    let json_perf = JsonPerf{
+    let json_perf = JsonPerf {
         kind,
         start_time,
         end_time,
-        data};
+        data,
+    };
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json_perf),
+        HttpResponseOk(json_perf),
         CorsHeaders::new_auth("PUT".into()),
     ))
 }
