@@ -1,4 +1,4 @@
-use bencher_json::report::JsonNewThroughput;
+use bencher_json::report::JsonThroughput;
 use diesel::{
     Insertable,
     SqliteConnection,
@@ -28,9 +28,9 @@ pub struct InsertThroughput {
     pub unit_time:    i64,
 }
 
-impl From<JsonNewThroughput> for InsertThroughput {
-    fn from(throughput: JsonNewThroughput) -> Self {
-        let JsonNewThroughput {
+impl From<JsonThroughput> for InsertThroughput {
+    fn from(throughput: JsonThroughput) -> Self {
+        let JsonThroughput {
             lower_events,
             upper_events,
             unit_time,
@@ -47,7 +47,7 @@ impl From<JsonNewThroughput> for InsertThroughput {
 impl InsertThroughput {
     pub fn map_json(
         conn: &SqliteConnection,
-        throughput: Option<JsonNewThroughput>,
+        throughput: Option<JsonThroughput>,
     ) -> Result<Option<i32>, HttpError> {
         Ok(if let Some(json_throughput) = throughput {
             let insert_throughput: InsertThroughput = json_throughput.into();

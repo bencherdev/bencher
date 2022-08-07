@@ -105,7 +105,7 @@ pub async fn put(
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
-                    .inner_join(
+                    .left_join(
                         schema::testbed::table
                             .on(schema::report::testbed_id.eq(schema::testbed::id)),
                     )
@@ -114,24 +114,34 @@ pub async fn put(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
                     )
-                    .inner_join(
+                    .left_join(
                         schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
                     )
                     .filter(schema::branch::uuid.eq(branch));
 
                 let query = match kind {
-                    JsonPerfKind::Latency => query
-                        .inner_join(
-                            schema::latency::table
-                                .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::report::start_time,
-                            schema::version::number,
-                        ))
-                        .load::<(String, String, i32)>(&*conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?,
+                    JsonPerfKind::Latency => {
+                        let latency =
+                            query
+                                .inner_join(schema::latency::table.on(
+                                    schema::perf::latency_id.eq(schema::latency::id.nullable()),
+                                ))
+                                .select((
+                                    schema::perf::uuid,
+                                    schema::report::start_time,
+                                    schema::report::end_time,
+                                    schema::version::number,
+                                    schema::version::hash,
+                                    schema::latency::lower_variance,
+                                    schema::latency::upper_variance,
+                                    schema::latency::duration,
+                                ))
+                                .order(schema::version::number)
+                                .load::<(String, String, String, i32, Option<String>, i64, i64, i64)>(
+                                    &*conn,
+                                )
+                                .map_err(|_| http_error!(PERF_ERROR))?;
+                    },
                     JsonPerfKind::Throughput => {
                         todo!()
                     },

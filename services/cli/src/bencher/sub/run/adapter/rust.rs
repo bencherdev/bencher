@@ -5,7 +5,7 @@ use std::{
 
 use bencher_json::report::{
     JsonNewBenchmarks,
-    JsonNewLatency,
+    JsonLatency,
     JsonNewPerf,
 };
 use nom::{
@@ -43,7 +43,7 @@ pub fn parse(output: &Output) -> Result<JsonNewBenchmarks, BencherError> {
 
 enum Test {
     Ignored,
-    Bench(JsonNewLatency),
+    Bench(JsonLatency),
 }
 
 fn parse_stdout(input: &str) -> IResult<&str, JsonNewBenchmarks> {
@@ -91,7 +91,7 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonNewBenchmarks> {
 
 fn to_latency(
     bench: (&str, &str, &str, &str, &str, &str, Test, &str),
-) -> Option<(String, JsonNewLatency)> {
+) -> Option<(String, JsonLatency)> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
@@ -118,7 +118,7 @@ impl From<&str> for Units {
     }
 }
 
-fn parse_bench(input: &str) -> IResult<&str, JsonNewLatency> {
+fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
     map(
         tuple((
             tag("bench:"),
@@ -137,7 +137,7 @@ fn parse_bench(input: &str) -> IResult<&str, JsonNewLatency> {
             let units = Units::from(units);
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
-            JsonNewLatency {
+            JsonLatency {
                 duration,
                 lower_variance: variance.clone(),
                 upper_variance: variance,

@@ -45,20 +45,20 @@ pub type JsonNewBenchmarks = BTreeMap<String, JsonNewPerf>;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPerf {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latency:    Option<JsonNewLatency>,
+    pub latency:    Option<JsonLatency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub throughput: Option<JsonNewThroughput>,
+    pub throughput: Option<JsonThroughput>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub compute:    Option<JsonNewMinMaxAvg>,
+    pub compute:    Option<JsonMinMaxAvg>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory:     Option<JsonNewMinMaxAvg>,
+    pub memory:     Option<JsonMinMaxAvg>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage:    Option<JsonNewMinMaxAvg>,
+    pub storage:    Option<JsonMinMaxAvg>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewLatency {
+pub struct JsonLatency {
     pub lower_variance: Duration,
     pub upper_variance: Duration,
     pub duration:       Duration,
@@ -66,7 +66,7 @@ pub struct JsonNewLatency {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewThroughput {
+pub struct JsonThroughput {
     pub lower_events: f64,
     pub upper_events: f64,
     pub unit_time:    Duration,
@@ -74,7 +74,7 @@ pub struct JsonNewThroughput {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewMinMaxAvg {
+pub struct JsonMinMaxAvg {
     pub min: f64,
     pub max: f64,
     pub avg: f64,
