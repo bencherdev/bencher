@@ -46,7 +46,7 @@ pub struct GetLsParams {
     path =  "/v0/projects/{project}/benchmarks",
     tags = ["projects", "benchmarks"]
 }]
-pub async fn options(
+pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
@@ -58,7 +58,7 @@ pub async fn options(
     path =  "/v0/projects/{project}/benchmarks",
     tags = ["projects", "benchmarks"]
 }]
-pub async fn get(
+pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonBenchmark>>, CorsHeaders>, HttpError> {
