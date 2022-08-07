@@ -73,6 +73,7 @@ pub async fn put(
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonPerf>>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
+    let path_params = path_params.into_inner();
     let JsonPerfQuery {
         branches,
         testbeds,
@@ -81,8 +82,12 @@ pub async fn put(
         start_time,
         end_time,
     } = body.into_inner();
-    let path_params = path_params.into_inner();
-    let kind = serde_json::to_string(&kind).map_err(|_| http_error!(PERF_ERROR))?;
+    let branches = branches.into_iter().map(|uuid| uuid.to_string()).collect();
+    let testbeds = testbeds.into_iter().map(|uuid| uuid.to_string()).collect();
+    let benchmarks = benchmarks
+        .into_iter()
+        .map(|uuid| uuid.to_string())
+        .collect();
 
     let conn = db_connection.lock().await;
     let mut perf_data = Vec::new();
@@ -90,13 +95,30 @@ pub async fn put(
         for testbed in testbeds {
             for benchmark in benchmarks {
                 let data = schema::perf::table
-                    .inner_join(
+                    .left_join(
                         schema::benchmark::table
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
                     )
-                    .filter(schema::benchmark::uuid.eq(&benchmark.to_string()))
-                    .select((schema::benchmark::uuid, schema::perf::uuid))
-                    .load::<(String, String)>(&*conn)
+                    .filter(schema::benchmark::uuid.eq(&benchmark))
+                    .inner_join(
+                        schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
+                    )
+                    .inner_join(
+                        schema::testbed::table
+                            .on(schema::report::testbed_id.eq(schema::testbed::id)),
+                    )
+                    .filter(schema::testbed::uuid.eq(&testbed))
+                    .inner_join(
+                        schema::version::table
+                            .on(schema::report::version_id.eq(schema::version::id)),
+                    )
+                    .inner_join(
+                        schema::branch::table
+                            .on(schema::version::branch_id.eq(schema::branch::id)),
+                    )
+                    .filter(schema::branch::uuid.eq(&branch))
+                    .select((schema::perf::uuid))
+                    .load::<(String)>(&*conn)
                     .map_err(|_| http_error!(PERF_ERROR))?;
 
                 perf_data.push(data);
