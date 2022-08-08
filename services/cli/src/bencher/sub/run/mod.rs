@@ -15,8 +15,8 @@ use crate::{
         wide::Wide,
     },
     cli::run::{
-        CliAdapter,
         CliRun,
+        CliRunAdapter,
     },
     BencherError,
 };
@@ -58,15 +58,14 @@ impl TryFrom<CliRun> for Run {
     }
 }
 
-fn unwrap_branch(branch: Option<String>) -> Result<Uuid, BencherError> {
-    let branch = if let Some(branch) = branch {
+fn unwrap_branch(branch: Option<Uuid>) -> Result<Uuid, BencherError> {
+    Ok(if let Some(branch) = branch {
         branch
     } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
-        branch
+        Uuid::from_str(&branch)?
     } else {
         return Err(BencherError::BranchNotFound);
-    };
-    Ok(Uuid::from_str(&branch)?)
+    })
 }
 
 fn map_hash(hash: Option<String>) -> Result<Option<Oid>, BencherError> {
@@ -77,18 +76,17 @@ fn map_hash(hash: Option<String>) -> Result<Option<Oid>, BencherError> {
     })
 }
 
-fn unwrap_testbed(testbed: Option<String>) -> Result<Uuid, BencherError> {
-    let testbed = if let Some(testbed) = testbed {
+fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, BencherError> {
+    Ok(if let Some(testbed) = testbed {
         testbed
     } else if let Ok(testbed) = std::env::var(BENCHER_TESTBED) {
-        testbed
+        Uuid::from_str(&testbed)?
     } else {
         return Err(BencherError::TestbedNotFound);
-    };
-    Ok(Uuid::from_str(&testbed)?)
+    })
 }
 
-fn unwrap_adapter(adapter: Option<CliAdapter>) -> Adapter {
+fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
     adapter.map(Into::into).unwrap_or_default()
 }
 

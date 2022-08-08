@@ -8,7 +8,7 @@ use super::{
     shell::Shell,
 };
 use crate::{
-    cli::run::CliShell,
+    cli::run::CliRunShell,
     BencherError,
 };
 
@@ -19,10 +19,10 @@ pub struct Command {
     cmd:   String,
 }
 
-impl TryFrom<(CliShell, String)> for Command {
+impl TryFrom<(CliRunShell, String)> for Command {
     type Error = BencherError;
 
-    fn try_from(shell_cmd: (CliShell, String)) -> Result<Self, Self::Error> {
+    fn try_from(shell_cmd: (CliRunShell, String)) -> Result<Self, Self::Error> {
         let (shell, cmd) = shell_cmd;
         Ok(Self {
             shell: Shell::try_from(shell.shell)?,

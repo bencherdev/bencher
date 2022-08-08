@@ -8,6 +8,7 @@ use clap::{
 pub mod auth;
 pub mod benchmark;
 pub mod branch;
+pub mod perf;
 pub mod project;
 pub mod report;
 pub mod run;
@@ -16,6 +17,7 @@ pub mod testbed;
 use auth::CliAuth;
 use benchmark::CliBenchmark;
 use branch::CliBranch;
+use perf::CliPerf;
 use project::CliProject;
 use report::CliReport;
 use run::CliRun;
@@ -59,6 +61,8 @@ pub enum CliSub {
     Benchmark(CliBenchmark),
     /// Run benchmarks
     Run(CliRun),
+    /// Query benchmark data
+    Perf(CliPerf),
 }
 
 #[derive(Args, Debug)]

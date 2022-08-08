@@ -3,6 +3,7 @@ use clap::{
     Parser,
     ValueEnum,
 };
+use uuid::Uuid;
 
 use super::CliLocality;
 
@@ -13,7 +14,7 @@ pub struct CliRun {
 
     /// Branch UUID
     #[clap(long)]
-    pub branch: Option<String>,
+    pub branch: Option<Uuid>,
 
     /// Software commit hash
     #[clap(long)]
@@ -21,27 +22,27 @@ pub struct CliRun {
 
     /// Testbed UUID
     #[clap(long)]
-    pub testbed: Option<String>,
+    pub testbed: Option<Uuid>,
 
     /// Benchmark output adapter
     #[clap(value_enum, long)]
-    pub adapter: Option<CliAdapter>,
+    pub adapter: Option<CliRunAdapter>,
 
     #[clap(flatten)]
-    pub command: CliCommand,
+    pub command: CliRunCommand,
 }
 
 #[derive(Args, Debug)]
-pub struct CliCommand {
+pub struct CliRunCommand {
     #[clap(flatten)]
-    pub shell: CliShell,
+    pub shell: CliRunShell,
 
     /// Benchmark command
     pub cmd: Option<String>,
 }
 
 #[derive(Args, Debug)]
-pub struct CliShell {
+pub struct CliRunShell {
     /// Shell command path
     #[clap(long, requires = "cmd")]
     pub shell: Option<String>,
@@ -54,7 +55,7 @@ pub struct CliShell {
 /// Supported Adapters
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
-pub enum CliAdapter {
+pub enum CliRunAdapter {
     /// JSON (default)
     Json,
     /// Rust `cargo bench` 🦀

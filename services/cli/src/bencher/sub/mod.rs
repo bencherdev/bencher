@@ -11,6 +11,7 @@ use crate::{
 mod auth;
 mod benchmark;
 mod branch;
+mod perf;
 mod project;
 mod report;
 mod run;
@@ -20,6 +21,7 @@ mod testbed;
 use auth::Auth;
 use benchmark::Benchmark;
 use branch::Branch;
+use perf::Perf;
 use project::Project;
 use report::Report;
 use run::Run;
@@ -35,6 +37,7 @@ pub enum Sub {
     Testbed(Testbed),
     Benchmark(Benchmark),
     Run(Run),
+    Perf(Perf),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -49,6 +52,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Testbed(testbed) => Self::Testbed(Testbed::try_from(testbed)?),
             CliSub::Benchmark(benchmark) => Self::Benchmark(Benchmark::try_from(benchmark)?),
             CliSub::Run(run) => Self::Run(Run::try_from(run)?),
+            CliSub::Perf(perf) => Self::Perf(Perf::try_from(perf)?),
         })
     }
 }
@@ -72,6 +76,7 @@ impl SubCmd for Sub {
             Self::Testbed(testbed) => testbed.exec(wide).await,
             Self::Benchmark(benchmark) => benchmark.exec(wide).await,
             Self::Run(run) => run.exec(wide).await,
+            Self::Perf(perf) => perf.exec(wide).await,
         }
     }
 }

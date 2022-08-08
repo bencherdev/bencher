@@ -6,7 +6,7 @@ use std::convert::{
 use chrono::Utc;
 
 use crate::{
-    cli::run::CliCommand,
+    cli::run::CliRunCommand,
     BencherError,
 };
 
@@ -26,10 +26,10 @@ pub enum Benchmark {
     Command(Command),
 }
 
-impl TryFrom<CliCommand> for Benchmark {
+impl TryFrom<CliRunCommand> for Benchmark {
     type Error = BencherError;
 
-    fn try_from(command: CliCommand) -> Result<Self, Self::Error> {
+    fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
         Ok(if let Some(cmd) = command.cmd {
             Self::Command(Command::try_from((command.shell, cmd))?)
         } else {

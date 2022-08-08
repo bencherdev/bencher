@@ -63,9 +63,38 @@ impl Backend {
     }
 
     pub async fn get(&self, path: &str) -> Result<serde_json::Value, BencherError> {
+        self.send::<()>(Method::Get, path).await
+    }
+
+    pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
+    where
+        T: Serialize + ?Sized,
+    {
+        self.send(Method::Post(json), path).await
+    }
+
+    pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
+    where
+        T: Serialize + ?Sized,
+    {
+        self.send(Method::Put(json), path).await
+    }
+
+    async fn send<T>(
+        &self,
+        method: Method<&T>,
+        path: &str,
+    ) -> Result<serde_json::Value, BencherError>
+    where
+        T: Serialize + ?Sized,
+    {
         let client = reqwest::Client::new();
         let url = self.host.join(path)?.to_string();
-        let mut builder = client.get(&url);
+        let mut builder = match method {
+            Method::Get => client.get(&url),
+            Method::Post(json) => client.post(&url).json(json),
+            Method::Put(json) => client.put(&url).json(json),
+        };
         if let Some(token) = &self.token {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
@@ -73,19 +102,10 @@ impl Backend {
         println!("{}", serde_json::to_string_pretty(&res)?);
         Ok(res)
     }
+}
 
-    pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
-    where
-        T: Serialize + ?Sized,
-    {
-        let client = reqwest::Client::new();
-        let url = self.host.join(path)?.to_string();
-        let mut builder = client.post(&url);
-        if let Some(token) = &self.token {
-            builder = builder.header("Authorization", format!("Bearer {token}"));
-        }
-        let res: serde_json::Value = builder.json(json).send().await?.json().await?;
-        println!("{}", serde_json::to_string_pretty(&res)?);
-        Ok(res)
-    }
+enum Method<T> {
+    Get,
+    Post(T),
+    Put(T),
 }

@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::db::model::project::QueryProject;
+
 use bencher_json::{
     perf::{
         JsonPerfData,
@@ -19,7 +19,7 @@ use bencher_json::{
     },
     JsonPerf,
     JsonPerfQuery,
-    ResourceId,
+
 };
 use chrono::NaiveDateTime;
 use diesel::{
@@ -33,12 +33,9 @@ use dropshot::{
     HttpError,
     HttpResponseHeaders,
     HttpResponseOk,
-    Path,
     RequestContext,
     TypedBody,
 };
-use schemars::JsonSchema;
-use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
@@ -54,35 +51,28 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to get benchmark data.";
 
-#[derive(Deserialize, JsonSchema)]
-pub struct PathParams {
-    pub project: ResourceId,
-}
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/perf",
-    tags = ["projects", "perf"]
+    path =  "/v0/perf",
+    tags = ["perf"]
 }]
 pub async fn options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     Ok(get_cors::<Context>())
 }
 
 #[endpoint {
     method = PUT,
-    path =  "/v0/projects/{project}/perf",
-    tags = ["projects", "perf"]
+    path =  "/v0/perf",
+    tags = ["perf"]
 }]
 pub async fn put(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<PathParams>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPerf>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
-    let path_params = path_params.into_inner();
     let JsonPerfQuery {
         branches,
         testbeds,
@@ -94,7 +84,6 @@ pub async fn put(
 
     let conn = db_connection.lock().await;
     let mut data = Vec::new();
-    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
     for branch_uuid in &branches {
         for testbed_uuid in &testbeds {
             for benchmark_uuid in &benchmarks {
@@ -104,7 +93,6 @@ pub async fn put(
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
                     )
                     .filter(schema::benchmark::uuid.eq(benchmark_uuid.to_string()))
-                    .filter(schema::benchmark::project_id.eq(project.id))
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
@@ -113,7 +101,6 @@ pub async fn put(
                             .on(schema::report::testbed_id.eq(schema::testbed::id)),
                     )
                     .filter(schema::testbed::uuid.eq(testbed_uuid.to_string()))
-                    .filter(schema::testbed::project_id.eq(project.id))
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
@@ -121,8 +108,7 @@ pub async fn put(
                     .left_join(
                         schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
                     )
-                    .filter(schema::branch::uuid.eq(branch_uuid.to_string()))
-                    .filter(schema::branch::project_id.eq(project.id));
+                    .filter(schema::branch::uuid.eq(branch_uuid.to_string()));
 
                 let query_perf_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query

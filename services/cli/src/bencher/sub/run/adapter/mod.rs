@@ -5,7 +5,7 @@ use bencher_json::report::{
 
 use crate::{
     bencher::sub::run::benchmark::Output,
-    cli::run::CliAdapter,
+    cli::run::CliRunAdapter,
     BencherError,
 };
 
@@ -19,11 +19,11 @@ pub enum Adapter {
     RustCargoBench,
 }
 
-impl From<CliAdapter> for Adapter {
-    fn from(adapter: CliAdapter) -> Self {
+impl From<CliRunAdapter> for Adapter {
+    fn from(adapter: CliRunAdapter) -> Self {
         match adapter {
-            CliAdapter::Json => Adapter::Json,
-            CliAdapter::RustCargoBench => Adapter::RustCargoBench,
+            CliRunAdapter::Json => Self::Json,
+            CliRunAdapter::RustCargoBench => Self::RustCargoBench,
         }
     }
 }
@@ -40,8 +40,8 @@ impl Into<JsonNewAdapter> for Adapter {
 impl Adapter {
     pub fn convert(&self, output: &Output) -> Result<JsonNewBenchmarks, BencherError> {
         match &self {
-            Adapter::Json => json::parse(output),
-            Adapter::RustCargoBench => rust::parse(output),
+            Self::Json => json::parse(output),
+            Self::RustCargoBench => rust::parse(output),
         }
     }
 }
