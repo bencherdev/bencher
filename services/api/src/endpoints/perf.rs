@@ -4,7 +4,6 @@ use std::{
     time::Duration,
 };
 
-
 use bencher_json::{
     perf::{
         JsonPerfData,
@@ -19,7 +18,6 @@ use bencher_json::{
     },
     JsonPerf,
     JsonPerfQuery,
-
 };
 use chrono::NaiveDateTime;
 use diesel::{
@@ -39,7 +37,10 @@ use dropshot::{
 use uuid::Uuid;
 
 use crate::{
-    db::schema,
+    db::{
+        model::DATETIME_FORMAT,
+        schema,
+    },
     diesel::ExpressionMethods,
     util::{
         cors::get_cors,
@@ -50,7 +51,6 @@ use crate::{
 };
 
 const PERF_ERROR: &str = "Failed to get benchmark data.";
-
 
 #[endpoint {
     method = OPTIONS,
@@ -216,6 +216,7 @@ fn to_json(
     })
 }
 
+#[derive(Debug)]
 pub struct QueryPerfDatum {
     pub perf_uuid:      String,
     pub start_time:     String,
@@ -237,9 +238,10 @@ impl QueryPerfDatum {
         } = self;
         Ok(JsonPerfDatum {
             perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(PERF_ERROR))?,
-            start_time: NaiveDateTime::from_str(&start_time)
+            start_time: NaiveDateTime::parse_from_str(&start_time, DATETIME_FORMAT)
                 .map_err(|_| http_error!(PERF_ERROR))?,
-            end_time: NaiveDateTime::from_str(&end_time).map_err(|_| http_error!(PERF_ERROR))?,
+            end_time: NaiveDateTime::parse_from_str(&end_time, DATETIME_FORMAT)
+                .map_err(|_| http_error!(PERF_ERROR))?,
             version_number: version_number as u32,
             version_hash,
             datum: QueryPerfDatumKind::to_json(datum)?,
@@ -247,6 +249,7 @@ impl QueryPerfDatum {
     }
 }
 
+#[derive(Debug)]
 pub enum QueryPerfDatumKind {
     Latency(QueryLatency),
     Throughput(QueryThroughput),
@@ -275,6 +278,7 @@ impl QueryPerfDatumKind {
     }
 }
 
+#[derive(Debug)]
 pub struct QueryLatency {
     pub lower_variance: i64,
     pub upper_variance: i64,
@@ -296,6 +300,7 @@ impl QueryLatency {
     }
 }
 
+#[derive(Debug)]
 pub struct QueryThroughput {
     pub lower_events: f64,
     pub upper_events: f64,
@@ -317,6 +322,7 @@ impl QueryThroughput {
     }
 }
 
+#[derive(Debug)]
 pub struct QueryMinMaxAvg {
     pub min: f64,
     pub max: f64,
