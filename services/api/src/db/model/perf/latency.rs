@@ -37,9 +37,9 @@ impl From<JsonLatency> for InsertLatency {
         } = latency;
         Self {
             uuid:           Uuid::new_v4().to_string(),
-            lower_variance: lower_variance.as_nanos() as i64,
-            upper_variance: upper_variance.as_nanos() as i64,
-            duration:       duration.as_nanos() as i64,
+            lower_variance: lower_variance as i64,
+            upper_variance: upper_variance as i64,
+            duration:       duration as i64,
         }
     }
 }

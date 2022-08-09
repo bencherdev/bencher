@@ -19,7 +19,6 @@ use bencher_json::{
     JsonPerf,
     JsonPerfQuery,
 };
-use chrono::NaiveDateTime;
 use diesel::{
     JoinOnDsl,
     NullableExpressionMethods,
@@ -38,7 +37,7 @@ use uuid::Uuid;
 
 use crate::{
     db::{
-        model::DATETIME_FORMAT,
+        model::report::to_date_time,
         schema,
     },
     diesel::ExpressionMethods,
@@ -83,7 +82,7 @@ pub async fn put(
     } = body.into_inner();
 
     let conn = db_connection.lock().await;
-    let mut data = Vec::new();
+    let mut perf = Vec::new();
     for branch_uuid in &branches {
         for testbed_uuid in &testbeds {
             for benchmark_uuid in &benchmarks {
@@ -127,9 +126,7 @@ pub async fn put(
                             schema::latency::duration,
                         ))
                         .order(schema::version::number)
-                        .load::<(String, String, String, i32, Option<String>, i64, i64, i64)>(
-                            &*conn,
-                        )
+                        .load::<(String, i64, i64, i32, Option<String>, i64, i64, i64)>(&*conn)
                         .map_err(|_| http_error!(PERF_ERROR))?
                         .into_iter()
                         .map(
@@ -180,7 +177,7 @@ pub async fn put(
                     query_perf_data,
                 )?;
 
-                data.push(json_perf_data);
+                perf.push(json_perf_data);
             }
         }
     }
@@ -189,7 +186,7 @@ pub async fn put(
         kind,
         start_time,
         end_time,
-        data,
+        perf,
     };
 
     Ok(HttpResponseHeaders::new(
@@ -219,8 +216,8 @@ fn to_json(
 #[derive(Debug)]
 pub struct QueryPerfDatum {
     pub perf_uuid:      String,
-    pub start_time:     String,
-    pub end_time:       String,
+    pub start_time:     i64,
+    pub end_time:       i64,
     pub version_number: i32,
     pub version_hash:   Option<String>,
     pub datum:          QueryPerfDatumKind,
@@ -238,10 +235,8 @@ impl QueryPerfDatum {
         } = self;
         Ok(JsonPerfDatum {
             perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(PERF_ERROR))?,
-            start_time: NaiveDateTime::parse_from_str(&start_time, DATETIME_FORMAT)
-                .map_err(|_| http_error!(PERF_ERROR))?,
-            end_time: NaiveDateTime::parse_from_str(&end_time, DATETIME_FORMAT)
-                .map_err(|_| http_error!(PERF_ERROR))?,
+            start_time: to_date_time(start_time)?,
+            end_time: to_date_time(end_time)?,
             version_number: version_number as u32,
             version_hash,
             datum: QueryPerfDatumKind::to_json(datum)?,
@@ -293,9 +288,9 @@ impl QueryLatency {
             duration,
         } = self;
         Ok(JsonLatency {
-            lower_variance: Duration::from_nanos(lower_variance as u64),
-            upper_variance: Duration::from_nanos(upper_variance as u64),
-            duration:       Duration::from_nanos(duration as u64),
+            lower_variance: Duration::from_nanos(lower_variance as u64).as_nanos(),
+            upper_variance: Duration::from_nanos(upper_variance as u64).as_nanos(),
+            duration:       Duration::from_nanos(duration as u64).as_nanos(),
         })
     }
 }
@@ -317,7 +312,7 @@ impl QueryThroughput {
         Ok(JsonThroughput {
             lower_events,
             upper_events,
-            unit_time: Duration::from_nanos(unit_time as u64),
+            unit_time: Duration::from_nanos(unit_time as u64).as_nanos(),
         })
     }
 }

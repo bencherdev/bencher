@@ -4,8 +4,8 @@ use std::{
 };
 
 use bencher_json::report::{
-    JsonNewBenchmarks,
     JsonLatency,
+    JsonNewBenchmarks,
     JsonNewPerf,
 };
 use nom::{
@@ -138,9 +138,9 @@ fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
             JsonLatency {
-                duration,
-                lower_variance: variance.clone(),
-                upper_variance: variance,
+                duration:       duration.as_nanos(),
+                lower_variance: variance.as_nanos(),
+                upper_variance: variance.as_nanos(),
             }
         },
     )(input)

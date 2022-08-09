@@ -1,4 +1,7 @@
-use chrono::NaiveDateTime;
+use chrono::{
+    DateTime,
+    Utc,
+};
 use clap::{
     Parser,
     ValueEnum,
@@ -26,10 +29,10 @@ pub struct CliPerf {
     pub kind: CliPerfKind,
 
     /// Start time
-    pub start_time: Option<NaiveDateTime>,
+    pub start_time: Option<DateTime<Utc>>,
 
     /// End time
-    pub end_time: Option<NaiveDateTime>,
+    pub end_time: Option<DateTime<Utc>>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -80,8 +80,8 @@ table! {
         version_id -> Integer,
         testbed_id -> Integer,
         adapter_id -> Integer,
-        start_time -> Timestamp,
-        end_time -> Timestamp,
+        start_time -> BigInt,
+        end_time -> BigInt,
     }
 }
 

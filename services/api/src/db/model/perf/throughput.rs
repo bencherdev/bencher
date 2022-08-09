@@ -39,7 +39,7 @@ impl From<JsonThroughput> for InsertThroughput {
             uuid: Uuid::new_v4().to_string(),
             lower_events,
             upper_events,
-            unit_time: unit_time.as_nanos() as i64,
+            unit_time: unit_time as i64,
         }
     }
 }

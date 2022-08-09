@@ -2,7 +2,10 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::JsonPerfQuery;
-use chrono::NaiveDateTime;
+use chrono::{
+    DateTime,
+    Utc,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -28,8 +31,8 @@ pub struct Perf {
     testbeds:   Vec<Uuid>,
     benchmarks: Vec<Uuid>,
     kind:       Kind,
-    start_time: Option<NaiveDateTime>,
-    end_time:   Option<NaiveDateTime>,
+    start_time: Option<DateTime<Utc>>,
+    end_time:   Option<DateTime<Utc>>,
     backend:    Backend,
 }
 

@@ -1,11 +1,7 @@
-use std::{
-    collections::BTreeMap,
-    time::Duration,
-};
+use std::collections::BTreeMap;
 
 use chrono::{
     DateTime,
-    NaiveDateTime,
     Utc,
 };
 use derive_more::Display;
@@ -59,9 +55,9 @@ pub struct JsonNewPerf {
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLatency {
-    pub lower_variance: Duration,
-    pub upper_variance: Duration,
-    pub duration:       Duration,
+    pub lower_variance: u128,
+    pub upper_variance: u128,
+    pub duration:       u128,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -69,7 +65,7 @@ pub struct JsonLatency {
 pub struct JsonThroughput {
     pub lower_events: f64,
     pub upper_events: f64,
-    pub unit_time:    Duration,
+    pub unit_time:    u128,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -88,8 +84,8 @@ pub struct JsonReport {
     pub version_uuid: Uuid,
     pub testbed_uuid: Uuid,
     pub adapter_uuid: Uuid,
-    pub start_time:   NaiveDateTime,
-    pub end_time:     NaiveDateTime,
+    pub start_time:   DateTime<Utc>,
+    pub end_time:     DateTime<Utc>,
     pub benchmarks:   JsonBenchmarks,
 }
 

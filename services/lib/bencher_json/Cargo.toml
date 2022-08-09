@@ -12,7 +12,7 @@ schema = ["schemars"]
 wasm = ["wasm-bindgen", "uuid/js"]
 
 [dependencies]
-chrono = { version = "0.4.19", features = ["serde"] }
+chrono = { version = "0.4.20", features = ["serde"] }
 derive_more = "0.99.17"
 schemars = { version = "0.8.10", optional = true, features = [
     "chrono",

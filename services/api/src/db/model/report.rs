@@ -10,7 +10,7 @@ use bencher_json::{
 };
 use chrono::{
     DateTime,
-    NaiveDateTime,
+    TimeZone,
     Utc,
 };
 use diesel::{
@@ -52,8 +52,8 @@ pub struct QueryReport {
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter_id: i32,
-    pub start_time: NaiveDateTime,
-    pub end_time:   NaiveDateTime,
+    pub start_time: i64,
+    pub end_time:   i64,
 }
 
 impl QueryReport {
@@ -83,11 +83,21 @@ impl QueryReport {
             version_uuid: QueryVersion::get_uuid(conn, version_id)?,
             testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id)?,
             adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
-            start_time,
-            end_time,
+            start_time: to_date_time(start_time)?,
+            end_time: to_date_time(end_time)?,
             benchmarks,
         })
     }
+}
+
+// https://docs.rs/chrono/latest/chrono/serde/ts_nanoseconds/index.html
+pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
+    Utc.timestamp_opt(
+        timestamp / 1_000_000_000,
+        (timestamp % 1_000_000_000) as u32,
+    )
+    .single()
+    .ok_or(http_error!(REPORT_ERROR))
 }
 
 fn get_benchmarks(conn: &SqliteConnection, report_id: i32) -> Result<JsonBenchmarks, HttpError> {
@@ -121,8 +131,8 @@ pub struct InsertReport {
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter_id: i32,
-    pub start_time: NaiveDateTime,
-    pub end_time:   NaiveDateTime,
+    pub start_time: i64,
+    pub end_time:   i64,
 }
 
 impl InsertReport {
@@ -141,8 +151,8 @@ impl InsertReport {
             version_id,
             testbed_id,
             adapter_id: QueryAdapter::get_id_from_name(conn, &adapter.to_string())?,
-            start_time: start_time.naive_utc(),
-            end_time: end_time.naive_utc(),
+            start_time: start_time.timestamp_nanos(),
+            end_time: end_time.timestamp_nanos(),
         })
     }
 }
