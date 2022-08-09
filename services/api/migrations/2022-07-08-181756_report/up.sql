@@ -131,6 +131,7 @@ CREATE TABLE z_score (
     branch_id INTEGER NOT NULL,
     population INTEGER,
     deviation REAL NOT NULL,
+    active BOOLEAN NOT NULL,
     FOREIGN KEY (branch_id) REFERENCES branch (id)
 );
 CREATE TABLE z_score_alert (

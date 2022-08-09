@@ -139,6 +139,7 @@ table! {
         branch_id -> Integer,
         population -> Nullable<Integer>,
         deviation -> Float,
+        active -> Bool,
     }
 }
 
