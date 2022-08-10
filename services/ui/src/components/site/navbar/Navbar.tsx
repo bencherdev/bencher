@@ -5,6 +5,7 @@ import ProjectSelect from "./ProjectSelect";
 const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
 const BENCHER_DOCS_URL: string = import.meta.env.VITE_BENCHER_DOCS_URL;
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
 
 export interface Props {
   user: Function;
@@ -43,12 +44,16 @@ export const Navbar = (props) => {
 
       <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
-          <a class="navbar-item" href={BENCHER_DOCS_URL}>
+          <a class="navbar-item" href={BENCHER_DOCS_URL} target="_blank">
             Docs
           </a>
 
-          <a class="navbar-item" href={BENCHER_API_URL}>
+          <a class="navbar-item" href={BENCHER_API_URL} target="_blank">
             API
+          </a>
+
+          <a class="navbar-item" href={BENCHER_GITHUB_URL} target="_blank">
+            GitHub
           </a>
 
           {props.user()?.uuid && (

@@ -1,6 +1,5 @@
 const authForms = {
     signup: {
-        title: "Sign up - Bencher",
         heading: "Sign up",
         form: {
             token: true,
@@ -12,7 +11,6 @@ const authForms = {
         }
     },
     login: {
-        title: "Log in - Bencher",
         heading: "Log in",
         form: {
             token: true,

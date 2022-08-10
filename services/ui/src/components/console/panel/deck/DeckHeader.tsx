@@ -1,4 +1,13 @@
+import { createEffect } from "solid-js";
+
 const DeckHeader = (props) => {
+  createEffect(() => {
+    const title = props.data?.[props.config?.key];
+    if (title) {
+      props.handleTitle(title);
+    }
+  });
+
   return (
     <nav class="level">
       <div class="level-left">
@@ -10,14 +19,14 @@ const DeckHeader = (props) => {
           }}
         >
           <span class="icon">
-            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            <i class="fas fa-chevron-left" aria-hidden="true" />
           </span>
           <span>Back</span>
         </button>
       </div>
       <div class="level-left">
         <div class="level-item">
-          <h3 class="title is-3">{props.data?.[props.config.key]}</h3>
+          <h3 class="title is-3">{props.data?.[props.config?.key]}</h3>
         </div>
       </div>
 
@@ -31,7 +40,7 @@ const DeckHeader = (props) => {
             }}
           >
             <span class="icon">
-              <i class="fas fa-sync-alt" aria-hidden="true"></i>
+              <i class="fas fa-sync-alt" aria-hidden="true" />
             </span>
             <span>Refresh</span>
           </button>

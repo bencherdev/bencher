@@ -15,6 +15,8 @@ const AuthFormPage = (props: {
   handleUser: Function;
   handleNotification: Function;
 }) => {
+  props.handleTitle(authForms[props.kind]?.heading);
+
   return (
     <section class="section">
       <div class="container">
@@ -26,7 +28,6 @@ const AuthFormPage = (props: {
 
             <AuthForm
               kind={props.kind}
-              handleTitle={props.handleTitle}
               handleRedirect={props.handleRedirect}
               user={props.user}
               handleUser={props.handleUser}

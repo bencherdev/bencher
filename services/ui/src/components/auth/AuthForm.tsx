@@ -10,7 +10,6 @@ const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 export interface Props {
   kind: "signup" | "login";
-  handleTitle: Function;
   handleRedirect: Function;
   user: Function;
   handleUser: Function;
@@ -23,8 +22,6 @@ export const AuthForm = (props: Props) => {
   createEffect(() => {
     handleFormValid();
   });
-
-  props.handleTitle(authForms[props.kind]?.title, false);
 
   const handleField = (key, value, valid) => {
     setForm({
@@ -149,7 +146,7 @@ export const AuthForm = (props: Props) => {
 
       <br />
 
-      {props.kind == "signup" &&
+      {props.kind === "signup" &&
         form()?.username?.valid &&
         form()?.email?.valid && (
           <SiteField

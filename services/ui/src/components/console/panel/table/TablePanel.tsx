@@ -47,6 +47,7 @@ const TablePanel = (props) => {
         config={props.config?.header}
         pathname={props.pathname}
         refresh={refresh}
+        handleTitle={props.handleTitle}
         handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
       />

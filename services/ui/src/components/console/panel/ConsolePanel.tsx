@@ -13,6 +13,7 @@ const ConsolePanel = (props) => {
           config={props.config}
           path_params={props.path_params}
           pathname={props.pathname}
+          handleTitle={props.handleTitle}
           handleRedirect={props.handleRedirect}
         />
       </Match>
@@ -20,6 +21,7 @@ const ConsolePanel = (props) => {
         <PosterPanel
           config={props.config}
           pathname={props.pathname}
+          handleTitle={props.handleTitle}
           handleRedirect={props.handleRedirect}
         />
       </Match>
@@ -28,11 +30,12 @@ const ConsolePanel = (props) => {
           config={props.config}
           path_params={props.path_params}
           pathname={props.pathname}
+          handleTitle={props.handleTitle}
           handleRedirect={props.handleRedirect}
         />
       </Match>
       <Match when={props.config?.operation === Operation.PERF}>
-        <PerfPanel config={props.config} />
+        <PerfPanel config={props.config} handleTitle={props.handleTitle} />
       </Match>
     </Switch>
   );

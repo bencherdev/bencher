@@ -1,7 +1,14 @@
-import { For, Match, Switch } from "solid-js";
+import { createEffect, For, Match, Switch } from "solid-js";
 import { Button } from "../../config/types";
 
 const TableHeader = (props) => {
+  createEffect(() => {
+    const title = props.config?.title;
+    if (title) {
+      props.handleTitle(title);
+    }
+  });
+
   return (
     <nav class="level">
       <div class="level-left">
@@ -12,7 +19,7 @@ const TableHeader = (props) => {
 
       <div class="level-right">
         <For each={props.config?.buttons}>
-          {(button, i) => (
+          {(button) => (
             <p class="level-item">
               <Switch fallback={<></>}>
                 <Match when={button.kind === Button.ADD}>
@@ -24,7 +31,7 @@ const TableHeader = (props) => {
                     }}
                   >
                     <span class="icon">
-                      <i class="fas fa-plus" aria-hidden="true"></i>
+                      <i class="fas fa-plus" aria-hidden="true" />
                     </span>
                     <span>Add</span>
                   </button>
@@ -39,7 +46,7 @@ const TableHeader = (props) => {
                     }}
                   >
                     <span class="icon">
-                      <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                      <i class="fas fa-sync-alt" aria-hidden="true" />
                     </span>
                     <span>Refresh</span>
                   </button>

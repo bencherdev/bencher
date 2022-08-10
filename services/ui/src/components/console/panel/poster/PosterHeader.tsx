@@ -1,4 +1,13 @@
+import { createEffect } from "solid-js";
+
 const PosterHeader = (props) => {
+  createEffect(() => {
+    const title = props.config?.title;
+    if (title) {
+      props.handleTitle(title);
+    }
+  });
+
   return (
     <nav class="level">
       <div class="level-left">
@@ -10,7 +19,7 @@ const PosterHeader = (props) => {
           }}
         >
           <span class="icon">
-            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            <i class="fas fa-chevron-left" aria-hidden="true" />
           </span>
           <span>Back</span>
         </button>
@@ -21,7 +30,7 @@ const PosterHeader = (props) => {
         </div>
       </div>
 
-      <div class="level-right"></div>
+      <div class="level-right" />
     </nav>
   );
 };

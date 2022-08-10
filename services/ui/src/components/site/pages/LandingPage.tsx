@@ -1,9 +1,11 @@
+export const BENCHER_TITLE = "Bencher - Track Your Benchmarks";
+
 const LandingPage = (props) => {
-  props.handleTitle("Bencher - Track Your Benchmarks");
+  props.handleTitle(BENCHER_TITLE);
 
   return (
     <section class="section is-medium">
-      {props.user() && props.handleRedirect("/console")}
+      {props.user().uuid && props.handleRedirect("/console")}
 
       <div class="container">
         <div class="content has-text-centered">

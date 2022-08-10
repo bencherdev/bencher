@@ -16,14 +16,12 @@ import { Navbar } from "./components/site/navbar/Navbar";
 import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
+import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
 
 const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
-const AccountPage = lazy(() => import("./components/site/account/AccountPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
-
-const BENCHER_TITLE = "Bencher";
 
 const initUser = () => {
   return {
@@ -96,8 +94,9 @@ const App: Component = () => {
   }, 1000);
 
   const handleTitle = (new_title) => {
-    if (title() !== new_title) {
-      setTitle(new_title);
+    const bencher_title = `${new_title} - Bencher`;
+    if (title() !== bencher_title) {
+      setTitle(bencher_title);
     }
   };
 
