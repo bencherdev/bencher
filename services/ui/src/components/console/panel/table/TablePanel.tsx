@@ -4,8 +4,6 @@ import Table from "./Table";
 
 import TableHeader from "./TableHeader";
 
-const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
-
 const TablePanel = (props) => {
   const options = (token: string) => {
     return {

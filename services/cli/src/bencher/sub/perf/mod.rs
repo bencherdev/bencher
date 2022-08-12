@@ -73,7 +73,7 @@ impl SubCmd for Perf {
             start_time: self.start_time,
             end_time:   self.end_time,
         };
-        self.backend.put(PERF_PATH, &perf).await?;
+        self.backend.post(PERF_PATH, &perf).await?;
         Ok(())
     }
 }

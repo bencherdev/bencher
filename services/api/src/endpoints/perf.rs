@@ -51,6 +51,7 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to get benchmark data.";
 
+// TODO figure out why this doesn't work as a PUT
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/perf",
@@ -63,7 +64,7 @@ pub async fn options(
 }
 
 #[endpoint {
-    method = PUT,
+    method = POST,
     path =  "/v0/perf",
     tags = ["perf"]
 }]
@@ -191,7 +192,7 @@ pub async fn put(
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json_perf),
-        CorsHeaders::new_auth("PUT".into()),
+        CorsHeaders::new_auth("POST".into()),
     ))
 }
 

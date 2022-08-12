@@ -1,11 +1,5 @@
 import axios from "axios";
-import {
-  createSignal,
-  createResource,
-  createEffect,
-  Suspense,
-  For,
-} from "solid-js";
+import { For } from "solid-js";
 
 import Card from "./Card";
 import DeckButton from "./DeckButton";

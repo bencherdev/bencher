@@ -147,6 +147,14 @@ const projectsConfig = {
   },
   [Operation.PERF]: {
     operation: Operation.PERF,
+    header: {
+      title: "Benchmark Perf",
+    },
+    plot: {
+      url: () => {
+        return `${BENCHER_API_URL}/v0/perf`;
+      },
+    },
   },
 };
 

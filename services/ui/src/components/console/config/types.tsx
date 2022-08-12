@@ -42,3 +42,11 @@ export enum Card {
   FIELD,
   TABLE,
 }
+
+export enum PerKind {
+  LATENCY = "latency",
+  THROUGHPUT = "throughput",
+  COMPUTE = "compute",
+  MEMORY = "memory",
+  STORAGE = "storage",
+}
