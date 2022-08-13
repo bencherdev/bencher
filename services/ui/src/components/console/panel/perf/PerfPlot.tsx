@@ -15,22 +15,39 @@ const PerfPlot = (props) => {
       <div class="column">
         <div class="card">
           <header class="card-header">
-            <p class="card-header-title">Component</p>
-            <button class="card-header-icon" aria-label="more options">
-              <span class="icon">
-                <i class="fas fa-angle-down" aria-hidden="true" />
-              </span>
-            </button>
-            <select
-              value={props.query?.kind}
-              onInput={(e) => props.handleKind(e.currentTarget?.value)}
-            >
-              <For each={perf_kinds}>
-                {(kind) => (
-                  <option value={kind}>{perfKindCapitalized(kind)}</option>
-                )}
-              </For>
-            </select>
+            <nav class="level">
+              <div class="level-left">
+                <select
+                  class="card-header-title level-item"
+                  value={props.query?.kind}
+                  onInput={(e) => props.handleKind(e.currentTarget?.value)}
+                >
+                  <For each={perf_kinds}>
+                    {(kind) => (
+                      <option value={kind}>{perfKindCapitalized(kind)}</option>
+                    )}
+                  </For>
+                </select>
+              </div>
+              <div class="level-right">
+                <div class="level-item">
+                  <nav class="level is-mobile">
+                    <div class="level-item has-text-centered">
+                      <p class="card-header-title">Start Date</p>
+                      <input type="date" onInput={(e) => console.log(e)} />
+                    </div>
+                  </nav>
+                </div>
+                <div class="level-item">
+                  <nav class="level is-mobile">
+                    <div class="level-item has-text-centered">
+                      <p class="card-header-title">End Date</p>
+                      <input type="date" onInput={(e) => console.log(e)} />
+                    </div>
+                  </nav>
+                </div>
+              </div>
+            </nav>
           </header>
           <div class="card-content">
             <div class="content">
