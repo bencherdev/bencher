@@ -7,7 +7,7 @@ import {
 } from "solid-js";
 import { PerKind } from "../../config/types";
 import PerfHeader from "./PerfHeader";
-import PerfPlot from "./PerfPlot";
+import PerfPlot from "./plot/PerfPlot";
 
 const initPerfQuery = () => {
   return {
