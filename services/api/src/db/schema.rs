@@ -7,6 +7,16 @@ table! {
 }
 
 table! {
+    alert (id) {
+        id -> Integer,
+        uuid -> Text,
+        threshold_id -> Integer,
+        perf_id -> Integer,
+        z_score_id -> Nullable<Integer>,
+    }
+}
+
+table! {
     benchmark (id) {
         id -> Integer,
         uuid -> Text,
@@ -103,6 +113,16 @@ table! {
 }
 
 table! {
+    threshold (id) {
+        id -> Integer,
+        uuid -> Text,
+        branch_id -> Integer,
+        testbed_id -> Integer,
+        z_score_id -> Nullable<Integer>,
+    }
+}
+
+table! {
     throughput (id) {
         id -> Integer,
         uuid -> Text,
@@ -136,22 +156,14 @@ table! {
     z_score (id) {
         id -> Integer,
         uuid -> Text,
-        branch_id -> Integer,
         population -> Nullable<Integer>,
         deviation -> Float,
-        active -> Bool,
     }
 }
 
-table! {
-    z_score_alert (id) {
-        id -> Integer,
-        uuid -> Text,
-        z_score_id -> Integer,
-        perf_id -> Integer,
-    }
-}
-
+joinable!(alert -> perf (perf_id));
+joinable!(alert -> threshold (threshold_id));
+joinable!(alert -> z_score (z_score_id));
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
 joinable!(perf -> benchmark (benchmark_id));
@@ -164,13 +176,12 @@ joinable!(report -> testbed (testbed_id));
 joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
 joinable!(testbed -> project (project_id));
+joinable!(threshold -> branch (branch_id));
 joinable!(version -> branch (branch_id));
-joinable!(z_score -> branch (branch_id));
-joinable!(z_score_alert -> perf (perf_id));
-joinable!(z_score_alert -> z_score (z_score_id));
 
 allow_tables_to_appear_in_same_query!(
     adapter,
+    alert,
     benchmark,
     branch,
     latency,
@@ -179,9 +190,9 @@ allow_tables_to_appear_in_same_query!(
     project,
     report,
     testbed,
+    threshold,
     throughput,
     user,
     version,
     z_score,
-    z_score_alert,
 );

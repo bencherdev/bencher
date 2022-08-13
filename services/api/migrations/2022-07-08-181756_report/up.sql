@@ -108,15 +108,15 @@ CREATE TABLE perf (
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
     benchmark_id INTEGER NOT NULL,
-    --
+    -- at least one should not be null
     latency_id INTEGER,
     throughput_id INTEGER,
     compute_id INTEGER,
     memory_id INTEGER,
     storage_id INTEGER,
+    --
     FOREIGN KEY (report_id) REFERENCES report (id),
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
-    --
     FOREIGN KEY (latency_id) REFERENCES latency (id),
     FOREIGN KEY (throughput_id) REFERENCES throughput (id),
     FOREIGN KEY (compute_id) REFERENCES min_max_avg (id),
@@ -128,18 +128,32 @@ CREATE TABLE perf (
 CREATE TABLE z_score (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    branch_id INTEGER NOT NULL,
     population INTEGER,
-    deviation REAL NOT NULL,
-    active BOOLEAN NOT NULL,
-    FOREIGN KEY (branch_id) REFERENCES branch (id)
+    deviation REAL NOT NULL
 );
-CREATE TABLE z_score_alert (
+CREATE TABLE threshold (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    z_score_id INTEGER NOT NULL,
+    branch_id INTEGER NOT NULL,
+    testbed_id INTEGER NOT NULL,
+    -- at least one should not be null
+    z_score_id INTEGER,
+    --
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
+    FOREIGN KEY (z_score_id) REFERENCES testbed (id),
+    UNIQUE(branch_id, testbed_id)
+);
+CREATE TABLE alert (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    threshold_id INTEGER NOT NULL,
     perf_id INTEGER NOT NULL,
-    FOREIGN KEY (z_score_id) REFERENCES z_score (id),
+    -- only one should not be null
+    z_score_id INTEGER,
+    --
+    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
     FOREIGN KEY (perf_id) REFERENCES perf (id),
+    FOREIGN KEY (z_score_id) REFERENCES z_score (id),
     UNIQUE(z_score_id, perf_id)
 );
