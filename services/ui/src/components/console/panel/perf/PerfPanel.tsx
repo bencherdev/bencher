@@ -87,7 +87,7 @@ const PerfPanel = (props) => {
         handleTitle={props.handleTitle}
         handleRefresh={handleRefresh}
       />
-      <PerfPlot data={perf_data} />
+      <PerfPlot query={perf_query()} handleKind={setKind} />
     </>
   );
 };

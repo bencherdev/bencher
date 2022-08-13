@@ -50,3 +50,7 @@ export enum PerKind {
   MEMORY = "memory",
   STORAGE = "storage",
 }
+
+export function perfKindCapitalized(perf_kind: PerKind) {
+  return perf_kind.charAt(0).toUpperCase() + perf_kind.slice(1);
+}
