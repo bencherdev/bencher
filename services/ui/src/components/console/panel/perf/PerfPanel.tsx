@@ -79,13 +79,6 @@ const PerfPanel = (props) => {
     setRefresh(refresh() + 1);
   };
 
-  createEffect(() => {
-    const title = "Benchmark Perf";
-    if (title) {
-      props.handleTitle(title);
-    }
-  });
-
   return (
     <>
       <PerfHeader
