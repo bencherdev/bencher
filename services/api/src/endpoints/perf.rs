@@ -82,6 +82,17 @@ pub async fn put(
         end_time,
     } = body.into_inner();
 
+    // In order to make the type system happy, always query a start and end time.
+    // If either is missing then just default to the extremes: zero and max.
+    let start_time_nanos = start_time
+        .as_ref()
+        .map(|t| t.timestamp_nanos())
+        .unwrap_or_default();
+    let end_time_nanos = end_time
+        .as_ref()
+        .map(|t| t.timestamp_nanos())
+        .unwrap_or(i64::MAX);
+
     let conn = db_connection.lock().await;
     let mut perf = Vec::new();
     for branch_uuid in &branches {
@@ -96,6 +107,8 @@ pub async fn put(
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
+                    .filter(schema::report::start_time.ge(start_time_nanos))
+                    .filter(schema::report::end_time.le(end_time_nanos))
                     .left_join(
                         schema::testbed::table
                             .on(schema::report::testbed_id.eq(schema::testbed::id)),
