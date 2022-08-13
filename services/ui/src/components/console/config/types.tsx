@@ -51,6 +51,12 @@ export enum PerKind {
   STORAGE = "storage",
 }
 
-export function perfKindCapitalized(perf_kind: PerKind) {
-  return perf_kind.charAt(0).toUpperCase() + perf_kind.slice(1);
-}
+export const perfKindCapitalized = (perf_kind: PerKind) =>
+  perf_kind.charAt(0).toUpperCase() + perf_kind.slice(1);
+
+export const isPerfKind = (kind: string) =>
+  kind === PerKind.LATENCY ||
+  kind === PerKind.THROUGHPUT ||
+  kind === PerKind.COMPUTE ||
+  kind === PerKind.MEMORY ||
+  kind === PerKind.STORAGE;

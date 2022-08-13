@@ -38,10 +38,9 @@ cargo run -- testbed create --host http://localhost:8080 --project hazel-river -
 
 cargo run -- testbed view --host http://localhost:8080 --project hazel-river nemo
 
-cargo run -- perf 
-
 cargo run -- perf --branches $BENCHER_BRANCH --testbeds $BENCHER_TESTBED --benchmarks 81a44c11-9edc-4522-9bbc-5c9f1570158f --kind latency
 
+http://localhost:3000/console/projects/the-computer/perf?kind=latency&branches=f01d95fa-ddf1-4a75-9823-e48c68d218dc&testbeds=a6dbf670-67b1-408d-8857-77c4d3467e5a&benchmarks=cdf1e0f7-6966-4a0d-9255-68be249259f9
 
 ----
 

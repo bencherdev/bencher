@@ -1,11 +1,12 @@
 import axios from "axios";
+import { useSearchParams } from "solid-app-router";
 import {
   createEffect,
   createMemo,
   createResource,
   createSignal,
 } from "solid-js";
-import { PerKind } from "../../config/types";
+import { isPerfKind, PerKind } from "../../config/types";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 
@@ -20,13 +21,91 @@ const initPerfQuery = () => {
   };
 };
 
+const addToAray = (array: any[], add: any) => {
+  array.push(add);
+  return array;
+};
+const removeFromAray = (array: any[], remove: any) => {
+  const index = array.indexOf(remove);
+  if (index > -1) {
+    array.splice(index, 1);
+  }
+  return array;
+};
+
+const arrayFromString = (array_str: undefined | string) => {
+  if (typeof array_str === "string") {
+    const array = array_str.split(",");
+    return removeFromAray(array, "");
+  }
+  return [];
+};
+const arrayToString = (array: any[]) => array.join();
+
+const BRANCHES_PARAM = "branches";
+const TESTBEDS_PARAM = "testbeds";
+const BENCHMARKS_PARAM = "benchmarks";
+const KIND_PARAM = "kind";
+const START_TIME_PARAM = "start_time";
+const END_TIME_PARAM = "end_time";
+
+const DEFAULT_PEF_KIND = PerKind.LATENCY;
+
 const PerfPanel = (props) => {
-  const [branches, setBranches] = createSignal([]);
-  const [testbeds, setTestbeds] = createSignal([]);
-  const [benchmarks, setBenchmarks] = createSignal([]);
-  const [kind, setKind] = createSignal(PerKind.LATENCY);
-  const [start_time, setStartTime] = createSignal(null);
-  const [end_time, setEndTime] = createSignal(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  createEffect(() => {
+    if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
+      setSearchParams({ [BRANCHES_PARAM]: null });
+    }
+    if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
+      setSearchParams({ [TESTBEDS_PARAM]: null });
+    }
+    if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
+      setSearchParams({ [BENCHMARKS_PARAM]: null });
+    }
+    if (!isPerfKind(searchParams[KIND_PARAM])) {
+      setSearchParams({ [KIND_PARAM]: DEFAULT_PEF_KIND });
+    }
+    if (!Number.isSafeInteger(searchParams[START_TIME_PARAM])) {
+      setSearchParams({ [START_TIME_PARAM]: null });
+    }
+    if (!Number.isSafeInteger(searchParams[END_TIME_PARAM])) {
+      setSearchParams({ [END_TIME_PARAM]: null });
+    }
+  });
+
+  const branches = createMemo(() =>
+    arrayFromString(searchParams[BRANCHES_PARAM])
+  );
+  const testbeds = createMemo(() =>
+    arrayFromString(searchParams[TESTBEDS_PARAM])
+  );
+  const benchmarks = createMemo(() =>
+    arrayFromString(searchParams[BENCHMARKS_PARAM])
+  );
+  const kind = createMemo(() => {
+    if (isPerfKind(searchParams[KIND_PARAM])) {
+      return searchParams[KIND_PARAM];
+    } else {
+      return DEFAULT_PEF_KIND;
+    }
+  });
+  const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
+  const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
+
+  const addToArrayParam = (param: string, array: any[], add: string) =>
+    setSearchParams({ [param]: arrayToString(addToAray(array, add)) });
+  const removeFromArrayParam = (param: string, array: any[], remove: string) =>
+    setSearchParams({
+      [param]: arrayToString(removeFromAray(array, remove)),
+    });
+
+  const addBranch = (branch: string) =>
+    addToArrayParam(BRANCHES_PARAM, branches(), branch);
+  const removeBranch = (branch: string) =>
+    removeFromArrayParam(BRANCHES_PARAM, branches(), branch);
+  const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
 
   const perf_query = createMemo(() => {
     return {
@@ -40,6 +119,7 @@ const PerfPanel = (props) => {
   });
 
   const options = (token: string) => {
+    console.log(perf_query());
     return {
       url: props.config?.plot?.url(),
       method: "POST",
@@ -87,7 +167,7 @@ const PerfPanel = (props) => {
         handleTitle={props.handleTitle}
         handleRefresh={handleRefresh}
       />
-      <PerfPlot query={perf_query()} handleKind={setKind} />
+      <PerfPlot query={perf_query()} handleKind={handleKind} />
     </>
   );
 };
