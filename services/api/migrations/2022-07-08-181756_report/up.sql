@@ -128,8 +128,26 @@ CREATE TABLE perf (
 CREATE TABLE z_score (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    population INTEGER,
-    deviation REAL NOT NULL
+    -- sample size, if null use the entire population
+    sample_size INTEGER,
+    -- min allowed negative standard deviation, if null don't compare
+    min_deviation REAL,
+    -- max allowed positive standard deviation, if null don't compare
+    max_deviation REAL
+);
+-- https://en.wikipedia.org/wiki/Student's_t-test
+CREATE TABLE t_test (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    -- sample size, for Two-sample equal variance (homoscedastic) and (heteroscedastic)
+    -- Paired if null
+    sample_size INTEGER,
+    -- one-tailed left (false), one-tailed right (true), two-tailed (null)
+    tail BOOLEAN,
+    -- confidence interval
+    confidence_interval REAL NOT NULL,
+    -- min p-value, if null don't compare
+    p_value REAL
 );
 CREATE TABLE threshold (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -138,10 +156,12 @@ CREATE TABLE threshold (
     testbed_id INTEGER NOT NULL,
     -- at least one should not be null
     z_score_id INTEGER,
+    t_test_id INTEGER,
     --
     FOREIGN KEY (branch_id) REFERENCES branch (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
-    FOREIGN KEY (z_score_id) REFERENCES testbed (id),
+    FOREIGN KEY (z_score_id) REFERENCES z_score (id),
+    FOREIGN KEY (t_test_id) REFERENCES t_test (id),
     UNIQUE(branch_id, testbed_id)
 );
 CREATE TABLE alert (
@@ -151,9 +171,11 @@ CREATE TABLE alert (
     perf_id INTEGER NOT NULL,
     -- only one should not be null
     z_score_id INTEGER,
+    t_test_id INTEGER,
     --
     FOREIGN KEY (threshold_id) REFERENCES threshold (id),
     FOREIGN KEY (perf_id) REFERENCES perf (id),
     FOREIGN KEY (z_score_id) REFERENCES z_score (id),
+    FOREIGN KEY (t_test_id) REFERENCES t_test (id),
     UNIQUE(z_score_id, perf_id)
 );
