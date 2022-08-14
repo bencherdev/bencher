@@ -60,12 +60,12 @@ const ISOToDate = (iso_str: undefined | string) => {
   return null;
 };
 
-const resourcesToCheckable = (resources) =>
+const resourcesToCheckable = (resources, params) =>
   resources.map((resource) => {
     return {
       uuid: resource?.uuid,
       name: resource?.name,
-      checked: false,
+      checked: params.indexOf(resource?.uuid) > -1,
     };
   });
 
@@ -127,6 +127,16 @@ const PerfPanel = (props) => {
     addToArrayParam(BRANCHES_PARAM, branches(), branch);
   const removeBranch = (branch: string) =>
     removeFromArrayParam(BRANCHES_PARAM, branches(), branch);
+
+  const addTestbed = (testbed: string) =>
+    addToArrayParam(TESTBEDS_PARAM, testbeds(), testbed);
+  const removeTestbed = (testbed: string) =>
+    removeFromArrayParam(TESTBEDS_PARAM, testbeds(), testbed);
+
+  const addBenchmark = (benchmark: string) =>
+    addToArrayParam(BENCHMARKS_PARAM, benchmarks(), benchmark);
+  const removeBenchmark = (benchmark: string) =>
+    removeFromArrayParam(BENCHMARKS_PARAM, benchmarks(), benchmark);
 
   const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
   const handleStartTime = (date: string) =>
@@ -238,12 +248,30 @@ const PerfPanel = (props) => {
   };
   const handleTestbedChecked = (index: number, uuid: string) => {
     const tab = testbeds_tab();
-    tab[index].checked = !tab?.[index].checked;
+    const checked = tab?.[index].checked;
+    if (typeof checked !== "boolean") {
+      return;
+    }
+    if (checked) {
+      removeTestbed(uuid);
+    } else {
+      addTestbed(uuid);
+    }
+    tab[index].checked = !checked;
     setTestbedsTab(tab);
   };
   const handleBenchmarkChecked = (index: number, uuid: string) => {
     const tab = benchmarks_tab();
-    tab[index].checked = !tab?.[index].checked;
+    const checked = tab?.[index].checked;
+    if (typeof checked !== "boolean") {
+      return;
+    }
+    if (checked) {
+      removeBenchmark(uuid);
+    } else {
+      addBenchmark(uuid);
+    }
+    tab[index].checked = !checked;
     setBenchmarksTab(tab);
   };
 
@@ -252,22 +280,17 @@ const PerfPanel = (props) => {
   createEffect(() => {
     // At init wait until data is loaded to set tabular_refresh
     if (
-      !tabular_refresh() &&
-      branches_data() &&
-      testbeds_data() &&
-      benchmarks_data()
+      (!tabular_refresh() &&
+        branches_data() &&
+        testbeds_data() &&
+        benchmarks_data()) ||
+      (tabular_refresh() && tabular_refresh() !== refresh())
     ) {
       setTabularRefresh(refresh());
 
-      setBranchesTab(resourcesToCheckable(branches_data()));
-      setTestbedsTab(resourcesToCheckable(testbeds_data()));
-      setBenchmarksTab(resourcesToCheckable(benchmarks_data()));
-    }
-    // If refresh is later triggered also update data
-    if (tabular_refresh() && tabular_refresh() !== refresh()) {
-      setTabularRefresh(refresh());
-
-      // TODO merge the states
+      setBranchesTab(resourcesToCheckable(branches_data(), branches()));
+      setTestbedsTab(resourcesToCheckable(testbeds_data(), testbeds()));
+      setBenchmarksTab(resourcesToCheckable(benchmarks_data(), benchmarks()));
     }
   });
 
