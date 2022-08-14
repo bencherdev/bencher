@@ -47,6 +47,8 @@ const PlotTab = (props) => {
       </p>
       <For each={getTab()}>
         {(item, index) => (
+          // TODO maybe move over to a store and see if this works?
+          // https://www.solidjs.com/tutorial/stores_createstore
           <a
             class="panel-block"
             onSelect={(e) => handleChecked(index(), item.uuid)}
