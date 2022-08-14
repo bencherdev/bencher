@@ -60,6 +60,15 @@ const ISOToDate = (iso_str: undefined | string) => {
   return null;
 };
 
+const resourcesToCheckable = (resources) =>
+  resources.map((resource) => {
+    return {
+      uuid: resource?.uuid,
+      name: resource?.name,
+      checked: false,
+    };
+  });
+
 const PerfPanel = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -212,33 +221,43 @@ const PerfPanel = (props) => {
   const [testbeds_tab, setTestbedsTab] = createSignal();
   const [benchmarks_tab, setBenchmarksTab] = createSignal();
 
-  const handleBranchesTab = () => {
-    setBranchesTab(branches_data());
+  const handleBranchChecked = (index: number) => {
+    const tab = branches_tab();
+    tab[index].checked = !tab?.[index].checked;
+    setBranchesTab(tab);
   };
-  const handleTestbedsTab = () => {
-    setTestbedsTab(testbeds_data());
+  const handleTestbedChecked = (index: number) => {
+    const tab = testbeds_tab();
+    tab[index].checked = !tab?.[index].checked;
+    setTestbedsTab(tab);
   };
-  const handleBenchmarksTab = () => {
-    setBenchmarksTab(benchmarks_data());
+  const handleBenchmarkChecked = (index: number) => {
+    const tab = benchmarks_tab();
+    tab[index].checked = !tab?.[index].checked;
+    setBenchmarksTab(tab);
   };
 
   const [tabular_refresh, setTabularRefresh] = createSignal();
 
   createEffect(() => {
+    // At init wait until data is loaded to set tabular_refresh
     if (
-      // At init wait until data is loaded to set tabular_refresh
-      (!tabular_refresh() &&
-        branches_data() &&
-        testbeds_data() &&
-        benchmarks_data()) ||
-      // If refresh is later triggered also update data
-      (tabular_refresh() && tabular_refresh() !== refresh())
+      !tabular_refresh() &&
+      branches_data() &&
+      testbeds_data() &&
+      benchmarks_data()
     ) {
       setTabularRefresh(refresh());
 
-      handleBranchesTab();
-      handleTestbedsTab();
-      handleBenchmarksTab();
+      setBranchesTab(resourcesToCheckable(branches_data()));
+      setTestbedsTab(resourcesToCheckable(testbeds_data()));
+      setBenchmarksTab(resourcesToCheckable(benchmarks_data()));
+    }
+    // If refresh is later triggered also update data
+    if (tabular_refresh() && tabular_refresh() !== refresh()) {
+      setTabularRefresh(refresh());
+
+      // TODO merge the states
     }
   });
 
@@ -274,9 +293,9 @@ const PerfPanel = (props) => {
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
         handlePerfTab={handlePerfTab}
-        handleBranchesTab={handleBranchesTab}
-        handleTestbedsTab={handleTestbedsTab}
-        handleBenchmarksTab={handleBenchmarksTab}
+        handleBranchChecked={handleBranchChecked}
+        handleTestbedChecked={handleTestbedChecked}
+        handleBenchmarkChecked={handleBenchmarkChecked}
       />
     </>
   );
