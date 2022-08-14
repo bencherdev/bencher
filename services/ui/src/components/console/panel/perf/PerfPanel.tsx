@@ -42,6 +42,17 @@ const arrayFromString = (array_str: undefined | string) => {
 };
 const arrayToString = (array: any[]) => array.join();
 
+const dateToDateTime = (date_str: string) => {
+  const date_ms = Date.parse(date_str);
+  if (date_ms) {
+    const date = new Date(date_ms);
+    if (date) {
+      return date.toISOString();
+    }
+  }
+  return null;
+};
+
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
 const BENCHMARKS_PARAM = "benchmarks";
@@ -54,26 +65,24 @@ const DEFAULT_PEF_KIND = PerKind.LATENCY;
 const PerfPanel = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  createEffect(() => {
-    if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
-      setSearchParams({ [BRANCHES_PARAM]: null });
-    }
-    if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
-      setSearchParams({ [TESTBEDS_PARAM]: null });
-    }
-    if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
-      setSearchParams({ [BENCHMARKS_PARAM]: null });
-    }
-    if (!isPerfKind(searchParams[KIND_PARAM])) {
-      setSearchParams({ [KIND_PARAM]: DEFAULT_PEF_KIND });
-    }
-    if (!Number.isSafeInteger(searchParams[START_TIME_PARAM])) {
-      setSearchParams({ [START_TIME_PARAM]: null });
-    }
-    if (!Number.isSafeInteger(searchParams[END_TIME_PARAM])) {
-      setSearchParams({ [END_TIME_PARAM]: null });
-    }
-  });
+  if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
+    setSearchParams({ [BRANCHES_PARAM]: null });
+  }
+  if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
+    setSearchParams({ [TESTBEDS_PARAM]: null });
+  }
+  if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
+    setSearchParams({ [BENCHMARKS_PARAM]: null });
+  }
+  if (!isPerfKind(searchParams[KIND_PARAM])) {
+    setSearchParams({ [KIND_PARAM]: DEFAULT_PEF_KIND });
+  }
+  if (!Number.isSafeInteger(searchParams[START_TIME_PARAM])) {
+    setSearchParams({ [START_TIME_PARAM]: null });
+  }
+  if (!Number.isSafeInteger(searchParams[END_TIME_PARAM])) {
+    setSearchParams({ [END_TIME_PARAM]: null });
+  }
 
   const branches = createMemo(() =>
     arrayFromString(searchParams[BRANCHES_PARAM])
@@ -106,6 +115,10 @@ const PerfPanel = (props) => {
   const removeBranch = (branch: string) =>
     removeFromArrayParam(BRANCHES_PARAM, branches(), branch);
   const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
+  const handleStartTime = (date: string) =>
+    setSearchParams({ [START_TIME_PARAM]: dateToDateTime(date) });
+  const handleEndTime = (date: string) =>
+    setSearchParams({ [END_TIME_PARAM]: dateToDateTime(date) });
 
   const perf_query = createMemo(() => {
     return {
@@ -167,7 +180,12 @@ const PerfPanel = (props) => {
         handleTitle={props.handleTitle}
         handleRefresh={handleRefresh}
       />
-      <PerfPlot query={perf_query()} handleKind={handleKind} />
+      <PerfPlot
+        query={perf_query()}
+        handleKind={handleKind}
+        handleStartTime={handleStartTime}
+        handleEndTime={handleEndTime}
+      />
     </>
   );
 };

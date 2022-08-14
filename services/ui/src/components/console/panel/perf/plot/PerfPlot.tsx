@@ -15,7 +15,12 @@ const PerfPlot = (props) => {
     <div class="columns">
       <div class="column">
         <nav class="panel">
-          <PlotHeader query={props.query} handleKind={props.handleKind} />
+          <PlotHeader
+            query={props.query}
+            handleKind={props.handleKind}
+            handleStartTime={props.handleStartTime}
+            handleEndTime={props.handleEndTime}
+          />
           <div class="panel-block">
             <p>TODO PLOT HERE</p>
           </div>

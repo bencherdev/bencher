@@ -30,7 +30,10 @@ const PlotHeader = (props) => {
           <nav class="level is-mobile">
             <div class="level-item has-text-centered">
               <p class="card-header-title">Start Date</p>
-              <input type="date" onInput={(e) => console.log(e)} />
+              <input
+                type="date"
+                onInput={(e) => props.handleStartTime(e.currentTarget?.value)}
+              />
             </div>
           </nav>
         </div>
@@ -38,7 +41,10 @@ const PlotHeader = (props) => {
           <nav class="level is-mobile">
             <div class="level-item has-text-centered">
               <p class="card-header-title">End Date</p>
-              <input type="date" onInput={(e) => console.log(e)} />
+              <input
+                type="date"
+                onInput={(e) => props.handleEndTime(e.currentTarget?.value)}
+              />
             </div>
           </nav>
         </div>
