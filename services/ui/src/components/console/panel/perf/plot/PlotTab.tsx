@@ -19,11 +19,11 @@ const PlotTab = (props) => {
           )}
         </For>
       </p>
-      <For each={perf_tabs}>
-        {(item) => (
+      <For each={props.branches_tab()}>
+        {(branch) => (
           <a class="panel-block">
             <input type="checkbox" />
-            {toCapitalized(item)}
+            {toCapitalized(branch.name)}
           </a>
         )}
       </For>

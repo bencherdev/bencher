@@ -199,14 +199,39 @@ const PerfPanel = (props) => {
   };
 
   const [branches_data] = createResource(refresh, async () => {
-    fetchPerfTab(PerfTab.BRANCHES);
+    return fetchPerfTab(PerfTab.BRANCHES);
   });
   const [testbeds_data] = createResource(refresh, async () => {
-    fetchPerfTab(PerfTab.TESTBEDS);
+    return fetchPerfTab(PerfTab.TESTBEDS);
   });
   const [benchmarks_data] = createResource(refresh, async () => {
-    fetchPerfTab(PerfTab.BENCHMARKS);
+    return fetchPerfTab(PerfTab.BENCHMARKS);
   });
+
+  const [branches_tab, setBranchesTab] = createSignal(branches_data());
+
+  const handleBranchesTab = () => {
+    setBranchesTab(branches_data());
+  };
+
+  const [tabular_refresh, setTabularRefresh] = createSignal();
+
+  createEffect(() => {
+    if (
+      // At init wait until data is loaded to set tabular_refresh
+      (!tabular_refresh() &&
+        branches_data() &&
+        testbeds_data() &&
+        benchmarks_data()) ||
+      // If refresh is later triggered also update data
+      (tabular_refresh() && tabular_refresh() !== refresh())
+    ) {
+      setTabularRefresh(refresh());
+
+      handleBranchesTab();
+    }
+  });
+
   const [perf_tab, setPerfTab] = createSignal(DEFAULT_PERF_TAB);
 
   const handleRefresh = () => {
@@ -232,10 +257,12 @@ const PerfPanel = (props) => {
         start_date={start_date}
         end_date={end_date}
         perf_tab={perf_tab}
+        branches_tab={branches_tab}
         handleKind={handleKind}
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
         handlePerfTab={handlePerfTab}
+        handleBranchesTab={handleBranchesTab}
       />
     </>
   );
