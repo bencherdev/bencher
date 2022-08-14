@@ -42,13 +42,22 @@ const arrayFromString = (array_str: undefined | string) => {
 };
 const arrayToString = (array: any[]) => array.join();
 
-const dateToDateTime = (date_str: string) => {
-  const date_ms = Date.parse(date_str);
-  if (date_ms) {
-    const date = new Date(date_ms);
-    if (date) {
-      return date.toISOString();
+const dateToISO = (date_str: undefined | string) => {
+  console.log(date_str);
+  if (typeof date_str === "string") {
+    const date_ms = Date.parse(date_str);
+    if (date_ms) {
+      const date = new Date(date_ms);
+      if (date) {
+        return date.toISOString();
+      }
     }
+  }
+  return null;
+};
+const ISOToDate = (iso_str: undefined | string) => {
+  if (typeof iso_str === "string") {
+    return iso_str.split("T")?.[0];
   }
   return null;
 };
@@ -65,6 +74,7 @@ const DEFAULT_PEF_KIND = PerKind.LATENCY;
 const PerfPanel = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Sanitize all query params
   if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
     setSearchParams({ [BRANCHES_PARAM]: null });
   }
@@ -77,13 +87,14 @@ const PerfPanel = (props) => {
   if (!isPerfKind(searchParams[KIND_PARAM])) {
     setSearchParams({ [KIND_PARAM]: DEFAULT_PEF_KIND });
   }
-  if (!Number.isSafeInteger(searchParams[START_TIME_PARAM])) {
+  if (!dateToISO(searchParams[START_TIME_PARAM])) {
     setSearchParams({ [START_TIME_PARAM]: null });
   }
-  if (!Number.isSafeInteger(searchParams[END_TIME_PARAM])) {
+  if (!dateToISO(searchParams[END_TIME_PARAM])) {
     setSearchParams({ [END_TIME_PARAM]: null });
   }
 
+  // Create memos of all query params
   const branches = createMemo(() =>
     arrayFromString(searchParams[BRANCHES_PARAM])
   );
@@ -94,6 +105,8 @@ const PerfPanel = (props) => {
     arrayFromString(searchParams[BENCHMARKS_PARAM])
   );
   const kind = createMemo(() => {
+    // This check is required for the initial load
+    // before the query params have been sanitized
     if (isPerfKind(searchParams[KIND_PARAM])) {
       return searchParams[KIND_PARAM];
     } else {
@@ -101,7 +114,9 @@ const PerfPanel = (props) => {
     }
   });
   const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
+  const start_date = createMemo(() => ISOToDate(start_time()));
   const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
+  const end_date = createMemo(() => ISOToDate(end_time()));
 
   const addToArrayParam = (param: string, array: any[], add: string) =>
     setSearchParams({ [param]: arrayToString(addToAray(array, add)) });
@@ -116,9 +131,9 @@ const PerfPanel = (props) => {
     removeFromArrayParam(BRANCHES_PARAM, branches(), branch);
   const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
   const handleStartTime = (date: string) =>
-    setSearchParams({ [START_TIME_PARAM]: dateToDateTime(date) });
+    setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });
   const handleEndTime = (date: string) =>
-    setSearchParams({ [END_TIME_PARAM]: dateToDateTime(date) });
+    setSearchParams({ [END_TIME_PARAM]: dateToISO(date) });
 
   const perf_query = createMemo(() => {
     return {
@@ -182,6 +197,8 @@ const PerfPanel = (props) => {
       />
       <PerfPlot
         query={perf_query()}
+        start_date={start_date}
+        end_date={end_date}
         handleKind={handleKind}
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}

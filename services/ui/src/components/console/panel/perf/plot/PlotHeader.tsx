@@ -32,6 +32,7 @@ const PlotHeader = (props) => {
               <p class="card-header-title">Start Date</p>
               <input
                 type="date"
+                value={props.start_date()}
                 onInput={(e) => props.handleStartTime(e.currentTarget?.value)}
               />
             </div>
@@ -43,6 +44,7 @@ const PlotHeader = (props) => {
               <p class="card-header-title">End Date</p>
               <input
                 type="date"
+                value={props.end_date()}
                 onInput={(e) => props.handleEndTime(e.currentTarget?.value)}
               />
             </div>

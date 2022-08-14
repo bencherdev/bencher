@@ -17,6 +17,8 @@ const PerfPlot = (props) => {
         <nav class="panel">
           <PlotHeader
             query={props.query}
+            start_date={props.start_date}
+            end_date={props.end_date}
             handleKind={props.handleKind}
             handleStartTime={props.handleStartTime}
             handleEndTime={props.handleEndTime}
