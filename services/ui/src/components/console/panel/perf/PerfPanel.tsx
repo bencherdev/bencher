@@ -72,7 +72,7 @@ const resourcesToCheckable = (resources, params) =>
 const PerfPanel = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Sanitize all query params
+  // Sanitize all query params at init
   if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
     setSearchParams({ [BRANCHES_PARAM]: null });
   }
@@ -92,7 +92,7 @@ const PerfPanel = (props) => {
     setSearchParams({ [END_TIME_PARAM]: null });
   }
 
-  // Create memos of all query params
+  // Create marshalized memos of all query params
   const branches = createMemo(() =>
     arrayFromString(searchParams[BRANCHES_PARAM])
   );
@@ -111,39 +111,14 @@ const PerfPanel = (props) => {
       return DEFAULT_PEF_KIND;
     }
   });
+  // start/end_time is used for the query
   const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
-  const start_date = createMemo(() => ISOToDate(start_time()));
   const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
+  // start/end_date is used for the GUI selector
+  const start_date = createMemo(() => ISOToDate(start_time()));
   const end_date = createMemo(() => ISOToDate(end_time()));
 
-  const addToArrayParam = (param: string, array: any[], add: string) =>
-    setSearchParams({ [param]: arrayToString(addToAray(array, add)) });
-  const removeFromArrayParam = (param: string, array: any[], remove: string) =>
-    setSearchParams({
-      [param]: arrayToString(removeFromAray(array, remove)),
-    });
-
-  const addBranch = (branch: string) =>
-    addToArrayParam(BRANCHES_PARAM, branches(), branch);
-  const removeBranch = (branch: string) =>
-    removeFromArrayParam(BRANCHES_PARAM, branches(), branch);
-
-  const addTestbed = (testbed: string) =>
-    addToArrayParam(TESTBEDS_PARAM, testbeds(), testbed);
-  const removeTestbed = (testbed: string) =>
-    removeFromArrayParam(TESTBEDS_PARAM, testbeds(), testbed);
-
-  const addBenchmark = (benchmark: string) =>
-    addToArrayParam(BENCHMARKS_PARAM, benchmarks(), benchmark);
-  const removeBenchmark = (benchmark: string) =>
-    removeFromArrayParam(BENCHMARKS_PARAM, benchmarks(), benchmark);
-
-  const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
-  const handleStartTime = (date: string) =>
-    setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });
-  const handleEndTime = (date: string) =>
-    setSearchParams({ [END_TIME_PARAM]: dateToISO(date) });
-
+  // The perf query sent to the server
   const perf_query = createMemo(() => {
     return {
       branches: branches(),
@@ -183,7 +158,13 @@ const PerfPanel = (props) => {
     }
   };
 
+  // Refresh pref query
   const [refresh, setRefresh] = createSignal(0);
+
+  const handleRefresh = () => {
+    setRefresh(refresh() + 1);
+  };
+
   const perf_query_refresh = createMemo(() => {
     return {
       perf_query: perf_query(),
@@ -191,6 +172,15 @@ const PerfPanel = (props) => {
     };
   });
   const [perf_data] = createResource(perf_query_refresh, fetchPerfData);
+
+  // Which perf resource tab is currently visible
+  const [perf_tab, setPerfTab] = createSignal(DEFAULT_PERF_TAB);
+
+  const handlePerfTab = (tab: PerfTab) => {
+    if (isPerfTab(tab)) {
+      setPerfTab(tab);
+    }
+  };
 
   const perf_tab_options = (token: string, perf_tab: PerfTab) => {
     return {
@@ -218,6 +208,7 @@ const PerfPanel = (props) => {
     }
   };
 
+  // Resource tabs data: Branches, Testbeds, Benchmarks
   const [branches_data] = createResource(refresh, async () => {
     return fetchPerfTab(PerfTab.BRANCHES);
   });
@@ -228,57 +219,17 @@ const PerfPanel = (props) => {
     return fetchPerfTab(PerfTab.BENCHMARKS);
   });
 
-  const [branches_tab, setBranchesTab] = createSignal();
-  const [testbeds_tab, setTestbedsTab] = createSignal();
-  const [benchmarks_tab, setBenchmarksTab] = createSignal();
+  // Initialize as empty, wait for resources to load
+  const [branches_tab, setBranchesTab] = createSignal([]);
+  const [testbeds_tab, setTestbedsTab] = createSignal([]);
+  const [benchmarks_tab, setBenchmarksTab] = createSignal([]);
 
-  const handleBranchChecked = (index: number, uuid: string) => {
-    const tab = branches_tab();
-    const checked = tab?.[index].checked;
-    if (typeof checked !== "boolean") {
-      return;
-    }
-    if (checked) {
-      removeBranch(uuid);
-    } else {
-      addBranch(uuid);
-    }
-    tab[index].checked = !checked;
-    setBranchesTab(tab);
-  };
-  const handleTestbedChecked = (index: number, uuid: string) => {
-    const tab = testbeds_tab();
-    const checked = tab?.[index].checked;
-    if (typeof checked !== "boolean") {
-      return;
-    }
-    if (checked) {
-      removeTestbed(uuid);
-    } else {
-      addTestbed(uuid);
-    }
-    tab[index].checked = !checked;
-    setTestbedsTab(tab);
-  };
-  const handleBenchmarkChecked = (index: number, uuid: string) => {
-    const tab = benchmarks_tab();
-    const checked = tab?.[index].checked;
-    if (typeof checked !== "boolean") {
-      return;
-    }
-    if (checked) {
-      removeBenchmark(uuid);
-    } else {
-      addBenchmark(uuid);
-    }
-    tab[index].checked = !checked;
-    setBenchmarksTab(tab);
-  };
-
+  // Keep state on whether the resouces have been refreshed
   const [tabular_refresh, setTabularRefresh] = createSignal();
 
   createEffect(() => {
-    // At init wait until data is loaded to set tabular_refresh
+    // At init wait until data is loaded to set *_tab and tabular_refresh
+    // Otherwise, check to see if there is a new refresh
     if (
       (!tabular_refresh() &&
         branches_data() &&
@@ -294,17 +245,56 @@ const PerfPanel = (props) => {
     }
   });
 
-  const [perf_tab, setPerfTab] = createSignal(DEFAULT_PERF_TAB);
-
-  const handleRefresh = () => {
-    setRefresh(refresh() + 1);
-  };
-
-  const handlePerfTab = (tab: PerfTab) => {
-    if (isPerfTab(tab)) {
-      setPerfTab(tab);
+  const handleChecked = (
+    resource_tab: any[],
+    index: number,
+    param: string,
+    param_array: string[],
+    uuid: string
+  ) => {
+    const tab = resource_tab;
+    const checked = tab?.[index].checked;
+    if (typeof checked !== "boolean") {
+      return;
     }
+    if (checked) {
+      setSearchParams({
+        [param]: arrayToString(removeFromAray(param_array, uuid)),
+      });
+    } else {
+      setSearchParams({ [param]: arrayToString(addToAray(param_array, uuid)) });
+    }
+    tab[index].checked = !checked;
+    return tab;
   };
+
+  const handleBranchChecked = (index: number, uuid: string) => {
+    setBranchesTab(
+      handleChecked(branches_tab(), index, BRANCHES_PARAM, branches(), uuid)
+    );
+  };
+  const handleTestbedChecked = (index: number, uuid: string) => {
+    setTestbedsTab(
+      handleChecked(testbeds_tab(), index, TESTBEDS_PARAM, testbeds(), uuid)
+    );
+  };
+  const handleBenchmarkChecked = (index: number, uuid: string) => {
+    setBenchmarksTab(
+      handleChecked(
+        benchmarks_tab(),
+        index,
+        BENCHMARKS_PARAM,
+        benchmarks(),
+        uuid
+      )
+    );
+  };
+
+  const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
+  const handleStartTime = (date: string) =>
+    setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });
+  const handleEndTime = (date: string) =>
+    setSearchParams({ [END_TIME_PARAM]: dateToISO(date) });
 
   return (
     <>
