@@ -9,9 +9,10 @@ const LandingPage = (props) => {
 
       <div class="container">
         <div class="content has-text-centered">
-          <h1 class="title">Track your benchmarks</h1>
+          <h1 class="title">Catch Performance Regressions in CI</h1>
           <h4 class="subtitle">
-            Catch performance regressions before they make it to production
+            Detect and prevent performance regressions before they make it to
+            production
           </h4>
           <div class="columns is-centered">
             <div class="column is-half">
