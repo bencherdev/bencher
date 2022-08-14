@@ -135,7 +135,7 @@ const PerfPanel = (props) => {
     };
   });
 
-  const options = (token: string) => {
+  const perf_data_options = (token: string) => {
     console.log(perf_query());
     return {
       url: props.config?.plot?.url(),
@@ -148,13 +148,13 @@ const PerfPanel = (props) => {
     };
   };
 
-  const fetchData = async (refresh) => {
+  const fetchPerfData = async () => {
     try {
       const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
       if (typeof token !== "string") {
         return;
       }
-      let resp = await axios(options(token));
+      let resp = await axios(perf_data_options(token));
       const data = resp.data;
       console.log(data);
       return data;
@@ -170,7 +170,43 @@ const PerfPanel = (props) => {
       refresh: refresh(),
     };
   });
-  const [perf_data] = createResource(perf_query_refresh, fetchData);
+  const [perf_data] = createResource(perf_query_refresh, fetchPerfData);
+
+  const perf_tab_options = (token: string, perf_tab: PerfTab) => {
+    return {
+      url: props.config?.plot?.tab_url(props.path_params(), perf_tab),
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
+  const fetchPerfTab = async (perf_tab: PerfTab) => {
+    try {
+      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+      if (typeof token !== "string") {
+        return;
+      }
+      let resp = await axios(perf_tab_options(token, perf_tab));
+      const data = resp.data;
+      console.log(data);
+      return data;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const [branches_data] = createResource(refresh, async () => {
+    fetchPerfTab(PerfTab.BRANCHES);
+  });
+  const [testbeds_data] = createResource(refresh, async () => {
+    fetchPerfTab(PerfTab.TESTBEDS);
+  });
+  const [benchmarks_data] = createResource(refresh, async () => {
+    fetchPerfTab(PerfTab.BENCHMARKS);
+  });
   const [perf_tab, setPerfTab] = createSignal(DEFAULT_PERF_TAB);
 
   const handleRefresh = () => {

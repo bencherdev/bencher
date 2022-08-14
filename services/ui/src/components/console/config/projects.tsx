@@ -1,5 +1,5 @@
 import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
-import { Button, Card, Field, Operation, Row } from "./types";
+import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 
 const projectsConfig = {
@@ -154,8 +154,8 @@ const projectsConfig = {
       url: () => {
         return `${BENCHER_API_URL}/v0/perf`;
       },
-      resource_url: (path_params, resource: string) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${resource}`;
+      tab_url: (path_params, tab: PerfTab) => {
+        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`;
       },
     },
   },
