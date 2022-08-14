@@ -43,7 +43,6 @@ const arrayFromString = (array_str: undefined | string) => {
 const arrayToString = (array: any[]) => array.join();
 
 const dateToISO = (date_str: undefined | string) => {
-  console.log(date_str);
   if (typeof date_str === "string") {
     const date_ms = Date.parse(date_str);
     if (date_ms) {

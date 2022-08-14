@@ -1,6 +1,7 @@
 import { createSignal, For } from "solid-js";
 import { PerKind, perfKindCapitalized } from "../../../config/types";
 import PlotHeader from "./PlotHeader";
+import PlotTab from "./PlotTab";
 
 const perf_kinds = [
   PerKind.LATENCY,
@@ -31,15 +32,7 @@ const PerfPlot = (props) => {
             <a>Testbeds</a>
             <a>Benchmarks</a>
           </p>
-          <a class="panel-block is-active">
-            <input type="checkbox" />A
-          </a>
-          <a class="panel-block">
-            <input type="checkbox" />B
-          </a>
-          <a class="panel-block">
-            <input type="checkbox" />C
-          </a>
+          <PlotTab />
         </nav>
       </div>
     </div>

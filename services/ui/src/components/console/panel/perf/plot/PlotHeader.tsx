@@ -1,4 +1,4 @@
-import { createSignal, For } from "solid-js";
+import { For } from "solid-js";
 import { PerKind, perfKindCapitalized } from "../../../config/types";
 
 const perf_kinds = [
