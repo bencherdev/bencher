@@ -127,6 +127,7 @@ const PerfPanel = (props) => {
     addToArrayParam(BRANCHES_PARAM, branches(), branch);
   const removeBranch = (branch: string) =>
     removeFromArrayParam(BRANCHES_PARAM, branches(), branch);
+
   const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
   const handleStartTime = (date: string) =>
     setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });
@@ -221,17 +222,26 @@ const PerfPanel = (props) => {
   const [testbeds_tab, setTestbedsTab] = createSignal();
   const [benchmarks_tab, setBenchmarksTab] = createSignal();
 
-  const handleBranchChecked = (index: number) => {
+  const handleBranchChecked = (index: number, uuid: string) => {
     const tab = branches_tab();
-    tab[index].checked = !tab?.[index].checked;
+    const checked = tab?.[index].checked;
+    if (typeof checked !== "boolean") {
+      return;
+    }
+    if (checked) {
+      removeBranch(uuid);
+    } else {
+      addBranch(uuid);
+    }
+    tab[index].checked = !checked;
     setBranchesTab(tab);
   };
-  const handleTestbedChecked = (index: number) => {
+  const handleTestbedChecked = (index: number, uuid: string) => {
     const tab = testbeds_tab();
     tab[index].checked = !tab?.[index].checked;
     setTestbedsTab(tab);
   };
-  const handleBenchmarkChecked = (index: number) => {
+  const handleBenchmarkChecked = (index: number, uuid: string) => {
     const tab = benchmarks_tab();
     tab[index].checked = !tab?.[index].checked;
     setBenchmarksTab(tab);

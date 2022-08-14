@@ -18,14 +18,14 @@ const PlotTab = (props) => {
     }
   };
 
-  const handleChecked = (index: number) => {
+  const handleChecked = (index: number, uuid: string) => {
     switch (props.perf_tab()) {
       case PerfTab.BRANCHES:
-        return props.handleBranchChecked(index);
+        return props.handleBranchChecked(index, uuid);
       case PerfTab.TESTBEDS:
-        return props.handleTestbedChecked(index);
+        return props.handleTestbedChecked(index, uuid);
       case PerfTab.BENCHMARKS:
-        return props.handleBenchmarkChecked(index);
+        return props.handleBenchmarkChecked(index, uuid);
       default:
         return [];
     }
@@ -47,11 +47,14 @@ const PlotTab = (props) => {
       </p>
       <For each={getTab()}>
         {(item, index) => (
-          <a class="panel-block" onSelect={(e) => handleChecked(index())}>
+          <a
+            class="panel-block"
+            onSelect={(e) => handleChecked(index(), item.uuid)}
+          >
             <input
               type="checkbox"
               checked={item.checked}
-              onInput={() => handleChecked(index())}
+              onChange={() => handleChecked(index(), item.uuid)}
             />
             {item.name}
           </a>
