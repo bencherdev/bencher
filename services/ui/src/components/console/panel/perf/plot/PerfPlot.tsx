@@ -1,15 +1,7 @@
 import { createSignal, For } from "solid-js";
-import { PerKind, perfKindCapitalized } from "../../../config/types";
+import { PerKind } from "../../../config/types";
 import PlotHeader from "./PlotHeader";
 import PlotTab from "./PlotTab";
-
-const perf_kinds = [
-  PerKind.LATENCY,
-  PerKind.THROUGHPUT,
-  PerKind.COMPUTE,
-  PerKind.MEMORY,
-  PerKind.STORAGE,
-];
 
 const PerfPlot = (props) => {
   return (
@@ -27,12 +19,10 @@ const PerfPlot = (props) => {
           <div class="panel-block">
             <p>TODO PLOT HERE</p>
           </div>
-          <p class="panel-tabs">
-            <a class="is-active">Branches</a>
-            <a>Testbeds</a>
-            <a>Benchmarks</a>
-          </p>
-          <PlotTab />
+          <PlotTab
+            perf_tab={props.perf_tab}
+            handlePerfTab={props.handlePerfTab}
+          />
         </nav>
       </div>
     </div>

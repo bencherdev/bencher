@@ -154,6 +154,9 @@ const projectsConfig = {
       url: () => {
         return `${BENCHER_API_URL}/v0/perf`;
       },
+      resource_url: (path_params, resource: string) => {
+        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${resource}`;
+      },
     },
   },
 };

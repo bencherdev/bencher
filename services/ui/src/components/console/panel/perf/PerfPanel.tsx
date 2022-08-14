@@ -6,20 +6,19 @@ import {
   createResource,
   createSignal,
 } from "solid-js";
-import { isPerfKind, PerKind } from "../../config/types";
+import { isPerfKind, isPerfTab, PerfTab, PerKind } from "../../config/types";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 
-const initPerfQuery = () => {
-  return {
-    branches: [],
-    testbeds: [],
-    benchmarks: [],
-    kind: "latency",
-    start_time: null,
-    end_time: null,
-  };
-};
+const BRANCHES_PARAM = "branches";
+const TESTBEDS_PARAM = "testbeds";
+const BENCHMARKS_PARAM = "benchmarks";
+const KIND_PARAM = "kind";
+const START_TIME_PARAM = "start_time";
+const END_TIME_PARAM = "end_time";
+
+const DEFAULT_PEF_KIND = PerKind.LATENCY;
+const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 
 const addToAray = (array: any[], add: any) => {
   array.push(add);
@@ -60,15 +59,6 @@ const ISOToDate = (iso_str: undefined | string) => {
   }
   return null;
 };
-
-const BRANCHES_PARAM = "branches";
-const TESTBEDS_PARAM = "testbeds";
-const BENCHMARKS_PARAM = "benchmarks";
-const KIND_PARAM = "kind";
-const START_TIME_PARAM = "start_time";
-const END_TIME_PARAM = "end_time";
-
-const DEFAULT_PEF_KIND = PerKind.LATENCY;
 
 const PerfPanel = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -181,9 +171,16 @@ const PerfPanel = (props) => {
     };
   });
   const [perf_data] = createResource(perf_query_refresh, fetchData);
+  const [perf_tab, setPerfTab] = createSignal(DEFAULT_PERF_TAB);
 
   const handleRefresh = () => {
     setRefresh(refresh() + 1);
+  };
+
+  const handlePerfTab = (tab: PerfTab) => {
+    if (isPerfTab(tab)) {
+      setPerfTab(tab);
+    }
   };
 
   return (
@@ -198,9 +195,11 @@ const PerfPanel = (props) => {
         query={perf_query()}
         start_date={start_date}
         end_date={end_date}
+        perf_tab={perf_tab}
         handleKind={handleKind}
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
+        handlePerfTab={handlePerfTab}
       />
     </>
   );

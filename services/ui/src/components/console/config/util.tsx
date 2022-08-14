@@ -11,3 +11,6 @@ export const addPath = (pathname) => {
 export const viewSlugPath = (pathname, datum) => {
   return `${pathname}/${datum?.slug}`;
 };
+
+export const toCapitalized = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);

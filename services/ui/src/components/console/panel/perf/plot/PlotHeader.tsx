@@ -1,5 +1,6 @@
 import { For } from "solid-js";
-import { PerKind, perfKindCapitalized } from "../../../config/types";
+import { PerKind } from "../../../config/types";
+import { toCapitalized } from "../../../config/util";
 
 const perf_kinds = [
   PerKind.LATENCY,
@@ -19,9 +20,7 @@ const PlotHeader = (props) => {
           onInput={(e) => props.handleKind(e.currentTarget?.value)}
         >
           <For each={perf_kinds}>
-            {(kind) => (
-              <option value={kind}>{perfKindCapitalized(kind)}</option>
-            )}
+            {(kind) => <option value={kind}>{toCapitalized(kind)}</option>}
           </For>
         </select>
       </div>
