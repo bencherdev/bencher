@@ -5,6 +5,19 @@ import { toCapitalized } from "../../../config/util";
 const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
 
 const PlotTab = (props) => {
+  const getTab = () => {
+    switch (props.perf_tab()) {
+      case PerfTab.BRANCHES:
+        return props.branches_tab();
+      case PerfTab.TESTBEDS:
+        return props.testbeds_tab();
+      case PerfTab.BENCHMARKS:
+        return props.benchmarks_tab();
+      default:
+        return [];
+    }
+  };
+
   return (
     <>
       <p class="panel-tabs">
@@ -19,11 +32,11 @@ const PlotTab = (props) => {
           )}
         </For>
       </p>
-      <For each={props.branches_tab()}>
-        {(branch) => (
+      <For each={getTab()}>
+        {(item) => (
           <a class="panel-block">
             <input type="checkbox" />
-            {toCapitalized(branch.name)}
+            {item.name}
           </a>
         )}
       </For>

@@ -208,10 +208,18 @@ const PerfPanel = (props) => {
     return fetchPerfTab(PerfTab.BENCHMARKS);
   });
 
-  const [branches_tab, setBranchesTab] = createSignal(branches_data());
+  const [branches_tab, setBranchesTab] = createSignal();
+  const [testbeds_tab, setTestbedsTab] = createSignal();
+  const [benchmarks_tab, setBenchmarksTab] = createSignal();
 
   const handleBranchesTab = () => {
     setBranchesTab(branches_data());
+  };
+  const handleTestbedsTab = () => {
+    setTestbedsTab(testbeds_data());
+  };
+  const handleBenchmarksTab = () => {
+    setBenchmarksTab(benchmarks_data());
   };
 
   const [tabular_refresh, setTabularRefresh] = createSignal();
@@ -229,6 +237,8 @@ const PerfPanel = (props) => {
       setTabularRefresh(refresh());
 
       handleBranchesTab();
+      handleTestbedsTab();
+      handleBenchmarksTab();
     }
   });
 
@@ -258,11 +268,15 @@ const PerfPanel = (props) => {
         end_date={end_date}
         perf_tab={perf_tab}
         branches_tab={branches_tab}
+        testbeds_tab={testbeds_tab}
+        benchmarks_tab={benchmarks_tab}
         handleKind={handleKind}
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
         handlePerfTab={handlePerfTab}
         handleBranchesTab={handleBranchesTab}
+        handleTestbedsTab={handleTestbedsTab}
+        handleBenchmarksTab={handleBenchmarksTab}
       />
     </>
   );
