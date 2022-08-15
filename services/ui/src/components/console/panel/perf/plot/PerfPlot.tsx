@@ -20,11 +20,11 @@ const PerfPlot = (props) => {
             <p>TODO PLOT HERE</p>
           </div>
           <PlotTab
-            perf_tab={props.perf_tab}
+            tab={props.tab}
             branches_tab={props.branches_tab}
             testbeds_tab={props.testbeds_tab}
             benchmarks_tab={props.benchmarks_tab}
-            handlePerfTab={props.handlePerfTab}
+            handleTab={props.handleTab}
             handleBranchChecked={props.handleBranchChecked}
             handleTestbedChecked={props.handleTestbedChecked}
             handleBenchmarkChecked={props.handleBenchmarkChecked}

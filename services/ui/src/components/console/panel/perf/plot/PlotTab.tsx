@@ -2,11 +2,11 @@ import { For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
 
-const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
+const tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
 
 const PlotTab = (props) => {
   const getTab = () => {
-    switch (props.perf_tab()) {
+    switch (props.tab()) {
       case PerfTab.BRANCHES:
         return props.branches_tab();
       case PerfTab.TESTBEDS:
@@ -19,7 +19,7 @@ const PlotTab = (props) => {
   };
 
   const handleChecked = (index: number, uuid: string) => {
-    switch (props.perf_tab()) {
+    switch (props.tab()) {
       case PerfTab.BRANCHES:
         return props.handleBranchChecked(index, uuid);
       case PerfTab.TESTBEDS:
@@ -34,11 +34,11 @@ const PlotTab = (props) => {
   return (
     <>
       <p class="panel-tabs">
-        <For each={perf_tabs}>
+        <For each={tabs}>
           {(tab) => (
             <a
-              class={props.perf_tab() === tab ? "is-active" : ""}
-              onClick={() => props.handlePerfTab(tab)}
+              class={props.tab() === tab ? "is-active" : ""}
+              onClick={() => props.handleTab(tab)}
             >
               {toCapitalized(tab)}
             </a>

@@ -17,7 +17,9 @@ const KIND_PARAM = "kind";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 
-const DEFAULT_PEF_KIND = PerKind.LATENCY;
+const TAB_PARAM = "tab";
+
+const DEFAULT_PERF_KIND = PerKind.LATENCY;
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 
 const addToAray = (array: any[], add: any) => {
@@ -83,13 +85,18 @@ const PerfPanel = (props) => {
     setSearchParams({ [BENCHMARKS_PARAM]: null });
   }
   if (!isPerfKind(searchParams[KIND_PARAM])) {
-    setSearchParams({ [KIND_PARAM]: DEFAULT_PEF_KIND });
+    setSearchParams({ [KIND_PARAM]: DEFAULT_PERF_KIND });
   }
   if (!dateToISO(searchParams[START_TIME_PARAM])) {
     setSearchParams({ [START_TIME_PARAM]: null });
   }
   if (!dateToISO(searchParams[END_TIME_PARAM])) {
     setSearchParams({ [END_TIME_PARAM]: null });
+  }
+
+  // Sanitize all UI state query params
+  if (!isPerfTab(searchParams[TAB_PARAM])) {
+    setSearchParams({ [TAB_PARAM]: null });
   }
 
   // Create marshalized memos of all query params
@@ -108,7 +115,7 @@ const PerfPanel = (props) => {
     if (isPerfKind(searchParams[KIND_PARAM])) {
       return searchParams[KIND_PARAM];
     } else {
-      return DEFAULT_PEF_KIND;
+      return DEFAULT_PERF_KIND;
     }
   });
   // start/end_time is used for the query
@@ -117,6 +124,16 @@ const PerfPanel = (props) => {
   // start/end_date is used for the GUI selector
   const start_date = createMemo(() => ISOToDate(start_time()));
   const end_date = createMemo(() => ISOToDate(end_time()));
+
+  const tab = createMemo(() => {
+    // This check is required for the initial load
+    // before the query params have been sanitized
+    if (isPerfTab(searchParams[TAB_PARAM])) {
+      return searchParams[TAB_PARAM];
+    } else {
+      return DEFAULT_PERF_TAB;
+    }
+  });
 
   // The perf query sent to the server
   const perf_query = createMemo(() => {
@@ -172,15 +189,6 @@ const PerfPanel = (props) => {
     };
   });
   const [perf_data] = createResource(perf_query_refresh, fetchPerfData);
-
-  // Which perf resource tab is currently visible
-  const [perf_tab, setPerfTab] = createSignal(DEFAULT_PERF_TAB);
-
-  const handlePerfTab = (tab: PerfTab) => {
-    if (isPerfTab(tab)) {
-      setPerfTab(tab);
-    }
-  };
 
   const perf_tab_options = (token: string, perf_tab: PerfTab) => {
     return {
@@ -290,11 +298,21 @@ const PerfPanel = (props) => {
     );
   };
 
-  const handleKind = (kind: PerKind) => setSearchParams({ [KIND_PARAM]: kind });
+  const handleKind = (kind: PerKind) => {
+    if (isPerfKind(kind)) {
+      setSearchParams({ [KIND_PARAM]: kind });
+    }
+  };
   const handleStartTime = (date: string) =>
     setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });
   const handleEndTime = (date: string) =>
     setSearchParams({ [END_TIME_PARAM]: dateToISO(date) });
+
+  const handleTab = (tab: PerfTab) => {
+    if (isPerfTab(tab)) {
+      setSearchParams({ [TAB_PARAM]: tab });
+    }
+  };
 
   return (
     <>
@@ -308,14 +326,14 @@ const PerfPanel = (props) => {
         query={perf_query()}
         start_date={start_date}
         end_date={end_date}
-        perf_tab={perf_tab}
+        tab={tab}
         branches_tab={branches_tab}
         testbeds_tab={testbeds_tab}
         benchmarks_tab={benchmarks_tab}
         handleKind={handleKind}
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
-        handlePerfTab={handlePerfTab}
+        handleTab={handleTab}
         handleBranchChecked={handleBranchChecked}
         handleTestbedChecked={handleTestbedChecked}
         handleBenchmarkChecked={handleBenchmarkChecked}
