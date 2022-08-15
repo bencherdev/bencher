@@ -2,7 +2,7 @@ import { For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
 
-const tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
+const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
 
 const PlotTab = (props) => {
   const getTab = () => {
@@ -34,7 +34,7 @@ const PlotTab = (props) => {
   return (
     <>
       <p class="panel-tabs">
-        <For each={tabs}>
+        <For each={perf_tabs}>
           {(tab) => (
             <a
               class={props.tab() === tab ? "is-active" : ""}

@@ -147,6 +147,11 @@ const PerfPanel = (props) => {
     };
   });
 
+  const isPlotInit = () =>
+    branches().length === 0 ||
+    testbeds().length === 0 ||
+    benchmarks().length === 0;
+
   const perf_data_options = (token: string) => {
     console.log(perf_query());
     return {
@@ -163,7 +168,8 @@ const PerfPanel = (props) => {
   const fetchPerfData = async () => {
     try {
       const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-      if (typeof token !== "string") {
+      // Don't even send query if there isn't at least one: branch, testbed, and benchmark
+      if (typeof token !== "string" || isPlotInit()) {
         return;
       }
       let resp = await axios(perf_data_options(token));
@@ -323,7 +329,11 @@ const PerfPanel = (props) => {
         handleRefresh={handleRefresh}
       />
       <PerfPlot
-        query={perf_query()}
+        isPlotInit={isPlotInit}
+        branches={branches}
+        testbeds={testbeds}
+        benchmarks={benchmarks}
+        kind={kind}
         start_date={start_date}
         end_date={end_date}
         tab={tab}

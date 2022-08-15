@@ -16,7 +16,7 @@ const PlotHeader = (props) => {
       <div class="level-left">
         <select
           class="card-header-title level-item"
-          value={props.query?.kind}
+          value={props.kind()}
           onInput={(e) => props.handleKind(e.currentTarget?.value)}
         >
           <For each={perf_kinds}>

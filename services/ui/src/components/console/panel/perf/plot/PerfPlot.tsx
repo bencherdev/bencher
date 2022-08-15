@@ -1,5 +1,6 @@
 import { createSignal, For } from "solid-js";
 import { PerKind } from "../../../config/types";
+import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotTab from "./PlotTab";
 
@@ -9,7 +10,7 @@ const PerfPlot = (props) => {
       <div class="column">
         <nav class="panel">
           <PlotHeader
-            query={props.query}
+            kind={props.kind}
             start_date={props.start_date}
             end_date={props.end_date}
             handleKind={props.handleKind}
@@ -17,7 +18,13 @@ const PerfPlot = (props) => {
             handleEndTime={props.handleEndTime}
           />
           <div class="panel-block">
-            <p>TODO PLOT HERE</p>
+            <Plot
+              isPlotInit={props.isPlotInit}
+              branches={props.branches}
+              testbeds={props.testbeds}
+              benchmarks={props.benchmarks}
+              handleTab={props.handleTab}
+            />
           </div>
           <PlotTab
             tab={props.tab}
