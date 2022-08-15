@@ -2,6 +2,7 @@ import { createSignal, For } from "solid-js";
 import { PerKind } from "../../../config/types";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
+import PlotInit from "./PlotInit";
 import PlotTab from "./PlotTab";
 
 const PerfPlot = (props) => {
@@ -18,13 +19,22 @@ const PerfPlot = (props) => {
             handleEndTime={props.handleEndTime}
           />
           <div class="panel-block">
-            <Plot
-              isPlotInit={props.isPlotInit}
-              branches={props.branches}
-              testbeds={props.testbeds}
-              benchmarks={props.benchmarks}
-              handleTab={props.handleTab}
-            />
+            {props.isPlotInit() ? (
+              <PlotInit
+                branches={props.branches}
+                testbeds={props.testbeds}
+                benchmarks={props.benchmarks}
+                handleTab={props.handleTab}
+              />
+            ) : (
+              <Plot
+                isPlotInit={props.isPlotInit}
+                branches={props.branches}
+                testbeds={props.testbeds}
+                benchmarks={props.benchmarks}
+                handleTab={props.handleTab}
+              />
+            )}
           </div>
           <PlotTab
             tab={props.tab}
