@@ -336,6 +336,7 @@ const PerfPanel = (props) => {
         kind={kind}
         start_date={start_date}
         end_date={end_date}
+        perf_data={perf_data}
         tab={tab}
         branches_tab={branches_tab}
         testbeds_tab={testbeds_tab}

@@ -27,13 +27,7 @@ const PerfPlot = (props) => {
                 handleTab={props.handleTab}
               />
             ) : (
-              <Plot
-                isPlotInit={props.isPlotInit}
-                branches={props.branches}
-                testbeds={props.testbeds}
-                benchmarks={props.benchmarks}
-                handleTab={props.handleTab}
-              />
+              <Plot perf_data={props.perf_data} />
             )}
           </div>
           <PlotTab
