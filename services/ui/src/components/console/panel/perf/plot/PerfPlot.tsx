@@ -1,5 +1,3 @@
-import { createSignal, For } from "solid-js";
-import { PerKind } from "../../../config/types";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
@@ -27,7 +25,16 @@ const PerfPlot = (props) => {
                 handleTab={props.handleTab}
               />
             ) : (
-              <Plot perf_data={props.perf_data} />
+              <Plot
+                config={props.config}
+                path_params={props.path_params}
+                branches={props.branches}
+                testbeds={props.testbeds}
+                benchmarks={props.benchmarks}
+                perf_data={props.perf_data}
+                key={props.key}
+                handleKey={props.handleKey}
+              />
             )}
           </div>
           <PlotTab

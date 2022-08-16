@@ -18,9 +18,11 @@ const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 
 const TAB_PARAM = "tab";
+const KEY_PARAM = "key";
 
 const DEFAULT_PERF_KIND = PerKind.LATENCY;
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
+const DEFAULT_PERF_KEY = true;
 
 const addToAray = (array: any[], add: any) => {
   array.push(add);
@@ -98,6 +100,12 @@ const PerfPanel = (props) => {
   if (!isPerfTab(searchParams[TAB_PARAM])) {
     setSearchParams({ [TAB_PARAM]: null });
   }
+  if (
+    searchParams[KEY_PARAM] !== "false" &&
+    searchParams[KEY_PARAM] !== "true"
+  ) {
+    setSearchParams({ [KEY_PARAM]: DEFAULT_PERF_KEY });
+  }
 
   // Create marshalized memos of all query params
   const branches = createMemo(() =>
@@ -135,6 +143,19 @@ const PerfPanel = (props) => {
     }
   });
 
+  const key = createMemo(() => {
+    // This check is required for the initial load
+    // before the query params have been sanitized
+    if (
+      searchParams[KEY_PARAM] === "false" ||
+      searchParams[KEY_PARAM] === "true"
+    ) {
+      return searchParams[KEY_PARAM] === "true";
+    } else {
+      return DEFAULT_PERF_KEY;
+    }
+  });
+
   // The perf query sent to the server
   const perf_query = createMemo(() => {
     return {
@@ -153,7 +174,6 @@ const PerfPanel = (props) => {
     benchmarks().length === 0;
 
   const perf_data_options = (token: string) => {
-    console.log(perf_query());
     return {
       url: props.config?.plot?.url(),
       method: "POST",
@@ -215,7 +235,6 @@ const PerfPanel = (props) => {
       }
       let resp = await axios(perf_tab_options(token, perf_tab));
       const data = resp.data;
-      console.log(data);
       return data;
     } catch (error) {
       console.error(error);
@@ -320,6 +339,12 @@ const PerfPanel = (props) => {
     }
   };
 
+  const handleKey = (key: boolean) => {
+    if (typeof key === "boolean") {
+      setSearchParams({ [KEY_PARAM]: key });
+    }
+  };
+
   return (
     <>
       <PerfHeader
@@ -329,6 +354,8 @@ const PerfPanel = (props) => {
         handleRefresh={handleRefresh}
       />
       <PerfPlot
+        config={props.config?.plot}
+        path_params={props.path_params}
         isPlotInit={isPlotInit}
         branches={branches}
         testbeds={testbeds}
@@ -338,6 +365,7 @@ const PerfPanel = (props) => {
         end_date={end_date}
         perf_data={perf_data}
         tab={tab}
+        key={key}
         branches_tab={branches_tab}
         testbeds_tab={testbeds_tab}
         benchmarks_tab={benchmarks_tab}
@@ -345,6 +373,7 @@ const PerfPanel = (props) => {
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
         handleTab={handleTab}
+        handleKey={handleKey}
         handleBranchChecked={handleBranchChecked}
         handleTestbedChecked={handleTestbedChecked}
         handleBenchmarkChecked={handleBenchmarkChecked}

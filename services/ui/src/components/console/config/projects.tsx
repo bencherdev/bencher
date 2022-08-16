@@ -157,6 +157,9 @@ const projectsConfig = {
       tab_url: (path_params, tab: PerfTab) => {
         return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`;
       },
+      key_url: (path_params, tab: PerfTab, uuid: string) => {
+        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}/${uuid}`;
+      },
     },
   },
 };
