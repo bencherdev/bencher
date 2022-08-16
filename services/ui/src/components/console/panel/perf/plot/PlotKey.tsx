@@ -164,7 +164,7 @@ const KeyResource = (props) => {
 };
 
 const KeyButton = (props) => {
-  const color = d3.schemeTableau10[props.index()];
+  const color = d3.schemeTableau10[props.index() % 10];
 
   return (
     <button
