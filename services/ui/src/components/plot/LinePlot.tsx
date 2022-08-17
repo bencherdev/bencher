@@ -17,17 +17,13 @@ export function LinePlot() {
     setMetricsId("");
   });
 
-  return (
-    <div>
-      {plot()}
-    </div>
-  );
+  return <div>{plot()}</div>;
 }
 
 const fetchPlot = async (metrics_id) => {
   try {
     let meta_metrics_array = await axios(options);
-    let data_arrays = intoDataArrays(meta_metrics_array?.data); 
+    let data_arrays = intoDataArrays(meta_metrics_array?.data);
     let plot_marks = intoPlotMarks(data_arrays);
     let plot = Plot.plot({
       y: {
@@ -35,20 +31,20 @@ const fetchPlot = async (metrics_id) => {
       },
       marks: plot_marks,
     });
-    return plot; 
+    return plot;
   } catch (error) {
     console.error(error);
   }
-}
+};
 
 const options = {
   url: `${BENCHER_API_URL}/v0/metrics`,
   method: "get",
   headers: {
-      "Content-Type": "application/json",
-      // Only use with explicit CORS
-      // Authorization: `Bearer ${window.localStorage.authToken}`
-  }
+    "Content-Type": "application/json",
+    // Only use with explicit CORS
+    // Authorization: `Bearer ${window.localStorage.authToken}`
+  },
 };
 
 const intoDataArrays = (meta_metrics_array) => {
@@ -73,7 +69,7 @@ const intoDataArrays = (meta_metrics_array) => {
   }
 
   return data_arrays;
-}
+};
 
 const intoPlotMarks = (data_arrays) => {
   let plot_arrays = [];
@@ -82,9 +78,9 @@ const intoPlotMarks = (data_arrays) => {
   let index = 0;
   for (const [key, value] of Object.entries(data_arrays)) {
     let color = colors[index % 10];
-    plot_arrays.push(Plot.line(value, {stroke: color}));
+    plot_arrays.push(Plot.line(value, { stroke: color }));
     index++;
   }
 
   return plot_arrays;
-}
+};

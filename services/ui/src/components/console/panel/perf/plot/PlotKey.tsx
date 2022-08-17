@@ -17,12 +17,10 @@ const PlotKey = (props) => {
 
   const fetchKeyData = async (perf_tab: PerfTab, uuids: any[]) => {
     const key_data = {};
-    console.log(uuids);
 
     await Promise.all(
       uuids.map(async (uuid: string) => {
         try {
-          console.log(uuid);
           const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
           // Don't even send query if there isn't at least one: branch, testbed, and benchmark
           if (typeof token !== "string") {
@@ -31,7 +29,6 @@ const PlotKey = (props) => {
           let resp = await axios(key_data_options(token, perf_tab, uuid));
           const data = resp.data;
           key_data[uuid] = data;
-          console.log(data);
         } catch (error) {
           console.error(error);
         }
