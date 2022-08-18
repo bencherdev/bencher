@@ -1,8 +1,26 @@
-import { createEffect, createSignal } from "solid-js";
+import { createResource } from "solid-js";
+import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
 
 const Plot = (props) => {
+  const [perf_active, setPerfActive] = createStore([]);
+
+  const [_perf_active] = createResource(props.perf_data, (perf_data) => {
+    const active = [];
+    perf_data?.perf.forEach(() => {
+      active.push(true);
+    });
+    setPerfActive(active);
+    return active;
+  });
+
+  const handlePerfActive = (index: number) => {
+    const active = [...perf_active];
+    active[index] = !active[index];
+    setPerfActive(active);
+  };
+
   return (
     <div class="container">
       <div class="columns is-reverse-mobile is-vcentered">
@@ -15,7 +33,9 @@ const Plot = (props) => {
             benchmarks={props.benchmarks}
             perf_data={props.perf_data}
             key={props.key}
+            perf_active={perf_active}
             handleKey={props.handleKey}
+            handlePerfActive={handlePerfActive}
           />
         </div>
         <div
@@ -23,7 +43,7 @@ const Plot = (props) => {
             props.key() ? "is-three-quarters" : "is-11"
           }`}
         >
-          <LinePlot perf_data={props.perf_data} />
+          <LinePlot perf_data={props.perf_data} perf_active={perf_active} />
         </div>
       </div>
     </div>

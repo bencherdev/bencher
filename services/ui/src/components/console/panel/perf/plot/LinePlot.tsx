@@ -1,5 +1,3 @@
-import { createEffect, createSignal } from "solid-js";
-import PlotKey from "./PlotKey";
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { PerKind } from "../../../config/types";
@@ -53,19 +51,17 @@ const LinePlot = (props) => {
     const colors = d3.schemeTableau10;
     perf_data.perf.forEach((perf, index) => {
       const data = perf.data;
-      if (!Array.isArray(data)) {
+      if (!(Array.isArray(data) && props.perf_active[index])) {
         return;
       }
 
       const line_data = [];
       data.forEach((datum) => {
-        console.log(datum);
         let x_value = new Date(datum?.start_time);
         let y_value = getDatum(perf_data.kind, datum?.datum);
         let xy = [x_value, y_value];
         line_data.push(xy);
       });
-      console.log(line_data);
 
       const color = colors[index % 10];
       plot_arrays.push(Plot.line(line_data, { stroke: color }));

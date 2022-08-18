@@ -56,10 +56,17 @@ const PlotKey = (props) => {
           testbeds={testbeds}
           benchmarks={benchmarks}
           perf_data={props.perf_data}
+          perf_active={props.perf_active}
           handleKey={props.handleKey}
+          handlePerfActive={props.handlePerfActive}
         />
       ) : (
-        <MinimizedKey perf_data={props.perf_data} handleKey={props.handleKey} />
+        <MinimizedKey
+          perf_data={props.perf_data}
+          perf_active={props.perf_active}
+          handleKey={props.handleKey}
+          handlePerfActive={props.handlePerfActive}
+        />
       )}
     </>
   );
@@ -95,7 +102,11 @@ const ExpandedKey = (props) => {
                 name={props.benchmarks()?.[perf.benchmark_uuid]?.name}
               />
             </div>
-            <KeyButton index={index} on={index() % 2 === 0} />
+            <KeyButton
+              index={index}
+              perf_active={props.perf_active}
+              handlePerfActive={props.handlePerfActive}
+            />
           </>
         )}
       </For>
@@ -111,7 +122,13 @@ const MinimizedKey = (props) => {
       <MaximizeKeyButton handleKey={props.handleKey} />
       <br />
       <For each={props.perf_data()?.perf}>
-        {(_perf, index) => <KeyButton index={index} on={index() % 2 === 0} />}
+        {(_perf, index) => (
+          <KeyButton
+            index={index}
+            perf_active={props.perf_active}
+            handlePerfActive={props.handlePerfActive}
+          />
+        )}
       </For>
       <br />
       <MaximizeKeyButton handleKey={props.handleKey} />
@@ -169,11 +186,11 @@ const KeyButton = (props) => {
       // move button over to being is-outlined
       class="button is-small is-fullwidth"
       style={
-        props.on
+        props.perf_active[props.index()]
           ? `background-color:${color};`
           : `border-color:${color};color:${color};`
       }
-      // onClick={() => props.handleKey(false)}
+      onClick={() => props.handlePerfActive(props.index())}
     >
       {props.index() + 1}
     </button>
