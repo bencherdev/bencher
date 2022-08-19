@@ -131,6 +131,7 @@ pub async fn put(
                         )
                         .select((
                             schema::perf::uuid,
+                            schema::perf::iteration,
                             schema::report::start_time,
                             schema::report::end_time,
                             schema::version::number,
@@ -139,13 +140,14 @@ pub async fn put(
                             schema::latency::upper_variance,
                             schema::latency::duration,
                         ))
-                        .order(schema::version::number)
-                        .load::<(String, i64, i64, i32, Option<String>, i64, i64, i64)>(&*conn)
+                        .order((schema::version::number, schema::perf::iteration))
+                        .load::<(String, i32, i64, i64, i32, Option<String>, i64, i64, i64)>(&*conn)
                         .map_err(|_| http_error!(PERF_ERROR))?
                         .into_iter()
                         .map(
                             |(
                                 perf_uuid,
+                                iteration,
                                 start_time,
                                 end_time,
                                 version_number,
@@ -161,6 +163,7 @@ pub async fn put(
                                 });
                                 QueryPerfDatum {
                                     perf_uuid,
+                                    iteration,
                                     start_time,
                                     end_time,
                                     version_number,
@@ -230,6 +233,7 @@ fn to_json(
 #[derive(Debug)]
 pub struct QueryPerfDatum {
     pub perf_uuid:      String,
+    pub iteration:      i32,
     pub start_time:     i64,
     pub end_time:       i64,
     pub version_number: i32,
@@ -241,6 +245,7 @@ impl QueryPerfDatum {
     fn to_json(self) -> Result<JsonPerfDatum, HttpError> {
         let Self {
             perf_uuid,
+            iteration,
             start_time,
             end_time,
             version_number,
@@ -249,6 +254,7 @@ impl QueryPerfDatum {
         } = self;
         Ok(JsonPerfDatum {
             perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(PERF_ERROR))?,
+            iteration: iteration as u32,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             version_number: version_number as u32,

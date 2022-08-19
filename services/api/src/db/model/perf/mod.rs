@@ -42,6 +42,7 @@ pub struct QueryPerf {
     pub id: i32,
     pub uuid: String,
     pub report_id: i32,
+    pub iteration: i32,
     pub benchmark_id: i32,
     pub latency_id: Option<i32>,
     pub throughput_id: Option<i32>,
@@ -74,6 +75,7 @@ impl QueryPerf {
 pub struct InsertPerf {
     pub uuid:          String,
     pub report_id:     i32,
+    pub iteration:     i32,
     pub benchmark_id:  i32,
     pub latency_id:    Option<i32>,
     pub throughput_id: Option<i32>,
@@ -87,6 +89,7 @@ impl InsertPerf {
         conn: &SqliteConnection,
         project_id: i32,
         report_id: i32,
+        iteration: i32,
         benchmark_name: String,
         json_perf: JsonNewPerf,
     ) -> Result<(Uuid, Uuid), HttpError> {
@@ -111,6 +114,7 @@ impl InsertPerf {
         let insert_perf = InsertPerf {
             uuid: perf_uuid.to_string(),
             report_id,
+            iteration,
             benchmark_id,
             latency_id: InsertLatency::map_json(conn, json_perf.latency)?,
             throughput_id: InsertThroughput::map_json(conn, json_perf.throughput)?,

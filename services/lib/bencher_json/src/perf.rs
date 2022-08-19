@@ -60,6 +60,7 @@ pub struct JsonPerfData {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfDatum {
     pub perf_uuid:      Uuid,
+    pub iteration: u32,
     pub start_time:     DateTime<Utc>,
     pub end_time:       DateTime<Utc>,
     pub version_number: u32,

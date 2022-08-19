@@ -205,18 +205,21 @@ pub async fn post(
         .map_err(|_| http_error!("Failed to create report."))?;
 
     let mut benchmarks = JsonBenchmarks::new();
-    for (benchmark_name, json_perf) in json_report.benchmarks {
-        let (benchmark_uuid, perf_uuid) = InsertPerf::from_json(
-            &*conn,
-            project_id,
-            query_report.id,
-            benchmark_name,
-            json_perf,
-        )?;
-        benchmarks.push(JsonBenchmarkPerf {
-            benchmark_uuid,
-            perf_uuid,
-        });
+    for (index, benchmark_perf) in json_report.benchmarks.into_iter().enumerate() {
+        for (benchmark_name, json_perf) in benchmark_perf {
+            let (benchmark_uuid, perf_uuid) = InsertPerf::from_json(
+                &*conn,
+                project_id,
+                query_report.id,
+                index as i32,
+                benchmark_name,
+                json_perf,
+            )?;
+            benchmarks.push(JsonBenchmarkPerf {
+                benchmark_uuid,
+                perf_uuid,
+            });
+        }
     }
 
     let json = query_report.to_json_with_benchmarks(&*conn, benchmarks)?;

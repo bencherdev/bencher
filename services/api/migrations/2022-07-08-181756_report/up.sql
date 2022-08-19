@@ -107,8 +107,8 @@ CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
+    iteration INTEGER NOT NULL,
     benchmark_id INTEGER NOT NULL,
-    iter INTEGER NOT NULL,
     -- at least one should not be null
     latency_id INTEGER,
     throughput_id INTEGER,
