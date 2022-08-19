@@ -13,6 +13,7 @@ table! {
         threshold_id -> Integer,
         perf_id -> Integer,
         z_score_id -> Nullable<Integer>,
+        t_test_id -> Nullable<Integer>,
     }
 }
 
@@ -61,6 +62,7 @@ table! {
         uuid -> Text,
         report_id -> Integer,
         benchmark_id -> Integer,
+        iter -> Integer,
         latency_id -> Nullable<Integer>,
         throughput_id -> Nullable<Integer>,
         compute_id -> Nullable<Integer>,
@@ -96,6 +98,16 @@ table! {
 }
 
 table! {
+    t_test (id) {
+        id -> Integer,
+        uuid -> Text,
+        sample_size -> Nullable<Integer>,
+        tail -> Nullable<Bool>,
+        confidence_interval -> Float,
+    }
+}
+
+table! {
     testbed (id) {
         id -> Integer,
         uuid -> Text,
@@ -119,6 +131,7 @@ table! {
         branch_id -> Integer,
         testbed_id -> Integer,
         z_score_id -> Nullable<Integer>,
+        t_test_id -> Nullable<Integer>,
     }
 }
 
@@ -156,12 +169,14 @@ table! {
     z_score (id) {
         id -> Integer,
         uuid -> Text,
-        population -> Nullable<Integer>,
-        deviation -> Float,
+        sample_size -> Nullable<Integer>,
+        min_deviation -> Nullable<Float>,
+        max_deviation -> Nullable<Float>,
     }
 }
 
 joinable!(alert -> perf (perf_id));
+joinable!(alert -> t_test (t_test_id));
 joinable!(alert -> threshold (threshold_id));
 joinable!(alert -> z_score (z_score_id));
 joinable!(benchmark -> project (project_id));
@@ -177,6 +192,9 @@ joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
 joinable!(testbed -> project (project_id));
 joinable!(threshold -> branch (branch_id));
+joinable!(threshold -> t_test (t_test_id));
+joinable!(threshold -> testbed (testbed_id));
+joinable!(threshold -> z_score (z_score_id));
 joinable!(version -> branch (branch_id));
 
 allow_tables_to_appear_in_same_query!(
@@ -189,6 +207,7 @@ allow_tables_to_appear_in_same_query!(
     perf,
     project,
     report,
+    t_test,
     testbed,
     threshold,
     throughput,

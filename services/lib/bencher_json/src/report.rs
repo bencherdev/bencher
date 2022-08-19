@@ -23,7 +23,7 @@ pub struct JsonNewReport {
     pub adapter:    JsonNewAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
-    pub benchmarks: JsonNewBenchmarks,
+    pub benchmarks: Vec<JsonNewBenchmarks>,
 }
 
 #[derive(Display, Debug, Serialize, Deserialize)]

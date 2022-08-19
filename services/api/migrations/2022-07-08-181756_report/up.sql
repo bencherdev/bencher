@@ -108,6 +108,7 @@ CREATE TABLE perf (
     uuid TEXT NOT NULL UNIQUE,
     report_id INTEGER NOT NULL,
     benchmark_id INTEGER NOT NULL,
+    iter INTEGER NOT NULL,
     -- at least one should not be null
     latency_id INTEGER,
     throughput_id INTEGER,
@@ -145,7 +146,7 @@ CREATE TABLE t_test (
     -- one-tailed left (false), one-tailed right (true), two-tailed (null)
     tail BOOLEAN,
     -- confidence interval
-    confidence_interval REAL NOT NULL,
+    confidence_interval REAL NOT NULL
 );
 CREATE TABLE threshold (
     id INTEGER PRIMARY KEY NOT NULL,
