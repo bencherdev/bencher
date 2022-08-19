@@ -4,7 +4,10 @@ use std::{
 };
 
 use async_trait::async_trait;
-use bencher_json::JsonNewReport;
+use bencher_json::{
+    report::JsonNewBenchmarks,
+    JsonNewReport,
+};
 use chrono::Utc;
 use git2::Oid;
 use uuid::Uuid;
@@ -17,6 +20,7 @@ use crate::{
     cli::run::{
         CliRun,
         CliRunAdapter,
+        CliRunFold,
     },
     BencherError,
 };
@@ -35,12 +39,14 @@ const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 
 #[derive(Debug)]
 pub struct Run {
-    locality:  Locality,
-    perf: Perf,
-    branch:    Uuid,
-    hash:      Option<Oid>,
-    testbed:   Uuid,
-    adapter:   Adapter,
+    locality: Locality,
+    perf:     Perf,
+    branch:   Uuid,
+    hash:     Option<Oid>,
+    testbed:  Uuid,
+    adapter:  Adapter,
+    iter:     usize,
+    fold:     Option<Fold>,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -58,12 +64,14 @@ impl TryFrom<CliRun> for Run {
             fold,
         } = run;
         Ok(Self {
-            locality:  Locality::try_from(locality)?,
-            perf: Perf::try_from(command)?,
-            branch:    unwrap_branch(branch)?,
-            hash:      map_hash(hash)?,
-            testbed:   unwrap_testbed(testbed)?,
-            adapter:   unwrap_adapter(adapter),
+            locality: Locality::try_from(locality)?,
+            perf:     Perf::try_from(command)?,
+            branch:   unwrap_branch(branch)?,
+            hash:     map_hash(hash)?,
+            testbed:  unwrap_testbed(testbed)?,
+            adapter:  unwrap_adapter(adapter),
+            iter:     iter.unwrap_or(1),
+            fold:     fold.map(Into::into),
         })
     }
 }
@@ -120,6 +128,25 @@ impl SubCmd for Run {
                 backend.post(REPORTS_PATH, &report).await?;
                 Ok(())
             },
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Fold {
+    Min,
+    Max,
+    Mean,
+    Median,
+}
+
+impl From<CliRunFold> for Fold {
+    fn from(fold: CliRunFold) -> Self {
+        match fold {
+            CliRunFold::Min => Self::Min,
+            CliRunFold::Max => Self::Max,
+            CliRunFold::Mean => Self::Mean,
+            CliRunFold::Median => Self::Median,
         }
     }
 }
