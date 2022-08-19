@@ -28,6 +28,14 @@ pub struct CliRun {
     #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
 
+    /// Number of run iterations
+    #[clap(long)]
+    pub iter: Option<usize>,
+
+    /// Fold into a single result value
+    #[clap(value_enum, long)]
+    pub fold: Option<CliRunFold>,
+
     #[clap(flatten)]
     pub command: CliRunCommand,
 }
@@ -61,4 +69,18 @@ pub enum CliRunAdapter {
     /// Rust `cargo bench` 🦀
     #[clap(alias("rust"), alias("rust_cargo"))]
     RustCargoBench,
+}
+
+/// Supported Fold Operations
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliRunFold {
+    /// Minimum value
+    Min,
+    /// Maximum value
+    Max,
+    /// Mean of values
+    Mean,
+    /// Median of values
+    Median,
 }

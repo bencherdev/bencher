@@ -4,7 +4,7 @@ use bencher_json::report::{
 };
 
 use crate::{
-    bencher::sub::run::benchmark::Output,
+    bencher::sub::run::perf::Output,
     cli::run::CliRunAdapter,
     BencherError,
 };

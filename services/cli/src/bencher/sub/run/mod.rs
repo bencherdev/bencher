@@ -22,10 +22,10 @@ use crate::{
 };
 
 mod adapter;
-mod benchmark;
+mod perf;
 
 use adapter::Adapter;
-use benchmark::Benchmark;
+use perf::Benchmark;
 
 use super::SubCmd;
 
@@ -47,13 +47,23 @@ impl TryFrom<CliRun> for Run {
     type Error = BencherError;
 
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
+        let CliRun {
+            locality,
+            command,
+            branch,
+            hash,
+            testbed,
+            adapter,
+            iter,
+            fold,
+        } = run;
         Ok(Self {
-            locality:  Locality::try_from(run.locality)?,
-            benchmark: Benchmark::try_from(run.command)?,
-            branch:    unwrap_branch(run.branch)?,
-            hash:      map_hash(run.hash)?,
-            testbed:   unwrap_testbed(run.testbed)?,
-            adapter:   unwrap_adapter(run.adapter),
+            locality:  Locality::try_from(locality)?,
+            benchmark: Benchmark::try_from(command)?,
+            branch:    unwrap_branch(branch)?,
+            hash:      map_hash(hash)?,
+            testbed:   unwrap_testbed(testbed)?,
+            adapter:   unwrap_adapter(adapter),
         })
     }
 }
