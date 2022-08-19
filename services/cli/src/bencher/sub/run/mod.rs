@@ -25,7 +25,7 @@ mod adapter;
 mod perf;
 
 use adapter::Adapter;
-use perf::Benchmark;
+use perf::Perf;
 
 use super::SubCmd;
 
@@ -36,7 +36,7 @@ const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 #[derive(Debug)]
 pub struct Run {
     locality:  Locality,
-    benchmark: Benchmark,
+    perf: Perf,
     branch:    Uuid,
     hash:      Option<Oid>,
     testbed:   Uuid,
@@ -59,7 +59,7 @@ impl TryFrom<CliRun> for Run {
         } = run;
         Ok(Self {
             locality:  Locality::try_from(locality)?,
-            benchmark: Benchmark::try_from(command)?,
+            perf: Perf::try_from(command)?,
             branch:    unwrap_branch(branch)?,
             hash:      map_hash(hash)?,
             testbed:   unwrap_testbed(testbed)?,
@@ -103,7 +103,7 @@ fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let output = self.benchmark.run()?;
+        let output = self.perf.run()?;
         let benchmarks = self.adapter.convert(&output)?;
         let report = JsonNewReport {
             branch: self.branch.clone(),

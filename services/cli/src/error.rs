@@ -13,7 +13,7 @@ pub enum BencherError {
     #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` flag.")]
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
-    Benchmark,
+    NoPerf,
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),

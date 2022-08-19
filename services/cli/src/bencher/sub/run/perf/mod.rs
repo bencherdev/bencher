@@ -21,12 +21,12 @@ use input::Input;
 pub use output::Output;
 
 #[derive(Debug)]
-pub enum Benchmark {
+pub enum Perf {
     Input(Input),
     Command(Command),
 }
 
-impl TryFrom<CliRunCommand> for Benchmark {
+impl TryFrom<CliRunCommand> for Perf {
     type Error = BencherError;
 
     fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
@@ -35,14 +35,14 @@ impl TryFrom<CliRunCommand> for Benchmark {
         } else {
             let input = Input::new()?;
             if input.is_empty() {
-                return Err(BencherError::Benchmark);
+                return Err(BencherError::NoPerf);
             }
             Self::Input(input)
         })
     }
 }
 
-impl Benchmark {
+impl Perf {
     pub fn run(&self) -> Result<Output, BencherError> {
         let start = Utc::now();
         let result = match self {
