@@ -146,8 +146,6 @@ CREATE TABLE t_test (
     tail BOOLEAN,
     -- confidence interval
     confidence_interval REAL NOT NULL,
-    -- min p-value, if null don't compare
-    p_value REAL
 );
 CREATE TABLE threshold (
     id INTEGER PRIMARY KEY NOT NULL,
