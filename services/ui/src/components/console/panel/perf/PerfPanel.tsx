@@ -326,9 +326,6 @@ const PerfPanel = (props) => {
   const handleKind = (kind: PerKind) => {
     if (isPerfKind(kind)) {
       setSearchParams({
-        [BRANCHES_PARAM]: null,
-        [TESTBEDS_PARAM]: null,
-        [BENCHMARKS_PARAM]: null,
         [KIND_PARAM]: kind,
       });
     }
