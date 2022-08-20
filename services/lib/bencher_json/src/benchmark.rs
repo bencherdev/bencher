@@ -6,7 +6,6 @@ use serde::{
 };
 use uuid::Uuid;
 
-
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmark {

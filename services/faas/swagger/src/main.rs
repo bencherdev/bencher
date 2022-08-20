@@ -1,10 +1,12 @@
 use std::sync::Mutex;
 
 use diesel::pg::PgConnection;
-use dropshot::ApiDescription;
-use dropshot::EndpointTagPolicy;
-use dropshot::TagConfig;
-use dropshot::TagDetails;
+use dropshot::{
+    ApiDescription,
+    EndpointTagPolicy,
+    TagConfig,
+    TagDetails,
+};
 
 const API_NAME: &str = "Bencher";
 const API_VERSION: &str = "0.1.0";

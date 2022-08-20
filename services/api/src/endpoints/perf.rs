@@ -172,7 +172,70 @@ pub async fn post(
                             },
                         )
                         .collect(),
-                    JsonPerfKind::Throughput => Vec::new(),
+                    JsonPerfKind::Throughput => {
+                        query
+                            .inner_join(schema::throughput::table.on(
+                                schema::perf::throughput_id.eq(schema::throughput::id.nullable()),
+                            ))
+                            .select((
+                                schema::perf::uuid,
+                                schema::perf::iteration,
+                                schema::report::start_time,
+                                schema::report::end_time,
+                                schema::version::number,
+                                schema::version::hash,
+                                schema::throughput::lower_variance,
+                                schema::throughput::upper_variance,
+                                schema::throughput::events,
+                                schema::throughput::unit_time,
+                            ))
+                            .order((schema::version::number, schema::perf::iteration))
+                            .load::<(
+                                String,
+                                i32,
+                                i64,
+                                i64,
+                                i32,
+                                Option<String>,
+                                f64,
+                                f64,
+                                f64,
+                                i64,
+                            )>(&*conn)
+                            .map_err(|_| http_error!(PERF_ERROR))?
+                            .into_iter()
+                            .map(
+                                |(
+                                    perf_uuid,
+                                    iteration,
+                                    start_time,
+                                    end_time,
+                                    version_number,
+                                    version_hash,
+                                    lower_variance,
+                                    upper_variance,
+                                    events,
+                                    unit_time,
+                                )| {
+                                    let datum = QueryPerfDatumKind::Throughput(QueryThroughput {
+                                        lower_variance,
+                                        upper_variance,
+                                        events,
+                                        unit_time,
+                                    });
+                                    QueryPerfDatum {
+                                        perf_uuid,
+                                        iteration,
+                                        start_time,
+                                        end_time,
+                                        version_number,
+                                        version_hash,
+                                        datum,
+                                    }
+                                },
+                            )
+                            .collect()
+                    },
                     JsonPerfKind::Compute => Vec::new(),
                     JsonPerfKind::Memory => Vec::new(),
                     JsonPerfKind::Storage => Vec::new(),

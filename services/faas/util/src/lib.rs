@@ -2,8 +2,10 @@
 #[macro_use]
 extern crate diesel;
 
-use dropshot::ApiDescription;
-use dropshot::ServerContext;
+use dropshot::{
+    ApiDescription,
+    ServerContext,
+};
 
 #[cfg(feature = "db")]
 pub mod db;

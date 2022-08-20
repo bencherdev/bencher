@@ -1,5 +1,7 @@
-use std::convert::TryFrom;
-use std::fmt;
+use std::{
+    convert::TryFrom,
+    fmt,
+};
 
 use crate::BencherError;
 
@@ -31,14 +33,10 @@ impl TryFrom<Option<String>> for Flag {
 
 impl fmt::Display for Flag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Unix => UNIX_FLAG,
-                Self::Windows => WINDOWS_FLAG,
-                Self::Custom(shell) => shell,
-            }
-        )
+        write!(f, "{}", match self {
+            Self::Unix => UNIX_FLAG,
+            Self::Windows => WINDOWS_FLAG,
+            Self::Custom(shell) => shell,
+        })
     }
 }

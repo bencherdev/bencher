@@ -1,11 +1,21 @@
-use std::collections::BTreeMap;
-use std::convert::AsMut;
-use std::convert::AsRef;
+use std::{
+    collections::BTreeMap,
+    convert::{
+        AsMut,
+        AsRef,
+    },
+};
 
-use chrono::{DateTime, Utc};
+use chrono::{
+    DateTime,
+    Utc,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -16,7 +26,11 @@ mod testbed;
 pub use data::Data;
 #[cfg(feature = "wasm")]
 pub use data::InventoryData;
-pub use metrics::{Latency, Metric, Metrics};
+pub use metrics::{
+    Latency,
+    Metric,
+    Metrics,
+};
 pub use testbed::Testbed;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -67,13 +81,13 @@ impl Reports {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Report {
-    pub email: String,
-    pub token: String,
+    pub email:     String,
+    pub token:     String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub project: Option<String>,
-    pub testbed: Option<String>,
+    pub project:   Option<String>,
+    pub testbed:   Option<String>,
     pub date_time: DateTime<Utc>,
-    pub metrics: Metrics,
+    pub metrics:   Metrics,
 }
 
 impl Report {
@@ -94,16 +108,17 @@ impl Report {
         }
     }
 
-    // TOOD add a static token validation function, that does not need the secret key
+    // TOOD add a static token validation function, that does not need the secret
+    // key
 }
 
 // This is just for testing purposes
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct MetaMetrics {
-    pub id: usize,
+    pub id:        usize,
     pub date_time: DateTime<Utc>,
-    pub metrics: Metrics,
-    pub hash: u64,
-    pub length: usize,
+    pub metrics:   Metrics,
+    pub hash:      u64,
+    pub length:    usize,
 }

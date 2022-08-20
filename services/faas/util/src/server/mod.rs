@@ -1,9 +1,11 @@
-use dropshot::ApiDescription;
-use dropshot::ConfigDropshot;
-use dropshot::ConfigLogging;
-use dropshot::ConfigLoggingLevel;
-use dropshot::HttpServer;
-use dropshot::ServerContext;
+use dropshot::{
+    ApiDescription,
+    ConfigDropshot,
+    ConfigLogging,
+    ConfigLoggingLevel,
+    HttpServer,
+    ServerContext,
+};
 
 const PORT_KEY: &str = "PORT";
 const DEFAULT_IP: &str = "0.0.0.0";

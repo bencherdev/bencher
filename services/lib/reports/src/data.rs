@@ -1,7 +1,10 @@
 #[cfg(feature = "wasm")]
 use std::collections::HashSet;
 
-use chrono::{DateTime, Utc};
+use chrono::{
+    DateTime,
+    Utc,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -39,7 +42,7 @@ impl Data {
 #[wasm_bindgen]
 pub struct InventoryData {
     inventory: JsValue,
-    data: JsValue,
+    data:      JsValue,
 }
 
 #[cfg(feature = "wasm")]
@@ -53,7 +56,7 @@ impl InventoryData {
         Self {
             inventory: JsValue::from_serde(&inventory)
                 .expect(&format!("Failed to serialize latency inventory JSON")),
-            data: JsValue::from_serde(&data)
+            data:      JsValue::from_serde(&data)
                 .expect(&format!("Failed to serialize latency data JSON")),
         }
     }

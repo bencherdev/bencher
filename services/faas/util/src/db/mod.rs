@@ -1,8 +1,12 @@
 use std::env;
 
-use diesel::pg::PgConnection;
-use diesel::prelude::ConnectionResult;
-use diesel::prelude::*;
+use diesel::{
+    pg::PgConnection,
+    prelude::{
+        ConnectionResult,
+        *,
+    },
+};
 
 pub mod model;
 pub mod schema;

@@ -1,5 +1,8 @@
 #![cfg(test)]
-use test::{black_box, Bencher};
+use test::{
+    black_box,
+    Bencher,
+};
 
 #[test]
 fn ignored() {
