@@ -56,6 +56,54 @@ pub struct JsonNewPerf {
     pub storage:    Option<JsonMinMaxAvg>,
 }
 
+impl JsonNewPerf {
+    pub fn min(self, other: Self) -> Self {
+        JsonNewPerf {
+            latency:    min_map(self.latency, other.latency),
+            throughput: min_map(self.throughput, other.throughput),
+            compute:    min_map(self.compute, other.compute),
+            memory:     min_map(self.memory, other.memory),
+            storage:    min_map(self.storage, other.storage),
+        }
+    }
+
+    pub fn max(self, other: Self) -> Self {
+        JsonNewPerf {
+            latency:    max_map(self.latency, other.latency),
+            throughput: max_map(self.throughput, other.throughput),
+            compute:    max_map(self.compute, other.compute),
+            memory:     max_map(self.memory, other.memory),
+            storage:    max_map(self.storage, other.storage),
+        }
+    }
+}
+
+fn min_map<T>(self_perf: Option<T>, other_perf: Option<T>) -> Option<T>
+where
+    T: Ord,
+{
+    self_perf.map(|sp| {
+        if let Some(op) = other_perf {
+            sp.min(op)
+        } else {
+            sp
+        }
+    })
+}
+
+fn max_map<T>(self_perf: Option<T>, other_perf: Option<T>) -> Option<T>
+where
+    T: Ord,
+{
+    self_perf.map(|sp| {
+        if let Some(op) = other_perf {
+            sp.max(op)
+        } else {
+            sp
+        }
+    })
+}
+
 #[derive(Debug, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLatency {
@@ -144,6 +192,7 @@ impl JsonThroughput {
         OrderedFloat(events.into_inner() / self.unit_time as f64)
     }
 }
+
 #[derive(Debug, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMinMaxAvg {
