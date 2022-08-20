@@ -100,13 +100,25 @@ impl From<BTreeMap<String, JsonNewPerf>> for JsonNewBenchmarksMap {
     }
 }
 
+enum CombinedKind {
+    Ord(OrdKind),
+    Add,
+}
+
 impl JsonNewBenchmarksMap {
-    fn ord(self, mut other: Self, ord_kind: OrdKind) -> Self {
+    fn ord(self, other: Self, ord_kind: OrdKind) -> Self {
+        self.combined_map(other, CombinedKind::Ord(ord_kind))
+    }
+
+    fn combined_map(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut benchmarks_map = BTreeMap::new();
         for (benchmark_name, json_perf) in self.inner.into_iter() {
             let other_json_perf = other.inner.remove(&benchmark_name);
             let ord_json_perf = if let Some(other_json_perf) = other_json_perf {
-                json_perf.ord(other_json_perf, ord_kind)
+                match kind {
+                    CombinedKind::Ord(ord_kind) => json_perf.ord(other_json_perf, ord_kind),
+                    CombinedKind::Add => json_perf + other_json_perf,
+                }
             } else {
                 json_perf
             };
@@ -122,21 +134,8 @@ impl JsonNewBenchmarksMap {
 impl std::ops::Add for JsonNewBenchmarksMap {
     type Output = Self;
 
-    fn add(self, mut other: Self) -> Self {
-        let mut benchmarks_map = BTreeMap::new();
-        for (benchmark_name, json_perf) in self.inner.into_iter() {
-            let other_json_perf = other.inner.remove(&benchmark_name);
-            let ord_json_perf = if let Some(other_json_perf) = other_json_perf {
-                json_perf + other_json_perf
-            } else {
-                json_perf
-            };
-            benchmarks_map.insert(benchmark_name, ord_json_perf);
-        }
-        for (benchmark_name, other_json_perf) in other.inner.into_iter() {
-            benchmarks_map.insert(benchmark_name, other_json_perf);
-        }
-        benchmarks_map.into()
+    fn add(self, other: Self) -> Self {
+        self.combined_map(other, CombinedKind::Add)
     }
 }
 
