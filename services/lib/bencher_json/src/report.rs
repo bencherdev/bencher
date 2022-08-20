@@ -7,7 +7,11 @@ use chrono::{
     DateTime,
     Utc,
 };
-use derive_more::Display;
+use derive_more::{
+    Add,
+    Display,
+    Sum,
+};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -158,7 +162,34 @@ where
     })
 }
 
-#[derive(Debug, Default, Eq, Serialize, Deserialize)]
+impl std::ops::Add for JsonNewPerf {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            latency:    add_map(self.latency, other.latency),
+            throughput: add_map(self.throughput, other.throughput),
+            compute:    add_map(self.compute, other.compute),
+            memory:     add_map(self.memory, other.memory),
+            storage:    add_map(self.storage, other.storage),
+        }
+    }
+}
+
+fn add_map<T>(self_perf: Option<T>, other_perf: Option<T>) -> Option<T>
+where
+    T: std::ops::Add<Output = T>,
+{
+    self_perf.map(|sp| {
+        if let Some(op) = other_perf {
+            sp + op
+        } else {
+            sp
+        }
+    })
+}
+
+#[derive(Debug, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLatency {
     pub lower_variance: u64,
@@ -196,7 +227,7 @@ impl Ord for JsonLatency {
     }
 }
 
-#[derive(Debug, Default, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThroughput {
     pub lower_variance: OrderedFloat<f64>,
@@ -247,7 +278,7 @@ impl JsonThroughput {
     }
 }
 
-#[derive(Debug, Default, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMinMaxAvg {
     pub min: OrderedFloat<f64>,
