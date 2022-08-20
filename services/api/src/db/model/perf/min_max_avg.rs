@@ -33,9 +33,9 @@ impl From<JsonMinMaxAvg> for InsertMinMaxAvg {
         let JsonMinMaxAvg { min, max, avg } = min_max_avg;
         Self {
             uuid: Uuid::new_v4().to_string(),
-            min,
-            max,
-            avg,
+            min:  min.into(),
+            max:  max.into(),
+            avg:  avg.into(),
         }
     }
 }

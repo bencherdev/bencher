@@ -38,11 +38,11 @@ impl From<JsonThroughput> for InsertThroughput {
             unit_time,
         } = throughput;
         Self {
-            uuid: Uuid::new_v4().to_string(),
-            lower_variance,
-            upper_variance,
-            events,
-            unit_time: unit_time as i64,
+            uuid:           Uuid::new_v4().to_string(),
+            lower_variance: lower_variance.into(),
+            upper_variance: upper_variance.into(),
+            events:         events.into(),
+            unit_time:      unit_time as i64,
         }
     }
 }

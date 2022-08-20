@@ -131,7 +131,7 @@ impl SubCmd for Run {
             adapter: self.adapter.into(),
             start_time,
             end_time: Utc::now(),
-            benchmarks,
+            benchmarks: benchmarks.into(),
         };
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string_pretty(&report)?)),
