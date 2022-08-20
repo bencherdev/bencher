@@ -57,9 +57,12 @@ const LinePlot = (props) => {
 
       const line_data = [];
       data.forEach((datum) => {
-        let x_value = new Date(datum?.start_time);
-        let y_value = getDatum(perf_data.kind, datum?.datum);
-        let xy = [x_value, y_value];
+        const date_time = new Date(datum.start_time);
+        const x_value = date_time.setSeconds(
+          date_time.getSeconds() + datum.iteration
+        );
+        const y_value = getDatum(perf_data.kind, datum.datum);
+        const xy = [x_value, y_value];
         line_data.push(xy);
       });
 
