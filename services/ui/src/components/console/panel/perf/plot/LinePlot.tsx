@@ -7,13 +7,11 @@ const getDatum = (kind, datum) => {
     case PerKind.LATENCY:
       return datum?.duration;
     case PerKind.THROUGHPUT:
-      return 0;
+      return datum?.event / datum?.unit_time;
     case PerKind.COMPUTE:
-      return 0;
     case PerKind.MEMORY:
-      return 0;
     case PerKind.STORAGE:
-      return 0;
+      return datum?.avg;
     default:
       return 0;
   }
@@ -24,13 +22,11 @@ const getLabel = (kind) => {
     case PerKind.LATENCY:
       return "↑ Nanoseconds";
     case PerKind.THROUGHPUT:
-      return "TODO";
+      return "↑ Events per Nanoseconds";
     case PerKind.COMPUTE:
-      return "TODO";
     case PerKind.MEMORY:
-      return "TODO";
     case PerKind.STORAGE:
-      return "TODO";
+      return "↑ Average performance";
     default:
       return "↑ UNITS";
   }
