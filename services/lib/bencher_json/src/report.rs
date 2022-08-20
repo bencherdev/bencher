@@ -27,7 +27,7 @@ pub struct JsonNewReport {
     pub adapter:    JsonNewAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
-    pub benchmarks: Vec<JsonNewBenchmarks>,
+    pub benchmarks: JsonNewBenchmarks,
 }
 
 #[derive(Display, Debug, Serialize, Deserialize)]
@@ -39,7 +39,33 @@ pub enum JsonNewAdapter {
     RustCargoBench,
 }
 
-pub type JsonNewBenchmarks = BTreeMap<String, JsonNewPerf>;
+pub type JsonNewBenchmarks = Vec<JsonNewBenchmarksMap>;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewBenchmarksMap(BTreeMap<String, JsonNewPerf>);
+
+impl Default for JsonNewBenchmarksMap {
+    fn default() -> Self {
+        Self(BTreeMap::default())
+    }
+}
+
+impl JsonNewBenchmarksMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+// impl JsonNewPerf {
+//     pub fn min(self, other: Self) -> Self {
+
+//     }
+
+//     pub fn max(self, other: Self) -> Self {
+
+//     }
+// }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
