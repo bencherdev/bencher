@@ -39,8 +39,8 @@ pub enum JsonNewAdapter {
     RustCargoBench,
 }
 
-#[derive(Copy, Clone)]
-enum OrdKind {
+#[derive(Debug, Copy, Clone)]
+pub enum OrdKind {
     Min,
     Max,
 }
@@ -55,6 +55,16 @@ pub struct JsonNewBenchmarks {
 impl From<Vec<JsonNewBenchmarksMap>> for JsonNewBenchmarks {
     fn from(benchmarks: Vec<JsonNewBenchmarksMap>) -> Self {
         Self { inner: benchmarks }
+    }
+}
+
+impl JsonNewBenchmarks {
+    pub fn ord(self, ord_kind: OrdKind) -> Self {
+        let map = self.inner.into_iter().fold(
+            BTreeMap::new().into(),
+            |ord_map: JsonNewBenchmarksMap, next_map| ord_map.ord(next_map, ord_kind),
+        );
+        vec![map].into()
     }
 }
 

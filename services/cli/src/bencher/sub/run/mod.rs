@@ -5,7 +5,11 @@ use std::{
 
 use async_trait::async_trait;
 use bencher_json::{
-    report::JsonNewBenchmarksMap,
+    report::{
+        JsonNewBenchmarks,
+        JsonNewBenchmarksMap,
+        OrdKind,
+    },
     JsonNewReport,
 };
 use chrono::Utc;
@@ -119,6 +123,7 @@ impl SubCmd for Run {
             let benchmark_perf = self.adapter.convert(&output)?;
             benchmarks.push(benchmark_perf);
         }
+        let mut benchmarks = benchmarks.into();
 
         if let Some(ref fold) = self.fold {
             benchmarks = fold.fold(benchmarks)
@@ -131,7 +136,7 @@ impl SubCmd for Run {
             adapter: self.adapter.into(),
             start_time,
             end_time: Utc::now(),
-            benchmarks: benchmarks.into(),
+            benchmarks,
         };
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string_pretty(&report)?)),
@@ -145,8 +150,7 @@ impl SubCmd for Run {
 
 #[derive(Debug)]
 enum Fold {
-    Min,
-    Max,
+    Ord(OrdKind),
     Mean,
     Median,
 }
@@ -154,8 +158,8 @@ enum Fold {
 impl From<CliRunFold> for Fold {
     fn from(fold: CliRunFold) -> Self {
         match fold {
-            CliRunFold::Min => Self::Min,
-            CliRunFold::Max => Self::Max,
+            CliRunFold::Min => Self::Ord(OrdKind::Min),
+            CliRunFold::Max => Self::Ord(OrdKind::Max),
             CliRunFold::Mean => Self::Mean,
             CliRunFold::Median => Self::Median,
         }
@@ -163,10 +167,9 @@ impl From<CliRunFold> for Fold {
 }
 
 impl Fold {
-    fn fold(&self, benchmarks: Vec<JsonNewBenchmarksMap>) -> Vec<JsonNewBenchmarksMap> {
+    fn fold(&self, benchmarks: JsonNewBenchmarks) -> JsonNewBenchmarks {
         match self {
-            Self::Min => benchmarks,
-            Self::Max => benchmarks,
+            Self::Ord(ord_kind) => benchmarks.ord(*ord_kind),
             Self::Mean => benchmarks,
             Self::Median => benchmarks,
         }
