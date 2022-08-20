@@ -46,6 +46,12 @@ pub enum OrdKind {
     Max,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum AvgKind {
+    Mean,
+    Median,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewBenchmarks {
