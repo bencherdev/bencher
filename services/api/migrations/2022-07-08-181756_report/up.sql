@@ -124,7 +124,7 @@ CREATE TABLE perf (
     FOREIGN KEY (compute_id) REFERENCES min_max_avg (id),
     FOREIGN KEY (memory_id) REFERENCES min_max_avg (id),
     FOREIGN KEY (storage_id) REFERENCES min_max_avg (id),
-    UNIQUE(report_id, benchmark_id)
+    UNIQUE(report_id, iteration, benchmark_id)
 );
 -- https://en.wikipedia.org/wiki/Standard_score
 CREATE TABLE z_score (

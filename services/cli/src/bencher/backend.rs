@@ -70,7 +70,6 @@ impl Backend {
     where
         T: Serialize + ?Sized,
     {
-        println!("{:?}", serde_json::to_string(json));
         self.send(Method::Post(json), path).await
     }
 
