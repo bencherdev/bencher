@@ -27,6 +27,7 @@ pub struct JsonNewReport {
     pub adapter:    JsonNewAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
+    #[serde(flatten)]
     pub benchmarks: JsonNewBenchmarks,
 }
 
@@ -48,7 +49,7 @@ pub enum OrdKind {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewBenchmarks {
-    #[serde(flatten)]
+    #[serde(rename = "benchmarks")]
     pub inner: Vec<JsonNewBenchmarksMap>,
 }
 
@@ -154,9 +155,9 @@ where
 #[derive(Debug, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLatency {
-    pub lower_variance: u128,
-    pub upper_variance: u128,
-    pub duration:       u128,
+    pub lower_variance: u64,
+    pub upper_variance: u64,
+    pub duration:       u64,
 }
 
 impl PartialEq for JsonLatency {
@@ -195,7 +196,7 @@ pub struct JsonThroughput {
     pub lower_variance: OrderedFloat<f64>,
     pub upper_variance: OrderedFloat<f64>,
     pub events:         OrderedFloat<f64>,
-    pub unit_time:      u128,
+    pub unit_time:      u64,
 }
 
 impl PartialEq for JsonThroughput {

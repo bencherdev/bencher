@@ -139,9 +139,9 @@ fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
             JsonLatency {
-                duration:       duration.as_nanos(),
-                lower_variance: variance.as_nanos(),
-                upper_variance: variance.as_nanos(),
+                duration:       duration.as_nanos() as u64,
+                lower_variance: variance.as_nanos() as u64,
+                upper_variance: variance.as_nanos() as u64,
             }
         },
     )(input)

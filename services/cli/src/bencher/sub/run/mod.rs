@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use bencher_json::{
     report::{
         JsonNewBenchmarks,
-        JsonNewBenchmarksMap,
         OrdKind,
     },
     JsonNewReport,

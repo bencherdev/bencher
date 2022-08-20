@@ -3,8 +3,6 @@ use std::convert::{
     TryInto,
 };
 
-use chrono::Utc;
-
 use crate::{
     cli::run::CliRunCommand,
     BencherError,

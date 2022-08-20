@@ -1,7 +1,6 @@
 use std::{
     str::FromStr,
     sync::Arc,
-    time::Duration,
 };
 
 use bencher_json::{
@@ -173,18 +172,10 @@ pub async fn post(
                             },
                         )
                         .collect(),
-                    JsonPerfKind::Throughput => {
-                        Vec::new()
-                    },
-                    JsonPerfKind::Compute => {
-                        Vec::new()
-                    },
-                    JsonPerfKind::Memory => {
-                        Vec::new()
-                    },
-                    JsonPerfKind::Storage => {
-                        Vec::new()
-                    },
+                    JsonPerfKind::Throughput => Vec::new(),
+                    JsonPerfKind::Compute => Vec::new(),
+                    JsonPerfKind::Memory => Vec::new(),
+                    JsonPerfKind::Storage => Vec::new(),
                 };
 
                 let json_perf_data = to_json(
@@ -308,9 +299,9 @@ impl QueryLatency {
             duration,
         } = self;
         Ok(JsonLatency {
-            lower_variance: Duration::from_nanos(lower_variance as u64).as_nanos(),
-            upper_variance: Duration::from_nanos(upper_variance as u64).as_nanos(),
-            duration:       Duration::from_nanos(duration as u64).as_nanos(),
+            lower_variance: lower_variance as u64,
+            upper_variance: upper_variance as u64,
+            duration:       duration as u64,
         })
     }
 }
@@ -319,8 +310,8 @@ impl QueryLatency {
 pub struct QueryThroughput {
     pub lower_variance: f64,
     pub upper_variance: f64,
-    pub events: f64,
-    pub unit_time:    i64,
+    pub events:         f64,
+    pub unit_time:      i64,
 }
 
 impl QueryThroughput {
@@ -334,8 +325,8 @@ impl QueryThroughput {
         Ok(JsonThroughput {
             lower_variance: lower_variance.into(),
             upper_variance: upper_variance.into(),
-            events: events.into(),
-            unit_time: Duration::from_nanos(unit_time as u64).as_nanos(),
+            events:         events.into(),
+            unit_time:      unit_time as u64,
         })
     }
 }
@@ -350,6 +341,10 @@ pub struct QueryMinMaxAvg {
 impl QueryMinMaxAvg {
     fn to_json(self) -> JsonMinMaxAvg {
         let Self { min, max, avg } = self;
-        JsonMinMaxAvg { min: min.into(), max: max.into(), avg: avg.into() }
+        JsonMinMaxAvg {
+            min: min.into(),
+            max: max.into(),
+            avg: avg.into(),
+        }
     }
 }

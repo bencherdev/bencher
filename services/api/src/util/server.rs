@@ -11,6 +11,9 @@ const PORT_KEY: &str = "BENCHER_PORT";
 const DEFAULT_IP: &str = "0.0.0.0";
 const DEFAULT_PORT: &str = "8080";
 
+// 16 megabytes or 16_777_216 bytes
+const MAX_BODY_SIZE: usize = 1 << 24;
+
 use super::registrar::Registrar;
 
 pub async fn get_server<Context>(
@@ -41,7 +44,7 @@ pub fn get_config() -> ConfigDropshot {
 
     ConfigDropshot {
         bind_address: address.parse().unwrap(),
-        request_body_max_bytes: 1024,
+        request_body_max_bytes: MAX_BODY_SIZE,
         tls: None,
     }
 }
