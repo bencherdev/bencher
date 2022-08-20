@@ -68,7 +68,7 @@ pub async fn options(
     path =  "/v0/perf",
     tags = ["perf"]
 }]
-pub async fn put(
+pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPerf>, CorsHeaders>, HttpError> {
@@ -174,16 +174,16 @@ pub async fn put(
                         )
                         .collect(),
                     JsonPerfKind::Throughput => {
-                        todo!()
+                        Vec::new()
                     },
                     JsonPerfKind::Compute => {
-                        todo!()
+                        Vec::new()
                     },
                     JsonPerfKind::Memory => {
-                        todo!()
+                        Vec::new()
                     },
                     JsonPerfKind::Storage => {
-                        todo!()
+                        Vec::new()
                     },
                 };
 
@@ -317,21 +317,24 @@ impl QueryLatency {
 
 #[derive(Debug)]
 pub struct QueryThroughput {
-    pub lower_events: f64,
-    pub upper_events: f64,
+    pub lower_variance: f64,
+    pub upper_variance: f64,
+    pub events: f64,
     pub unit_time:    i64,
 }
 
 impl QueryThroughput {
     fn to_json(self) -> Result<JsonThroughput, HttpError> {
         let Self {
-            lower_events,
-            upper_events,
+            lower_variance,
+            upper_variance,
+            events,
             unit_time,
         } = self;
         Ok(JsonThroughput {
-            lower_events,
-            upper_events,
+            lower_variance: lower_variance.into(),
+            upper_variance: upper_variance.into(),
+            events: events.into(),
             unit_time: Duration::from_nanos(unit_time as u64).as_nanos(),
         })
     }
@@ -347,6 +350,6 @@ pub struct QueryMinMaxAvg {
 impl QueryMinMaxAvg {
     fn to_json(self) -> JsonMinMaxAvg {
         let Self { min, max, avg } = self;
-        JsonMinMaxAvg { min, max, avg }
+        JsonMinMaxAvg { min: min.into(), max: max.into(), avg: avg.into() }
     }
 }
