@@ -304,18 +304,40 @@ struct JsonNewPerfList {
 impl From<JsonNewPerfList> for JsonNewPerf {
     fn from(json_perf_list: JsonNewPerfList) -> Self {
         let JsonNewPerfList {
-            mut latency,
-            mut throughput,
-            mut compute,
-            mut memory,
-            mut storage,
+            latency,
+            throughput,
+            compute,
+            memory,
+            storage,
         } = json_perf_list;
         Self {
-            latency:    latency.pop().unwrap(),
-            throughput: throughput.pop().unwrap(),
-            compute:    compute.pop().unwrap(),
-            memory:     memory.pop().unwrap(),
-            storage:    storage.pop().unwrap(),
+            latency:    JsonLatency::median(latency),
+            throughput: JsonThroughput::median(throughput),
+            compute:    JsonMinMaxAvg::median(compute),
+            memory:     JsonMinMaxAvg::median(memory),
+            storage:    JsonMinMaxAvg::median(storage),
+        }
+    }
+}
+
+trait Median {
+    fn median(mut array: Vec<Option<Self>>) -> Option<Self>
+    where
+        Self: Copy
+            + Clone
+            + Ord
+            + std::ops::Add<Output = Self>
+            + std::ops::Div<usize, Output = Self>
+            + std::default::Default,
+    {
+        array.sort_unstable();
+
+        if (array.len() % 2) == 0 {
+            let ind_left = array.len() / 2 - 1;
+            let ind_right = array.len() / 2;
+            Some((array[ind_left]? + array[ind_right]?) / 2)
+        } else {
+            array[(array.len() / 2)]
         }
     }
 }
@@ -369,6 +391,22 @@ impl std::ops::Div<usize> for JsonLatency {
         }
     }
 }
+
+impl Median for JsonLatency {}
+
+// impl Median for JsonLatency {
+//     fn median(mut array: Vec<Option<Self>>) -> Self {
+//         array.sort_unstable();
+
+//         if (array.len() % 2) == 0 {
+//             let ind_left = array.len() / 2 - 1;
+//             let ind_right = array.len() / 2;
+//             (array[ind_left].unwrap_or_default() +
+// array[ind_right].unwrap_or_default()) / 2         } else {
+//             array[(array.len() / 2)].unwrap_or_default()
+//         }
+//     }
+// }
 
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -434,6 +472,8 @@ impl std::ops::Div<usize> for JsonThroughput {
     }
 }
 
+impl Median for JsonThroughput {}
+
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMinMaxAvg {
@@ -481,6 +521,8 @@ impl std::ops::Div<usize> for JsonMinMaxAvg {
         }
     }
 }
+
+impl Median for JsonMinMaxAvg {}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

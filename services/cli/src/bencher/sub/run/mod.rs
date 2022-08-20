@@ -169,7 +169,7 @@ impl Fold {
             Self::Min => benchmarks.min(),
             Self::Max => benchmarks.max(),
             Self::Mean => benchmarks.mean(),
-            Self::Median => benchmarks,
+            Self::Median => benchmarks.median(),
         }
     }
 }
