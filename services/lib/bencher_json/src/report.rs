@@ -120,15 +120,16 @@ impl PartialOrd for JsonThroughput {
 
 impl Ord for JsonThroughput {
     fn cmp(&self, other: &Self) -> Ordering {
-        let events_per_unit_time = OrderedFloat(self.events.into_inner() / self.unit_time as f64);
-        let other_events_per_unit_time =
-            OrderedFloat(other.events.into_inner() / other.unit_time as f64);
-
-        let events_order = events_per_unit_time.cmp(&other_events_per_unit_time);
+        let events_order = self
+            .per_unit_time(&self.events)
+            .cmp(&other.per_unit_time(&other.events));
         if Ordering::Equal == events_order {
-            let upper_order = self.upper_variance.cmp(&other.upper_variance);
+            let upper_order = self
+                .per_unit_time(&self.upper_variance)
+                .cmp(&other.per_unit_time(&other.upper_variance));
             if Ordering::Equal == upper_order {
-                self.lower_variance.cmp(&other.lower_variance)
+                self.per_unit_time(&self.lower_variance)
+                    .cmp(&other.per_unit_time(&other.lower_variance))
             } else {
                 upper_order
             }
@@ -138,6 +139,11 @@ impl Ord for JsonThroughput {
     }
 }
 
+impl JsonThroughput {
+    fn per_unit_time(&self, events: &OrderedFloat<f64>) -> OrderedFloat<f64> {
+        OrderedFloat(events.into_inner() / self.unit_time as f64)
+    }
+}
 #[derive(Debug, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMinMaxAvg {
