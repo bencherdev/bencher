@@ -111,16 +111,27 @@ fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let output = self.perf.run()?;
-        let benchmarks = self.adapter.convert(&output)?;
+        let start_time = Utc::now();
+
+        let mut benchmarks = Vec::with_capacity(self.iter);
+        for _ in 0..self.iter {
+            let output = self.perf.run()?;
+            let benchmark_perf = self.adapter.convert(&output)?;
+            benchmarks.push(benchmark_perf);
+        }
+
+        if let Some(ref fold) = self.fold {
+            benchmarks = fold.fold(benchmarks)
+        }
+
         let report = JsonNewReport {
             branch: self.branch.clone(),
             hash: self.hash.clone().map(|hash| hash.to_string()),
             testbed: self.testbed.clone(),
             adapter: self.adapter.into(),
-            start_time: output.start,
+            start_time,
             end_time: Utc::now(),
-            benchmarks: vec![benchmarks],
+            benchmarks,
         };
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string_pretty(&report)?)),
@@ -147,6 +158,17 @@ impl From<CliRunFold> for Fold {
             CliRunFold::Max => Self::Max,
             CliRunFold::Mean => Self::Mean,
             CliRunFold::Median => Self::Median,
+        }
+    }
+}
+
+impl Fold {
+    fn fold(&self, benchmarks: Vec<JsonNewBenchmarks>) -> Vec<JsonNewBenchmarks> {
+        match self {
+            Self::Min => benchmarks,
+            Self::Max => benchmarks,
+            Self::Mean => benchmarks,
+            Self::Median => benchmarks,
         }
     }
 }

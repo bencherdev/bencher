@@ -44,11 +44,10 @@ impl TryFrom<CliRunCommand> for Perf {
 
 impl Perf {
     pub fn run(&self) -> Result<Output, BencherError> {
-        let start = Utc::now();
         let result = match self {
             Self::Input(input) => input.to_string(),
             Self::Command(command) => command.try_into()?,
         };
-        Ok(Output { start, result })
+        Ok(Output { result })
     }
 }
