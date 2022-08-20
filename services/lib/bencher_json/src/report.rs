@@ -63,6 +63,8 @@ impl From<Vec<JsonNewBenchmarksMap>> for JsonNewBenchmarks {
     }
 }
 
+type JsonNewPerfListMap = BTreeMap<String, JsonNewPerfList>;
+
 impl JsonNewBenchmarks {
     pub fn min(self) -> Self {
         self.ord(OrdKind::Min)
@@ -75,7 +77,9 @@ impl JsonNewBenchmarks {
     fn ord(self, ord_kind: OrdKind) -> Self {
         let map = self.inner.into_iter().fold(
             BTreeMap::new().into(),
-            |ord_map: JsonNewBenchmarksMap, next_map| ord_map.ord(next_map, ord_kind),
+            |ord_map: JsonNewBenchmarksMap, next_map| {
+                ord_map.combined(next_map, CombinedKind::Ord(ord_kind))
+            },
         );
         vec![map].into()
     }
@@ -84,6 +88,19 @@ impl JsonNewBenchmarks {
         let length = self.inner.len();
         let map: JsonNewBenchmarksMap = self.inner.into_iter().sum();
         vec![map / length].into()
+    }
+
+    pub fn median(self) -> Self {
+        let mut benchmarks_list_map: JsonNewPerfListMap = BTreeMap::new();
+        for benchmarks_map in self.inner.into_iter() {
+            benchmarks_map.append_to(&mut benchmarks_list_map);
+        }
+        vec![benchmarks_list_map
+            .into_iter()
+            .map(|(benchmark_name, json_perf_list)| (benchmark_name, json_perf_list.into()))
+            .collect::<BTreeMap<String, JsonNewPerf>>()
+            .into()]
+        .into()
     }
 }
 
@@ -106,11 +123,7 @@ enum CombinedKind {
 }
 
 impl JsonNewBenchmarksMap {
-    fn ord(self, other: Self, ord_kind: OrdKind) -> Self {
-        self.combined_map(other, CombinedKind::Ord(ord_kind))
-    }
-
-    fn combined_map(self, mut other: Self, kind: CombinedKind) -> Self {
+    fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut benchmarks_map = BTreeMap::new();
         for (benchmark_name, json_perf) in self.inner.into_iter() {
             let other_json_perf = other.inner.remove(&benchmark_name);
@@ -129,13 +142,40 @@ impl JsonNewBenchmarksMap {
         }
         benchmarks_map.into()
     }
+
+    fn append_to(self, benchmarks_list_map: &mut JsonNewPerfListMap) {
+        for (benchmark_name, json_perf) in self.inner.into_iter() {
+            let JsonNewPerf {
+                latency,
+                throughput,
+                compute,
+                memory,
+                storage,
+            } = json_perf;
+            if let Some(json_perfs) = benchmarks_list_map.get_mut(&benchmark_name) {
+                json_perfs.latency.push(latency);
+                json_perfs.throughput.push(throughput);
+                json_perfs.compute.push(compute);
+                json_perfs.memory.push(memory);
+                json_perfs.storage.push(storage);
+            } else {
+                benchmarks_list_map.insert(benchmark_name, JsonNewPerfList {
+                    latency:    vec![latency],
+                    throughput: vec![throughput],
+                    compute:    vec![compute],
+                    memory:     vec![memory],
+                    storage:    vec![storage],
+                });
+            }
+        }
+    }
 }
 
 impl std::ops::Add for JsonNewBenchmarksMap {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        self.combined_map(other, CombinedKind::Add)
+        self.combined(other, CombinedKind::Add)
     }
 }
 
@@ -251,6 +291,33 @@ where
     T: std::ops::Div<usize, Output = T>,
 {
     self_perf.map(|sp| sp / rhs)
+}
+
+struct JsonNewPerfList {
+    pub latency:    Vec<Option<JsonLatency>>,
+    pub throughput: Vec<Option<JsonThroughput>>,
+    pub compute:    Vec<Option<JsonMinMaxAvg>>,
+    pub memory:     Vec<Option<JsonMinMaxAvg>>,
+    pub storage:    Vec<Option<JsonMinMaxAvg>>,
+}
+
+impl From<JsonNewPerfList> for JsonNewPerf {
+    fn from(json_perf_list: JsonNewPerfList) -> Self {
+        let JsonNewPerfList {
+            mut latency,
+            mut throughput,
+            mut compute,
+            mut memory,
+            mut storage,
+        } = json_perf_list;
+        Self {
+            latency:    latency.pop().unwrap(),
+            throughput: throughput.pop().unwrap(),
+            compute:    compute.pop().unwrap(),
+            memory:     memory.pop().unwrap(),
+            storage:    storage.pop().unwrap(),
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
