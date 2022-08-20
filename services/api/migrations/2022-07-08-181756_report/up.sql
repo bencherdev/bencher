@@ -92,8 +92,9 @@ CREATE TABLE latency (
 CREATE TABLE throughput (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    lower_events DOUBLE NOT NULL,
-    upper_events DOUBLE NOT NULL,
+    lower_variance DOUBLE NOT NULL,
+    upper_variance DOUBLE NOT NULL,
+    events DOUBLE NOT NULL,
     unit_time BIGINT NOT NULL
 );
 CREATE TABLE min_max_avg (

@@ -8,7 +8,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-schema = ["schemars"]
+schema = ["schemars", "ordered-float/schemars"]
 wasm = ["wasm-bindgen", "uuid/js"]
 
 [dependencies]
@@ -27,6 +27,7 @@ wasm-bindgen = { version = "0.2.80", optional = true, features = [
     "serde-serialize",
 ] }
 slug = "0.1.4"
+ordered-float = { version = "3.0.0", features = ["serde"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"

@@ -22,23 +22,26 @@ use crate::{
 #[derive(Insertable)]
 #[table_name = "throughput_table"]
 pub struct InsertThroughput {
-    pub uuid:         String,
-    pub lower_events: f64,
-    pub upper_events: f64,
-    pub unit_time:    i64,
+    pub uuid:           String,
+    pub lower_variance: f64,
+    pub upper_variance: f64,
+    pub events:         f64,
+    pub unit_time:      i64,
 }
 
 impl From<JsonThroughput> for InsertThroughput {
     fn from(throughput: JsonThroughput) -> Self {
         let JsonThroughput {
-            lower_events,
-            upper_events,
+            lower_variance,
+            upper_variance,
+            events,
             unit_time,
         } = throughput;
         Self {
             uuid: Uuid::new_v4().to_string(),
-            lower_events,
-            upper_events,
+            lower_variance,
+            upper_variance,
+            events,
             unit_time: unit_time as i64,
         }
     }

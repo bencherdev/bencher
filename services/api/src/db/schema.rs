@@ -139,8 +139,9 @@ table! {
     throughput (id) {
         id -> Integer,
         uuid -> Text,
-        lower_events -> Double,
-        upper_events -> Double,
+        lower_variance -> Double,
+        upper_variance -> Double,
+        events -> Double,
         unit_time -> BigInt,
     }
 }
