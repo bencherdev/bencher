@@ -45,6 +45,12 @@ pub enum JsonNewAdapter {
 }
 
 #[derive(Debug, Copy, Clone)]
+pub enum FoldKind {
+    Ord(OrdKind),
+    Avg(AvgKind),
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum OrdKind {
     Min,
     Max,
@@ -76,6 +82,12 @@ impl JsonNewBenchmarks {
             |ord_map: JsonNewBenchmarksMap, next_map| ord_map.ord(next_map, ord_kind),
         );
         vec![map].into()
+    }
+
+    pub fn mean(self) -> Self {
+        let length = self.inner.len();
+        let map: JsonNewBenchmarksMap = self.inner.into_iter().sum();
+        vec![map / length].into()
     }
 }
 
@@ -119,7 +131,51 @@ impl JsonNewBenchmarksMap {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+impl std::ops::Add for JsonNewBenchmarksMap {
+    type Output = Self;
+
+    fn add(self, mut other: Self) -> Self {
+        let mut benchmarks_map = BTreeMap::new();
+        for (benchmark_name, json_perf) in self.inner.into_iter() {
+            let other_json_perf = other.inner.remove(&benchmark_name);
+            let ord_json_perf = if let Some(other_json_perf) = other_json_perf {
+                json_perf + other_json_perf
+            } else {
+                json_perf
+            };
+            benchmarks_map.insert(benchmark_name, ord_json_perf);
+        }
+        for (benchmark_name, other_json_perf) in other.inner.into_iter() {
+            benchmarks_map.insert(benchmark_name, other_json_perf);
+        }
+        benchmarks_map.into()
+    }
+}
+
+impl std::iter::Sum for JsonNewBenchmarksMap {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.into_iter().fold(
+            BTreeMap::new().into(),
+            |acc_map: JsonNewBenchmarksMap, next_map| acc_map + next_map,
+        )
+    }
+}
+
+impl std::ops::Div<usize> for JsonNewBenchmarksMap {
+    type Output = Self;
+
+    fn div(mut self, rhs: usize) -> Self::Output {
+        for (_, json_perf) in self.inner.iter_mut() {
+            *json_perf = *json_perf / rhs;
+        }
+        self
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPerf {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -189,7 +245,28 @@ where
     })
 }
 
-#[derive(Debug, Default, Eq, Add, Sum, Serialize, Deserialize)]
+impl std::ops::Div<usize> for JsonNewPerf {
+    type Output = Self;
+
+    fn div(self, rhs: usize) -> Self::Output {
+        Self {
+            latency:    div_map(self.latency, rhs),
+            throughput: div_map(self.throughput, rhs),
+            compute:    div_map(self.compute, rhs),
+            memory:     div_map(self.memory, rhs),
+            storage:    div_map(self.storage, rhs),
+        }
+    }
+}
+
+fn div_map<T>(self_perf: Option<T>, rhs: usize) -> Option<T>
+where
+    T: std::ops::Div<usize, Output = T>,
+{
+    self_perf.map(|sp| sp / rhs)
+}
+
+#[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLatency {
     pub lower_variance: u64,
@@ -227,7 +304,19 @@ impl Ord for JsonLatency {
     }
 }
 
-#[derive(Debug, Default, Eq, Add, Sum, Serialize, Deserialize)]
+impl std::ops::Div<usize> for JsonLatency {
+    type Output = Self;
+
+    fn div(self, rhs: usize) -> Self::Output {
+        Self {
+            lower_variance: self.lower_variance / rhs as u64,
+            upper_variance: self.upper_variance / rhs as u64,
+            duration:       self.duration / rhs as u64,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThroughput {
     pub lower_variance: OrderedFloat<f64>,
@@ -278,7 +367,20 @@ impl JsonThroughput {
     }
 }
 
-#[derive(Debug, Default, Eq, Add, Sum, Serialize, Deserialize)]
+impl std::ops::Div<usize> for JsonThroughput {
+    type Output = Self;
+
+    fn div(self, rhs: usize) -> Self::Output {
+        Self {
+            lower_variance: self.lower_variance / rhs as f64,
+            upper_variance: self.upper_variance / rhs as f64,
+            events:         self.events / rhs as f64,
+            unit_time:      self.unit_time / rhs as u64,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMinMaxAvg {
     pub min: OrderedFloat<f64>,
@@ -310,6 +412,18 @@ impl Ord for JsonMinMaxAvg {
             }
         } else {
             avg_order
+        }
+    }
+}
+
+impl std::ops::Div<usize> for JsonMinMaxAvg {
+    type Output = Self;
+
+    fn div(self, rhs: usize) -> Self::Output {
+        Self {
+            min: self.min / rhs as f64,
+            max: self.max / rhs as f64,
+            avg: self.avg / rhs as f64,
         }
     }
 }
