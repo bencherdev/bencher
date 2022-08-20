@@ -43,29 +43,54 @@ pub type JsonNewBenchmarks = Vec<JsonNewBenchmarksMap>;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewBenchmarksMap(BTreeMap<String, JsonNewPerf>);
+pub struct JsonNewBenchmarksMap {
+    map: BTreeMap<String, JsonNewPerf>,
+}
 
 impl Default for JsonNewBenchmarksMap {
     fn default() -> Self {
-        Self(BTreeMap::default())
+        Self {
+            map: BTreeMap::default(),
+        }
     }
+}
+
+#[derive(Copy, Clone)]
+enum OrdKind {
+    Min,
+    Max,
 }
 
 impl JsonNewBenchmarksMap {
     pub fn new() -> Self {
         Self::default()
     }
+
+    pub fn min(self, other: Self) -> Self {
+        self.ord(other, OrdKind::Min)
+    }
+
+    pub fn max(self, other: Self) -> Self {
+        self.ord(other, OrdKind::Max)
+    }
+
+    fn ord(self, mut other: Self, ord_kind: OrdKind) -> Self {
+        let mut benchmarks_map = Self::new();
+        for (benchmark_name, json_perf) in self.map.into_iter() {
+            let other_json_perf = other.map.remove(&benchmark_name);
+            let ord_json_perf = if let Some(other_json_perf) = other_json_perf {
+                json_perf.ord(other_json_perf, ord_kind)
+            } else {
+                json_perf
+            };
+            benchmarks_map.map.insert(benchmark_name, ord_json_perf);
+        }
+        for (benchmark_name, other_json_perf) in other.map.into_iter() {
+            benchmarks_map.map.insert(benchmark_name, other_json_perf);
+        }
+        benchmarks_map
+    }
 }
-
-// impl JsonNewPerf {
-//     pub fn min(self, other: Self) -> Self {
-
-//     }
-
-//     pub fn max(self, other: Self) -> Self {
-
-//     }
-// }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -83,47 +108,27 @@ pub struct JsonNewPerf {
 }
 
 impl JsonNewPerf {
-    pub fn min(self, other: Self) -> Self {
+    fn ord(self, other: Self, ord_kind: OrdKind) -> Self {
         JsonNewPerf {
-            latency:    min_map(self.latency, other.latency),
-            throughput: min_map(self.throughput, other.throughput),
-            compute:    min_map(self.compute, other.compute),
-            memory:     min_map(self.memory, other.memory),
-            storage:    min_map(self.storage, other.storage),
-        }
-    }
-
-    pub fn max(self, other: Self) -> Self {
-        JsonNewPerf {
-            latency:    max_map(self.latency, other.latency),
-            throughput: max_map(self.throughput, other.throughput),
-            compute:    max_map(self.compute, other.compute),
-            memory:     max_map(self.memory, other.memory),
-            storage:    max_map(self.storage, other.storage),
+            latency:    ord_map(self.latency, other.latency, ord_kind),
+            throughput: ord_map(self.throughput, other.throughput, ord_kind),
+            compute:    ord_map(self.compute, other.compute, ord_kind),
+            memory:     ord_map(self.memory, other.memory, ord_kind),
+            storage:    ord_map(self.storage, other.storage, ord_kind),
         }
     }
 }
 
-fn min_map<T>(self_perf: Option<T>, other_perf: Option<T>) -> Option<T>
+fn ord_map<T>(self_perf: Option<T>, other_perf: Option<T>, ord_kind: OrdKind) -> Option<T>
 where
     T: Ord,
 {
     self_perf.map(|sp| {
         if let Some(op) = other_perf {
-            sp.min(op)
-        } else {
-            sp
-        }
-    })
-}
-
-fn max_map<T>(self_perf: Option<T>, other_perf: Option<T>) -> Option<T>
-where
-    T: Ord,
-{
-    self_perf.map(|sp| {
-        if let Some(op) = other_perf {
-            sp.max(op)
+            match ord_kind {
+                OrdKind::Min => sp.min(op),
+                OrdKind::Max => sp.max(op),
+            }
         } else {
             sp
         }
