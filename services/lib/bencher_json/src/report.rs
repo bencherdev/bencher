@@ -45,21 +45,9 @@ pub enum JsonNewAdapter {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum FoldKind {
-    Ord(OrdKind),
-    Avg(AvgKind),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum OrdKind {
+enum OrdKind {
     Min,
     Max,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum AvgKind {
-    Mean,
-    Median,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -76,7 +64,15 @@ impl From<Vec<JsonNewBenchmarksMap>> for JsonNewBenchmarks {
 }
 
 impl JsonNewBenchmarks {
-    pub fn ord(self, ord_kind: OrdKind) -> Self {
+    pub fn min(self) -> Self {
+        self.ord(OrdKind::Min)
+    }
+
+    pub fn max(self) -> Self {
+        self.ord(OrdKind::Max)
+    }
+
+    fn ord(self, ord_kind: OrdKind) -> Self {
         let map = self.inner.into_iter().fold(
             BTreeMap::new().into(),
             |ord_map: JsonNewBenchmarksMap, next_map| ord_map.ord(next_map, ord_kind),
@@ -105,14 +101,6 @@ impl From<BTreeMap<String, JsonNewPerf>> for JsonNewBenchmarksMap {
 }
 
 impl JsonNewBenchmarksMap {
-    pub fn min(self, other: Self) -> Self {
-        self.ord(other, OrdKind::Min)
-    }
-
-    pub fn max(self, other: Self) -> Self {
-        self.ord(other, OrdKind::Max)
-    }
-
     fn ord(self, mut other: Self, ord_kind: OrdKind) -> Self {
         let mut benchmarks_map = BTreeMap::new();
         for (benchmark_name, json_perf) in self.inner.into_iter() {

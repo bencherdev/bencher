@@ -5,11 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use bencher_json::{
-    report::{
-        AvgKind,
-        JsonNewBenchmarks,
-        OrdKind,
-    },
+    report::JsonNewBenchmarks,
     JsonNewReport,
 };
 use chrono::Utc;
@@ -150,17 +146,19 @@ impl SubCmd for Run {
 
 #[derive(Debug)]
 enum Fold {
-    Ord(OrdKind),
-    Avg(AvgKind),
+    Min,
+    Max,
+    Mean,
+    Median,
 }
 
 impl From<CliRunFold> for Fold {
     fn from(fold: CliRunFold) -> Self {
         match fold {
-            CliRunFold::Min => Self::Ord(OrdKind::Min),
-            CliRunFold::Max => Self::Ord(OrdKind::Max),
-            CliRunFold::Mean => Self::Avg(AvgKind::Mean),
-            CliRunFold::Median => Self::Avg(AvgKind::Median),
+            CliRunFold::Min => Self::Min,
+            CliRunFold::Max => Self::Max,
+            CliRunFold::Mean => Self::Mean,
+            CliRunFold::Median => Self::Median,
         }
     }
 }
@@ -168,8 +166,10 @@ impl From<CliRunFold> for Fold {
 impl Fold {
     fn fold(&self, benchmarks: JsonNewBenchmarks) -> JsonNewBenchmarks {
         match self {
-            Self::Ord(ord_kind) => benchmarks.ord(*ord_kind),
-            Self::Avg(avg_kind) => benchmarks,
+            Self::Min => benchmarks.min(),
+            Self::Max => benchmarks.max(),
+            Self::Mean => benchmarks.mean(),
+            Self::Median => benchmarks,
         }
     }
 }
