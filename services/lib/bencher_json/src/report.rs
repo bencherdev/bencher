@@ -528,14 +528,14 @@ impl Median for JsonMinMaxAvg {}
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
-    pub uuid:         Uuid,
-    pub user_uuid:    Uuid,
-    pub version_uuid: Uuid,
-    pub testbed_uuid: Uuid,
-    pub adapter_uuid: Uuid,
-    pub start_time:   DateTime<Utc>,
-    pub end_time:     DateTime<Utc>,
-    pub benchmarks:   JsonBenchmarks,
+    pub uuid:       Uuid,
+    pub user_uuid:  Uuid,
+    pub version:    Uuid,
+    pub testbed:    Uuid,
+    pub adapter:    Uuid,
+    pub start_time: DateTime<Utc>,
+    pub end_time:   DateTime<Utc>,
+    pub benchmarks: JsonBenchmarks,
 }
 
 pub type JsonBenchmarks = Vec<JsonBenchmarkPerf>;
@@ -543,6 +543,6 @@ pub type JsonBenchmarks = Vec<JsonBenchmarkPerf>;
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarkPerf {
-    pub benchmark_uuid: Uuid,
-    pub perf_uuid:      Uuid,
+    pub benchmark: Uuid,
+    pub perf_uuid: Uuid,
 }

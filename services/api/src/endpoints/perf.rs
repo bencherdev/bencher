@@ -96,15 +96,15 @@ pub async fn post(
 
     let conn = db_connection.lock().await;
     let mut perf = Vec::new();
-    for branch_uuid in &branches {
-        for testbed_uuid in &testbeds {
-            for benchmark_uuid in &benchmarks {
+    for branch in &branches {
+        for testbed in &testbeds {
+            for benchmark in &benchmarks {
                 let query = schema::perf::table
                     .left_join(
                         schema::benchmark::table
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
                     )
-                    .filter(schema::benchmark::uuid.eq(benchmark_uuid.to_string()))
+                    .filter(schema::benchmark::uuid.eq(benchmark.to_string()))
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
@@ -114,7 +114,7 @@ pub async fn post(
                         schema::testbed::table
                             .on(schema::report::testbed_id.eq(schema::testbed::id)),
                     )
-                    .filter(schema::testbed::uuid.eq(testbed_uuid.to_string()))
+                    .filter(schema::testbed::uuid.eq(testbed.to_string()))
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
@@ -122,7 +122,7 @@ pub async fn post(
                     .left_join(
                         schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
                     )
-                    .filter(schema::branch::uuid.eq(branch_uuid.to_string()));
+                    .filter(schema::branch::uuid.eq(branch.to_string()));
 
                 let query_perf_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query
@@ -391,9 +391,9 @@ pub async fn post(
                 };
 
                 let json_perf_data = to_json(
-                    branch_uuid.clone(),
-                    testbed_uuid.clone(),
-                    benchmark_uuid.clone(),
+                    branch.clone(),
+                    testbed.clone(),
+                    benchmark.clone(),
                     query_perf_data,
                 )?;
 
@@ -416,9 +416,9 @@ pub async fn post(
 }
 
 fn to_json(
-    branch_uuid: Uuid,
-    testbed_uuid: Uuid,
-    benchmark_uuid: Uuid,
+    branch: Uuid,
+    testbed: Uuid,
+    benchmark: Uuid,
     perf_data: Vec<QueryPerfDatum>,
 ) -> Result<JsonPerfData, HttpError> {
     let mut data = Vec::new();
@@ -426,9 +426,9 @@ fn to_json(
         data.push(QueryPerfDatum::to_json(perf_datum)?)
     }
     Ok(JsonPerfData {
-        branch_uuid,
-        testbed_uuid,
-        benchmark_uuid,
+        branch,
+        testbed,
+        benchmark,
         data,
     })
 }

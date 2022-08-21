@@ -127,8 +127,8 @@ impl InsertPerf {
             .execute(conn)
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
-        let benchmark_uuid = QueryBenchmark::get_uuid(conn, benchmark_id)?;
+        let benchmark = QueryBenchmark::get_uuid(conn, benchmark_id)?;
 
-        Ok((benchmark_uuid, perf_uuid))
+        Ok((benchmark, perf_uuid))
     }
 }

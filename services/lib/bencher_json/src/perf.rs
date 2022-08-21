@@ -50,10 +50,10 @@ pub struct JsonPerf {
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfData {
-    pub branch_uuid:    Uuid,
-    pub testbed_uuid:   Uuid,
-    pub benchmark_uuid: Uuid,
-    pub data:           Vec<JsonPerfDatum>,
+    pub branch:    Uuid,
+    pub testbed:   Uuid,
+    pub benchmark: Uuid,
+    pub data:      Vec<JsonPerfDatum>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

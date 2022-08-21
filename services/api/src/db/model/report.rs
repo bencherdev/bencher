@@ -80,9 +80,9 @@ impl QueryReport {
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(REPORT_ERROR))?,
             user_uuid: QueryUser::get_uuid(conn, user_id)?,
-            version_uuid: QueryVersion::get_uuid(conn, version_id)?,
-            testbed_uuid: QueryTestbed::get_uuid(conn, testbed_id)?,
-            adapter_uuid: QueryAdapter::get_uuid(conn, adapter_id)?,
+            version: QueryVersion::get_uuid(conn, version_id)?,
+            testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
+            adapter: QueryAdapter::get_uuid(conn, adapter_id)?,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             benchmarks,
@@ -112,9 +112,9 @@ fn get_benchmarks(conn: &SqliteConnection, report_id: i32) -> Result<JsonBenchma
         .map_err(|_| http_error!(REPORT_ERROR))?;
 
     let mut benchmarks = JsonBenchmarks::new();
-    for (benchmark_uuid, perf_uuid) in uuids {
+    for (benchmark, perf_uuid) in uuids {
         benchmarks.push(JsonBenchmarkPerf {
-            benchmark_uuid: Uuid::from_str(&benchmark_uuid)
+            benchmark: Uuid::from_str(&benchmark)
                 .map_err(|_| http_error!(REPORT_ERROR))?,
             perf_uuid:      Uuid::from_str(&perf_uuid).map_err(|_| http_error!(REPORT_ERROR))?,
         });

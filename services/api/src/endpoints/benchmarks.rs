@@ -113,7 +113,7 @@ pub async fn get_one(
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonBenchmark>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
-    let benchmark_uuid = path_params.benchmark.to_string();
+    let benchmark = path_params.benchmark.to_string();
 
     let conn = db_connection.lock().await;
     let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
@@ -121,7 +121,7 @@ pub async fn get_one(
         .filter(
             schema::benchmark::project_id
                 .eq(project.id)
-                .and(schema::benchmark::uuid.eq(&benchmark_uuid)),
+                .and(schema::benchmark::uuid.eq(&benchmark)),
         )
         .first::<QueryBenchmark>(&*conn)
     {

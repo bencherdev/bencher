@@ -68,12 +68,12 @@ pub async fn get_ls(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct PathParams {
-    pub adapter_uuid: Uuid,
+    pub adapter: Uuid,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/adapters/{adapter_uuid}",
+    path =  "/v0/adapters/{adapter}",
     tags = ["projects"]
 }]
 pub async fn one_options(
@@ -85,7 +85,7 @@ pub async fn one_options(
 
 #[endpoint {
     method = GET,
-    path = "/v0/adapters/{adapter_uuid}",
+    path = "/v0/adapters/{adapter}",
     tags = ["adapters"]
 }]
 pub async fn get_one(
@@ -97,7 +97,7 @@ pub async fn get_one(
 
     let conn = db_connection.lock().await;
     let query = schema::adapter::table
-        .filter(schema::adapter::uuid.eq(&path_params.adapter_uuid.to_string()))
+        .filter(schema::adapter::uuid.eq(&path_params.adapter.to_string()))
         .first::<QueryAdapter>(&*conn)
         .map_err(|_| http_error!("Failed to get adapter."))?;
     let json = query.to_json()?;

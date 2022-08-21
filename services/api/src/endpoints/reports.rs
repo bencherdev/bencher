@@ -207,7 +207,7 @@ pub async fn post(
     let mut benchmarks = JsonBenchmarks::new();
     for (index, benchmark_perf) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_perf) in benchmark_perf.inner {
-            let (benchmark_uuid, perf_uuid) = InsertPerf::from_json(
+            let (benchmark, perf_uuid) = InsertPerf::from_json(
                 &*conn,
                 project_id,
                 query_report.id,
@@ -216,7 +216,7 @@ pub async fn post(
                 json_perf,
             )?;
             benchmarks.push(JsonBenchmarkPerf {
-                benchmark_uuid,
+                benchmark,
                 perf_uuid,
             });
         }

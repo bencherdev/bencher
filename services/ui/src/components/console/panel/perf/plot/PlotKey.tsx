@@ -80,9 +80,9 @@ const ExpandedKey = (props) => {
       <For each={props.perf_data()?.perf}>
         {(
           perf: {
-            branch_uuid: string;
-            testbed_uuid: string;
-            benchmark_uuid: string;
+            branch: string;
+            testbed: string;
+            benchmark: string;
           },
           index
         ) => (
@@ -91,15 +91,15 @@ const ExpandedKey = (props) => {
             <div class="content">
               <KeyResource
                 icon="fas fa-code-branch"
-                name={props.branches()?.[perf.branch_uuid]?.name}
+                name={props.branches()?.[perf.branch]?.name}
               />
               <KeyResource
                 icon="fas fa-server"
-                name={props.testbeds()?.[perf.testbed_uuid]?.name}
+                name={props.testbeds()?.[perf.testbed]?.name}
               />
               <KeyResource
                 icon="fas fa-tachometer-alt"
-                name={props.benchmarks()?.[perf.benchmark_uuid]?.name}
+                name={props.benchmarks()?.[perf.benchmark]?.name}
               />
             </div>
             <KeyButton
