@@ -95,7 +95,7 @@ pub async fn post(
     let order_by = (schema::version::number, schema::perf::iteration);
 
     let conn = db_connection.lock().await;
-    let mut perf = Vec::new();
+    let mut perf_data = Vec::new();
     for branch in &branches {
         for testbed in &testbeds {
             for benchmark in &benchmarks {
@@ -124,7 +124,7 @@ pub async fn post(
                     )
                     .filter(schema::branch::uuid.eq(branch.to_string()));
 
-                let query_perf_data: Vec<QueryPerfDatum> = match kind {
+                let query_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query
                         .inner_join(
                             schema::latency::table
@@ -147,7 +147,7 @@ pub async fn post(
                         .into_iter()
                         .map(
                             |(
-                                perf_uuid,
+                                uuid,
                                 iteration,
                                 start_time,
                                 end_time,
@@ -157,19 +157,19 @@ pub async fn post(
                                 upper_variance,
                                 duration,
                             )| {
-                                let datum = QueryPerfDatumKind::Latency(QueryLatency {
+                                let perf = QueryPerfDatumKind::Latency(QueryLatency {
                                     lower_variance,
                                     upper_variance,
                                     duration,
                                 });
                                 QueryPerfDatum {
-                                    perf_uuid,
+                                    uuid,
                                     iteration,
                                     start_time,
                                     end_time,
                                     version_number,
                                     version_hash,
-                                    datum,
+                                    perf,
                                 }
                             },
                         )
@@ -208,7 +208,7 @@ pub async fn post(
                             .into_iter()
                             .map(
                                 |(
-                                    perf_uuid,
+                                    uuid,
                                     iteration,
                                     start_time,
                                     end_time,
@@ -219,20 +219,20 @@ pub async fn post(
                                     events,
                                     unit_time,
                                 )| {
-                                    let datum = QueryPerfDatumKind::Throughput(QueryThroughput {
+                                    let perf = QueryPerfDatumKind::Throughput(QueryThroughput {
                                         lower_variance,
                                         upper_variance,
                                         events,
                                         unit_time,
                                     });
                                     QueryPerfDatum {
-                                        perf_uuid,
+                                        uuid,
                                         iteration,
                                         start_time,
                                         end_time,
                                         version_number,
                                         version_hash,
-                                        datum,
+                                        perf,
                                     }
                                 },
                             )
@@ -262,7 +262,7 @@ pub async fn post(
                             .into_iter()
                             .map(
                                 |(
-                                    perf_uuid,
+                                    uuid,
                                     iteration,
                                     start_time,
                                     end_time,
@@ -272,19 +272,19 @@ pub async fn post(
                                     max,
                                     avg,
                                 )| {
-                                    let datum = QueryPerfDatumKind::Compute(QueryMinMaxAvg {
+                                    let perf = QueryPerfDatumKind::Compute(QueryMinMaxAvg {
                                         min,
                                         max,
                                         avg,
                                     });
                                     QueryPerfDatum {
-                                        perf_uuid,
+                                        uuid,
                                         iteration,
                                         start_time,
                                         end_time,
                                         version_number,
                                         version_hash,
-                                        datum,
+                                        perf,
                                     }
                                 },
                             )
@@ -312,7 +312,7 @@ pub async fn post(
                         .into_iter()
                         .map(
                             |(
-                                perf_uuid,
+                                uuid,
                                 iteration,
                                 start_time,
                                 end_time,
@@ -322,16 +322,16 @@ pub async fn post(
                                 max,
                                 avg,
                             )| {
-                                let datum =
+                                let perf =
                                     QueryPerfDatumKind::Memory(QueryMinMaxAvg { min, max, avg });
                                 QueryPerfDatum {
-                                    perf_uuid,
+                                    uuid,
                                     iteration,
                                     start_time,
                                     end_time,
                                     version_number,
                                     version_hash,
-                                    datum,
+                                    perf,
                                 }
                             },
                         )
@@ -360,7 +360,7 @@ pub async fn post(
                             .into_iter()
                             .map(
                                 |(
-                                    perf_uuid,
+                                    uuid,
                                     iteration,
                                     start_time,
                                     end_time,
@@ -370,19 +370,19 @@ pub async fn post(
                                     max,
                                     avg,
                                 )| {
-                                    let datum = QueryPerfDatumKind::Storage(QueryMinMaxAvg {
+                                    let perf = QueryPerfDatumKind::Storage(QueryMinMaxAvg {
                                         min,
                                         max,
                                         avg,
                                     });
                                     QueryPerfDatum {
-                                        perf_uuid,
+                                        uuid,
                                         iteration,
                                         start_time,
                                         end_time,
                                         version_number,
                                         version_hash,
-                                        datum,
+                                        perf,
                                     }
                                 },
                             )
@@ -394,10 +394,10 @@ pub async fn post(
                     branch.clone(),
                     testbed.clone(),
                     benchmark.clone(),
-                    query_perf_data,
+                    query_data,
                 )?;
 
-                perf.push(json_perf_data);
+                perf_data.push(json_perf_data);
             }
         }
     }
@@ -406,7 +406,7 @@ pub async fn post(
         kind,
         start_time,
         end_time,
-        perf,
+        perf_data,
     };
 
     Ok(HttpResponseHeaders::new(
@@ -419,11 +419,11 @@ fn to_json(
     branch: Uuid,
     testbed: Uuid,
     benchmark: Uuid,
-    perf_data: Vec<QueryPerfDatum>,
+    query_data: Vec<QueryPerfDatum>,
 ) -> Result<JsonPerfData, HttpError> {
     let mut data = Vec::new();
-    for perf_datum in perf_data {
-        data.push(QueryPerfDatum::to_json(perf_datum)?)
+    for query_datum in query_data {
+        data.push(QueryPerfDatum::to_json(query_datum)?)
     }
     Ok(JsonPerfData {
         branch,
@@ -435,34 +435,34 @@ fn to_json(
 
 #[derive(Debug)]
 pub struct QueryPerfDatum {
-    pub perf_uuid:      String,
+    pub uuid:           String,
     pub iteration:      i32,
     pub start_time:     i64,
     pub end_time:       i64,
     pub version_number: i32,
     pub version_hash:   Option<String>,
-    pub datum:          QueryPerfDatumKind,
+    pub perf:           QueryPerfDatumKind,
 }
 
 impl QueryPerfDatum {
     fn to_json(self) -> Result<JsonPerfDatum, HttpError> {
         let Self {
-            perf_uuid,
+            uuid,
             iteration,
             start_time,
             end_time,
             version_number,
             version_hash,
-            datum,
+            perf,
         } = self;
         Ok(JsonPerfDatum {
-            perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(PERF_ERROR))?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(PERF_ERROR))?,
             iteration: iteration as u32,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             version_number: version_number as u32,
             version_hash,
-            datum: QueryPerfDatumKind::to_json(datum)?,
+            perf: QueryPerfDatumKind::to_json(perf)?,
         })
     }
 }

@@ -2,16 +2,16 @@ import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { PerKind } from "../../../config/types";
 
-const getDatum = (kind, datum) => {
+const getPerf = (kind, perf) => {
   switch (kind) {
     case PerKind.LATENCY:
-      return datum?.duration;
+      return perf?.duration;
     case PerKind.THROUGHPUT:
-      return datum?.event / datum?.unit_time;
+      return perf?.event / perf?.unit_time;
     case PerKind.COMPUTE:
     case PerKind.MEMORY:
     case PerKind.STORAGE:
-      return datum?.avg;
+      return perf?.avg;
     default:
       return 0;
   }
@@ -34,19 +34,19 @@ const getLabel = (kind) => {
 
 const LinePlot = (props) => {
   const plotted = () => {
-    const perf_data = props.perf_data();
+    const json_perf = props.perf_data();
     if (
-      typeof perf_data !== "object" ||
-      perf_data === null ||
-      !Array.isArray(perf_data.perf)
+      typeof json_perf !== "object" ||
+      json_perf === null ||
+      !Array.isArray(json_perf.perf_data)
     ) {
       return;
     }
 
     const plot_arrays = [];
     const colors = d3.schemeTableau10;
-    perf_data.perf.forEach((perf, index) => {
-      const data = perf.data;
+    json_perf.perf_data.forEach((perf_data, index) => {
+      const data = perf_data.data;
       if (!(Array.isArray(data) && props.perf_active[index])) {
         return;
       }
@@ -55,7 +55,7 @@ const LinePlot = (props) => {
       data.forEach((datum) => {
         const x_value = new Date(datum.start_time);
         x_value.setSeconds(x_value.getSeconds() + datum.iteration);
-        const y_value = getDatum(perf_data.kind, datum.datum);
+        const y_value = getPerf(json_perf.kind, datum.perf);
         const xy = [x_value, y_value];
         line_data.push(xy);
       });
@@ -67,7 +67,7 @@ const LinePlot = (props) => {
     return Plot.plot({
       y: {
         grid: true,
-        label: getLabel(perf_data.kind),
+        label: getLabel(json_perf.kind),
       },
       marks: plot_arrays,
     });

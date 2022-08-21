@@ -77,7 +77,7 @@ const ExpandedKey = (props) => {
     <>
       <MinimizeKeyButton handleKey={props.handleKey} />
       <br />
-      <For each={props.perf_data()?.perf}>
+      <For each={props.perf_data()?.perf_data}>
         {(
           perf: {
             branch: string;
@@ -121,7 +121,7 @@ const MinimizedKey = (props) => {
     <>
       <MaximizeKeyButton handleKey={props.handleKey} />
       <br />
-      <For each={props.perf_data()?.perf}>
+      <For each={props.perf_data()?.perf_data}>
         {(_perf, index) => (
           <KeyButton
             index={index}

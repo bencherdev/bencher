@@ -18,10 +18,7 @@ use super::{
 use crate::{
     db::{
         schema,
-        schema::{
-            branch as branch_table,
-            threshold as threshold_table,
-        },
+        schema::threshold as threshold_table,
     },
     diesel::{
         ExpressionMethods,

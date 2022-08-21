@@ -6,9 +6,9 @@ import PlotKey from "./PlotKey";
 const Plot = (props) => {
   const [perf_active, setPerfActive] = createStore([]);
 
-  const [_perf_active] = createResource(props.perf_data, (perf_data) => {
+  const [_perf_active] = createResource(props.perf_data, (json_perf) => {
     const active = [];
-    perf_data?.perf.forEach(() => {
+    json_perf?.perf_data.forEach(() => {
       active.push(true);
     });
     setPerfActive(active);
