@@ -529,7 +529,7 @@ impl Median for JsonMinMaxAvg {}
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid:       Uuid,
-    pub user_uuid:  Uuid,
+    pub user:       Uuid,
     pub version:    Uuid,
     pub testbed:    Uuid,
     pub adapter:    Uuid,
