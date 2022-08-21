@@ -332,12 +332,13 @@ trait Median {
     {
         array.sort_unstable();
 
-        if (array.len() % 2) == 0 {
-            let ind_left = array.len() / 2 - 1;
-            let ind_right = array.len() / 2;
-            Some((array[ind_left]? + array[ind_right]?) / 2)
+        let size = array.len();
+        if (size % 2) == 0 {
+            let left = size / 2 - 1;
+            let right = size / 2;
+            Some((array[left]? + array[right]?) / 2)
         } else {
-            array[(array.len() / 2)]
+            array[(size / 2)]
         }
     }
 }
