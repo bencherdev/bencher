@@ -7,6 +7,7 @@ pub mod perf;
 pub mod project;
 pub mod report;
 pub mod testbed;
+pub mod threshold;
 
 pub use adapter::JsonAdapter;
 pub use auth::{
