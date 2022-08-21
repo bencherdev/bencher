@@ -20,8 +20,8 @@ pub struct JsonNewBranch {
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranch {
-    pub uuid:         Uuid,
-    pub project_uuid: Uuid,
-    pub name:         String,
-    pub slug:         String,
+    pub uuid:    Uuid,
+    pub project: Uuid,
+    pub name:    String,
+    pub slug:    String,
 }

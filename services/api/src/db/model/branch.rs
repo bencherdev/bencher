@@ -65,7 +65,7 @@ impl QueryBranch {
         } = self;
         Ok(JsonBranch {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(BRANCH_ERROR))?,
-            project_uuid: QueryProject::get_uuid(conn, project_id)?,
+            project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,
         })

@@ -79,7 +79,7 @@ impl QueryTestbed {
         } = self;
         Ok(JsonTestbed {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(TESTBED_ERROR))?,
-            project_uuid: QueryProject::get_uuid(conn, project_id)?,
+            project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,
             os_name,

@@ -10,6 +10,6 @@ use uuid::Uuid;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmark {
     pub uuid:         Uuid,
-    pub project_uuid: Uuid,
+    pub project: Uuid,
     pub name:         String,
 }

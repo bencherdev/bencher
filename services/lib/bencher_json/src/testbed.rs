@@ -35,7 +35,7 @@ pub struct JsonNewTestbed {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbed {
     pub uuid: Uuid,
-    pub project_uuid: Uuid,
+    pub project: Uuid,
     pub name: String,
     pub slug: String,
     pub os_name: Option<String>,
