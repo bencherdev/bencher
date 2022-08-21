@@ -11,8 +11,9 @@ const PORT_KEY: &str = "BENCHER_PORT";
 const DEFAULT_IP: &str = "0.0.0.0";
 const DEFAULT_PORT: &str = "8080";
 
-// 16 megabytes or 16_777_216 bytes
-const MAX_BODY_SIZE: usize = 1 << 24;
+// TODO increase and add as a customizable feature
+// 1 megabyte or 1_048_576 bytes
+const MAX_BODY_SIZE: usize = 1 << 20;
 
 use super::registrar::Registrar;
 
