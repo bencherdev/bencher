@@ -9,6 +9,7 @@ pub mod ping;
 pub mod projects;
 pub mod reports;
 pub mod testbeds;
+pub mod thresholds;
 
 use crate::util::{
     registrar::Registrar,
@@ -66,6 +67,13 @@ impl Registrar<Context> for Api {
         api.register(benchmarks::get_ls)?;
         api.register(benchmarks::one_options)?;
         api.register(benchmarks::get_one)?;
+        // Thresholds
+        api.register(thresholds::dir_options)?;
+        api.register(thresholds::get_ls)?;
+        api.register(thresholds::post_options)?;
+        api.register(thresholds::post)?;
+        api.register(thresholds::one_options)?;
+        api.register(thresholds::get_one)?;
 
         Ok(())
     }
