@@ -65,12 +65,13 @@ pub struct JsonPerfDatum {
     pub end_time:       DateTime<Utc>,
     pub version_number: u32,
     pub version_hash:   Option<String>,
+    #[serde(flatten)]
     pub perf:           JsonPerfDatumKind,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(untagged)]
+#[serde(rename_all = "lowercase")]
 pub enum JsonPerfDatumKind {
     Latency(JsonLatency),
     Throughput(JsonThroughput),

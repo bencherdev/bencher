@@ -2,16 +2,18 @@ import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { PerKind } from "../../../config/types";
 
-const getPerf = (kind, perf) => {
+const getPerf = (kind, datum) => {
   switch (kind) {
     case PerKind.LATENCY:
-      return perf?.duration;
+      return datum?.latency?.duration;
     case PerKind.THROUGHPUT:
-      return perf?.event / perf?.unit_time;
+      return datum?.throughput?.event / datum?.throughput?.unit_time;
     case PerKind.COMPUTE:
+      return datum?.compute?.duration;
     case PerKind.MEMORY:
+      return datum?.memory?.duration;
     case PerKind.STORAGE:
-      return perf?.avg;
+      return datum?.storage?.duration;
     default:
       return 0;
   }
@@ -55,7 +57,7 @@ const LinePlot = (props) => {
       data.forEach((datum) => {
         const x_value = new Date(datum.start_time);
         x_value.setSeconds(x_value.getSeconds() + datum.iteration);
-        const y_value = getPerf(json_perf.kind, datum.perf);
+        const y_value = getPerf(json_perf.kind, datum);
         const xy = [x_value, y_value];
         line_data.push(xy);
       });
