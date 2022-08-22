@@ -44,7 +44,7 @@ pub struct JsonPerf {
     pub kind:       JsonPerfKind,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time:   Option<DateTime<Utc>>,
-    pub perf_data:  Vec<JsonPerfData>,
+    pub data:       Vec<JsonPerfData>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -53,7 +53,7 @@ pub struct JsonPerfData {
     pub branch:    Uuid,
     pub testbed:   Uuid,
     pub benchmark: Uuid,
-    pub data:      Vec<JsonPerfDatum>,
+    pub perfs:     Vec<JsonPerfDatum>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -95,7 +95,7 @@ pub async fn post(
     let order_by = (schema::version::number, schema::perf::iteration);
 
     let conn = db_connection.lock().await;
-    let mut perf_data = Vec::new();
+    let mut data = Vec::new();
     for branch in &branches {
         for testbed in &testbeds {
             for benchmark in &benchmarks {
@@ -397,7 +397,7 @@ pub async fn post(
                     query_data,
                 )?;
 
-                perf_data.push(json_perf_data);
+                data.push(json_perf_data);
             }
         }
     }
@@ -406,7 +406,7 @@ pub async fn post(
         kind,
         start_time,
         end_time,
-        perf_data,
+        data,
     };
 
     Ok(HttpResponseHeaders::new(
@@ -421,15 +421,15 @@ fn to_json(
     benchmark: Uuid,
     query_data: Vec<QueryPerfDatum>,
 ) -> Result<JsonPerfData, HttpError> {
-    let mut data = Vec::new();
+    let mut perfs = Vec::new();
     for query_datum in query_data {
-        data.push(QueryPerfDatum::to_json(query_datum)?)
+        perfs.push(QueryPerfDatum::to_json(query_datum)?)
     }
     Ok(JsonPerfData {
         branch,
         testbed,
         benchmark,
-        data,
+        perfs,
     })
 }
 
