@@ -17,6 +17,7 @@ mod report;
 mod run;
 mod subcmd;
 mod testbed;
+mod threshold;
 
 use auth::Auth;
 use benchmark::Benchmark;
@@ -27,6 +28,7 @@ use report::Report;
 use run::Run;
 pub use subcmd::SubCmd;
 use testbed::Testbed;
+use threshold::Threshold;
 
 #[derive(Debug)]
 pub enum Sub {
@@ -35,8 +37,9 @@ pub enum Sub {
     Report(Report),
     Branch(Branch),
     Testbed(Testbed),
-    Benchmark(Benchmark),
+    Threshold(Threshold),
     Run(Run),
+    Benchmark(Benchmark),
     Perf(Perf),
 }
 
@@ -50,8 +53,9 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Report(report) => Self::Report(Report::try_from(report)?),
             CliSub::Branch(branch) => Self::Branch(Branch::try_from(branch)?),
             CliSub::Testbed(testbed) => Self::Testbed(Testbed::try_from(testbed)?),
-            CliSub::Benchmark(benchmark) => Self::Benchmark(Benchmark::try_from(benchmark)?),
+            CliSub::Threshold(threshold) => Self::Threshold(Threshold::try_from(threshold)?),
             CliSub::Run(run) => Self::Run(Run::try_from(run)?),
+            CliSub::Benchmark(benchmark) => Self::Benchmark(Benchmark::try_from(benchmark)?),
             CliSub::Perf(perf) => Self::Perf(Perf::try_from(perf)?),
         })
     }
@@ -74,8 +78,9 @@ impl SubCmd for Sub {
             Self::Report(report) => report.exec(wide).await,
             Self::Branch(branch) => branch.exec(wide).await,
             Self::Testbed(testbed) => testbed.exec(wide).await,
-            Self::Benchmark(benchmark) => benchmark.exec(wide).await,
+            Self::Threshold(threshold) => threshold.exec(wide).await,
             Self::Run(run) => run.exec(wide).await,
+            Self::Benchmark(benchmark) => benchmark.exec(wide).await,
             Self::Perf(perf) => perf.exec(wide).await,
         }
     }

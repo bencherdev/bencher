@@ -13,6 +13,7 @@ pub mod project;
 pub mod report;
 pub mod run;
 pub mod testbed;
+pub mod threshold;
 
 use auth::CliAuth;
 use benchmark::CliBenchmark;
@@ -22,6 +23,7 @@ use project::CliProject;
 use report::CliReport;
 use run::CliRun;
 use testbed::CliTestbed;
+use threshold::CliThreshold;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
@@ -56,11 +58,14 @@ pub enum CliSub {
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),
+    /// Manage thresholds
+    #[clap(subcommand)]
+    Threshold(CliThreshold),
+    /// Run benchmarks
+    Run(CliRun),
     /// Manage benchmarks
     #[clap(subcommand)]
     Benchmark(CliBenchmark),
-    /// Run benchmarks
-    Run(CliRun),
     /// Query benchmark data
     Perf(CliPerf),
 }

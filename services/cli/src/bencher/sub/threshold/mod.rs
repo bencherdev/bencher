@@ -5,7 +5,7 @@ use crate::{
         sub::SubCmd,
         wide::Wide,
     },
-    cli::testbed::CliTestbed,
+    cli::threshold::CliThreshold,
     BencherError,
 };
 
@@ -14,26 +14,26 @@ mod list;
 mod view;
 
 #[derive(Debug)]
-pub enum Testbed {
+pub enum Threshold {
     List(list::List),
     Create(create::Create),
     View(view::View),
 }
 
-impl TryFrom<CliTestbed> for Testbed {
+impl TryFrom<CliThreshold> for Threshold {
     type Error = BencherError;
 
-    fn try_from(testbed: CliTestbed) -> Result<Self, Self::Error> {
-        Ok(match testbed {
-            CliTestbed::List(list) => Self::List(list.try_into()?),
-            CliTestbed::Create(create) => Self::Create(create.try_into()?),
-            CliTestbed::View(view) => Self::View(view.try_into()?),
+    fn try_from(threshold: CliThreshold) -> Result<Self, Self::Error> {
+        Ok(match threshold {
+            CliThreshold::List(list) => Self::List(list.try_into()?),
+            CliThreshold::Create(create) => Self::Create(create.try_into()?),
+            CliThreshold::View(view) => Self::View(view.try_into()?),
         })
     }
 }
 
 #[async_trait]
-impl SubCmd for Testbed {
+impl SubCmd for Threshold {
     async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
         match self {
             Self::List(list) => list.exec(wide).await,

@@ -38,7 +38,7 @@ impl SubCmd for Branch {
         match self {
             Self::List(list) => list.exec(wide).await,
             Self::Create(create) => create.exec(wide).await,
-            Self::View(create) => create.exec(wide).await,
+            Self::View(view) => view.exec(wide).await,
         }
     }
 }

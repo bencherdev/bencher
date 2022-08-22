@@ -37,3 +37,7 @@ pub use testbed::{
     JsonNewTestbed,
     JsonTestbed,
 };
+pub use threshold::{
+    JsonNewThreshold,
+    JsonThreshold,
+};

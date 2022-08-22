@@ -9,6 +9,7 @@ use assert_cmd::prelude::*;
 use bencher_json::{
     JsonBranch,
     JsonTestbed,
+    JsonThreshold,
     JsonUser,
 };
 
@@ -20,7 +21,9 @@ const LOCALHOST: &str = "http://localhost:8080";
 const TOKEN_ARG: &str = "--token";
 const PROJECT_ARG: &str = "--project";
 const PROJECT_SLUG: &str = "the-computer";
+const BRANCH_ARG: &str = "--branch";
 const BRANCH_SLUG: &str = "master";
+const TESTBED_ARG: &str = "--testbed";
 const TESTBED_SLUG: &str = "base";
 
 const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
@@ -155,7 +158,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let branch = cmd.output().unwrap().stdout;
     let branch: JsonBranch = serde_json::from_slice(&branch).unwrap();
     let branch = branch.uuid.to_string();
-    env::set_var(BENCHER_BRANCH, branch);
+    env::set_var(BENCHER_BRANCH, branch.clone());
 
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -214,11 +217,70 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let testbed = cmd.output().unwrap().stdout;
     let testbed: JsonTestbed = serde_json::from_slice(&testbed).unwrap();
     let testbed = testbed.uuid.to_string();
-    env::set_var(BENCHER_TESTBED, testbed);
+    env::set_var(BENCHER_TESTBED, testbed.clone());
 
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "testbed",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        &token,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    cmd.assert().success();
+
+    // cargo run -- threshold ls --host http://localhost:8080 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "threshold",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    cmd.assert().success();
+
+    // cargo run -- threshold create --host http://localhost:8080 --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "threshold",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        BRANCH_ARG,
+        &branch,
+        TESTBED_ARG,
+        &testbed,
+    ]);
+    cmd.assert().success();
+
+    let threshold = cmd.output().unwrap().stdout;
+    // println!("{}", branch);
+    // println!("{}", testbed);
+    // println!("{}", String::from_utf8_lossy(&threshold));
+    let threshold: JsonThreshold = serde_json::from_slice(&threshold).unwrap();
+    let threshold = threshold.uuid.to_string();
+
+    // cargo run -- threshold view --host http://localhost:8080 --project the-computer [THRESHOLD_UUID]
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "threshold",
+        "view",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        &threshold,
+    ]);
+    cmd.assert().success();
+
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "threshold",
         "ls",
         HOST_ARG,
         LOCALHOST,

@@ -12,7 +12,7 @@ pub struct CliRun {
     #[clap(flatten)]
     pub locality: CliLocality,
 
-    /// Branch UUID
+    /// Branch UUID (or set BENCHER_BRANCH)
     #[clap(long)]
     pub branch: Option<Uuid>,
 
@@ -20,7 +20,7 @@ pub struct CliRun {
     #[clap(long)]
     pub hash: Option<String>,
 
-    /// Testbed UUID
+    /// Testbed UUID (or set BENCHER_TESTBED)
     #[clap(long)]
     pub testbed: Option<Uuid>,
 
@@ -28,12 +28,12 @@ pub struct CliRun {
     #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
 
-    /// Number of run iterations
+    /// Number of run iterations (default is 1)
     #[clap(long)]
     pub iter: Option<usize>,
 
     /// Fold into a single result value
-    #[clap(value_enum, long)]
+    #[clap(value_enum, long, requires = "iter")]
     pub fold: Option<CliRunFold>,
 
     #[clap(flatten)]

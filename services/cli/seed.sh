@@ -1,5 +1,5 @@
 # run as `source ./seed.sh` or `. ./seed.sh`
-cargo test --features seed --test seed
+RUST_BACKTRACE=1 cargo test --features seed --test seed -- --nocapture
 
 export BENCHER_HOST=http://localhost:8080
 
