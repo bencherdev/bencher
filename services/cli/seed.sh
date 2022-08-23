@@ -21,4 +21,4 @@ TESTBED_UUID=$(echo "$TESTBED_UUID" | tr -d '"')
 echo $TESTBED_UUID
 export BENCHER_TESTBED=$TESTBED_UUID
 
-cargo run -- run --adapter rust "cargo bench"
+cargo run -- run --adapter rust --iter 3 "cargo bench"

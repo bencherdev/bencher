@@ -77,6 +77,18 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.TESTBEDS]?.[Operation.VIEW])}
       />
       <Route
+        path="/projects/:project_slug/thresholds"
+        element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.LIST])}
+      />
+      <Route
+        path="/projects/:project_slug/thresholds/add"
+        element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.ADD])}
+      />
+      <Route
+        path="/projects/:project_slug/thresholds/:threshold_uuid"
+        element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.VIEW])}
+      />
+      <Route
         path="/projects/:project_slug/connections"
         element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.LIST])}
       />

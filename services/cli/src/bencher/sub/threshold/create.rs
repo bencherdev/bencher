@@ -14,7 +14,7 @@ use crate::{
     BencherError,
 };
 
-const THESHOLDS_PATH: &str = "/v0/thresholds";
+const THRESHOLDS_PATH: &str = "/v0/thresholds";
 
 #[derive(Debug)]
 pub struct Create {
@@ -47,7 +47,7 @@ impl SubCmd for Create {
             branch:  self.branch.clone(),
             testbed: self.testbed.clone(),
         };
-        self.backend.post(THESHOLDS_PATH, &threshold).await?;
+        self.backend.post(THRESHOLDS_PATH, &threshold).await?;
         Ok(())
     }
 }
