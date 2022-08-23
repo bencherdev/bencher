@@ -48,22 +48,22 @@ impl TryFrom<CliSub> for Sub {
 
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            CliSub::Auth(auth) => Self::Auth(Auth::try_from(auth)?),
-            CliSub::Project(project) => Self::Project(Project::try_from(project)?),
-            CliSub::Report(report) => Self::Report(Report::try_from(report)?),
-            CliSub::Branch(branch) => Self::Branch(Branch::try_from(branch)?),
-            CliSub::Testbed(testbed) => Self::Testbed(Testbed::try_from(testbed)?),
-            CliSub::Threshold(threshold) => Self::Threshold(Threshold::try_from(threshold)?),
-            CliSub::Run(run) => Self::Run(Run::try_from(run)?),
-            CliSub::Benchmark(benchmark) => Self::Benchmark(Benchmark::try_from(benchmark)?),
-            CliSub::Perf(perf) => Self::Perf(Perf::try_from(perf)?),
+            CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
+            CliSub::Project(project) => Self::Project(project.try_into()?),
+            CliSub::Report(report) => Self::Report(report.try_into()?),
+            CliSub::Branch(branch) => Self::Branch(branch.try_into()?),
+            CliSub::Testbed(testbed) => Self::Testbed(testbed.try_into()?),
+            CliSub::Threshold(threshold) => Self::Threshold(threshold.try_into()?),
+            CliSub::Run(run) => Self::Run(run.try_into()?),
+            CliSub::Benchmark(benchmark) => Self::Benchmark(benchmark.try_into()?),
+            CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
         })
     }
 }
 
 pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, BencherError> {
     if let Some(sub) = sub {
-        Ok(Some(Sub::try_from(sub)?))
+        Ok(Some(sub.try_into()?))
     } else {
         Ok(None)
     }

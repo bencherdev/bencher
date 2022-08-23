@@ -24,7 +24,7 @@ impl TryFrom<CliProjectList> for List {
     fn try_from(list: CliProjectList) -> Result<Self, Self::Error> {
         let CliProjectList { backend } = list;
         Ok(Self {
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

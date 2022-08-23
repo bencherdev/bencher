@@ -35,7 +35,7 @@ use super::{
         InsertBenchmark,
         QueryBenchmark,
     },
-    threshold::QueryThreshold,
+    threshold::statistic::QueryStatistic,
 };
 
 const PERF_ERROR: &str = "Failed to get perf.";
@@ -55,7 +55,7 @@ pub struct QueryPerf {
 }
 
 impl QueryPerf {
-    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::perf::table
             .filter(schema::perf::uuid.eq(uuid.to_string()))
             .select(schema::perf::id)
@@ -95,11 +95,11 @@ impl InsertPerf {
         iteration: i32,
         benchmark_name: String,
         json_perf: JsonNewPerf,
+        query_statistic: Option<&QueryStatistic>,
     ) -> Result<(Uuid, Uuid), HttpError> {
         let benchmark_id =
             if let Ok(id) = QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name) {
                 // If benchmark already exists then check for threshold violations
-
                 id
             } else {
                 let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);

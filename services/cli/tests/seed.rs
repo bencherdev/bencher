@@ -244,7 +244,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- threshold create --host http://localhost:8080 --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED
+    // cargo run -- threshold create --host http://localhost:8080 --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --kind z
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "threshold",
@@ -255,6 +255,8 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         &branch,
         TESTBED_ARG,
         &testbed,
+        "--kind",
+        "z",
     ]);
     cmd.assert().success();
 

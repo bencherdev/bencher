@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use bencher_json::JsonNewThreshold;
 use uuid::Uuid;
 
+use super::statistic::Statistic;
 use crate::{
     bencher::{
         backend::Backend,
@@ -18,9 +19,10 @@ const THRESHOLDS_PATH: &str = "/v0/thresholds";
 
 #[derive(Debug)]
 pub struct Create {
-    pub branch:  Uuid,
-    pub testbed: Uuid,
-    pub backend: Backend,
+    pub branch:    Uuid,
+    pub testbed:   Uuid,
+    pub statistic: Statistic,
+    pub backend:   Backend,
 }
 
 impl TryFrom<CliThresholdCreate> for Create {
@@ -30,12 +32,14 @@ impl TryFrom<CliThresholdCreate> for Create {
         let CliThresholdCreate {
             branch,
             testbed,
+            statistic,
             backend,
         } = create;
         Ok(Self {
             branch,
             testbed,
-            backend: Backend::try_from(backend)?,
+            statistic: statistic.try_into()?,
+            backend: backend.try_into()?,
         })
     }
 }
@@ -44,8 +48,9 @@ impl TryFrom<CliThresholdCreate> for Create {
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let threshold = JsonNewThreshold {
-            branch:  self.branch.clone(),
-            testbed: self.testbed.clone(),
+            branch:    self.branch.clone(),
+            testbed:   self.testbed.clone(),
+            statistic: self.statistic.into(),
         };
         self.backend.post(THRESHOLDS_PATH, &threshold).await?;
         Ok(())

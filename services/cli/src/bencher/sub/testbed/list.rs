@@ -26,7 +26,7 @@ impl TryFrom<CliTestbedList> for List {
         let CliTestbedList { project, backend } = list;
         Ok(Self {
             project,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

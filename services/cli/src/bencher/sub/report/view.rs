@@ -33,7 +33,7 @@ impl TryFrom<CliReportView> for View {
         Ok(Self {
             project,
             report,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

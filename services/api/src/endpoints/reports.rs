@@ -42,7 +42,7 @@ use crate::{
                 QueryReport,
             },
             testbed::QueryTestbed,
-            threshold::QueryThreshold,
+            threshold::statistic::QueryStatistic,
             user::QueryUser,
             version::InsertVersion,
         },
@@ -207,18 +207,7 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    let query_threshold = schema::threshold::table
-        .filter(
-            schema::threshold::branch_id
-                .eq(branch_id)
-                .and(schema::threshold::testbed_id.eq(testbed_id)),
-        )
-        .first::<QueryThreshold>(&*conn)
-        .ok();
-    if let Some(query_threshold) = query_threshold {
-        if let Some(z_score_id) = query_threshold.z_score_id {}
-        if let Some(t_test_id) = query_threshold.t_test_id {}
-    }
+    let query_statistic = QueryStatistic::for_threshold(&*conn, branch_id, testbed_id);
 
     let mut benchmarks = JsonBenchmarks::new();
     let mut alerts = JsonAlerts::new();
@@ -233,6 +222,7 @@ pub async fn post(
                 index as i32,
                 benchmark_name,
                 json_perf,
+                query_statistic.as_ref(),
             )?;
 
             let alert = None;

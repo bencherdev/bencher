@@ -43,7 +43,7 @@ impl TryFrom<CliProjectCreate> for Project {
             description,
             url: map_url(url)?,
             public,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

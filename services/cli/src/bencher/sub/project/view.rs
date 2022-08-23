@@ -30,7 +30,7 @@ impl TryFrom<CliProjectView> for View {
         let CliProjectView { project, backend } = view;
         Ok(Self {
             project,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

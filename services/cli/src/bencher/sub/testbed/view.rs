@@ -32,7 +32,7 @@ impl TryFrom<CliTestbedView> for View {
         Ok(Self {
             project,
             testbed,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

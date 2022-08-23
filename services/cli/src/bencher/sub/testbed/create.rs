@@ -61,7 +61,7 @@ impl TryFrom<CliTestbedCreate> for Create {
             cpu,
             ram,
             disk,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

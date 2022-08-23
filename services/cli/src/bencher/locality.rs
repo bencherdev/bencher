@@ -19,7 +19,7 @@ impl TryFrom<CliLocality> for Locality {
         if locality.local == true {
             Ok(Self::Local)
         } else {
-            Ok(Self::Backend(Backend::try_from(locality.backend)?))
+            Ok(Self::Backend(locality.backend.try_into()?))
         }
     }
 }

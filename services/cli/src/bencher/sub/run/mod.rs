@@ -64,8 +64,8 @@ impl TryFrom<CliRun> for Run {
             fold,
         } = run;
         Ok(Self {
-            locality: Locality::try_from(locality)?,
-            perf:     Perf::try_from(command)?,
+            locality: locality.try_into()?,
+            perf:     command.try_into()?,
             branch:   unwrap_branch(branch)?,
             hash:     map_hash(hash)?,
             testbed:  unwrap_testbed(testbed)?,

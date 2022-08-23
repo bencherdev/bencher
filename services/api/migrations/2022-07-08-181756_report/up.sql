@@ -127,55 +127,40 @@ CREATE TABLE perf (
     UNIQUE(report_id, iteration, benchmark_id)
 );
 -- https://en.wikipedia.org/wiki/Standard_score
-CREATE TABLE z_score (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    -- sample size, if null use the entire population
-    sample_size INTEGER,
-    -- min allowed negative standard deviation, if null don't compare
-    min_deviation REAL,
-    -- max allowed positive standard deviation, if null don't compare
-    max_deviation REAL
-);
 -- https://en.wikipedia.org/wiki/Student's_t-test
-CREATE TABLE t_test (
+CREATE TABLE statistic (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    -- sample size, for Two-sample equal variance (homoscedastic) and (heteroscedastic)
-    -- Paired if null
-    sample_size INTEGER,
-    -- one-tailed left (false), one-tailed right (true), two-tailed (null)
-    tail BOOLEAN,
-    -- confidence interval
-    confidence_interval REAL NOT NULL
+    -- kind: Z or T
+    kind INTEGER NOT NULL,
+    -- sample size
+    sample_size BIGINT,
+    -- time window
+    window BIGINT,
+    -- left side percentage
+    left_side REAL,
+    -- right side percentage
+    right_side REAL
 );
 CREATE TABLE threshold (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     branch_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
-    -- at least one should not be null
-    z_score_id INTEGER,
-    t_test_id INTEGER,
-    --
+    statistic_id INTEGER NOT NULL,
     FOREIGN KEY (branch_id) REFERENCES branch (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
-    FOREIGN KEY (z_score_id) REFERENCES z_score (id),
-    FOREIGN KEY (t_test_id) REFERENCES t_test (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
     UNIQUE(branch_id, testbed_id)
 );
 CREATE TABLE alert (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    threshold_id INTEGER NOT NULL,
     perf_id INTEGER NOT NULL,
-    -- only one should not be null
-    z_score_id INTEGER,
-    t_test_id INTEGER,
-    --
-    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
+    threshold_id INTEGER NOT NULL,
+    statistic_id INTEGER NOT NULL,
     FOREIGN KEY (perf_id) REFERENCES perf (id),
-    FOREIGN KEY (z_score_id) REFERENCES z_score (id),
-    FOREIGN KEY (t_test_id) REFERENCES t_test (id),
-    UNIQUE(z_score_id, perf_id)
+    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
+    UNIQUE(perf_id, threshold_id)
 );

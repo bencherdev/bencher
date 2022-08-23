@@ -11,6 +11,7 @@ use crate::{
 
 mod create;
 mod list;
+mod statistic;
 mod view;
 
 #[derive(Debug)]

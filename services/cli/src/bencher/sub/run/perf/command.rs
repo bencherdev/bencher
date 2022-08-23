@@ -25,8 +25,8 @@ impl TryFrom<(CliRunShell, String)> for Command {
     fn try_from(shell_cmd: (CliRunShell, String)) -> Result<Self, Self::Error> {
         let (shell, cmd) = shell_cmd;
         Ok(Self {
-            shell: Shell::try_from(shell.shell)?,
-            flag: Flag::try_from(shell.flag)?,
+            shell: shell.shell.try_into()?,
+            flag: shell.flag.try_into()?,
             cmd,
         })
     }

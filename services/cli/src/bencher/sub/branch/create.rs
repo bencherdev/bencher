@@ -40,7 +40,7 @@ impl TryFrom<CliBranchCreate> for Create {
             project,
             name,
             slug,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

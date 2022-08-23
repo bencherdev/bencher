@@ -26,7 +26,7 @@ impl TryFrom<CliReportList> for List {
         let CliReportList { project, backend } = list;
         Ok(Self {
             project,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

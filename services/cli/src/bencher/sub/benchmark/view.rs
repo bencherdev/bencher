@@ -33,7 +33,7 @@ impl TryFrom<CliBenchmarkView> for View {
         Ok(Self {
             project,
             benchmark,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

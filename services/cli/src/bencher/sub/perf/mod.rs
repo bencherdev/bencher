@@ -56,7 +56,7 @@ impl TryFrom<CliPerf> for Perf {
             kind: kind.into(),
             start_time,
             end_time,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

@@ -17,5 +17,9 @@
       "database": "${workspaceFolder:bencher}/services/api/bencher.db"
     }
   ],
-  "sqltools.useNodeRuntime": true
+  "sqltools.useNodeRuntime": true,
+  "cSpell.words": [
+    "dropshot",
+    "Insertable"
+  ]
 }

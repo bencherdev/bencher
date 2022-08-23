@@ -26,7 +26,7 @@ impl TryFrom<CliThresholdList> for List {
         let CliThresholdList { project, backend } = list;
         Ok(Self {
             project,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

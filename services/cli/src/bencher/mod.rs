@@ -38,8 +38,7 @@ impl TryFrom<CliBencher> for Bencher {
 
 impl Bencher {
     pub fn new() -> Result<Self, BencherError> {
-        let args = CliBencher::parse();
-        Self::try_from(args)
+        CliBencher::parse().try_into()
     }
 
     pub async fn exec(&self) -> Result<(), BencherError> {

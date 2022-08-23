@@ -395,20 +395,6 @@ impl std::ops::Div<usize> for JsonLatency {
 
 impl Median for JsonLatency {}
 
-// impl Median for JsonLatency {
-//     fn median(mut array: Vec<Option<Self>>) -> Self {
-//         array.sort_unstable();
-
-//         if (array.len() % 2) == 0 {
-//             let ind_left = array.len() / 2 - 1;
-//             let ind_right = array.len() / 2;
-//             (array[ind_left].unwrap_or_default() +
-// array[ind_right].unwrap_or_default()) / 2         } else {
-//             array[(array.len() / 2)].unwrap_or_default()
-//         }
-//     }
-// }
-
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThroughput {

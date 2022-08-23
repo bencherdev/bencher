@@ -2,6 +2,7 @@ use bencher_json::ResourceId;
 use clap::{
     Parser,
     Subcommand,
+    ValueEnum,
 };
 use uuid::Uuid;
 
@@ -40,7 +41,42 @@ pub struct CliThresholdCreate {
     pub testbed: Uuid,
 
     #[clap(flatten)]
+    pub statistic: CliStatisticCreate,
+
+    #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliStatisticCreate {
+    /// Statistic kind
+    #[clap(value_enum, long)]
+    pub kind: CliStatisticKind,
+
+    /// Limit sample size
+    #[clap(long)]
+    pub sample_size: Option<u32>,
+
+    /// Limit sampling window in seconds
+    #[clap(long)]
+    pub window: Option<u32>,
+
+    /// Left side percentage
+    #[clap(long)]
+    pub left_side: Option<f32>,
+
+    /// Right side percentage
+    #[clap(long)]
+    pub right_side: Option<f32>,
+}
+
+/// Supported kinds of statistic
+#[derive(ValueEnum, Debug, Clone)]
+pub enum CliStatisticKind {
+    /// z-score
+    Z,
+    /// t-test
+    T,
 }
 
 #[derive(Parser, Debug)]

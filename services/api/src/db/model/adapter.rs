@@ -26,7 +26,7 @@ pub struct QueryAdapter {
 }
 
 impl QueryAdapter {
-    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::adapter::table
             .filter(schema::adapter::uuid.eq(&uuid.to_string()))
             .select(schema::adapter::id)

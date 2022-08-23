@@ -35,7 +35,7 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::benchmark::table
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .select(schema::benchmark::id)

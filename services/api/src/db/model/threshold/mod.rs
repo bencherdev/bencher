@@ -11,6 +11,10 @@ use diesel::{
 use dropshot::HttpError;
 use uuid::Uuid;
 
+use self::statistic::{
+    InsertStatistic,
+    QueryStatistic,
+};
 use super::{
     branch::QueryBranch,
     testbed::QueryTestbed,
@@ -28,23 +32,21 @@ use crate::{
     util::http_error,
 };
 
-mod t_test;
-mod z_score;
+pub mod statistic;
 
 const THRESHOLD_ERROR: &str = "Failed to get threshold.";
 
 #[derive(Queryable)]
 pub struct QueryThreshold {
-    pub id:         i32,
-    pub uuid:       String,
-    pub branch_id:  i32,
-    pub testbed_id: i32,
-    pub z_score_id: Option<i32>,
-    pub t_test_id:  Option<i32>,
+    pub id:           i32,
+    pub uuid:         String,
+    pub branch_id:    i32,
+    pub testbed_id:   i32,
+    pub statistic_id: i32,
 }
 
 impl QueryThreshold {
-    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::threshold::table
             .filter(schema::threshold::uuid.eq(uuid.to_string()))
             .select(schema::threshold::id)
@@ -67,15 +69,13 @@ impl QueryThreshold {
             uuid,
             branch_id,
             testbed_id,
-            z_score_id,
-            t_test_id,
+            statistic_id,
         } = self;
         Ok(JsonThreshold {
-            uuid:    Uuid::from_str(&uuid).map_err(|_| http_error!(THRESHOLD_ERROR))?,
-            branch:  QueryBranch::get_uuid(conn, branch_id)?,
-            testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
-            z_score: None,
-            t_test:  None,
+            uuid:      Uuid::from_str(&uuid).map_err(|_| http_error!(THRESHOLD_ERROR))?,
+            branch:    QueryBranch::get_uuid(conn, branch_id)?,
+            testbed:   QueryTestbed::get_uuid(conn, testbed_id)?,
+            statistic: QueryStatistic::get_uuid(conn, statistic_id)?,
         })
     }
 }
@@ -83,9 +83,10 @@ impl QueryThreshold {
 #[derive(Insertable)]
 #[table_name = "threshold_table"]
 pub struct InsertThreshold {
-    pub uuid:       String,
-    pub branch_id:  i32,
-    pub testbed_id: i32,
+    pub uuid:         String,
+    pub branch_id:    i32,
+    pub testbed_id:   i32,
+    pub statistic_id: i32,
 }
 
 impl InsertThreshold {
@@ -93,11 +94,23 @@ impl InsertThreshold {
         conn: &SqliteConnection,
         json_threshold: JsonNewThreshold,
     ) -> Result<Self, HttpError> {
-        let JsonNewThreshold { branch, testbed } = json_threshold;
+        let JsonNewThreshold {
+            branch,
+            testbed,
+            statistic,
+        } = json_threshold;
+
+        let insert_statistic = InsertStatistic::from_json(statistic)?;
+        diesel::insert_into(schema::statistic::table)
+            .values(&insert_statistic)
+            .execute(conn)
+            .map_err(|_| http_error!(THRESHOLD_ERROR))?;
+
         Ok(Self {
-            uuid:       Uuid::new_v4().to_string(),
-            branch_id:  QueryBranch::get_id(conn, &branch)?,
-            testbed_id: QueryTestbed::get_id(conn, &testbed)?,
+            uuid:         Uuid::new_v4().to_string(),
+            branch_id:    QueryBranch::get_id(conn, &branch)?,
+            testbed_id:   QueryTestbed::get_id(conn, &testbed)?,
+            statistic_id: QueryStatistic::get_id(conn, &insert_statistic.uuid)?,
         })
     }
 }

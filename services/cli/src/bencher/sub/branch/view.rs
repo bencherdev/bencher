@@ -32,7 +32,7 @@ impl TryFrom<CliBranchView> for View {
         Ok(Self {
             project,
             branch,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

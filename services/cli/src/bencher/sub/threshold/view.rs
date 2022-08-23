@@ -33,7 +33,7 @@ impl TryFrom<CliThresholdView> for View {
         Ok(Self {
             project,
             threshold,
-            backend: Backend::try_from(backend)?,
+            backend: backend.try_into()?,
         })
     }
 }

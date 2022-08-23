@@ -10,10 +10,9 @@ table! {
     alert (id) {
         id -> Integer,
         uuid -> Text,
-        threshold_id -> Integer,
         perf_id -> Integer,
-        z_score_id -> Nullable<Integer>,
-        t_test_id -> Nullable<Integer>,
+        threshold_id -> Integer,
+        statistic_id -> Integer,
     }
 }
 
@@ -98,12 +97,14 @@ table! {
 }
 
 table! {
-    t_test (id) {
+    statistic (id) {
         id -> Integer,
         uuid -> Text,
-        sample_size -> Nullable<Integer>,
-        tail -> Nullable<Bool>,
-        confidence_interval -> Float,
+        kind -> Integer,
+        sample_size -> Nullable<BigInt>,
+        window -> Nullable<BigInt>,
+        left_side -> Nullable<Float>,
+        right_side -> Nullable<Float>,
     }
 }
 
@@ -130,8 +131,7 @@ table! {
         uuid -> Text,
         branch_id -> Integer,
         testbed_id -> Integer,
-        z_score_id -> Nullable<Integer>,
-        t_test_id -> Nullable<Integer>,
+        statistic_id -> Integer,
     }
 }
 
@@ -166,20 +166,9 @@ table! {
     }
 }
 
-table! {
-    z_score (id) {
-        id -> Integer,
-        uuid -> Text,
-        sample_size -> Nullable<Integer>,
-        min_deviation -> Nullable<Float>,
-        max_deviation -> Nullable<Float>,
-    }
-}
-
 joinable!(alert -> perf (perf_id));
-joinable!(alert -> t_test (t_test_id));
+joinable!(alert -> statistic (statistic_id));
 joinable!(alert -> threshold (threshold_id));
-joinable!(alert -> z_score (z_score_id));
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
 joinable!(perf -> benchmark (benchmark_id));
@@ -193,9 +182,8 @@ joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
 joinable!(testbed -> project (project_id));
 joinable!(threshold -> branch (branch_id));
-joinable!(threshold -> t_test (t_test_id));
+joinable!(threshold -> statistic (statistic_id));
 joinable!(threshold -> testbed (testbed_id));
-joinable!(threshold -> z_score (z_score_id));
 joinable!(version -> branch (branch_id));
 
 allow_tables_to_appear_in_same_query!(
@@ -208,11 +196,10 @@ allow_tables_to_appear_in_same_query!(
     perf,
     project,
     report,
-    t_test,
+    statistic,
     testbed,
     threshold,
     throughput,
     user,
     version,
-    z_score,
 );

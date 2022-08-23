@@ -117,7 +117,7 @@ impl TryInto<JsonUser> for QueryUser {
 }
 
 impl QueryUser {
-    pub fn get_id(conn: &SqliteConnection, uuid: &Uuid) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::user::table
             .filter(schema::user::uuid.eq(uuid.to_string()))
             .select(schema::user::id)
