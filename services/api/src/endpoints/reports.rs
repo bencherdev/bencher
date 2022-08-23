@@ -207,15 +207,18 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    let threshold_id = schema::threshold::table
+    let query_threshold = schema::threshold::table
         .filter(
             schema::threshold::branch_id
                 .eq(branch_id)
                 .and(schema::threshold::testbed_id.eq(testbed_id)),
         )
-        .select(schema::threshold::id)
-        .first::<i32>(&*conn)
+        .first::<QueryThreshold>(&*conn)
         .ok();
+    if let Some(query_threshold) = query_threshold {
+        if let Some(z_score_id) = query_threshold.z_score_id {}
+        if let Some(t_test_id) = query_threshold.t_test_id {}
+    }
 
     let mut benchmarks = JsonBenchmarks::new();
     let mut alerts = JsonAlerts::new();

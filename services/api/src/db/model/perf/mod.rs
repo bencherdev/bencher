@@ -30,9 +30,12 @@ pub use latency::InsertLatency;
 pub use min_max_avg::InsertMinMaxAvg;
 pub use throughput::InsertThroughput;
 
-use super::benchmark::{
-    InsertBenchmark,
-    QueryBenchmark,
+use super::{
+    benchmark::{
+        InsertBenchmark,
+        QueryBenchmark,
+    },
+    threshold::QueryThreshold,
 };
 
 const PERF_ERROR: &str = "Failed to get perf.";
@@ -96,6 +99,7 @@ impl InsertPerf {
         let benchmark_id =
             if let Ok(id) = QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name) {
                 // If benchmark already exists then check for threshold violations
+
                 id
             } else {
                 let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
