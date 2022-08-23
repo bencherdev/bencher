@@ -86,6 +86,7 @@ impl QueryReport {
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             benchmarks,
+            alerts: Vec::new(),
         })
     }
 }
@@ -112,10 +113,10 @@ fn get_benchmarks(conn: &SqliteConnection, report_id: i32) -> Result<JsonBenchma
         .map_err(|_| http_error!(REPORT_ERROR))?;
 
     let mut benchmarks = JsonBenchmarks::new();
-    for (benchmark, perf_uuid) in uuids {
+    for (benchmark, perf) in uuids {
         benchmarks.push(JsonBenchmarkPerf {
             benchmark: Uuid::from_str(&benchmark).map_err(|_| http_error!(REPORT_ERROR))?,
-            perf_uuid: Uuid::from_str(&perf_uuid).map_err(|_| http_error!(REPORT_ERROR))?,
+            perf:      Uuid::from_str(&perf).map_err(|_| http_error!(REPORT_ERROR))?,
         });
     }
 

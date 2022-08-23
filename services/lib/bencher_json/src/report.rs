@@ -536,6 +536,7 @@ pub struct JsonReport {
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
     pub benchmarks: JsonBenchmarks,
+    pub alerts:     JsonAlerts,
 }
 
 pub type JsonBenchmarks = Vec<JsonBenchmarkPerf>;
@@ -544,5 +545,14 @@ pub type JsonBenchmarks = Vec<JsonBenchmarkPerf>;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarkPerf {
     pub benchmark: Uuid,
-    pub perf_uuid: Uuid,
+    pub perf:      Uuid,
+}
+
+pub type JsonAlerts = Vec<JsonPerfAlert>;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPerfAlert {
+    pub perf:  Uuid,
+    pub alert: Uuid,
 }

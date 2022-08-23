@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use bencher_json::{
     report::{
+        JsonAlerts,
         JsonBenchmarkPerf,
         JsonBenchmarks,
+        JsonPerfAlert,
     },
     JsonNewReport,
     JsonReport,
@@ -40,6 +42,7 @@ use crate::{
                 QueryReport,
             },
             testbed::QueryTestbed,
+            threshold::QueryThreshold,
             user::QueryUser,
             version::InsertVersion,
         },
@@ -204,10 +207,23 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
+    let threshold_id = schema::threshold::table
+        .filter(
+            schema::threshold::branch_id
+                .eq(branch_id)
+                .and(schema::threshold::testbed_id.eq(testbed_id)),
+        )
+        .select(schema::threshold::id)
+        .first::<i32>(&*conn)
+        .ok();
+
     let mut benchmarks = JsonBenchmarks::new();
+    let mut alerts = JsonAlerts::new();
     for (index, benchmark_perf) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_perf) in benchmark_perf.inner {
-            let (benchmark, perf_uuid) = InsertPerf::from_json(
+            // TODO before inserting the perf query for the threshold
+            // if there is a violation then create an alert after the perf is created
+            let (benchmark, perf) = InsertPerf::from_json(
                 &*conn,
                 project_id,
                 query_report.id,
@@ -215,10 +231,16 @@ pub async fn post(
                 benchmark_name,
                 json_perf,
             )?;
-            benchmarks.push(JsonBenchmarkPerf {
-                benchmark,
-                perf_uuid,
-            });
+
+            let alert = None;
+            if let Some(alert) = alert {
+                alerts.push(JsonPerfAlert {
+                    perf: perf.clone(),
+                    alert,
+                });
+            }
+
+            benchmarks.push(JsonBenchmarkPerf { benchmark, perf });
         }
     }
 

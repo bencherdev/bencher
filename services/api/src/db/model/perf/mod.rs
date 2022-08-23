@@ -95,6 +95,7 @@ impl InsertPerf {
     ) -> Result<(Uuid, Uuid), HttpError> {
         let benchmark_id =
             if let Ok(id) = QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name) {
+                // If benchmark already exists then check for threshold violations
                 id
             } else {
                 let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
@@ -110,9 +111,9 @@ impl InsertPerf {
                     .map_err(|_| http_error!("Failed to create benchmark."))?
             };
 
-        let perf_uuid = Uuid::new_v4();
+        let perf = Uuid::new_v4();
         let insert_perf = InsertPerf {
-            uuid: perf_uuid.to_string(),
+            uuid: perf.to_string(),
             report_id,
             iteration,
             benchmark_id,
@@ -129,6 +130,6 @@ impl InsertPerf {
 
         let benchmark = QueryBenchmark::get_uuid(conn, benchmark_id)?;
 
-        Ok((benchmark, perf_uuid))
+        Ok((benchmark, perf))
     }
 }
