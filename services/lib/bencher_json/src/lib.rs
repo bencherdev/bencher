@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod alert;
 pub mod auth;
 pub mod benchmark;
 pub mod branch;

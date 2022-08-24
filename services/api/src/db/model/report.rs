@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use bencher_json::{
     report::{
-        JsonBenchmarkPerf,
-        JsonBenchmarks,
         JsonNewAdapter,
+        JsonReportBenchmark,
+        JsonReportBenchmarks,
     },
     JsonReport,
 };
@@ -65,7 +65,7 @@ impl QueryReport {
     pub fn to_json_with_benchmarks(
         self,
         conn: &SqliteConnection,
-        benchmarks: JsonBenchmarks,
+        benchmarks: JsonReportBenchmarks,
     ) -> Result<JsonReport, HttpError> {
         let Self {
             id: _,
@@ -86,7 +86,6 @@ impl QueryReport {
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             benchmarks,
-            alerts: Vec::new(),
         })
     }
 }
@@ -101,22 +100,26 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
     .ok_or(http_error!(REPORT_ERROR))
 }
 
-fn get_benchmarks(conn: &SqliteConnection, report_id: i32) -> Result<JsonBenchmarks, HttpError> {
-    let uuids: Vec<(String, String)> = schema::perf::table
+fn get_benchmarks(
+    conn: &SqliteConnection,
+    report_id: i32,
+) -> Result<JsonReportBenchmarks, HttpError> {
+    let perf_uuids: Vec<String> = schema::perf::table
         .inner_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )
         .filter(schema::perf::report_id.eq(report_id))
-        .select((schema::benchmark::uuid, schema::perf::uuid))
+        .select(schema::perf::uuid)
         .order(schema::benchmark::name)
-        .load::<(String, String)>(conn)
+        .load::<String>(conn)
         .map_err(|_| http_error!(REPORT_ERROR))?;
 
-    let mut benchmarks = JsonBenchmarks::new();
-    for (benchmark, perf) in uuids {
-        benchmarks.push(JsonBenchmarkPerf {
-            benchmark: Uuid::from_str(&benchmark).map_err(|_| http_error!(REPORT_ERROR))?,
-            perf:      Uuid::from_str(&perf).map_err(|_| http_error!(REPORT_ERROR))?,
+    let mut benchmarks = JsonReportBenchmarks::new();
+    for perf_uuid in perf_uuids {
+        benchmarks.push(JsonReportBenchmark {
+            perf:   Uuid::from_str(&perf_uuid).map_err(|_| http_error!(REPORT_ERROR))?,
+            // todo query for alerts
+            alerts: Vec::new(),
         });
     }
 

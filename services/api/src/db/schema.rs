@@ -13,6 +13,8 @@ table! {
         perf_id -> Integer,
         threshold_id -> Integer,
         statistic_id -> Integer,
+        boundary -> Double,
+        outlier -> Double,
     }
 }
 

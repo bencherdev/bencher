@@ -32,6 +32,7 @@ use crate::{
     util::http_error,
 };
 
+pub mod alert;
 pub mod statistic;
 
 const THRESHOLD_ERROR: &str = "Failed to get threshold.";

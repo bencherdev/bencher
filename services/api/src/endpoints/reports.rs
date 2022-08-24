@@ -2,10 +2,8 @@ use std::sync::Arc;
 
 use bencher_json::{
     report::{
-        JsonAlerts,
-        JsonBenchmarkPerf,
-        JsonBenchmarks,
-        JsonPerfAlert,
+        JsonReportBenchmark,
+        JsonReportBenchmarks,
     },
     JsonNewReport,
     JsonReport,
@@ -42,7 +40,10 @@ use crate::{
                 QueryReport,
             },
             testbed::QueryTestbed,
-            threshold::statistic::QueryStatistic,
+            threshold::statistic::{
+                QueryStatistic,
+                ThresholdStatistic,
+            },
             user::QueryUser,
             version::InsertVersion,
         },
@@ -207,33 +208,24 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    let query_statistic = QueryStatistic::for_threshold(&*conn, branch_id, testbed_id);
+    let threshold_statistic = ThresholdStatistic::new(&*conn, branch_id, testbed_id).ok();
 
-    let mut benchmarks = JsonBenchmarks::new();
-    let mut alerts = JsonAlerts::new();
+    let mut benchmarks = JsonReportBenchmarks::new();
     for (index, benchmark_perf) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_perf) in benchmark_perf.inner {
             // TODO before inserting the perf query for the threshold
             // if there is a violation then create an alert after the perf is created
-            let (benchmark, perf) = InsertPerf::from_json(
+            let (perf, alerts) = InsertPerf::from_json(
                 &*conn,
                 project_id,
                 query_report.id,
                 index as i32,
                 benchmark_name,
                 json_perf,
-                query_statistic.as_ref(),
+                threshold_statistic.as_ref(),
             )?;
 
-            let alert = None;
-            if let Some(alert) = alert {
-                alerts.push(JsonPerfAlert {
-                    perf: perf.clone(),
-                    alert,
-                });
-            }
-
-            benchmarks.push(JsonBenchmarkPerf { benchmark, perf });
+            benchmarks.push(JsonReportBenchmark { perf, alerts });
         }
     }
 

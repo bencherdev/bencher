@@ -159,6 +159,8 @@ CREATE TABLE alert (
     perf_id INTEGER NOT NULL,
     threshold_id INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
+    boundary DOUBLE NOT NULL,
+    outlier DOUBLE NOT NULL,
     FOREIGN KEY (perf_id) REFERENCES perf (id),
     FOREIGN KEY (threshold_id) REFERENCES threshold (id),
     FOREIGN KEY (statistic_id) REFERENCES statistic (id),

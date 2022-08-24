@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use bencher_json::report::JsonNewPerf;
+use bencher_json::report::{
+    JsonNewPerf,
+    JsonReportAlert,
+};
 use diesel::{
     Insertable,
     Queryable,
@@ -35,7 +38,10 @@ use super::{
         InsertBenchmark,
         QueryBenchmark,
     },
-    threshold::statistic::QueryStatistic,
+    threshold::statistic::{
+        QueryStatistic,
+        ThresholdStatistic,
+    },
 };
 
 const PERF_ERROR: &str = "Failed to get perf.";
@@ -95,29 +101,32 @@ impl InsertPerf {
         iteration: i32,
         benchmark_name: String,
         json_perf: JsonNewPerf,
-        query_statistic: Option<&QueryStatistic>,
-    ) -> Result<(Uuid, Uuid), HttpError> {
-        let benchmark_id =
-            if let Ok(id) = QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name) {
-                // If benchmark already exists then check for threshold violations
-                id
-            } else {
-                let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
-                diesel::insert_into(schema::benchmark::table)
-                    .values(&insert_benchmark)
-                    .execute(conn)
-                    .map_err(|_| http_error!("Failed to create benchmark."))?;
+        threshold_statistic: Option<&ThresholdStatistic>,
+    ) -> Result<(Uuid, Vec<JsonReportAlert>), HttpError> {
+        let mut alerts = Vec::new();
 
-                schema::benchmark::table
-                    .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-                    .select(schema::benchmark::id)
-                    .first::<i32>(conn)
-                    .map_err(|_| http_error!("Failed to create benchmark."))?
-            };
+        let benchmark_id = if let Ok(benchmark_id) =
+            QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name)
+        {
+            // If benchmark already exists then check for threshold violations
+            benchmark_id
+        } else {
+            let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
+            diesel::insert_into(schema::benchmark::table)
+                .values(&insert_benchmark)
+                .execute(conn)
+                .map_err(|_| http_error!("Failed to create benchmark."))?;
 
-        let perf = Uuid::new_v4();
+            schema::benchmark::table
+                .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
+                .select(schema::benchmark::id)
+                .first::<i32>(conn)
+                .map_err(|_| http_error!("Failed to create benchmark."))?
+        };
+
+        let perf_uuid = Uuid::new_v4();
         let insert_perf = InsertPerf {
-            uuid: perf.to_string(),
+            uuid: perf_uuid.to_string(),
             report_id,
             iteration,
             benchmark_id,
@@ -132,8 +141,6 @@ impl InsertPerf {
             .execute(conn)
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
-        let benchmark = QueryBenchmark::get_uuid(conn, benchmark_id)?;
-
-        Ok((benchmark, perf))
+        Ok((perf_uuid, alerts))
     }
 }

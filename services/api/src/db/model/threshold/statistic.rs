@@ -56,34 +56,6 @@ impl QueryStatistic {
         Uuid::from_str(&uuid).map_err(|_| http_error!(STATISTIC_ERROR))
     }
 
-    pub fn for_threshold(
-        conn: &SqliteConnection,
-        branch_id: i32,
-        testbed_id: i32,
-    ) -> Option<QueryStatistic> {
-        schema::statistic::table
-            .left_join(
-                schema::threshold::table
-                    .on(schema::statistic::id.eq(schema::threshold::statistic_id)),
-            )
-            .filter(
-                schema::threshold::branch_id
-                    .eq(branch_id)
-                    .and(schema::threshold::testbed_id.eq(testbed_id)),
-            )
-            .select((
-                schema::statistic::id,
-                schema::statistic::uuid,
-                schema::statistic::kind,
-                schema::statistic::sample_size,
-                schema::statistic::window,
-                schema::statistic::left_side,
-                schema::statistic::right_side,
-            ))
-            .first::<QueryStatistic>(conn)
-            .ok()
-    }
-
     pub fn to_json(self) -> Result<JsonStatistic, HttpError> {
         let Self {
             id: _,
@@ -137,6 +109,68 @@ impl From<JsonStatisticKind> for StatisticKind {
             JsonStatisticKind::Z => Self::Z,
             JsonStatisticKind::T => Self::T,
         }
+    }
+}
+
+pub struct ThresholdStatistic {
+    pub threshold_id:    i32,
+    pub query_statistic: QueryStatistic,
+}
+
+impl ThresholdStatistic {
+    pub fn new(
+        conn: &SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+    ) -> Result<Self, HttpError> {
+        schema::statistic::table
+            .inner_join(
+                schema::threshold::table
+                    .on(schema::statistic::id.eq(schema::threshold::statistic_id)),
+            )
+            .filter(
+                schema::threshold::branch_id
+                    .eq(branch_id)
+                    .and(schema::threshold::testbed_id.eq(testbed_id)),
+            )
+            .select((
+                schema::threshold::id,
+                schema::statistic::id,
+                schema::statistic::uuid,
+                schema::statistic::kind,
+                schema::statistic::sample_size,
+                schema::statistic::window,
+                schema::statistic::left_side,
+                schema::statistic::right_side,
+            ))
+            .first::<(
+                i32,
+                i32,
+                String,
+                i32,
+                Option<i64>,
+                Option<i64>,
+                Option<f32>,
+                Option<f32>,
+            )>(conn)
+            .map(
+                |(threshold_id, id, uuid, kind, sample_size, window, left_side, right_side)| {
+                    let query_statistic = QueryStatistic {
+                        id,
+                        uuid,
+                        kind,
+                        sample_size,
+                        window,
+                        left_side,
+                        right_side,
+                    };
+                    Self {
+                        threshold_id,
+                        query_statistic,
+                    }
+                },
+            )
+            .map_err(|_| http_error!(STATISTIC_ERROR))
     }
 }
 
