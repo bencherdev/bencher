@@ -33,16 +33,16 @@ use crate::{
     db::{
         model::{
             branch::QueryBranch,
-            perf::InsertPerf,
+            perf::{
+                threshold::PerfThreshold,
+                InsertPerf,
+            },
             project::QueryProject,
             report::{
                 InsertReport,
                 QueryReport,
             },
             testbed::QueryTestbed,
-            threshold::statistic::{
-                ThresholdStatistic,
-            },
             user::QueryUser,
             version::InsertVersion,
         },
@@ -207,13 +207,12 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    let threshold_statistic = ThresholdStatistic::new(&*conn, branch_id, testbed_id).ok();
+    // The threshold is constant across iterations
+    let perf_threshold = PerfThreshold::new(&*conn, branch_id, testbed_id).ok();
 
     let mut benchmarks = JsonReportBenchmarks::new();
     for (index, benchmark_perf) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_perf) in benchmark_perf.inner {
-            // TODO before inserting the perf query for the threshold
-            // if there is a violation then create an alert after the perf is created
             let (perf, alerts) = InsertPerf::from_json(
                 &*conn,
                 project_id,
@@ -221,7 +220,7 @@ pub async fn post(
                 index as i32,
                 benchmark_name,
                 json_perf,
-                threshold_statistic.as_ref(),
+                perf_threshold.as_ref(),
             )?;
 
             benchmarks.push(JsonReportBenchmark { perf, alerts });

@@ -2,12 +2,10 @@ use std::str::FromStr;
 
 use bencher_json::report::{
     JsonNewPerf,
-    JsonReportAlert,
     JsonReportAlerts,
 };
 use diesel::{
     Insertable,
-    JoinOnDsl,
     Queryable,
     SqliteConnection,
 };
@@ -29,24 +27,20 @@ use crate::{
 
 pub mod latency;
 pub mod min_max_avg;
+pub mod threshold;
 pub mod throughput;
 
 pub use latency::InsertLatency;
 pub use min_max_avg::InsertMinMaxAvg;
 pub use throughput::InsertThroughput;
 
-use super::{
-    benchmark::{
-        InsertBenchmark,
-        QueryBenchmark,
-    },
-    threshold::{
-        alert::InsertAlert,
-        statistic::{
-            QueryStatistic,
-            ThresholdStatistic,
-        },
-    },
+use self::threshold::{
+    PerfAlerts,
+    PerfThreshold,
+};
+use super::benchmark::{
+    InsertBenchmark,
+    QueryBenchmark,
 };
 
 const PERF_ERROR: &str = "Failed to get perf.";
@@ -106,17 +100,19 @@ impl InsertPerf {
         iteration: i32,
         benchmark_name: String,
         json_perf: JsonNewPerf,
-        threshold_statistic: Option<&ThresholdStatistic>,
+        perf_threshold: Option<&PerfThreshold>,
     ) -> Result<(Uuid, JsonReportAlerts), HttpError> {
-        let mut report_alerts = Vec::new();
+        let mut perf_alerts = PerfAlerts::new();
+
         let benchmark_id = if let Ok(benchmark_id) =
             QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name)
         {
-            report_alerts.append(&mut InsertAlert::alerts(
-                conn,
-                threshold_statistic,
-                benchmark_id,
-            )?);
+            // Only generate alerts if the benchmark already exists
+            // and a threshold is provided.
+            // Note these alerts have not yet been committed to the database.
+            if let Some(perf_threshold) = perf_threshold {
+                perf_alerts.append(&mut perf_threshold.alerts(conn, benchmark_id)?);
+            }
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
@@ -148,6 +144,13 @@ impl InsertPerf {
             .values(&insert_perf)
             .execute(conn)
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
+        let perf_id = QueryPerf::get_id(conn, &perf_uuid)?;
+
+        // Commit the alerts to the database now that the perf exists
+        let report_alerts = perf_alerts
+            .into_iter()
+            .filter_map(|perf_alert| perf_alert.into_report_alert(conn, perf_id).ok())
+            .collect();
 
         Ok((perf_uuid, report_alerts))
     }

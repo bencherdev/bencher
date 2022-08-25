@@ -5,17 +5,9 @@ use bencher_json::{
         JsonAlert,
         JsonSide,
     },
-    report::{
-        JsonNewPerf,
-        JsonReportAlert,
-        JsonReportAlerts,
-    },
 };
 use diesel::{
-    expression_methods::BoolExpressionMethods,
     Insertable,
-    JoinOnDsl,
-    NullableExpressionMethods,
     QueryDsl,
     Queryable,
     RunQueryDsl,
@@ -25,10 +17,7 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{
-    statistic::{
-        QueryStatistic,
-        ThresholdStatistic,
-    },
+    statistic::QueryStatistic,
     QueryThreshold,
 };
 use crate::{
@@ -138,94 +127,4 @@ pub struct InsertAlert {
     pub side:         bool,
     pub boundary:     f64,
     pub outlier:      f64,
-}
-
-struct Perf {
-    pub id: i32,
-    pub latency_id: Option<i32>,
-    pub throughput_id: Option<i32>,
-    pub compute_id: Option<i32>,
-    pub memory_id: Option<i32>,
-    pub storage_id: Option<i32>,
-}
-
-impl InsertAlert {
-    pub fn alerts(
-        conn: &SqliteConnection,
-        threshold_statistic: Option<&ThresholdStatistic>,
-        benchmark_id: i32,
-    ) -> Result<JsonReportAlerts, HttpError> {
-        let alerts = Vec::new();
-
-        let threshold_statistic = if let Some(threshold_statistic) = threshold_statistic {
-            threshold_statistic
-        } else {
-            return Ok(alerts);
-        };
-
-        let perfs: Vec<Perf> = schema::perf::table
-            .left_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-            )
-            .filter(schema::benchmark::id.eq(benchmark_id))
-            .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .filter(schema::report::start_time.ge(threshold_statistic.statistic.window))
-            .left_join(
-                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
-            )
-            .filter(schema::testbed::id.eq(threshold_statistic.testbed_id))
-            .left_join(
-                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
-            )
-            .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
-            .filter(schema::branch::id.eq(threshold_statistic.branch_id))
-            .select((
-                schema::perf::id,
-                schema::perf::latency_id,
-                schema::perf::throughput_id,
-                schema::perf::compute_id,
-                schema::perf::memory_id,
-                schema::perf::storage_id,
-            ))
-            .order((
-                schema::version::number.desc(),
-                schema::report::start_time.desc(),
-                schema::perf::iteration.desc(),
-            ))
-            .limit(threshold_statistic.statistic.sample_size)
-            .load::<(
-                i32,
-                Option<i32>,
-                Option<i32>,
-                Option<i32>,
-                Option<i32>,
-                Option<i32>,
-            )>(conn)
-            .map_err(|_| http_error!(ALERT_ERROR))?
-            .into_iter()
-            .map(
-                |(id, latency_id, throughput_id, compute_id, memory_id, storage_id)| Perf {
-                    id,
-                    latency_id,
-                    throughput_id,
-                    compute_id,
-                    memory_id,
-                    storage_id,
-                },
-            )
-            .collect();
-
-        for perf in &perfs {
-            // let latency = if let Some(latency_id) = perf.latency_id {
-            //     schema::latency::table
-            //         .filter(schema::latency::id.eq(latency_id))
-            //         .first::<QueryLatency>(conn)
-            //         .ok()
-            // } else {
-            //     None
-            // };
-        }
-
-        Ok(alerts)
-    }
 }
