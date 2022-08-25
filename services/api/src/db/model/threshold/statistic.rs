@@ -78,7 +78,7 @@ impl QueryStatistic {
     }
 }
 
-enum StatisticKind {
+pub enum StatisticKind {
     Z = 0,
     T = 1,
 }
@@ -95,20 +95,20 @@ impl TryFrom<i32> for StatisticKind {
     }
 }
 
-impl Into<JsonStatisticKind> for StatisticKind {
-    fn into(self) -> JsonStatisticKind {
-        match self {
-            Self::Z => JsonStatisticKind::Z,
-            Self::T => JsonStatisticKind::T,
-        }
-    }
-}
-
 impl From<JsonStatisticKind> for StatisticKind {
     fn from(kind: JsonStatisticKind) -> Self {
         match kind {
             JsonStatisticKind::Z => Self::Z,
             JsonStatisticKind::T => Self::T,
+        }
+    }
+}
+
+impl Into<JsonStatisticKind> for StatisticKind {
+    fn into(self) -> JsonStatisticKind {
+        match self {
+            Self::Z => JsonStatisticKind::Z,
+            Self::T => JsonStatisticKind::T,
         }
     }
 }
@@ -121,8 +121,8 @@ pub struct ThresholdStatistic {
 pub struct Statistic {
     pub id:          i32,
     pub uuid:        String,
-    pub kind:        i32,
-    pub sample_size: Option<i64>,
+    pub kind:        StatisticKind,
+    pub sample_size: i64,
     pub window:      i64,
     pub left_side:   Option<f32>,
     pub right_side:  Option<f32>,
@@ -165,26 +165,30 @@ impl ThresholdStatistic {
                 Option<f32>,
             )>(conn)
             .map(
-                |(threshold_id, id, uuid, kind, sample_size, window, left_side, right_side)| {
+                |(threshold_id, id, uuid, kind, sample_size, window, left_side, right_side)| -> Result<ThresholdStatistic, HttpError> {
                     let statistic = Statistic {
                         id,
                         uuid,
-                        kind,
-                        sample_size,
+                        kind: kind.try_into()?,
+                        sample_size: unwrap_sample_size(sample_size),
                         window: unwrap_window(window),
                         left_side,
                         right_side,
                     };
-                    Self {
+                    Ok(Self {
                         threshold_id,
                         statistic,
-                    }
+                    })
                 },
             )
-            .map_err(|_| http_error!(STATISTIC_ERROR))?;
+            .map_err(|_| http_error!(STATISTIC_ERROR))??;
 
         Ok(threshold_statistic)
     }
+}
+
+fn unwrap_sample_size(sample_size: Option<i64>) -> i64 {
+    sample_size.unwrap_or(i64::MAX)
 }
 
 fn unwrap_window(window: Option<i64>) -> i64 {
