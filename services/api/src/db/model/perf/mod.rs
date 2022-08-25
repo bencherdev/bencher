@@ -40,9 +40,12 @@ use super::{
         InsertBenchmark,
         QueryBenchmark,
     },
-    threshold::statistic::{
-        QueryStatistic,
-        ThresholdStatistic,
+    threshold::{
+        alert::InsertAlert,
+        statistic::{
+            QueryStatistic,
+            ThresholdStatistic,
+        },
     },
 };
 
@@ -105,37 +108,15 @@ impl InsertPerf {
         json_perf: JsonNewPerf,
         threshold_statistic: Option<&ThresholdStatistic>,
     ) -> Result<(Uuid, JsonReportAlerts), HttpError> {
-        // let alerts = Vec::new();
+        let mut report_alerts = Vec::new();
         let benchmark_id = if let Ok(benchmark_id) =
             QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name)
         {
-            if let Some(threshold_statistic) = threshold_statistic {
-                // If benchmark already exists then check for threshold violations
-                schema::perf::table
-                    .left_join(
-                        schema::benchmark::table
-                            .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-                    )
-                    .filter(schema::benchmark::id.eq(benchmark_id))
-                    .inner_join(
-                        schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
-                    )
-                    .filter(schema::report::start_time.ge(threshold_statistic.statistic.window))
-                    .left_join(
-                        schema::testbed::table
-                            .on(schema::report::testbed_id.eq(schema::testbed::id)),
-                    )
-                    .filter(schema::testbed::id.eq(threshold_statistic.testbed_id))
-                    .inner_join(
-                        schema::version::table
-                            .on(schema::report::version_id.eq(schema::version::id)),
-                    )
-                    .left_join(
-                        schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
-                    )
-                    .filter(schema::branch::id.eq(threshold_statistic.branch_id));
-            }
-
+            report_alerts.append(&mut InsertAlert::alerts(
+                conn,
+                threshold_statistic,
+                benchmark_id,
+            )?);
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
@@ -167,8 +148,6 @@ impl InsertPerf {
             .values(&insert_perf)
             .execute(conn)
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
-
-        let mut report_alerts = Vec::new();
 
         Ok((perf_uuid, report_alerts))
     }
