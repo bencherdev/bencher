@@ -29,7 +29,7 @@ const STATISTIC_ERROR: &str = "Failed to get statistic.";
 pub struct QueryStatistic {
     pub id:          i32,
     pub uuid:        String,
-    pub kind:        i32,
+    pub test:        i32,
     pub sample_size: Option<i64>,
     pub window:      Option<i64>,
     pub left_side:   Option<f32>,
@@ -58,7 +58,7 @@ impl QueryStatistic {
         let Self {
             id: _,
             uuid,
-            kind,
+            test,
             sample_size,
             window,
             left_side,
@@ -66,7 +66,7 @@ impl QueryStatistic {
         } = self;
         Ok(JsonStatistic {
             uuid:        Uuid::from_str(&uuid).map_err(|_| http_error!(STATISTIC_ERROR))?,
-            kind:        StatisticKind::try_from(kind)?.into(),
+            test:        StatisticKind::try_from(test)?.into(),
             sample_size: sample_size.map(|ss| ss as u32),
             window:      window.map(|w| w as u32),
             left_side:   left_side.map(Into::into),
@@ -85,8 +85,8 @@ impl TryFrom<i32> for StatisticKind {
 
     fn try_from(kind: i32) -> Result<Self, Self::Error> {
         match kind {
-            0 => Ok(StatisticKind::Z),
-            1 => Ok(StatisticKind::T),
+            0 => Ok(Self::Z),
+            1 => Ok(Self::T),
             _ => Err(http_error!(STATISTIC_ERROR)),
         }
     }
@@ -114,7 +114,7 @@ impl Into<JsonStatisticKind> for StatisticKind {
 #[table_name = "statistic_table"]
 pub struct InsertStatistic {
     pub uuid:        String,
-    pub kind:        i32,
+    pub test:        i32,
     pub sample_size: Option<i64>,
     pub window:      Option<i64>,
     pub left_side:   Option<f32>,
@@ -124,7 +124,7 @@ pub struct InsertStatistic {
 impl InsertStatistic {
     pub fn from_json(json_statistic: JsonNewStatistic) -> Result<Self, HttpError> {
         let JsonNewStatistic {
-            kind,
+            test,
             sample_size,
             window,
             left_side,
@@ -132,7 +132,7 @@ impl InsertStatistic {
         } = json_statistic;
         Ok(Self {
             uuid:        Uuid::new_v4().to_string(),
-            kind:        StatisticKind::from(kind) as i32,
+            test:        StatisticKind::from(test) as i32,
             sample_size: sample_size.map(|ss| ss as i64),
             window:      window.map(|w| w as i64),
             left_side:   left_side.map(Into::into),

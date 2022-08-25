@@ -103,7 +103,7 @@ table! {
     statistic (id) {
         id -> Integer,
         uuid -> Text,
-        kind -> Integer,
+        test -> Integer,
         sample_size -> Nullable<BigInt>,
         window -> Nullable<BigInt>,
         left_side -> Nullable<Float>,
@@ -134,6 +134,7 @@ table! {
         uuid -> Text,
         branch_id -> Integer,
         testbed_id -> Integer,
+        kind -> Integer,
         statistic_id -> Integer,
     }
 }

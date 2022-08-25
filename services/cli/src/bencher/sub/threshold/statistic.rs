@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct Statistic {
-    pub kind:        StatisticKind,
+    pub test:        StatisticKind,
     pub sample_size: Option<u32>,
     pub window:      Option<u32>,
     pub left_side:   Option<f32>,
@@ -27,14 +27,14 @@ impl TryFrom<CliStatisticCreate> for Statistic {
 
     fn try_from(create: CliStatisticCreate) -> Result<Self, Self::Error> {
         let CliStatisticCreate {
-            kind,
+            test,
             sample_size,
             window,
             left_side,
             right_side,
         } = create;
         Ok(Self {
-            kind: kind.into(),
+            test: test.into(),
             sample_size,
             window,
             // TODO validate these as reasonable percentages
@@ -47,14 +47,14 @@ impl TryFrom<CliStatisticCreate> for Statistic {
 impl Into<JsonNewStatistic> for Statistic {
     fn into(self) -> JsonNewStatistic {
         let Self {
-            kind,
+            test,
             sample_size,
             window,
             left_side,
             right_side,
         } = self;
         JsonNewStatistic {
-            kind: kind.into(),
+            test: test.into(),
             sample_size,
             window,
             left_side: left_side.map(|s| s.into()),

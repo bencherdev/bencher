@@ -256,6 +256,8 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         TESTBED_ARG,
         &testbed,
         "--kind",
+        "latency",
+        "--test",
         "z",
     ]);
     cmd.assert().success();

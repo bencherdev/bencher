@@ -6,7 +6,10 @@ use clap::{
 };
 use uuid::Uuid;
 
-use super::CliBackend;
+use super::{
+    perf::CliPerfKind,
+    CliBackend,
+};
 
 #[derive(Subcommand, Debug)]
 pub enum CliThreshold {
@@ -40,6 +43,10 @@ pub struct CliThresholdCreate {
     #[clap(long)]
     pub testbed: Uuid,
 
+    /// Benchmark kind
+    #[clap(value_enum, long)]
+    pub kind: CliPerfKind,
+
     #[clap(flatten)]
     pub statistic: CliStatisticCreate,
 
@@ -49,9 +56,9 @@ pub struct CliThresholdCreate {
 
 #[derive(Parser, Debug)]
 pub struct CliStatisticCreate {
-    /// Statistic kind
+    /// Statistic test kind
     #[clap(value_enum, long)]
-    pub kind: CliStatisticKind,
+    pub test: CliStatisticKind,
 
     /// Limit sample size
     #[clap(long)]

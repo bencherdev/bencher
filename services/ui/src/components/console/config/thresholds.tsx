@@ -81,6 +81,17 @@ const thresholdsConfig = {
           clear: false,
           config: thresholdFieldsConfig.name,
         },
+        {
+          kind: Field.INPUT,
+          key: "kind",
+          label: true,
+          value: "",
+          valid: null,
+          validate: true,
+          nullify: false,
+          clear: false,
+          config: thresholdFieldsConfig.name,
+        },
       ],
       path: (pathname) => {
         return parentPath(pathname);

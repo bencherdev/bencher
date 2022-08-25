@@ -207,6 +207,7 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
+    // TODO this needs to hold multiple thresholds, potentially one for each kind
     // The threshold is constant across iterations
     let perf_threshold = PerfThreshold::new(&*conn, branch_id, testbed_id).ok();
 

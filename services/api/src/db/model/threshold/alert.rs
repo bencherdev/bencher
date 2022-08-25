@@ -1,10 +1,8 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    alert::{
-        JsonAlert,
-        JsonSide,
-    },
+use bencher_json::alert::{
+    JsonAlert,
+    JsonSide,
 };
 use diesel::{
     Insertable,

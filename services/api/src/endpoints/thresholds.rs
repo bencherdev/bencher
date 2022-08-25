@@ -89,6 +89,7 @@ pub async fn get_ls(
             schema::threshold::uuid,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
+            schema::threshold::kind,
             schema::threshold::statistic_id,
         ))
         .order(schema::threshold::id)
@@ -210,6 +211,7 @@ pub async fn get_one(
             schema::threshold::uuid,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
+            schema::threshold::kind,
             schema::threshold::statistic_id,
         ))
         .first::<QueryThreshold>(&*conn)

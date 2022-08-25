@@ -46,7 +46,7 @@ pub struct PerfThreshold {
 pub struct Statistic {
     pub id:          i32,
     pub uuid:        String,
-    pub kind:        StatisticKind,
+    pub test:        StatisticKind,
     pub sample_size: i64,
     pub window:      i64,
     pub left_side:   Option<f32>,
@@ -82,7 +82,7 @@ impl PerfThreshold {
                 schema::threshold::id,
                 schema::statistic::id,
                 schema::statistic::uuid,
-                schema::statistic::kind,
+                schema::statistic::test,
                 schema::statistic::sample_size,
                 schema::statistic::window,
                 schema::statistic::left_side,
@@ -99,11 +99,11 @@ impl PerfThreshold {
                 Option<f32>,
             )>(conn)
             .map(
-                |(threshold_id, id, uuid, kind, sample_size, window, left_side, right_side)| -> Result<PerfThreshold, HttpError> {
+                |(threshold_id, id, uuid, test, sample_size, window, left_side, right_side)| -> Result<PerfThreshold, HttpError> {
                     let statistic = Statistic {
                         id,
                         uuid,
-                        kind: kind.try_into()?,
+                        test: test.try_into()?,
                         sample_size: unwrap_sample_size(sample_size),
                         window: unwrap_window(window),
                         left_side,

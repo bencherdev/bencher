@@ -7,18 +7,21 @@ use serde::{
 };
 use uuid::Uuid;
 
+use crate::perf::JsonPerfKind;
+
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
     pub branch:    Uuid,
     pub testbed:   Uuid,
+    pub kind:      JsonPerfKind,
     pub statistic: JsonNewStatistic,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewStatistic {
-    pub kind:        JsonStatisticKind,
+    pub test:        JsonStatisticKind,
     pub sample_size: Option<u32>,
     pub window:      Option<u32>,
     pub left_side:   Option<OrderedFloat<f32>>,
@@ -31,6 +34,7 @@ pub struct JsonThreshold {
     pub uuid:      Uuid,
     pub branch:    Uuid,
     pub testbed:   Uuid,
+    pub kind:      JsonPerfKind,
     pub statistic: Uuid,
 }
 
@@ -38,7 +42,7 @@ pub struct JsonThreshold {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStatistic {
     pub uuid:        Uuid,
-    pub kind:        JsonStatisticKind,
+    pub test:        JsonStatisticKind,
     pub sample_size: Option<u32>,
     pub window:      Option<u32>,
     pub left_side:   Option<OrderedFloat<f32>>,

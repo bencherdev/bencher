@@ -17,7 +17,7 @@ use crate::{
     BencherError,
 };
 
-mod kind;
+pub mod kind;
 
 use kind::Kind;
 

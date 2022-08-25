@@ -131,8 +131,8 @@ CREATE TABLE perf (
 CREATE TABLE statistic (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    -- kind: Z or T
-    kind INTEGER NOT NULL,
+    -- test kind: Z or T
+    test INTEGER NOT NULL,
     -- sample size
     sample_size BIGINT,
     -- time window
@@ -147,11 +147,12 @@ CREATE TABLE threshold (
     uuid TEXT NOT NULL UNIQUE,
     branch_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
+    kind INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
     FOREIGN KEY (branch_id) REFERENCES branch (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (statistic_id) REFERENCES statistic (id),
-    UNIQUE(branch_id, testbed_id)
+    UNIQUE(branch_id, testbed_id, kind)
 );
 CREATE TABLE alert (
     id INTEGER PRIMARY KEY NOT NULL,
