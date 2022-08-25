@@ -92,7 +92,11 @@ pub async fn post(
         .map(|t| t.timestamp_nanos())
         .unwrap_or(i64::MAX);
 
-    let order_by = (schema::version::number, schema::perf::iteration);
+    let order_by = (
+        schema::version::number,
+        schema::report::start_time,
+        schema::perf::iteration,
+    );
 
     let conn = db_connection.lock().await;
     let mut data = Vec::new();
