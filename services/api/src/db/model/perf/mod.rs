@@ -36,7 +36,7 @@ pub use throughput::InsertThroughput;
 
 use self::threshold::{
     PerfAlerts,
-    PerfThreshold,
+    PerfThresholds,
 };
 use super::benchmark::{
     InsertBenchmark,
@@ -100,9 +100,9 @@ impl InsertPerf {
         iteration: i32,
         benchmark_name: String,
         json_perf: JsonNewPerf,
-        perf_threshold: Option<&PerfThreshold>,
+        perf_thresholds: &PerfThresholds,
     ) -> Result<(Uuid, JsonReportAlerts), HttpError> {
-        let mut perf_alerts = PerfAlerts::new();
+        let mut perf_alerts = None;
 
         let benchmark_id = if let Ok(benchmark_id) =
             QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name)
@@ -110,9 +110,7 @@ impl InsertPerf {
             // Only generate alerts if the benchmark already exists
             // and a threshold is provided.
             // Note these alerts have not yet been committed to the database.
-            if let Some(perf_threshold) = perf_threshold {
-                perf_alerts.append(&mut perf_threshold.alerts(conn, benchmark_id)?);
-            }
+            perf_alerts = Some(perf_thresholds.alerts(conn, benchmark_id)?);
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
@@ -152,6 +150,6 @@ impl InsertPerf {
             .filter_map(|perf_alert| perf_alert.into_report_alert(conn, perf_id).ok())
             .collect();
 
-        Ok((perf_uuid, report_alerts))
+        Ok((perf_uuid, report_alerts.unwrap_or_default()))
     }
 }

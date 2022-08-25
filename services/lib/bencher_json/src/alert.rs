@@ -1,6 +1,6 @@
+use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use ordered_float::OrderedFloat;
 use serde::{
     Deserialize,
     Serialize,

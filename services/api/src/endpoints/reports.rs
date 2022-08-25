@@ -34,7 +34,7 @@ use crate::{
         model::{
             branch::QueryBranch,
             perf::{
-                threshold::PerfThreshold,
+                threshold::PerfThresholds,
                 InsertPerf,
             },
             project::QueryProject,
@@ -207,9 +207,7 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    // TODO this needs to hold multiple thresholds, potentially one for each kind
-    // The threshold is constant across iterations
-    let perf_threshold = PerfThreshold::new(&*conn, branch_id, testbed_id).ok();
+    let perf_thresholds = PerfThresholds::new(&*conn, branch_id, testbed_id);
 
     let mut benchmarks = JsonReportBenchmarks::new();
     for (index, benchmark_perf) in json_report.benchmarks.inner.into_iter().enumerate() {
@@ -221,7 +219,7 @@ pub async fn post(
                 index as i32,
                 benchmark_name,
                 json_perf,
-                perf_threshold.as_ref(),
+                &perf_thresholds,
             )?;
 
             benchmarks.push(JsonReportBenchmark { perf, alerts });

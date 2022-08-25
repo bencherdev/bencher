@@ -87,7 +87,7 @@ impl QueryThreshold {
     }
 }
 
-enum PerfKind {
+pub enum PerfKind {
     Throughput = 0,
     Latency    = 1,
     Compute    = 2,

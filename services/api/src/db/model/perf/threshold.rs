@@ -26,6 +26,7 @@ use crate::{
         model::threshold::{
             alert::InsertAlert,
             statistic::StatisticKind,
+            PerfKind,
         },
         schema,
         schema::statistic as statistic_table,
@@ -36,39 +37,29 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-pub struct PerfThreshold {
-    pub branch_id:    i32,
-    pub testbed_id:   i32,
+pub struct PerfThresholds {
+    pub branch_id:  i32,
+    pub testbed_id: i32,
+    pub latency:    Option<ThresholdStatistic>,
+    pub throughput: Option<ThresholdStatistic>,
+    pub compute:    Option<ThresholdStatistic>,
+    pub memory:     Option<ThresholdStatistic>,
+    pub storage:    Option<ThresholdStatistic>,
+}
+
+pub struct ThresholdStatistic {
     pub threshold_id: i32,
     pub statistic:    Statistic,
 }
 
-pub struct Statistic {
-    pub id:          i32,
-    pub uuid:        String,
-    pub test:        StatisticKind,
-    pub sample_size: i64,
-    pub window:      i64,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
-}
-
-struct Perf {
-    pub id: i32,
-    pub latency_id: Option<i32>,
-    pub throughput_id: Option<i32>,
-    pub compute_id: Option<i32>,
-    pub memory_id: Option<i32>,
-    pub storage_id: Option<i32>,
-}
-
-impl PerfThreshold {
+impl ThresholdStatistic {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
+        kind: PerfKind,
     ) -> Result<Self, HttpError> {
-        let perf_threshold = schema::statistic::table
+        schema::statistic::table
             .inner_join(
                 schema::threshold::table
                     .on(schema::statistic::id.eq(schema::threshold::statistic_id)),
@@ -76,7 +67,8 @@ impl PerfThreshold {
             .filter(
                 schema::threshold::branch_id
                     .eq(branch_id)
-                    .and(schema::threshold::testbed_id.eq(testbed_id)),
+                    .and(schema::threshold::testbed_id.eq(testbed_id))
+                    .and(schema::threshold::kind.eq(kind as i32)),
             )
             .select((
                 schema::threshold::id,
@@ -99,9 +91,9 @@ impl PerfThreshold {
                 Option<f32>,
             )>(conn)
             .map(
-                |(threshold_id, id, uuid, test, sample_size, window, left_side, right_side)| -> Result<PerfThreshold, HttpError> {
-                    let statistic = Statistic {
-                        id,
+                |(threshold_id, id, uuid, test, sample_size, window, left_side,
+        right_side)| -> Result<Self, HttpError> {             let
+        statistic = Statistic {                 id,
                         uuid,
                         test: test.try_into()?,
                         sample_size: unwrap_sample_size(sample_size),
@@ -110,16 +102,46 @@ impl PerfThreshold {
                         right_side,
                     };
                     Ok(Self {
-                        branch_id,
-                        testbed_id,
                         threshold_id,
                         statistic,
                     })
                 },
             )
-            .map_err(|_| http_error!(PERF_ERROR))??;
+            .map_err(|_| http_error!(PERF_ERROR))?
+    }
+}
 
-        Ok(perf_threshold)
+pub struct Statistic {
+    pub id:          i32,
+    pub uuid:        String,
+    pub test:        StatisticKind,
+    pub sample_size: i64,
+    pub window:      i64,
+    pub left_side:   Option<f32>,
+    pub right_side:  Option<f32>,
+}
+
+struct Perf {
+    pub id: i32,
+    pub latency_id: Option<i32>,
+    pub throughput_id: Option<i32>,
+    pub compute_id: Option<i32>,
+    pub memory_id: Option<i32>,
+    pub storage_id: Option<i32>,
+}
+
+impl PerfThresholds {
+    pub fn new(conn: &SqliteConnection, branch_id: i32, testbed_id: i32) -> Self {
+        Self {
+            branch_id,
+            testbed_id,
+            latency: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Latency).ok(),
+            throughput: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Throughput)
+                .ok(),
+            compute: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Compute).ok(),
+            memory: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Memory).ok(),
+            storage: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Storage).ok(),
+        }
     }
 
     pub fn alerts(
@@ -189,7 +211,9 @@ impl PerfThreshold {
         // TODO use perf_json value to calculate the standard deviation and threshold
         // bounds. Then use those to generate alert(s)
 
-        Ok(alerts)
+        // Ok(alerts)
+
+        todo!()
     }
 }
 
