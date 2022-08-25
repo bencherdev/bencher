@@ -167,6 +167,10 @@ impl ThresholdStatistic {
 
         // TODO calculate the standard deviation and apply the proper test
         // generate alerts for the json_latency given as applicable
+        let length = json_latency_data.len();
+        let json_latency_sum: JsonLatency = json_latency_data.into_iter().sum();
+        let mean = json_latency_sum / length;
+
         Ok(alerts)
     }
 }
