@@ -20,6 +20,7 @@
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
     "dropshot",
-    "Insertable"
+    "Insertable",
+    "nanos"
   ]
 }

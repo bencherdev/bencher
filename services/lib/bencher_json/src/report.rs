@@ -538,3 +538,9 @@ pub type JsonReportAlerts = Vec<JsonReportAlert>;
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportAlert(pub Uuid);
+
+impl From<Uuid> for JsonReportAlert {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}

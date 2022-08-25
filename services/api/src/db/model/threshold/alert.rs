@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use bencher_json::alert::JsonAlert;
+use bencher_json::alert::{
+    JsonAlert,
+    JsonSide,
+};
 use diesel::{
     expression_methods::BoolExpressionMethods,
     Insertable,
@@ -35,6 +38,7 @@ pub struct QueryAlert {
     pub perf_id:      i32,
     pub threshold_id: i32,
     pub statistic_id: i32,
+    pub side:         bool,
     pub boundary:     f64,
     pub outlier:      f64,
 }
@@ -64,6 +68,7 @@ impl QueryAlert {
             perf_id,
             threshold_id,
             statistic_id,
+            side,
             boundary,
             outlier,
         } = self;
@@ -72,9 +77,42 @@ impl QueryAlert {
             perf:      QueryPerf::get_uuid(conn, perf_id)?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             statistic: QueryStatistic::get_uuid(conn, statistic_id)?,
+            side:      Side::from(side).into(),
             boundary:  boundary.into(),
             outlier:   outlier.into(),
         })
+    }
+}
+
+enum Side {
+    Left  = 0,
+    Right = 1,
+}
+
+impl From<bool> for Side {
+    fn from(side: bool) -> Self {
+        match side {
+            false => Self::Left,
+            true => Self::Right,
+        }
+    }
+}
+
+impl Into<bool> for Side {
+    fn into(self) -> bool {
+        match self {
+            Self::Left => false,
+            Self::Right => true,
+        }
+    }
+}
+
+impl Into<JsonSide> for Side {
+    fn into(self) -> JsonSide {
+        match self {
+            Self::Left => JsonSide::Left,
+            Self::Right => JsonSide::Right,
+        }
     }
 }
 
@@ -85,6 +123,7 @@ pub struct InsertAlert {
     pub perf_id:      i32,
     pub threshold_id: i32,
     pub statistic_id: i32,
+    pub side:         bool,
     pub boundary:     f64,
     pub outlier:      f64,
 }

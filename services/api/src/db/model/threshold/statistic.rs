@@ -5,6 +5,7 @@ use bencher_json::threshold::{
     JsonStatistic,
     JsonStatisticKind,
 };
+use chrono::offset::Utc;
 use diesel::{
     expression_methods::BoolExpressionMethods,
     Insertable,
@@ -113,8 +114,18 @@ impl From<JsonStatisticKind> for StatisticKind {
 }
 
 pub struct ThresholdStatistic {
-    pub threshold_id:    i32,
-    pub query_statistic: QueryStatistic,
+    pub threshold_id: i32,
+    pub statistic:    Statistic,
+}
+
+pub struct Statistic {
+    pub id:          i32,
+    pub uuid:        String,
+    pub kind:        i32,
+    pub sample_size: Option<i64>,
+    pub window:      i64,
+    pub left_side:   Option<f32>,
+    pub right_side:  Option<f32>,
 }
 
 impl ThresholdStatistic {
@@ -123,7 +134,7 @@ impl ThresholdStatistic {
         branch_id: i32,
         testbed_id: i32,
     ) -> Result<Self, HttpError> {
-        schema::statistic::table
+        let threshold_statistic = schema::statistic::table
             .inner_join(
                 schema::threshold::table
                     .on(schema::statistic::id.eq(schema::threshold::statistic_id)),
@@ -155,23 +166,34 @@ impl ThresholdStatistic {
             )>(conn)
             .map(
                 |(threshold_id, id, uuid, kind, sample_size, window, left_side, right_side)| {
-                    let query_statistic = QueryStatistic {
+                    let statistic = Statistic {
                         id,
                         uuid,
                         kind,
                         sample_size,
-                        window,
+                        window: unwrap_window(window),
                         left_side,
                         right_side,
                     };
                     Self {
                         threshold_id,
-                        query_statistic,
+                        statistic,
                     }
                 },
             )
-            .map_err(|_| http_error!(STATISTIC_ERROR))
+            .map_err(|_| http_error!(STATISTIC_ERROR))?;
+
+        Ok(threshold_statistic)
     }
+}
+
+fn unwrap_window(window: Option<i64>) -> i64 {
+    window
+        .map(|window| {
+            let now = Utc::now().timestamp_nanos();
+            now - window
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Insertable)]

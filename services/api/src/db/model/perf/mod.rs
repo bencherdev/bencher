@@ -3,9 +3,11 @@ use std::str::FromStr;
 use bencher_json::report::{
     JsonNewPerf,
     JsonReportAlert,
+    JsonReportAlerts,
 };
 use diesel::{
     Insertable,
+    JoinOnDsl,
     Queryable,
     SqliteConnection,
 };
@@ -102,13 +104,39 @@ impl InsertPerf {
         benchmark_name: String,
         json_perf: JsonNewPerf,
         threshold_statistic: Option<&ThresholdStatistic>,
-    ) -> Result<(Uuid, Vec<JsonReportAlert>), HttpError> {
-        let mut alerts = Vec::new();
-
+    ) -> Result<(Uuid, JsonReportAlerts), HttpError> {
+        // let alerts = Vec::new();
         let benchmark_id = if let Ok(benchmark_id) =
             QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name)
         {
             // If benchmark already exists then check for threshold violations
+            // schema::perf::table
+            //         .left_join(
+            //             schema::benchmark::table
+            //                 .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            //         )
+            //         .filter(schema::benchmark::id.eq(benchmark_id))
+            //         .inner_join(
+            //             
+            // schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
+            //         )
+            //         .filter(schema::report::start_time.ge(start_time_nanos))
+            //         .filter(schema::report::end_time.le(end_time_nanos))
+            //         .left_join(
+            //             schema::testbed::table
+            //                 .on(schema::report::testbed_id.eq(schema::testbed::id)),
+            //         )
+            //         .filter(schema::testbed::uuid.eq(testbed.to_string()))
+            //         .inner_join(
+            //             schema::version::table
+            //                 .on(schema::report::version_id.eq(schema::version::id)),
+            //         )
+            //         .left_join(
+            //             
+            // schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
+            //         )
+            //         .filter(schema::branch::uuid.eq(branch.to_string()));
+
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
@@ -141,6 +169,8 @@ impl InsertPerf {
             .execute(conn)
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
-        Ok((perf_uuid, alerts))
+        let mut report_alerts = Vec::new();
+
+        Ok((perf_uuid, report_alerts))
     }
 }
