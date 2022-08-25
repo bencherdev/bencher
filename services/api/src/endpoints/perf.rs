@@ -34,6 +34,7 @@ use dropshot::{
 };
 use uuid::Uuid;
 
+use crate::db::model::perf::latency::QueryLatency;
 use crate::{
     db::{
         model::report::to_date_time,
@@ -141,12 +142,14 @@ pub async fn post(
                             schema::report::end_time,
                             schema::version::number,
                             schema::version::hash,
+                            schema::latency::id,
+                            schema::latency::uuid,
                             schema::latency::lower_variance,
                             schema::latency::upper_variance,
                             schema::latency::duration,
                         ))
                         .order(&order_by)
-                        .load::<(String, i32, i64, i64, i32, Option<String>, i64, i64, i64)>(&*conn)
+                        .load::<(String, i32, i64, i64, i32, Option<String>, i32, String, i64, i64, i64)>(&*conn)
                         .map_err(|_| http_error!(PERF_ERROR))?
                         .into_iter()
                         .map(
@@ -157,11 +160,15 @@ pub async fn post(
                                 end_time,
                                 version_number,
                                 version_hash,
+                                latency_id,
+                                latency_uuid,
                                 lower_variance,
                                 upper_variance,
                                 duration,
                             )| {
                                 let perf = QueryPerfDatumKind::Latency(QueryLatency {
+                                    id: latency_id,
+                                    uuid: latency_uuid,
                                     lower_variance,
                                     upper_variance,
                                     duration,
@@ -500,27 +507,7 @@ impl QueryPerfDatumKind {
     }
 }
 
-#[derive(Debug)]
-pub struct QueryLatency {
-    pub lower_variance: i64,
-    pub upper_variance: i64,
-    pub duration:       i64,
-}
 
-impl QueryLatency {
-    fn to_json(self) -> Result<JsonLatency, HttpError> {
-        let Self {
-            lower_variance,
-            upper_variance,
-            duration,
-        } = self;
-        Ok(JsonLatency {
-            lower_variance: lower_variance as u64,
-            upper_variance: upper_variance as u64,
-            duration:       duration as u64,
-        })
-    }
-}
 
 #[derive(Debug)]
 pub struct QueryThroughput {

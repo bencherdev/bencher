@@ -38,7 +38,6 @@ use crate::{
         schema::alert as alert_table,
     },
     diesel::ExpressionMethods,
-    endpoints::perf::QueryLatency,
     util::http_error,
 };
 
@@ -217,10 +216,14 @@ impl InsertAlert {
             .collect();
 
         for perf in &perfs {
-            let latency = schema::latency::table
-                .filter(schema::latency::id.eq(perf.latency_id))
-                .first::<QueryLatency>(conn)
-                .map_err(|_| http_error!(ALERT_ERROR))?;
+            // let latency = if let Some(latency_id) = perf.latency_id {
+            //     schema::latency::table
+            //         .filter(schema::latency::id.eq(latency_id))
+            //         .first::<QueryLatency>(conn)
+            //         .ok()
+            // } else {
+            //     None
+            // };
         }
 
         Ok(alerts)

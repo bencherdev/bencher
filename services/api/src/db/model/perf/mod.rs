@@ -27,9 +27,9 @@ use crate::{
     util::http_error,
 };
 
-mod latency;
-mod min_max_avg;
-mod throughput;
+pub mod latency;
+pub mod min_max_avg;
+pub mod throughput;
 
 pub use latency::InsertLatency;
 pub use min_max_avg::InsertMinMaxAvg;

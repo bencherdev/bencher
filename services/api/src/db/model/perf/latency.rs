@@ -19,6 +19,32 @@ use crate::{
     util::http_error,
 };
 
+#[derive(Queryable, Debug)]
+pub struct QueryLatency {
+    pub id: i32,
+    pub uuid: String,
+    pub lower_variance: i64,
+    pub upper_variance: i64,
+    pub duration:       i64,
+}
+
+impl QueryLatency {
+    pub fn to_json(self) -> Result<JsonLatency, HttpError> {
+        let Self {
+            id: _,
+            uuid: _,
+            lower_variance,
+            upper_variance,
+            duration,
+        } = self;
+        Ok(JsonLatency {
+            lower_variance: lower_variance as u64,
+            upper_variance: upper_variance as u64,
+            duration:       duration as u64,
+        })
+    }
+}
+
 #[derive(Insertable)]
 #[table_name = "latency_table"]
 pub struct InsertLatency {
