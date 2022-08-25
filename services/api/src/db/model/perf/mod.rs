@@ -110,7 +110,7 @@ impl InsertPerf {
             // Only generate alerts if the benchmark already exists
             // and a threshold is provided.
             // Note these alerts have not yet been committed to the database.
-            perf_alerts = Some(perf_thresholds.alerts(conn, benchmark_id)?);
+            perf_alerts = Some(perf_thresholds.alerts(conn, benchmark_id, &json_perf)?);
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);

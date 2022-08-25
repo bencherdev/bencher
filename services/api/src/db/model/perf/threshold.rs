@@ -1,6 +1,7 @@
 use bencher_json::report::{
     JsonLatency,
     JsonMinMaxAvg,
+    JsonNewPerf,
     JsonReportAlert,
     JsonReportAlerts,
     JsonThroughput,
@@ -111,13 +112,13 @@ impl ThresholdStatistic {
             .map_err(|_| http_error!(PERF_ERROR))?
     }
 
-    pub fn alerts(
+    pub fn latency_alerts(
         &self,
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        kind: PerfKind,
         benchmark_id: i32,
+        json_latency: &JsonLatency,
     ) -> Result<PerfAlerts, HttpError> {
         let alerts = PerfAlerts::new();
 
@@ -144,32 +145,29 @@ impl ThresholdStatistic {
             .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
             .filter(schema::branch::id.eq(branch_id));
 
-        match kind {
-            PerfKind::Latency => {
-                let json_latency_data: Vec<JsonLatency> = query
-                    .inner_join(
-                        schema::latency::table
-                            .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-                    )
-                    .select((
-                        schema::latency::id,
-                        schema::latency::uuid,
-                        schema::latency::lower_variance,
-                        schema::latency::upper_variance,
-                        schema::latency::duration,
-                    ))
-                    .order(&order_by)
-                    .limit(self.statistic.sample_size)
-                    .load::<QueryLatency>(conn)
-                    .map_err(|_| http_error!(PERF_ERROR))?
-                    .into_iter()
-                    .filter_map(|query| query.to_json().ok())
-                    .collect();
-            },
-            _ => {},
-        }
+        let json_latency_data: Vec<JsonLatency> = query
+            .inner_join(
+                schema::latency::table
+                    .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
+            )
+            .select((
+                schema::latency::id,
+                schema::latency::uuid,
+                schema::latency::lower_variance,
+                schema::latency::upper_variance,
+                schema::latency::duration,
+            ))
+            .order(&order_by)
+            .limit(self.statistic.sample_size)
+            .load::<QueryLatency>(conn)
+            .map_err(|_| http_error!(PERF_ERROR))?
+            .into_iter()
+            .filter_map(|query| query.to_json().ok())
+            .collect();
 
-        todo!()
+        // TODO calculate the standard deviation and apply the proper test
+        // generate alerts for the json_latency given as applicable
+        Ok(alerts)
     }
 }
 
@@ -210,30 +208,24 @@ impl PerfThresholds {
         &self,
         conn: &SqliteConnection,
         benchmark_id: i32,
+        json_perf: &JsonNewPerf,
     ) -> Result<PerfAlerts, HttpError> {
         let mut alerts = PerfAlerts::new();
-        // TODO other perf kinds
-        alerts.append(&mut self.latency_alerts(conn, benchmark_id)?);
-        Ok(alerts)
-    }
 
-    // todo make a macro rules macro for this
-    fn latency_alerts(
-        &self,
-        conn: &SqliteConnection,
-        benchmark_id: i32,
-    ) -> Result<PerfAlerts, HttpError> {
-        if let Some(st) = &self.latency {
-            st.alerts(
-                conn,
-                self.branch_id,
-                self.testbed_id,
-                PerfKind::Latency,
-                benchmark_id,
-            )
-        } else {
-            Ok(PerfAlerts::default())
+        // TODO other perf kinds
+        if let Some(json_latency) = &json_perf.latency {
+            if let Some(st) = &self.latency {
+                alerts.append(&mut st.latency_alerts(
+                    conn,
+                    self.branch_id,
+                    self.testbed_id,
+                    benchmark_id,
+                    json_latency,
+                )?)
+            }
         }
+
+        Ok(alerts)
     }
 }
 
