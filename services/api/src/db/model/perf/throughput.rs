@@ -19,6 +19,35 @@ use crate::{
     util::http_error,
 };
 
+#[derive(Queryable, Debug)]
+pub struct QueryThroughput {
+    pub id: i32,
+    pub uuid: String,
+    pub lower_variance: f64,
+    pub upper_variance: f64,
+    pub events: f64,
+    pub unit_time: i64,
+}
+
+impl QueryThroughput {
+    pub fn to_json(self) -> Result<JsonThroughput, HttpError> {
+        let Self {
+            id: _,
+            uuid: _,
+            lower_variance,
+            upper_variance,
+            events,
+            unit_time,
+        } = self;
+        Ok(JsonThroughput {
+            lower_variance: lower_variance.into(),
+            upper_variance: upper_variance.into(),
+            events:         events.into(),
+            unit_time:      unit_time as u64,
+        })
+    }
+}
+
 #[derive(Insertable)]
 #[table_name = "throughput_table"]
 pub struct InsertThroughput {

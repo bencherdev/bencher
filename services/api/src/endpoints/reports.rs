@@ -41,7 +41,6 @@ use crate::{
             },
             testbed::QueryTestbed,
             threshold::statistic::{
-                QueryStatistic,
                 ThresholdStatistic,
             },
             user::QueryUser,

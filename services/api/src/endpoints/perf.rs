@@ -10,11 +10,6 @@ use bencher_json::{
         JsonPerfDatumKind,
         JsonPerfKind,
     },
-    report::{
-        JsonLatency,
-        JsonMinMaxAvg,
-        JsonThroughput,
-    },
     JsonPerf,
     JsonPerfQuery,
 };
@@ -34,10 +29,16 @@ use dropshot::{
 };
 use uuid::Uuid;
 
-use crate::db::model::perf::latency::QueryLatency;
 use crate::{
     db::{
-        model::report::to_date_time,
+        model::{
+            perf::{
+                latency::QueryLatency,
+                min_max_avg::QueryMinMaxAvg,
+                throughput::QueryThroughput,
+            },
+            report::to_date_time,
+        },
         schema,
     },
     diesel::ExpressionMethods,
@@ -129,64 +130,77 @@ pub async fn post(
                     )
                     .filter(schema::branch::uuid.eq(branch.to_string()));
 
-                let query_data: Vec<QueryPerfDatum> = match kind {
-                    JsonPerfKind::Latency => query
-                        .inner_join(
-                            schema::latency::table
-                                .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::perf::iteration,
-                            schema::report::start_time,
-                            schema::report::end_time,
-                            schema::version::number,
-                            schema::version::hash,
-                            schema::latency::id,
-                            schema::latency::uuid,
-                            schema::latency::lower_variance,
-                            schema::latency::upper_variance,
-                            schema::latency::duration,
-                        ))
-                        .order(&order_by)
-                        .load::<(String, i32, i64, i64, i32, Option<String>, i32, String, i64, i64, i64)>(&*conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?
-                        .into_iter()
-                        .map(
-                            |(
-                                uuid,
-                                iteration,
-                                start_time,
-                                end_time,
-                                version_number,
-                                version_hash,
-                                latency_id,
-                                latency_uuid,
-                                lower_variance,
-                                upper_variance,
-                                duration,
-                            )| {
-                                let perf = QueryPerfDatumKind::Latency(QueryLatency {
-                                    id: latency_id,
-                                    uuid: latency_uuid,
-                                    lower_variance,
-                                    upper_variance,
-                                    duration,
-                                });
-                                QueryPerfDatum {
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    perf,
-                                }
-                            },
-                        )
-                        .collect(),
-                    JsonPerfKind::Throughput => {
-                        query
+                let query_data: Vec<QueryPerfDatum> =
+                    match kind {
+                        JsonPerfKind::Latency => {
+                            query
+                                .inner_join(schema::latency::table.on(
+                                    schema::perf::latency_id.eq(schema::latency::id.nullable()),
+                                ))
+                                .select((
+                                    schema::perf::uuid,
+                                    schema::perf::iteration,
+                                    schema::report::start_time,
+                                    schema::report::end_time,
+                                    schema::version::number,
+                                    schema::version::hash,
+                                    schema::latency::id,
+                                    schema::latency::uuid,
+                                    schema::latency::lower_variance,
+                                    schema::latency::upper_variance,
+                                    schema::latency::duration,
+                                ))
+                                .order(&order_by)
+                                .load::<(
+                                    String,
+                                    i32,
+                                    i64,
+                                    i64,
+                                    i32,
+                                    Option<String>,
+                                    i32,
+                                    String,
+                                    i64,
+                                    i64,
+                                    i64,
+                                )>(&*conn)
+                                .map_err(|_| http_error!(PERF_ERROR))?
+                                .into_iter()
+                                .map(
+                                    |(
+                                        uuid,
+                                        iteration,
+                                        start_time,
+                                        end_time,
+                                        version_number,
+                                        version_hash,
+                                        latency_id,
+                                        latency_uuid,
+                                        lower_variance,
+                                        upper_variance,
+                                        duration,
+                                    )| {
+                                        let perf = QueryPerfDatumKind::Latency(QueryLatency {
+                                            id: latency_id,
+                                            uuid: latency_uuid,
+                                            lower_variance,
+                                            upper_variance,
+                                            duration,
+                                        });
+                                        QueryPerfDatum {
+                                            uuid,
+                                            iteration,
+                                            start_time,
+                                            end_time,
+                                            version_number,
+                                            version_hash,
+                                            perf,
+                                        }
+                                    },
+                                )
+                                .collect()
+                        },
+                        JsonPerfKind::Throughput => query
                             .inner_join(schema::throughput::table.on(
                                 schema::perf::throughput_id.eq(schema::throughput::id.nullable()),
                             ))
@@ -197,6 +211,8 @@ pub async fn post(
                                 schema::report::end_time,
                                 schema::version::number,
                                 schema::version::hash,
+                                schema::throughput::id,
+                                schema::throughput::uuid,
                                 schema::throughput::lower_variance,
                                 schema::throughput::upper_variance,
                                 schema::throughput::events,
@@ -210,6 +226,8 @@ pub async fn post(
                                 i64,
                                 i32,
                                 Option<String>,
+                                i32,
+                                String,
                                 f64,
                                 f64,
                                 f64,
@@ -225,12 +243,16 @@ pub async fn post(
                                     end_time,
                                     version_number,
                                     version_hash,
+                                    throughput_id,
+                                    throughput_uuid,
                                     lower_variance,
                                     upper_variance,
                                     events,
                                     unit_time,
                                 )| {
                                     let perf = QueryPerfDatumKind::Throughput(QueryThroughput {
+                                        id: throughput_id,
+                                        uuid: throughput_uuid,
                                         lower_variance,
                                         upper_variance,
                                         events,
@@ -247,10 +269,8 @@ pub async fn post(
                                     }
                                 },
                             )
-                            .collect()
-                    },
-                    JsonPerfKind::Compute => {
-                        query
+                            .collect(),
+                        JsonPerfKind::Compute => query
                             .inner_join(schema::min_max_avg::table.on(
                                 schema::perf::compute_id.eq(schema::min_max_avg::id.nullable()),
                             ))
@@ -261,14 +281,26 @@ pub async fn post(
                                 schema::report::end_time,
                                 schema::version::number,
                                 schema::version::hash,
+                                schema::min_max_avg::id,
+                                schema::min_max_avg::uuid,
                                 schema::min_max_avg::min,
                                 schema::min_max_avg::max,
                                 schema::min_max_avg::avg,
                             ))
                             .order(&order_by)
-                            .load::<(String, i32, i64, i64, i32, Option<String>, f64, f64, f64)>(
-                                &*conn,
-                            )
+                            .load::<(
+                                String,
+                                i32,
+                                i64,
+                                i64,
+                                i32,
+                                Option<String>,
+                                i32,
+                                String,
+                                f64,
+                                f64,
+                                f64,
+                            )>(&*conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
                             .map(
@@ -279,11 +311,15 @@ pub async fn post(
                                     end_time,
                                     version_number,
                                     version_hash,
+                                    mma_id,
+                                    mma_uuid,
                                     min,
                                     max,
                                     avg,
                                 )| {
                                     let perf = QueryPerfDatumKind::Compute(QueryMinMaxAvg {
+                                        id: mma_id,
+                                        uuid: mma_uuid,
                                         min,
                                         max,
                                         avg,
@@ -299,56 +335,76 @@ pub async fn post(
                                     }
                                 },
                             )
-                            .collect()
-                    },
-                    JsonPerfKind::Memory => query
-                        .inner_join(
-                            schema::min_max_avg::table
-                                .on(schema::perf::memory_id.eq(schema::min_max_avg::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::perf::iteration,
-                            schema::report::start_time,
-                            schema::report::end_time,
-                            schema::version::number,
-                            schema::version::hash,
-                            schema::min_max_avg::min,
-                            schema::min_max_avg::max,
-                            schema::min_max_avg::avg,
-                        ))
-                        .order(&order_by)
-                        .load::<(String, i32, i64, i64, i32, Option<String>, f64, f64, f64)>(&*conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?
-                        .into_iter()
-                        .map(
-                            |(
-                                uuid,
-                                iteration,
-                                start_time,
-                                end_time,
-                                version_number,
-                                version_hash,
-                                min,
-                                max,
-                                avg,
-                            )| {
-                                let perf =
-                                    QueryPerfDatumKind::Memory(QueryMinMaxAvg { min, max, avg });
-                                QueryPerfDatum {
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    perf,
-                                }
-                            },
-                        )
-                        .collect(),
-                    JsonPerfKind::Storage => {
-                        query
+                            .collect(),
+                        JsonPerfKind::Memory => {
+                            query
+                                .inner_join(schema::min_max_avg::table.on(
+                                    schema::perf::memory_id.eq(schema::min_max_avg::id.nullable()),
+                                ))
+                                .select((
+                                    schema::perf::uuid,
+                                    schema::perf::iteration,
+                                    schema::report::start_time,
+                                    schema::report::end_time,
+                                    schema::version::number,
+                                    schema::version::hash,
+                                    schema::min_max_avg::id,
+                                    schema::min_max_avg::uuid,
+                                    schema::min_max_avg::min,
+                                    schema::min_max_avg::max,
+                                    schema::min_max_avg::avg,
+                                ))
+                                .order(&order_by)
+                                .load::<(
+                                    String,
+                                    i32,
+                                    i64,
+                                    i64,
+                                    i32,
+                                    Option<String>,
+                                    i32,
+                                    String,
+                                    f64,
+                                    f64,
+                                    f64,
+                                )>(&*conn)
+                                .map_err(|_| http_error!(PERF_ERROR))?
+                                .into_iter()
+                                .map(
+                                    |(
+                                        uuid,
+                                        iteration,
+                                        start_time,
+                                        end_time,
+                                        version_number,
+                                        version_hash,
+                                        mma_id,
+                                        mma_uuid,
+                                        min,
+                                        max,
+                                        avg,
+                                    )| {
+                                        let perf = QueryPerfDatumKind::Memory(QueryMinMaxAvg {
+                                            id: mma_id,
+                                            uuid: mma_uuid,
+                                            min,
+                                            max,
+                                            avg,
+                                        });
+                                        QueryPerfDatum {
+                                            uuid,
+                                            iteration,
+                                            start_time,
+                                            end_time,
+                                            version_number,
+                                            version_hash,
+                                            perf,
+                                        }
+                                    },
+                                )
+                                .collect()
+                        },
+                        JsonPerfKind::Storage => query
                             .inner_join(schema::min_max_avg::table.on(
                                 schema::perf::storage_id.eq(schema::min_max_avg::id.nullable()),
                             ))
@@ -359,14 +415,26 @@ pub async fn post(
                                 schema::report::end_time,
                                 schema::version::number,
                                 schema::version::hash,
+                                schema::min_max_avg::id,
+                                schema::min_max_avg::uuid,
                                 schema::min_max_avg::min,
                                 schema::min_max_avg::max,
                                 schema::min_max_avg::avg,
                             ))
                             .order(&order_by)
-                            .load::<(String, i32, i64, i64, i32, Option<String>, f64, f64, f64)>(
-                                &*conn,
-                            )
+                            .load::<(
+                                String,
+                                i32,
+                                i64,
+                                i64,
+                                i32,
+                                Option<String>,
+                                i32,
+                                String,
+                                f64,
+                                f64,
+                                f64,
+                            )>(&*conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
                             .map(
@@ -377,11 +445,15 @@ pub async fn post(
                                     end_time,
                                     version_number,
                                     version_hash,
+                                    mma_id,
+                                    mma_uuid,
                                     min,
                                     max,
                                     avg,
                                 )| {
                                     let perf = QueryPerfDatumKind::Storage(QueryMinMaxAvg {
+                                        id: mma_id,
+                                        uuid: mma_uuid,
                                         min,
                                         max,
                                         avg,
@@ -397,9 +469,8 @@ pub async fn post(
                                     }
                                 },
                             )
-                            .collect()
-                    },
-                };
+                            .collect(),
+                    };
 
                 let json_perf_data = to_json(
                     branch.clone(),
@@ -504,50 +575,5 @@ impl QueryPerfDatumKind {
                 JsonPerfDatumKind::Storage(QueryMinMaxAvg::to_json(min_max_avg))
             },
         })
-    }
-}
-
-
-
-#[derive(Debug)]
-pub struct QueryThroughput {
-    pub lower_variance: f64,
-    pub upper_variance: f64,
-    pub events:         f64,
-    pub unit_time:      i64,
-}
-
-impl QueryThroughput {
-    fn to_json(self) -> Result<JsonThroughput, HttpError> {
-        let Self {
-            lower_variance,
-            upper_variance,
-            events,
-            unit_time,
-        } = self;
-        Ok(JsonThroughput {
-            lower_variance: lower_variance.into(),
-            upper_variance: upper_variance.into(),
-            events:         events.into(),
-            unit_time:      unit_time as u64,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub struct QueryMinMaxAvg {
-    pub min: f64,
-    pub max: f64,
-    pub avg: f64,
-}
-
-impl QueryMinMaxAvg {
-    fn to_json(self) -> JsonMinMaxAvg {
-        let Self { min, max, avg } = self;
-        JsonMinMaxAvg {
-            min: min.into(),
-            max: max.into(),
-            avg: avg.into(),
-        }
     }
 }

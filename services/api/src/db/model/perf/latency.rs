@@ -25,7 +25,7 @@ pub struct QueryLatency {
     pub uuid: String,
     pub lower_variance: i64,
     pub upper_variance: i64,
-    pub duration:       i64,
+    pub duration: i64,
 }
 
 impl QueryLatency {

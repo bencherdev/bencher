@@ -19,6 +19,32 @@ use crate::{
     util::http_error,
 };
 
+#[derive(Queryable, Debug)]
+pub struct QueryMinMaxAvg {
+    pub id:   i32,
+    pub uuid: String,
+    pub min:  f64,
+    pub max:  f64,
+    pub avg:  f64,
+}
+
+impl QueryMinMaxAvg {
+    pub fn to_json(self) -> JsonMinMaxAvg {
+        let Self {
+            id: _,
+            uuid: _,
+            min,
+            max,
+            avg,
+        } = self;
+        JsonMinMaxAvg {
+            min: min.into(),
+            max: max.into(),
+            avg: avg.into(),
+        }
+    }
+}
+
 #[derive(Insertable)]
 #[table_name = "min_max_avg_table"]
 pub struct InsertMinMaxAvg {
