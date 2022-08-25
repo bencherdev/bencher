@@ -114,6 +114,8 @@ impl Into<JsonStatisticKind> for StatisticKind {
 }
 
 pub struct ThresholdStatistic {
+    pub branch_id:    i32,
+    pub testbed_id:   i32,
     pub threshold_id: i32,
     pub statistic:    Statistic,
 }
@@ -176,6 +178,8 @@ impl ThresholdStatistic {
                         right_side,
                     };
                     Ok(Self {
+                        branch_id,
+                        testbed_id,
                         threshold_id,
                         statistic,
                     })

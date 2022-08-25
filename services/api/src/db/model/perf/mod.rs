@@ -109,33 +109,32 @@ impl InsertPerf {
         let benchmark_id = if let Ok(benchmark_id) =
             QueryBenchmark::get_id_from_name(conn, project_id, &benchmark_name)
         {
-            // If benchmark already exists then check for threshold violations
-            // schema::perf::table
-            //         .left_join(
-            //             schema::benchmark::table
-            //                 .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-            //         )
-            //         .filter(schema::benchmark::id.eq(benchmark_id))
-            //         .inner_join(
-            //             
-            // schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
-            //         )
-            //         .filter(schema::report::start_time.ge(start_time_nanos))
-            //         .filter(schema::report::end_time.le(end_time_nanos))
-            //         .left_join(
-            //             schema::testbed::table
-            //                 .on(schema::report::testbed_id.eq(schema::testbed::id)),
-            //         )
-            //         .filter(schema::testbed::uuid.eq(testbed.to_string()))
-            //         .inner_join(
-            //             schema::version::table
-            //                 .on(schema::report::version_id.eq(schema::version::id)),
-            //         )
-            //         .left_join(
-            //             
-            // schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
-            //         )
-            //         .filter(schema::branch::uuid.eq(branch.to_string()));
+            if let Some(threshold_statistic) = threshold_statistic {
+                // If benchmark already exists then check for threshold violations
+                schema::perf::table
+                    .left_join(
+                        schema::benchmark::table
+                            .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+                    )
+                    .filter(schema::benchmark::id.eq(benchmark_id))
+                    .inner_join(
+                        schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
+                    )
+                    .filter(schema::report::start_time.ge(threshold_statistic.statistic.window))
+                    .left_join(
+                        schema::testbed::table
+                            .on(schema::report::testbed_id.eq(schema::testbed::id)),
+                    )
+                    .filter(schema::testbed::id.eq(threshold_statistic.testbed_id))
+                    .inner_join(
+                        schema::version::table
+                            .on(schema::report::version_id.eq(schema::version::id)),
+                    )
+                    .left_join(
+                        schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
+                    )
+                    .filter(schema::branch::id.eq(threshold_statistic.branch_id));
+            }
 
             benchmark_id
         } else {
