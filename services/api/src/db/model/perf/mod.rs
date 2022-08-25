@@ -145,10 +145,12 @@ impl InsertPerf {
         let perf_id = QueryPerf::get_id(conn, &perf_uuid)?;
 
         // Commit the alerts to the database now that the perf exists
-        let report_alerts = perf_alerts
-            .into_iter()
-            .filter_map(|perf_alert| perf_alert.into_report_alert(conn, perf_id).ok())
-            .collect();
+        let report_alerts = perf_alerts.map(|alerts| {
+            alerts
+                .into_iter()
+                .filter_map(|perf_alert| perf_alert.into_report_alert(conn, perf_id).ok())
+                .collect()
+        });
 
         Ok((perf_uuid, report_alerts.unwrap_or_default()))
     }

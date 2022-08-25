@@ -9,6 +9,7 @@ use chrono::offset::Utc;
 use diesel::{
     expression_methods::BoolExpressionMethods,
     JoinOnDsl,
+    NullableExpressionMethods,
     QueryDsl,
     RunQueryDsl,
     SqliteConnection,
@@ -109,6 +110,67 @@ impl ThresholdStatistic {
             )
             .map_err(|_| http_error!(PERF_ERROR))?
     }
+
+    pub fn alerts(
+        &self,
+        conn: &SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+        kind: PerfKind,
+        benchmark_id: i32,
+    ) -> Result<PerfAlerts, HttpError> {
+        let alerts = PerfAlerts::new();
+
+        let order_by = (
+            schema::version::number.desc(),
+            schema::report::start_time.desc(),
+            schema::perf::iteration.desc(),
+        );
+
+        let query = schema::perf::table
+            .left_join(
+                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            )
+            .filter(schema::benchmark::id.eq(benchmark_id))
+            .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+            .filter(schema::report::start_time.ge(self.statistic.window))
+            .left_join(
+                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
+            )
+            .filter(schema::testbed::id.eq(testbed_id))
+            .left_join(
+                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
+            )
+            .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
+            .filter(schema::branch::id.eq(branch_id));
+
+        match kind {
+            PerfKind::Latency => {
+                let json_latency_data: Vec<JsonLatency> = query
+                    .inner_join(
+                        schema::latency::table
+                            .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
+                    )
+                    .select((
+                        schema::latency::id,
+                        schema::latency::uuid,
+                        schema::latency::lower_variance,
+                        schema::latency::upper_variance,
+                        schema::latency::duration,
+                    ))
+                    .order(&order_by)
+                    .limit(self.statistic.sample_size)
+                    .load::<QueryLatency>(conn)
+                    .map_err(|_| http_error!(PERF_ERROR))?
+                    .into_iter()
+                    .filter_map(|query| query.to_json().ok())
+                    .collect();
+            },
+            _ => {},
+        }
+
+        todo!()
+    }
 }
 
 pub struct Statistic {
@@ -149,71 +211,29 @@ impl PerfThresholds {
         conn: &SqliteConnection,
         benchmark_id: i32,
     ) -> Result<PerfAlerts, HttpError> {
-        let alerts = PerfAlerts::new();
+        let mut alerts = PerfAlerts::new();
+        // TODO other perf kinds
+        alerts.append(&mut self.latency_alerts(conn, benchmark_id)?);
+        Ok(alerts)
+    }
 
-        let perfs: Vec<Perf> = schema::perf::table
-            .left_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+    // todo make a macro rules macro for this
+    fn latency_alerts(
+        &self,
+        conn: &SqliteConnection,
+        benchmark_id: i32,
+    ) -> Result<PerfAlerts, HttpError> {
+        if let Some(st) = &self.latency {
+            st.alerts(
+                conn,
+                self.branch_id,
+                self.testbed_id,
+                PerfKind::Latency,
+                benchmark_id,
             )
-            .filter(schema::benchmark::id.eq(benchmark_id))
-            .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .filter(schema::report::start_time.ge(self.statistic.window))
-            .left_join(
-                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
-            )
-            .filter(schema::testbed::id.eq(self.testbed_id))
-            .left_join(
-                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
-            )
-            .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
-            .filter(schema::branch::id.eq(self.branch_id))
-            .select((
-                schema::perf::id,
-                schema::perf::latency_id,
-                schema::perf::throughput_id,
-                schema::perf::compute_id,
-                schema::perf::memory_id,
-                schema::perf::storage_id,
-            ))
-            .order((
-                schema::version::number.desc(),
-                schema::report::start_time.desc(),
-                schema::perf::iteration.desc(),
-            ))
-            .limit(self.statistic.sample_size)
-            .load::<(
-                i32,
-                Option<i32>,
-                Option<i32>,
-                Option<i32>,
-                Option<i32>,
-                Option<i32>,
-            )>(conn)
-            .map_err(|_| http_error!(PERF_ERROR))?
-            .into_iter()
-            .map(
-                |(id, latency_id, throughput_id, compute_id, memory_id, storage_id)| Perf {
-                    id,
-                    latency_id,
-                    throughput_id,
-                    compute_id,
-                    memory_id,
-                    storage_id,
-                },
-            )
-            .collect();
-
-        let mut perf_json = PerfJson::default();
-        for perf in &perfs {
-            perf_json.push(conn, perf);
+        } else {
+            Ok(PerfAlerts::default())
         }
-
-        // TODO use perf_json value to calculate the standard deviation and threshold
-        // bounds. Then use those to generate alert(s)
-
-        // Ok(alerts)
-
-        todo!()
     }
 }
 
