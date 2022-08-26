@@ -85,6 +85,10 @@ impl JsonNewBenchmarks {
     }
 
     pub fn mean(self) -> Self {
+        if self.inner.is_empty() {
+            return self;
+        }
+
         let length = self.inner.len();
         let map: JsonNewBenchmarksMap = self.inner.into_iter().sum();
         vec![map / length].into()

@@ -165,6 +165,9 @@ impl ThresholdStatistic {
             .filter_map(|query| query.to_json().ok())
             .collect();
 
+        if json_latency_data.is_empty() {
+            return Ok(alerts);
+        }
         // TODO calculate the standard deviation and apply the proper test
         // generate alerts for the json_latency given as applicable
         let length = json_latency_data.len();
