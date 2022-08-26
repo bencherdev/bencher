@@ -148,14 +148,15 @@ CREATE TABLE threshold (
 CREATE TABLE alert (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    perf_id INTEGER NOT NULL,
+    report_id INTEGER NOT NULL,
+    perf_id INTEGER,
     threshold_id INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
     side BOOLEAN NOT NULL,
     boundary DOUBLE NOT NULL,
     outlier DOUBLE NOT NULL,
+    FOREIGN KEY (report_id) REFERENCES report (id),
     FOREIGN KEY (perf_id) REFERENCES perf (id),
     FOREIGN KEY (threshold_id) REFERENCES threshold (id),
-    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
-    UNIQUE(perf_id, threshold_id)
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id)
 );

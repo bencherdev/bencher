@@ -20,7 +20,10 @@ use super::{
 };
 use crate::{
     db::{
-        model::perf::QueryPerf,
+        model::{
+            perf::QueryPerf,
+            report::QueryReport,
+        },
         schema,
         schema::alert as alert_table,
     },
@@ -34,7 +37,8 @@ const ALERT_ERROR: &str = "Failed to get alert.";
 pub struct QueryAlert {
     pub id:           i32,
     pub uuid:         String,
-    pub perf_id:      i32,
+    pub report_id:    i32,
+    pub perf_id:      Option<i32>,
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub side:         bool,
@@ -64,6 +68,7 @@ impl QueryAlert {
         let Self {
             id: _,
             uuid,
+            report_id,
             perf_id,
             threshold_id,
             statistic_id,
@@ -73,7 +78,8 @@ impl QueryAlert {
         } = self;
         Ok(JsonAlert {
             uuid:      Uuid::from_str(&uuid).map_err(|_| http_error!(ALERT_ERROR))?,
-            perf:      QueryPerf::get_uuid(conn, perf_id)?,
+            report:    QueryReport::get_uuid(conn, report_id)?,
+            perf:      map_id(conn, perf_id)?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             statistic: QueryStatistic::get_uuid(conn, statistic_id)?,
             side:      Side::from(side).into(),
@@ -81,6 +87,14 @@ impl QueryAlert {
             outlier:   outlier.into(),
         })
     }
+}
+
+fn map_id(conn: &SqliteConnection, id: Option<i32>) -> Result<Option<Uuid>, HttpError> {
+    Ok(if let Some(id) = id {
+        Some(QueryPerf::get_uuid(conn, id)?)
+    } else {
+        None
+    })
 }
 
 enum Side {
@@ -119,7 +133,8 @@ impl Into<JsonSide> for Side {
 #[table_name = "alert_table"]
 pub struct InsertAlert {
     pub uuid:         String,
-    pub perf_id:      i32,
+    pub report_id:    i32,
+    pub perf_id:      Option<i32>,
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub side:         bool,

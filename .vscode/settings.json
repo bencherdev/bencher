@@ -19,9 +19,11 @@
   ],
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
+    "chrono",
     "dropshot",
     "Insertable",
     "nanos",
-    "perfs"
+    "perfs",
+    "schemars"
   ]
 }

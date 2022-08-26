@@ -5,7 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use bencher_json::{
-    report::JsonNewBenchmarks,
+    report::new::JsonBenchmarks,
     JsonNewReport,
 };
 use chrono::Utc;
@@ -164,7 +164,7 @@ impl From<CliRunFold> for Fold {
 }
 
 impl Fold {
-    fn fold(&self, benchmarks: JsonNewBenchmarks) -> JsonNewBenchmarks {
+    fn fold(&self, benchmarks: JsonBenchmarks) -> JsonBenchmarks {
         match self {
             Self::Min => benchmarks.min(),
             Self::Max => benchmarks.max(),

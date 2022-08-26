@@ -11,7 +11,8 @@ use uuid::Uuid;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAlert {
     pub uuid:      Uuid,
-    pub perf:      Uuid,
+    pub report:    Uuid,
+    pub perf:      Option<Uuid>,
     pub threshold: Uuid,
     pub statistic: Uuid,
     pub side:      JsonSide,

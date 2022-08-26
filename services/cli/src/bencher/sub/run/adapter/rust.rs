@@ -5,9 +5,11 @@ use std::{
 };
 
 use bencher_json::report::{
+    new::{
+        JsonBenchmarksMap,
+        JsonMetrics,
+    },
     JsonLatency,
-    JsonNewBenchmarksMap,
-    JsonNewPerf,
 };
 use nom::{
     branch::alt,
@@ -37,7 +39,7 @@ use crate::{
     BencherError,
 };
 
-pub fn parse(output: &Output) -> Result<JsonNewBenchmarksMap, BencherError> {
+pub fn parse(output: &Output) -> Result<JsonBenchmarksMap, BencherError> {
     let (_, report) = parse_stdout(output.as_str()).unwrap();
     Ok(report)
 }
@@ -47,7 +49,7 @@ enum Test {
     Bench(JsonLatency),
 }
 
-fn parse_stdout(input: &str) -> IResult<&str, JsonNewBenchmarksMap> {
+fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarksMap> {
     map(
         tuple((
             line_ending,
@@ -78,7 +80,7 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonNewBenchmarksMap> {
             let mut benchmarks = BTreeMap::new();
             for bench in benches {
                 if let Some((benchmark, latency)) = to_latency(bench) {
-                    let perf = JsonNewPerf {
+                    let perf = JsonMetrics {
                         latency: Some(latency),
                         ..Default::default()
                     };

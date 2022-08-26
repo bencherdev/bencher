@@ -1,9 +1,15 @@
 use bencher_json::report::{
+    data::{
+        JsonReportAlert,
+        JsonReportAlerts,
+    },
+    new::{
+        JsonBenchmarks,
+        JsonMetrics,
+    },
     JsonLatency,
+    JsonMetricsMap,
     JsonMinMaxAvg,
-    JsonNewPerf,
-    JsonReportAlert,
-    JsonReportAlerts,
     JsonThroughput,
 };
 use chrono::offset::Utc;
@@ -39,14 +45,15 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-pub struct PerfThresholds {
-    pub branch_id:  i32,
-    pub testbed_id: i32,
-    pub latency:    Option<ThresholdStatistic>,
-    pub throughput: Option<ThresholdStatistic>,
-    pub compute:    Option<ThresholdStatistic>,
-    pub memory:     Option<ThresholdStatistic>,
-    pub storage:    Option<ThresholdStatistic>,
+pub struct MetricsThresholds {
+    pub branch_id:   i32,
+    pub testbed_id:  i32,
+    pub metrics_map: JsonMetricsMap,
+    pub latency:     Option<ThresholdStatistic>,
+    pub throughput:  Option<ThresholdStatistic>,
+    pub compute:     Option<ThresholdStatistic>,
+    pub memory:      Option<ThresholdStatistic>,
+    pub storage:     Option<ThresholdStatistic>,
 }
 
 pub struct ThresholdStatistic {
@@ -197,11 +204,17 @@ struct Perf {
     pub storage_id: Option<i32>,
 }
 
-impl PerfThresholds {
-    pub fn new(conn: &SqliteConnection, branch_id: i32, testbed_id: i32) -> Self {
+impl MetricsThresholds {
+    pub fn new(
+        conn: &SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+        benchmarks: JsonBenchmarks,
+    ) -> Self {
         Self {
             branch_id,
             testbed_id,
+            metrics_map: JsonMetricsMap::from(benchmarks),
             latency: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Latency).ok(),
             throughput: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Throughput)
                 .ok(),
@@ -214,8 +227,9 @@ impl PerfThresholds {
     pub fn alerts(
         &self,
         conn: &SqliteConnection,
+        benchmark_name: &str,
         benchmark_id: i32,
-        json_perf: &JsonNewPerf,
+        metrics: &JsonMetrics,
     ) -> Result<PerfAlerts, HttpError> {
         let mut alerts = PerfAlerts::new();
 
@@ -318,7 +332,8 @@ impl PerfAlert {
     pub fn into_report_alert(
         self,
         conn: &SqliteConnection,
-        perf_id: i32,
+        report_id: i32,
+        perf_id: Option<i32>,
     ) -> Result<JsonReportAlert, HttpError> {
         let Self {
             threshold_id,
@@ -330,6 +345,7 @@ impl PerfAlert {
         let uuid = Uuid::new_v4();
         let insert_alert = InsertAlert {
             uuid: uuid.to_string(),
+            report_id,
             perf_id,
             threshold_id,
             statistic_id,

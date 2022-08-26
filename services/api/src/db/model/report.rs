@@ -2,9 +2,11 @@ use std::str::FromStr;
 
 use bencher_json::{
     report::{
+        data::{
+            JsonReportBenchmark,
+            JsonReportBenchmarks,
+        },
         JsonAdapter,
-        JsonReportBenchmark,
-        JsonReportBenchmarks,
     },
     JsonReport,
 };
@@ -55,6 +57,15 @@ pub struct QueryReport {
 }
 
 impl QueryReport {
+    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+        let uuid: String = schema::report::table
+            .filter(schema::report::id.eq(id))
+            .select(schema::report::uuid)
+            .first(conn)
+            .map_err(|_| http_error!(REPORT_ERROR))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!(REPORT_ERROR))
+    }
+
     pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonReport, HttpError> {
         let id = self.id;
         self.to_json_with_benchmarks(conn, get_benchmarks(conn, id)?)

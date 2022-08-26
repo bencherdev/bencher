@@ -1,6 +1,6 @@
 use bencher_json::report::{
+    new::JsonBenchmarksMap,
     JsonAdapter,
-    JsonNewBenchmarksMap,
 };
 
 use crate::{
@@ -38,7 +38,7 @@ impl Into<JsonAdapter> for Adapter {
 }
 
 impl Adapter {
-    pub fn convert(&self, output: &Output) -> Result<JsonNewBenchmarksMap, BencherError> {
+    pub fn convert(&self, output: &Output) -> Result<JsonBenchmarksMap, BencherError> {
         match &self {
             Self::Json => json::parse(output),
             Self::Rust => rust::parse(output),

@@ -2,8 +2,11 @@ use std::sync::Arc;
 
 use bencher_json::{
     report::{
-        JsonReportBenchmark,
-        JsonReportBenchmarks,
+        data::{
+            JsonReportBenchmark,
+            JsonReportBenchmarks,
+        },
+        JsonMetricsMap,
     },
     JsonNewReport,
     JsonReport,
@@ -34,7 +37,7 @@ use crate::{
         model::{
             branch::QueryBranch,
             perf::{
-                threshold::PerfThresholds,
+                threshold::MetricsThresholds,
                 InsertPerf,
             },
             project::QueryProject,
@@ -207,19 +210,19 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    let perf_thresholds = PerfThresholds::new(&*conn, branch_id, testbed_id);
+    let metrics_thresholds = MetricsThresholds::new(&*conn, branch_id, testbed_id, json_report.benchmarks.clone());
 
     let mut benchmarks = JsonReportBenchmarks::new();
-    for (index, benchmark_perf) in json_report.benchmarks.inner.into_iter().enumerate() {
-        for (benchmark_name, json_perf) in benchmark_perf.inner {
+    for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
+        for (benchmark_name, metrics) in benchmark.inner {
             let (perf, alerts) = InsertPerf::from_json(
                 &*conn,
                 project_id,
                 query_report.id,
                 index as i32,
                 benchmark_name,
-                json_perf,
-                &perf_thresholds,
+                metrics,
+                &metrics_thresholds,
             )?;
 
             benchmarks.push(JsonReportBenchmark { perf, alerts });

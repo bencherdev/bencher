@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use bencher_json::report::{
-    JsonNewPerf,
-    JsonReportAlerts,
+    data::JsonReportAlerts,
+    new::JsonMetrics,
 };
 use diesel::{
     Insertable,
@@ -35,8 +35,8 @@ pub use min_max_avg::InsertMinMaxAvg;
 pub use throughput::InsertThroughput;
 
 use self::threshold::{
+    MetricsThresholds,
     PerfAlerts,
-    PerfThresholds,
 };
 use super::benchmark::{
     InsertBenchmark,
@@ -99,8 +99,8 @@ impl InsertPerf {
         report_id: i32,
         iteration: i32,
         benchmark_name: String,
-        json_perf: JsonNewPerf,
-        perf_thresholds: &PerfThresholds,
+        metrics: JsonMetrics,
+        metrics_thresholds: &MetricsThresholds,
     ) -> Result<(Uuid, JsonReportAlerts), HttpError> {
         let mut perf_alerts = None;
 
@@ -110,7 +110,8 @@ impl InsertPerf {
             // Only generate alerts if the benchmark already exists
             // and a threshold is provided.
             // Note these alerts have not yet been committed to the database.
-            perf_alerts = Some(perf_thresholds.alerts(conn, benchmark_id, &json_perf)?);
+            perf_alerts =
+                Some(metrics_thresholds.alerts(conn, &benchmark_name, benchmark_id, &metrics)?);
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(project_id, benchmark_name);
@@ -132,11 +133,11 @@ impl InsertPerf {
             report_id,
             iteration,
             benchmark_id,
-            latency_id: InsertLatency::map_json(conn, json_perf.latency)?,
-            throughput_id: InsertThroughput::map_json(conn, json_perf.throughput)?,
-            compute_id: InsertMinMaxAvg::map_json(conn, json_perf.compute)?,
-            memory_id: InsertMinMaxAvg::map_json(conn, json_perf.memory)?,
-            storage_id: InsertMinMaxAvg::map_json(conn, json_perf.storage)?,
+            latency_id: InsertLatency::map_json(conn, metrics.latency)?,
+            throughput_id: InsertThroughput::map_json(conn, metrics.throughput)?,
+            compute_id: InsertMinMaxAvg::map_json(conn, metrics.compute)?,
+            memory_id: InsertMinMaxAvg::map_json(conn, metrics.memory)?,
+            storage_id: InsertMinMaxAvg::map_json(conn, metrics.storage)?,
         };
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
@@ -148,7 +149,11 @@ impl InsertPerf {
         let report_alerts = perf_alerts.map(|alerts| {
             alerts
                 .into_iter()
-                .filter_map(|perf_alert| perf_alert.into_report_alert(conn, perf_id).ok())
+                .filter_map(|perf_alert| {
+                    perf_alert
+                        .into_report_alert(conn, report_id, Some(perf_id))
+                        .ok()
+                })
                 .collect()
         });
 
