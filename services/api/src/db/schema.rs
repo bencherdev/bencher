@@ -1,12 +1,4 @@
 table! {
-    adapter (id) {
-        id -> Integer,
-        uuid -> Text,
-        name -> Text,
-    }
-}
-
-table! {
     alert (id) {
         id -> Integer,
         uuid -> Text,
@@ -93,7 +85,7 @@ table! {
         user_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
-        adapter_id -> Integer,
+        adapter -> Integer,
         start_time -> BigInt,
         end_time -> BigInt,
     }
@@ -180,7 +172,6 @@ joinable!(perf -> latency (latency_id));
 joinable!(perf -> report (report_id));
 joinable!(perf -> throughput (throughput_id));
 joinable!(project -> user (owner_id));
-joinable!(report -> adapter (adapter_id));
 joinable!(report -> testbed (testbed_id));
 joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
@@ -191,7 +182,6 @@ joinable!(threshold -> testbed (testbed_id));
 joinable!(version -> branch (branch_id));
 
 allow_tables_to_appear_in_same_query!(
-    adapter,
     alert,
     benchmark,
     branch,

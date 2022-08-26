@@ -67,8 +67,7 @@ pub enum CliRunAdapter {
     /// JSON (default)
     Json,
     /// Rust `cargo bench` 🦀
-    #[clap(alias("rust"), alias("rust_cargo"))]
-    RustCargoBench,
+    Rust,
 }
 
 /// Supported Fold Operations

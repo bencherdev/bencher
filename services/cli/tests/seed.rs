@@ -262,38 +262,38 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    let threshold = cmd.output().unwrap().stdout;
-    // println!("{}", branch);
-    // println!("{}", testbed);
-    // println!("{}", String::from_utf8_lossy(&threshold));
-    let threshold: JsonThreshold = serde_json::from_slice(&threshold).unwrap();
-    let threshold = threshold.uuid.to_string();
+    // let threshold = cmd.output().unwrap().stdout;
+    // // println!("{}", branch);
+    // // println!("{}", testbed);
+    // // println!("{}", String::from_utf8_lossy(&threshold));
+    // let threshold: JsonThreshold = serde_json::from_slice(&threshold).unwrap();
+    // let threshold = threshold.uuid.to_string();
 
-    // cargo run -- threshold view --host http://localhost:8080 --project the-computer [THRESHOLD_UUID]
-    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args([
-        "threshold",
-        "view",
-        HOST_ARG,
-        LOCALHOST,
-        PROJECT_ARG,
-        PROJECT_SLUG,
-        &threshold,
-    ]);
-    cmd.assert().success();
+    // // cargo run -- threshold view --host http://localhost:8080 --project the-computer [THRESHOLD_UUID]
+    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    // cmd.args([
+    //     "threshold",
+    //     "view",
+    //     HOST_ARG,
+    //     LOCALHOST,
+    //     PROJECT_ARG,
+    //     PROJECT_SLUG,
+    //     &threshold,
+    // ]);
+    // cmd.assert().success();
 
-    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args([
-        "threshold",
-        "ls",
-        HOST_ARG,
-        LOCALHOST,
-        TOKEN_ARG,
-        &token,
-        PROJECT_ARG,
-        PROJECT_SLUG,
-    ]);
-    cmd.assert().success();
+    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    // cmd.args([
+    //     "threshold",
+    //     "ls",
+    //     HOST_ARG,
+    //     LOCALHOST,
+    //     TOKEN_ARG,
+    //     &token,
+    //     PROJECT_ARG,
+    //     PROJECT_SLUG,
+    // ]);
+    // cmd.assert().success();
 
     Ok(())
 }

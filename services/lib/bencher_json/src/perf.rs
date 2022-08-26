@@ -71,7 +71,7 @@ pub struct JsonPerfDatum {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum JsonPerfDatumKind {
     Latency(JsonLatency),
     Throughput(JsonThroughput),

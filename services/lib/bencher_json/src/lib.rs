@@ -1,4 +1,3 @@
-pub mod adapter;
 pub mod alert;
 pub mod auth;
 pub mod benchmark;
@@ -10,7 +9,6 @@ pub mod report;
 pub mod testbed;
 pub mod threshold;
 
-pub use adapter::JsonAdapter;
 pub use auth::{
     JsonLogin,
     JsonSignup,

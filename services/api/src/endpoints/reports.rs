@@ -102,7 +102,7 @@ pub async fn get_ls(
             schema::report::user_id,
             schema::report::version_id,
             schema::report::testbed_id,
-            schema::report::adapter_id,
+            schema::report::adapter,
             schema::report::start_time,
             schema::report::end_time,
         ))
@@ -284,7 +284,7 @@ pub async fn get_one(
             schema::report::user_id,
             schema::report::version_id,
             schema::report::testbed_id,
-            schema::report::adapter_id,
+            schema::report::adapter,
             schema::report::start_time,
             schema::report::end_time,
         ))

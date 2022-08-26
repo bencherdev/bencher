@@ -1,6 +1,5 @@
 use dropshot::ApiDescription;
 
-pub mod adapters;
 pub mod auth;
 pub mod benchmarks;
 pub mod branches;
@@ -57,11 +56,6 @@ impl Registrar<Context> for Api {
         api.register(testbeds::post)?;
         api.register(testbeds::one_options)?;
         api.register(testbeds::get_one)?;
-        // Adapters
-        api.register(adapters::dir_options)?;
-        api.register(adapters::get_ls)?;
-        api.register(adapters::one_options)?;
-        api.register(adapters::get_one)?;
         // Benchmarks
         api.register(benchmarks::dir_options)?;
         api.register(benchmarks::get_ls)?;

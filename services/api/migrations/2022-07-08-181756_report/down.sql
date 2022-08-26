@@ -7,7 +7,6 @@ DROP TABLE min_max_avg;
 DROP TABLE throughput;
 DROP TABLE latency;
 DROP TABLE report;
-DROP TABLE adapter;
 DROP TABLE benchmark;
 DROP TABLE testbed;
 DROP TABLE version;

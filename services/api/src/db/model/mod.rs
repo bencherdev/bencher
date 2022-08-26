@@ -1,4 +1,3 @@
-pub mod adapter;
 pub mod benchmark;
 pub mod branch;
 pub mod perf;

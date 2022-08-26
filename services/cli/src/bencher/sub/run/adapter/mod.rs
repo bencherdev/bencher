@@ -1,5 +1,5 @@
 use bencher_json::report::{
-    JsonNewAdapter,
+    JsonAdapter,
     JsonNewBenchmarksMap,
 };
 
@@ -16,23 +16,23 @@ pub mod rust;
 pub enum Adapter {
     #[default]
     Json,
-    RustCargoBench,
+    Rust,
 }
 
 impl From<CliRunAdapter> for Adapter {
     fn from(adapter: CliRunAdapter) -> Self {
         match adapter {
             CliRunAdapter::Json => Self::Json,
-            CliRunAdapter::RustCargoBench => Self::RustCargoBench,
+            CliRunAdapter::Rust => Self::Rust,
         }
     }
 }
 
-impl Into<JsonNewAdapter> for Adapter {
-    fn into(self) -> JsonNewAdapter {
+impl Into<JsonAdapter> for Adapter {
+    fn into(self) -> JsonAdapter {
         match self {
-            Self::Json => JsonNewAdapter::Json,
-            Self::RustCargoBench => JsonNewAdapter::RustCargoBench,
+            Self::Json => JsonAdapter::Json,
+            Self::Rust => JsonAdapter::Rust,
         }
     }
 }
@@ -41,7 +41,7 @@ impl Adapter {
     pub fn convert(&self, output: &Output) -> Result<JsonNewBenchmarksMap, BencherError> {
         match &self {
             Self::Json => json::parse(output),
-            Self::RustCargoBench => rust::parse(output),
+            Self::Rust => rust::parse(output),
         }
     }
 }

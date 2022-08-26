@@ -220,17 +220,17 @@ impl PerfThresholds {
         let mut alerts = PerfAlerts::new();
 
         // TODO other perf kinds
-        if let Some(json_latency) = &json_perf.latency {
-            if let Some(st) = &self.latency {
-                alerts.append(&mut st.latency_alerts(
-                    conn,
-                    self.branch_id,
-                    self.testbed_id,
-                    benchmark_id,
-                    json_latency,
-                )?)
-            }
-        }
+        // if let Some(json_latency) = &json_perf.latency {
+        //     if let Some(st) = &self.latency {
+        //         alerts.append(&mut st.latency_alerts(
+        //             conn,
+        //             self.branch_id,
+        //             self.testbed_id,
+        //             benchmark_id,
+        //             json_latency,
+        //         )?)
+        //     }
+        // }
 
         Ok(alerts)
     }

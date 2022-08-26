@@ -60,27 +60,18 @@ CREATE TABLE benchmark (
     FOREIGN KEY (project_id) REFERENCES project (id),
     UNIQUE(project_id, name)
 );
-CREATE TABLE adapter (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL UNIQUE
-);
-INSERT INTO adapter (uuid, name)
-VALUES("55e0af45-48df-420e-a0eb-134ea1e806db", "json"),
-    ("6a4a11f9-682c-43c2-9385-fde30a14350b", "rust");
 CREATE TABLE report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
-    adapter_id INTEGER NOT NULL,
+    adapter INTEGER NOT NULL,
     start_time BIGINT NOT NULL,
     end_time BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
     FOREIGN KEY (version_id) REFERENCES version (id),
-    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
-    FOREIGN KEY (adapter_id) REFERENCES adapter (id)
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id)
 );
 CREATE TABLE latency (
     id INTEGER PRIMARY KEY NOT NULL,

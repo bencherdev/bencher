@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     report::{
-        JsonNewAdapter,
+        JsonAdapter,
         JsonReportBenchmark,
         JsonReportBenchmarks,
     },
@@ -23,7 +23,6 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{
-    adapter::QueryAdapter,
     testbed::QueryTestbed,
     user::QueryUser,
     version::QueryVersion,
@@ -41,7 +40,6 @@ use crate::{
     util::http_error,
 };
 
-pub const DEFAULT_PROJECT: &str = "default";
 const REPORT_ERROR: &str = "Failed to get report.";
 
 #[derive(Queryable)]
@@ -51,7 +49,7 @@ pub struct QueryReport {
     pub user_id:    i32,
     pub version_id: i32,
     pub testbed_id: i32,
-    pub adapter_id: i32,
+    pub adapter:    i32,
     pub start_time: i64,
     pub end_time:   i64,
 }
@@ -73,7 +71,7 @@ impl QueryReport {
             user_id,
             version_id,
             testbed_id,
-            adapter_id,
+            adapter,
             start_time,
             end_time,
         } = self;
@@ -82,7 +80,7 @@ impl QueryReport {
             user: QueryUser::get_uuid(conn, user_id)?,
             version: QueryVersion::get_uuid(conn, version_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
-            adapter: QueryAdapter::get_uuid(conn, adapter_id)?,
+            adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             benchmarks,
@@ -126,6 +124,41 @@ fn get_benchmarks(
     Ok(benchmarks)
 }
 
+pub enum Adapter {
+    Json = 0,
+    Rust = 1,
+}
+
+impl TryFrom<i32> for Adapter {
+    type Error = HttpError;
+
+    fn try_from(adapter: i32) -> Result<Self, Self::Error> {
+        match adapter {
+            0 => Ok(Self::Json),
+            1 => Ok(Self::Rust),
+            _ => Err(http_error!(REPORT_ERROR)),
+        }
+    }
+}
+
+impl From<&JsonAdapter> for Adapter {
+    fn from(adapter: &JsonAdapter) -> Self {
+        match adapter {
+            JsonAdapter::Json => Self::Json,
+            JsonAdapter::Rust => Self::Rust,
+        }
+    }
+}
+
+impl Into<JsonAdapter> for Adapter {
+    fn into(self) -> JsonAdapter {
+        match self {
+            Self::Json => JsonAdapter::Json,
+            Self::Rust => JsonAdapter::Rust,
+        }
+    }
+}
+
 #[derive(Insertable)]
 #[table_name = "report_table"]
 pub struct InsertReport {
@@ -133,7 +166,7 @@ pub struct InsertReport {
     pub user_id:    i32,
     pub version_id: i32,
     pub testbed_id: i32,
-    pub adapter_id: i32,
+    pub adapter:    i32,
     pub start_time: i64,
     pub end_time:   i64,
 }
@@ -144,7 +177,7 @@ impl InsertReport {
         user_id: i32,
         version_id: i32,
         testbed_id: i32,
-        adapter: &JsonNewAdapter,
+        adapter: &JsonAdapter,
         start_time: &DateTime<Utc>,
         end_time: &DateTime<Utc>,
     ) -> Result<Self, HttpError> {
@@ -153,7 +186,7 @@ impl InsertReport {
             user_id,
             version_id,
             testbed_id,
-            adapter_id: QueryAdapter::get_id_from_name(conn, &adapter.to_string())?,
+            adapter: Adapter::from(adapter) as i32,
             start_time: start_time.timestamp_nanos(),
             end_time: end_time.timestamp_nanos(),
         })

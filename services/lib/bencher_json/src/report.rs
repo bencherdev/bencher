@@ -9,7 +9,6 @@ use chrono::{
 };
 use derive_more::{
     Add,
-    Display,
     Sum,
 };
 use ordered_float::OrderedFloat;
@@ -28,20 +27,19 @@ pub struct JsonNewReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hash:       Option<String>,
     pub testbed:    Uuid,
-    pub adapter:    JsonNewAdapter,
+    pub adapter:    JsonAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
     #[serde(flatten)]
     pub benchmarks: JsonNewBenchmarks,
 }
 
-#[derive(Display, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub enum JsonNewAdapter {
+#[serde(rename_all = "snake_case")]
+pub enum JsonAdapter {
     Json,
-    #[display(fmt = "rust")]
-    #[serde(rename = "rust")]
-    RustCargoBench,
+    Rust,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -522,7 +520,7 @@ pub struct JsonReport {
     pub user:       Uuid,
     pub version:    Uuid,
     pub testbed:    Uuid,
-    pub adapter:    Uuid,
+    pub adapter:    JsonAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
     pub benchmarks: JsonReportBenchmarks,
