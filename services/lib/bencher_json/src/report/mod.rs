@@ -31,7 +31,7 @@ pub struct JsonNewReport {
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
     #[serde(flatten)]
-    pub benchmarks: JsonNewBenchmarks,
+    pub benchmarks: JsonBenchmarks,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,20 +50,62 @@ enum OrdKind {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewBenchmarks {
+pub struct JsonBenchmarks {
     #[serde(rename = "benchmarks")]
-    pub inner: Vec<JsonNewBenchmarksMap>,
+    pub inner: Vec<JsonBenchmarksMap>,
 }
 
-impl From<Vec<JsonNewBenchmarksMap>> for JsonNewBenchmarks {
-    fn from(benchmarks: Vec<JsonNewBenchmarksMap>) -> Self {
+impl From<Vec<JsonBenchmarksMap>> for JsonBenchmarks {
+    fn from(benchmarks: Vec<JsonBenchmarksMap>) -> Self {
         Self { inner: benchmarks }
     }
 }
 
-type JsonNewPerfListMap = BTreeMap<String, JsonNewPerfList>;
+#[derive(Default)]
+pub struct JsonPerfListMap {
+    pub inner: BTreeMap<String, JsonNewPerfList>,
+}
 
-impl JsonNewBenchmarks {
+impl From<JsonBenchmarks> for JsonPerfListMap {
+    fn from(benchmarks: JsonBenchmarks) -> Self {
+        let mut perf_list_map = Self::default();
+        for benchmarks_map in benchmarks.inner.into_iter() {
+            perf_list_map.append(benchmarks_map);
+        }
+        perf_list_map
+    }
+}
+
+impl JsonPerfListMap {
+    fn append(&mut self, benchmarks_map: JsonBenchmarksMap) {
+        for (benchmark_name, json_perf) in benchmarks_map.inner.into_iter() {
+            let JsonNewPerf {
+                latency,
+                throughput,
+                compute,
+                memory,
+                storage,
+            } = json_perf;
+            if let Some(json_perfs) = self.inner.get_mut(&benchmark_name) {
+                json_perfs.latency.push(latency);
+                json_perfs.throughput.push(throughput);
+                json_perfs.compute.push(compute);
+                json_perfs.memory.push(memory);
+                json_perfs.storage.push(storage);
+            } else {
+                self.inner.insert(benchmark_name, JsonNewPerfList {
+                    latency:    vec![latency],
+                    throughput: vec![throughput],
+                    compute:    vec![compute],
+                    memory:     vec![memory],
+                    storage:    vec![storage],
+                });
+            }
+        }
+    }
+}
+
+impl JsonBenchmarks {
     pub fn min(self) -> Self {
         self.ord(OrdKind::Min)
     }
@@ -75,7 +117,7 @@ impl JsonNewBenchmarks {
     fn ord(self, ord_kind: OrdKind) -> Self {
         let map = self.inner.into_iter().fold(
             BTreeMap::new().into(),
-            |ord_map: JsonNewBenchmarksMap, next_map| {
+            |ord_map: JsonBenchmarksMap, next_map| {
                 ord_map.combined(next_map, CombinedKind::Ord(ord_kind))
             },
         );
@@ -88,16 +130,13 @@ impl JsonNewBenchmarks {
         }
 
         let length = self.inner.len();
-        let map: JsonNewBenchmarksMap = self.inner.into_iter().sum();
+        let map: JsonBenchmarksMap = self.inner.into_iter().sum();
         vec![map / length].into()
     }
 
     pub fn median(self) -> Self {
-        let mut benchmarks_list_map: JsonNewPerfListMap = BTreeMap::new();
-        for benchmarks_map in self.inner.into_iter() {
-            benchmarks_map.append_to(&mut benchmarks_list_map);
-        }
-        vec![benchmarks_list_map
+        vec![JsonPerfListMap::from(self)
+            .inner
             .into_iter()
             .map(|(benchmark_name, json_new_perf_list)| {
                 (benchmark_name, json_new_perf_list.median())
@@ -110,12 +149,12 @@ impl JsonNewBenchmarks {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewBenchmarksMap {
+pub struct JsonBenchmarksMap {
     #[serde(flatten)]
     pub inner: BTreeMap<String, JsonNewPerf>,
 }
 
-impl From<BTreeMap<String, JsonNewPerf>> for JsonNewBenchmarksMap {
+impl From<BTreeMap<String, JsonNewPerf>> for JsonBenchmarksMap {
     fn from(map: BTreeMap<String, JsonNewPerf>) -> Self {
         Self { inner: map }
     }
@@ -126,12 +165,12 @@ enum CombinedKind {
     Add,
 }
 
-impl JsonNewBenchmarksMap {
+impl JsonBenchmarksMap {
     fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut benchmarks_map = BTreeMap::new();
         for (benchmark_name, json_perf) in self.inner.into_iter() {
             let other_json_perf = other.inner.remove(&benchmark_name);
-            let ord_json_perf = if let Some(other_json_perf) = other_json_perf {
+            let combined_json_perf = if let Some(other_json_perf) = other_json_perf {
                 match kind {
                     CombinedKind::Ord(ord_kind) => json_perf.ord(other_json_perf, ord_kind),
                     CombinedKind::Add => json_perf + other_json_perf,
@@ -139,43 +178,16 @@ impl JsonNewBenchmarksMap {
             } else {
                 json_perf
             };
-            benchmarks_map.insert(benchmark_name, ord_json_perf);
+            benchmarks_map.insert(benchmark_name, combined_json_perf);
         }
         for (benchmark_name, other_json_perf) in other.inner.into_iter() {
             benchmarks_map.insert(benchmark_name, other_json_perf);
         }
         benchmarks_map.into()
     }
-
-    fn append_to(self, benchmarks_list_map: &mut JsonNewPerfListMap) {
-        for (benchmark_name, json_perf) in self.inner.into_iter() {
-            let JsonNewPerf {
-                latency,
-                throughput,
-                compute,
-                memory,
-                storage,
-            } = json_perf;
-            if let Some(json_perfs) = benchmarks_list_map.get_mut(&benchmark_name) {
-                json_perfs.latency.push(latency);
-                json_perfs.throughput.push(throughput);
-                json_perfs.compute.push(compute);
-                json_perfs.memory.push(memory);
-                json_perfs.storage.push(storage);
-            } else {
-                benchmarks_list_map.insert(benchmark_name, JsonNewPerfList {
-                    latency:    vec![latency],
-                    throughput: vec![throughput],
-                    compute:    vec![compute],
-                    memory:     vec![memory],
-                    storage:    vec![storage],
-                });
-            }
-        }
-    }
 }
 
-impl std::ops::Add for JsonNewBenchmarksMap {
+impl std::ops::Add for JsonBenchmarksMap {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -183,19 +195,19 @@ impl std::ops::Add for JsonNewBenchmarksMap {
     }
 }
 
-impl std::iter::Sum for JsonNewBenchmarksMap {
+impl std::iter::Sum for JsonBenchmarksMap {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
     {
         iter.into_iter().fold(
             BTreeMap::new().into(),
-            |acc_map: JsonNewBenchmarksMap, next_map| acc_map + next_map,
+            |acc_map: JsonBenchmarksMap, next_map| acc_map + next_map,
         )
     }
 }
 
-impl std::ops::Div<usize> for JsonNewBenchmarksMap {
+impl std::ops::Div<usize> for JsonBenchmarksMap {
     type Output = Self;
 
     fn div(mut self, rhs: usize) -> Self::Output {
@@ -297,7 +309,7 @@ where
     self_perf.map(|sp| sp / rhs)
 }
 
-struct JsonNewPerfList {
+pub struct JsonNewPerfList {
     pub latency:    Vec<Option<JsonLatency>>,
     pub throughput: Vec<Option<JsonThroughput>>,
     pub compute:    Vec<Option<JsonMinMaxAvg>>,
