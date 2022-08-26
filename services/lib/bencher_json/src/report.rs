@@ -99,7 +99,9 @@ impl JsonNewBenchmarks {
         }
         vec![benchmarks_list_map
             .into_iter()
-            .map(|(benchmark_name, json_perf_list)| (benchmark_name, json_perf_list.into()))
+            .map(|(benchmark_name, json_new_perf_list)| {
+                (benchmark_name, json_new_perf_list.median())
+            })
             .collect::<BTreeMap<String, JsonNewPerf>>()
             .into()]
         .into()
@@ -303,16 +305,16 @@ struct JsonNewPerfList {
     pub storage:    Vec<Option<JsonMinMaxAvg>>,
 }
 
-impl From<JsonNewPerfList> for JsonNewPerf {
-    fn from(json_perf_list: JsonNewPerfList) -> Self {
-        let JsonNewPerfList {
+impl JsonNewPerfList {
+    fn median(self) -> JsonNewPerf {
+        let Self {
             latency,
             throughput,
             compute,
             memory,
             storage,
-        } = json_perf_list;
-        Self {
+        } = self;
+        JsonNewPerf {
             latency:    JsonLatency::median(latency),
             throughput: JsonThroughput::median(throughput),
             compute:    JsonMinMaxAvg::median(compute),
