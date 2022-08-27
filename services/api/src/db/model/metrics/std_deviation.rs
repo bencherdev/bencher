@@ -11,6 +11,7 @@ use diesel::{
     RunQueryDsl,
     SqliteConnection,
 };
+use crate::db::model::threshold::PerfKind;
 use dropshot::HttpError;
 use ordered_float::OrderedFloat;
 
@@ -35,17 +36,18 @@ pub struct StdDev {
     std_dev: OrderedFloat<f64>,
 }
 
-pub enum StdDevKind {
+enum StdDevKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
 }
 
-pub enum MinMaxAvgKind {
+enum MinMaxAvgKind {
     Compute,
     Memory,
     Storage,
 }
+
 
 impl StdDev {
     pub fn new(
@@ -54,8 +56,10 @@ impl StdDev {
         testbed_id: i32,
         benchmark_id: i32,
         statistic: &Statistic,
-        kind: StdDevKind,
+        kind: PerfKind,
     ) -> Result<Option<Self>, HttpError> {
+        let kind = kind.into();
+
         let order_by = (
             schema::version::number.desc(),
             schema::report::start_time.desc(),
@@ -247,4 +251,17 @@ fn variance(mean: f64, data: &[f64]) -> f64 {
         })
         .sum::<f64>()
         / data.len() as f64
+}
+
+
+impl From<PerfKind> for StdDevKind {
+    fn from(kind: PerfKind) -> Self {
+        match kind{
+            PerfKind::Latency => Self::Latency,
+            PerfKind::Throughput => Self::Throughput,
+            PerfKind::Compute => Self::MinMaxAvg(MinMaxAvgKind::Compute),
+            PerfKind::Memory => Self::MinMaxAvg(MinMaxAvgKind::Memory),
+            PerfKind::Storage => Self::MinMaxAvg(MinMaxAvgKind::Storage),
+        }
+    }
 }

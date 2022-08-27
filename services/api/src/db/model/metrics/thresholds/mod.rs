@@ -8,6 +8,7 @@ use bencher_json::report::{
 use diesel::SqliteConnection;
 use dropshot::HttpError;
 
+use crate::db::model::threshold::PerfKind;
 pub use self::threshold::Threshold;
 use self::{
     latency::Latency,
@@ -76,7 +77,7 @@ impl Thresholds {
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
             if let Some(latency) = &self.latency {
-                latency.z_score(conn, perf_id, benchmark_name, json)?
+                latency.z_score(conn, perf_id, benchmark_name, json, PerfKind::Latency)?
             }
         }
         if let Some(json) = json_metrics.throughput {

@@ -11,13 +11,8 @@ use super::threshold::Threshold;
 use crate::{
     db::model::{
         metrics::{
-            sample_mean::{
-                MeanKind,
-                SampleMean,
-            },
             std_deviation::{
                 StdDev,
-                StdDevKind,
             },
         },
         threshold::{
@@ -44,10 +39,11 @@ impl Latency {
         report_id: i32,
         benchmarks: &[(String, i32)],
         metrics_map: &JsonMetricsMap,
+        kind: PerfKind,
     ) -> Result<Option<Self>, HttpError> {
         // Check to see if there is a latency threshold for this branch/testbed pair
         let threshold = if let Some(threshold) =
-            Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency)
+            Threshold::new(conn, branch_id, testbed_id, kind)
         {
             threshold
         } else {
@@ -63,7 +59,7 @@ impl Latency {
                 testbed_id,
                 *benchmark_id,
                 &threshold.statistic,
-                StdDevKind::Latency,
+                kind,
             )? {
                 deviations.insert(benchmark_name.clone(), json);
             } else {

@@ -87,6 +87,7 @@ impl QueryThreshold {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum PerfKind {
     Throughput = 0,
     Latency    = 1,
