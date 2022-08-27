@@ -1,9 +1,10 @@
-use std::cmp::Ordering;
-
-use derive_more::{
-    Add,
-    Sum,
+use std::{
+    cmp::Ordering,
+    iter::Sum,
+    ops::Add,
 };
+
+use num::integer::gcd;
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -17,7 +18,7 @@ use super::{
     median::Median,
 };
 
-#[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThroughput {
     pub lower_variance: OrderedFloat<f64>,
@@ -65,6 +66,31 @@ impl Ord for JsonThroughput {
 impl JsonThroughput {
     fn per_unit_time(&self, events: &OrderedFloat<f64>) -> OrderedFloat<f64> {
         OrderedFloat(events.into_inner() / self.unit_time as f64)
+    }
+}
+
+impl Add for JsonThroughput {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let gcd = gcd(self.unit_time, other.unit_time);
+        let gcd_f64 = gcd as f64;
+
+        Self {
+            lower_variance: (self.lower_variance * gcd_f64) + (other.lower_variance * gcd_f64),
+            upper_variance: (self.upper_variance * gcd_f64) + (other.upper_variance * gcd_f64),
+            events:         (self.events * gcd_f64) + (other.events * gcd_f64),
+            unit_time:      gcd,
+        }
+    }
+}
+
+impl Sum for JsonThroughput {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Self::default(), |s, o| s + o)
     }
 }
 
