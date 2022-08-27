@@ -55,32 +55,28 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct Thresholds {
-    pub latency:    Option<ThresholdStatistic>,
-    pub throughput: Option<ThresholdStatistic>,
-    pub compute:    Option<ThresholdStatistic>,
-    pub memory:     Option<ThresholdStatistic>,
-    pub storage:    Option<ThresholdStatistic>,
+    pub latency:    Option<Threshold>,
+    pub throughput: Option<Threshold>,
+    pub compute:    Option<Threshold>,
+    pub memory:     Option<Threshold>,
+    pub storage:    Option<Threshold>,
 }
 
 impl Thresholds {
     pub fn new(conn: &SqliteConnection, branch_id: i32, testbed_id: i32) -> Self {
         Self {
-            latency:    ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Latency)
-                .ok(),
-            throughput: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Throughput)
-                .ok(),
-            compute:    ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Compute)
-                .ok(),
-            memory:     ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Memory).ok(),
-            storage:    ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Storage)
-                .ok(),
+            latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency).ok(),
+            throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput).ok(),
+            compute:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Compute).ok(),
+            memory:     Threshold::new(conn, branch_id, testbed_id, PerfKind::Memory).ok(),
+            storage:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Storage).ok(),
         }
     }
 }
 
-pub struct ThresholdStatistic {
-    pub threshold_id: i32,
-    pub statistic:    Statistic,
+pub struct Threshold {
+    pub id:        i32,
+    pub statistic: Statistic,
 }
 
 pub struct Statistic {
@@ -93,7 +89,7 @@ pub struct Statistic {
     pub right_side:  Option<f32>,
 }
 
-impl ThresholdStatistic {
+impl Threshold {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
@@ -132,9 +128,19 @@ impl ThresholdStatistic {
                 Option<f32>,
             )>(conn)
             .map(
-                |(threshold_id, id, uuid, test, sample_size, window, left_side,
-        right_side)| -> Result<Self, HttpError> {             let
-        statistic = Statistic {                 id,
+                |(
+                    threshold_id,
+                    statistic_id,
+                    uuid,
+                    test,
+                    sample_size,
+                    window,
+                    left_side,
+                    right_side,
+                )|
+                 -> Result<Self, HttpError> {
+                    let statistic = Statistic {
+                        id: statistic_id,
                         uuid,
                         test: test.try_into()?,
                         sample_size: unwrap_sample_size(sample_size),
@@ -143,7 +149,7 @@ impl ThresholdStatistic {
                         right_side,
                     };
                     Ok(Self {
-                        threshold_id,
+                        id: threshold_id,
                         statistic,
                     })
                 },

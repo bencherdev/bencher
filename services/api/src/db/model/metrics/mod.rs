@@ -53,12 +53,12 @@ use crate::{
 
 pub mod alerts;
 pub mod mean;
-pub mod threshold_statistic;
+pub mod thresholds;
 
 use self::{
     alerts::Alerts,
-    threshold_statistic::{
-        ThresholdStatistic,
+    thresholds::{
+        Threshold,
         Thresholds,
     },
 };
