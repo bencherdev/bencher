@@ -98,25 +98,8 @@ impl Metrics {
         benchmark_name: String,
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
-        // let mut perf_alerts = None;
-
-        let benchmark_id = if let Ok(benchmark_id) =
-            QueryBenchmark::get_id_from_name(conn, self.project_id, &benchmark_name)
-        {
-            benchmark_id
-        } else {
-            let insert_benchmark = InsertBenchmark::from_json(self.project_id, benchmark_name);
-            diesel::insert_into(schema::benchmark::table)
-                .values(&insert_benchmark)
-                .execute(conn)
-                .map_err(|_| http_error!("Failed to create benchmark."))?;
-
-            schema::benchmark::table
-                .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-                .select(schema::benchmark::id)
-                .first::<i32>(conn)
-                .map_err(|_| http_error!("Failed to create benchmark."))?
-        };
+        let benchmark_id =
+            QueryBenchmark::get_id_from_name(conn, self.project_id, &benchmark_name)?;
 
         let insert_perf =
             InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id, json_metrics)?;
@@ -128,21 +111,13 @@ impl Metrics {
 
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
-        // TODO move this over to an internal state/operation of metrics_threshold
-        // That is it should manage all of this behind the scenes.
-        // For t-tests, it won't include the perf_id but for z scores it will
-        // Break this out into its own `metrics` module
-        // Commit the alerts to the database now that the perf exists
-        // let report_alerts = perf_alerts.map(|alerts| {
-        //     alerts
-        //         .into_iter()
-        //         .filter_map(|perf_alert| {
-        //             perf_alert
-        //                 .to_json(conn, self.report_id, Some(perf_id))
-        //                 .ok()
-        //         })
-        //         .collect()
-        // });
+        // TODO move this into a call to thresholds
+        // thresholds.z_score
+        if let Some(latency) = &self.thresholds.latency {
+            if let Some(sample_mean) = latency.sample_means.get(&benchmark_name) {
+                // Then do z score test with sample mean and latency.threshold
+            }
+        }
 
         Ok(())
     }
