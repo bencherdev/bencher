@@ -8,6 +8,7 @@ use serde::{
 };
 
 use super::{
+    mean::Mean,
     metrics::JsonMetrics,
     metrics_map::JsonMetricsMap,
 };
@@ -51,13 +52,10 @@ impl JsonBenchmarks {
     }
 
     pub fn mean(self) -> Self {
-        if self.inner.is_empty() {
-            return self;
-        }
-
-        let length = self.inner.len();
-        let map: JsonBenchmarksMap = self.inner.into_iter().sum();
-        vec![map / length].into()
+        JsonBenchmarksMap::mean(self.inner)
+            .map(|mean| vec![mean])
+            .unwrap_or_default()
+            .into()
     }
 
     pub fn median(self) -> Self {
@@ -71,7 +69,7 @@ impl JsonBenchmarks {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarksMap {
     #[serde(flatten)]
@@ -141,3 +139,5 @@ impl std::ops::Div<usize> for JsonBenchmarksMap {
         self
     }
 }
+
+impl Mean for JsonBenchmarksMap {}

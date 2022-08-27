@@ -1,12 +1,8 @@
 pub trait Median {
     fn median(mut array: Vec<Option<Self>>) -> Option<Self>
     where
-        Self: Copy
-            + Clone
-            + Ord
-            + std::ops::Add<Output = Self>
-            + std::ops::Div<usize, Output = Self>
-            + std::default::Default,
+        Self:
+            Copy + Clone + Ord + std::ops::Add<Output = Self> + std::ops::Div<usize, Output = Self>,
     {
         if array.is_empty() {
             return None;
