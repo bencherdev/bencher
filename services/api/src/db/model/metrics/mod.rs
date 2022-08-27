@@ -60,12 +60,11 @@ impl Metrics {
         &self,
         conn: &SqliteConnection,
         iteration: i32,
-        benchmark_name: String,
+        benchmark_name: &str,
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         // All benchmarks should already exist
-        let benchmark_id =
-            QueryBenchmark::get_id_from_name(conn, self.project_id, &benchmark_name)?;
+        let benchmark_id = QueryBenchmark::get_id_from_name(conn, self.project_id, benchmark_name)?;
 
         let insert_perf =
             InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id, json_metrics)?;
@@ -80,7 +79,7 @@ impl Metrics {
         // TODO move this into a call to thresholds
         // thresholds.z_score
         if let Some(latency) = &self.thresholds.latency {
-            if let Some(sample_mean) = latency.sample_means.get(&benchmark_name) {
+            if let Some(sample_mean) = latency.sample_means.get(benchmark_name) {
                 // Then do z score test with sample mean and latency.threshold
             }
         }

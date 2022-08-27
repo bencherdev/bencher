@@ -75,4 +75,16 @@ impl Latency {
             })
         })
     }
+
+    pub fn z_score(
+        &self,
+        conn: &SqliteConnection,
+        benchmark_name: &str,
+        json_latency: JsonLatency,
+    ) {
+        if let Some(sample_mean) = self.sample_means.get(benchmark_name) {
+            // TODO use the sample mean to compare against the self.threshold
+            // and the json_latency
+        }
+    }
 }

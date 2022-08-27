@@ -1,5 +1,8 @@
 use bencher_json::report::{
-    new::JsonBenchmarks,
+    new::{
+        JsonBenchmarks,
+        JsonMetrics,
+    },
     JsonMetricsMap,
 };
 use diesel::SqliteConnection;
@@ -56,5 +59,18 @@ impl Thresholds {
             memory:     None,
             storage:    None,
         })
+    }
+
+    pub fn z_score(
+        &self,
+        conn: &SqliteConnection,
+        benchmark_name: &str,
+        json_metrics: JsonMetrics,
+    ) {
+        if let Some(json_latency) = json_metrics.latency {
+            if let Some(latency) = &self.latency {
+                latency.z_score(conn, benchmark_name, json_latency)
+            }
+        }
     }
 }

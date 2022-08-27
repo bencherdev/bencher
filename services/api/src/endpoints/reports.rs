@@ -211,7 +211,7 @@ pub async fn post(
 
     for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_metrics) in benchmark.inner {
-            metrics.benchmark(&*conn, index as i32, benchmark_name, json_metrics)?;
+            metrics.benchmark(&*conn, index as i32, &benchmark_name, json_metrics)?;
         }
     }
 
