@@ -52,7 +52,7 @@ use crate::{
 };
 
 pub mod alerts;
-pub mod mean;
+pub mod sample;
 pub mod thresholds;
 
 use self::{
@@ -83,13 +83,14 @@ impl Metrics {
         testbed_id: i32,
         benchmarks: JsonBenchmarks,
     ) -> Self {
+        let thresholds = Thresholds::new(conn, branch_id, testbed_id);
         Self {
             project_id,
             report_id,
             branch_id,
             testbed_id,
             metrics_map: JsonMetricsMap::from(benchmarks),
-            thresholds: Thresholds::new(conn, branch_id, testbed_id),
+            thresholds,
         }
     }
 

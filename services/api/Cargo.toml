@@ -24,6 +24,7 @@ uuid = { version = "1.1.2", features = ["v4", "serde"] }
 rand = "0.8.5"
 url = "2.2.2"
 http = "0.2.8"
+ordered-float = { version = "3.0.0" }
 
 [[bin]]
 name = "api"

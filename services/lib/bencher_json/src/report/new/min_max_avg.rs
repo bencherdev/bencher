@@ -12,7 +12,7 @@ use serde::{
     Serialize,
 };
 
-use super::median::Median;
+use super::{median::Median, mean::Mean};
 
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -61,5 +61,7 @@ impl std::ops::Div<usize> for JsonMinMaxAvg {
         }
     }
 }
+
+impl Mean for JsonMinMaxAvg {}
 
 impl Median for JsonMinMaxAvg {}

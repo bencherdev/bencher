@@ -111,6 +111,7 @@ dependencies = [
  "email-address-parser",
  "http",
  "jsonwebtoken",
+ "ordered-float",
  "rand",
  "schemars",
  "serde",
