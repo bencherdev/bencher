@@ -85,6 +85,10 @@ impl Thresholds {
         for name in &benchmark_names {
             benchmark_ids.push(QueryBenchmark::get_or_create(conn, project_id, name)?);
         }
+        let benchmarks: Vec<(String, i32)> = benchmark_names
+            .into_iter()
+            .zip(benchmark_ids.into_iter())
+            .collect();
 
         Ok(Self {
             latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency),
@@ -98,7 +102,7 @@ impl Thresholds {
 
 pub struct Latency {
     pub threshold:    Threshold,
-    pub sample_means: HashMap<String, Option<JsonLatency>>,
+    pub sample_means: HashMap<String, JsonLatency>,
 }
 
 impl Latency {
@@ -106,7 +110,7 @@ impl Latency {
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        benchmark_ids: &[i32],
+        benchmarks: &[(&str, i32)],
     ) -> Result<Option<Self>, HttpError> {
         let threshold = if let Some(threshold) =
             Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency)
@@ -116,21 +120,28 @@ impl Latency {
             return Ok(None);
         };
 
-        todo!()
+        let mut sample_means = HashMap::with_capacity(benchmarks.len());
+        for (benchmark_name, benchmark_id) in benchmarks {
+            if let SampleMeanKind::Latency(json) = SampleMeanKind::new(
+                conn,
+                branch_id,
+                testbed_id,
+                *benchmark_id,
+                &threshold.statistic,
+                SampleKind::Latency,
+            )? {
+                if let Some(json) = json {
+                    sample_means.insert(benchmark_name.to_string(), json);
+                }
+            } else {
+                return Err(http_error!(PERF_ERROR));
+            }
+        }
 
-        // for benchmark_name
-        // if let SampleMeanKind::Latency(json) = SampleMeanKind::new(
-        //     conn,
-        //     branch_id,
-        //     testbed_id,
-        //     benchmark_id,
-        //     &threshold.statistic,
-        //     SampleKind::Latency,
-        // )? {
-        //     json
-        // } else {
-        //     return Err(http_error!(PERF_ERROR));
-        // }
+        Ok(Some(Self {
+            threshold,
+            sample_means,
+        }))
     }
 }
 

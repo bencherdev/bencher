@@ -216,7 +216,7 @@ fn map_min_max_avg(
 }
 
 impl SampleMeanKind {
-    fn new(
+    pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
