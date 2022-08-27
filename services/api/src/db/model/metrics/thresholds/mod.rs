@@ -64,12 +64,38 @@ impl Thresholds {
     pub fn z_score(
         &self,
         conn: &SqliteConnection,
+        report_id: i32,
+        perf_id: i32,
         benchmark_name: &str,
         json_metrics: JsonMetrics,
     ) {
-        if let Some(json_latency) = json_metrics.latency {
+        if let Some(json) = json_metrics.latency {
             if let Some(latency) = &self.latency {
-                latency.z_score(conn, benchmark_name, json_latency)
+                latency.z_score(conn, report_id, perf_id, benchmark_name, json)
+            }
+        }
+        if let Some(json) = json_metrics.throughput {
+            if let Some(throughput) = &self.throughput {
+                // throughput.z_score(conn, report_id, perf_id, benchmark_name,
+                // json)
+            }
+        }
+        if let Some(json) = json_metrics.compute {
+            if let Some(compute) = &self.compute {
+                // compute.z_score(conn, report_id, perf_id, benchmark_name,
+                // json)
+            }
+        }
+        if let Some(json) = json_metrics.memory {
+            if let Some(memory) = &self.memory {
+                // memory.z_score(conn, report_id, perf_id, benchmark_name,
+                // json)
+            }
+        }
+        if let Some(json) = json_metrics.storage {
+            if let Some(storage) = &self.storage {
+                // storage.z_score(conn, report_id, perf_id, benchmark_name,
+                // json)
             }
         }
     }

@@ -33,8 +33,6 @@ const PERF_ERROR: &str = "Failed to create perf statistic.";
 pub struct Metrics {
     pub project_id: i32,
     pub report_id:  i32,
-    pub branch_id:  i32,
-    pub testbed_id: i32,
     pub thresholds: Thresholds,
 }
 
@@ -49,8 +47,6 @@ impl Metrics {
     ) -> Result<Self, HttpError> {
         Ok(Self {
             project_id,
-            branch_id,
-            testbed_id,
             report_id,
             thresholds: Thresholds::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
         })
@@ -72,17 +68,12 @@ impl Metrics {
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
             .execute(conn)
-            .map_err(|_| http_error!("Failed to create benchmark data."))?;
+            .map_err(|_| http_error!(PERF_ERROR))?;
 
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
-        // TODO move this into a call to thresholds
-        // thresholds.z_score
-        if let Some(latency) = &self.thresholds.latency {
-            if let Some(sample_mean) = latency.sample_means.get(benchmark_name) {
-                // Then do z score test with sample mean and latency.threshold
-            }
-        }
+        self.thresholds
+            .z_score(conn, self.report_id, perf_id, benchmark_name, json_metrics);
 
         Ok(())
     }

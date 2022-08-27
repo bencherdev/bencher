@@ -79,6 +79,8 @@ impl Latency {
     pub fn z_score(
         &self,
         conn: &SqliteConnection,
+        report_id: i32,
+        perf_id: i32,
         benchmark_name: &str,
         json_latency: JsonLatency,
     ) {
