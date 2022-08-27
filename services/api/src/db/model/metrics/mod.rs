@@ -48,7 +48,9 @@ impl Metrics {
         Ok(Self {
             project_id,
             report_id,
-            thresholds: Thresholds::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
+            thresholds: Thresholds::new(
+                conn, project_id, branch_id, testbed_id, report_id, benchmarks,
+            )?,
         })
     }
 
@@ -73,8 +75,6 @@ impl Metrics {
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
         self.thresholds
-            .z_score(conn, self.report_id, perf_id, benchmark_name, json_metrics);
-
-        Ok(())
+            .z_score(conn, perf_id, benchmark_name, json_metrics)
     }
 }

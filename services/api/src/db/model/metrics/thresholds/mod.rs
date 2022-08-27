@@ -21,8 +21,6 @@ pub mod min_max_avg;
 pub mod threshold;
 pub mod throughput;
 
-const PERF_ERROR: &str = "Failed to create perf statistic.";
-
 pub struct Thresholds {
     pub latency:    Option<Latency>,
     pub throughput: Option<Throughput>,
@@ -37,6 +35,7 @@ impl Thresholds {
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,
+        report_id: i32,
         benchmarks: JsonBenchmarks,
     ) -> Result<Self, HttpError> {
         let metrics_map = JsonMetricsMap::from(benchmarks);
@@ -53,7 +52,14 @@ impl Thresholds {
             .collect();
 
         Ok(Self {
-            latency:    Latency::new(conn, branch_id, testbed_id, &benchmarks, &metrics_map)?,
+            latency:    Latency::new(
+                conn,
+                branch_id,
+                testbed_id,
+                report_id,
+                &benchmarks,
+                &metrics_map,
+            )?,
             throughput: None,
             compute:    None,
             memory:     None,
@@ -64,39 +70,40 @@ impl Thresholds {
     pub fn z_score(
         &self,
         conn: &SqliteConnection,
-        report_id: i32,
         perf_id: i32,
         benchmark_name: &str,
         json_metrics: JsonMetrics,
-    ) {
+    ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
             if let Some(latency) = &self.latency {
-                latency.z_score(conn, report_id, perf_id, benchmark_name, json)
+                latency.z_score(conn, perf_id, benchmark_name, json)?
             }
         }
         if let Some(json) = json_metrics.throughput {
             if let Some(throughput) = &self.throughput {
-                // throughput.z_score(conn, report_id, perf_id, benchmark_name,
+                // throughput.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
         if let Some(json) = json_metrics.compute {
             if let Some(compute) = &self.compute {
-                // compute.z_score(conn, report_id, perf_id, benchmark_name,
+                // compute.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
         if let Some(json) = json_metrics.memory {
             if let Some(memory) = &self.memory {
-                // memory.z_score(conn, report_id, perf_id, benchmark_name,
+                // memory.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
         if let Some(json) = json_metrics.storage {
             if let Some(storage) = &self.storage {
-                // storage.z_score(conn, report_id, perf_id, benchmark_name,
+                // storage.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
+
+        Ok(())
     }
 }
