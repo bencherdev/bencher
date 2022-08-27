@@ -51,7 +51,7 @@ impl Thresholds {
 
         Ok(Self {
             latency:    Latency::new(conn, branch_id, testbed_id, &benchmarks, &metrics_map)?,
-            throughput: Throughput::new(conn, branch_id, testbed_id, &benchmarks, &metrics_map)?,
+            throughput: None,
             compute:    None,
             memory:     None,
             storage:    None,

@@ -1,38 +1,24 @@
 use std::collections::HashMap;
 
 use bencher_json::report::{
-  
     JsonLatency,
     JsonMetricsMap,
-   
 };
-
-use diesel::{
-   
-    SqliteConnection,
-};
+use diesel::SqliteConnection;
 use dropshot::HttpError;
-
 
 use super::threshold::Threshold;
 use crate::{
-    db::{
-        model::{
-           
-            metrics::sample_mean::{
-                MeanKind,
-                SampleMean,
-            },
-            
-            threshold::{
-               
-                statistic::StatisticKind,
-                PerfKind,
-            },
+    db::model::{
+        metrics::sample_mean::{
+            MeanKind,
+            SampleMean,
         },
-       
+        threshold::{
+            statistic::StatisticKind,
+            PerfKind,
+        },
     },
-   
     util::http_error,
 };
 
