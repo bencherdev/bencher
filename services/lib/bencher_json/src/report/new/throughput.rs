@@ -64,7 +64,7 @@ impl Ord for JsonThroughput {
 }
 
 impl JsonThroughput {
-    fn per_unit_time(&self, events: &OrderedFloat<f64>) -> OrderedFloat<f64> {
+    pub fn per_unit_time(&self, events: &OrderedFloat<f64>) -> OrderedFloat<f64> {
         OrderedFloat(events.into_inner() / self.unit_time as f64)
     }
 }

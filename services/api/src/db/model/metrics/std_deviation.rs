@@ -12,6 +12,7 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
+use ordered_float::OrderedFloat;
 
 use super::thresholds::threshold::Statistic;
 use crate::{
@@ -29,13 +30,12 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-pub enum SampleMean {
-    Latency(Option<JsonLatency>),
-    Throughput(Option<JsonThroughput>),
-    MinMaxAvg(Option<JsonMinMaxAvg>),
+pub struct StdDev {
+    mean:    OrderedFloat<f64>,
+    std_dev: OrderedFloat<f64>,
 }
 
-pub enum MeanKind {
+pub enum StdDevKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
@@ -47,15 +47,15 @@ pub enum MinMaxAvgKind {
     Storage,
 }
 
-impl SampleMean {
+impl StdDev {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
         benchmark_id: i32,
         statistic: &Statistic,
-        kind: MeanKind,
-    ) -> Result<Self, HttpError> {
+        kind: StdDevKind,
+    ) -> Result<Option<Self>, HttpError> {
         let order_by = (
             schema::version::number.desc(),
             schema::report::start_time.desc(),
@@ -79,8 +79,8 @@ impl SampleMean {
             .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
             .filter(schema::branch::id.eq(branch_id));
 
-        match kind {
-            MeanKind::Latency => {
+        let (mean, data) = match kind {
+            StdDevKind::Latency => {
                 let json_data: Vec<JsonLatency> = query
                     .inner_join(
                         schema::latency::table
@@ -102,25 +102,19 @@ impl SampleMean {
                     .collect();
 
                 if json_data.is_empty() {
-                    return Ok(SampleMean::Latency(None));
+                    return Ok(None);
                 }
 
-                let length = json_data.len();
-                let mean = JsonLatency::mean(json_data);
-                let variance = json_data
-                    .clone()
-                    .into_iter()
-                    .map(|value| {
-                        let diff = mean - (value as f64);
-                        diff * diff
-                    })
-                    .sum::<f32>()
-                    / length as f64;
-                let std_deviation = variance.sqrt();
+                let float_data: Vec<f64> = json_data.iter().map(|d| d.duration as f64).collect();
+                let mean = if let Some(mean) = JsonLatency::mean(json_data) {
+                    mean.duration as f64
+                } else {
+                    return Ok(None);
+                };
 
-                Ok(SampleMean::Latency(mean))
+                (mean, float_data)
             },
-            MeanKind::Throughput => {
+            StdDevKind::Throughput => {
                 let json_data: Vec<JsonThroughput> = query
                     .inner_join(
                         schema::throughput::table
@@ -142,9 +136,23 @@ impl SampleMean {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                Ok(SampleMean::Throughput(JsonThroughput::mean(json_data)))
+                if json_data.is_empty() {
+                    return Ok(None);
+                }
+
+                let float_data: Vec<f64> = json_data
+                    .iter()
+                    .map(|d| d.per_unit_time(&d.events).into())
+                    .collect();
+                let mean = if let Some(mean) = JsonThroughput::mean(json_data) {
+                    mean.per_unit_time(&mean.events).into()
+                } else {
+                    return Ok(None);
+                };
+
+                (mean, float_data)
             },
-            MeanKind::MinMaxAvg(mma) => {
+            StdDevKind::MinMaxAvg(mma) => {
                 let json_data: Vec<JsonMinMaxAvg> =
                     match mma {
                         MinMaxAvgKind::Compute => query
@@ -205,8 +213,38 @@ impl SampleMean {
                             .collect(),
                     };
 
-                Ok(SampleMean::MinMaxAvg(JsonMinMaxAvg::mean(json_data)))
+                if json_data.is_empty() {
+                    return Ok(None);
+                }
+
+                let float_data: Vec<f64> = json_data.iter().map(|d| d.avg.into()).collect();
+                let mean = if let Some(mean) = JsonMinMaxAvg::mean(json_data) {
+                    mean.avg.into()
+                } else {
+                    return Ok(None);
+                };
+
+                (mean, float_data)
             },
-        }
+        };
+
+        Ok(Some(Self {
+            mean:    mean.into(),
+            std_dev: std_deviation(mean, &data).into(),
+        }))
     }
+}
+
+fn std_deviation(mean: f64, data: &[f64]) -> f64 {
+    variance(mean, data).sqrt()
+}
+
+fn variance(mean: f64, data: &[f64]) -> f64 {
+    data.iter()
+        .map(|value| {
+            let diff = mean - *value;
+            diff * diff
+        })
+        .sum::<f64>()
+        / data.len() as f64
 }
