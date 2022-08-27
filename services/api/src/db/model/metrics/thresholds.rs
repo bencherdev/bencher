@@ -64,15 +64,25 @@ const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct Thresholds {
     pub latency:    Option<Latency>,
-    pub throughput: Option<Threshold>,
-    pub compute:    Option<Threshold>,
-    pub memory:     Option<Threshold>,
-    pub storage:    Option<Threshold>,
+    pub throughput: Option<Throughput>,
+    pub compute:    Option<MinMaxAvg>,
+    pub memory:     Option<MinMaxAvg>,
+    pub storage:    Option<MinMaxAvg>,
 }
 
 pub struct Latency {
     pub threshold:    Threshold,
     pub sample_means: HashMap<String, JsonLatency>,
+}
+
+pub struct Throughput {
+    pub threshold:    Threshold,
+    pub sample_means: HashMap<String, JsonThroughput>,
+}
+
+pub struct MinMaxAvg {
+    pub threshold:    Threshold,
+    pub sample_means: HashMap<String, JsonMinMaxAvg>,
 }
 
 pub struct Threshold {
@@ -112,10 +122,10 @@ impl Thresholds {
 
         Ok(Self {
             latency:    Latency::new(conn, branch_id, testbed_id, &benchmarks, &metrics_map)?,
-            throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput),
-            compute:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Compute),
-            memory:     Threshold::new(conn, branch_id, testbed_id, PerfKind::Memory),
-            storage:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Storage),
+            throughput: Throughput::new(conn, branch_id, testbed_id, &benchmarks, &metrics_map)?,
+            compute:    None,
+            memory:     None,
+            storage:    None,
         })
     }
 }
@@ -145,6 +155,54 @@ impl Latency {
                 *benchmark_id,
                 &threshold.statistic,
                 SampleKind::Latency,
+            )? {
+                if let Some(json) = json {
+                    sample_means.insert(benchmark_name.clone(), json);
+                }
+            } else {
+                return Err(http_error!(PERF_ERROR));
+            }
+        }
+
+        // TODO check threshold kind
+        // if it is a t-test go ahead and perform it and create alerts and then return
+        // None since the threshold won't be needed for every perf
+        Ok(if let StatisticKind::T = threshold.statistic.test {
+            None
+        } else {
+            Some(Self {
+                threshold,
+                sample_means,
+            })
+        })
+    }
+}
+
+impl Throughput {
+    pub fn new(
+        conn: &SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+        benchmarks: &[(String, i32)],
+        metrics_map: &JsonMetricsMap,
+    ) -> Result<Option<Self>, HttpError> {
+        let threshold = if let Some(threshold) =
+            Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput)
+        {
+            threshold
+        } else {
+            return Ok(None);
+        };
+
+        let mut sample_means = HashMap::with_capacity(benchmarks.len());
+        for (benchmark_name, benchmark_id) in benchmarks {
+            if let SampleMeanKind::Throughput(json) = SampleMeanKind::new(
+                conn,
+                branch_id,
+                testbed_id,
+                *benchmark_id,
+                &threshold.statistic,
+                SampleKind::Throughput,
             )? {
                 if let Some(json) = json {
                     sample_means.insert(benchmark_name.clone(), json);
