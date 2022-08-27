@@ -52,11 +52,15 @@ use crate::{
 };
 
 pub mod alerts;
+pub mod mean;
 pub mod threshold_statistic;
 
 use self::{
     alerts::Alerts,
-    threshold_statistic::ThresholdStatistic,
+    threshold_statistic::{
+        ThresholdStatistic,
+        Thresholds,
+    },
 };
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
@@ -67,11 +71,7 @@ pub struct Metrics {
     pub branch_id:   i32,
     pub testbed_id:  i32,
     pub metrics_map: JsonMetricsMap,
-    pub latency:     Option<ThresholdStatistic>,
-    pub throughput:  Option<ThresholdStatistic>,
-    pub compute:     Option<ThresholdStatistic>,
-    pub memory:      Option<ThresholdStatistic>,
-    pub storage:     Option<ThresholdStatistic>,
+    pub thresholds:  Thresholds,
 }
 
 impl Metrics {
@@ -89,12 +89,7 @@ impl Metrics {
             branch_id,
             testbed_id,
             metrics_map: JsonMetricsMap::from(benchmarks),
-            latency: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Latency).ok(),
-            throughput: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Throughput)
-                .ok(),
-            compute: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Compute).ok(),
-            memory: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Memory).ok(),
-            storage: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Storage).ok(),
+            thresholds: Thresholds::new(conn, branch_id, testbed_id),
         }
     }
 

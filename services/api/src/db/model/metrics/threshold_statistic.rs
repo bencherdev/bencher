@@ -24,6 +24,7 @@ use diesel::{
 use dropshot::HttpError;
 use uuid::Uuid;
 
+use super::alerts::Alerts;
 use crate::{
     db::{
         model::{
@@ -51,10 +52,31 @@ use crate::{
     util::http_error,
 };
 
-
-use super::alerts::Alerts;
-
 const PERF_ERROR: &str = "Failed to create perf statistic.";
+
+pub struct Thresholds {
+    pub latency:    Option<ThresholdStatistic>,
+    pub throughput: Option<ThresholdStatistic>,
+    pub compute:    Option<ThresholdStatistic>,
+    pub memory:     Option<ThresholdStatistic>,
+    pub storage:    Option<ThresholdStatistic>,
+}
+
+impl Thresholds {
+    pub fn new(conn: &SqliteConnection, branch_id: i32, testbed_id: i32) -> Self {
+        Self {
+            latency:    ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Latency)
+                .ok(),
+            throughput: ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Throughput)
+                .ok(),
+            compute:    ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Compute)
+                .ok(),
+            memory:     ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Memory).ok(),
+            storage:    ThresholdStatistic::new(conn, branch_id, testbed_id, PerfKind::Storage)
+                .ok(),
+        }
+    }
+}
 
 pub struct ThresholdStatistic {
     pub threshold_id: i32,
@@ -194,7 +216,6 @@ impl ThresholdStatistic {
         Ok(alerts)
     }
 }
-
 
 fn unwrap_sample_size(sample_size: Option<i64>) -> i64 {
     sample_size.unwrap_or(i64::MAX)
