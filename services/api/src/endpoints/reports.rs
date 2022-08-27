@@ -218,10 +218,9 @@ pub async fn post(
         json_report.benchmarks.clone(),
     );
 
-    let mut benchmarks = JsonReportBenchmarks::new();
     for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, metrics) in benchmark.inner {
-            let (perf, alerts) = InsertPerf::from_json(
+            InsertPerf::from_json(
                 &*conn,
                 project_id,
                 query_report.id,
@@ -230,12 +229,10 @@ pub async fn post(
                 metrics,
                 &metrics_thresholds,
             )?;
-
-            benchmarks.push(JsonReportBenchmark { perf, alerts });
         }
     }
 
-    let json = query_report.to_json_with_benchmarks(&*conn, benchmarks)?;
+    let json = query_report.to_json(&*conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),

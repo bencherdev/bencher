@@ -23,19 +23,15 @@ pub struct JsonReport {
     pub start_time: DateTime<Utc>,
     pub end_time:   DateTime<Utc>,
     pub benchmarks: JsonReportBenchmarks,
+    pub alerts:     JsonReportAlerts,
 }
 
 pub type JsonReportBenchmarks = Vec<JsonReportBenchmark>;
-
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReportBenchmark {
-    pub perf:   Uuid,
-    pub alerts: JsonReportAlerts,
-}
+pub struct JsonReportBenchmark(pub Uuid);
 
 pub type JsonReportAlerts = Vec<JsonReportAlert>;
-
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportAlert(pub Uuid);

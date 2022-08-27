@@ -3,6 +3,7 @@ use std::str::FromStr;
 use bencher_json::{
     report::{
         data::{
+            JsonReportAlerts,
             JsonReportBenchmark,
             JsonReportBenchmarks,
         },
@@ -67,15 +68,8 @@ impl QueryReport {
     }
 
     pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonReport, HttpError> {
-        let id = self.id;
-        self.to_json_with_benchmarks(conn, get_benchmarks(conn, id)?)
-    }
-
-    pub fn to_json_with_benchmarks(
-        self,
-        conn: &SqliteConnection,
-        benchmarks: JsonReportBenchmarks,
-    ) -> Result<JsonReport, HttpError> {
+        let benchmarks = self.get_benchmarks(conn)?;
+        let alerts = self.get_alerts(conn)?;
         let Self {
             id: _,
             uuid,
@@ -95,7 +89,31 @@ impl QueryReport {
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             benchmarks,
+            alerts,
         })
+    }
+
+    fn get_benchmarks(&self, conn: &SqliteConnection) -> Result<JsonReportBenchmarks, HttpError> {
+        Ok(schema::perf::table
+            .inner_join(
+                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            )
+            .filter(schema::perf::report_id.eq(self.id))
+            .select(schema::perf::uuid)
+            .order(schema::benchmark::name)
+            .load::<String>(conn)
+            .map_err(|_| http_error!(REPORT_ERROR))?
+            .iter()
+            .filter_map(|uuid| {
+                Uuid::from_str(uuid)
+                    .ok()
+                    .map(|uuid| JsonReportBenchmark(uuid))
+            })
+            .collect())
+    }
+
+    fn get_alerts(&self, conn: &SqliteConnection) -> Result<JsonReportAlerts, HttpError> {
+        Ok(Vec::new().into())
     }
 }
 
@@ -107,32 +125,6 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
     )
     .single()
     .ok_or(http_error!(REPORT_ERROR))
-}
-
-fn get_benchmarks(
-    conn: &SqliteConnection,
-    report_id: i32,
-) -> Result<JsonReportBenchmarks, HttpError> {
-    let perf_uuids: Vec<String> = schema::perf::table
-        .inner_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-        )
-        .filter(schema::perf::report_id.eq(report_id))
-        .select(schema::perf::uuid)
-        .order(schema::benchmark::name)
-        .load::<String>(conn)
-        .map_err(|_| http_error!(REPORT_ERROR))?;
-
-    let mut benchmarks = JsonReportBenchmarks::new();
-    for perf_uuid in perf_uuids {
-        benchmarks.push(JsonReportBenchmark {
-            perf:   Uuid::from_str(&perf_uuid).map_err(|_| http_error!(REPORT_ERROR))?,
-            // todo query for alerts
-            alerts: Vec::new(),
-        });
-    }
-
-    Ok(benchmarks)
 }
 
 pub enum Adapter {

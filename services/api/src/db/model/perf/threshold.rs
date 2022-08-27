@@ -136,6 +136,10 @@ impl ThresholdStatistic {
             schema::perf::iteration.desc(),
         );
 
+        // For simplicity, his query makes the assumption that all data is perfectly
+        // chronological. That is, alerts will never need to be generated for X after Y
+        // has already been submitted when X really happened before Y.
+        // For implementing git bisect a more complex query will be needed.
         let query = schema::perf::table
             .left_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
