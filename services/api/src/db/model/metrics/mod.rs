@@ -98,6 +98,7 @@ impl Metrics {
         benchmark_name: String,
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
+        // All benchmarks should already exist
         let benchmark_id =
             QueryBenchmark::get_id_from_name(conn, self.project_id, &benchmark_name)?;
 

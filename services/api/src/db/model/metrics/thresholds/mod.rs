@@ -110,6 +110,7 @@ impl Thresholds {
     ) -> Result<Self, HttpError> {
         let metrics_map = JsonMetricsMap::from(benchmarks);
 
+        // Create all benchmarks if they don't already exist
         let benchmark_names: Vec<String> = metrics_map.inner.keys().cloned().collect();
         let mut benchmark_ids = Vec::with_capacity(benchmark_names.len());
         for name in &benchmark_names {
