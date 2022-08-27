@@ -203,11 +203,11 @@ pub async fn post(
     let metrics = Metrics::new(
         &*conn,
         project_id,
-        query_report.id,
         branch_id,
         testbed_id,
+        query_report.id,
         json_report.benchmarks.clone(),
-    );
+    )?;
 
     for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_metrics) in benchmark.inner {

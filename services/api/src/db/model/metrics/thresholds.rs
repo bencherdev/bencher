@@ -73,20 +73,26 @@ pub struct Thresholds {
 impl Thresholds {
     pub fn new(
         conn: &SqliteConnection,
+        project_id: i32,
         branch_id: i32,
         testbed_id: i32,
         benchmarks: JsonBenchmarks,
-    ) -> Self {
+    ) -> Result<Self, HttpError> {
         let metrics_map = JsonMetricsMap::from(benchmarks);
-        let benchmark_names: Vec<String> = metrics_map.inner.keys().cloned().collect();
 
-        Self {
+        let benchmark_names: Vec<String> = metrics_map.inner.keys().cloned().collect();
+        let mut benchmark_ids = Vec::with_capacity(benchmark_names.len());
+        for name in &benchmark_names {
+            benchmark_ids.push(QueryBenchmark::get_or_create(conn, project_id, name)?);
+        }
+
+        Ok(Self {
             latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency),
             throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput),
             compute:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Compute),
             memory:     Threshold::new(conn, branch_id, testbed_id, PerfKind::Memory),
             storage:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Storage),
-        }
+        })
     }
 }
 
@@ -100,7 +106,7 @@ impl Latency {
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        benchmark_names: &[&str],
+        benchmark_ids: &[i32],
     ) -> Result<Option<Self>, HttpError> {
         let threshold = if let Some(threshold) =
             Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency)
@@ -109,6 +115,8 @@ impl Latency {
         } else {
             return Ok(None);
         };
+
+        todo!()
 
         // for benchmark_name
         // if let SampleMeanKind::Latency(json) = SampleMeanKind::new(

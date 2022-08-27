@@ -81,6 +81,30 @@ impl QueryBenchmark {
             name,
         })
     }
+
+    pub fn get_or_create(
+        conn: &SqliteConnection,
+        project_id: i32,
+        name: &str,
+    ) -> Result<i32, HttpError> {
+        let id = QueryBenchmark::get_id_from_name(conn, project_id, &name);
+
+        if id.is_ok() {
+            return id;
+        }
+
+        let insert_benchmark = InsertBenchmark::from_json(project_id, name.to_string());
+        diesel::insert_into(schema::benchmark::table)
+            .values(&insert_benchmark)
+            .execute(conn)
+            .map_err(|_| http_error!(BENCHMARK_ERROR))?;
+
+        schema::benchmark::table
+            .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
+            .select(schema::benchmark::id)
+            .first::<i32>(conn)
+            .map_err(|_| http_error!(BENCHMARK_ERROR))
+    }
 }
 
 #[derive(Insertable)]
@@ -92,7 +116,7 @@ pub struct InsertBenchmark {
 }
 
 impl InsertBenchmark {
-    pub fn new(project_id: i32, name: String) -> Self {
+    pub fn from_json(project_id: i32, name: String) -> Self {
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,

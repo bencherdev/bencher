@@ -77,18 +77,18 @@ impl Metrics {
     pub fn new(
         conn: &SqliteConnection,
         project_id: i32,
-        report_id: i32,
         branch_id: i32,
         testbed_id: i32,
+        report_id: i32,
         benchmarks: JsonBenchmarks,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, HttpError> {
+        Ok(Self {
             project_id,
-            report_id,
             branch_id,
             testbed_id,
-            thresholds: Thresholds::new(conn, branch_id, testbed_id, benchmarks),
-        }
+            report_id,
+            thresholds: Thresholds::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
+        })
     }
 
     pub fn benchmark(
@@ -98,18 +98,14 @@ impl Metrics {
         benchmark_name: String,
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
-        let mut perf_alerts = None;
+        // let mut perf_alerts = None;
 
         let benchmark_id = if let Ok(benchmark_id) =
             QueryBenchmark::get_id_from_name(conn, self.project_id, &benchmark_name)
         {
-            // Only generate alerts if the benchmark already exists
-            // and a threshold is provided.
-            // Note these alerts have not yet been committed to the database.
-            perf_alerts = Some(self.alerts(conn, &benchmark_name, benchmark_id, &json_metrics)?);
             benchmark_id
         } else {
-            let insert_benchmark = InsertBenchmark::new(self.project_id, benchmark_name);
+            let insert_benchmark = InsertBenchmark::from_json(self.project_id, benchmark_name);
             diesel::insert_into(schema::benchmark::table)
                 .values(&insert_benchmark)
                 .execute(conn)
