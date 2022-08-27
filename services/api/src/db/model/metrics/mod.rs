@@ -56,7 +56,7 @@ impl Metrics {
     }
 
     pub fn benchmark(
-        &self,
+        &mut self,
         conn: &SqliteConnection,
         iteration: i32,
         benchmark_name: &str,

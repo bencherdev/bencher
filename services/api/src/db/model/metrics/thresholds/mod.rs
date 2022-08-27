@@ -66,7 +66,7 @@ impl Thresholds {
     }
 
     pub fn z_score(
-        &self,
+        &mut self,
         conn: &SqliteConnection,
         perf_id: i32,
         benchmark_name: &str,

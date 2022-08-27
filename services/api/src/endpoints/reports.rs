@@ -200,7 +200,7 @@ pub async fn post(
         .map_err(|_| http_error!("Failed to create report."))?;
 
     // Metrics is used to add benchmarks, perf metrics, and alerts.
-    let metrics = Metrics::new(
+    let mut metrics = Metrics::new(
         &*conn,
         project_id,
         branch_id,
