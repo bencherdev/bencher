@@ -10,11 +10,7 @@ use dropshot::HttpError;
 use super::threshold::Threshold;
 use crate::{
     db::model::{
-        metrics::{
-            std_deviation::{
-                StdDev,
-            },
-        },
+        metrics::std_deviation::StdDev,
         threshold::{
             statistic::StatisticKind,
             PerfKind,
@@ -42,9 +38,7 @@ impl Latency {
         kind: PerfKind,
     ) -> Result<Option<Self>, HttpError> {
         // Check to see if there is a latency threshold for this branch/testbed pair
-        let threshold = if let Some(threshold) =
-            Threshold::new(conn, branch_id, testbed_id, kind)
-        {
+        let threshold = if let Some(threshold) = Threshold::new(conn, branch_id, testbed_id, kind) {
             threshold
         } else {
             return Ok(None);
@@ -91,11 +85,11 @@ impl Latency {
     ) -> Result<(), HttpError> {
         if let Some(std_dev) = self.deviations.get(benchmark_name) {
             let mut data = std_dev.data.clone();
-            let datum =json_latency.duration as f64 ;
+            let datum = json_latency.duration as f64;
             data.push(datum);
-            if let Some(mean) = StdDev::mean(&data){
+            if let Some(mean) = StdDev::mean(&data) {
                 let std_deviation = StdDev::std_deviation(mean, &data);
-                let z  = (datum - mean) / std_deviation;
+                let z = (datum - mean) / std_deviation;
             }
         }
 

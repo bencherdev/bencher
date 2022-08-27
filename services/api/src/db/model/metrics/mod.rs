@@ -24,8 +24,8 @@ use crate::{
 
 pub mod alerts;
 pub mod sample_mean;
-pub mod thresholds;
 pub mod std_deviation;
+pub mod thresholds;
 
 use self::thresholds::Thresholds;
 

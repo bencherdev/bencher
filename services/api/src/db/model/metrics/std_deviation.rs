@@ -11,17 +11,19 @@ use diesel::{
     RunQueryDsl,
     SqliteConnection,
 };
-use crate::db::model::threshold::PerfKind;
 use dropshot::HttpError;
 use ordered_float::OrderedFloat;
 
 use super::thresholds::threshold::Statistic;
 use crate::{
     db::{
-        model::perf::{
-            latency::QueryLatency,
-            min_max_avg::QueryMinMaxAvg,
-            throughput::QueryThroughput,
+        model::{
+            perf::{
+                latency::QueryLatency,
+                min_max_avg::QueryMinMaxAvg,
+                throughput::QueryThroughput,
+            },
+            threshold::PerfKind,
         },
         schema,
     },
@@ -46,7 +48,6 @@ enum MinMaxAvgKind {
     Memory,
     Storage,
 }
-
 
 impl StdDev {
     pub fn new(
@@ -82,80 +83,80 @@ impl StdDev {
             .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
             .filter(schema::branch::id.eq(branch_id));
 
-        let data = match kind {
-            StdDevKind::Latency => {
-                let json_data: Vec<JsonLatency> = query
-                    .inner_join(
-                        schema::latency::table
-                            .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-                    )
-                    .select((
-                        schema::latency::id,
-                        schema::latency::uuid,
-                        schema::latency::lower_variance,
-                        schema::latency::upper_variance,
-                        schema::latency::duration,
-                    ))
-                    .order(&order_by)
-                    .limit(statistic.sample_size)
-                    .load::<QueryLatency>(conn)
-                    .map_err(|_| http_error!(PERF_ERROR))?
-                    .into_iter()
-                    .filter_map(|query| query.to_json().ok())
-                    .collect();
+        let data: Vec<f64> =
+            match kind {
+                StdDevKind::Latency => {
+                    let json_data: Vec<JsonLatency> = query
+                        .inner_join(
+                            schema::latency::table
+                                .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
+                        )
+                        .select((
+                            schema::latency::id,
+                            schema::latency::uuid,
+                            schema::latency::lower_variance,
+                            schema::latency::upper_variance,
+                            schema::latency::duration,
+                        ))
+                        .order(&order_by)
+                        .limit(statistic.sample_size)
+                        .load::<QueryLatency>(conn)
+                        .map_err(|_| http_error!(PERF_ERROR))?
+                        .into_iter()
+                        .filter_map(|query| query.to_json().ok())
+                        .collect();
 
-                json_data.into_iter().map(|d| d.duration as f64).collect()
-            },
-            StdDevKind::Throughput => {
-                let json_data: Vec<JsonThroughput> = query
-                    .inner_join(
-                        schema::throughput::table
-                            .on(schema::perf::throughput_id.eq(schema::throughput::id.nullable())),
-                    )
-                    .select((
-                        schema::throughput::id,
-                        schema::throughput::uuid,
-                        schema::throughput::lower_variance,
-                        schema::throughput::upper_variance,
-                        schema::throughput::events,
-                        schema::throughput::unit_time,
-                    ))
-                    .order(&order_by)
-                    .limit(statistic.sample_size)
-                    .load::<QueryThroughput>(conn)
-                    .map_err(|_| http_error!(PERF_ERROR))?
-                    .into_iter()
-                    .filter_map(|query| query.to_json().ok())
-                    .collect();
-
-                json_data
-                    .iter()
-                    .map(|d| d.per_unit_time(&d.events).into())
-                    .collect()
-            },
-            StdDevKind::MinMaxAvg(mma) => {
-                let json_data: Vec<JsonMinMaxAvg> =
-                    match mma {
-                        MinMaxAvgKind::Compute => query
-                            .inner_join(schema::min_max_avg::table.on(
-                                schema::perf::compute_id.eq(schema::min_max_avg::id.nullable()),
+                    json_data.into_iter().map(|d| d.duration as f64).collect()
+                },
+                StdDevKind::Throughput => {
+                    let json_data: Vec<JsonThroughput> =
+                        query
+                            .inner_join(schema::throughput::table.on(
+                                schema::perf::throughput_id.eq(schema::throughput::id.nullable()),
                             ))
                             .select((
-                                schema::min_max_avg::id,
-                                schema::min_max_avg::uuid,
-                                schema::min_max_avg::min,
-                                schema::min_max_avg::max,
-                                schema::min_max_avg::avg,
+                                schema::throughput::id,
+                                schema::throughput::uuid,
+                                schema::throughput::lower_variance,
+                                schema::throughput::upper_variance,
+                                schema::throughput::events,
+                                schema::throughput::unit_time,
                             ))
                             .order(&order_by)
                             .limit(statistic.sample_size)
-                            .load::<QueryMinMaxAvg>(conn)
+                            .load::<QueryThroughput>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
-                            .map(|query| query.to_json())
-                            .collect(),
-                        MinMaxAvgKind::Memory => {
-                            query
+                            .filter_map(|query| query.to_json().ok())
+                            .collect();
+
+                    json_data
+                        .iter()
+                        .map(|d| d.per_unit_time(&d.events).into())
+                        .collect()
+                },
+                StdDevKind::MinMaxAvg(mma) => {
+                    let json_data: Vec<JsonMinMaxAvg> =
+                        match mma {
+                            MinMaxAvgKind::Compute => query
+                                .inner_join(schema::min_max_avg::table.on(
+                                    schema::perf::compute_id.eq(schema::min_max_avg::id.nullable()),
+                                ))
+                                .select((
+                                    schema::min_max_avg::id,
+                                    schema::min_max_avg::uuid,
+                                    schema::min_max_avg::min,
+                                    schema::min_max_avg::max,
+                                    schema::min_max_avg::avg,
+                                ))
+                                .order(&order_by)
+                                .limit(statistic.sample_size)
+                                .load::<QueryMinMaxAvg>(conn)
+                                .map_err(|_| http_error!(PERF_ERROR))?
+                                .into_iter()
+                                .map(|query| query.to_json())
+                                .collect(),
+                            MinMaxAvgKind::Memory => query
                                 .inner_join(schema::min_max_avg::table.on(
                                     schema::perf::memory_id.eq(schema::min_max_avg::id.nullable()),
                                 ))
@@ -172,44 +173,41 @@ impl StdDev {
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
                                 .map(|query| query.to_json())
-                                .collect()
-                        },
-                        MinMaxAvgKind::Storage => query
-                            .inner_join(schema::min_max_avg::table.on(
-                                schema::perf::storage_id.eq(schema::min_max_avg::id.nullable()),
-                            ))
-                            .select((
-                                schema::min_max_avg::id,
-                                schema::min_max_avg::uuid,
-                                schema::min_max_avg::min,
-                                schema::min_max_avg::max,
-                                schema::min_max_avg::avg,
-                            ))
-                            .order(&order_by)
-                            .limit(statistic.sample_size)
-                            .load::<QueryMinMaxAvg>(conn)
-                            .map_err(|_| http_error!(PERF_ERROR))?
-                            .into_iter()
-                            .map(|query| query.to_json())
-                            .collect(),
-                    };
+                                .collect(),
+                            MinMaxAvgKind::Storage => query
+                                .inner_join(schema::min_max_avg::table.on(
+                                    schema::perf::storage_id.eq(schema::min_max_avg::id.nullable()),
+                                ))
+                                .select((
+                                    schema::min_max_avg::id,
+                                    schema::min_max_avg::uuid,
+                                    schema::min_max_avg::min,
+                                    schema::min_max_avg::max,
+                                    schema::min_max_avg::avg,
+                                ))
+                                .order(&order_by)
+                                .limit(statistic.sample_size)
+                                .load::<QueryMinMaxAvg>(conn)
+                                .map_err(|_| http_error!(PERF_ERROR))?
+                                .into_iter()
+                                .map(|query| query.to_json())
+                                .collect(),
+                        };
 
-                json_data.iter().map(|d| d.avg.into()).collect()
-            },
-        };
+                    json_data.iter().map(|d| d.avg.into()).collect()
+                },
+            };
 
         Ok(if data.is_empty() {
             None
         } else {
-            Some(Self{ data})
-
+            Some(Self { data })
         })
     }
 
     pub fn std_deviation(mean: f64, data: &[f64]) -> f64 {
         Self::variance(mean, data).sqrt()
     }
-
 
     pub fn variance(mean: f64, data: &[f64]) -> f64 {
         data.iter()
@@ -227,16 +225,14 @@ impl StdDev {
         }
 
         let length = data.len();
-        let sum: f64 = data.into_iter().sum().collect();
+        let sum: f64 = data.into_iter().sum();
         Some(sum / length as f64)
     }
-
 }
-
 
 impl From<PerfKind> for StdDevKind {
     fn from(kind: PerfKind) -> Self {
-        match kind{
+        match kind {
             PerfKind::Latency => Self::Latency,
             PerfKind::Throughput => Self::Throughput,
             PerfKind::Compute => Self::MinMaxAvg(MinMaxAvgKind::Compute),

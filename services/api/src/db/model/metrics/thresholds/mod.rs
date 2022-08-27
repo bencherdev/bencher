@@ -15,7 +15,9 @@ use self::{
     min_max_avg::MinMaxAvg,
     throughput::Throughput,
 };
-use crate::db::model::benchmark::QueryBenchmark;
+use crate::db::model::{
+    benchmark::QueryBenchmark,
+};
 
 pub mod latency;
 pub mod min_max_avg;
@@ -60,6 +62,7 @@ impl Thresholds {
                 report_id,
                 &benchmarks,
                 &metrics_map,
+                PerfKind::Latency,
             )?,
             throughput: None,
             compute:    None,
@@ -77,7 +80,7 @@ impl Thresholds {
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
             if let Some(latency) = &self.latency {
-                latency.z_score(conn, perf_id, benchmark_name, json, PerfKind::Latency)?
+                latency.z_score(conn, perf_id, benchmark_name, json)?
             }
         }
         if let Some(json) = json_metrics.throughput {
