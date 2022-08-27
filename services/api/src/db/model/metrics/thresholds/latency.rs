@@ -10,7 +10,7 @@ use dropshot::HttpError;
 use super::threshold::Threshold;
 use crate::{
     db::model::{
-        metrics::std_deviation::StdDev,
+        metrics::data::MetricsData,
         threshold::{
             statistic::StatisticKind,
             PerfKind,
@@ -22,9 +22,9 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct Latency {
-    pub report_id:  i32,
-    pub threshold:  Threshold,
-    pub deviations: HashMap<String, StdDev>,
+    pub report_id: i32,
+    pub threshold: Threshold,
+    pub data:      HashMap<String, MetricsData>,
 }
 
 impl Latency {
@@ -45,9 +45,9 @@ impl Latency {
         };
 
         // Calculate the sample means
-        let mut deviations = HashMap::with_capacity(benchmarks.len());
+        let mut data = HashMap::with_capacity(benchmarks.len());
         for (benchmark_name, benchmark_id) in benchmarks {
-            if let Some(json) = StdDev::new(
+            if let Some(json) = MetricsData::new(
                 conn,
                 branch_id,
                 testbed_id,
@@ -55,7 +55,7 @@ impl Latency {
                 &threshold.statistic,
                 kind,
             )? {
-                deviations.insert(benchmark_name.clone(), json);
+                data.insert(benchmark_name.clone(), json);
             } else {
                 return Err(http_error!(PERF_ERROR));
             }
@@ -65,13 +65,13 @@ impl Latency {
         // alerts. Since this only needs to happen once, return None for the
         // latency threshold.
         Ok(if let StatisticKind::T = threshold.statistic.test {
-            Self::t_test(conn, report_id, &threshold, metrics_map, &deviations)?;
+            Self::t_test(conn, report_id, &threshold, metrics_map, &data)?;
             None
         } else {
             Some(Self {
                 report_id,
                 threshold,
-                deviations,
+                data,
             })
         })
     }
@@ -83,13 +83,13 @@ impl Latency {
         benchmark_name: &str,
         json_latency: JsonLatency,
     ) -> Result<(), HttpError> {
-        if let Some(std_dev) = self.deviations.get(benchmark_name) {
-            let mut data = std_dev.data.clone();
+        if let Some(metrics_data) = self.data.get(benchmark_name) {
+            let mut data = metrics_data.data.clone();
             let datum = json_latency.duration as f64;
             data.push(datum);
-            if let Some(mean) = StdDev::mean(&data) {
-                let std_deviation = StdDev::std_deviation(mean, &data);
-                let z = (datum - mean) / std_deviation;
+            if let Some(mean) = MetricsData::mean(&data) {
+                let std_dev = MetricsData::std_deviation(mean, &data);
+                let z = (datum - mean) / std_dev;
             }
         }
 
@@ -101,10 +101,10 @@ impl Latency {
         report_id: i32,
         threshold: &Threshold,
         metrics_map: &JsonMetricsMap,
-        deviations: &HashMap<String, StdDev>,
+        data: &HashMap<String, MetricsData>,
     ) -> Result<(), HttpError> {
         for (benchmark_name, metrics_list) in &metrics_map.inner {
-            if let Some(std_dev) = deviations.get(benchmark_name) {
+            if let Some(std_dev) = data.get(benchmark_name) {
                 // TODO perform a t test with the sample mean and threshold
                 let latency_data = &metrics_list.latency;
             }

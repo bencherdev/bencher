@@ -8,7 +8,6 @@ use bencher_json::report::{
 use diesel::SqliteConnection;
 use dropshot::HttpError;
 
-use crate::db::model::threshold::PerfKind;
 pub use self::threshold::Threshold;
 use self::{
     latency::Latency,
@@ -17,6 +16,7 @@ use self::{
 };
 use crate::db::model::{
     benchmark::QueryBenchmark,
+    threshold::PerfKind,
 };
 
 pub mod latency;

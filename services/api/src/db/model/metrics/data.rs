@@ -33,11 +33,11 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-pub struct StdDev {
+pub struct MetricsData {
     pub data: Vec<f64>,
 }
 
-enum StdDevKind {
+enum MetricsKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
@@ -49,7 +49,7 @@ enum MinMaxAvgKind {
     Storage,
 }
 
-impl StdDev {
+impl MetricsData {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
@@ -85,7 +85,7 @@ impl StdDev {
 
         let data: Vec<f64> =
             match kind {
-                StdDevKind::Latency => {
+                MetricsKind::Latency => {
                     let json_data: Vec<JsonLatency> = query
                         .inner_join(
                             schema::latency::table
@@ -108,7 +108,7 @@ impl StdDev {
 
                     json_data.into_iter().map(|d| d.duration as f64).collect()
                 },
-                StdDevKind::Throughput => {
+                MetricsKind::Throughput => {
                     let json_data: Vec<JsonThroughput> =
                         query
                             .inner_join(schema::throughput::table.on(
@@ -135,7 +135,7 @@ impl StdDev {
                         .map(|d| d.per_unit_time(&d.events).into())
                         .collect()
                 },
-                StdDevKind::MinMaxAvg(mma) => {
+                MetricsKind::MinMaxAvg(mma) => {
                     let json_data: Vec<JsonMinMaxAvg> =
                         match mma {
                             MinMaxAvgKind::Compute => query
@@ -230,7 +230,7 @@ impl StdDev {
     }
 }
 
-impl From<PerfKind> for StdDevKind {
+impl From<PerfKind> for MetricsKind {
     fn from(kind: PerfKind) -> Self {
         match kind {
             PerfKind::Latency => Self::Latency,
