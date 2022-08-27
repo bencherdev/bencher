@@ -26,6 +26,7 @@ use dropshot::HttpError;
 use ordered_float::OrderedFloat;
 use uuid::Uuid;
 
+use super::thresholds::Statistic;
 use crate::{
     db::{
         model::{
@@ -68,19 +69,19 @@ struct SampleMean {
     pub storage:    Option<JsonMinMaxAvg>,
 }
 
-enum SampleMeanKind {
+pub enum SampleMeanKind {
     Latency(Option<JsonLatency>),
     Throughput(Option<JsonThroughput>),
     MinMaxAvg(Option<JsonMinMaxAvg>),
 }
 
-enum SampleKind {
+pub enum SampleKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
 }
 
-enum MinMaxAvgKind {
+pub enum MinMaxAvgKind {
     Compute,
     Memory,
     Storage,
@@ -151,7 +152,7 @@ fn map_latency(
             branch_id,
             testbed_id,
             benchmark_id,
-            threshold,
+            &threshold.statistic,
             SampleKind::Latency,
         )? {
             json
@@ -176,7 +177,7 @@ fn map_throughput(
             branch_id,
             testbed_id,
             benchmark_id,
-            threshold,
+            &threshold.statistic,
             SampleKind::Throughput,
         )? {
             json
@@ -202,7 +203,7 @@ fn map_min_max_avg(
             branch_id,
             testbed_id,
             benchmark_id,
-            threshold,
+            &threshold.statistic,
             SampleKind::MinMaxAvg(kind),
         )? {
             json
@@ -220,7 +221,7 @@ impl SampleMeanKind {
         branch_id: i32,
         testbed_id: i32,
         benchmark_id: i32,
-        threshold: &Threshold,
+        statistic: &Statistic,
         kind: SampleKind,
     ) -> Result<Self, HttpError> {
         let order_by = (
@@ -235,7 +236,7 @@ impl SampleMeanKind {
             )
             .filter(schema::benchmark::id.eq(benchmark_id))
             .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .filter(schema::report::start_time.ge(threshold.statistic.window))
+            .filter(schema::report::start_time.ge(statistic.window))
             .left_join(
                 schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
             )
@@ -261,7 +262,7 @@ impl SampleMeanKind {
                         schema::latency::duration,
                     ))
                     .order(&order_by)
-                    .limit(threshold.statistic.sample_size)
+                    .limit(statistic.sample_size)
                     .load::<QueryLatency>(conn)
                     .map_err(|_| http_error!(PERF_ERROR))?
                     .into_iter()
@@ -285,7 +286,7 @@ impl SampleMeanKind {
                         schema::throughput::unit_time,
                     ))
                     .order(&order_by)
-                    .limit(threshold.statistic.sample_size)
+                    .limit(statistic.sample_size)
                     .load::<QueryThroughput>(conn)
                     .map_err(|_| http_error!(PERF_ERROR))?
                     .into_iter()
@@ -309,7 +310,7 @@ impl SampleMeanKind {
                                 schema::min_max_avg::avg,
                             ))
                             .order(&order_by)
-                            .limit(threshold.statistic.sample_size)
+                            .limit(statistic.sample_size)
                             .load::<QueryMinMaxAvg>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
@@ -328,7 +329,7 @@ impl SampleMeanKind {
                                     schema::min_max_avg::avg,
                                 ))
                                 .order(&order_by)
-                                .limit(threshold.statistic.sample_size)
+                                .limit(statistic.sample_size)
                                 .load::<QueryMinMaxAvg>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
@@ -347,7 +348,7 @@ impl SampleMeanKind {
                                 schema::min_max_avg::avg,
                             ))
                             .order(&order_by)
-                            .limit(threshold.statistic.sample_size)
+                            .limit(statistic.sample_size)
                             .load::<QueryMinMaxAvg>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()

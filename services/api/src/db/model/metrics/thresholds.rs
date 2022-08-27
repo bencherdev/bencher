@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bencher_json::report::{
     data::{
         JsonReportAlert,
@@ -24,7 +26,13 @@ use diesel::{
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use super::alerts::Alerts;
+use super::{
+    alerts::Alerts,
+    sample_mean::{
+        SampleKind,
+        SampleMeanKind,
+    },
+};
 use crate::{
     db::{
         model::{
@@ -70,14 +78,51 @@ impl Thresholds {
         benchmarks: JsonBenchmarks,
     ) -> Self {
         let metrics_map = JsonMetricsMap::from(benchmarks);
+        let benchmark_names: Vec<String> = metrics_map.inner.keys().cloned().collect();
 
         Self {
-            latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency).ok(),
-            throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput).ok(),
-            compute:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Compute).ok(),
-            memory:     Threshold::new(conn, branch_id, testbed_id, PerfKind::Memory).ok(),
-            storage:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Storage).ok(),
+            latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency),
+            throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput),
+            compute:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Compute),
+            memory:     Threshold::new(conn, branch_id, testbed_id, PerfKind::Memory),
+            storage:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Storage),
         }
+    }
+}
+
+pub struct Latency {
+    pub threshold:    Threshold,
+    pub sample_means: HashMap<String, Option<JsonLatency>>,
+}
+
+impl Latency {
+    pub fn new(
+        conn: &SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+        benchmark_names: &[&str],
+    ) -> Result<Option<Self>, HttpError> {
+        let threshold = if let Some(threshold) =
+            Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency)
+        {
+            threshold
+        } else {
+            return Ok(None);
+        };
+
+        // for benchmark_name
+        // if let SampleMeanKind::Latency(json) = SampleMeanKind::new(
+        //     conn,
+        //     branch_id,
+        //     testbed_id,
+        //     benchmark_id,
+        //     &threshold.statistic,
+        //     SampleKind::Latency,
+        // )? {
+        //     json
+        // } else {
+        //     return Err(http_error!(PERF_ERROR));
+        // }
     }
 }
 
@@ -102,7 +147,7 @@ impl Threshold {
         branch_id: i32,
         testbed_id: i32,
         kind: PerfKind,
-    ) -> Result<Self, HttpError> {
+    ) -> Option<Self> {
         schema::statistic::table
             .inner_join(
                 schema::threshold::table
@@ -161,7 +206,8 @@ impl Threshold {
                     })
                 },
             )
-            .map_err(|_| http_error!(PERF_ERROR))?
+            .ok()?
+            .ok()
     }
 }
 
