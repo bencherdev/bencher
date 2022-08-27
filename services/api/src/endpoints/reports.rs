@@ -210,7 +210,13 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    let metrics_thresholds = MetricsThresholds::new(&*conn, branch_id, testbed_id, json_report.benchmarks.clone());
+    let metrics_thresholds = MetricsThresholds::new(
+        &*conn,
+        query_report.id,
+        branch_id,
+        testbed_id,
+        json_report.benchmarks.clone(),
+    );
 
     let mut benchmarks = JsonReportBenchmarks::new();
     for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {

@@ -46,6 +46,7 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct MetricsThresholds {
+    pub report_id:   i32,
     pub branch_id:   i32,
     pub testbed_id:  i32,
     pub metrics_map: JsonMetricsMap,
@@ -207,11 +208,13 @@ struct Perf {
 impl MetricsThresholds {
     pub fn new(
         conn: &SqliteConnection,
+        report_id: i32,
         branch_id: i32,
         testbed_id: i32,
         benchmarks: JsonBenchmarks,
     ) -> Self {
         Self {
+            report_id,
             branch_id,
             testbed_id,
             metrics_map: JsonMetricsMap::from(benchmarks),

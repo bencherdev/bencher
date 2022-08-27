@@ -145,6 +145,10 @@ impl InsertPerf {
             .map_err(|_| http_error!("Failed to create benchmark data."))?;
         let perf_id = QueryPerf::get_id(conn, &perf_uuid)?;
 
+        // TODO move this over to an internal state/operation of metrics_threshold
+        // That is it should manage all of this behind the scenes.
+        // For t-tests, it won't include the perf_id but for z scores it will
+        // Break this out into its own `metrics` module
         // Commit the alerts to the database now that the perf exists
         let report_alerts = perf_alerts.map(|alerts| {
             alerts
