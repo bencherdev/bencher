@@ -88,54 +88,54 @@ pub enum MinMaxAvgKind {
 }
 
 impl SampleMean {
-    pub fn new(
-        conn: &SqliteConnection,
-        branch_id: i32,
-        testbed_id: i32,
-        benchmark_id: i32,
-        thresholds: &Thresholds,
-    ) -> Result<Self, HttpError> {
-        Ok(Self {
-            latency:    map_latency(
-                conn,
-                branch_id,
-                testbed_id,
-                benchmark_id,
-                thresholds.latency.as_ref(),
-            )?,
-            throughput: map_throughput(
-                conn,
-                branch_id,
-                testbed_id,
-                benchmark_id,
-                thresholds.throughput.as_ref(),
-            )?,
-            compute:    map_min_max_avg(
-                conn,
-                branch_id,
-                testbed_id,
-                benchmark_id,
-                thresholds.compute.as_ref(),
-                MinMaxAvgKind::Compute,
-            )?,
-            memory:     map_min_max_avg(
-                conn,
-                branch_id,
-                testbed_id,
-                benchmark_id,
-                thresholds.memory.as_ref(),
-                MinMaxAvgKind::Memory,
-            )?,
-            storage:    map_min_max_avg(
-                conn,
-                branch_id,
-                testbed_id,
-                benchmark_id,
-                thresholds.storage.as_ref(),
-                MinMaxAvgKind::Storage,
-            )?,
-        })
-    }
+    // pub fn new(
+    //     conn: &SqliteConnection,
+    //     branch_id: i32,
+    //     testbed_id: i32,
+    //     benchmark_id: i32,
+    //     thresholds: &Thresholds,
+    // ) -> Result<Self, HttpError> {
+    //     Ok(Self {
+    //         latency:    map_latency(
+    //             conn,
+    //             branch_id,
+    //             testbed_id,
+    //             benchmark_id,
+    //             thresholds.latency.as_ref(),
+    //         )?,
+    //         throughput: map_throughput(
+    //             conn,
+    //             branch_id,
+    //             testbed_id,
+    //             benchmark_id,
+    //             thresholds.throughput.as_ref(),
+    //         )?,
+    //         compute:    map_min_max_avg(
+    //             conn,
+    //             branch_id,
+    //             testbed_id,
+    //             benchmark_id,
+    //             thresholds.compute.as_ref(),
+    //             MinMaxAvgKind::Compute,
+    //         )?,
+    //         memory:     map_min_max_avg(
+    //             conn,
+    //             branch_id,
+    //             testbed_id,
+    //             benchmark_id,
+    //             thresholds.memory.as_ref(),
+    //             MinMaxAvgKind::Memory,
+    //         )?,
+    //         storage:    map_min_max_avg(
+    //             conn,
+    //             branch_id,
+    //             testbed_id,
+    //             benchmark_id,
+    //             thresholds.storage.as_ref(),
+    //             MinMaxAvgKind::Storage,
+    //         )?,
+    //     })
+    // }
 }
 
 // TODO move over to generics instead

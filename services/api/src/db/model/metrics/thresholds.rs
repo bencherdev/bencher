@@ -63,11 +63,31 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct Thresholds {
-    pub latency:    Option<Threshold>,
+    pub latency:    Option<Latency>,
     pub throughput: Option<Threshold>,
     pub compute:    Option<Threshold>,
     pub memory:     Option<Threshold>,
     pub storage:    Option<Threshold>,
+}
+
+pub struct Latency {
+    pub threshold:    Threshold,
+    pub sample_means: HashMap<String, JsonLatency>,
+}
+
+pub struct Threshold {
+    pub id:        i32,
+    pub statistic: Statistic,
+}
+
+pub struct Statistic {
+    pub id:          i32,
+    pub uuid:        String,
+    pub test:        StatisticKind,
+    pub sample_size: i64,
+    pub window:      i64,
+    pub left_side:   Option<f32>,
+    pub right_side:  Option<f32>,
 }
 
 impl Thresholds {
@@ -91,7 +111,7 @@ impl Thresholds {
             .collect();
 
         Ok(Self {
-            latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency),
+            latency:    Latency::new(conn, branch_id, testbed_id, &benchmarks, &metrics_map)?,
             throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput),
             compute:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Compute),
             memory:     Threshold::new(conn, branch_id, testbed_id, PerfKind::Memory),
@@ -100,17 +120,13 @@ impl Thresholds {
     }
 }
 
-pub struct Latency {
-    pub threshold:    Threshold,
-    pub sample_means: HashMap<String, JsonLatency>,
-}
-
 impl Latency {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        benchmarks: &[(&str, i32)],
+        benchmarks: &[(String, i32)],
+        metrics_map: &JsonMetricsMap,
     ) -> Result<Option<Self>, HttpError> {
         let threshold = if let Some(threshold) =
             Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency)
@@ -131,33 +147,25 @@ impl Latency {
                 SampleKind::Latency,
             )? {
                 if let Some(json) = json {
-                    sample_means.insert(benchmark_name.to_string(), json);
+                    sample_means.insert(benchmark_name.clone(), json);
                 }
             } else {
                 return Err(http_error!(PERF_ERROR));
             }
         }
 
-        Ok(Some(Self {
-            threshold,
-            sample_means,
-        }))
+        // TODO check threshold kind
+        // if it is a t-test go ahead and perform it and create alerts and then return
+        // None since the threshold won't be needed for every perf
+        Ok(if let StatisticKind::T = threshold.statistic.test {
+            None
+        } else {
+            Some(Self {
+                threshold,
+                sample_means,
+            })
+        })
     }
-}
-
-pub struct Threshold {
-    pub id:        i32,
-    pub statistic: Statistic,
-}
-
-pub struct Statistic {
-    pub id:          i32,
-    pub uuid:        String,
-    pub test:        StatisticKind,
-    pub sample_size: i64,
-    pub window:      i64,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
 }
 
 impl Threshold {

@@ -75,6 +75,7 @@ impl QueryStatistic {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum StatisticKind {
     Z = 0,
     T = 1,
