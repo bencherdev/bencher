@@ -89,9 +89,14 @@ impl Latency {
         benchmark_name: &str,
         json_latency: JsonLatency,
     ) -> Result<(), HttpError> {
-        if let Some(sample_mean) = self.deviations.get(benchmark_name) {
-            // TODO use the sample mean to compare against the self.threshold
-            // and the json_latency
+        if let Some(std_dev) = self.deviations.get(benchmark_name) {
+            let mut data = std_dev.data.clone();
+            let datum =json_latency.duration as f64 ;
+            data.push(datum);
+            if let Some(mean) = StdDev::mean(&data){
+                let std_deviation = StdDev::std_deviation(mean, &data);
+                let z  = (datum - mean) / std_deviation;
+            }
         }
 
         Ok(())
@@ -105,7 +110,7 @@ impl Latency {
         deviations: &HashMap<String, StdDev>,
     ) -> Result<(), HttpError> {
         for (benchmark_name, metrics_list) in &metrics_map.inner {
-            if let Some(sample_mean) = deviations.get(benchmark_name) {
+            if let Some(std_dev) = deviations.get(benchmark_name) {
                 // TODO perform a t test with the sample mean and threshold
                 let latency_data = &metrics_list.latency;
             }

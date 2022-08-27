@@ -32,8 +32,7 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct StdDev {
-    mean:    OrderedFloat<f64>,
-    std_dev: OrderedFloat<f64>,
+    pub data: Vec<f64>,
 }
 
 enum StdDevKind {
@@ -83,7 +82,7 @@ impl StdDev {
             .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
             .filter(schema::branch::id.eq(branch_id));
 
-        let (mean, data) = match kind {
+        let data = match kind {
             StdDevKind::Latency => {
                 let json_data: Vec<JsonLatency> = query
                     .inner_join(
@@ -105,18 +104,7 @@ impl StdDev {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                if json_data.is_empty() {
-                    return Ok(None);
-                }
-
-                let float_data: Vec<f64> = json_data.iter().map(|d| d.duration as f64).collect();
-                let mean = if let Some(mean) = JsonLatency::mean(json_data) {
-                    mean.duration as f64
-                } else {
-                    return Ok(None);
-                };
-
-                (mean, float_data)
+                json_data.into_iter().map(|d| d.duration as f64).collect()
             },
             StdDevKind::Throughput => {
                 let json_data: Vec<JsonThroughput> = query
@@ -140,21 +128,10 @@ impl StdDev {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                if json_data.is_empty() {
-                    return Ok(None);
-                }
-
-                let float_data: Vec<f64> = json_data
+                json_data
                     .iter()
                     .map(|d| d.per_unit_time(&d.events).into())
-                    .collect();
-                let mean = if let Some(mean) = JsonThroughput::mean(json_data) {
-                    mean.per_unit_time(&mean.events).into()
-                } else {
-                    return Ok(None);
-                };
-
-                (mean, float_data)
+                    .collect()
             },
             StdDevKind::MinMaxAvg(mma) => {
                 let json_data: Vec<JsonMinMaxAvg> =
@@ -217,40 +194,43 @@ impl StdDev {
                             .collect(),
                     };
 
-                if json_data.is_empty() {
-                    return Ok(None);
-                }
-
-                let float_data: Vec<f64> = json_data.iter().map(|d| d.avg.into()).collect();
-                let mean = if let Some(mean) = JsonMinMaxAvg::mean(json_data) {
-                    mean.avg.into()
-                } else {
-                    return Ok(None);
-                };
-
-                (mean, float_data)
+                json_data.iter().map(|d| d.avg.into()).collect()
             },
         };
 
-        Ok(Some(Self {
-            mean:    mean.into(),
-            std_dev: std_deviation(mean, &data).into(),
-        }))
-    }
-}
+        Ok(if data.is_empty() {
+            None
+        } else {
+            Some(Self{ data})
 
-fn std_deviation(mean: f64, data: &[f64]) -> f64 {
-    variance(mean, data).sqrt()
-}
-
-fn variance(mean: f64, data: &[f64]) -> f64 {
-    data.iter()
-        .map(|value| {
-            let diff = mean - *value;
-            diff * diff
         })
-        .sum::<f64>()
-        / data.len() as f64
+    }
+
+    pub fn std_deviation(mean: f64, data: &[f64]) -> f64 {
+        Self::variance(mean, data).sqrt()
+    }
+
+
+    pub fn variance(mean: f64, data: &[f64]) -> f64 {
+        data.iter()
+            .map(|value| {
+                let diff = mean - *value;
+                diff * diff
+            })
+            .sum::<f64>()
+            / data.len() as f64
+    }
+
+    pub fn mean(data: &[f64]) -> Option<f64> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let length = data.len();
+        let sum: f64 = data.into_iter().sum().collect();
+        Some(sum / length as f64)
+    }
+
 }
 
 
