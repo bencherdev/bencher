@@ -175,33 +175,26 @@ pub async fn post(
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
     // Otherwise, create a new code version for this branch with/without the hash.
-    let version_id = if let Some(hash) = json_report.hash {
+    let version_id = if let Some(hash) = &json_report.hash {
         if let Ok(version_id) = schema::version::table
             .filter(
                 schema::version::branch_id
                     .eq(branch_id)
-                    .and(schema::version::hash.eq(&hash)),
+                    .and(schema::version::hash.eq(hash)),
             )
             .select(schema::version::id)
             .first::<i32>(&*conn)
         {
             version_id
         } else {
-            InsertVersion::increment(&*conn, branch_id, Some(hash))?
+            InsertVersion::increment(&*conn, branch_id, Some(hash.clone()))?
         }
     } else {
         InsertVersion::increment(&*conn, branch_id, None)?
     };
 
-    let insert_report = InsertReport::new(
-        &*conn,
-        user_id,
-        version_id,
-        testbed_id,
-        &json_report.adapter,
-        &json_report.start_time,
-        &json_report.end_time,
-    )?;
+    // Create a new report and add it to the database
+    let insert_report = InsertReport::from_json(user_id, version_id, testbed_id, &json_report)?;
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
@@ -213,6 +206,7 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
+    // A MetricsThresholds is used to add benchmarks, perf metrics, and alerts.
     let metrics_thresholds = MetricsThresholds::new(
         &*conn,
         project_id,

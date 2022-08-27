@@ -3,12 +3,14 @@ use std::str::FromStr;
 use bencher_json::{
     report::{
         data::{
+            JsonReportAlert,
             JsonReportAlerts,
             JsonReportBenchmark,
             JsonReportBenchmarks,
         },
         JsonAdapter,
     },
+    JsonNewReport,
     JsonReport,
 };
 use chrono::{
@@ -113,7 +115,15 @@ impl QueryReport {
     }
 
     fn get_alerts(&self, conn: &SqliteConnection) -> Result<JsonReportAlerts, HttpError> {
-        Ok(Vec::new().into())
+        Ok(schema::alert::table
+            .filter(schema::alert::report_id.eq(self.id))
+            .select(schema::alert::uuid)
+            .order(schema::alert::id)
+            .load::<String>(conn)
+            .map_err(|_| http_error!(REPORT_ERROR))?
+            .iter()
+            .filter_map(|uuid| Uuid::from_str(uuid).ok().map(|uuid| JsonReportAlert(uuid)))
+            .collect())
     }
 }
 
@@ -175,23 +185,20 @@ pub struct InsertReport {
 }
 
 impl InsertReport {
-    pub fn new(
-        conn: &SqliteConnection,
+    pub fn from_json(
         user_id: i32,
         version_id: i32,
         testbed_id: i32,
-        adapter: &JsonAdapter,
-        start_time: &DateTime<Utc>,
-        end_time: &DateTime<Utc>,
+        report: &JsonNewReport,
     ) -> Result<Self, HttpError> {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             user_id,
             version_id,
             testbed_id,
-            adapter: Adapter::from(adapter) as i32,
-            start_time: start_time.timestamp_nanos(),
-            end_time: end_time.timestamp_nanos(),
+            adapter: Adapter::from(&report.adapter) as i32,
+            start_time: report.start_time.timestamp_nanos(),
+            end_time: report.end_time.timestamp_nanos(),
         })
     }
 }
