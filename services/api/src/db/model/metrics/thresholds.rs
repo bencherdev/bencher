@@ -63,7 +63,14 @@ pub struct Thresholds {
 }
 
 impl Thresholds {
-    pub fn new(conn: &SqliteConnection, branch_id: i32, testbed_id: i32) -> Self {
+    pub fn new(
+        conn: &SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+        benchmarks: JsonBenchmarks,
+    ) -> Self {
+        let metrics_map = JsonMetricsMap::from(benchmarks);
+
         Self {
             latency:    Threshold::new(conn, branch_id, testbed_id, PerfKind::Latency).ok(),
             throughput: Threshold::new(conn, branch_id, testbed_id, PerfKind::Throughput).ok(),
@@ -155,71 +162,6 @@ impl Threshold {
                 },
             )
             .map_err(|_| http_error!(PERF_ERROR))?
-    }
-
-    pub fn latency_alerts(
-        &self,
-        conn: &SqliteConnection,
-        branch_id: i32,
-        testbed_id: i32,
-        benchmark_id: i32,
-        json_latency: &JsonLatency,
-    ) -> Result<Alerts, HttpError> {
-        let alerts = Alerts::new();
-
-        let order_by = (
-            schema::version::number.desc(),
-            schema::report::start_time.desc(),
-            schema::perf::iteration.desc(),
-        );
-
-        let query = schema::perf::table
-            .left_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-            )
-            .filter(schema::benchmark::id.eq(benchmark_id))
-            .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .filter(schema::report::start_time.ge(self.statistic.window))
-            .left_join(
-                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
-            )
-            .filter(schema::testbed::id.eq(testbed_id))
-            .left_join(
-                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
-            )
-            .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
-            .filter(schema::branch::id.eq(branch_id));
-
-        let json_latency_data: Vec<JsonLatency> = query
-            .inner_join(
-                schema::latency::table
-                    .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-            )
-            .select((
-                schema::latency::id,
-                schema::latency::uuid,
-                schema::latency::lower_variance,
-                schema::latency::upper_variance,
-                schema::latency::duration,
-            ))
-            .order(&order_by)
-            .limit(self.statistic.sample_size)
-            .load::<QueryLatency>(conn)
-            .map_err(|_| http_error!(PERF_ERROR))?
-            .into_iter()
-            .filter_map(|query| query.to_json().ok())
-            .collect();
-
-        if json_latency_data.is_empty() {
-            return Ok(alerts);
-        }
-        // TODO calculate the standard deviation and apply the proper test
-        // generate alerts for the json_latency given as applicable
-        let length = json_latency_data.len();
-        let json_latency_sum: JsonLatency = json_latency_data.into_iter().sum();
-        let mean = json_latency_sum / length;
-
-        Ok(alerts)
     }
 }
 

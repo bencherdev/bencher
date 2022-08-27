@@ -52,7 +52,7 @@ use crate::{
 };
 
 pub mod alerts;
-pub mod sample;
+pub mod sample_mean;
 pub mod thresholds;
 
 use self::{
@@ -66,12 +66,11 @@ use self::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct Metrics {
-    pub project_id:  i32,
-    pub report_id:   i32,
-    pub branch_id:   i32,
-    pub testbed_id:  i32,
-    pub metrics_map: JsonMetricsMap,
-    pub thresholds:  Thresholds,
+    pub project_id: i32,
+    pub report_id:  i32,
+    pub branch_id:  i32,
+    pub testbed_id: i32,
+    pub thresholds: Thresholds,
 }
 
 impl Metrics {
@@ -83,14 +82,12 @@ impl Metrics {
         testbed_id: i32,
         benchmarks: JsonBenchmarks,
     ) -> Self {
-        let thresholds = Thresholds::new(conn, branch_id, testbed_id);
         Self {
             project_id,
             report_id,
             branch_id,
             testbed_id,
-            metrics_map: JsonMetricsMap::from(benchmarks),
-            thresholds,
+            thresholds: Thresholds::new(conn, branch_id, testbed_id, benchmarks),
         }
     }
 

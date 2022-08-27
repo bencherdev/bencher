@@ -67,16 +67,19 @@ struct SampleMean {
     pub memory:     Option<JsonMinMaxAvg>,
     pub storage:    Option<JsonMinMaxAvg>,
 }
+
 enum SampleMeanKind {
     Latency(Option<JsonLatency>),
     Throughput(Option<JsonThroughput>),
     MinMaxAvg(Option<JsonMinMaxAvg>),
 }
+
 enum SampleKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
 }
+
 enum MinMaxAvgKind {
     Compute,
     Memory,
