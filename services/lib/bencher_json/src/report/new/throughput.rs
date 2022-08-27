@@ -12,7 +12,10 @@ use serde::{
     Serialize,
 };
 
-use super::{median::Median, mean::Mean};
+use super::{
+    mean::Mean,
+    median::Median,
+};
 
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

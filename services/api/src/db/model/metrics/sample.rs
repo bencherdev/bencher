@@ -74,10 +74,16 @@ enum SampleMean {
     MinMaxAvg(Option<JsonMinMaxAvg>),
 }
 
-enum Kind {
+enum SampleKind {
     Latency,
     Throughput,
-    MinMaxAvg,
+    MinMaxAvg(MinMaxAvgKind),
+}
+
+enum MinMaxAvgKind {
+    Compute,
+    Memory,
+    Storage,
 }
 
 impl Sample {
@@ -109,6 +115,7 @@ impl Sample {
                 testbed_id,
                 benchmark_id,
                 thresholds.compute.as_ref(),
+                MinMaxAvgKind::Compute,
             )?,
             memory:     map_min_max_avg(
                 conn,
@@ -116,6 +123,7 @@ impl Sample {
                 testbed_id,
                 benchmark_id,
                 thresholds.memory.as_ref(),
+                MinMaxAvgKind::Memory,
             )?,
             storage:    map_min_max_avg(
                 conn,
@@ -123,6 +131,7 @@ impl Sample {
                 testbed_id,
                 benchmark_id,
                 thresholds.storage.as_ref(),
+                MinMaxAvgKind::Storage,
             )?,
         })
     }
@@ -143,7 +152,7 @@ fn map_latency(
             testbed_id,
             benchmark_id,
             threshold,
-            Kind::Latency,
+            SampleKind::Latency,
         )? {
             json
         } else {
@@ -168,7 +177,7 @@ fn map_throughput(
             testbed_id,
             benchmark_id,
             threshold,
-            Kind::Throughput,
+            SampleKind::Throughput,
         )? {
             json
         } else {
@@ -185,6 +194,7 @@ fn map_min_max_avg(
     testbed_id: i32,
     benchmark_id: i32,
     threshold: Option<&Threshold>,
+    kind: MinMaxAvgKind,
 ) -> Result<Option<JsonMinMaxAvg>, HttpError> {
     Ok(if let Some(threshold) = threshold {
         if let SampleMean::MinMaxAvg(json) = SampleMean::new(
@@ -193,7 +203,7 @@ fn map_min_max_avg(
             testbed_id,
             benchmark_id,
             threshold,
-            Kind::MinMaxAvg,
+            SampleKind::MinMaxAvg(kind),
         )? {
             json
         } else {
@@ -211,7 +221,7 @@ impl SampleMean {
         testbed_id: i32,
         benchmark_id: i32,
         threshold: &Threshold,
-        kind: Kind,
+        kind: SampleKind,
     ) -> Result<Self, HttpError> {
         let order_by = (
             schema::version::number.desc(),
@@ -237,8 +247,8 @@ impl SampleMean {
             .filter(schema::branch::id.eq(branch_id));
 
         match kind {
-            Kind::Latency => {
-                let json_latency_data: Vec<JsonLatency> = query
+            SampleKind::Latency => {
+                let json_data: Vec<JsonLatency> = query
                     .inner_join(
                         schema::latency::table
                             .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
@@ -258,9 +268,95 @@ impl SampleMean {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                Ok(SampleMean::Latency(JsonLatency::mean(json_latency_data)))
+                Ok(SampleMean::Latency(JsonLatency::mean(json_data)))
             },
-            _ => todo!(),
+            SampleKind::Throughput => {
+                let json_data: Vec<JsonThroughput> = query
+                    .inner_join(
+                        schema::throughput::table
+                            .on(schema::perf::throughput_id.eq(schema::throughput::id.nullable())),
+                    )
+                    .select((
+                        schema::throughput::id,
+                        schema::throughput::uuid,
+                        schema::throughput::lower_variance,
+                        schema::throughput::upper_variance,
+                        schema::throughput::events,
+                        schema::throughput::unit_time,
+                    ))
+                    .order(&order_by)
+                    .limit(threshold.statistic.sample_size)
+                    .load::<QueryThroughput>(conn)
+                    .map_err(|_| http_error!(PERF_ERROR))?
+                    .into_iter()
+                    .filter_map(|query| query.to_json().ok())
+                    .collect();
+
+                Ok(SampleMean::Throughput(JsonThroughput::mean(json_data)))
+            },
+            SampleKind::MinMaxAvg(mma) => {
+                let json_data: Vec<JsonMinMaxAvg> =
+                    match mma {
+                        MinMaxAvgKind::Compute => query
+                            .inner_join(schema::min_max_avg::table.on(
+                                schema::perf::compute_id.eq(schema::min_max_avg::id.nullable()),
+                            ))
+                            .select((
+                                schema::min_max_avg::id,
+                                schema::min_max_avg::uuid,
+                                schema::min_max_avg::min,
+                                schema::min_max_avg::max,
+                                schema::min_max_avg::avg,
+                            ))
+                            .order(&order_by)
+                            .limit(threshold.statistic.sample_size)
+                            .load::<QueryMinMaxAvg>(conn)
+                            .map_err(|_| http_error!(PERF_ERROR))?
+                            .into_iter()
+                            .map(|query| query.to_json())
+                            .collect(),
+                        MinMaxAvgKind::Memory => {
+                            query
+                                .inner_join(schema::min_max_avg::table.on(
+                                    schema::perf::memory_id.eq(schema::min_max_avg::id.nullable()),
+                                ))
+                                .select((
+                                    schema::min_max_avg::id,
+                                    schema::min_max_avg::uuid,
+                                    schema::min_max_avg::min,
+                                    schema::min_max_avg::max,
+                                    schema::min_max_avg::avg,
+                                ))
+                                .order(&order_by)
+                                .limit(threshold.statistic.sample_size)
+                                .load::<QueryMinMaxAvg>(conn)
+                                .map_err(|_| http_error!(PERF_ERROR))?
+                                .into_iter()
+                                .map(|query| query.to_json())
+                                .collect()
+                        },
+                        MinMaxAvgKind::Storage => query
+                            .inner_join(schema::min_max_avg::table.on(
+                                schema::perf::storage_id.eq(schema::min_max_avg::id.nullable()),
+                            ))
+                            .select((
+                                schema::min_max_avg::id,
+                                schema::min_max_avg::uuid,
+                                schema::min_max_avg::min,
+                                schema::min_max_avg::max,
+                                schema::min_max_avg::avg,
+                            ))
+                            .order(&order_by)
+                            .limit(threshold.statistic.sample_size)
+                            .load::<QueryMinMaxAvg>(conn)
+                            .map_err(|_| http_error!(PERF_ERROR))?
+                            .into_iter()
+                            .map(|query| query.to_json())
+                            .collect(),
+                    };
+
+                Ok(SampleMean::MinMaxAvg(JsonMinMaxAvg::mean(json_data)))
+            },
         }
     }
 }

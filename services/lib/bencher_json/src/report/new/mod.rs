@@ -14,12 +14,12 @@ use super::JsonAdapter;
 
 pub mod benchmarks;
 pub mod latency;
+pub mod mean;
 pub mod median;
 pub mod metrics;
 pub mod metrics_map;
 pub mod min_max_avg;
 pub mod throughput;
-pub mod mean;
 
 pub use benchmarks::{
     JsonBenchmarks,
