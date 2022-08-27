@@ -1,21 +1,10 @@
 use bencher_json::report::{
-    data::{
-        JsonReportAlert,
-        JsonReportAlerts,
-    },
-    new::{
-        mean::Mean,
-        JsonBenchmarks,
-        JsonMetrics,
-    },
+    new::mean::Mean,
     JsonLatency,
-    JsonMetricsMap,
     JsonMinMaxAvg,
     JsonThroughput,
 };
-use chrono::offset::Utc;
 use diesel::{
-    expression_methods::BoolExpressionMethods,
     JoinOnDsl,
     NullableExpressionMethods,
     QueryDsl,
@@ -23,36 +12,16 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use ordered_float::OrderedFloat;
-use uuid::Uuid;
 
-use super::thresholds::Statistic;
+use super::thresholds::threshold::Statistic;
 use crate::{
     db::{
-        model::{
-            benchmark::{
-                InsertBenchmark,
-                QueryBenchmark,
-            },
-            metrics::thresholds::{
-                Threshold,
-                Thresholds,
-            },
-            perf::{
-                latency::QueryLatency,
-                min_max_avg::QueryMinMaxAvg,
-                throughput::QueryThroughput,
-                InsertPerf,
-                QueryPerf,
-            },
-            threshold::{
-                alert::InsertAlert,
-                statistic::StatisticKind,
-                PerfKind,
-            },
+        model::perf::{
+            latency::QueryLatency,
+            min_max_avg::QueryMinMaxAvg,
+            throughput::QueryThroughput,
         },
         schema,
-        schema::statistic as statistic_table,
     },
     diesel::ExpressionMethods,
     util::http_error,
@@ -60,22 +29,13 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-#[derive(Debug)]
-struct SampleMean {
-    pub latency:    Option<JsonLatency>,
-    pub throughput: Option<JsonThroughput>,
-    pub compute:    Option<JsonMinMaxAvg>,
-    pub memory:     Option<JsonMinMaxAvg>,
-    pub storage:    Option<JsonMinMaxAvg>,
-}
-
-pub enum SampleMeanKind {
+pub enum SampleMean {
     Latency(Option<JsonLatency>),
     Throughput(Option<JsonThroughput>),
     MinMaxAvg(Option<JsonMinMaxAvg>),
 }
 
-pub enum SampleKind {
+pub enum MeanKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
@@ -88,141 +48,13 @@ pub enum MinMaxAvgKind {
 }
 
 impl SampleMean {
-    // pub fn new(
-    //     conn: &SqliteConnection,
-    //     branch_id: i32,
-    //     testbed_id: i32,
-    //     benchmark_id: i32,
-    //     thresholds: &Thresholds,
-    // ) -> Result<Self, HttpError> {
-    //     Ok(Self {
-    //         latency:    map_latency(
-    //             conn,
-    //             branch_id,
-    //             testbed_id,
-    //             benchmark_id,
-    //             thresholds.latency.as_ref(),
-    //         )?,
-    //         throughput: map_throughput(
-    //             conn,
-    //             branch_id,
-    //             testbed_id,
-    //             benchmark_id,
-    //             thresholds.throughput.as_ref(),
-    //         )?,
-    //         compute:    map_min_max_avg(
-    //             conn,
-    //             branch_id,
-    //             testbed_id,
-    //             benchmark_id,
-    //             thresholds.compute.as_ref(),
-    //             MinMaxAvgKind::Compute,
-    //         )?,
-    //         memory:     map_min_max_avg(
-    //             conn,
-    //             branch_id,
-    //             testbed_id,
-    //             benchmark_id,
-    //             thresholds.memory.as_ref(),
-    //             MinMaxAvgKind::Memory,
-    //         )?,
-    //         storage:    map_min_max_avg(
-    //             conn,
-    //             branch_id,
-    //             testbed_id,
-    //             benchmark_id,
-    //             thresholds.storage.as_ref(),
-    //             MinMaxAvgKind::Storage,
-    //         )?,
-    //     })
-    // }
-}
-
-// TODO move over to generics instead
-fn map_latency(
-    conn: &SqliteConnection,
-    branch_id: i32,
-    testbed_id: i32,
-    benchmark_id: i32,
-    threshold: Option<&Threshold>,
-) -> Result<Option<JsonLatency>, HttpError> {
-    Ok(if let Some(threshold) = threshold {
-        if let SampleMeanKind::Latency(json) = SampleMeanKind::new(
-            conn,
-            branch_id,
-            testbed_id,
-            benchmark_id,
-            &threshold.statistic,
-            SampleKind::Latency,
-        )? {
-            json
-        } else {
-            return Err(http_error!(PERF_ERROR));
-        }
-    } else {
-        None
-    })
-}
-
-fn map_throughput(
-    conn: &SqliteConnection,
-    branch_id: i32,
-    testbed_id: i32,
-    benchmark_id: i32,
-    threshold: Option<&Threshold>,
-) -> Result<Option<JsonThroughput>, HttpError> {
-    Ok(if let Some(threshold) = threshold {
-        if let SampleMeanKind::Throughput(json) = SampleMeanKind::new(
-            conn,
-            branch_id,
-            testbed_id,
-            benchmark_id,
-            &threshold.statistic,
-            SampleKind::Throughput,
-        )? {
-            json
-        } else {
-            return Err(http_error!(PERF_ERROR));
-        }
-    } else {
-        None
-    })
-}
-
-fn map_min_max_avg(
-    conn: &SqliteConnection,
-    branch_id: i32,
-    testbed_id: i32,
-    benchmark_id: i32,
-    threshold: Option<&Threshold>,
-    kind: MinMaxAvgKind,
-) -> Result<Option<JsonMinMaxAvg>, HttpError> {
-    Ok(if let Some(threshold) = threshold {
-        if let SampleMeanKind::MinMaxAvg(json) = SampleMeanKind::new(
-            conn,
-            branch_id,
-            testbed_id,
-            benchmark_id,
-            &threshold.statistic,
-            SampleKind::MinMaxAvg(kind),
-        )? {
-            json
-        } else {
-            return Err(http_error!(PERF_ERROR));
-        }
-    } else {
-        None
-    })
-}
-
-impl SampleMeanKind {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
         benchmark_id: i32,
         statistic: &Statistic,
-        kind: SampleKind,
+        kind: MeanKind,
     ) -> Result<Self, HttpError> {
         let order_by = (
             schema::version::number.desc(),
@@ -248,7 +80,7 @@ impl SampleMeanKind {
             .filter(schema::branch::id.eq(branch_id));
 
         match kind {
-            SampleKind::Latency => {
+            MeanKind::Latency => {
                 let json_data: Vec<JsonLatency> = query
                     .inner_join(
                         schema::latency::table
@@ -269,9 +101,9 @@ impl SampleMeanKind {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                Ok(SampleMeanKind::Latency(JsonLatency::mean(json_data)))
+                Ok(SampleMean::Latency(JsonLatency::mean(json_data)))
             },
-            SampleKind::Throughput => {
+            MeanKind::Throughput => {
                 let json_data: Vec<JsonThroughput> = query
                     .inner_join(
                         schema::throughput::table
@@ -293,9 +125,9 @@ impl SampleMeanKind {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                Ok(SampleMeanKind::Throughput(JsonThroughput::mean(json_data)))
+                Ok(SampleMean::Throughput(JsonThroughput::mean(json_data)))
             },
-            SampleKind::MinMaxAvg(mma) => {
+            MeanKind::MinMaxAvg(mma) => {
                 let json_data: Vec<JsonMinMaxAvg> =
                     match mma {
                         MinMaxAvgKind::Compute => query
@@ -356,7 +188,7 @@ impl SampleMeanKind {
                             .collect(),
                     };
 
-                Ok(SampleMeanKind::MinMaxAvg(JsonMinMaxAvg::mean(json_data)))
+                Ok(SampleMean::MinMaxAvg(JsonMinMaxAvg::mean(json_data)))
             },
         }
     }

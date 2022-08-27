@@ -1,53 +1,24 @@
-use bencher_json::report::{
-    data::{
-        JsonReportAlert,
-        JsonReportAlerts,
-    },
-    new::{
-        JsonBenchmarks,
-        JsonMetrics,
-    },
-    JsonLatency,
-    JsonMetricsMap,
-    JsonMinMaxAvg,
-    JsonThroughput,
+use bencher_json::report::new::{
+    JsonBenchmarks,
+    JsonMetrics,
 };
-use chrono::offset::Utc;
 use diesel::{
-    expression_methods::BoolExpressionMethods,
-    JoinOnDsl,
-    NullableExpressionMethods,
-    QueryDsl,
     RunQueryDsl,
     SqliteConnection,
 };
 use dropshot::HttpError;
-use uuid::Uuid;
 
 use crate::{
     db::{
         model::{
-            benchmark::{
-                InsertBenchmark,
-                QueryBenchmark,
-            },
+            benchmark::QueryBenchmark,
             perf::{
-                latency::QueryLatency,
-                min_max_avg::QueryMinMaxAvg,
-                throughput::QueryThroughput,
                 InsertPerf,
                 QueryPerf,
             },
-            threshold::{
-                alert::InsertAlert,
-                statistic::StatisticKind,
-                PerfKind,
-            },
         },
         schema,
-        schema::statistic as statistic_table,
     },
-    diesel::ExpressionMethods,
     util::http_error,
 };
 
@@ -55,13 +26,7 @@ pub mod alerts;
 pub mod sample_mean;
 pub mod thresholds;
 
-use self::{
-    alerts::Alerts,
-    thresholds::{
-        Threshold,
-        Thresholds,
-    },
-};
+use self::thresholds::Thresholds;
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
@@ -121,30 +86,5 @@ impl Metrics {
         }
 
         Ok(())
-    }
-
-    pub fn alerts(
-        &self,
-        conn: &SqliteConnection,
-        benchmark_name: &str,
-        benchmark_id: i32,
-        metrics: &JsonMetrics,
-    ) -> Result<Alerts, HttpError> {
-        let mut alerts = Alerts::new();
-
-        // TODO other perf kinds
-        // if let Some(json_latency) = &json_perf.latency {
-        //     if let Some(st) = &self.latency {
-        //         alerts.append(&mut st.latency_alerts(
-        //             conn,
-        //             self.branch_id,
-        //             self.testbed_id,
-        //             benchmark_id,
-        //             json_latency,
-        //         )?)
-        //     }
-        // }
-
-        Ok(alerts)
     }
 }
