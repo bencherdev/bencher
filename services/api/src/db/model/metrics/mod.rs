@@ -51,9 +51,17 @@ use crate::{
     util::http_error,
 };
 
+pub mod alerts;
+pub mod threshold_statistic;
+
+use self::{
+    alerts::Alerts,
+    threshold_statistic::ThresholdStatistic,
+};
+
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-pub struct MetricsThresholds {
+pub struct Metrics {
     pub project_id:  i32,
     pub report_id:   i32,
     pub branch_id:   i32,
@@ -66,155 +74,7 @@ pub struct MetricsThresholds {
     pub storage:     Option<ThresholdStatistic>,
 }
 
-pub struct ThresholdStatistic {
-    pub threshold_id: i32,
-    pub statistic:    Statistic,
-}
-
-impl ThresholdStatistic {
-    pub fn new(
-        conn: &SqliteConnection,
-        branch_id: i32,
-        testbed_id: i32,
-        kind: PerfKind,
-    ) -> Result<Self, HttpError> {
-        schema::statistic::table
-            .inner_join(
-                schema::threshold::table
-                    .on(schema::statistic::id.eq(schema::threshold::statistic_id)),
-            )
-            .filter(
-                schema::threshold::branch_id
-                    .eq(branch_id)
-                    .and(schema::threshold::testbed_id.eq(testbed_id))
-                    .and(schema::threshold::kind.eq(kind as i32)),
-            )
-            .select((
-                schema::threshold::id,
-                schema::statistic::id,
-                schema::statistic::uuid,
-                schema::statistic::test,
-                schema::statistic::sample_size,
-                schema::statistic::window,
-                schema::statistic::left_side,
-                schema::statistic::right_side,
-            ))
-            .first::<(
-                i32,
-                i32,
-                String,
-                i32,
-                Option<i64>,
-                Option<i64>,
-                Option<f32>,
-                Option<f32>,
-            )>(conn)
-            .map(
-                |(threshold_id, id, uuid, test, sample_size, window, left_side,
-        right_side)| -> Result<Self, HttpError> {             let
-        statistic = Statistic {                 id,
-                        uuid,
-                        test: test.try_into()?,
-                        sample_size: unwrap_sample_size(sample_size),
-                        window: unwrap_window(window),
-                        left_side,
-                        right_side,
-                    };
-                    Ok(Self {
-                        threshold_id,
-                        statistic,
-                    })
-                },
-            )
-            .map_err(|_| http_error!(PERF_ERROR))?
-    }
-
-    pub fn latency_alerts(
-        &self,
-        conn: &SqliteConnection,
-        branch_id: i32,
-        testbed_id: i32,
-        benchmark_id: i32,
-        json_latency: &JsonLatency,
-    ) -> Result<PerfAlerts, HttpError> {
-        let alerts = PerfAlerts::new();
-
-        let order_by = (
-            schema::version::number.desc(),
-            schema::report::start_time.desc(),
-            schema::perf::iteration.desc(),
-        );
-
-        let query = schema::perf::table
-            .left_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-            )
-            .filter(schema::benchmark::id.eq(benchmark_id))
-            .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .filter(schema::report::start_time.ge(self.statistic.window))
-            .left_join(
-                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
-            )
-            .filter(schema::testbed::id.eq(testbed_id))
-            .left_join(
-                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
-            )
-            .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
-            .filter(schema::branch::id.eq(branch_id));
-
-        let json_latency_data: Vec<JsonLatency> = query
-            .inner_join(
-                schema::latency::table
-                    .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-            )
-            .select((
-                schema::latency::id,
-                schema::latency::uuid,
-                schema::latency::lower_variance,
-                schema::latency::upper_variance,
-                schema::latency::duration,
-            ))
-            .order(&order_by)
-            .limit(self.statistic.sample_size)
-            .load::<QueryLatency>(conn)
-            .map_err(|_| http_error!(PERF_ERROR))?
-            .into_iter()
-            .filter_map(|query| query.to_json().ok())
-            .collect();
-
-        if json_latency_data.is_empty() {
-            return Ok(alerts);
-        }
-        // TODO calculate the standard deviation and apply the proper test
-        // generate alerts for the json_latency given as applicable
-        let length = json_latency_data.len();
-        let json_latency_sum: JsonLatency = json_latency_data.into_iter().sum();
-        let mean = json_latency_sum / length;
-
-        Ok(alerts)
-    }
-}
-
-pub struct Statistic {
-    pub id:          i32,
-    pub uuid:        String,
-    pub test:        StatisticKind,
-    pub sample_size: i64,
-    pub window:      i64,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
-}
-
-struct Perf {
-    pub id: i32,
-    pub latency_id: Option<i32>,
-    pub throughput_id: Option<i32>,
-    pub compute_id: Option<i32>,
-    pub memory_id: Option<i32>,
-    pub storage_id: Option<i32>,
-}
-
-impl MetricsThresholds {
+impl Metrics {
     pub fn new(
         conn: &SqliteConnection,
         project_id: i32,
@@ -243,7 +103,7 @@ impl MetricsThresholds {
         conn: &SqliteConnection,
         iteration: i32,
         benchmark_name: String,
-        metrics: JsonMetrics,
+        json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         let mut perf_alerts = None;
 
@@ -253,7 +113,7 @@ impl MetricsThresholds {
             // Only generate alerts if the benchmark already exists
             // and a threshold is provided.
             // Note these alerts have not yet been committed to the database.
-            perf_alerts = Some(self.alerts(conn, &benchmark_name, benchmark_id, &metrics)?);
+            perf_alerts = Some(self.alerts(conn, &benchmark_name, benchmark_id, &json_metrics)?);
             benchmark_id
         } else {
             let insert_benchmark = InsertBenchmark::new(self.project_id, benchmark_name);
@@ -270,7 +130,7 @@ impl MetricsThresholds {
         };
 
         let insert_perf =
-            InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id, metrics)?;
+            InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id, json_metrics)?;
 
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
@@ -289,7 +149,7 @@ impl MetricsThresholds {
         //         .into_iter()
         //         .filter_map(|perf_alert| {
         //             perf_alert
-        //                 .into_report_alert(conn, self.report_id, Some(perf_id))
+        //                 .to_json(conn, self.report_id, Some(perf_id))
         //                 .ok()
         //         })
         //         .collect()
@@ -304,8 +164,8 @@ impl MetricsThresholds {
         benchmark_name: &str,
         benchmark_id: i32,
         metrics: &JsonMetrics,
-    ) -> Result<PerfAlerts, HttpError> {
-        let mut alerts = PerfAlerts::new();
+    ) -> Result<Alerts, HttpError> {
+        let mut alerts = Alerts::new();
 
         // TODO other perf kinds
         // if let Some(json_latency) = &json_perf.latency {
@@ -321,118 +181,5 @@ impl MetricsThresholds {
         // }
 
         Ok(alerts)
-    }
-}
-
-fn unwrap_sample_size(sample_size: Option<i64>) -> i64 {
-    sample_size.unwrap_or(i64::MAX)
-}
-
-fn unwrap_window(window: Option<i64>) -> i64 {
-    window
-        .map(|window| {
-            let now = Utc::now().timestamp_nanos();
-            now - window
-        })
-        .unwrap_or_default()
-}
-
-fn json_min_max_avg(conn: &SqliteConnection, id: i32) -> Option<JsonMinMaxAvg> {
-    schema::min_max_avg::table
-        .filter(schema::min_max_avg::id.eq(id))
-        .first::<QueryMinMaxAvg>(conn)
-        .map(|query| query.to_json())
-        .ok()
-}
-
-#[derive(Default)]
-struct PerfJson {
-    pub latency:    Vec<JsonLatency>,
-    pub throughput: Vec<JsonThroughput>,
-    pub compute:    Vec<JsonMinMaxAvg>,
-    pub memory:     Vec<JsonMinMaxAvg>,
-    pub storage:    Vec<JsonMinMaxAvg>,
-}
-
-impl PerfJson {
-    fn push(&mut self, conn: &SqliteConnection, perf: &Perf) {
-        if let Some(id) = perf.latency_id {
-            if let Ok(Ok(json)) = schema::latency::table
-                .filter(schema::latency::id.eq(id))
-                .first::<QueryLatency>(conn)
-                .map(|query| query.to_json())
-            {
-                self.latency.push(json);
-            }
-        }
-        if let Some(id) = perf.throughput_id {
-            if let Ok(Ok(json)) = schema::throughput::table
-                .filter(schema::throughput::id.eq(id))
-                .first::<QueryThroughput>(conn)
-                .map(|query| query.to_json())
-            {
-                self.throughput.push(json);
-            }
-        }
-        if let Some(id) = perf.compute_id {
-            if let Some(json) = json_min_max_avg(conn, id) {
-                self.compute.push(json);
-            }
-        }
-        if let Some(id) = perf.memory_id {
-            if let Some(json) = json_min_max_avg(conn, id) {
-                self.memory.push(json);
-            }
-        }
-        if let Some(id) = perf.storage_id {
-            if let Some(json) = json_min_max_avg(conn, id) {
-                self.storage.push(json);
-            }
-        }
-    }
-}
-
-pub type PerfAlerts = Vec<PerfAlert>;
-
-pub struct PerfAlert {
-    pub threshold_id: i32,
-    pub statistic_id: i32,
-    pub side:         bool,
-    pub boundary:     f64,
-    pub outlier:      f64,
-}
-
-impl PerfAlert {
-    pub fn into_report_alert(
-        self,
-        conn: &SqliteConnection,
-        report_id: i32,
-        perf_id: Option<i32>,
-    ) -> Result<JsonReportAlert, HttpError> {
-        let Self {
-            threshold_id,
-            statistic_id,
-            side,
-            boundary,
-            outlier,
-        } = self;
-        let uuid = Uuid::new_v4();
-        let insert_alert = InsertAlert {
-            uuid: uuid.to_string(),
-            report_id,
-            perf_id,
-            threshold_id,
-            statistic_id,
-            side,
-            boundary,
-            outlier,
-        };
-
-        diesel::insert_into(schema::alert::table)
-            .values(&insert_alert)
-            .execute(conn)
-            .map_err(|_| http_error!(PERF_ERROR))?;
-
-        Ok(uuid.into())
     }
 }

@@ -1,13 +1,6 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    report::{
-        data::{
-            JsonReportBenchmark,
-            JsonReportBenchmarks,
-        },
-        JsonMetricsMap,
-    },
     JsonNewReport,
     JsonReport,
     ResourceId,
@@ -36,7 +29,7 @@ use crate::{
     db::{
         model::{
             branch::QueryBranch,
-            metrics::MetricsThresholds,
+            metrics::Metrics,
             project::QueryProject,
             report::{
                 InsertReport,
@@ -206,8 +199,8 @@ pub async fn post(
         .first::<QueryReport>(&*conn)
         .map_err(|_| http_error!("Failed to create report."))?;
 
-    // A MetricsThresholds is used to add benchmarks, perf metrics, and alerts.
-    let metrics_thresholds = MetricsThresholds::new(
+    // Metrics is used to add benchmarks, perf metrics, and alerts.
+    let metrics = Metrics::new(
         &*conn,
         project_id,
         query_report.id,
@@ -217,8 +210,8 @@ pub async fn post(
     );
 
     for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
-        for (benchmark_name, metrics) in benchmark.inner {
-            metrics_thresholds.benchmark(&*conn, index as i32, benchmark_name, metrics)?;
+        for (benchmark_name, json_metrics) in benchmark.inner {
+            metrics.benchmark(&*conn, index as i32, benchmark_name, json_metrics)?;
         }
     }
 
