@@ -4,7 +4,7 @@ use std::{
     ops::Add,
 };
 
-use num::integer::gcd;
+use num::integer::lcm;
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -73,14 +73,22 @@ impl Add for JsonThroughput {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        let gcd = gcd(self.unit_time, other.unit_time);
-        let gcd_f64 = gcd as f64;
+        let unit_time = lcm(self.unit_time, other.unit_time);
+
+        let self_multiple = (unit_time / self.unit_time) as f64;
+        let other_multiple = (unit_time / other.unit_time) as f64;
+
+        let lower_variance =
+            (self.lower_variance * self_multiple) + (other.lower_variance * other_multiple);
+        let upper_variance =
+            (self.upper_variance * self_multiple) + (other.upper_variance * other_multiple);
+        let events = (self.events * self_multiple) + (other.events * other_multiple);
 
         Self {
-            lower_variance: (self.lower_variance * gcd_f64) + (other.lower_variance * gcd_f64),
-            upper_variance: (self.upper_variance * gcd_f64) + (other.upper_variance * gcd_f64),
-            events:         (self.events * gcd_f64) + (other.events * gcd_f64),
-            unit_time:      gcd,
+            lower_variance,
+            upper_variance,
+            events,
+            unit_time,
         }
     }
 }
