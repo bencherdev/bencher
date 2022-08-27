@@ -81,11 +81,10 @@ impl Latency {
         conn: &SqliteConnection,
         perf_id: i32,
         benchmark_name: &str,
-        json_latency: JsonLatency,
+        datum: f64
     ) -> Result<(), HttpError> {
         if let Some(metrics_data) = self.data.get(benchmark_name) {
             let mut data = metrics_data.data.clone();
-            let datum = json_latency.duration as f64;
             data.push(datum);
             if let Some(mean) = MetricsData::mean(&data) {
                 let std_dev = MetricsData::std_deviation(mean, &data);

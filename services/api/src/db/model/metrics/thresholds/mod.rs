@@ -80,7 +80,7 @@ impl Thresholds {
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
             if let Some(latency) = &self.latency {
-                latency.z_score(conn, perf_id, benchmark_name, json)?
+                latency.z_score(conn, perf_id, benchmark_name, json.duration as f64)?
             }
         }
         if let Some(json) = json_metrics.throughput {
