@@ -60,33 +60,30 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 #[derive(Debug)]
-struct Sample {
+struct SampleMean {
     pub latency:    Option<JsonLatency>,
     pub throughput: Option<JsonThroughput>,
     pub compute:    Option<JsonMinMaxAvg>,
     pub memory:     Option<JsonMinMaxAvg>,
     pub storage:    Option<JsonMinMaxAvg>,
 }
-
-enum SampleMean {
+enum SampleMeanKind {
     Latency(Option<JsonLatency>),
     Throughput(Option<JsonThroughput>),
     MinMaxAvg(Option<JsonMinMaxAvg>),
 }
-
 enum SampleKind {
     Latency,
     Throughput,
     MinMaxAvg(MinMaxAvgKind),
 }
-
 enum MinMaxAvgKind {
     Compute,
     Memory,
     Storage,
 }
 
-impl Sample {
+impl SampleMean {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
@@ -146,7 +143,7 @@ fn map_latency(
     threshold: Option<&Threshold>,
 ) -> Result<Option<JsonLatency>, HttpError> {
     Ok(if let Some(threshold) = threshold {
-        if let SampleMean::Latency(json) = SampleMean::new(
+        if let SampleMeanKind::Latency(json) = SampleMeanKind::new(
             conn,
             branch_id,
             testbed_id,
@@ -171,7 +168,7 @@ fn map_throughput(
     threshold: Option<&Threshold>,
 ) -> Result<Option<JsonThroughput>, HttpError> {
     Ok(if let Some(threshold) = threshold {
-        if let SampleMean::Throughput(json) = SampleMean::new(
+        if let SampleMeanKind::Throughput(json) = SampleMeanKind::new(
             conn,
             branch_id,
             testbed_id,
@@ -197,7 +194,7 @@ fn map_min_max_avg(
     kind: MinMaxAvgKind,
 ) -> Result<Option<JsonMinMaxAvg>, HttpError> {
     Ok(if let Some(threshold) = threshold {
-        if let SampleMean::MinMaxAvg(json) = SampleMean::new(
+        if let SampleMeanKind::MinMaxAvg(json) = SampleMeanKind::new(
             conn,
             branch_id,
             testbed_id,
@@ -214,7 +211,7 @@ fn map_min_max_avg(
     })
 }
 
-impl SampleMean {
+impl SampleMeanKind {
     fn new(
         conn: &SqliteConnection,
         branch_id: i32,
@@ -268,7 +265,7 @@ impl SampleMean {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                Ok(SampleMean::Latency(JsonLatency::mean(json_data)))
+                Ok(SampleMeanKind::Latency(JsonLatency::mean(json_data)))
             },
             SampleKind::Throughput => {
                 let json_data: Vec<JsonThroughput> = query
@@ -292,7 +289,7 @@ impl SampleMean {
                     .filter_map(|query| query.to_json().ok())
                     .collect();
 
-                Ok(SampleMean::Throughput(JsonThroughput::mean(json_data)))
+                Ok(SampleMeanKind::Throughput(JsonThroughput::mean(json_data)))
             },
             SampleKind::MinMaxAvg(mma) => {
                 let json_data: Vec<JsonMinMaxAvg> =
@@ -355,7 +352,7 @@ impl SampleMean {
                             .collect(),
                     };
 
-                Ok(SampleMean::MinMaxAvg(JsonMinMaxAvg::mean(json_data)))
+                Ok(SampleMeanKind::MinMaxAvg(JsonMinMaxAvg::mean(json_data)))
             },
         }
     }
