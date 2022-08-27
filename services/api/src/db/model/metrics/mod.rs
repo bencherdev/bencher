@@ -24,11 +24,7 @@ use diesel::{
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use super::{
-    latency::QueryLatency,
-    min_max_avg::QueryMinMaxAvg,
-    throughput::QueryThroughput,
-};
+
 use crate::{
     db::{
         model::threshold::{

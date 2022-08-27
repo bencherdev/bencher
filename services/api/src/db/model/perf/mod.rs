@@ -27,17 +27,13 @@ use crate::{
 
 pub mod latency;
 pub mod min_max_avg;
-pub mod threshold;
 pub mod throughput;
 
 pub use latency::InsertLatency;
 pub use min_max_avg::InsertMinMaxAvg;
 pub use throughput::InsertThroughput;
 
-use self::threshold::{
-    MetricsThresholds,
-    PerfAlerts,
-};
+
 use super::benchmark::{
     InsertBenchmark,
     QueryBenchmark,
