@@ -36,10 +36,7 @@ use crate::{
     db::{
         model::{
             branch::QueryBranch,
-            perf::{
-                threshold::MetricsThresholds,
-                InsertPerf,
-            },
+            metrics::MetricsThresholds,
             project::QueryProject,
             report::{
                 InsertReport,
@@ -138,6 +135,10 @@ pub async fn post_options(
     path = "/v0/reports",
     tags = ["reports"]
 }]
+// For simplicity, his query makes the assumption that all posts are perfectly
+// chronological. That is, a report will never be posted for X after Y has
+// already been submitted when X really happened before Y. For implementing git
+// bisect more complex logic will be required.
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewReport>,
@@ -149,6 +150,7 @@ pub async fn post(
     let json_report = body.into_inner();
 
     let conn = db_connection.lock().await;
+
     // Verify that the branch and testbed are part of the same project
     let branch_id = QueryBranch::get_id(&*conn, &json_report.branch)?;
     let testbed_id = QueryTestbed::get_id(&*conn, &json_report.testbed)?;
@@ -166,6 +168,7 @@ pub async fn post(
         return Err(http_error!(ERROR));
     }
     let project_id = branch_project_id;
+
     // Verify that the user has access to the project
     let user_id = QueryUser::has_access(&*conn, project_id, user_uuid)?;
 
@@ -212,6 +215,7 @@ pub async fn post(
 
     let metrics_thresholds = MetricsThresholds::new(
         &*conn,
+        project_id,
         query_report.id,
         branch_id,
         testbed_id,
@@ -220,15 +224,7 @@ pub async fn post(
 
     for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, metrics) in benchmark.inner {
-            InsertPerf::from_json(
-                &*conn,
-                project_id,
-                query_report.id,
-                index as i32,
-                benchmark_name,
-                metrics,
-                &metrics_thresholds,
-            )?;
+            metrics_thresholds.benchmark(&*conn, index as i32, benchmark_name, metrics)?;
         }
     }
 
