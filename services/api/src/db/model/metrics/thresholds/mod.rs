@@ -8,28 +8,22 @@ use bencher_json::report::{
 use diesel::SqliteConnection;
 use dropshot::HttpError;
 
+use self::detector::Detector;
 pub use self::threshold::Threshold;
-use self::{
-    latency::Latency,
-    min_max_avg::MinMaxAvg,
-    throughput::Throughput,
-};
 use crate::db::model::{
     benchmark::QueryBenchmark,
     threshold::PerfKind,
 };
 
-pub mod latency;
-pub mod min_max_avg;
+pub mod detector;
 pub mod threshold;
-pub mod throughput;
 
 pub struct Thresholds {
-    pub latency:    Option<Latency>,
-    pub throughput: Option<Throughput>,
-    pub compute:    Option<MinMaxAvg>,
-    pub memory:     Option<MinMaxAvg>,
-    pub storage:    Option<MinMaxAvg>,
+    pub latency:    Option<Detector>,
+    pub throughput: Option<Detector>,
+    pub compute:    Option<Detector>,
+    pub memory:     Option<Detector>,
+    pub storage:    Option<Detector>,
 }
 
 impl Thresholds {
@@ -55,7 +49,7 @@ impl Thresholds {
             .collect();
 
         Ok(Self {
-            latency:    Latency::new(
+            latency:    Detector::new(
                 conn,
                 branch_id,
                 testbed_id,
@@ -79,30 +73,30 @@ impl Thresholds {
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
-            if let Some(latency) = &self.latency {
-                latency.z_score(conn, perf_id, benchmark_name, json.duration as f64)?
+            if let Some(detector) = &self.latency {
+                detector.z_score(conn, perf_id, benchmark_name, json.duration as f64)?
             }
         }
         if let Some(json) = json_metrics.throughput {
-            if let Some(throughput) = &self.throughput {
+            if let Some(detector) = &self.throughput {
                 // throughput.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
         if let Some(json) = json_metrics.compute {
-            if let Some(compute) = &self.compute {
+            if let Some(detector) = &self.compute {
                 // compute.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
         if let Some(json) = json_metrics.memory {
-            if let Some(memory) = &self.memory {
+            if let Some(detector) = &self.memory {
                 // memory.z_score(conn, perf_id, benchmark_name,
                 // json)
             }
         }
         if let Some(json) = json_metrics.storage {
-            if let Some(storage) = &self.storage {
+            if let Some(detector) = &self.storage {
                 // storage.z_score(conn, perf_id, benchmark_name,
                 // json)
             }

@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::report::{
-    JsonLatency,
-    JsonMetricsMap,
-};
+use bencher_json::report::JsonMetricsMap;
 use diesel::SqliteConnection;
 use dropshot::HttpError;
 
@@ -21,13 +18,13 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-pub struct Latency {
+pub struct Detector {
     pub report_id: i32,
     pub threshold: Threshold,
     pub data:      HashMap<String, MetricsData>,
 }
 
-impl Latency {
+impl Detector {
     pub fn new(
         conn: &SqliteConnection,
         branch_id: i32,
@@ -81,7 +78,7 @@ impl Latency {
         conn: &SqliteConnection,
         perf_id: i32,
         benchmark_name: &str,
-        datum: f64
+        datum: f64,
     ) -> Result<(), HttpError> {
         if let Some(metrics_data) = self.data.get(benchmark_name) {
             let mut data = metrics_data.data.clone();
