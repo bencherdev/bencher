@@ -74,31 +74,32 @@ impl Thresholds {
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
             if let Some(detector) = &mut self.latency {
-                detector.z_score(conn, perf_id, benchmark_name, json.duration as f64)?
+                detector.z_score(conn, perf_id, benchmark_name, json.duration as f64)?;
             }
         }
         if let Some(json) = json_metrics.throughput {
-            if let Some(detector) = &self.throughput {
-                // throughput.z_score(conn, perf_id, benchmark_name,
-                // json)
+            if let Some(detector) = &mut self.throughput {
+                detector.z_score(
+                    conn,
+                    perf_id,
+                    benchmark_name,
+                    json.per_unit_time(&json.events).into(),
+                )?;
             }
         }
         if let Some(json) = json_metrics.compute {
-            if let Some(detector) = &self.compute {
-                // compute.z_score(conn, perf_id, benchmark_name,
-                // json)
+            if let Some(detector) = &mut self.compute {
+                detector.z_score(conn, perf_id, benchmark_name, json.avg.into())?;
             }
         }
         if let Some(json) = json_metrics.memory {
-            if let Some(detector) = &self.memory {
-                // memory.z_score(conn, perf_id, benchmark_name,
-                // json)
+            if let Some(detector) = &mut self.memory {
+                detector.z_score(conn, perf_id, benchmark_name, json.avg.into())?;
             }
         }
         if let Some(json) = json_metrics.storage {
-            if let Some(detector) = &self.storage {
-                // storage.z_score(conn, perf_id, benchmark_name,
-                // json)
+            if let Some(detector) = &mut self.storage {
+                detector.z_score(conn, perf_id, benchmark_name, json.avg.into())?;
             }
         }
 
