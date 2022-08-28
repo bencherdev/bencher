@@ -1,6 +1,9 @@
-use std::collections::{
-    HashMap,
-    VecDeque,
+use std::{
+    collections::{
+        HashMap,
+        VecDeque,
+    },
+    f64::consts::PI,
 };
 
 use bencher_json::report::JsonMetricsMap;
@@ -20,6 +23,8 @@ use crate::{
 };
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
+
+const NORMAL_PROBABILITY_DENSITY: f64 = 1.0 / (2.0 * PI).sqrt();
 
 pub struct Detector {
     pub report_id: i32,
@@ -121,11 +126,11 @@ impl Detector {
     }
 }
 
-pub fn std_deviation(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
+fn std_deviation(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
     variance(mean, data).map(|variance| variance.sqrt())
 }
 
-pub fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
+fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
     if data.is_empty() {
         return None;
     }
@@ -137,9 +142,13 @@ pub fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
     )
 }
 
-pub fn mean(data: &VecDeque<f64>) -> Option<f64> {
+fn mean(data: &VecDeque<f64>) -> Option<f64> {
     if data.is_empty() {
         return None;
     }
     Some(data.iter().sum::<f64>() / data.len() as f64)
+}
+
+fn normal_probability_density(z: f64) -> f64 {
+    NORMAL_PROBABILITY_DENSITY * (-z.powi(2) / 2.0).exp()
 }
