@@ -63,6 +63,7 @@ impl MetricsData {
     ) -> Result<Option<Self>, HttpError> {
         let sample_size = unwrap_sample_size(statistic.sample_size);
         let window = unwrap_window(statistic.window);
+
         let order_by = (
             schema::version::number.desc(),
             schema::report::start_time.desc(),

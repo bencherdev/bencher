@@ -44,10 +44,10 @@ impl Detector {
             return Ok(None);
         };
 
-        // Calculate the sample means
+        // Query and cache the historical population/sample data for each benchmark
         let mut data = HashMap::with_capacity(benchmarks.len());
         for (benchmark_name, benchmark_id) in benchmarks {
-            if let Some(json) = MetricsData::new(
+            if let Some(metrics_data) = MetricsData::new(
                 conn,
                 branch_id,
                 testbed_id,
@@ -55,7 +55,7 @@ impl Detector {
                 &threshold.statistic,
                 kind,
             )? {
-                data.insert(benchmark_name.clone(), json);
+                data.insert(benchmark_name.clone(), metrics_data);
             } else {
                 return Err(http_error!(PERF_ERROR));
             }
@@ -63,36 +63,19 @@ impl Detector {
 
         // If the threshold statistic is a t-test go ahead and perform it and create
         // alerts. Since this only needs to happen once, return None for the
-        // latency threshold.
-        Ok(
-            if let StatisticKind::T = threshold.statistic.test.try_into()? {
+        // latency threshold. Otherwise, return a Detector that will be used for the
+        // other, per datum tests (i.e. z-score).
+        Ok(match threshold.statistic.test.try_into()? {
+            StatisticKind::Z => Some(Self {
+                report_id,
+                threshold,
+                data,
+            }),
+            StatisticKind::T => {
                 Self::t_test(conn, report_id, &threshold, metrics_map, &data)?;
                 None
-            } else {
-                Some(Self {
-                    report_id,
-                    threshold,
-                    data,
-                })
             },
-        )
-    }
-
-    pub fn t_test(
-        conn: &SqliteConnection,
-        report_id: i32,
-        threshold: &Threshold,
-        metrics_map: &JsonMetricsMap,
-        data: &HashMap<String, MetricsData>,
-    ) -> Result<(), HttpError> {
-        for (benchmark_name, metrics_list) in &metrics_map.inner {
-            if let Some(std_dev) = data.get(benchmark_name) {
-                // TODO perform a t test with the sample mean and threshold
-                let latency_data = &metrics_list.latency;
-            }
-        }
-
-        Ok(())
+        })
     }
 
     pub fn z_score(
@@ -114,6 +97,23 @@ impl Detector {
                 if let Some(std_dev) = std_deviation(mean, &data) {
                     let z = (datum - mean) / std_dev;
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn t_test(
+        conn: &SqliteConnection,
+        report_id: i32,
+        threshold: &Threshold,
+        metrics_map: &JsonMetricsMap,
+        data: &HashMap<String, MetricsData>,
+    ) -> Result<(), HttpError> {
+        for (benchmark_name, metrics_list) in &metrics_map.inner {
+            if let Some(std_dev) = data.get(benchmark_name) {
+                // TODO perform a t test with the sample mean and threshold
+                let latency_data = &metrics_list.latency;
             }
         }
 

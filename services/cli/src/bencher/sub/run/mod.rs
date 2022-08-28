@@ -165,6 +165,10 @@ impl From<CliRunFold> for Fold {
 
 impl Fold {
     fn fold(&self, benchmarks: JsonBenchmarks) -> JsonBenchmarks {
+        if benchmarks.inner.is_empty() {
+            return benchmarks;
+        }
+
         match self {
             Self::Min => benchmarks.min(),
             Self::Max => benchmarks.max(),
