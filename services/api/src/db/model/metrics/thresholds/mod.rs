@@ -73,7 +73,7 @@ impl Thresholds {
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
-            if let Some(detector) = &self.latency {
+            if let Some(detector) = &mut self.latency {
                 detector.z_score(conn, perf_id, benchmark_name, json.duration as f64)?
             }
         }

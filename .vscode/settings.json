@@ -20,6 +20,7 @@
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
     "chrono",
+    "Deque",
     "dropshot",
     "Insertable",
     "nanos",

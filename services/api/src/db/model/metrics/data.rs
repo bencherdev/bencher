@@ -1,3 +1,6 @@
+use std::collections::VecDeque;
+
+use chrono::offset::Utc;
 use bencher_json::report::{
     new::mean::Mean,
     JsonLatency,
@@ -34,7 +37,7 @@ use crate::{
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
 pub struct MetricsData {
-    pub data: Vec<f64>,
+    pub data: VecDeque<f64>,
 }
 
 enum MetricsKind {
@@ -58,8 +61,7 @@ impl MetricsData {
         statistic: &Statistic,
         kind: PerfKind,
     ) -> Result<Option<Self>, HttpError> {
-        let kind = kind.into();
-
+        let sample_size = unwrap_sample_size(statistic.sample_size);
         let order_by = (
             schema::version::number.desc(),
             schema::report::start_time.desc(),
@@ -83,8 +85,8 @@ impl MetricsData {
             .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
             .filter(schema::branch::id.eq(branch_id));
 
-        let data: Vec<f64> =
-            match kind {
+        let data: VecDeque<f64> =
+            match kind.into() {
                 MetricsKind::Latency => {
                     let json_data: Vec<JsonLatency> = query
                         .inner_join(
@@ -99,7 +101,7 @@ impl MetricsData {
                             schema::latency::duration,
                         ))
                         .order(&order_by)
-                        .limit(statistic.sample_size)
+                        .limit(sample_size)
                         .load::<QueryLatency>(conn)
                         .map_err(|_| http_error!(PERF_ERROR))?
                         .into_iter()
@@ -123,7 +125,7 @@ impl MetricsData {
                                 schema::throughput::unit_time,
                             ))
                             .order(&order_by)
-                            .limit(statistic.sample_size)
+                            .limit(sample_size)
                             .load::<QueryThroughput>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
@@ -150,7 +152,7 @@ impl MetricsData {
                                     schema::min_max_avg::avg,
                                 ))
                                 .order(&order_by)
-                                .limit(statistic.sample_size)
+                                .limit(sample_size)
                                 .load::<QueryMinMaxAvg>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
@@ -168,7 +170,7 @@ impl MetricsData {
                                     schema::min_max_avg::avg,
                                 ))
                                 .order(&order_by)
-                                .limit(statistic.sample_size)
+                                .limit(sample_size)
                                 .load::<QueryMinMaxAvg>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
@@ -186,7 +188,7 @@ impl MetricsData {
                                     schema::min_max_avg::avg,
                                 ))
                                 .order(&order_by)
-                                .limit(statistic.sample_size)
+                                .limit(sample_size)
                                 .load::<QueryMinMaxAvg>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
@@ -228,6 +230,19 @@ impl MetricsData {
         let sum: f64 = data.into_iter().sum();
         Some(sum / length as f64)
     }
+}
+
+fn unwrap_sample_size(sample_size: Option<i64>) -> i64 {
+    sample_size.unwrap_or(i64::MAX)
+}
+
+fn unwrap_window(window: Option<i64>) -> i64 {
+    window
+        .map(|window| {
+            let now = Utc::now().timestamp_nanos();
+            now - window
+        })
+        .unwrap_or_default()
 }
 
 impl From<PerfKind> for MetricsKind {

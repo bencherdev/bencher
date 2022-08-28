@@ -73,25 +73,6 @@ impl Detector {
         })
     }
 
-    pub fn z_score(
-        &mut self,
-        conn: &SqliteConnection,
-        perf_id: i32,
-        benchmark_name: &str,
-        datum: f64,
-    ) -> Result<(), HttpError> {
-        if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
-            let mut data = metrics_data.data;
-            data.push(datum);
-            if let Some(mean) = MetricsData::mean(&data) {
-                let std_dev = MetricsData::std_deviation(mean, &data);
-                let z = (datum - mean) / std_dev;
-            }
-        }
-
-        Ok(())
-    }
-
     pub fn t_test(
         conn: &SqliteConnection,
         report_id: i32,
@@ -103,6 +84,30 @@ impl Detector {
             if let Some(std_dev) = data.get(benchmark_name) {
                 // TODO perform a t test with the sample mean and threshold
                 let latency_data = &metrics_list.latency;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn z_score(
+        &mut self,
+        conn: &SqliteConnection,
+        perf_id: i32,
+        benchmark_name: &str,
+        datum: f64,
+    ) -> Result<(), HttpError> {
+        if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
+            let mut data = metrics_data.data;
+            // Add the new metrics datum
+            data.push_left(datum);
+            // If there was a set sample size, then pop off the oldest datum
+            if self.threshold.statistic.sample_size.is_some() {
+                data.pop_right();
+            }
+            if let Some(mean) = MetricsData::mean(&data) {
+                let std_dev = MetricsData::std_deviation(mean, &data);
+                let z = (datum - mean) / std_dev;
             }
         }
 
