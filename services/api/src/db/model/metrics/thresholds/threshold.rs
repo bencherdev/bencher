@@ -1,4 +1,3 @@
-use chrono::offset::Utc;
 use diesel::{
     expression_methods::BoolExpressionMethods,
     JoinOnDsl,
@@ -11,7 +10,7 @@ use dropshot::HttpError;
 use crate::{
     db::{
         model::threshold::{
-            statistic::StatisticKind,
+            statistic::QueryStatistic,
             PerfKind,
         },
         schema,
@@ -21,17 +20,7 @@ use crate::{
 
 pub struct Threshold {
     pub id:        i32,
-    pub statistic: Statistic,
-}
-
-pub struct Statistic {
-    pub id:          i32,
-    pub uuid:        String,
-    pub test:        StatisticKind,
-    pub sample_size: Option<i64>,
-    pub window:      i64,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
+    pub statistic: QueryStatistic,
 }
 
 impl Threshold {
@@ -84,12 +73,12 @@ impl Threshold {
                     right_side,
                 )|
                  -> Result<Self, HttpError> {
-                    let statistic = Statistic {
+                    let statistic = QueryStatistic {
                         id: statistic_id,
                         uuid,
-                        test: test.try_into()?,
+                        test,
                         sample_size,
-                        window: unwrap_window(window),
+                        window,
                         left_side,
                         right_side,
                     };
@@ -102,17 +91,4 @@ impl Threshold {
             .ok()?
             .ok()
     }
-}
-
-fn unwrap_sample_size(sample_size: Option<i64>) -> i64 {
-    sample_size.unwrap_or(i64::MAX)
-}
-
-fn unwrap_window(window: Option<i64>) -> i64 {
-    window
-        .map(|window| {
-            let now = Utc::now().timestamp_nanos();
-            now - window
-        })
-        .unwrap_or_default()
 }

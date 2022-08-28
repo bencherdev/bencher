@@ -61,7 +61,7 @@ impl Detector {
         // If the threshold statistic is a t-test go ahead and perform it and create
         // alerts. Since this only needs to happen once, return None for the
         // latency threshold.
-        Ok(if let StatisticKind::T = threshold.statistic.test {
+        Ok(if let StatisticKind::T = threshold.statistic.test.try_into()? {
             Self::t_test(conn, report_id, &threshold, metrics_map, &data)?;
             None
         } else {
@@ -100,10 +100,10 @@ impl Detector {
         if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
             let mut data = metrics_data.data;
             // Add the new metrics datum
-            data.push_left(datum);
+            data.push_front(datum);
             // If there was a set sample size, then pop off the oldest datum
             if self.threshold.statistic.sample_size.is_some() {
-                data.pop_right();
+                data.pop_back();
             }
             if let Some(mean) = MetricsData::mean(&data) {
                 let std_dev = MetricsData::std_deviation(mean, &data);

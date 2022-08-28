@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use chrono::offset::Utc;
 use bencher_json::report::{
-    new::mean::Mean,
+   
     JsonLatency,
     JsonMinMaxAvg,
     JsonThroughput,
@@ -15,9 +15,8 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use ordered_float::OrderedFloat;
 
-use super::thresholds::threshold::Statistic;
+
 use crate::{
     db::{
         model::{
@@ -27,6 +26,7 @@ use crate::{
                 throughput::QueryThroughput,
             },
             threshold::PerfKind,
+            threshold::statistic::QueryStatistic,
         },
         schema,
     },
@@ -58,10 +58,11 @@ impl MetricsData {
         branch_id: i32,
         testbed_id: i32,
         benchmark_id: i32,
-        statistic: &Statistic,
+        statistic: &QueryStatistic,
         kind: PerfKind,
     ) -> Result<Option<Self>, HttpError> {
         let sample_size = unwrap_sample_size(statistic.sample_size);
+        let window = unwrap_window(statistic.window);
         let order_by = (
             schema::version::number.desc(),
             schema::report::start_time.desc(),
@@ -74,7 +75,7 @@ impl MetricsData {
             )
             .filter(schema::benchmark::id.eq(benchmark_id))
             .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-            .filter(schema::report::start_time.ge(statistic.window))
+            .filter(schema::report::start_time.ge(window))
             .left_join(
                 schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
             )
