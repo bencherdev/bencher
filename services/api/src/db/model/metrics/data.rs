@@ -1,12 +1,11 @@
 use std::collections::VecDeque;
 
-use chrono::offset::Utc;
 use bencher_json::report::{
-   
     JsonLatency,
     JsonMinMaxAvg,
     JsonThroughput,
 };
+use chrono::offset::Utc;
 use diesel::{
     JoinOnDsl,
     NullableExpressionMethods,
@@ -16,7 +15,6 @@ use diesel::{
 };
 use dropshot::HttpError;
 
-
 use crate::{
     db::{
         model::{
@@ -25,8 +23,10 @@ use crate::{
                 min_max_avg::QueryMinMaxAvg,
                 throughput::QueryThroughput,
             },
-            threshold::PerfKind,
-            threshold::statistic::QueryStatistic,
+            threshold::{
+                statistic::QueryStatistic,
+                PerfKind,
+            },
         },
         schema,
     },
@@ -206,30 +206,6 @@ impl MetricsData {
         } else {
             Some(Self { data })
         })
-    }
-
-    pub fn std_deviation(mean: f64, data: &[f64]) -> f64 {
-        Self::variance(mean, data).sqrt()
-    }
-
-    pub fn variance(mean: f64, data: &[f64]) -> f64 {
-        data.iter()
-            .map(|value| {
-                let diff = mean - *value;
-                diff * diff
-            })
-            .sum::<f64>()
-            / data.len() as f64
-    }
-
-    pub fn mean(data: &[f64]) -> Option<f64> {
-        if data.is_empty() {
-            return None;
-        }
-
-        let length = data.len();
-        let sum: f64 = data.into_iter().sum();
-        Some(sum / length as f64)
     }
 }
 

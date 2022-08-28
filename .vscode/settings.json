@@ -25,6 +25,7 @@
     "Insertable",
     "nanos",
     "perfs",
+    "powi",
     "schemars"
   ]
 }

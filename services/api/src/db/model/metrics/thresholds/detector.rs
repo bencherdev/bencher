@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    VecDeque,
+};
 
 use bencher_json::report::JsonMetricsMap;
 use diesel::SqliteConnection;
@@ -61,16 +64,18 @@ impl Detector {
         // If the threshold statistic is a t-test go ahead and perform it and create
         // alerts. Since this only needs to happen once, return None for the
         // latency threshold.
-        Ok(if let StatisticKind::T = threshold.statistic.test.try_into()? {
-            Self::t_test(conn, report_id, &threshold, metrics_map, &data)?;
-            None
-        } else {
-            Some(Self {
-                report_id,
-                threshold,
-                data,
-            })
-        })
+        Ok(
+            if let StatisticKind::T = threshold.statistic.test.try_into()? {
+                Self::t_test(conn, report_id, &threshold, metrics_map, &data)?;
+                None
+            } else {
+                Some(Self {
+                    report_id,
+                    threshold,
+                    data,
+                })
+            },
+        )
     }
 
     pub fn t_test(
@@ -98,19 +103,43 @@ impl Detector {
         datum: f64,
     ) -> Result<(), HttpError> {
         if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
-            let mut data = metrics_data.data;
+            let data = &mut metrics_data.data;
             // Add the new metrics datum
             data.push_front(datum);
             // If there was a set sample size, then pop off the oldest datum
             if self.threshold.statistic.sample_size.is_some() {
                 data.pop_back();
             }
-            if let Some(mean) = MetricsData::mean(&data) {
-                let std_dev = MetricsData::std_deviation(mean, &data);
-                let z = (datum - mean) / std_dev;
+            if let Some(mean) = mean(&data) {
+                if let Some(std_dev) = std_deviation(mean, &data) {
+                    let z = (datum - mean) / std_dev;
+                }
             }
         }
 
         Ok(())
     }
+}
+
+pub fn std_deviation(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
+    variance(mean, data).map(|variance| variance.sqrt())
+}
+
+pub fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
+    if data.is_empty() {
+        return None;
+    }
+    Some(
+        data.iter()
+            .map(|value| (mean - *value).powi(2))
+            .sum::<f64>()
+            / data.len() as f64,
+    )
+}
+
+pub fn mean(data: &VecDeque<f64>) -> Option<f64> {
+    if data.is_empty() {
+        return None;
+    }
+    Some(data.iter().sum::<f64>() / data.len() as f64)
 }
