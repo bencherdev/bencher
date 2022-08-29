@@ -24,8 +24,6 @@ use crate::{
 
 const PERF_ERROR: &str = "Failed to create perf statistic.";
 
-const NORMAL_PROBABILITY_DENSITY: f64 = 1.0 / (2.0 * PI).sqrt();
-
 pub struct Detector {
     pub report_id: i32,
     pub threshold: Threshold,
@@ -92,16 +90,21 @@ impl Detector {
     ) -> Result<(), HttpError> {
         if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
             let data = &mut metrics_data.data;
+
             // Add the new metrics datum
             data.push_front(datum);
-            // If there was a set sample size, then pop off the oldest datum
-            if self.threshold.statistic.sample_size.is_some() {
-                data.pop_back();
-            }
-            if let Some(mean) = mean(&data) {
-                if let Some(std_dev) = std_deviation(mean, &data) {
-                    let z = (datum - mean) / std_dev;
+            // If there is a set sample size, then check to see if adding the new datum
+            // caused us to exceed it. If so, then pop off the oldest datum.
+            if let Some(sample_size) = self.threshold.statistic.sample_size {
+                if data.len() > sample_size as usize {
+                    data.pop_back();
+                    debug_assert!(data.len() == sample_size as usize)
                 }
+            }
+
+            if let Some(z) = z_score(datum, &data) {
+
+                // TODO
             }
         }
 
@@ -126,6 +129,15 @@ impl Detector {
     }
 }
 
+fn z_score(datum: f64, data: &VecDeque<f64>) -> Option<f64> {
+    if let Some(mean) = mean(&data) {
+        if let Some(std_dev) = std_deviation(mean, &data) {
+            return Some((datum - mean) / std_dev);
+        }
+    }
+    None
+}
+
 fn std_deviation(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
     variance(mean, data).map(|variance| variance.sqrt())
 }
@@ -136,7 +148,7 @@ fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
     }
     Some(
         data.iter()
-            .map(|value| (mean - *value).powi(2))
+            .map(|value| (*value - mean).powi(2))
             .sum::<f64>()
             / data.len() as f64,
     )
@@ -150,5 +162,6 @@ fn mean(data: &VecDeque<f64>) -> Option<f64> {
 }
 
 fn normal_probability_density(z: f64) -> f64 {
-    NORMAL_PROBABILITY_DENSITY * (-z.powi(2) / 2.0).exp()
+    let constant = 1.0 / (2.0 * PI).sqrt();
+    constant * (-z.powi(2) / 2.0).exp()
 }
