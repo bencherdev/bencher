@@ -60,7 +60,7 @@ impl MetricsData {
         benchmark_id: i32,
         statistic: &QueryStatistic,
         kind: PerfKind,
-    ) -> Result<Option<Self>, HttpError> {
+    ) -> Result<Self, HttpError> {
         let sample_size = unwrap_sample_size(statistic.sample_size);
         let window = unwrap_window(statistic.window);
 
@@ -202,11 +202,7 @@ impl MetricsData {
                 },
             };
 
-        Ok(if data.is_empty() {
-            None
-        } else {
-            Some(Self { data })
-        })
+        Ok(Self { data })
     }
 }
 

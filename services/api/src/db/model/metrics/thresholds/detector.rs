@@ -67,16 +67,15 @@ impl Detector {
         // Query and cache the historical population/sample data for each benchmark
         let mut data = HashMap::with_capacity(benchmarks.len());
         for (benchmark_name, benchmark_id) in benchmarks {
-            if let Some(metrics_data) = MetricsData::new(
+            let metrics_data = MetricsData::new(
                 conn,
                 branch_id,
                 testbed_id,
                 *benchmark_id,
                 &threshold.statistic,
                 kind,
-            )? {
-                data.insert(benchmark_name.clone(), metrics_data);
-            }
+            )?;
+            data.insert(benchmark_name.clone(), metrics_data);
         }
 
         // If the threshold statistic is a t-test go ahead and perform it and create
