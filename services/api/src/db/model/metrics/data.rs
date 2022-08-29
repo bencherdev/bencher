@@ -34,7 +34,7 @@ use crate::{
     util::http_error,
 };
 
-const PERF_ERROR: &str = "Failed to create perf statistic.";
+const PERF_ERROR: &str = "Failed to get perf data.";
 
 pub struct MetricsData {
     pub data: VecDeque<f64>,

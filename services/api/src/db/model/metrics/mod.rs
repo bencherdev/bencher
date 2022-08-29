@@ -27,7 +27,7 @@ pub mod thresholds;
 
 use self::thresholds::Thresholds;
 
-const PERF_ERROR: &str = "Failed to create perf statistic.";
+const PERF_ERROR: &str = "Failed to create perf metrics.";
 
 pub struct Metrics {
     pub project_id: i32,

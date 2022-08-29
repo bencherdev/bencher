@@ -39,7 +39,7 @@ use crate::{
     util::http_error,
 };
 
-const PERF_ERROR: &str = "Failed to create perf statistic.";
+const PERF_ERROR: &str = "Failed to run metrics detector.";
 
 pub struct Detector {
     pub report_id: i32,
@@ -76,8 +76,6 @@ impl Detector {
                 kind,
             )? {
                 data.insert(benchmark_name.clone(), metrics_data);
-            } else {
-                return Err(http_error!(PERF_ERROR));
             }
         }
 
