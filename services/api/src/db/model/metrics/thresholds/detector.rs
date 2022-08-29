@@ -103,8 +103,15 @@ impl Detector {
             }
 
             if let Some(z) = z_score(datum, &data) {
-
-                // TODO
+                match z < 0.0 {
+                    true => {
+                        let abs_z = z.abs();
+                        // Compare against the left side
+                    },
+                    false => {
+                        // Compare against the right side
+                    },
+                }
             }
         }
 
@@ -161,7 +168,21 @@ fn mean(data: &VecDeque<f64>) -> Option<f64> {
     Some(data.iter().sum::<f64>() / data.len() as f64)
 }
 
-fn normal_probability_density(z: f64) -> f64 {
-    let constant = 1.0 / (2.0 * PI).sqrt();
-    constant * (-z.powi(2) / 2.0).exp()
+fn percentile(z: f64) -> f64 {
+    // quad(normalProbabilityDensity, np.NINF, 1.25)
+    // https://doc.rust-lang.org/std/primitive.f64.html#associatedconstant.NEG_INFINITY
+    // to z
+    standard_normal_probability_density(z)
+}
+
+// Probability Density Function for a Standard Normal Distribution
+// mean (μ) of 0 and a standard deviation (σ) of 1
+fn standard_normal_probability_density(x: f64) -> f64 {
+    normal_probability_density(0.0, 1.0, x)
+}
+
+// Probability Density Function for a Normal Distribution
+fn normal_probability_density(mean: f64, std_dev: f64, x: f64) -> f64 {
+    let constant = 1.0 / (2.0 * PI * std_dev.powi(2)).sqrt();
+    constant * (-(x - mean).powi(2) / (2.0 * std_dev.powi(2))).exp()
 }
