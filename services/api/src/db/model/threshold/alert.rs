@@ -21,7 +21,6 @@ use super::{
 use crate::{
     db::{
         model::{
-            metrics::alerts::Alert,
             perf::QueryPerf,
             report::QueryReport,
         },
@@ -98,7 +97,7 @@ fn map_id(conn: &SqliteConnection, id: Option<i32>) -> Result<Option<Uuid>, Http
     })
 }
 
-enum Side {
+pub enum Side {
     Left  = 0,
     Right = 1,
 }
@@ -139,28 +138,6 @@ pub struct InsertAlert {
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub side:         bool,
-    pub boundary:     f64,
-    pub outlier:      f64,
-}
-
-impl InsertAlert {
-    pub fn from_alert(report_id: i32, perf_id: Option<i32>, alert: Alert) -> InsertAlert {
-        let Alert {
-            threshold_id,
-            statistic_id,
-            side,
-            boundary,
-            outlier,
-        } = alert;
-        InsertAlert {
-            uuid: Uuid::new_v4().to_string(),
-            report_id,
-            perf_id,
-            threshold_id,
-            statistic_id,
-            side,
-            boundary,
-            outlier,
-        }
-    }
+    pub boundary:     f32,
+    pub outlier:      f32,
 }

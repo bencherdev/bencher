@@ -65,7 +65,7 @@ impl Thresholds {
         })
     }
 
-    pub fn z_score(
+    pub fn z_test(
         &mut self,
         conn: &SqliteConnection,
         perf_id: i32,
@@ -74,12 +74,12 @@ impl Thresholds {
     ) -> Result<(), HttpError> {
         if let Some(json) = json_metrics.latency {
             if let Some(detector) = &mut self.latency {
-                detector.z_score(conn, perf_id, benchmark_name, json.duration as f64)?;
+                detector.z_test(conn, perf_id, benchmark_name, json.duration as f64)?;
             }
         }
         if let Some(json) = json_metrics.throughput {
             if let Some(detector) = &mut self.throughput {
-                detector.z_score(
+                detector.z_test(
                     conn,
                     perf_id,
                     benchmark_name,
@@ -89,17 +89,17 @@ impl Thresholds {
         }
         if let Some(json) = json_metrics.compute {
             if let Some(detector) = &mut self.compute {
-                detector.z_score(conn, perf_id, benchmark_name, json.avg.into())?;
+                detector.z_test(conn, perf_id, benchmark_name, json.avg.into())?;
             }
         }
         if let Some(json) = json_metrics.memory {
             if let Some(detector) = &mut self.memory {
-                detector.z_score(conn, perf_id, benchmark_name, json.avg.into())?;
+                detector.z_test(conn, perf_id, benchmark_name, json.avg.into())?;
             }
         }
         if let Some(json) = json_metrics.storage {
             if let Some(detector) = &mut self.storage {
-                detector.z_score(conn, perf_id, benchmark_name, json.avg.into())?;
+                detector.z_test(conn, perf_id, benchmark_name, json.avg.into())?;
             }
         }
 

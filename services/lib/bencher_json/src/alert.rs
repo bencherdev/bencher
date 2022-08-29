@@ -16,8 +16,8 @@ pub struct JsonAlert {
     pub threshold: Uuid,
     pub statistic: Uuid,
     pub side:      JsonSide,
-    pub boundary:  OrderedFloat<f64>,
-    pub outlier:   OrderedFloat<f64>,
+    pub boundary:  OrderedFloat<f32>,
+    pub outlier:   OrderedFloat<f32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

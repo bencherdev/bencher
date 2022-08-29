@@ -7,8 +7,8 @@ table! {
         threshold_id -> Integer,
         statistic_id -> Integer,
         side -> Bool,
-        boundary -> Double,
-        outlier -> Double,
+        boundary -> Float,
+        outlier -> Float,
     }
 }
 

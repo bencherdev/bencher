@@ -32,8 +32,8 @@ pub struct QueryStatistic {
     pub test:        i32,
     pub sample_size: Option<i64>,
     pub window:      Option<i64>,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
+    pub left_side:   Option<f64>,
+    pub right_side:  Option<f64>,
 }
 
 impl QueryStatistic {

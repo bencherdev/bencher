@@ -17,11 +17,13 @@ const ALERT_ERROR: &str = "Failed to create perf alert.";
 pub type Alerts = Vec<Alert>;
 
 pub struct Alert {
+    pub report_id:    i32,
+    pub perf_id:      Option<i32>,
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub side:         bool,
-    pub boundary:     f64,
-    pub outlier:      f64,
+    pub boundary:     f32,
+    pub outlier:      f32,
 }
 
 impl Alert {

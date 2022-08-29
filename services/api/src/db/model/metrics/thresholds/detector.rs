@@ -9,12 +9,22 @@ use std::{
 use bencher_json::report::JsonMetricsMap;
 use diesel::SqliteConnection;
 use dropshot::HttpError;
+use statrs::{
+    distribution::{
+        Continuous,
+        ContinuousCDF,
+        Normal,
+        StudentsT,
+    },
+    statistics::Distribution,
+};
 
 use super::threshold::Threshold;
 use crate::{
     db::model::{
         metrics::data::MetricsData,
         threshold::{
+            alert::Side,
             statistic::StatisticKind,
             PerfKind,
         },
@@ -81,7 +91,7 @@ impl Detector {
         })
     }
 
-    pub fn z_score(
+    pub fn z_test(
         &mut self,
         conn: &SqliteConnection,
         perf_id: i32,
@@ -90,7 +100,6 @@ impl Detector {
     ) -> Result<(), HttpError> {
         if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
             let data = &mut metrics_data.data;
-
             // Add the new metrics datum
             data.push_front(datum);
             // If there is a set sample size, then check to see if adding the new datum
@@ -101,21 +110,47 @@ impl Detector {
                     debug_assert!(data.len() == sample_size as usize)
                 }
             }
+        }
 
-            if let Some(z) = z_score(datum, &data) {
-                match z < 0.0 {
-                    true => {
-                        let abs_z = z.abs();
-                        // Compare against the left side
-                    },
-                    false => {
-                        // Compare against the right side
-                    },
+        if let Some(metrics_data) = self.data.get(benchmark_name) {
+            self.z_score(&metrics_data.data, datum);
+        }
+
+        Ok(())
+    }
+
+    fn z_score(&self, data: &VecDeque<f64>, datum: f64) -> Option<f64> {
+        if let Some(mean) = mean(&data) {
+            if let Some(std_dev) = std_deviation(mean, &data) {
+                if let Some(z) = z_score(mean, std_dev, datum) {
+                    let (side, side_percentile) = match z < 0.0 {
+                        true => {
+                            if let Some(left_side) = self.threshold.statistic.left_side {
+                                (Side::Left, left_side)
+                            } else {
+                                return None;
+                            }
+                        },
+                        false => {
+                            if let Some(right_side) = self.threshold.statistic.right_side {
+                                (Side::Right, right_side)
+                            } else {
+                                return None;
+                            }
+                        },
+                    };
+
+                    if let Ok(normal) = Normal::new(mean, std_dev) {
+                        let percentile = normal.cdf(z.abs());
+                        if percentile > side_percentile as f64 {
+                            // Generate alert
+                        }
+                    }
                 }
             }
         }
 
-        Ok(())
+        None
     }
 
     pub fn t_test(
@@ -136,13 +171,12 @@ impl Detector {
     }
 }
 
-fn z_score(datum: f64, data: &VecDeque<f64>) -> Option<f64> {
-    if let Some(mean) = mean(&data) {
-        if let Some(std_dev) = std_deviation(mean, &data) {
-            return Some((datum - mean) / std_dev);
-        }
+fn z_score(mean: f64, std_dev: f64, datum: f64) -> Option<f64> {
+    if std_dev.is_normal() {
+        Some((datum - mean) / std_dev)
+    } else {
+        None
     }
-    None
 }
 
 fn std_deviation(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
@@ -185,4 +219,25 @@ fn standard_normal_probability_density(x: f64) -> f64 {
 fn normal_probability_density(mean: f64, std_dev: f64, x: f64) -> f64 {
     let constant = 1.0 / (2.0 * PI * std_dev.powi(2)).sqrt();
     constant * (-(x - mean).powi(2) / (2.0 * std_dev.powi(2))).exp()
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_stats() {
+        use statrs::{
+            distribution::{
+                Continuous,
+                ContinuousCDF,
+                Normal,
+            },
+            statistics::Distribution,
+        };
+
+        let n = Normal::new(0.0, 1.0).unwrap();
+        assert_eq!(n.mean().unwrap(), 0.0);
+        assert_eq!(n.pdf(1.0), 0.2419707245191433497978);
+        assert_eq!(n.cdf(1.0), 0.8413447460549428);
+        assert_eq!(n.cdf(2.0), 0.9772498680528374);
+    }
 }
