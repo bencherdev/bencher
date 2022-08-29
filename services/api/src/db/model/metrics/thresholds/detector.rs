@@ -1,13 +1,13 @@
-use std::{
-    collections::{
-        HashMap,
-        VecDeque,
-    },
-    f64::consts::PI,
+use std::collections::{
+    HashMap,
+    VecDeque,
 };
 
 use bencher_json::report::JsonMetricsMap;
-use diesel::SqliteConnection;
+use diesel::{
+    RunQueryDsl,
+    SqliteConnection,
+};
 use dropshot::HttpError;
 use statrs::{
     distribution::{
@@ -18,16 +18,23 @@ use statrs::{
     },
     statistics::Distribution,
 };
+use uuid::Uuid;
 
 use super::threshold::Threshold;
 use crate::{
-    db::model::{
-        metrics::data::MetricsData,
-        threshold::{
-            alert::Side,
-            statistic::StatisticKind,
-            PerfKind,
+    db::{
+        model::{
+            metrics::data::MetricsData,
+            threshold::{
+                alert::{
+                    InsertAlert,
+                    Side,
+                },
+                statistic::StatisticKind,
+                PerfKind,
+            },
         },
+        schema,
     },
     util::http_error,
 };
@@ -98,6 +105,7 @@ impl Detector {
         benchmark_name: &str,
         datum: f64,
     ) -> Result<(), HttpError> {
+        // Update cached metrics data
         if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
             let data = &mut metrics_data.data;
             // Add the new metrics datum
@@ -113,44 +121,50 @@ impl Detector {
         }
 
         if let Some(metrics_data) = self.data.get(benchmark_name) {
-            self.z_score(&metrics_data.data, datum);
+            self.z_score(conn, perf_id, &metrics_data.data, datum)?;
         }
 
         Ok(())
     }
 
-    fn z_score(&self, data: &VecDeque<f64>, datum: f64) -> Option<f64> {
+    fn z_score(
+        &self,
+        conn: &SqliteConnection,
+        perf_id: i32,
+        data: &VecDeque<f64>,
+        datum: f64,
+    ) -> Result<(), HttpError> {
         if let Some(mean) = mean(&data) {
             if let Some(std_dev) = std_deviation(mean, &data) {
                 if let Some(z) = z_score(mean, std_dev, datum) {
-                    let (side, side_percentile) = match z < 0.0 {
+                    let (side, boundary) = match z < 0.0 {
                         true => {
                             if let Some(left_side) = self.threshold.statistic.left_side {
                                 (Side::Left, left_side)
                             } else {
-                                return None;
+                                return Ok(());
                             }
                         },
                         false => {
                             if let Some(right_side) = self.threshold.statistic.right_side {
                                 (Side::Right, right_side)
                             } else {
-                                return None;
+                                return Ok(());
                             }
                         },
                     };
 
                     if let Ok(normal) = Normal::new(mean, std_dev) {
                         let percentile = normal.cdf(z.abs());
-                        if percentile > side_percentile as f64 {
-                            // Generate alert
+                        if percentile > boundary as f64 {
+                            self.alert(conn, Some(perf_id), side, boundary, percentile)?;
                         }
                     }
                 }
             }
         }
 
-        None
+        Ok(())
     }
 
     pub fn t_test(
@@ -166,6 +180,33 @@ impl Detector {
                 let latency_data = &metrics_list.latency;
             }
         }
+
+        Ok(())
+    }
+
+    fn alert(
+        &self,
+        conn: &SqliteConnection,
+        perf_id: Option<i32>,
+        side: Side,
+        boundary: f32,
+        outlier: f64,
+    ) -> Result<(), HttpError> {
+        let insert_alert = InsertAlert {
+            uuid: Uuid::new_v4().to_string(),
+            report_id: self.report_id,
+            perf_id,
+            threshold_id: self.threshold.id,
+            statistic_id: self.threshold.statistic.id,
+            side: side.into(),
+            boundary,
+            outlier: outlier as f32,
+        };
+
+        diesel::insert_into(schema::alert::table)
+            .values(&insert_alert)
+            .execute(conn)
+            .map_err(|_| http_error!(PERF_ERROR))?;
 
         Ok(())
     }
@@ -200,25 +241,6 @@ fn mean(data: &VecDeque<f64>) -> Option<f64> {
         return None;
     }
     Some(data.iter().sum::<f64>() / data.len() as f64)
-}
-
-fn percentile(z: f64) -> f64 {
-    // quad(normalProbabilityDensity, np.NINF, 1.25)
-    // https://doc.rust-lang.org/std/primitive.f64.html#associatedconstant.NEG_INFINITY
-    // to z
-    standard_normal_probability_density(z)
-}
-
-// Probability Density Function for a Standard Normal Distribution
-// mean (μ) of 0 and a standard deviation (σ) of 1
-fn standard_normal_probability_density(x: f64) -> f64 {
-    normal_probability_density(0.0, 1.0, x)
-}
-
-// Probability Density Function for a Normal Distribution
-fn normal_probability_density(mean: f64, std_dev: f64, x: f64) -> f64 {
-    let constant = 1.0 / (2.0 * PI * std_dev.powi(2)).sqrt();
-    constant * (-(x - mean).powi(2) / (2.0 * std_dev.powi(2))).exp()
 }
 
 #[cfg(test)]

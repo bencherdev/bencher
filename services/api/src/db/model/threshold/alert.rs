@@ -42,8 +42,8 @@ pub struct QueryAlert {
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub side:         bool,
-    pub boundary:     f64,
-    pub outlier:      f64,
+    pub boundary:     f32,
+    pub outlier:      f32,
 }
 
 impl QueryAlert {

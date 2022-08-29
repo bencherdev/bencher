@@ -22,7 +22,6 @@ use crate::{
     util::http_error,
 };
 
-pub mod alert;
 pub mod data;
 pub mod thresholds;
 
