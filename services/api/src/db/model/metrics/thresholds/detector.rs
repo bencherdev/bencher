@@ -107,96 +107,40 @@ impl Detector {
             let data = &metrics_data.data;
             if let Some(mean) = mean(data) {
                 if let Some(std_dev) = std_deviation(mean, data) {
-                    match self.threshold.statistic.test.try_into()? {
-                        StatisticKind::Z => self.z_score(conn, perf_id, mean, std_dev, datum)?,
-                        StatisticKind::T => {
-                            self.t_test(conn, perf_id, mean, std_dev, data.len(), datum)?
+                    let (abs_datum, side, boundary) = match datum < mean {
+                        true => {
+                            if let Some(left_side) = self.threshold.statistic.left_side {
+                                (mean * 2.0 - datum, Side::Left, left_side)
+                            } else {
+                                return Ok(());
+                            }
                         },
+                        false => {
+                            if let Some(right_side) = self.threshold.statistic.right_side {
+                                (datum, Side::Right, right_side)
+                            } else {
+                                return Ok(());
+                            }
+                        },
+                    };
+
+                    let percentile = match self.threshold.statistic.test.try_into()? {
+                        StatisticKind::Z => {
+                            let normal =
+                                Normal::new(mean, std_dev).map_err(|_| http_error!(PERF_ERROR))?;
+                            normal.cdf(abs_datum)
+                        },
+                        StatisticKind::T => {
+                            let students_t = StudentsT::new(mean, std_dev, (data.len() - 1) as f64)
+                                .map_err(|_| http_error!(PERF_ERROR))?;
+                            students_t.cdf(abs_datum)
+                        },
+                    };
+
+                    if percentile > boundary as f64 {
+                        self.alert(conn, perf_id, side, boundary, percentile)?;
                     }
                 }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn z_score(
-        &self,
-        conn: &SqliteConnection,
-        perf_id: i32,
-        mean: f64,
-        std_dev: f64,
-        datum: f64,
-    ) -> Result<(), HttpError> {
-        if let Some(z) = z_score(mean, std_dev, datum) {
-            let (side, boundary) = match z < 0.0 {
-                true => {
-                    if let Some(left_side) = self.threshold.statistic.left_side {
-                        (Side::Left, left_side)
-                    } else {
-                        return Ok(());
-                    }
-                },
-                false => {
-                    if let Some(right_side) = self.threshold.statistic.right_side {
-                        (Side::Right, right_side)
-                    } else {
-                        return Ok(());
-                    }
-                },
-            };
-
-            if let Ok(normal) = Normal::new(mean, std_dev) {
-                let percentile = normal.cdf(z.abs());
-                if percentile > boundary as f64 {
-                    self.alert(conn, perf_id, side, boundary, percentile)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn t_test(
-        &self,
-        conn: &SqliteConnection,
-        perf_id: i32,
-        mean: f64,
-        std_dev: f64,
-        n: usize,
-        datum: f64,
-    ) -> Result<(), HttpError> {
-        if let Ok(students_t) = StudentsT::new(LOCATION, SCALE, (n - 1) as f64) {
-            let (side, boundary) = match datum - mean < 0.0 {
-                true => {
-                    if let Some(left_side) = self.threshold.statistic.left_side {
-                        (Side::Left, left_side)
-                    } else {
-                        return Ok(());
-                    }
-                },
-                false => {
-                    if let Some(right_side) = self.threshold.statistic.right_side {
-                        (Side::Right, right_side)
-                    } else {
-                        return Ok(());
-                    }
-                },
-            };
-
-            let t = students_t.cdf(1.0 - boundary as f64);
-
-            // mean +/- t * sample std dev / sqrt(n)
-            let confidence_interval = match side {
-                Side::Left => mean - t,
-                Side::Right => mean + t,
-            } * (std_dev / (n as f64).sqrt());
-
-            if match side {
-                Side::Left => datum < confidence_interval,
-                Side::Right => datum > confidence_interval,
-            } {
-                self.alert(conn, perf_id, side, confidence_interval as f32, datum)?;
             }
         }
 
@@ -263,21 +207,68 @@ fn mean(data: &VecDeque<f64>) -> Option<f64> {
 
 #[cfg(test)]
 mod test {
-    #[test]
-    fn test_stats() {
-        use statrs::{
-            distribution::{
-                Continuous,
-                ContinuousCDF,
-                Normal,
-            },
-            statistics::Distribution,
-        };
+    use statrs::{
+        distribution::{
+            Continuous,
+            ContinuousCDF,
+            Normal,
+            StudentsT,
+        },
+        statistics::Distribution,
+    };
 
+    use super::{
+        LOCATION,
+        SCALE,
+    };
+
+    #[test]
+    fn test_normal() {
         let n = Normal::new(0.0, 1.0).unwrap();
         assert_eq!(n.mean().unwrap(), 0.0);
         assert_eq!(n.pdf(1.0), 0.2419707245191433497978);
+        assert_eq!(n.cdf(0.0), 0.5);
         assert_eq!(n.cdf(1.0), 0.8413447460549428);
         assert_eq!(n.cdf(2.0), 0.9772498680528374);
+    }
+
+    #[test]
+    fn test_students_t() {
+        let students_t = StudentsT::new(0.0, 2.0, 10.0).unwrap();
+
+        // assert_eq!(students_t.pdf(0.25), 0.37600028568971794);
+        // assert_eq!(students_t.pdf(0.5), 0.33969513635207776);
+        // assert_eq!(students_t.pdf(0.9), 0.2535299505598274);
+
+        // assert_eq!(students_t.cdf(0.25), 0.5961758971316931);
+        // assert_eq!(students_t.cdf(0.5), 0.6860531971285135);
+        // assert_eq!(students_t.cdf(0.9), 0.8053603689969588);
+
+        // Location 0
+        // assert_eq!(students_t.mean().unwrap(), 0.0);
+
+        // assert_eq!(students_t.cdf(0.0), 0.5);
+        // assert_eq!(students_t.cdf(1.0), 0.8295534338489701);
+        // assert_eq!(students_t.cdf(2.0), 0.9633059826146299);
+
+        // assert_eq!(students_t.std_dev().unwrap(), 1.118033988749895);
+
+        // Location 1
+        // assert_eq!(students_t.mean().unwrap(), 1.0);
+
+        // assert_eq!(students_t.cdf(1.0), 0.5);
+        // assert_eq!(students_t.cdf(2.0), 0.8295534338489701);
+        // assert_eq!(students_t.cdf(3.0), 0.9633059826146299);
+
+        // assert_eq!(students_t.std_dev().unwrap(), 1.118033988749895);
+
+        // Scale 2
+        assert_eq!(students_t.mean().unwrap(), 0.0);
+
+        assert_eq!(students_t.cdf(0.0), 0.5);
+        assert_eq!(students_t.cdf(1.0), 0.6860531971285135);
+        assert_eq!(students_t.cdf(2.0), 0.8295534338489701);
+
+        assert_eq!(students_t.std_dev().unwrap(), 2.23606797749979);
     }
 }
