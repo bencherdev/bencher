@@ -40,6 +40,8 @@ use crate::{
 };
 
 const PERF_ERROR: &str = "Failed to run metrics detector.";
+const LOCATION: f64 = 0.0;
+const SCALE: f64 = 1.0;
 
 pub struct Detector {
     pub report_id: i32,
@@ -79,10 +81,10 @@ impl Detector {
         }
 
         Ok(Some(Self {
-                report_id,
-                threshold,
-                data,
-            }))
+            report_id,
+            threshold,
+            data,
+        }))
     }
 
     pub fn test(
@@ -107,49 +109,15 @@ impl Detector {
             }
         }
 
-        match self.threshold.statistic.test.try_into()? {
-            StatisticKind::Z => self.z_score(conn, perf_id, benchmark_name, datum),
-            StatisticKind::T => {
-                todo!()
-            },
-        }
-    }
-
-    fn z_score(
-        &self,
-        conn: &SqliteConnection,
-        perf_id: i32,
-        benchmark_name: &str,
-        datum: f64,
-    ) -> Result<(), HttpError> {
         if let Some(metrics_data) = self.data.get(benchmark_name) {
             let data = &metrics_data.data;
-            if let Some(mean) = mean(&data) {
-                if let Some(std_dev) = std_deviation(mean, &data) {
-                    if let Some(z) = z_score(mean, std_dev, datum) {
-                        let (side, boundary) = match z < 0.0 {
-                            true => {
-                                if let Some(left_side) = self.threshold.statistic.left_side {
-                                    (Side::Left, left_side)
-                                } else {
-                                    return Ok(());
-                                }
-                            },
-                            false => {
-                                if let Some(right_side) = self.threshold.statistic.right_side {
-                                    (Side::Right, right_side)
-                                } else {
-                                    return Ok(());
-                                }
-                            },
-                        };
-
-                        if let Ok(normal) = Normal::new(mean, std_dev) {
-                            let percentile = normal.cdf(z.abs());
-                            if percentile > boundary as f64 {
-                                self.alert(conn, Some(perf_id), side, boundary, percentile)?;
-                            }
-                        }
+            if let Some(mean) = mean(data) {
+                if let Some(std_dev) = std_deviation(mean, data) {
+                    match self.threshold.statistic.test.try_into()? {
+                        StatisticKind::Z => self.z_score(conn, perf_id, mean, std_dev, datum)?,
+                        StatisticKind::T => {
+                            self.t_test(conn, perf_id, mean, std_dev, data.len(), datum)?
+                        },
                     }
                 }
             }
@@ -158,19 +126,83 @@ impl Detector {
         Ok(())
     }
 
-    pub fn t_test(
+    fn z_score(
+        &self,
         conn: &SqliteConnection,
-        report_id: i32,
-        threshold: &Threshold,
-        metrics_map: &JsonMetricsMap,
-        data: &HashMap<String, MetricsData>,
+        perf_id: i32,
+        mean: f64,
+        std_dev: f64,
+        datum: f64,
     ) -> Result<(), HttpError> {
-        // confidence interval
-        // mean +/- t *  Sample std dev / sqrt(n)
-        for (benchmark_name, metrics_list) in &metrics_map.inner {
-            if let Some(std_dev) = data.get(benchmark_name) {
-                // TODO perform a t test with the sample mean and threshold
-                let latency_data = &metrics_list.latency;
+        if let Some(z) = z_score(mean, std_dev, datum) {
+            let (side, boundary) = match z < 0.0 {
+                true => {
+                    if let Some(left_side) = self.threshold.statistic.left_side {
+                        (Side::Left, left_side)
+                    } else {
+                        return Ok(());
+                    }
+                },
+                false => {
+                    if let Some(right_side) = self.threshold.statistic.right_side {
+                        (Side::Right, right_side)
+                    } else {
+                        return Ok(());
+                    }
+                },
+            };
+
+            if let Ok(normal) = Normal::new(mean, std_dev) {
+                let percentile = normal.cdf(z.abs());
+                if percentile > boundary as f64 {
+                    self.alert(conn, Some(perf_id), side, boundary, percentile)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn t_test(
+        &self,
+        conn: &SqliteConnection,
+        perf_id: i32,
+        mean: f64,
+        std_dev: f64,
+        n: usize,
+        datum: f64,
+    ) -> Result<(), HttpError> {
+        let (side, boundary) = match datum - mean < 0.0 {
+            true => {
+                if let Some(left_side) = self.threshold.statistic.left_side {
+                    (Side::Left, left_side)
+                } else {
+                    return Ok(());
+                }
+            },
+            false => {
+                if let Some(right_side) = self.threshold.statistic.right_side {
+                    (Side::Right, right_side)
+                } else {
+                    return Ok(());
+                }
+            },
+        };
+
+        if let Ok(students_t) = StudentsT::new(LOCATION, SCALE, (n - 1) as f64) {
+            let t = students_t.cdf(1.0 - boundary as f64);
+
+            // mean +/- t * sample std dev / sqrt(n)
+            let confidence_interval = match side {
+                Side::Left => mean - t,
+                Side::Right => mean + t,
+            } * (std_dev / (n as f64).sqrt());
+
+            if match side {
+                Side::Left => datum < confidence_interval,
+                Side::Right => datum > confidence_interval,
+            } {
+                self.alert(conn, Some(perf_id), side, confidence_interval as f32, datum)?;
             }
         }
 
