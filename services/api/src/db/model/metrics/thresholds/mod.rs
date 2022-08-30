@@ -32,7 +32,6 @@ impl Thresholds {
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,
-        report_id: i32,
         benchmarks: JsonBenchmarks,
     ) -> Result<Self, HttpError> {
         let metrics_map = JsonMetricsMap::from(benchmarks);
@@ -53,7 +52,6 @@ impl Thresholds {
                 conn,
                 branch_id,
                 testbed_id,
-                report_id,
                 &benchmarks,
                 &metrics_map,
                 PerfKind::Latency,

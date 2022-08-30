@@ -2,8 +2,7 @@ table! {
     alert (id) {
         id -> Integer,
         uuid -> Text,
-        report_id -> Integer,
-        perf_id -> Nullable<Integer>,
+        perf_id -> Integer,
         threshold_id -> Integer,
         statistic_id -> Integer,
         side -> Bool,
@@ -164,7 +163,6 @@ table! {
 }
 
 joinable!(alert -> perf (perf_id));
-joinable!(alert -> report (report_id));
 joinable!(alert -> statistic (statistic_id));
 joinable!(alert -> threshold (threshold_id));
 joinable!(benchmark -> project (project_id));

@@ -47,9 +47,7 @@ impl Metrics {
         Ok(Self {
             project_id,
             report_id,
-            thresholds: Thresholds::new(
-                conn, project_id, branch_id, testbed_id, report_id, benchmarks,
-            )?,
+            thresholds: Thresholds::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
         })
     }
 

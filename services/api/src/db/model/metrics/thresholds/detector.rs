@@ -44,7 +44,6 @@ const LOCATION: f64 = 0.0;
 const SCALE: f64 = 1.0;
 
 pub struct Detector {
-    pub report_id: i32,
     pub threshold: Threshold,
     pub data:      HashMap<String, MetricsData>,
 }
@@ -54,7 +53,6 @@ impl Detector {
         conn: &SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        report_id: i32,
         benchmarks: &[(String, i32)],
         metrics_map: &JsonMetricsMap,
         kind: PerfKind,
@@ -80,11 +78,7 @@ impl Detector {
             data.insert(benchmark_name.clone(), metrics_data);
         }
 
-        Ok(Some(Self {
-            report_id,
-            threshold,
-            data,
-        }))
+        Ok(Some(Self { threshold, data }))
     }
 
     pub fn test(
@@ -155,7 +149,7 @@ impl Detector {
             if let Ok(normal) = Normal::new(mean, std_dev) {
                 let percentile = normal.cdf(z.abs());
                 if percentile > boundary as f64 {
-                    self.alert(conn, Some(perf_id), side, boundary, percentile)?;
+                    self.alert(conn, perf_id, side, boundary, percentile)?;
                 }
             }
         }
@@ -202,7 +196,7 @@ impl Detector {
                 Side::Left => datum < confidence_interval,
                 Side::Right => datum > confidence_interval,
             } {
-                self.alert(conn, Some(perf_id), side, confidence_interval as f32, datum)?;
+                self.alert(conn, perf_id, side, confidence_interval as f32, datum)?;
             }
         }
 
@@ -212,14 +206,13 @@ impl Detector {
     fn alert(
         &self,
         conn: &SqliteConnection,
-        perf_id: Option<i32>,
+        perf_id: i32,
         side: Side,
         boundary: f32,
         outlier: f64,
     ) -> Result<(), HttpError> {
         let insert_alert = InsertAlert {
             uuid: Uuid::new_v4().to_string(),
-            report_id: self.report_id,
             perf_id,
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,

@@ -116,7 +116,10 @@ impl QueryReport {
 
     fn get_alerts(&self, conn: &SqliteConnection) -> Result<JsonReportAlerts, HttpError> {
         Ok(schema::alert::table
-            .filter(schema::alert::report_id.eq(self.id))
+            .left_join(
+                schema::perf::table.on(schema::perf::id.eq(schema::alert::perf_id)),
+            )
+            .filter(schema::perf::report_id.eq(self.id))
             .select(schema::alert::uuid)
             .order(schema::alert::id)
             .load::<String>(conn)
