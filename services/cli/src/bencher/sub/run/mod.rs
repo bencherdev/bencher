@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use bencher_json::{
     report::new::JsonBenchmarks,
     JsonNewReport,
+    JsonReport,
 };
 use chrono::Utc;
 use git2::Oid;
@@ -47,6 +48,7 @@ pub struct Run {
     adapter:  Adapter,
     iter:     usize,
     fold:     Option<Fold>,
+    err:      bool,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -62,16 +64,18 @@ impl TryFrom<CliRun> for Run {
             adapter,
             iter,
             fold,
+            err,
         } = run;
         Ok(Self {
             locality: locality.try_into()?,
-            perf:     command.try_into()?,
-            branch:   unwrap_branch(branch)?,
-            hash:     map_hash(hash)?,
-            testbed:  unwrap_testbed(testbed)?,
-            adapter:  unwrap_adapter(adapter),
-            iter:     iter.unwrap_or(1),
-            fold:     fold.map(Into::into),
+            perf: command.try_into()?,
+            branch: unwrap_branch(branch)?,
+            hash: map_hash(hash)?,
+            testbed: unwrap_testbed(testbed)?,
+            adapter: unwrap_adapter(adapter),
+            iter: iter.unwrap_or(1),
+            fold: fold.map(Into::into),
+            err,
         })
     }
 }
@@ -137,7 +141,13 @@ impl SubCmd for Run {
         match &self.locality {
             Locality::Local => Ok(println!("{}", serde_json::to_string_pretty(&report)?)),
             Locality::Backend(backend) => {
-                backend.post(REPORTS_PATH, &report).await?;
+                let value = backend.post(REPORTS_PATH, &report).await?;
+                if self.err {
+                    let json_report: JsonReport = serde_json::from_value(value)?;
+                    if !json_report.alerts.is_empty() {
+                        return Err(BencherError::Alerts)
+                    }
+                }
                 Ok(())
             },
         }

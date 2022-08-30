@@ -14,6 +14,8 @@ pub enum BencherError {
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
     NoPerf,
+    #[error("Alerts detected.")]
+    Alerts,
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),
