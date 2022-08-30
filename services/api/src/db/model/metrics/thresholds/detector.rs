@@ -172,24 +172,24 @@ impl Detector {
         n: usize,
         datum: f64,
     ) -> Result<(), HttpError> {
-        let (side, boundary) = match datum - mean < 0.0 {
-            true => {
-                if let Some(left_side) = self.threshold.statistic.left_side {
-                    (Side::Left, left_side)
-                } else {
-                    return Ok(());
-                }
-            },
-            false => {
-                if let Some(right_side) = self.threshold.statistic.right_side {
-                    (Side::Right, right_side)
-                } else {
-                    return Ok(());
-                }
-            },
-        };
-
         if let Ok(students_t) = StudentsT::new(LOCATION, SCALE, (n - 1) as f64) {
+            let (side, boundary) = match datum - mean < 0.0 {
+                true => {
+                    if let Some(left_side) = self.threshold.statistic.left_side {
+                        (Side::Left, left_side)
+                    } else {
+                        return Ok(());
+                    }
+                },
+                false => {
+                    if let Some(right_side) = self.threshold.statistic.right_side {
+                        (Side::Right, right_side)
+                    } else {
+                        return Ok(());
+                    }
+                },
+            };
+
             let t = students_t.cdf(1.0 - boundary as f64);
 
             // mean +/- t * sample std dev / sqrt(n)
