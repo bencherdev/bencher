@@ -74,6 +74,6 @@ impl Metrics {
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
         self.thresholds
-            .z_test(conn, perf_id, benchmark_name, json_metrics)
+            .test(conn, perf_id, benchmark_name, json_metrics)
     }
 }

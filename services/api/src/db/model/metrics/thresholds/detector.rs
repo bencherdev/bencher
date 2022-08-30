@@ -78,24 +78,14 @@ impl Detector {
             data.insert(benchmark_name.clone(), metrics_data);
         }
 
-        // If the threshold statistic is a t-test go ahead and perform it and create
-        // alerts. Since this only needs to happen once, return None for the
-        // latency threshold. Otherwise, return a Detector that will be used for the
-        // other, per datum tests (i.e. z-score).
-        Ok(match threshold.statistic.test.try_into()? {
-            StatisticKind::Z => Some(Self {
+        Ok(Some(Self {
                 report_id,
                 threshold,
                 data,
-            }),
-            StatisticKind::T => {
-                Self::t_test(conn, report_id, &threshold, metrics_map, &data)?;
-                None
-            },
-        })
+            }))
     }
 
-    pub fn z_test(
+    pub fn test(
         &mut self,
         conn: &SqliteConnection,
         perf_id: i32,
@@ -117,44 +107,48 @@ impl Detector {
             }
         }
 
-        if let Some(metrics_data) = self.data.get(benchmark_name) {
-            self.z_score(conn, perf_id, &metrics_data.data, datum)?;
+        match self.threshold.statistic.test.try_into()? {
+            StatisticKind::Z => self.z_score(conn, perf_id, benchmark_name, datum),
+            StatisticKind::T => {
+                todo!()
+            },
         }
-
-        Ok(())
     }
 
     fn z_score(
         &self,
         conn: &SqliteConnection,
         perf_id: i32,
-        data: &VecDeque<f64>,
+        benchmark_name: &str,
         datum: f64,
     ) -> Result<(), HttpError> {
-        if let Some(mean) = mean(&data) {
-            if let Some(std_dev) = std_deviation(mean, &data) {
-                if let Some(z) = z_score(mean, std_dev, datum) {
-                    let (side, boundary) = match z < 0.0 {
-                        true => {
-                            if let Some(left_side) = self.threshold.statistic.left_side {
-                                (Side::Left, left_side)
-                            } else {
-                                return Ok(());
-                            }
-                        },
-                        false => {
-                            if let Some(right_side) = self.threshold.statistic.right_side {
-                                (Side::Right, right_side)
-                            } else {
-                                return Ok(());
-                            }
-                        },
-                    };
+        if let Some(metrics_data) = self.data.get(benchmark_name) {
+            let data = &metrics_data.data;
+            if let Some(mean) = mean(&data) {
+                if let Some(std_dev) = std_deviation(mean, &data) {
+                    if let Some(z) = z_score(mean, std_dev, datum) {
+                        let (side, boundary) = match z < 0.0 {
+                            true => {
+                                if let Some(left_side) = self.threshold.statistic.left_side {
+                                    (Side::Left, left_side)
+                                } else {
+                                    return Ok(());
+                                }
+                            },
+                            false => {
+                                if let Some(right_side) = self.threshold.statistic.right_side {
+                                    (Side::Right, right_side)
+                                } else {
+                                    return Ok(());
+                                }
+                            },
+                        };
 
-                    if let Ok(normal) = Normal::new(mean, std_dev) {
-                        let percentile = normal.cdf(z.abs());
-                        if percentile > boundary as f64 {
-                            self.alert(conn, Some(perf_id), side, boundary, percentile)?;
+                        if let Ok(normal) = Normal::new(mean, std_dev) {
+                            let percentile = normal.cdf(z.abs());
+                            if percentile > boundary as f64 {
+                                self.alert(conn, Some(perf_id), side, boundary, percentile)?;
+                            }
                         }
                     }
                 }
@@ -171,6 +165,8 @@ impl Detector {
         metrics_map: &JsonMetricsMap,
         data: &HashMap<String, MetricsData>,
     ) -> Result<(), HttpError> {
+        // confidence interval
+        // mean +/- t *  Sample std dev / sqrt(n)
         for (benchmark_name, metrics_list) in &metrics_map.inner {
             if let Some(std_dev) = data.get(benchmark_name) {
                 // TODO perform a t test with the sample mean and threshold
