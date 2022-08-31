@@ -31,7 +31,7 @@ pub struct QueryVersion {
 }
 
 impl QueryVersion {
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::version::table
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
@@ -42,7 +42,7 @@ impl QueryVersion {
 }
 
 #[derive(Insertable)]
-#[table_name = "version_table"]
+#[diesel(table_name = version_table)]
 pub struct InsertVersion {
     pub uuid:      String,
     pub branch_id: i32,
@@ -52,7 +52,7 @@ pub struct InsertVersion {
 
 impl InsertVersion {
     pub fn increment(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         branch_id: i32,
         hash: Option<String>,
     ) -> Result<i32, HttpError> {
@@ -62,7 +62,7 @@ impl InsertVersion {
             .filter(schema::version::branch_id.eq(branch_id))
             .select(schema::version::number)
             .order(schema::version::number.desc())
-            .first::<i32>(&*conn)
+            .first::<i32>(conn)
         {
             number + 1
         } else {
@@ -78,7 +78,7 @@ impl InsertVersion {
 
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
-            .execute(&*conn)
+            .execute(conn)
             .map_err(|_| http_error!("Failed to create version."))?;
 
         schema::version::table
@@ -88,7 +88,7 @@ impl InsertVersion {
                     .and(schema::version::number.eq(number)),
             )
             .select(schema::version::id)
-            .first::<i32>(&*conn)
+            .first::<i32>(conn)
             .map_err(|_| http_error!("Failed to create version."))
     }
 }

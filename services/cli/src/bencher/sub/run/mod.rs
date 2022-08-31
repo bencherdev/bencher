@@ -145,7 +145,7 @@ impl SubCmd for Run {
                 if self.err {
                     let json_report: JsonReport = serde_json::from_value(value)?;
                     if !json_report.alerts.is_empty() {
-                        return Err(BencherError::Alerts)
+                        return Err(BencherError::Alerts);
                     }
                 }
                 Ok(())

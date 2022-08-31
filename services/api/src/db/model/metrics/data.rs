@@ -54,7 +54,7 @@ enum MinMaxAvgKind {
 
 impl MetricsData {
     pub fn new(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
         benchmark_id: i32,

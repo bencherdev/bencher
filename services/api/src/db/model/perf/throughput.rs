@@ -49,7 +49,7 @@ impl QueryThroughput {
 }
 
 #[derive(Insertable)]
-#[table_name = "throughput_table"]
+#[diesel(table_name = throughput_table)]
 pub struct InsertThroughput {
     pub uuid:           String,
     pub lower_variance: f64,
@@ -78,21 +78,21 @@ impl From<JsonThroughput> for InsertThroughput {
 
 impl InsertThroughput {
     pub fn map_json(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         throughput: Option<JsonThroughput>,
     ) -> Result<Option<i32>, HttpError> {
         Ok(if let Some(json_throughput) = throughput {
             let insert_throughput: InsertThroughput = json_throughput.into();
             diesel::insert_into(schema::throughput::table)
                 .values(&insert_throughput)
-                .execute(&*conn)
+                .execute(conn)
                 .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
             Some(
                 schema::throughput::table
                     .filter(schema::throughput::uuid.eq(&insert_throughput.uuid))
                     .select(schema::throughput::id)
-                    .first::<i32>(&*conn)
+                    .first::<i32>(conn)
                     .map_err(|_| http_error!("Failed to create benchmark data."))?,
             )
         } else {

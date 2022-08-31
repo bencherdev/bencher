@@ -46,7 +46,7 @@ impl QueryLatency {
 }
 
 #[derive(Insertable)]
-#[table_name = "latency_table"]
+#[diesel(table_name = latency_table)]
 pub struct InsertLatency {
     pub uuid:           String,
     pub lower_variance: i64,
@@ -72,21 +72,21 @@ impl From<JsonLatency> for InsertLatency {
 
 impl InsertLatency {
     pub fn map_json(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         latency: Option<JsonLatency>,
     ) -> Result<Option<i32>, HttpError> {
         Ok(if let Some(json_latency) = latency {
             let insert_latency: InsertLatency = json_latency.into();
             diesel::insert_into(schema::latency::table)
                 .values(&insert_latency)
-                .execute(&*conn)
+                .execute(conn)
                 .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
             Some(
                 schema::latency::table
                     .filter(schema::latency::uuid.eq(&insert_latency.uuid))
                     .select(schema::latency::id)
-                    .first::<i32>(&*conn)
+                    .first::<i32>(conn)
                     .map_err(|_| http_error!("Failed to create benchmark data."))?,
             )
         } else {

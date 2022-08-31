@@ -78,8 +78,8 @@ pub async fn get_ls(
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let conn = db_connection.lock().await;
-    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonThreshold> = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(schema::testbed::project_id.eq(query_project.id))
@@ -93,10 +93,10 @@ pub async fn get_ls(
             schema::threshold::statistic_id,
         ))
         .order(schema::threshold::id)
-        .load::<QueryThreshold>(&*conn)
+        .load::<QueryThreshold>(conn)
         .map_err(|_| http_error!("Failed to get threshold."))?
         .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -130,35 +130,35 @@ pub async fn post(
     let db_connection = rqctx.context();
     let json_threshold = body.into_inner();
 
-    let conn = db_connection.lock().await;
+    let conn = &mut *db_connection.lock().await;
 
-    let branch_id = QueryBranch::get_id(&*conn, &json_threshold.branch)?;
-    let testbed_id = QueryTestbed::get_id(&*conn, &json_threshold.testbed)?;
+    let branch_id = QueryBranch::get_id(conn, &json_threshold.branch)?;
+    let testbed_id = QueryTestbed::get_id(conn, &json_threshold.testbed)?;
     let branch_project_id = schema::branch::table
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
-        .first::<i32>(&*conn)
+        .first::<i32>(conn)
         .map_err(|_| http_error!(ERROR))?;
     let testbed_project_id = schema::testbed::table
         .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
-        .first::<i32>(&*conn)
+        .first::<i32>(conn)
         .map_err(|_| http_error!(ERROR))?;
     if branch_project_id != testbed_project_id {
         return Err(http_error!(ERROR));
     }
 
-    let insert_threshold = InsertThreshold::from_json(&*conn, json_threshold)?;
+    let insert_threshold = InsertThreshold::from_json(conn, json_threshold)?;
     diesel::insert_into(schema::threshold::table)
         .values(&insert_threshold)
-        .execute(&*conn)
+        .execute(conn)
         .map_err(|_| http_error!(ERROR))?;
 
     let query_threshold = schema::threshold::table
         .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
-        .first::<QueryThreshold>(&*conn)
+        .first::<QueryThreshold>(conn)
         .map_err(|_| http_error!(ERROR))?;
-    let json = query_threshold.to_json(&*conn)?;
+    let json = query_threshold.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -197,8 +197,8 @@ pub async fn get_one(
     let path_params = path_params.into_inner();
     let threshold_uuid = path_params.threshold.to_string();
 
-    let conn = db_connection.lock().await;
-    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(
@@ -214,13 +214,13 @@ pub async fn get_one(
             schema::threshold::kind,
             schema::threshold::statistic_id,
         ))
-        .first::<QueryThreshold>(&*conn)
+        .first::<QueryThreshold>(conn)
     {
         Ok(query)
     } else {
         Err(http_error!("Failed to get threshold."))
     }?;
-    let json = query.to_json(&*conn)?;
+    let json = query.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

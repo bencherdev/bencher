@@ -38,7 +38,7 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
-    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::branch::table
             .filter(schema::branch::uuid.eq(uuid.to_string()))
             .select(schema::branch::id)
@@ -46,7 +46,7 @@ impl QueryBranch {
             .map_err(|_| http_error!(BRANCH_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::branch::table
             .filter(schema::branch::id.eq(id))
             .select(schema::branch::uuid)
@@ -55,7 +55,7 @@ impl QueryBranch {
         Uuid::from_str(&uuid).map_err(|_| http_error!(BRANCH_ERROR))
     }
 
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonBranch, HttpError> {
+    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, HttpError> {
         let Self {
             id: _,
             uuid,
@@ -73,7 +73,7 @@ impl QueryBranch {
 }
 
 #[derive(Insertable)]
-#[table_name = "branch_table"]
+#[diesel(table_name = branch_table)]
 pub struct InsertBranch {
     pub uuid:       String,
     pub project_id: i32,
@@ -82,7 +82,10 @@ pub struct InsertBranch {
 }
 
 impl InsertBranch {
-    pub fn from_json(conn: &SqliteConnection, branch: JsonNewBranch) -> Result<Self, HttpError> {
+    pub fn from_json(
+        conn: &mut SqliteConnection,
+        branch: JsonNewBranch,
+    ) -> Result<Self, HttpError> {
         let JsonNewBranch {
             project,
             name,
@@ -98,7 +101,7 @@ impl InsertBranch {
     }
 }
 
-fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> String {
+fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
     let mut slug = slug
         .map(|s| {
             if s == slug::slugify(&s) {

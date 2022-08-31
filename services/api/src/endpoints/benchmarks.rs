@@ -67,15 +67,15 @@ pub async fn get_ls(
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let conn = db_connection.lock().await;
-    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonBenchmark> = schema::benchmark::table
         .filter(schema::benchmark::project_id.eq(&query_project.id))
         .order(schema::benchmark::name)
-        .load::<QueryBenchmark>(&*conn)
+        .load::<QueryBenchmark>(conn)
         .map_err(|_| http_error!("Failed to get benchmarks."))?
         .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -115,21 +115,21 @@ pub async fn get_one(
     let path_params = path_params.into_inner();
     let benchmark = path_params.benchmark.to_string();
 
-    let conn = db_connection.lock().await;
-    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::benchmark::table
         .filter(
             schema::benchmark::project_id
                 .eq(project.id)
                 .and(schema::benchmark::uuid.eq(&benchmark)),
         )
-        .first::<QueryBenchmark>(&*conn)
+        .first::<QueryBenchmark>(conn)
     {
         Ok(query)
     } else {
         Err(http_error!("Failed to get benchmark."))
     }?;
-    let json = query.to_json(&*conn)?;
+    let json = query.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

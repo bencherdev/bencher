@@ -33,7 +33,7 @@ use crate::{
 const PROJECT_ERROR: &str = "Failed to get project.";
 
 #[derive(Insertable)]
-#[table_name = "project_table"]
+#[diesel(table_name = project_table)]
 pub struct InsertProject {
     pub uuid:        String,
     pub owner_id:    i32,
@@ -46,7 +46,7 @@ pub struct InsertProject {
 
 impl InsertProject {
     pub fn from_json(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         user_uuid: &Uuid,
         project: JsonNewProject,
     ) -> Result<Self, HttpError> {
@@ -70,7 +70,7 @@ impl InsertProject {
     }
 }
 
-fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> String {
+fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
     let mut slug = slug
         .map(|s| {
             if s == slug::slugify(&s) {
@@ -107,7 +107,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonProject, HttpError> {
+    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, HttpError> {
         let Self {
             id: _,
             uuid,
@@ -130,7 +130,7 @@ impl QueryProject {
     }
 
     pub fn from_resource_id(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         project: &ResourceId,
     ) -> Result<Self, HttpError> {
         let project = &project.0;
@@ -140,11 +140,11 @@ impl QueryProject {
                     .eq(project)
                     .or(schema::project::uuid.eq(project)),
             )
-            .first::<QueryProject>(&*conn)
+            .first::<QueryProject>(conn)
             .map_err(|_| http_error!(PROJECT_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::project::table
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)

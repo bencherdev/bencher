@@ -72,15 +72,15 @@ pub async fn get_ls(
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let conn = db_connection.lock().await;
-    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonTestbed> = schema::testbed::table
         .filter(schema::testbed::project_id.eq(&query_project.id))
         .order(schema::testbed::name)
-        .load::<QueryTestbed>(&*conn)
+        .load::<QueryTestbed>(conn)
         .map_err(|_| http_error!("Failed to get testbeds."))?
         .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -112,18 +112,18 @@ pub async fn post(
     let db_connection = rqctx.context();
     let json_testbed = body.into_inner();
 
-    let conn = db_connection.lock().await;
-    let insert_testbed = InsertTestbed::from_json(&*conn, json_testbed)?;
+    let conn = &mut *db_connection.lock().await;
+    let insert_testbed = InsertTestbed::from_json(conn, json_testbed)?;
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
-        .execute(&*conn)
-        .map_err(|_| http_error!("Failed to create testebed."))?;
+        .execute(conn)
+        .map_err(|_| http_error!("Failed to create testbed."))?;
 
     let query_testbed = schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
-        .first::<QueryTestbed>(&*conn)
-        .map_err(|_| http_error!("Failed to create testebed."))?;
-    let json = query_testbed.to_json(&*conn)?;
+        .first::<QueryTestbed>(conn)
+        .map_err(|_| http_error!("Failed to create testbed."))?;
+    let json = query_testbed.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -162,8 +162,8 @@ pub async fn get_one(
     let path_params = path_params.into_inner();
     let resource_id = path_params.testbed.as_str();
 
-    let conn = db_connection.lock().await;
-    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::testbed::table
         .filter(
             schema::testbed::project_id.eq(project.id).and(
@@ -172,13 +172,13 @@ pub async fn get_one(
                     .or(schema::testbed::uuid.eq(resource_id)),
             ),
         )
-        .first::<QueryTestbed>(&*conn)
+        .first::<QueryTestbed>(conn)
     {
         Ok(query)
     } else {
         Err(http_error!("Failed to get testbed."))
     }?;
-    let json = query.to_json(&*conn)?;
+    let json = query.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

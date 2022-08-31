@@ -9,14 +9,10 @@ use diesel::{
     SqliteConnection,
 };
 use dropshot::HttpError;
-use statrs::{
-    distribution::{
-        Continuous,
-        ContinuousCDF,
-        Normal,
-        StudentsT,
-    },
-    statistics::Distribution,
+use statrs::distribution::{
+    ContinuousCDF,
+    Normal,
+    StudentsT,
 };
 use uuid::Uuid;
 
@@ -50,7 +46,7 @@ pub struct Detector {
 
 impl Detector {
     pub fn new(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
         benchmarks: &[(String, i32)],
@@ -83,7 +79,7 @@ impl Detector {
 
     pub fn test(
         &mut self,
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         perf_id: i32,
         benchmark_name: &str,
         datum: f64,
@@ -149,7 +145,7 @@ impl Detector {
 
     fn alert(
         &self,
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         perf_id: i32,
         side: Side,
         boundary: f32,

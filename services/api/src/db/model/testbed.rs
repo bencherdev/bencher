@@ -45,7 +45,7 @@ pub struct QueryTestbed {
 }
 
 impl QueryTestbed {
-    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::testbed::table
             .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .select(schema::testbed::id)
@@ -53,7 +53,7 @@ impl QueryTestbed {
             .map_err(|_| http_error!(TESTBED_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::testbed::table
             .filter(schema::testbed::id.eq(id))
             .select(schema::testbed::uuid)
@@ -62,7 +62,7 @@ impl QueryTestbed {
         Uuid::from_str(&uuid).map_err(|_| http_error!(TESTBED_ERROR))
     }
 
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonTestbed, HttpError> {
+    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, HttpError> {
         let Self {
             id: _,
             uuid,
@@ -94,7 +94,7 @@ impl QueryTestbed {
 }
 
 #[derive(Insertable)]
-#[table_name = "testbed_table"]
+#[diesel(table_name = testbed_table)]
 pub struct InsertTestbed {
     pub uuid: String,
     pub project_id: i32,
@@ -110,7 +110,10 @@ pub struct InsertTestbed {
 }
 
 impl InsertTestbed {
-    pub fn from_json(conn: &SqliteConnection, testbed: JsonNewTestbed) -> Result<Self, HttpError> {
+    pub fn from_json(
+        conn: &mut SqliteConnection,
+        testbed: JsonNewTestbed,
+    ) -> Result<Self, HttpError> {
         let JsonNewTestbed {
             project,
             name,
@@ -140,7 +143,7 @@ impl InsertTestbed {
     }
 }
 
-fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> String {
+fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
     let mut slug = slug
         .map(|s| {
             if s == slug::slugify(&s) {

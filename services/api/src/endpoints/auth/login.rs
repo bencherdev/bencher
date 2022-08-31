@@ -55,10 +55,10 @@ pub async fn post(
     let db_connection = rqctx.context();
 
     let json_login = body.into_inner();
-    let conn = db_connection.lock().await;
+    let conn = &mut *db_connection.lock().await;
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))
-        .first::<QueryUser>(&*conn)
+        .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to login user."))?;
     let json_user = query_user.try_into()?;
 

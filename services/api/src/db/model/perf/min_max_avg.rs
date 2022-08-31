@@ -46,7 +46,7 @@ impl QueryMinMaxAvg {
 }
 
 #[derive(Insertable)]
-#[table_name = "min_max_avg_table"]
+#[diesel(table_name = min_max_avg_table)]
 pub struct InsertMinMaxAvg {
     pub uuid: String,
     pub min:  f64,
@@ -68,21 +68,21 @@ impl From<JsonMinMaxAvg> for InsertMinMaxAvg {
 
 impl InsertMinMaxAvg {
     pub fn map_json(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         min_max_avg: Option<JsonMinMaxAvg>,
     ) -> Result<Option<i32>, HttpError> {
         Ok(if let Some(json_min_max_avg) = min_max_avg {
             let insert_min_max_avg: InsertMinMaxAvg = json_min_max_avg.into();
             diesel::insert_into(schema::min_max_avg::table)
                 .values(&insert_min_max_avg)
-                .execute(&*conn)
+                .execute(conn)
                 .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
             Some(
                 schema::min_max_avg::table
                     .filter(schema::min_max_avg::uuid.eq(&insert_min_max_avg.uuid))
                     .select(schema::min_max_avg::id)
-                    .first::<i32>(&*conn)
+                    .first::<i32>(conn)
                     .map_err(|_| http_error!("Failed to create benchmark data."))?,
             )
         } else {

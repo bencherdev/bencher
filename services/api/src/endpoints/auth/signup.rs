@@ -58,12 +58,12 @@ pub async fn post(
     let db_connection = rqctx.context();
 
     let json_signup = body.into_inner();
-    let conn = db_connection.lock().await;
-    let insert_user = InsertUser::from_json(&conn, json_signup)?;
+    let conn = &mut *db_connection.lock().await;
+    let insert_user = InsertUser::from_json(conn, json_signup)?;
     let email = insert_user.email.clone();
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
-        .execute(&*conn)
+        .execute(conn)
         .map_err(|e| {
             HttpError::for_bad_request(
                 Some(String::from("BadInput")),
@@ -73,7 +73,7 @@ pub async fn post(
 
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&email))
-        .first::<QueryUser>(&*conn)
+        .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to signup user."))?;
     let json_user = query_user.try_into()?;
 

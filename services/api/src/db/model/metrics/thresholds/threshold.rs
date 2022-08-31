@@ -25,7 +25,7 @@ pub struct Threshold {
 
 impl Threshold {
     pub fn new(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
         kind: PerfKind,

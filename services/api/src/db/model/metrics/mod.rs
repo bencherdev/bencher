@@ -37,7 +37,7 @@ pub struct Metrics {
 
 impl Metrics {
     pub fn new(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,
@@ -53,7 +53,7 @@ impl Metrics {
 
     pub fn benchmark(
         &mut self,
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         iteration: i32,
         benchmark_name: &str,
         json_metrics: JsonMetrics,

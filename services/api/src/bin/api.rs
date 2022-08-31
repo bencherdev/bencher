@@ -12,8 +12,8 @@ const API_NAME: &str = "Bencher API";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    let db_connection = get_db_connection().map_err(|e| e.to_string())?;
-    run_migration(&db_connection).map_err(|e| e.to_string())?;
+    let mut db_connection = get_db_connection().map_err(|e| e.to_string())?;
+    run_migration(&mut db_connection).map_err(|e| e.to_string())?;
     get_server(API_NAME, &mut Api, Mutex::new(db_connection))
         .await?
         .await

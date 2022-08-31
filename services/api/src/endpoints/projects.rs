@@ -65,15 +65,15 @@ pub async fn get_ls(
     let uuid = get_token(&rqctx).await?;
     let db_connection = rqctx.context();
 
-    let conn = db_connection.lock().await;
-    let owner_id = QueryUser::get_id(&*conn, &uuid)?;
+    let conn = &mut *db_connection.lock().await;
+    let owner_id = QueryUser::get_id(conn, &uuid)?;
     let json: Vec<JsonProject> = schema::project::table
         .filter(schema::project::owner_id.eq(owner_id))
         .order(schema::project::name)
-        .load::<QueryProject>(&*conn)
+        .load::<QueryProject>(conn)
         .map_err(|_| http_error!("Failed to get projects."))?
         .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -95,18 +95,18 @@ pub async fn post(
     let db_connection = rqctx.context();
     let json_project = body.into_inner();
 
-    let conn = db_connection.lock().await;
-    let insert_project = InsertProject::from_json(&*conn, &user_uuid, json_project)?;
+    let conn = &mut *db_connection.lock().await;
+    let insert_project = InsertProject::from_json(conn, &user_uuid, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
-        .execute(&*conn)
+        .execute(conn)
         .map_err(|_| http_error!("Failed to create project."))?;
 
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
-        .first::<QueryProject>(&*conn)
+        .first::<QueryProject>(conn)
         .map_err(|_| http_error!("Failed to create project."))?;
-    let json = query_project.to_json(&*conn)?;
+    let json = query_project.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -143,9 +143,9 @@ pub async fn get_one(
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let conn = db_connection.lock().await;
-    let query = QueryProject::from_resource_id(&*conn, &path_params.project)?;
-    let json = query.to_json(&*conn)?;
+    let conn = &mut *db_connection.lock().await;
+    let query = QueryProject::from_resource_id(conn, &path_params.project)?;
+    let json = query.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

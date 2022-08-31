@@ -28,7 +28,7 @@ use crate::{
 const USER_ERROR: &str = "Failed to get user.";
 
 #[derive(Insertable)]
-#[table_name = "user_table"]
+#[diesel(table_name = user_table)]
 pub struct InsertUser {
     pub uuid:  String,
     pub name:  String,
@@ -37,7 +37,7 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn from_json(conn: &SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
+    pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup { name, slug, email } = signup;
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
@@ -49,7 +49,7 @@ impl InsertUser {
     }
 }
 
-fn validate_slug(conn: &SqliteConnection, name: &str, slug: Option<String>) -> String {
+fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
     let mut slug = slug
         .map(|s| {
             if s == slug::slugify(&s) {
@@ -117,7 +117,7 @@ impl TryInto<JsonUser> for QueryUser {
 }
 
 impl QueryUser {
-    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::user::table
             .filter(schema::user::uuid.eq(uuid.to_string()))
             .select(schema::user::id)
@@ -125,7 +125,7 @@ impl QueryUser {
             .map_err(|_| http_error!(USER_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::uuid)
@@ -135,7 +135,7 @@ impl QueryUser {
     }
 
     pub fn has_access(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         project_id: i32,
         user_uuid: Uuid,
     ) -> Result<i32, HttpError> {

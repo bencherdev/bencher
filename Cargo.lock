@@ -113,8 +113,8 @@ version = "0.1.0"
 dependencies = [
  "bencher_json",
  "chrono",
- "diesel",
- "diesel_migrations",
+ "diesel 2.0.0",
+ "diesel_migrations 2.0.0",
  "dotenv",
  "dropshot 0.7.1-dev",
  "email-address-parser",
@@ -415,10 +415,20 @@ dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
- "diesel_derives",
- "libsqlite3-sys",
+ "diesel_derives 1.4.1",
  "pq-sys",
  "serde_json",
+]
+
+[[package]]
+name = "diesel"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01e2adfd0a7a81070ed7beec0c62636458926326c16fedb77796d41e447b282d"
+dependencies = [
+ "chrono",
+ "diesel_derives 2.0.0",
+ "libsqlite3-sys",
 ]
 
 [[package]]
@@ -433,13 +443,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel_derives"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22a7ab9d7967e6a1a247ea38aedf88ab808b4ac0c159576bc71866ab8f9f9250"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "diesel_migrations"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf3cde8413353dc7f5d72fa8ce0b99a560a359d2c5ef1e5817ca731cd9008f4c"
 dependencies = [
- "migrations_internals",
- "migrations_macros",
+ "migrations_internals 1.4.1",
+ "migrations_macros 1.4.2",
+]
+
+[[package]]
+name = "diesel_migrations"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9ae22beef5e9d6fab9225ddb073c1c6c1a7a6ded5019d5da11d1e5c5adc34e2"
+dependencies = [
+ "diesel 2.0.0",
+ "migrations_internals 2.0.0",
+ "migrations_macros 2.0.0",
 ]
 
 [[package]]
@@ -679,8 +712,8 @@ name = "fn_admin"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "diesel",
- "diesel_migrations",
+ "diesel 1.4.8",
+ "diesel_migrations 1.4.0",
  "dropshot 0.7.0",
  "email-address-parser",
  "jsonwebtoken",
@@ -699,7 +732,7 @@ name = "fn_reports"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "diesel",
+ "diesel 1.4.8",
  "dropshot 0.7.0",
  "email-address-parser",
  "jsonwebtoken",
@@ -1216,7 +1249,17 @@ version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b4fc84e4af020b837029e017966f86a1c2d5e83e64b589963d5047525995860"
 dependencies = [
- "diesel",
+ "diesel 1.4.8",
+]
+
+[[package]]
+name = "migrations_internals"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c493c09323068c01e54c685f7da41a9ccf9219735c3766fbfd6099806ea08fbc"
+dependencies = [
+ "serde",
+ "toml",
 ]
 
 [[package]]
@@ -1225,10 +1268,21 @@ version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9753f12909fd8d923f75ae5c3258cae1ed3c8ec052e1b38c93c21a6d157f789c"
 dependencies = [
- "migrations_internals",
+ "migrations_internals 1.4.1",
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "migrations_macros"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a8ff27a350511de30cdabb77147501c36ef02e0451d957abea2f30caffb2b58"
+dependencies = [
+ "migrations_internals 2.0.0",
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]
@@ -2272,7 +2326,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 name = "swagger"
 version = "0.1.0"
 dependencies = [
- "diesel",
+ "diesel 1.4.8",
  "dropshot 0.7.0",
  "fn_admin",
  "fn_reports",
@@ -2674,7 +2728,7 @@ name = "util"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "diesel",
+ "diesel 1.4.8",
  "dropshot 0.7.0",
  "reports",
  "schemars",

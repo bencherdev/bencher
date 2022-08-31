@@ -51,7 +51,7 @@ pub struct QueryThreshold {
 }
 
 impl QueryThreshold {
-    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::threshold::table
             .filter(schema::threshold::uuid.eq(uuid.to_string()))
             .select(schema::threshold::id)
@@ -59,7 +59,7 @@ impl QueryThreshold {
             .map_err(|_| http_error!(THRESHOLD_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::threshold::table
             .filter(schema::threshold::id.eq(id))
             .select(schema::threshold::uuid)
@@ -68,7 +68,7 @@ impl QueryThreshold {
         Uuid::from_str(&uuid).map_err(|_| http_error!(THRESHOLD_ERROR))
     }
 
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonThreshold, HttpError> {
+    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, HttpError> {
         let Self {
             id: _,
             uuid,
@@ -136,7 +136,7 @@ impl Into<JsonPerfKind> for PerfKind {
 }
 
 #[derive(Insertable)]
-#[table_name = "threshold_table"]
+#[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid:         String,
     pub branch_id:    i32,
@@ -147,7 +147,7 @@ pub struct InsertThreshold {
 
 impl InsertThreshold {
     pub fn from_json(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         json_threshold: JsonNewThreshold,
     ) -> Result<Self, HttpError> {
         let JsonNewThreshold {

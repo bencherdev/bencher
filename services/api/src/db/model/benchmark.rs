@@ -35,7 +35,7 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::benchmark::table
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .select(schema::benchmark::id)
@@ -44,7 +44,7 @@ impl QueryBenchmark {
     }
 
     pub fn get_id_from_name(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         project_id: i32,
         name: &str,
     ) -> Result<i32, HttpError> {
@@ -59,7 +59,7 @@ impl QueryBenchmark {
             .map_err(|_| http_error!(BENCHMARK_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::benchmark::table
             .filter(schema::benchmark::id.eq(id))
             .select(schema::benchmark::uuid)
@@ -68,7 +68,7 @@ impl QueryBenchmark {
         Uuid::from_str(&uuid).map_err(|_| http_error!(BENCHMARK_ERROR))
     }
 
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonBenchmark, HttpError> {
+    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, HttpError> {
         let QueryBenchmark {
             id: _,
             uuid,
@@ -83,7 +83,7 @@ impl QueryBenchmark {
     }
 
     pub fn get_or_create(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         project_id: i32,
         name: &str,
     ) -> Result<i32, HttpError> {
@@ -108,7 +108,7 @@ impl QueryBenchmark {
 }
 
 #[derive(Insertable)]
-#[table_name = "benchmark_table"]
+#[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
     pub uuid:       String,
     pub project_id: i32,

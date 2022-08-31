@@ -60,7 +60,7 @@ pub struct QueryReport {
 }
 
 impl QueryReport {
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::report::table
             .filter(schema::report::id.eq(id))
             .select(schema::report::uuid)
@@ -69,7 +69,7 @@ impl QueryReport {
         Uuid::from_str(&uuid).map_err(|_| http_error!(REPORT_ERROR))
     }
 
-    pub fn to_json(self, conn: &SqliteConnection) -> Result<JsonReport, HttpError> {
+    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, HttpError> {
         let benchmarks = self.get_benchmarks(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {
@@ -95,7 +95,10 @@ impl QueryReport {
         })
     }
 
-    fn get_benchmarks(&self, conn: &SqliteConnection) -> Result<JsonReportBenchmarks, HttpError> {
+    fn get_benchmarks(
+        &self,
+        conn: &mut SqliteConnection,
+    ) -> Result<JsonReportBenchmarks, HttpError> {
         Ok(schema::perf::table
             .inner_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -114,7 +117,7 @@ impl QueryReport {
             .collect())
     }
 
-    fn get_alerts(&self, conn: &SqliteConnection) -> Result<JsonReportAlerts, HttpError> {
+    fn get_alerts(&self, conn: &mut SqliteConnection) -> Result<JsonReportAlerts, HttpError> {
         Ok(schema::alert::table
             .left_join(schema::perf::table.on(schema::perf::id.eq(schema::alert::perf_id)))
             .filter(schema::perf::report_id.eq(self.id))
@@ -174,7 +177,7 @@ impl Into<JsonAdapter> for Adapter {
 }
 
 #[derive(Insertable)]
-#[table_name = "report_table"]
+#[diesel(table_name = report_table)]
 pub struct InsertReport {
     pub uuid:       String,
     pub user_id:    i32,

@@ -72,15 +72,15 @@ pub async fn get_ls(
     let db_connection = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let conn = db_connection.lock().await;
-    let query_project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonBranch> = schema::branch::table
         .filter(schema::branch::project_id.eq(&query_project.id))
         .order(schema::branch::name)
-        .load::<QueryBranch>(&*conn)
+        .load::<QueryBranch>(conn)
         .map_err(|_| http_error!("Failed to get branches."))?
         .into_iter()
-        .filter_map(|query| query.to_json(&*conn).ok())
+        .filter_map(|query| query.to_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -112,18 +112,18 @@ pub async fn post(
     let db_connection = rqctx.context();
     let json_branch = body.into_inner();
 
-    let conn = db_connection.lock().await;
-    let insert_branch = InsertBranch::from_json(&*conn, json_branch)?;
+    let conn = &mut *db_connection.lock().await;
+    let insert_branch = InsertBranch::from_json(conn, json_branch)?;
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
-        .execute(&*conn)
+        .execute(conn)
         .map_err(|_| http_error!("Failed to create branch."))?;
 
     let query_branch = schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
-        .first::<QueryBranch>(&*conn)
+        .first::<QueryBranch>(conn)
         .map_err(|_| http_error!("Failed to create branch."))?;
-    let json = query_branch.to_json(&*conn)?;
+    let json = query_branch.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -162,8 +162,8 @@ pub async fn get_one(
     let path_params = path_params.into_inner();
     let resource_id = path_params.branch.as_str();
 
-    let conn = db_connection.lock().await;
-    let project = QueryProject::from_resource_id(&*conn, &path_params.project)?;
+    let conn = &mut *db_connection.lock().await;
+    let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::branch::table
         .filter(
             schema::branch::project_id.eq(project.id).and(
@@ -172,13 +172,13 @@ pub async fn get_one(
                     .or(schema::branch::uuid.eq(resource_id)),
             ),
         )
-        .first::<QueryBranch>(&*conn)
+        .first::<QueryBranch>(conn)
     {
         Ok(query)
     } else {
         Err(http_error!("Failed to get branch."))
     }?;
-    let json = query.to_json(&*conn)?;
+    let json = query.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

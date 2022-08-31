@@ -28,7 +28,7 @@ pub struct Thresholds {
 
 impl Thresholds {
     pub fn new(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,
@@ -65,7 +65,7 @@ impl Thresholds {
 
     pub fn test(
         &mut self,
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         perf_id: i32,
         benchmark_name: &str,
         json_metrics: JsonMetrics,

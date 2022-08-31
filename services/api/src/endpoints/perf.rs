@@ -100,7 +100,7 @@ pub async fn post(
         schema::perf::iteration,
     );
 
-    let conn = db_connection.lock().await;
+    let conn = &mut *db_connection.lock().await;
     let mut data = Vec::new();
     for branch in &branches {
         for testbed in &testbeds {
@@ -163,7 +163,7 @@ pub async fn post(
                                     i64,
                                     i64,
                                     i64,
-                                )>(&*conn)
+                                )>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
                                 .map(
@@ -232,7 +232,7 @@ pub async fn post(
                                 f64,
                                 f64,
                                 i64,
-                            )>(&*conn)
+                            )>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
                             .map(
@@ -300,7 +300,7 @@ pub async fn post(
                                 f64,
                                 f64,
                                 f64,
-                            )>(&*conn)
+                            )>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
                             .map(
@@ -367,7 +367,7 @@ pub async fn post(
                                     f64,
                                     f64,
                                     f64,
-                                )>(&*conn)
+                                )>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
                                 .map(
@@ -434,7 +434,7 @@ pub async fn post(
                                 f64,
                                 f64,
                                 f64,
-                            )>(&*conn)
+                            )>(conn)
                             .map_err(|_| http_error!(PERF_ERROR))?
                             .into_iter()
                             .map(

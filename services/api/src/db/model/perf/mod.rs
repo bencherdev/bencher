@@ -47,7 +47,7 @@ pub struct QueryPerf {
 }
 
 impl QueryPerf {
-    pub fn get_id(conn: &SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::perf::table
             .filter(schema::perf::uuid.eq(uuid.to_string()))
             .select(schema::perf::id)
@@ -55,7 +55,7 @@ impl QueryPerf {
             .map_err(|_| http_error!(PERF_ERROR))
     }
 
-    pub fn get_uuid(conn: &SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
         let uuid: String = schema::perf::table
             .filter(schema::perf::id.eq(id))
             .select(schema::perf::uuid)
@@ -66,7 +66,7 @@ impl QueryPerf {
 }
 
 #[derive(Insertable)]
-#[table_name = "perf_table"]
+#[diesel(table_name = perf_table)]
 pub struct InsertPerf {
     pub uuid:          String,
     pub report_id:     i32,
@@ -81,7 +81,7 @@ pub struct InsertPerf {
 
 impl InsertPerf {
     pub fn from_json(
-        conn: &SqliteConnection,
+        conn: &mut SqliteConnection,
         report_id: i32,
         iteration: i32,
         benchmark_id: i32,
