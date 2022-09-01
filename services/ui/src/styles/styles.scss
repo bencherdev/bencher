@@ -1,5 +1,6 @@
 @import "./variables.scss";
 
+
 $primary: $orange !default;
 
 $link: $orange !default;
@@ -18,6 +19,8 @@ $badoge-z-index: 5 !default;
 @import "../node_modules/bulma/bulma.sass";
 @import "../node_modules/bulma-pricingtable/src/sass/index.sass";
 @import "../node_modules/bulma-switch/src/sass/index.sass";
+
+@import "./swagger-ui.css";
 
 .columns.is-reverse-mobile {
   @include mobile {
