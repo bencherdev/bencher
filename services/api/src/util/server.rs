@@ -4,7 +4,6 @@ use dropshot::{
     ConfigLogging,
     ConfigLoggingLevel,
     HttpServer,
-    ServerContext,
 };
 
 const PORT_KEY: &str = "BENCHER_PORT";

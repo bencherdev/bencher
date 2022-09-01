@@ -27,7 +27,7 @@ async fn run() -> Result<(), String> {
         TagDetails,
     };
 
-    const API_VERSION: &str = "0.1.0";
+    const API_VERSION: &str = env!("CARGO_PKG_VERSION");
     const SWAGGER_PATH: &str = "../ui/src/components/docs/api/swagger.json";
 
     let mut db_connection = get_db_connection().map_err(|e| e.to_string())?;

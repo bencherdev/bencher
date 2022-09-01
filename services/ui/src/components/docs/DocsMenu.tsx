@@ -9,10 +9,15 @@ const asSlug = (text: string) => {
 
 export enum Section {
   HOW_TO = "How To",
+  REFERENCE = "Reference",
 }
 
 export enum HowTo {
   QUICK_START = "Quick Start",
+}
+
+export enum Reference {
+  API = "API",
 }
 
 const DocsMenu = (props) => {
@@ -30,14 +35,11 @@ const DocsMenu = (props) => {
           </Link>
         </li>
       </ul>
-      <p class="menu-label">User</p>
+      <p class="menu-label">{Section.REFERENCE}</p>
       <ul class="menu-list">
-        <li>
-          <Link href="/console/user/account">Account</Link>
-        </li>
-        <li>
-          <Link href="/console/user/settings">Settings</Link>
-        </li>
+        <Link href={getDocsPath(Section.REFERENCE, Reference.API)}>
+          {Reference.API}
+        </Link>
       </ul>
     </aside>
   );

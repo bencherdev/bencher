@@ -1,7 +1,7 @@
 import { useParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import DocsMenu from "./DocsMenu";
-// import ConsolePanel from "./panel/ConsolePanel";
+import DocsPanel from "./DocsPanel";
 
 const DocsPage = (props) => {
   return (
@@ -9,23 +9,10 @@ const DocsPage = (props) => {
       <div class="container">
         <div class="columns is-reverse-mobile">
           <div class="column is-one-fifth">
-            <DocsMenu
-              project_slug={props.project_slug}
-              handleRedirect={props.handleRedirect}
-              handleProjectSlug={props.handleProjectSlug}
-            />
+            <DocsMenu />
           </div>
           <div class="column">
-            {/* <ConsolePanel
-              project_slug={props.project_slug}
-              operation={props.operation}
-              config={props.config}
-              path_params={path_params}
-              pathname={props.pathname}
-              handleTitle={props.handleTitle}
-              handleRedirect={props.handleRedirect}
-              handleProjectSlug={props.handleProjectSlug}
-            /> */}
+            <DocsPanel page={props.page} />
           </div>
         </div>
       </div>

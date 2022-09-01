@@ -159,7 +159,7 @@ const App: Component = () => {
           <div class="container">{getNotification()}</div>
         </section>
       )}
-      <div id="swagger" />
+      {/* <div id="swagger" /> */}
 
       <Routes>
         <Route

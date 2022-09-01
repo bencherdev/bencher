@@ -45,7 +45,7 @@ export const Navbar = (props) => {
             Docs
           </a>
 
-          <a class="navbar-item" href="/docs/api" target="_blank">
+          <a class="navbar-item" href="/docs/reference/api">
             API
           </a>
 
