@@ -20,11 +20,17 @@ const DocsRoutes = (props) => {
       <Route path="/api" element={<Navigate href="/docs/api/v0" />} />
       <Route
         path="/api/v0"
-        element={SwaggerUI({
-          dom_id: "#root",
-          spec: swagger,
-          layout: "BaseLayout",
-        })}
+        element={
+          <>
+            <div>
+              {SwaggerUI({
+                dom_id: "#swagger",
+                spec: swagger,
+                layout: "BaseLayout",
+              })}
+            </div>
+          </>
+        }
       />
     </>
   );

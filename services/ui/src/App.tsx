@@ -159,6 +159,7 @@ const App: Component = () => {
           <div class="container">{getNotification()}</div>
         </section>
       )}
+      <div id="swagger" />
 
       <Routes>
         <Route
