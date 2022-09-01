@@ -4,7 +4,7 @@ import mdx from "@mdx-js/rollup"
 // import wasmPack from "vite-plugin-wasm-pack";
 
 export default defineConfig({
-  plugins: [solidPlugin(), mdx()],
+  plugins: [mdx({ jsxImportSource: 'solid-jsx'}), solidPlugin()],
   // plugins: [solidPlugin(), wasmPack("../lib/bencher_json")],
   build: {
     target: "esnext",

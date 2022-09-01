@@ -2,9 +2,6 @@ import { Link } from "solid-app-router";
 import { Accessor } from "solid-js";
 import ProjectSelect from "./ProjectSelect";
 
-const BENCHER_UI_URL: string = import.meta.env.VITE_BENCHER_UI_URL;
-const BENCHER_DOCS_URL: string = import.meta.env.VITE_BENCHER_DOCS_URL;
-const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
 
 export interface Props {
@@ -44,11 +41,11 @@ export const Navbar = (props) => {
 
       <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
-          <a class="navbar-item" href={BENCHER_DOCS_URL} target="_blank">
+          <a class="navbar-item" href="/docs">
             Docs
           </a>
 
-          <a class="navbar-item" href={BENCHER_API_URL} target="_blank">
+          <a class="navbar-item" href="/docs/api" target="_blank">
             API
           </a>
 

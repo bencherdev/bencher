@@ -180,7 +180,7 @@ pub async fn post(
                                         upper_variance,
                                         duration,
                                     )| {
-                                        let perf = QueryPerfDatumKind::Latency(QueryLatency {
+                                        let metrics = QueryPerfMetrics::Latency(QueryLatency {
                                             id: latency_id,
                                             uuid: latency_uuid,
                                             lower_variance,
@@ -194,7 +194,7 @@ pub async fn post(
                                             end_time,
                                             version_number,
                                             version_hash,
-                                            perf,
+                                            metrics,
                                         }
                                     },
                                 )
@@ -250,7 +250,7 @@ pub async fn post(
                                     events,
                                     unit_time,
                                 )| {
-                                    let perf = QueryPerfDatumKind::Throughput(QueryThroughput {
+                                    let metrics = QueryPerfMetrics::Throughput(QueryThroughput {
                                         id: throughput_id,
                                         uuid: throughput_uuid,
                                         lower_variance,
@@ -265,7 +265,7 @@ pub async fn post(
                                         end_time,
                                         version_number,
                                         version_hash,
-                                        perf,
+                                        metrics,
                                     }
                                 },
                             )
@@ -317,7 +317,7 @@ pub async fn post(
                                     max,
                                     avg,
                                 )| {
-                                    let perf = QueryPerfDatumKind::Compute(QueryMinMaxAvg {
+                                    let metrics = QueryPerfMetrics::Compute(QueryMinMaxAvg {
                                         id: mma_id,
                                         uuid: mma_uuid,
                                         min,
@@ -331,7 +331,7 @@ pub async fn post(
                                         end_time,
                                         version_number,
                                         version_hash,
-                                        perf,
+                                        metrics,
                                     }
                                 },
                             )
@@ -384,7 +384,7 @@ pub async fn post(
                                         max,
                                         avg,
                                     )| {
-                                        let perf = QueryPerfDatumKind::Memory(QueryMinMaxAvg {
+                                        let metrics = QueryPerfMetrics::Memory(QueryMinMaxAvg {
                                             id: mma_id,
                                             uuid: mma_uuid,
                                             min,
@@ -398,7 +398,7 @@ pub async fn post(
                                             end_time,
                                             version_number,
                                             version_hash,
-                                            perf,
+                                            metrics,
                                         }
                                     },
                                 )
@@ -451,7 +451,7 @@ pub async fn post(
                                     max,
                                     avg,
                                 )| {
-                                    let perf = QueryPerfDatumKind::Storage(QueryMinMaxAvg {
+                                    let metrics = QueryPerfMetrics::Storage(QueryMinMaxAvg {
                                         id: mma_id,
                                         uuid: mma_uuid,
                                         min,
@@ -465,7 +465,7 @@ pub async fn post(
                                         end_time,
                                         version_number,
                                         version_hash,
-                                        perf,
+                                        metrics,
                                     }
                                 },
                             )
@@ -488,7 +488,7 @@ pub async fn post(
         kind,
         start_time,
         end_time,
-        data,
+        benchmarks: data,
     };
 
     Ok(HttpResponseHeaders::new(
@@ -503,15 +503,15 @@ fn to_json(
     benchmark: Uuid,
     query_data: Vec<QueryPerfDatum>,
 ) -> Result<JsonPerfData, HttpError> {
-    let mut perfs = Vec::new();
+    let mut data = Vec::new();
     for query_datum in query_data {
-        perfs.push(QueryPerfDatum::to_json(query_datum)?)
+        data.push(QueryPerfDatum::to_json(query_datum)?)
     }
     Ok(JsonPerfData {
         branch,
         testbed,
         benchmark,
-        perfs,
+        data,
     })
 }
 
@@ -523,7 +523,7 @@ pub struct QueryPerfDatum {
     pub end_time:       i64,
     pub version_number: i32,
     pub version_hash:   Option<String>,
-    pub perf:           QueryPerfDatumKind,
+    pub metrics:        QueryPerfMetrics,
 }
 
 impl QueryPerfDatum {
@@ -535,7 +535,7 @@ impl QueryPerfDatum {
             end_time,
             version_number,
             version_hash,
-            perf,
+            metrics,
         } = self;
         Ok(JsonPerfDatum {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(PERF_ERROR))?,
@@ -544,13 +544,13 @@ impl QueryPerfDatum {
             end_time: to_date_time(end_time)?,
             version_number: version_number as u32,
             version_hash,
-            perf: QueryPerfDatumKind::to_json(perf)?,
+            metrics: QueryPerfMetrics::to_json(metrics)?,
         })
     }
 }
 
 #[derive(Debug)]
-pub enum QueryPerfDatumKind {
+pub enum QueryPerfMetrics {
     Latency(QueryLatency),
     Throughput(QueryThroughput),
     Compute(QueryMinMaxAvg),
@@ -558,7 +558,7 @@ pub enum QueryPerfDatumKind {
     Storage(QueryMinMaxAvg),
 }
 
-impl QueryPerfDatumKind {
+impl QueryPerfMetrics {
     fn to_json(self) -> Result<JsonPerfDatumKind, HttpError> {
         Ok(match self {
             Self::Latency(latency) => JsonPerfDatumKind::Latency(QueryLatency::to_json(latency)?),

@@ -44,7 +44,7 @@ pub struct JsonPerf {
     pub kind:       JsonPerfKind,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time:   Option<DateTime<Utc>>,
-    pub data:       Vec<JsonPerfData>,
+    pub benchmarks: Vec<JsonPerfData>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -53,7 +53,7 @@ pub struct JsonPerfData {
     pub branch:    Uuid,
     pub testbed:   Uuid,
     pub benchmark: Uuid,
-    pub perfs:     Vec<JsonPerfDatum>,
+    pub data:      Vec<JsonPerfDatum>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -65,13 +65,12 @@ pub struct JsonPerfDatum {
     pub end_time:       DateTime<Utc>,
     pub version_number: u32,
     pub version_hash:   Option<String>,
-    #[serde(flatten)]
-    pub perf:           JsonPerfDatumKind,
+    pub metrics:        JsonPerfDatumKind,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "snake_case")]
+#[serde(untagged)]
 pub enum JsonPerfDatumKind {
     Latency(JsonLatency),
     Throughput(JsonThroughput),

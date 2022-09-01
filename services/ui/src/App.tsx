@@ -18,12 +18,11 @@ import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
 
-import example from "./components/docs/example.mdx";
-
 const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
+const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 
 const initUser = () => {
   return {
@@ -41,6 +40,8 @@ const initNotification = () => {
     text: null,
   };
 };
+
+// console.log(Example()());
 
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
@@ -170,6 +171,7 @@ const App: Component = () => {
             />
           }
         />
+
         {/* Auth Routes */}
         <Route path="/auth">
           <Route
@@ -210,6 +212,7 @@ const App: Component = () => {
           />
         </Route>
 
+        {/* Console Routes */}
         <Route path="/console">
           <ConsoleRoutes
             user={user}
@@ -221,7 +224,10 @@ const App: Component = () => {
           />
         </Route>
 
-        <Route path="/docs">{example}</Route>
+        {/* Docs Routes */}
+        <Route path="/docs">
+          <DocsRoutes />
+        </Route>
       </Routes>
 
       <For each={[...Array(9).keys()]}>{(_k, _i) => <br />}</For>

@@ -15,20 +15,14 @@ const DEFAULT_PORT: &str = "8080";
 // 1 megabyte or 1_048_576 bytes
 const MAX_BODY_SIZE: usize = 1 << 20;
 
-use super::registrar::Registrar;
+use super::{registrar::Registrar, Context};
+use crate::endpoints::Api;
 
-pub async fn get_server<Context>(
-    api_name: &str,
-    registrar: &mut impl Registrar<Context>,
-    private: Context,
-) -> Result<HttpServer<Context>, String>
-where
-    Context: ServerContext,
-{
+pub async fn get_server(api_name: &str, private: Context) -> Result<HttpServer<Context>, String> {
     let config = get_config();
 
     let mut api = ApiDescription::new();
-    registrar.register(&mut api)?;
+    Api::register(&mut api)?;
 
     let log = get_logger(api_name)?;
 

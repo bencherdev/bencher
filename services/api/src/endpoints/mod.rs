@@ -18,7 +18,7 @@ use crate::util::{
 pub struct Api;
 
 impl Registrar<Context> for Api {
-    fn register(&self, api: &mut ApiDescription<Context>) -> Result<(), String> {
+    fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
         // Ping
         api.register(ping::api_get_ping)?;
         // Auth

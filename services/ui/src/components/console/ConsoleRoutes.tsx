@@ -26,7 +26,7 @@ const ConsoleRoutes = (props) => {
   return (
     <>
       {/* Console Routes */}
-      <Route path="/" element={<Navigate href={"/console/projects"} />} />
+      <Route path="/" element={<Navigate href="/console/projects" />} />
       {/* Console Projects Routes */}
       <Route
         path="/projects"
