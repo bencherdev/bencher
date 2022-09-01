@@ -356,6 +356,7 @@ const PerfPanel = (props) => {
         handleRefresh={handleRefresh}
       />
       <PerfPlot
+        project_slug={props.project_slug}
         config={props.config?.plot}
         path_params={props.path_params}
         isPlotInit={isPlotInit}

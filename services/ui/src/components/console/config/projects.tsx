@@ -21,6 +21,12 @@ const projectsConfig = {
       url: (_path_params) => {
         return `${BENCHER_API_URL}/v0/projects`;
       },
+      add: {
+        path: (pathname) => {
+          return addPath(pathname);
+        },
+        text: "Add a Project",
+      },
       row: {
         key: "name",
         items: [

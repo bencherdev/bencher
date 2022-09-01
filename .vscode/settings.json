@@ -23,6 +23,8 @@
     "consts",
     "Deque",
     "dropshot",
+    "ello",
+    "fullwidth",
     "Insertable",
     "nanos",
     "perfs",

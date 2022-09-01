@@ -28,6 +28,12 @@ const thresholdsConfig = {
       url: (path_params) => {
         return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds`;
       },
+      add: {
+        path: (pathname) => {
+          return addPath(pathname);
+        },
+        text: "Add a Threshold",
+      },
       row: {
         key: "uuid",
         items: [{}, {}, {}, {}],

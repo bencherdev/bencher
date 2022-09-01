@@ -53,6 +53,7 @@ const ConsolePage = (props) => {
           </div>
           <div class="column">
             <ConsolePanel
+              project_slug={props.project_slug}
               operation={props.operation}
               config={props.config}
               path_params={path_params}

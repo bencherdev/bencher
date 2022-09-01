@@ -22,6 +22,12 @@ const testbedsConfig = {
       url: (path_params) => {
         return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`;
       },
+      add: {
+        path: (pathname) => {
+          return addPath(pathname);
+        },
+        text: "Add a Testbed",
+      },
       row: {
         key: "name",
         items: [

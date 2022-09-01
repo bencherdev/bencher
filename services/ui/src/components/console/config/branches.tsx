@@ -22,6 +22,12 @@ const branchesConfig = {
       url: (path_params) => {
         return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/branches`;
       },
+      add: {
+        path: (pathname) => {
+          return addPath(pathname);
+        },
+        text: "Add a Branch",
+      },
       row: {
         key: "name",
         items: [

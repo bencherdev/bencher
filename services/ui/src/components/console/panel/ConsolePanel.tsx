@@ -36,6 +36,7 @@ const ConsolePanel = (props) => {
       </Match>
       <Match when={props.config?.operation === Operation.PERF}>
         <PerfPanel
+          project_slug={props.project_slug}
           config={props.config}
           path_params={props.path_params}
           handleTitle={props.handleTitle}

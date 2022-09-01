@@ -14,6 +14,12 @@ const reportsConfig = {
       url: (path_params) => {
         return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/reports`;
       },
+      add: {
+        path: (_pathname) => {
+          return "/docs/how-to/run-a-report";
+        },
+        text: "Run a Report",
+      },
       row: {
         key: "start_time",
         items: [{}, {}, {}, {}],
