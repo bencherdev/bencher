@@ -241,14 +241,21 @@ const PerfPanel = (props) => {
     }
   };
 
+  const project_refresh = createMemo(() => {
+    return {
+      project_slug: props.path_params().project_slug,
+      refresh: refresh(),
+    };
+  });
+
   // Resource tabs data: Branches, Testbeds, Benchmarks
-  const [branches_data] = createResource(refresh, async () => {
+  const [branches_data] = createResource(project_refresh, async () => {
     return fetchPerfTab(PerfTab.BRANCHES);
   });
-  const [testbeds_data] = createResource(refresh, async () => {
+  const [testbeds_data] = createResource(project_refresh, async () => {
     return fetchPerfTab(PerfTab.TESTBEDS);
   });
-  const [benchmarks_data] = createResource(refresh, async () => {
+  const [benchmarks_data] = createResource(project_refresh, async () => {
     return fetchPerfTab(PerfTab.BENCHMARKS);
   });
 
@@ -257,7 +264,10 @@ const PerfPanel = (props) => {
   const [testbeds_tab, setTestbedsTab] = createSignal([]);
   const [benchmarks_tab, setBenchmarksTab] = createSignal([]);
 
-  // Keep state on whether the resouces have been refreshed
+  // Keep state on whether the project slug has changed
+  const [project_slug, setProjectSlug] = createSignal(props.project_slug());
+
+  // Keep state on whether the resources have been refreshed
   const [tabular_refresh, setTabularRefresh] = createSignal();
 
   createEffect(() => {
