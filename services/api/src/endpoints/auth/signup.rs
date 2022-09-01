@@ -75,7 +75,7 @@ pub async fn post(
         .filter(schema::user::email.eq(&email))
         .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to signup user."))?;
-    let json_user = query_user.try_into()?;
+    let json_user = query_user.to_json()?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json_user),

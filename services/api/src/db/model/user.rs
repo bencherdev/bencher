@@ -91,31 +91,6 @@ pub struct QueryUser {
     pub email: String,
 }
 
-impl TryInto<JsonUser> for QueryUser {
-    type Error = HttpError;
-
-    fn try_into(self) -> Result<JsonUser, Self::Error> {
-        let Self {
-            id: _,
-            uuid,
-            name,
-            slug,
-            email,
-        } = self;
-        Ok(JsonUser {
-            uuid: Uuid::from_str(&uuid).map_err(|e| {
-                HttpError::for_bad_request(
-                    Some(String::from("BadInput")),
-                    format!("Error getting UUID: {e}"),
-                )
-            })?,
-            name,
-            slug,
-            email,
-        })
-    }
-}
-
 impl QueryUser {
     pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
         schema::user::table
@@ -150,5 +125,23 @@ impl QueryUser {
             .first::<i32>(conn)
             .map_err(|_| http_error!("Failed to get user."))?;
         Ok(user_id)
+    }
+
+    pub fn to_json(self) -> Result<JsonUser, HttpError> {
+        let Self {
+            id: _,
+            uuid,
+            name,
+            slug,
+            email,
+        } = self;
+        Ok(JsonUser {
+            uuid: Uuid::from_str(&uuid).map_err(|_| {
+                http_error!("Failed to get user.")
+            })?,
+            name,
+            slug,
+            email,
+        })
     }
 }
