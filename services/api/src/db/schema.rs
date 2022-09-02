@@ -51,6 +51,16 @@ table! {
 }
 
 table! {
+    nonce (id) {
+        id -> Integer,
+        user_id -> Integer,
+        code -> Integer,
+        attempts -> Integer,
+        creation -> Integer,
+    }
+}
+
+table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
@@ -143,6 +153,17 @@ table! {
 }
 
 table! {
+    token (id) {
+        id -> Integer,
+        uuid -> Text,
+        user_id -> Integer,
+        token -> Text,
+        creation -> Integer,
+        expiration -> Integer,
+    }
+}
+
+table! {
     user (id) {
         id -> Integer,
         uuid -> Text,
@@ -167,6 +188,7 @@ joinable!(alert -> statistic (statistic_id));
 joinable!(alert -> threshold (threshold_id));
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
+joinable!(nonce -> user (user_id));
 joinable!(perf -> benchmark (benchmark_id));
 joinable!(perf -> latency (latency_id));
 joinable!(perf -> report (report_id));
@@ -179,6 +201,7 @@ joinable!(testbed -> project (project_id));
 joinable!(threshold -> branch (branch_id));
 joinable!(threshold -> statistic (statistic_id));
 joinable!(threshold -> testbed (testbed_id));
+joinable!(token -> user (user_id));
 joinable!(version -> branch (branch_id));
 
 allow_tables_to_appear_in_same_query!(
@@ -187,6 +210,7 @@ allow_tables_to_appear_in_same_query!(
     branch,
     latency,
     min_max_avg,
+    nonce,
     perf,
     project,
     report,
@@ -194,6 +218,7 @@ allow_tables_to_appear_in_same_query!(
     testbed,
     threshold,
     throughput,
+    token,
     user,
     version,
 );

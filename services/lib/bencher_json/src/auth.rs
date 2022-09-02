@@ -31,18 +31,25 @@ pub enum JsonNonce {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonSecurityCode(pub [u8; 6]);
+pub struct JsonSecurityCode{
+    pub email: String,
+    pub code: JsonCode
+}
 
-impl TryFrom<[u8; 6]> for JsonSecurityCode {
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCode(pub [u8; 6]);
+
+impl TryFrom<[u8; 6]> for JsonCode {
     type Error = &'static str;
 
-    fn try_from(security_code: [u8; 6]) -> Result<Self, Self::Error> {
-        for digit in security_code {
+    fn try_from(code: [u8; 6]) -> Result<Self, Self::Error> {
+        for digit in code {
             if digit > 9 {
                 return Err("Security code digits must be between 0 and 9.");
             }
         }
-        Ok(Self(security_code))
+        Ok(Self(code))
     }
 }
 
