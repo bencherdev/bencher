@@ -18,7 +18,7 @@ pub mod mean;
 pub mod median;
 pub mod metrics;
 pub mod metrics_map;
-pub mod min_max_avg;
+pub mod resource;
 pub mod throughput;
 
 pub use benchmarks::{

@@ -8,7 +8,7 @@ use super::{
     latency::JsonLatency,
     median::Median,
     metrics::JsonMetrics,
-    min_max_avg::JsonMinMaxAvg,
+    resource::JsonResource,
     throughput::JsonThroughput,
 };
 
@@ -59,9 +59,9 @@ impl JsonMetricsMap {
 pub struct JsonMetricsList {
     pub latency:    Vec<Option<JsonLatency>>,
     pub throughput: Vec<Option<JsonThroughput>>,
-    pub compute:    Vec<Option<JsonMinMaxAvg>>,
-    pub memory:     Vec<Option<JsonMinMaxAvg>>,
-    pub storage:    Vec<Option<JsonMinMaxAvg>>,
+    pub compute:    Vec<Option<JsonResource>>,
+    pub memory:     Vec<Option<JsonResource>>,
+    pub storage:    Vec<Option<JsonResource>>,
 }
 
 impl JsonMetricsList {
@@ -76,9 +76,9 @@ impl JsonMetricsList {
         JsonMetrics {
             latency:    JsonLatency::median(latency),
             throughput: JsonThroughput::median(throughput),
-            compute:    JsonMinMaxAvg::median(compute),
-            memory:     JsonMinMaxAvg::median(memory),
-            storage:    JsonMinMaxAvg::median(storage),
+            compute:    JsonResource::median(compute),
+            memory:     JsonResource::median(memory),
+            storage:    JsonResource::median(storage),
         }
     }
 }

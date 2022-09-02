@@ -3,7 +3,7 @@ DROP TABLE alert;
 DROP TABLE threshold;
 DROP TABLE statistic;
 DROP TABLE perf;
-DROP TABLE min_max_avg;
+DROP TABLE resource;
 DROP TABLE throughput;
 DROP TABLE latency;
 DROP TABLE report;

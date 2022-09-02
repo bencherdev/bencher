@@ -8,7 +8,7 @@ use serde::{
 use super::{
     benchmarks::OrdKind,
     latency::JsonLatency,
-    min_max_avg::JsonMinMaxAvg,
+    resource::JsonResource,
     throughput::JsonThroughput,
 };
 
@@ -20,11 +20,11 @@ pub struct JsonMetrics {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub throughput: Option<JsonThroughput>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub compute:    Option<JsonMinMaxAvg>,
+    pub compute:    Option<JsonResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory:     Option<JsonMinMaxAvg>,
+    pub memory:     Option<JsonResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage:    Option<JsonMinMaxAvg>,
+    pub storage:    Option<JsonResource>,
 }
 
 impl JsonMetrics {

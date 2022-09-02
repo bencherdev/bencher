@@ -19,7 +19,7 @@ CREATE TABLE token (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
-    token TEXT NOT NULL,
+    jwt TEXT NOT NULL,
     creation INTEGER NOT NULL,
     expiration INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id)
@@ -105,7 +105,7 @@ CREATE TABLE throughput (
     events DOUBLE NOT NULL,
     unit_time BIGINT NOT NULL
 );
-CREATE TABLE min_max_avg (
+CREATE TABLE resource (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     min DOUBLE NOT NULL,
@@ -129,9 +129,9 @@ CREATE TABLE perf (
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
     FOREIGN KEY (latency_id) REFERENCES latency (id),
     FOREIGN KEY (throughput_id) REFERENCES throughput (id),
-    FOREIGN KEY (compute_id) REFERENCES min_max_avg (id),
-    FOREIGN KEY (memory_id) REFERENCES min_max_avg (id),
-    FOREIGN KEY (storage_id) REFERENCES min_max_avg (id),
+    FOREIGN KEY (compute_id) REFERENCES resource (id),
+    FOREIGN KEY (memory_id) REFERENCES resource (id),
+    FOREIGN KEY (storage_id) REFERENCES resource (id),
     UNIQUE(report_id, iteration, benchmark_id)
 );
 -- https://en.wikipedia.org/wiki/Standard_score

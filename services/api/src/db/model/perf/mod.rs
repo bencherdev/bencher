@@ -23,11 +23,11 @@ use crate::{
 };
 
 pub mod latency;
-pub mod min_max_avg;
+pub mod resource;
 pub mod throughput;
 
 pub use latency::InsertLatency;
-pub use min_max_avg::InsertMinMaxAvg;
+pub use resource::InsertResource;
 pub use throughput::InsertThroughput;
 
 const PERF_ERROR: &str = "Failed to get perf.";
@@ -94,9 +94,9 @@ impl InsertPerf {
             benchmark_id,
             latency_id: InsertLatency::map_json(conn, metrics.latency)?,
             throughput_id: InsertThroughput::map_json(conn, metrics.throughput)?,
-            compute_id: InsertMinMaxAvg::map_json(conn, metrics.compute)?,
-            memory_id: InsertMinMaxAvg::map_json(conn, metrics.memory)?,
-            storage_id: InsertMinMaxAvg::map_json(conn, metrics.storage)?,
+            compute_id: InsertResource::map_json(conn, metrics.compute)?,
+            memory_id: InsertResource::map_json(conn, metrics.memory)?,
+            storage_id: InsertResource::map_json(conn, metrics.storage)?,
         })
     }
 }

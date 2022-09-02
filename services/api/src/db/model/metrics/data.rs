@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use bencher_json::report::{
     JsonLatency,
-    JsonMinMaxAvg,
+    JsonResource,
     JsonThroughput,
 };
 use chrono::offset::Utc;
@@ -20,7 +20,7 @@ use crate::{
         model::{
             perf::{
                 latency::QueryLatency,
-                min_max_avg::QueryMinMaxAvg,
+                resource::QueryResource,
                 throughput::QueryThroughput,
             },
             threshold::{
@@ -140,58 +140,58 @@ impl MetricsData {
                         .collect()
                 },
                 MetricsKind::MinMaxAvg(mma) => {
-                    let json_data: Vec<JsonMinMaxAvg> =
+                    let json_data: Vec<JsonResource> =
                         match mma {
                             MinMaxAvgKind::Compute => query
-                                .inner_join(schema::min_max_avg::table.on(
-                                    schema::perf::compute_id.eq(schema::min_max_avg::id.nullable()),
+                                .inner_join(schema::resource::table.on(
+                                    schema::perf::compute_id.eq(schema::resource::id.nullable()),
                                 ))
                                 .select((
-                                    schema::min_max_avg::id,
-                                    schema::min_max_avg::uuid,
-                                    schema::min_max_avg::min,
-                                    schema::min_max_avg::max,
-                                    schema::min_max_avg::avg,
+                                    schema::resource::id,
+                                    schema::resource::uuid,
+                                    schema::resource::min,
+                                    schema::resource::max,
+                                    schema::resource::avg,
                                 ))
                                 .order(&order_by)
                                 .limit(sample_size)
-                                .load::<QueryMinMaxAvg>(conn)
+                                .load::<QueryResource>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
                                 .map(|query| query.to_json())
                                 .collect(),
                             MinMaxAvgKind::Memory => query
-                                .inner_join(schema::min_max_avg::table.on(
-                                    schema::perf::memory_id.eq(schema::min_max_avg::id.nullable()),
+                                .inner_join(schema::resource::table.on(
+                                    schema::perf::memory_id.eq(schema::resource::id.nullable()),
                                 ))
                                 .select((
-                                    schema::min_max_avg::id,
-                                    schema::min_max_avg::uuid,
-                                    schema::min_max_avg::min,
-                                    schema::min_max_avg::max,
-                                    schema::min_max_avg::avg,
+                                    schema::resource::id,
+                                    schema::resource::uuid,
+                                    schema::resource::min,
+                                    schema::resource::max,
+                                    schema::resource::avg,
                                 ))
                                 .order(&order_by)
                                 .limit(sample_size)
-                                .load::<QueryMinMaxAvg>(conn)
+                                .load::<QueryResource>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
                                 .map(|query| query.to_json())
                                 .collect(),
                             MinMaxAvgKind::Storage => query
-                                .inner_join(schema::min_max_avg::table.on(
-                                    schema::perf::storage_id.eq(schema::min_max_avg::id.nullable()),
+                                .inner_join(schema::resource::table.on(
+                                    schema::perf::storage_id.eq(schema::resource::id.nullable()),
                                 ))
                                 .select((
-                                    schema::min_max_avg::id,
-                                    schema::min_max_avg::uuid,
-                                    schema::min_max_avg::min,
-                                    schema::min_max_avg::max,
-                                    schema::min_max_avg::avg,
+                                    schema::resource::id,
+                                    schema::resource::uuid,
+                                    schema::resource::min,
+                                    schema::resource::max,
+                                    schema::resource::avg,
                                 ))
                                 .order(&order_by)
                                 .limit(sample_size)
-                                .load::<QueryMinMaxAvg>(conn)
+                                .load::<QueryResource>(conn)
                                 .map_err(|_| http_error!(PERF_ERROR))?
                                 .into_iter()
                                 .map(|query| query.to_json())

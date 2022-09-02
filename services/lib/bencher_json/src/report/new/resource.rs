@@ -19,25 +19,25 @@ use super::{
 
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonMinMaxAvg {
+pub struct JsonResource {
     pub min: OrderedFloat<f64>,
     pub max: OrderedFloat<f64>,
     pub avg: OrderedFloat<f64>,
 }
 
-impl PartialEq for JsonMinMaxAvg {
+impl PartialEq for JsonResource {
     fn eq(&self, other: &Self) -> bool {
         self.min == other.min && self.max == other.max && self.avg == other.avg
     }
 }
 
-impl PartialOrd for JsonMinMaxAvg {
+impl PartialOrd for JsonResource {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for JsonMinMaxAvg {
+impl Ord for JsonResource {
     fn cmp(&self, other: &Self) -> Ordering {
         let avg_order = self.avg.cmp(&other.avg);
         if Ordering::Equal == avg_order {
@@ -53,7 +53,7 @@ impl Ord for JsonMinMaxAvg {
     }
 }
 
-impl std::ops::Div<usize> for JsonMinMaxAvg {
+impl std::ops::Div<usize> for JsonResource {
     type Output = Self;
 
     fn div(self, rhs: usize) -> Self::Output {
@@ -65,6 +65,6 @@ impl std::ops::Div<usize> for JsonMinMaxAvg {
     }
 }
 
-impl Mean for JsonMinMaxAvg {}
+impl Mean for JsonResource {}
 
-impl Median for JsonMinMaxAvg {}
+impl Median for JsonResource {}

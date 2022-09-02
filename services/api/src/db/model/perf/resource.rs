@@ -1,4 +1,4 @@
-use bencher_json::report::JsonMinMaxAvg;
+use bencher_json::report::JsonResource;
 use diesel::{
     Insertable,
     SqliteConnection,
@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     db::{
         schema,
-        schema::min_max_avg as min_max_avg_table,
+        schema::resource as resource_table,
     },
     diesel::{
         ExpressionMethods,
@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[derive(Queryable, Debug)]
-pub struct QueryMinMaxAvg {
+pub struct QueryResource {
     pub id:   i32,
     pub uuid: String,
     pub min:  f64,
@@ -28,8 +28,8 @@ pub struct QueryMinMaxAvg {
     pub avg:  f64,
 }
 
-impl QueryMinMaxAvg {
-    pub fn to_json(self) -> JsonMinMaxAvg {
+impl QueryResource {
+    pub fn to_json(self) -> JsonResource {
         let Self {
             id: _,
             uuid: _,
@@ -37,7 +37,7 @@ impl QueryMinMaxAvg {
             max,
             avg,
         } = self;
-        JsonMinMaxAvg {
+        JsonResource {
             min: min.into(),
             max: max.into(),
             avg: avg.into(),
@@ -46,17 +46,17 @@ impl QueryMinMaxAvg {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = min_max_avg_table)]
-pub struct InsertMinMaxAvg {
+#[diesel(table_name = resource_table)]
+pub struct InsertResource {
     pub uuid: String,
     pub min:  f64,
     pub max:  f64,
     pub avg:  f64,
 }
 
-impl From<JsonMinMaxAvg> for InsertMinMaxAvg {
-    fn from(min_max_avg: JsonMinMaxAvg) -> Self {
-        let JsonMinMaxAvg { min, max, avg } = min_max_avg;
+impl From<JsonResource> for InsertResource {
+    fn from(resource: JsonResource) -> Self {
+        let JsonResource { min, max, avg } = resource;
         Self {
             uuid: Uuid::new_v4().to_string(),
             min:  min.into(),
@@ -66,22 +66,22 @@ impl From<JsonMinMaxAvg> for InsertMinMaxAvg {
     }
 }
 
-impl InsertMinMaxAvg {
+impl InsertResource {
     pub fn map_json(
         conn: &mut SqliteConnection,
-        min_max_avg: Option<JsonMinMaxAvg>,
+        resource: Option<JsonResource>,
     ) -> Result<Option<i32>, HttpError> {
-        Ok(if let Some(json_min_max_avg) = min_max_avg {
-            let insert_min_max_avg: InsertMinMaxAvg = json_min_max_avg.into();
-            diesel::insert_into(schema::min_max_avg::table)
+        Ok(if let Some(json_min_max_avg) = resource {
+            let insert_min_max_avg: InsertResource = json_min_max_avg.into();
+            diesel::insert_into(schema::resource::table)
                 .values(&insert_min_max_avg)
                 .execute(conn)
                 .map_err(|_| http_error!("Failed to create benchmark data."))?;
 
             Some(
-                schema::min_max_avg::table
-                    .filter(schema::min_max_avg::uuid.eq(&insert_min_max_avg.uuid))
-                    .select(schema::min_max_avg::id)
+                schema::resource::table
+                    .filter(schema::resource::uuid.eq(&insert_min_max_avg.uuid))
+                    .select(schema::resource::id)
                     .first::<i32>(conn)
                     .map_err(|_| http_error!("Failed to create benchmark data."))?,
             )

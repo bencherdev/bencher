@@ -12,7 +12,7 @@ pub use data::JsonReport;
 pub use new::{
     latency::JsonLatency,
     metrics_map::JsonMetricsMap,
-    min_max_avg::JsonMinMaxAvg,
+    resource::JsonResource,
     throughput::JsonThroughput,
     JsonNewReport,
 };

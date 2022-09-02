@@ -2250,7 +2250,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonMinMaxAvg"
+                "$ref": "#/components/schemas/JsonResource"
               }
             ]
           },
@@ -2266,7 +2266,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonMinMaxAvg"
+                "$ref": "#/components/schemas/JsonResource"
               }
             ]
           },
@@ -2274,7 +2274,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonMinMaxAvg"
+                "$ref": "#/components/schemas/JsonResource"
               }
             ]
           },
@@ -2288,7 +2288,7 @@
           }
         }
       },
-      "JsonMinMaxAvg": {
+      "JsonResource": {
         "type": "object",
         "properties": {
           "avg": {
@@ -2612,13 +2612,13 @@
             "$ref": "#/components/schemas/JsonThroughput"
           },
           {
-            "$ref": "#/components/schemas/JsonMinMaxAvg"
+            "$ref": "#/components/schemas/JsonResource"
           },
           {
-            "$ref": "#/components/schemas/JsonMinMaxAvg"
+            "$ref": "#/components/schemas/JsonResource"
           },
           {
-            "$ref": "#/components/schemas/JsonMinMaxAvg"
+            "$ref": "#/components/schemas/JsonResource"
           }
         ]
       },

@@ -41,16 +41,6 @@ table! {
 }
 
 table! {
-    min_max_avg (id) {
-        id -> Integer,
-        uuid -> Text,
-        min -> Double,
-        max -> Double,
-        avg -> Double,
-    }
-}
-
-table! {
     nonce (id) {
         id -> Integer,
         user_id -> Integer,
@@ -98,6 +88,16 @@ table! {
         adapter -> Integer,
         start_time -> BigInt,
         end_time -> BigInt,
+    }
+}
+
+table! {
+    resource (id) {
+        id -> Integer,
+        uuid -> Text,
+        min -> Double,
+        max -> Double,
+        avg -> Double,
     }
 }
 
@@ -157,7 +157,7 @@ table! {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
-        token -> Text,
+        jwt -> Text,
         creation -> Integer,
         expiration -> Integer,
     }
@@ -209,11 +209,11 @@ allow_tables_to_appear_in_same_query!(
     benchmark,
     branch,
     latency,
-    min_max_avg,
     nonce,
     perf,
     project,
     report,
+    resource,
     statistic,
     testbed,
     threshold,

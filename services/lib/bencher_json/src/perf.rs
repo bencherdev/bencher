@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::report::{
     JsonLatency,
-    JsonMinMaxAvg,
+    JsonResource,
     JsonThroughput,
 };
 
@@ -74,7 +74,7 @@ pub struct JsonPerfDatum {
 pub enum JsonPerfDatumKind {
     Latency(JsonLatency),
     Throughput(JsonThroughput),
-    Compute(JsonMinMaxAvg),
-    Memory(JsonMinMaxAvg),
-    Storage(JsonMinMaxAvg),
+    Compute(JsonResource),
+    Memory(JsonResource),
+    Storage(JsonResource),
 }
