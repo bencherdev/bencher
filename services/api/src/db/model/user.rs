@@ -109,6 +109,22 @@ impl QueryUser {
         Uuid::from_str(&uuid).map_err(|_| http_error!(USER_ERROR))
     }
 
+    pub fn get_id_from_email(conn: &mut SqliteConnection, email: &str) -> Result<i32, HttpError> {
+        schema::user::table
+            .filter(schema::user::email.eq(email))
+            .select(schema::user::id)
+            .first(conn)
+            .map_err(|_| http_error!(USER_ERROR))
+    }
+
+    pub fn get_email_from_id(conn: &mut SqliteConnection, id: i32) -> Result<String, HttpError> {
+        schema::user::table
+            .filter(schema::user::id.eq(id))
+            .select(schema::user::email)
+            .first(conn)
+            .map_err(|_| http_error!(USER_ERROR))
+    }
+
     pub fn has_access(
         conn: &mut SqliteConnection,
         project_id: i32,
@@ -136,9 +152,7 @@ impl QueryUser {
             email,
         } = self;
         Ok(JsonUser {
-            uuid: Uuid::from_str(&uuid).map_err(|_| {
-                http_error!("Failed to get user.")
-            })?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get user."))?,
             name,
             slug,
             email,

@@ -43,10 +43,11 @@ table! {
 table! {
     nonce (id) {
         id -> Integer,
+        uuid -> Text,
         user_id -> Integer,
         code -> Integer,
         attempts -> Integer,
-        creation -> Integer,
+        creation -> BigInt,
     }
 }
 
