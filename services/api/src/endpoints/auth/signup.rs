@@ -60,7 +60,6 @@ pub async fn post(
     let json_signup = body.into_inner();
     let conn = &mut *db_connection.lock().await;
     let insert_user = InsertUser::from_json(conn, json_signup)?;
-    let email = insert_user.email.clone();
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
         .execute(conn)
@@ -72,7 +71,7 @@ pub async fn post(
         })?;
 
     let query_user = schema::user::table
-        .filter(schema::user::email.eq(&email))
+        .filter(schema::user::email.eq(&insert_user.email))
         .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to signup user."))?;
     let json_user = query_user.to_json()?;
