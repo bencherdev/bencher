@@ -21,26 +21,16 @@ const DocsRoutes = (props) => {
         element={<Navigate href="/docs/how-to/quick-start" />}
       />
       <Route path="/how-to/quick-start" element={docsPage(true)} />
+      <Route path="/how-to/run-a-report" element={docsPage(true)} />
       <Route
         path="/reference"
         element={<Navigate href="/docs/reference/api" />}
       />
-      <Route path="/reference/api" element={docsPage(false)} />
-      <Route path="/api" element={<Navigate href="/docs/api/v0" />} />
       <Route
-        path="/api/v0"
-        element={
-          <>
-            <div>
-              {SwaggerUI({
-                dom_id: "#swagger",
-                spec: swagger,
-                layout: "BaseLayout",
-              })}
-            </div>
-          </>
-        }
+        path="/reference/api"
+        element={<Navigate href="/docs/reference/api/v0" />}
       />
+      <Route path="/reference/api/v0" element={docsPage(false)} />
     </>
   );
 };
