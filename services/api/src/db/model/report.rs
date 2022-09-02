@@ -141,18 +141,24 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
     .ok_or(http_error!(REPORT_ERROR))
 }
 
+const JSON: isize = 0;
+const RUST_TEST: isize = 100;
+const RUST_BENCH: isize = 150;
+
 pub enum Adapter {
-    Json = 0,
-    Rust = 1,
+    Json      = JSON,
+    RustTest  = RUST_TEST,
+    RustBench = RUST_BENCH,
 }
 
 impl TryFrom<i32> for Adapter {
     type Error = HttpError;
 
     fn try_from(adapter: i32) -> Result<Self, Self::Error> {
-        match adapter {
-            0 => Ok(Self::Json),
-            1 => Ok(Self::Rust),
+        match adapter as isize {
+            JSON => Ok(Self::Json),
+            RUST_TEST => Ok(Self::RustTest),
+            RUST_BENCH => Ok(Self::RustBench),
             _ => Err(http_error!(REPORT_ERROR)),
         }
     }
@@ -162,7 +168,8 @@ impl From<&JsonAdapter> for Adapter {
     fn from(adapter: &JsonAdapter) -> Self {
         match adapter {
             JsonAdapter::Json => Self::Json,
-            JsonAdapter::Rust => Self::Rust,
+            JsonAdapter::RustTest => Self::RustTest,
+            JsonAdapter::RustBench => Self::RustBench,
         }
     }
 }
@@ -171,7 +178,8 @@ impl Into<JsonAdapter> for Adapter {
     fn into(self) -> JsonAdapter {
         match self {
             Self::Json => JsonAdapter::Json,
-            Self::Rust => JsonAdapter::Rust,
+            Self::RustTest => JsonAdapter::RustTest,
+            Self::RustBench => JsonAdapter::RustBench,
         }
     }
 }

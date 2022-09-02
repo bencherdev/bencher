@@ -22,5 +22,6 @@ pub use new::{
 #[serde(rename_all = "snake_case")]
 pub enum JsonAdapter {
     Json,
-    Rust,
+    RustTest,
+    RustBench,
 }
