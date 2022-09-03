@@ -18,7 +18,7 @@ use serde::{
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
-const TOKEN_TTL: usize = 15 * 60;
+const AUTH_TOKEN_TTL: usize = 15 * 60;
 
 lazy_static::lazy_static! {
     static ref HEADER: Header = Header::default();
@@ -27,25 +27,20 @@ lazy_static::lazy_static! {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct NonceClaims {
-    aud: String, // Audience
-    exp: usize,  // Expiration time (as UTC timestamp)
-    iat: usize,  // Issued at (as UTC timestamp)
-    iss: String, // Issuer
-    sub: String, // Subject (whom token refers to)
-}
+pub struct Token(pub String);
 
-impl NonceClaims {
-    pub fn new(key: &str, email: String) -> Result<String, jsonwebtoken::errors::Error> {
-        let now = Utc::now().timestamp() as usize;
-        let claims = Self {
-            aud: BENCHER_DEV.into(),
-            exp: now + TOKEN_TTL,
-            iat: now,
-            iss: BENCHER_DEV.into(),
-            sub: email,
-        };
+impl Token {
+    pub fn new(
+        key: &str,
+        email: String,
+        ttl: usize,
+    ) -> Result<String, jsonwebtoken::errors::Error> {
+        let claims = Claims::new(email, ttl);
         encode(&*HEADER, &claims, &EncodingKey::from_secret(key.as_bytes()))
+    }
+
+    pub fn new_auth(key: &str, email: String) -> Result<String, jsonwebtoken::errors::Error> {
+        Self::new(key, email, AUTH_TOKEN_TTL)
     }
 
     pub fn validate(
@@ -63,5 +58,28 @@ impl NonceClaims {
             &DecodingKey::from_secret(key.as_bytes()),
             &validation,
         )
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+struct Claims {
+    aud: String, // Audience
+    exp: usize,  // Expiration time (as UTC timestamp)
+    iat: usize,  // Issued at (as UTC timestamp)
+    iss: String, // Issuer
+    sub: String, // Subject (whom token refers to)
+}
+
+impl Claims {
+    fn new(email: String, ttl: usize) -> Self {
+        let now = Utc::now().timestamp() as usize;
+        Self {
+            aud: BENCHER_DEV.into(),
+            exp: now + ttl,
+            iat: now,
+            iss: BENCHER_DEV.into(),
+            sub: email,
+        }
     }
 }
