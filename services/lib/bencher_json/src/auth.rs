@@ -9,6 +9,8 @@ use serde::{
 };
 use uuid::Uuid;
 
+use crate::token::JsonWebToken;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSignup {
@@ -25,16 +27,9 @@ pub struct JsonLogin {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNonce {
-    pub email: String,
-    pub code:  u32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfirmed {
     pub user:  JsonUser,
-    pub token: String,
+    pub token: JsonWebToken,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

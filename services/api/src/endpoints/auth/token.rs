@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    nonce::JsonNonce,
+    token::Jsontoken,
     JsonLogin,
     JsonUser,
 };
@@ -35,7 +35,7 @@ use crate::{
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/auth/nonce",
+    path =  "/v0/auth/token",
     tags = ["auth"]
 }]
 pub async fn options(
@@ -46,12 +46,12 @@ pub async fn options(
 
 #[endpoint {
     method = POST,
-    path = "/v0/auth/nonce",
+    path = "/v0/auth/token",
     tags = ["auth"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonNonce>,
+    body: TypedBody<Jsontoken>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
