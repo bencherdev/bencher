@@ -2,6 +2,7 @@ pub mod alert;
 pub mod auth;
 pub mod benchmark;
 pub mod branch;
+pub mod nonce;
 pub mod params;
 pub mod perf;
 pub mod project;

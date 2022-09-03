@@ -1,7 +1,6 @@
 pub mod benchmark;
 pub mod branch;
 pub mod metrics;
-pub mod nonce;
 pub mod perf;
 pub mod project;
 pub mod report;
