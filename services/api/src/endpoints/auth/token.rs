@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    token::Jsontoken,
+    token::{
+        Audience,
+        JsonToken,
+    },
     JsonLogin,
     JsonUser,
 };
@@ -51,14 +54,19 @@ pub async fn options(
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<Jsontoken>,
+    body: TypedBody<JsonToken>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
     let db_connection = rqctx.context();
 
-    let json_login = body.into_inner();
+    let json_token = body.into_inner();
+    let token_data = json_token
+        .token
+        .validate("todo", Audience::Auth)
+        .map_err(|_| http_error!("Failed to login user."))?;
+
     let conn = &mut *db_connection.lock().await;
     let query_user = schema::user::table
-        .filter(schema::user::email.eq(&json_login.email))
+        .filter(schema::user::email.eq(&token_data.claims.sub))
         .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to login user."))?;
     let json_user = query_user.to_json()?;

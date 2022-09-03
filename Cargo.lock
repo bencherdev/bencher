@@ -120,6 +120,7 @@ dependencies = [
  "email-address-parser",
  "http",
  "jsonwebtoken",
+ "lazy_static",
  "literally",
  "ordered-float",
  "rand",

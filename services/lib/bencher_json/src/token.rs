@@ -71,16 +71,16 @@ impl JsonWebToken {
     }
 
     pub fn validate(
+        &self,
         key: &str,
         audience: Audience,
-        token: &str,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(&[audience]);
         validation.set_issuer(&[BENCHER_DEV]);
         validation.set_required_spec_claims(&["aud", "exp", "iss"]);
         decode(
-            token,
+            &self.0,
             &DecodingKey::from_secret(key.as_bytes()),
             &validation,
         )
@@ -90,11 +90,11 @@ impl JsonWebToken {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaims {
-    aud: String, // Audience
-    exp: usize,  // Expiration time (as UTC timestamp)
-    iat: usize,  // Issued at (as UTC timestamp)
-    iss: String, // Issuer
-    sub: String, // Subject (whom token refers to)
+    pub aud: String, // Audience
+    pub exp: usize,  // Expiration time (as UTC timestamp)
+    pub iat: usize,  // Issued at (as UTC timestamp)
+    pub iss: String, // Issuer
+    pub sub: String, // Subject (whom token refers to)
 }
 
 impl JsonClaims {

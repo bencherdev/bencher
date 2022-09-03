@@ -41,3 +41,4 @@ pub use threshold::{
     JsonNewThreshold,
     JsonThreshold,
 };
+pub use token::JsonToken;

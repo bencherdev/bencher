@@ -1,11 +1,8 @@
-use std::convert::TryFrom;
-
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
     Deserialize,
     Serialize,
-    Serializer,
 };
 use uuid::Uuid;
 
