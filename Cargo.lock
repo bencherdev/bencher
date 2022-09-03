@@ -165,6 +165,8 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "derive_more",
+ "jsonwebtoken",
+ "lazy_static",
  "num",
  "ordered-float",
  "schemars",

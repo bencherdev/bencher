@@ -29,6 +29,8 @@ wasm-bindgen = { version = "0.2.80", optional = true, features = [
 slug = "0.1.4"
 ordered-float = { version = "3.0.0", features = ["serde"] }
 num = "0.4.0"
+jsonwebtoken = "8.1.1"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
