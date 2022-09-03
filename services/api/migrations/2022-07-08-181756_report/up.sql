@@ -7,15 +7,6 @@ CREATE TABLE user (
     slug TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE
 );
-CREATE TABLE nonce (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    user_id INTEGER NOT NULL,
-    code INTEGER NOT NULL,
-    attempts INTEGER NOT NULL,
-    creation BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user (id)
-);
 CREATE TABLE token (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,

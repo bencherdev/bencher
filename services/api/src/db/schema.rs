@@ -41,17 +41,6 @@ table! {
 }
 
 table! {
-    nonce (id) {
-        id -> Integer,
-        uuid -> Text,
-        user_id -> Integer,
-        code -> Integer,
-        attempts -> Integer,
-        creation -> BigInt,
-    }
-}
-
-table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
@@ -189,7 +178,6 @@ joinable!(alert -> statistic (statistic_id));
 joinable!(alert -> threshold (threshold_id));
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
-joinable!(nonce -> user (user_id));
 joinable!(perf -> benchmark (benchmark_id));
 joinable!(perf -> latency (latency_id));
 joinable!(perf -> report (report_id));
@@ -210,7 +198,6 @@ allow_tables_to_appear_in_same_query!(
     benchmark,
     branch,
     latency,
-    nonce,
     perf,
     project,
     report,

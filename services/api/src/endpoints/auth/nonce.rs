@@ -5,6 +5,7 @@ use bencher_json::{
     JsonLogin,
     JsonUser,
 };
+use chrono::Utc;
 use diesel::{
     QueryDsl,
     RunQueryDsl,
@@ -15,8 +16,14 @@ use dropshot::{
     HttpResponseAccepted,
     HttpResponseHeaders,
     HttpResponseOk,
+    Path,
     RequestContext,
     TypedBody,
+};
+use schemars::JsonSchema;
+use serde::{
+    Deserialize,
+    Serialize,
 };
 
 use crate::{
@@ -32,6 +39,11 @@ use crate::{
         Context,
     },
 };
+#[derive(Deserialize, JsonSchema)]
+pub struct NonceParams {
+    pub email: String,
+    pub token: String,
+}
 
 #[endpoint {
     method = OPTIONS,
@@ -40,22 +52,23 @@ use crate::{
 }]
 pub async fn options(
     _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<NonceParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     Ok(get_cors::<Context>())
 }
 
 #[endpoint {
-    method = POST,
+    method = GET,
     path = "/v0/auth/nonce",
     tags = ["auth"]
 }]
-pub async fn post(
+pub async fn get(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonNonce>,
+    path_params: Path<NonceParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
+    let path_params = path_params.into_inner();
     let db_connection = rqctx.context();
-
-    let json_nonce = body.into_inner();
+    // let json_nonce = body.into_inner();
 
     // let conn = &mut *db_connection.lock().await;
     // let query_user = schema::user::table

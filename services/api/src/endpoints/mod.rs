@@ -27,7 +27,7 @@ impl Registrar<Context> for Api {
         api.register(auth::login::options)?;
         api.register(auth::login::post)?;
         api.register(auth::nonce::options)?;
-        api.register(auth::nonce::post)?;
+        api.register(auth::nonce::get)?;
         // Projects
         api.register(projects::dir_options)?;
         api.register(projects::get_ls)?;

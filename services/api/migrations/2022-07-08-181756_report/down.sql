@@ -13,5 +13,4 @@ DROP TABLE version;
 DROP TABLE branch;
 DROP TABLE project;
 DROP TABLE token;
-DROP TABLE nonce;
 DROP TABLE user;
