@@ -29,24 +29,36 @@ lazy_static::lazy_static! {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonToken(pub String);
+pub struct JsonToken {
+    pub token: JsonWebToken,
+}
 
-impl JsonToken {
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonWebToken(pub String);
+
+impl From<String> for JsonWebToken {
+    fn from(token: String) -> Self {
+        Self(token)
+    }
+}
+
+impl JsonWebToken {
     pub fn new(
         key: &str,
         audience: Audience,
         email: String,
         ttl: usize,
-    ) -> Result<String, jsonwebtoken::errors::Error> {
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
         let claims = JsonClaims::new(audience, email, ttl);
-        encode(&*HEADER, &claims, &EncodingKey::from_secret(key.as_bytes()))
+        encode(&*HEADER, &claims, &EncodingKey::from_secret(key.as_bytes())).map(Into::into)
     }
 
-    pub fn new_auth(key: &str, email: String) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn new_auth(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL)
     }
 
-    pub fn new_web(key: &str, email: String) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn new_web(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Web, email, WEB_TOKEN_TTL)
     }
 
@@ -54,7 +66,7 @@ impl JsonToken {
         key: &str,
         email: String,
         ttl: usize,
-    ) -> Result<String, jsonwebtoken::errors::Error> {
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Api, email, ttl)
     }
 
