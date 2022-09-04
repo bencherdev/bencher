@@ -7,8 +7,10 @@ import {
   createSignal,
 } from "solid-js";
 import { isPerfKind, isPerfTab, PerfTab, PerKind } from "../../config/types";
+import { LOCAL_USER_KEY } from "../../config/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
+import validator from "validator";
 
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
@@ -187,17 +189,22 @@ const PerfPanel = (props) => {
 
   const fetchPerfData = async () => {
     try {
-      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
+      const token = JSON.parse(
+        window.localStorage.getItem(LOCAL_USER_KEY)
+      )?.token;
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
-      if (typeof token !== "string" || isPlotInit()) {
-        return;
+      if (isPlotInit() || !validator.isJWT(token)) {
+        return {};
       }
+
       let resp = await axios(perf_data_options(token));
       const data = resp.data;
       console.log(data);
       return data;
     } catch (error) {
       console.error(error);
+
+      return {};
     }
   };
 
@@ -229,15 +236,21 @@ const PerfPanel = (props) => {
 
   const fetchPerfTab = async (perf_tab: PerfTab) => {
     try {
-      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-      if (typeof token !== "string") {
-        return;
+      const token = JSON.parse(
+        window.localStorage.getItem(LOCAL_USER_KEY)
+      )?.token;
+      if (!validator.isJWT(token)) {
+        return [];
       }
+
       let resp = await axios(perf_tab_options(token, perf_tab));
       const data = resp.data;
+
       return data;
     } catch (error) {
       console.error(error);
+
+      return [];
     }
   };
 

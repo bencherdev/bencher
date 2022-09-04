@@ -1,15 +1,11 @@
 import axios from "axios";
-import {
-  createSignal,
-  createResource,
-  createEffect,
-  Suspense,
-  For,
-} from "solid-js";
+import { createSignal, createResource } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
 import Card from "./Card";
+import { LOCAL_USER_KEY } from "../../config/util";
+import validator from "validator";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
@@ -29,15 +25,20 @@ const DeckPanel = (props) => {
 
   const fetchData = async () => {
     try {
-      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-      if (typeof token !== "string") {
-        return;
+      const token = JSON.parse(
+        window.localStorage.getItem(LOCAL_USER_KEY)
+      )?.token;
+      if (!validator.isJWT(token)) {
+        return {};
       }
+
       let reports = await axios(options(token));
       console.log(reports);
       return reports.data;
     } catch (error) {
       console.error(error);
+
+      return {};
     }
   };
 

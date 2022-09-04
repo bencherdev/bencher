@@ -1,8 +1,10 @@
 import axios from "axios";
 import { createSignal, createResource } from "solid-js";
 import Table from "./Table";
+import validator from "validator";
 
 import TableHeader from "./TableHeader";
+import { LOCAL_USER_KEY } from "../../config/util";
 
 const TablePanel = (props) => {
   const options = (token: string) => {
@@ -18,16 +20,21 @@ const TablePanel = (props) => {
 
   const fetchData = async (refresh) => {
     try {
-      const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-      if (typeof token !== "string") {
-        return;
+      const token = JSON.parse(
+        window.localStorage.getItem(LOCAL_USER_KEY)
+      )?.token;
+      if (!validator.isJWT(token)) {
+        return [];
       }
+
       let resp = await axios(options(token));
       const data = resp.data;
-      console.log(data);
+
       return data;
     } catch (error) {
       console.error(error);
+
+      return [];
     }
   };
 

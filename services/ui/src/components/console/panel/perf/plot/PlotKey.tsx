@@ -2,6 +2,8 @@ import axios from "axios";
 import { createEffect, createResource, createSignal, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
+import { LOCAL_USER_KEY } from "../../../config/util";
+import validator from "validator";
 
 const PlotKey = (props) => {
   const key_data_options = (token: string, perf_tab: PerfTab, uuid: string) => {
@@ -18,14 +20,16 @@ const PlotKey = (props) => {
   const fetchKeyData = async (perf_tab: PerfTab, uuids: any[]) => {
     const key_data = {};
 
+    const token = JSON.parse(
+      window.localStorage.getItem(LOCAL_USER_KEY)
+    )?.token;
+    if (!validator.isJWT(token)) {
+      return key_data;
+    }
+
     await Promise.all(
       uuids.map(async (uuid: string) => {
         try {
-          const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-          // Don't even send query if there isn't at least one: branch, testbed, and benchmark
-          if (typeof token !== "string") {
-            return;
-          }
           let resp = await axios(key_data_options(token, perf_tab, uuid));
           const data = resp.data;
           key_data[uuid] = data;
