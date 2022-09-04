@@ -6,7 +6,7 @@ use bencher_api::util::{
 use tokio::sync::Mutex;
 
 const API_NAME: &str = "Bencher API";
-const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
+const BENCHER_SECRET: &str = "BENCHER_SECRET";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -67,8 +67,8 @@ async fn run() -> Result<(), String> {
 
     dotenv().map_err(|e| e.to_string())?;
 
-    let secret_key = std::env::var(BENCHER_SECRET_KEY).unwrap_or_else(|e| {
-        info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
+    let secret_key = std::env::var(BENCHER_SECRET).unwrap_or_else(|e| {
+        info!("Failed to find \"{BENCHER_SECRET}\": {e}");
         let secret_key = uuid::Uuid::new_v4().to_string();
         info!("Generated temporary secret key: {secret_key}");
         secret_key
