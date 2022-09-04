@@ -99,13 +99,9 @@ const AuthConfirmPage = (props: {
   };
 
   const fetchData = async (auth_json) => {
-    try {
-      const config = request_config(auth_json);
-      let resp = await axios(config);
-      return resp;
-    } catch (error) {
-      console.error(error);
-    }
+    const config = request_config(auth_json);
+    let resp = await axios(config);
+    return resp;
   };
 
   return (
