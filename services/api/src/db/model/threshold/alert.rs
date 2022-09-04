@@ -22,7 +22,6 @@ use crate::{
     db::{
         model::{
             perf::QueryPerf,
-            report::QueryReport,
         },
         schema,
         schema::alert as alert_table,

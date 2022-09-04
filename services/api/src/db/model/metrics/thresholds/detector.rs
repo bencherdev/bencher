@@ -36,8 +36,6 @@ use crate::{
 };
 
 const PERF_ERROR: &str = "Failed to run metrics detector.";
-const LOCATION: f64 = 0.0;
-const SCALE: f64 = 1.0;
 
 pub struct Detector {
     pub threshold: Threshold,
@@ -50,7 +48,7 @@ impl Detector {
         branch_id: i32,
         testbed_id: i32,
         benchmarks: &[(String, i32)],
-        metrics_map: &JsonMetricsMap,
+        _metrics_map: &JsonMetricsMap,
         kind: PerfKind,
     ) -> Result<Option<Self>, HttpError> {
         // Check to see if there is a latency threshold for this branch/testbed pair
@@ -73,6 +71,8 @@ impl Detector {
             )?;
             data.insert(benchmark_name.clone(), metrics_data);
         }
+
+        // TODO use metrics_map in a two sample t-test
 
         Ok(Some(Self { threshold, data }))
     }
@@ -170,6 +170,7 @@ impl Detector {
     }
 }
 
+#[allow(dead_code)]
 fn z_score(mean: f64, std_dev: f64, datum: f64) -> Option<f64> {
     if std_dev.is_normal() {
         Some((datum - mean) / std_dev)
@@ -211,11 +212,6 @@ mod test {
             StudentsT,
         },
         statistics::Distribution,
-    };
-
-    use super::{
-        LOCATION,
-        SCALE,
     };
 
     #[test]
