@@ -20,7 +20,7 @@ const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
 const AUTH_TOKEN_TTL: usize = 15 * 60;
 // 21 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
-const WEB_TOKEN_TTL: usize = 21 * 24 * 60 * 60;
+const CLIENT_TOKEN_TTL: usize = 21 * 24 * 60 * 60;
 
 lazy_static::lazy_static! {
     static ref HEADER: Header = Header::default();
@@ -58,25 +58,25 @@ impl JsonWebToken {
         Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL)
     }
 
-    pub fn new_web(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Web, email, WEB_TOKEN_TTL)
+    pub fn new_client(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
+        Self::new(key, Audience::Client, email, CLIENT_TOKEN_TTL)
     }
 
-    pub fn new_api(
+    pub fn new_api_key(
         key: &str,
         email: String,
         ttl: usize,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Api, email, ttl)
+        Self::new(key, Audience::ApiKey, email, ttl)
     }
 
     pub fn validate(
         &self,
         key: &str,
-        audience: Audience,
+        audience: &[Audience],
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         let mut validation = Validation::new(*ALGORITHM);
-        validation.set_audience(&[audience]);
+        validation.set_audience(audience);
         validation.set_issuer(&[BENCHER_DEV]);
         validation.set_required_spec_claims(&["aud", "exp", "iss"]);
         decode(
@@ -84,6 +84,20 @@ impl JsonWebToken {
             &DecodingKey::from_secret(key.as_bytes()),
             &validation,
         )
+    }
+
+    pub fn validate_auth(
+        &self,
+        key: &str,
+    ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
+        self.validate(key, &[Audience::Auth])
+    }
+
+    pub fn validate_user(
+        &self,
+        key: &str,
+    ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
+        self.validate(key, &[Audience::Client, Audience::ApiKey])
     }
 }
 
@@ -113,20 +127,20 @@ impl JsonClaims {
 #[derive(Debug, Copy, Clone)]
 pub enum Audience {
     Auth,
-    Web,
-    Api,
+    Client,
+    ApiKey,
 }
 
 const AUDIENCE_AUTH: &str = "auth";
-const AUDIENCE_WEB: &str = "web";
-const AUDIENCE_API: &str = "api";
+const AUDIENCE_CLIENT: &str = "client";
+const AUDIENCE_API_KEY: &str = "api_key";
 
 impl ToString for Audience {
     fn to_string(&self) -> String {
         match self {
             Self::Auth => AUDIENCE_AUTH.into(),
-            Self::Web => AUDIENCE_WEB.into(),
-            Self::Api => AUDIENCE_API.into(),
+            Self::Client => AUDIENCE_CLIENT.into(),
+            Self::ApiKey => AUDIENCE_API_KEY.into(),
         }
     }
 }

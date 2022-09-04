@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    token::{
-        Audience,
-        JsonToken,
-    },
+    token::JsonToken,
     JsonUser,
 };
 use diesel::{
@@ -60,7 +57,7 @@ pub async fn post(
     let json_token = body.into_inner();
     let token_data = json_token
         .token
-        .validate(&context.key, Audience::Auth)
+        .validate_auth(&context.key)
         .map_err(|_| http_error!("Failed to login user."))?;
 
     let conn = &mut context.db;
