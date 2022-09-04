@@ -49,7 +49,8 @@ const AuthRoutes = (props) => {
             config={config[Auth.CONFIRM]}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
-            removeUser={props.removeUser}
+            handleUser={props.handleUser}
+            handleNotification={props.handleNotification}
           />
         }
       />

@@ -20,9 +20,7 @@ const AuthFormPage = (props: {
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
-            <h2 class="title">
-              <span>{props.config?.title}</span>
-            </h2>
+            <h2 class="title">{props.config?.title}</h2>
 
             <AuthForm
               config={props.config?.form}

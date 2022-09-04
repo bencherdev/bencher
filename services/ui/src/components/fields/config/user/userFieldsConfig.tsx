@@ -42,6 +42,14 @@ const userFieldsConfig = {
     type: "select",
     icon: "fas fa-user-tag",
   },
+  token: {
+    label: "Token",
+    type: "text",
+    placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
+    icon: "fas fa-key",
+    help: "Must be a valid JWT (JSON Web Token)",
+    validate: validator.isJWT,
+  },
 };
 
 export default userFieldsConfig;
