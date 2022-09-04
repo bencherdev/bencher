@@ -1,11 +1,10 @@
-import { Link, Navigate } from "solid-app-router";
-import { createSignal, createEffect, Accessor } from "solid-js";
+import { Link } from "solid-app-router";
+import validator from "validator";
 
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
 
 const AuthFormPage = (props: {
-  kind: "signup" | "login";
   config: any;
   handleTitle: Function;
   handleRedirect: Function;
@@ -14,6 +13,12 @@ const AuthFormPage = (props: {
   handleNotification: Function;
 }) => {
   props.handleTitle(props.config?.title);
+
+  setInterval(() => {
+    if (validator.isJWT(props.user()?.token)) {
+      props.handleRedirect("/console");
+    }
+  }, 1000);
 
   return (
     <section class="section">

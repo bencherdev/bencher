@@ -18,7 +18,6 @@ const AuthRoutes = (props) => {
         path="/signup"
         element={
           <AuthFormPage
-            kind="signup"
             config={config[Auth.SIGNUP]}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
@@ -32,7 +31,6 @@ const AuthRoutes = (props) => {
         path="/login"
         element={
           <AuthFormPage
-            kind="login"
             config={config[Auth.LOGIN]}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}
