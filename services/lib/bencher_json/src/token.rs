@@ -122,6 +122,10 @@ impl JsonClaims {
             sub: email,
         }
     }
+
+    pub fn email(&self) -> &str {
+        &self.sub
+    }
 }
 
 #[derive(Debug, Copy, Clone)]

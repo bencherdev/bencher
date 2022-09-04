@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    token::JsonToken,
-    JsonUser,
+    auth::JsonConfirmed,
+    token::{
+        JsonToken,
+        JsonWebToken,
+    },
 };
 use diesel::{
     QueryDsl,
@@ -51,7 +54,7 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonToken>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonConfirmed>, CorsHeaders>, HttpError> {
     let context = &mut *rqctx.context().lock().await;
 
     let json_token = body.into_inner();
@@ -62,13 +65,19 @@ pub async fn post(
 
     let conn = &mut context.db;
     let query_user = schema::user::table
-        .filter(schema::user::email.eq(&token_data.claims.sub))
+        .filter(schema::user::email.eq(token_data.claims.email()))
         .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to login user."))?;
     let json_user = query_user.to_json()?;
 
+    let json_confirmed = JsonConfirmed {
+        user:  json_user,
+        token: JsonWebToken::new_client(&context.key, token_data.claims.email().to_string())
+            .map_err(|_| http_error!("Failed to login user."))?,
+    };
+
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json_user),
+        HttpResponseAccepted(json_confirmed),
         CorsHeaders::new_pub("POST".into()),
     ))
 }
