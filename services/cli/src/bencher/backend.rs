@@ -13,7 +13,7 @@ pub const BENCHER_URL: &str = "BENCHER_URL";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Backend {
     pub token: Option<String>,
     pub host:  Url,

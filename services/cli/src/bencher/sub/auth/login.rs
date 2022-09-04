@@ -15,7 +15,7 @@ use crate::{
 
 const LOGIN_PATH: &str = "/v0/auth/login";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Login {
     pub email:   String,
     pub backend: Backend,
@@ -31,13 +31,19 @@ impl TryFrom<CliAuthLogin> for Login {
     }
 }
 
+impl Into<JsonLogin> for Login {
+    fn into(self) -> JsonLogin {
+        let Self { email, backend: _ } = self;
+        JsonLogin { email }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Login {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let login = JsonLogin {
-            email: self.email.clone(),
-        };
-        self.backend.post(LOGIN_PATH, &login).await?;
+        let json_login: JsonLogin = self.clone().into();
+        let res = self.backend.post(LOGIN_PATH, &json_login).await?;
+        let _: () = serde_json::from_value(res)?;
         Ok(())
     }
 }
