@@ -1,13 +1,10 @@
 use std::sync::Arc;
 
 use bencher_json::{
+    token::JsonWebToken,
     JsonSignup,
-    JsonUser,
 };
-use diesel::{
-    QueryDsl,
-    RunQueryDsl,
-};
+use diesel::RunQueryDsl;
 use dropshot::{
     endpoint,
     HttpError,
@@ -17,16 +14,13 @@ use dropshot::{
     RequestContext,
     TypedBody,
 };
+use tracing::info;
 
 use crate::{
     db::{
-        model::user::{
-            InsertUser,
-            QueryUser,
-        },
+        model::user::InsertUser,
         schema,
     },
-    diesel::ExpressionMethods,
     util::{
         cors::get_cors,
         headers::CorsHeaders,
@@ -54,29 +48,25 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonSignup>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
     let json_signup = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
+
     let conn = &mut context.db;
     let insert_user = InsertUser::from_json(conn, json_signup)?;
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
         .execute(conn)
-        .map_err(|e| {
-            HttpError::for_bad_request(
-                Some(String::from("BadInput")),
-                format!("Error saving new user to database: {e}"),
-            )
-        })?;
-
-    let query_user = schema::user::table
-        .filter(schema::user::email.eq(&insert_user.email))
-        .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to signup user."))?;
-    let json_user = query_user.to_json()?;
+
+    let token = JsonWebToken::new_auth(&context.key, insert_user.email.clone())
+        .map_err(|_| http_error!("Failed to login user."))?;
+
+    // TODO log this as trace if SMTP is configured
+    info!("Confirm \"{}\" with: {token}", insert_user.email);
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json_user),
+        HttpResponseAccepted(()),
         CorsHeaders::new_pub("POST".into()),
     ))
 }
