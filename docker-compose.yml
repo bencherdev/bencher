@@ -10,6 +10,8 @@ services:
         - 2048:8080
     environment:
       - BENCHER_DB=bencher.db
+    depends_on:
+      - minio
 
   bencher_ui:
     build:
@@ -19,4 +21,10 @@ services:
       - 4096:4173
     depends_on:
       - bencher_api
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - 9000:9000
+      - 9001:9001
 
