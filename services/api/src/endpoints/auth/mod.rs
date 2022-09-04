@@ -1,3 +1,3 @@
+pub mod confirm;
 pub mod login;
 pub mod signup;
-pub mod token;

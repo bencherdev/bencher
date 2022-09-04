@@ -73,12 +73,12 @@ async fn run() -> Result<(), String> {
         secret_key
     });
 
-    let mut conn = get_db_connection().map_err(|e| e.to_string())?;
-    run_migration(&mut conn).map_err(|e| e.to_string())?;
+    let mut db_conn = get_db_connection().map_err(|e| e.to_string())?;
+    run_migration(&mut db_conn).map_err(|e| e.to_string())?;
 
     let context = Mutex::new(ApiContext {
-        db:     conn,
-        secret: secret_key,
+        db:  db_conn,
+        key: secret_key,
     });
 
     get_server(API_NAME, context).await?.await
