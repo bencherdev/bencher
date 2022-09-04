@@ -32,6 +32,7 @@
     "powi",
     "rqctx",
     "schemars",
-    "signup"
+    "signup",
+    "VITE"
   ]
 }

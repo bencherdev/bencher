@@ -168,7 +168,7 @@ const App: Component = () => {
           element={
             <LandingPage
               user={user}
-              handleTitle={handleTitle}
+              handleTitle={setTitle}
               handleRedirect={setRedirect}
             />
           }
