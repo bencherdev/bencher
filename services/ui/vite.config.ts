@@ -7,7 +7,6 @@ export default defineConfig({
   plugins: [mdx({ jsxImportSource: "solid-jsx", remarkPlugins: [remarkGfm] }), solidPlugin()],
   build: {
     target: "esnext",
-    polyfillDynamicImport: false,
   },
   server: {
     host: true,
