@@ -53,7 +53,7 @@ export const Navbar = (props) => {
             GitHub
           </a>
 
-          {props.user()?.uuid && (
+          {props.user()?.token && (
             <div class="navbar-item">
               <ProjectSelect
                 project_slug={props?.project_slug}
@@ -67,7 +67,7 @@ export const Navbar = (props) => {
         <div class="navbar-end">
           <div class="navbar-item">
             <div class="buttons">
-              {props.user()?.uuid === null ? (
+              {props.user()?.token === null ? (
                 <>
                   <Link class="button is-light" href="/auth/login">
                     Log in

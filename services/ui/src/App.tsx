@@ -25,11 +25,13 @@ const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 
 const initUser = () => {
   return {
-    uuid: null,
-    name: null,
-    slug: null,
-    email: null,
-    free: null,
+    user: {
+      uuid: null,
+      name: null,
+      slug: null,
+      email: null,
+    },
+    token: null,
   };
 };
 

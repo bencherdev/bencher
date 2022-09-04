@@ -30,7 +30,7 @@ const ConsolePage = (props) => {
   });
 
   setInterval(() => {
-    if (props.user()?.uuid === null) {
+    if (props.user()?.token === null) {
       setCount(count() + 1);
       if (count() === 2) {
         props.handleRedirect("/auth/login");
