@@ -1,5 +1,3 @@
-import { useParams } from "solid-app-router";
-import { createEffect, createMemo, createSignal } from "solid-js";
 import DocsMenu from "./DocsMenu";
 import DocsPanel from "./DocsPanel";
 
