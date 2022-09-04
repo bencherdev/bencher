@@ -1,19 +1,14 @@
-newline_style = 'Unix'
+newline_style = "Unix"
 use_field_init_shorthand = true
 use_try_shorthand = true
 match_block_trailing_comma = true
-
-# Nightly options -- once stablilized these will likely get a default of true
-
-imports_layout = 'Vertical'
-imports_granularity = 'Crate'
-group_imports = 'StdExternalCrate'
+imports_layout = "Vertical"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
 enum_discrim_align_threshold = 10
 format_code_in_doc_comments = true
-# format_generated_files = true
 format_macro_matchers = true
 format_macro_bodies = true
-# format_strings = true
 normalize_comments = true
 normalize_doc_attributes = true
 overflow_delimited_expr = true

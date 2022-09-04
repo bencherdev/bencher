@@ -30,6 +30,7 @@ email-address-parser = "1.0.3"
 async-trait = "0.1.56"
 chrono = { version = "0.4.20" }
 uuid = "1.1.2"
+smart-default = "0.6.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"

@@ -1,11 +1,10 @@
-#![feature(derive_default_enum)]
-#![feature(test)]
-extern crate test;
+// #![feature(test)]
+// extern crate test;
 
 mod bencher;
 mod cli;
 mod error;
-mod tests;
+// mod tests;
 
 use bencher::Bencher;
 pub use error::BencherError;

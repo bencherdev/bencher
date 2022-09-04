@@ -73,6 +73,7 @@ impl Backend {
         self.send(Method::Post(json), path).await
     }
 
+    #[allow(dead_code)]
     pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
     where
         T: Serialize + ?Sized,
@@ -106,6 +107,7 @@ impl Backend {
 
 enum Method<T> {
     Get,
+    #[allow(dead_code)]
     Post(T),
     Put(T),
 }

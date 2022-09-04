@@ -1,18 +1,12 @@
-use bencher_json::report::{
-    new::JsonBenchmarksMap,
-    JsonAdapter,
-};
+use bencher_json::report::{new::JsonBenchmarksMap, JsonAdapter};
+use smart_default::SmartDefault;
 
-use crate::{
-    bencher::sub::run::perf::Output,
-    cli::run::CliRunAdapter,
-    BencherError,
-};
+use crate::{bencher::sub::run::perf::Output, cli::run::CliRunAdapter, BencherError};
 
 pub mod json;
 pub mod rust;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, SmartDefault)]
 pub enum Adapter {
     #[default]
     Json,

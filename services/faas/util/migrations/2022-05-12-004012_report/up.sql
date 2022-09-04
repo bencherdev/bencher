@@ -1,7 +1,0 @@
-CREATE TABLE report (
-  id SERIAL PRIMARY KEY,
-  date_time TIMESTAMPTZ NOT NULL,
-  metrics JSONB NOT NULL,
-  hash BIGINT NOT NULL,
-  length INTEGER NOT NULL
-);

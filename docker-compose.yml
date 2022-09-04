@@ -1,89 +1,22 @@
 version: "3.9"
 services:
-
-  nginx:
+  bencher_api:
     build:
-      context: ./services/local/nginx
-      dockerfile: Dockerfile
-    restart: always
+      context: ./services
+      dockerfile: ./api/Dockerfile
+    image: benhcer-api
+    container_name: bencher_api
     ports:
-      - 80:80
-      - 3001:3001
-    depends_on:
-      # - cli 
-      - ui
-      - fn_admin
-      - fn_reports
+        - 2048:8080
+    environment:
+      - BENCHER_DB=bencher.db
 
-  ui:
+  bencher_ui:
     build:
       context: ./services/ui
-      dockerfile: dev.Dockerfile
-    volumes:
-      - "./services/ui:/usr/src/ui"
-      - "/usr/src/ui/node_modules"
-    ports:
-      - 6000:3000
-      - 3101:3101
-    depends_on:
-      - fn_admin
-      - fn_reports
-
-  # cli:
-  #   build:
-  #     context: ./services
-  #     dockerfile: ./cli/Dockerfile
-  #   image: bencher-cli
-  #   container_name: bencher_cli
-
-  postgres:
-    build:
-      context: ./services/local/db
       dockerfile: Dockerfile
-    image: bencher-postgres
-    container_name: bencher_postgres
     ports:
-      - 5432:5432
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-
-  # kratos:
-  #   build:
-  #     context: ./services/local/kratos
-  #     dockerfile: Dockerfile
-  #   image: bencher-kratos
-  #   container_name: bencher_kratos
-  #   ports:
-  #     - 4433:4433
-  #     - 4434:4434
-  #     - 4436:4436
-  #   environment:
-  #     - DSN=memory
-
-  fn_admin:
-    build:
-      context: ./services
-      dockerfile: ./api/admin/dev.Dockerfile
-    image: fn-admin
-    container_name: fn_admin
-    ports:
-        - 2000:8080
-    environment:
-      - BENCHER_DB_URL=postgres://postgres:postgres@postgres:5432/bencher
+      - 4096:3000
     depends_on:
-      - postgres
+      - bencher_api
 
-  fn_reports:
-    build:
-      context: ./services
-      dockerfile: ./api/reports/dev.Dockerfile
-    image: fn-reports
-    container_name: fn_reports
-    ports:
-        - 2001:8080
-    environment:
-      - BENCHER_DB_URL=postgres://postgres:postgres@postgres:5432/bencher
-    depends_on:
-      - postgres
-      - fn_admin
