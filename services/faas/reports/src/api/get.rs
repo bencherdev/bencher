@@ -31,7 +31,7 @@ use util::{
 pub async fn api_get_metrics(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<MetaMetrics>>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
 
     if let Ok(db_conn) = db_connection.lock() {
         let db_conn = &*db_conn;

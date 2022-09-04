@@ -14,8 +14,8 @@ use super::{
 pub type AuthToken = Uuid;
 
 pub async fn get_token(rqctx: &RequestContext<Context>) -> Result<AuthToken, HttpError> {
-    let headers = rqctx.request.lock().await;
-    let headers = headers
+    let request = rqctx.request.lock().await;
+    let headers = request
         .headers()
         .get("Authorization")
         .ok_or(http_error!("Missing \"Authorization\" header."))?

@@ -69,10 +69,11 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonTestbed>>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let conn = &mut *db_connection.lock().await;
+    let api_context = &mut *api_context.lock().await;
+    let conn = &mut api_context.db;
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonTestbed> = schema::testbed::table
         .filter(schema::testbed::project_id.eq(&query_project.id))
@@ -109,10 +110,11 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonTestbed>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
     let json_testbed = body.into_inner();
 
-    let conn = &mut *db_connection.lock().await;
+    let api_context = &mut *api_context.lock().await;
+    let conn = &mut api_context.db;
     let insert_testbed = InsertTestbed::from_json(conn, json_testbed)?;
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
@@ -158,11 +160,12 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
     let resource_id = path_params.testbed.as_str();
 
-    let conn = &mut *db_connection.lock().await;
+    let api_context = &mut *api_context.lock().await;
+    let conn = &mut api_context.db;
     let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::testbed::table
         .filter(

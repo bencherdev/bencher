@@ -73,7 +73,7 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPerf>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
     let JsonPerfQuery {
         branches,
         testbeds,
@@ -100,7 +100,8 @@ pub async fn post(
         schema::perf::iteration,
     );
 
-    let conn = &mut *db_connection.lock().await;
+    let api_context = &mut *api_context.lock().await;
+    let conn = &mut api_context.db;
     let mut data = Vec::new();
     for branch in &branches {
         for testbed in &testbeds {

@@ -29,6 +29,7 @@
     "nanos",
     "perfs",
     "powi",
+    "rqctx",
     "schemars"
   ]
 }

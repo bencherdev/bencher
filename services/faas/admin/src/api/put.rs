@@ -27,7 +27,7 @@ embed_migrations!("../util/migrations");
 pub async fn api_put_admin_migrate(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
 
     if let Ok(db_conn) = db_connection.lock() {
         let db_conn = &*db_conn;

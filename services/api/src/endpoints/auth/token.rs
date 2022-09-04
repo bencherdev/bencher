@@ -55,7 +55,7 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonToken>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
+    let api_context = rqctx.context();
 
     let json_token = body.into_inner();
     let token_data = json_token
@@ -63,7 +63,8 @@ pub async fn post(
         .validate("todo", Audience::Auth)
         .map_err(|_| http_error!("Failed to login user."))?;
 
-    let conn = &mut *db_connection.lock().await;
+    let api_context = &mut *api_context.lock().await;
+    let conn = &mut api_context.db;
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&token_data.claims.sub))
         .first::<QueryUser>(conn)

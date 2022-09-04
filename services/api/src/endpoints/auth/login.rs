@@ -52,10 +52,9 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonLogin>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
-    let db_connection = rqctx.context();
-
     let json_login = body.into_inner();
-    let conn = &mut *db_connection.lock().await;
+    let api_context = &mut *rqctx.context().lock().await;
+    let conn = &mut api_context.db;
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))
         .first::<QueryUser>(conn)
