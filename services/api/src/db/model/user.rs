@@ -148,7 +148,7 @@ impl QueryUser {
         })
     }
 
-    pub async fn get(rqctx: &RequestContext<Context>) -> Result<QueryUser, HttpError> {
+    pub async fn auth(rqctx: &RequestContext<Context>) -> Result<i32, HttpError> {
         let request = rqctx.request.lock().await;
 
         let headers = request
@@ -172,7 +172,8 @@ impl QueryUser {
         let conn = &mut context.db;
         schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
-            .first::<QueryUser>(conn)
+            .select(schema::user::id)
+            .first::<i32>(conn)
             .map_err(|_| http_error!(INVALID_JWT))
     }
 

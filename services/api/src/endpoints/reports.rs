@@ -43,7 +43,6 @@ use crate::{
     },
     diesel::ExpressionMethods,
     util::{
-        auth::get_token,
         cors::get_cors,
         headers::CorsHeaders,
         http_error,
@@ -77,7 +76,7 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
-    let query_user = QueryUser::get(&rqctx).await?;
+    let user_id = QueryUser::auth(&rqctx).await?;
 
     let path_params = path_params.into_inner();
 
@@ -85,7 +84,7 @@ pub async fn get_ls(
     let conn = &mut context.db;
     // Verify that the user has access to the project
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
-    QueryUser::has_access(conn, query_project.id, query_user.id)?;
+    QueryUser::has_access(conn, query_project.id, user_id)?;
 
     let json: Vec<JsonReport> = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
@@ -137,7 +136,7 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
-    let query_user = QueryUser::get(&rqctx).await?;
+    let user_id = QueryUser::auth(&rqctx).await?;
 
     const ERROR: &str = "Failed to create report.";
 
@@ -165,7 +164,7 @@ pub async fn post(
     let project_id = branch_project_id;
 
     // Verify that the user has access to the project
-    QueryUser::has_access(conn, project_id, query_user.id)?;
+    QueryUser::has_access(conn, project_id, user_id)?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -189,8 +188,7 @@ pub async fn post(
     };
 
     // Create a new report and add it to the database
-    let insert_report =
-        InsertReport::from_json(query_user.id, version_id, testbed_id, &json_report)?;
+    let insert_report = InsertReport::from_json(user_id, version_id, testbed_id, &json_report)?;
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
@@ -253,7 +251,7 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
-    let query_user = QueryUser::get(&rqctx).await?;
+    let user_id = QueryUser::auth(&rqctx).await?;
 
     let path_params = path_params.into_inner();
     let report_uuid = path_params.report_uuid.to_string();
@@ -262,7 +260,7 @@ pub async fn get_one(
     let conn = &mut context.db;
     // Verify that the user has access to the project
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
-    QueryUser::has_access(conn, query_project.id, query_user.id)?;
+    QueryUser::has_access(conn, query_project.id, user_id)?;
 
     let query_report = if let Ok(query) = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
