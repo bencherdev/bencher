@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{
     token::JsonWebToken,
+    JsonEmpty,
     JsonLogin,
 };
 use diesel::{
@@ -52,7 +53,7 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonLogin>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonEmpty>, CorsHeaders>, HttpError> {
     let json_login = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
 
@@ -69,7 +70,7 @@ pub async fn post(
     info!("Confirm \"{}\" with: {token}", json_login.email);
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(()),
+        HttpResponseAccepted(JsonEmpty::default()),
         CorsHeaders::new_pub("POST".into()),
     ))
 }

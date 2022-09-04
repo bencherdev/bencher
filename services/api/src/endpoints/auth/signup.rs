@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{
     token::JsonWebToken,
+    JsonEmpty,
     JsonSignup,
 };
 use diesel::RunQueryDsl;
@@ -48,7 +49,7 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonSignup>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonEmpty>, CorsHeaders>, HttpError> {
     let json_signup = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
 
@@ -66,7 +67,7 @@ pub async fn post(
     info!("Confirm \"{}\" with: {token}", insert_user.email);
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(()),
+        HttpResponseAccepted(JsonEmpty::default()),
         CorsHeaders::new_pub("POST".into()),
     ))
 }

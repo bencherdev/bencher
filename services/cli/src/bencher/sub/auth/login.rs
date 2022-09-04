@@ -1,7 +1,10 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonLogin;
+use bencher_json::{
+    JsonEmpty,
+    JsonLogin,
+};
 
 use crate::{
     bencher::{
@@ -43,7 +46,7 @@ impl SubCmd for Login {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let json_login: JsonLogin = self.clone().into();
         let res = self.backend.post(LOGIN_PATH, &json_login).await?;
-        let _: () = serde_json::from_value(res)?;
+        let _: JsonEmpty = serde_json::from_value(res)?;
         Ok(())
     }
 }

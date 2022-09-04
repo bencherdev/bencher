@@ -1,3 +1,10 @@
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
+use serde::{
+    Deserialize,
+    Serialize,
+};
+
 pub mod alert;
 pub mod auth;
 pub mod benchmark;
@@ -42,3 +49,7 @@ pub use threshold::{
     JsonThreshold,
 };
 pub use token::JsonToken;
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonEmpty {}
