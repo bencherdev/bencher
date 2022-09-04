@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    auth::JsonConfirmed,
+    auth::JsonConfirm,
     token::{
         JsonToken,
         JsonWebToken,
@@ -54,7 +54,7 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonToken>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonConfirmed>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonConfirm>, CorsHeaders>, HttpError> {
     let context = &mut *rqctx.context().lock().await;
 
     let json_token = body.into_inner();
@@ -73,7 +73,7 @@ pub async fn post(
     let token = JsonWebToken::new_client(&context.key, token_data.claims.email().to_string())
         .map_err(|_| http_error!("Failed to login user."))?;
 
-    let json_confirmed = JsonConfirmed {
+    let json_confirmed = JsonConfirm {
         user: json_user,
         token,
     };

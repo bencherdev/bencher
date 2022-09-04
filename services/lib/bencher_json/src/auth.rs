@@ -24,7 +24,7 @@ pub struct JsonLogin {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonConfirmed {
+pub struct JsonConfirm {
     pub user:  JsonUser,
     pub token: JsonWebToken,
 }

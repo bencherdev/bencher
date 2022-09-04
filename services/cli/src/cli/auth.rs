@@ -9,6 +9,8 @@ pub enum CliAuth {
     Signup(CliAuthSignup),
     // Log in to a user account
     Login(CliAuthLogin),
+    // Confirm token
+    Confirm(CliAuthConfirm),
 }
 
 #[derive(Parser, Debug)]
@@ -33,6 +35,16 @@ pub struct CliAuthSignup {
 pub struct CliAuthLogin {
     /// User email
     pub email: String,
+
+    /// Backend host URL (default http://api.bencher.dev)
+    #[clap(long)]
+    pub host: Option<String>,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliAuthConfirm {
+    /// Confirmation token
+    pub token: String,
 
     /// Backend host URL (default http://api.bencher.dev)
     #[clap(long)]

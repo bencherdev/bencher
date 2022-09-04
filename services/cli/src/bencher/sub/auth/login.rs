@@ -3,7 +3,6 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 use bencher_json::JsonLogin;
 
-use super::confirm;
 use crate::{
     bencher::{
         backend::Backend,
@@ -45,7 +44,6 @@ impl SubCmd for Login {
         let json_login: JsonLogin = self.clone().into();
         let res = self.backend.post(LOGIN_PATH, &json_login).await?;
         let _: () = serde_json::from_value(res)?;
-
-        confirm(&self.backend).await
+        Ok(())
     }
 }
