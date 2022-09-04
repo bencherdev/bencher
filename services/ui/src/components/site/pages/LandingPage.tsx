@@ -1,3 +1,5 @@
+import validator from "validator";
+
 export const BENCHER_TITLE = "Bencher - Track Your Benchmarks";
 
 const LandingPage = (props) => {
@@ -5,7 +7,9 @@ const LandingPage = (props) => {
 
   return (
     <section class="section is-medium">
-      {props.user().uuid && props.handleRedirect("/console")}
+      {props.user().token &&
+        validator.isJWT(props.user().token) &&
+        props.handleRedirect("/console")}
 
       <div class="container">
         <div class="content has-text-centered">
