@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
+    token::JsonWebToken,
     JsonSignup,
     JsonUser,
 };
@@ -12,7 +13,10 @@ use diesel::{
     RunQueryDsl,
     SqliteConnection,
 };
-use dropshot::HttpError;
+use dropshot::{
+    HttpError,
+    RequestContext,
+};
 use email_address_parser::EmailAddress;
 use uuid::Uuid;
 
@@ -22,7 +26,10 @@ use crate::{
         user as user_table,
     },
     diesel::ExpressionMethods,
-    util::http_error,
+    util::{
+        http_error,
+        Context,
+    },
 };
 
 const USER_ERROR: &str = "Failed to get user.";
@@ -125,24 +132,6 @@ impl QueryUser {
             .map_err(|_| http_error!(USER_ERROR))
     }
 
-    pub fn has_access(
-        conn: &mut SqliteConnection,
-        project_id: i32,
-        user_uuid: Uuid,
-    ) -> Result<i32, HttpError> {
-        let user_id = QueryUser::get_id(conn, &user_uuid)?;
-        schema::project::table
-            .filter(
-                schema::project::id
-                    .eq(project_id)
-                    .and(schema::project::owner_id.eq(user_id)),
-            )
-            .select(schema::project::id)
-            .first::<i32>(conn)
-            .map_err(|_| http_error!("Failed to get user."))?;
-        Ok(user_id)
-    }
-
     pub fn to_json(self) -> Result<JsonUser, HttpError> {
         let Self {
             id: _,
@@ -157,5 +146,51 @@ impl QueryUser {
             slug,
             email,
         })
+    }
+
+    pub async fn get(rqctx: &RequestContext<Context>) -> Result<QueryUser, HttpError> {
+        let request = rqctx.request.lock().await;
+
+        let headers = request
+            .headers()
+            .get("Authorization")
+            .ok_or(http_error!("Missing \"Authorization\" header."))?
+            .to_str()
+            .map_err(|_| http_error!("Invalid \"Authorization\" header."))?;
+        let (_, token) = headers
+            .split_once("Bearer ")
+            .ok_or(http_error!("Missing \"Authorization\" Bearer."))?;
+        let jwt: JsonWebToken = token.to_string().into();
+
+        const INVALID_JWT: &str = "Invalid JWT (JSON Web Token).";
+
+        let context = &mut *rqctx.context().lock().await;
+        let token_data = jwt
+            .validate_user(&context.key)
+            .map_err(|_| http_error!(INVALID_JWT))?;
+
+        let conn = &mut context.db;
+        schema::user::table
+            .filter(schema::user::email.eq(token_data.claims.email()))
+            .first::<QueryUser>(conn)
+            .map_err(|_| http_error!(INVALID_JWT))
+    }
+
+    pub fn has_access(
+        conn: &mut SqliteConnection,
+        project_id: i32,
+        user_id: i32,
+    ) -> Result<(), HttpError> {
+        schema::project::table
+            .filter(
+                schema::project::id
+                    .eq(project_id)
+                    .and(schema::project::owner_id.eq(user_id)),
+            )
+            .select(schema::project::id)
+            .first::<i32>(conn)
+            .map_err(|_| http_error!("Failed to get user."))?;
+
+        Ok(())
     }
 }

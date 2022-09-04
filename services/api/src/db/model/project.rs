@@ -47,7 +47,7 @@ pub struct InsertProject {
 impl InsertProject {
     pub fn from_json(
         conn: &mut SqliteConnection,
-        user_uuid: &Uuid,
+        owner_id: i32,
         project: JsonNewProject,
     ) -> Result<Self, HttpError> {
         let JsonNewProject {
@@ -60,7 +60,7 @@ impl InsertProject {
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            owner_id: QueryUser::get_id(conn, user_uuid)?,
+            owner_id,
             name,
             slug,
             description,

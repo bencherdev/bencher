@@ -25,7 +25,7 @@ const fetchProjects = async () => {
 
   try {
     const token = getToken();
-    if (!validator.isJWT(token)) {
+    if (token && !validator.isJWT(token)) {
       return [all_projects];
     }
 

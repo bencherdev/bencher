@@ -26,7 +26,7 @@ const DeckPanel = (props) => {
   const fetchData = async () => {
     try {
       const token = getToken();
-      if (!validator.isJWT(token)) {
+      if (token && !validator.isJWT(token)) {
         return {};
       }
 

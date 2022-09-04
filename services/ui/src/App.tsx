@@ -92,7 +92,7 @@ const App: Component = () => {
     if (user()?.token === null) {
       const user = JSON.parse(window.localStorage.getItem(LOCAL_USER_KEY));
       // TODO properly validate entire user
-      if (validator.isJWT(user.token)) {
+      if (user?.token && validator.isJWT(user.token)) {
         setUser(user);
       }
     }

@@ -21,7 +21,7 @@ const PlotKey = (props) => {
     const key_data = {};
 
     const token = getToken();
-    if (!validator.isJWT(token)) {
+    if (token && !validator.isJWT(token)) {
       return key_data;
     }
 

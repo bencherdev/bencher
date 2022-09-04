@@ -62,13 +62,12 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
-    let uuid = get_token(&rqctx).await?;
+    let query_user = QueryUser::get(&rqctx).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let owner_id = QueryUser::get_id(conn, &uuid)?;
     let json: Vec<JsonProject> = schema::project::table
-        .filter(schema::project::owner_id.eq(owner_id))
+        .filter(schema::project::owner_id.eq(query_user.id))
         .order(schema::project::name)
         .load::<QueryProject>(conn)
         .map_err(|_| http_error!("Failed to get projects."))?
@@ -91,13 +90,13 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonProject>, CorsHeaders>, HttpError> {
-    let user_uuid = get_token(&rqctx).await?;
+    let query_user = QueryUser::get(&rqctx).await?;
 
     let json_project = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let insert_project = InsertProject::from_json(conn, &user_uuid, json_project)?;
+    let insert_project = InsertProject::from_json(conn, query_user.id, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)

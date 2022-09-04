@@ -18,7 +18,7 @@ const AuthFormPage = (props: {
   const [authenticated, setAuthenticated] = createSignal(false);
 
   setInterval(() => {
-    if (validator.isJWT(props.user()?.token)) {
+    if (props.user()?.token && validator.isJWT(props.user()?.token)) {
       setAuthenticated(true);
     }
   }, 1000);

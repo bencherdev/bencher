@@ -21,7 +21,7 @@ const TablePanel = (props) => {
   const fetchData = async (refresh) => {
     try {
       const token = getToken();
-      if (!validator.isJWT(token)) {
+      if (token && !validator.isJWT(token)) {
         return [];
       }
 

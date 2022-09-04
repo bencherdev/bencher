@@ -38,7 +38,7 @@ const Poster = (props) => {
   const postData = async (url, data) => {
     try {
       const token = getToken();
-      if (!validator.isJWT(token)) {
+      if (token && !validator.isJWT(token)) {
         return;
       }
 

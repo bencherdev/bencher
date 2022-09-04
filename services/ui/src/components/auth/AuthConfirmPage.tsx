@@ -20,7 +20,7 @@ const AuthConfirmPage = (props: {
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (
-    !searchParams[TOKEN_PARAM] ||
+    searchParams[TOKEN_PARAM] &&
     !validator.isJWT(searchParams[TOKEN_PARAM])
   ) {
     setSearchParams({ [TOKEN_PARAM]: null });

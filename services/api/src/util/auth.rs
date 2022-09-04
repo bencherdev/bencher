@@ -1,8 +1,18 @@
 use std::str::FromStr;
 
+use bencher_json::token::JsonWebToken;
+use diesel::{
+    QueryDsl,
+    RunQueryDsl,
+};
 use dropshot::{
+    endpoint,
     HttpError,
+    HttpResponseAccepted,
+    HttpResponseHeaders,
+    HttpResponseOk,
     RequestContext,
+    TypedBody,
 };
 use uuid::Uuid;
 
@@ -10,10 +20,9 @@ use super::{
     http_error,
     Context,
 };
+use crate::db::model::user::QueryUser;
 
-pub type AuthToken = Uuid;
-
-pub async fn get_token(rqctx: &RequestContext<Context>) -> Result<AuthToken, HttpError> {
+pub async fn get_token(rqctx: &RequestContext<Context>) -> Result<JsonWebToken, HttpError> {
     let request = rqctx.request.lock().await;
     let headers = request
         .headers()
@@ -21,8 +30,8 @@ pub async fn get_token(rqctx: &RequestContext<Context>) -> Result<AuthToken, Htt
         .ok_or(http_error!("Missing \"Authorization\" header."))?
         .to_str()
         .map_err(|_| http_error!("Invalid \"Authorization\" header."))?;
-    let (_, uuid) = headers
+    let (_, token) = headers
         .split_once("Bearer ")
-        .ok_or(http_error!("Missisng \"Authorization\" Bearer."))?;
-    Uuid::from_str(uuid).map_err(|_| http_error!("Invalid \"Authorization\" Bearer token."))
+        .ok_or(http_error!("Missing \"Authorization\" Bearer."))?;
+    Ok(token.to_string().into())
 }
