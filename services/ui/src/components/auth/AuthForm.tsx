@@ -60,7 +60,6 @@ export const AuthForm = (props: Props) => {
     event.preventDefault();
     handleFormSubmitting(true);
     let json_data;
-    let notification: string;
     if (props.config?.kind === FormKind.SIGNUP) {
       const signup_form = form();
       json_data = {
@@ -69,19 +68,16 @@ export const AuthForm = (props: Props) => {
         email: signup_form.email.value,
         free: null,
       };
-      notification = "Successful signup!";
     } else if (props.config?.kind === FormKind.LOGIN) {
       const login_form = form();
       json_data = {
         email: login_form.email.value,
         free: null,
       };
-      notification = "Welcome back!";
     }
     fetchData(json_data)
       .then((resp) => {
         props.handleUser(resp.data);
-        props.handleNotification({ status: "ok", text: notification });
         props.handleRedirect(props.config?.redirect);
       })
       .catch((e) => {

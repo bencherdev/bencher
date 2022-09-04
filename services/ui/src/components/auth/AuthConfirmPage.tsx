@@ -71,7 +71,7 @@ const AuthConfirmPage = (props: {
     fetchData(json_data)
       .then((resp) => {
         props.handleUser(resp.data);
-        props.handleNotification({ status: "ok", text: "Hello" });
+        props.handleNotification({ status: "ok", text: "🐰 Ahoy!" });
         props.handleRedirect(props.config?.form?.redirect);
       })
       .catch((e) => {
