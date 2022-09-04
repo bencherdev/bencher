@@ -18,7 +18,7 @@ services:
       context: ./services/ui
       dockerfile: Dockerfile
     ports:
-      - 4096:4173
+      - 4096:5173
     depends_on:
       - bencher_api
 
