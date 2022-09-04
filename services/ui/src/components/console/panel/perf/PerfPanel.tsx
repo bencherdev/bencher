@@ -264,9 +264,6 @@ const PerfPanel = (props) => {
   const [testbeds_tab, setTestbedsTab] = createSignal([]);
   const [benchmarks_tab, setBenchmarksTab] = createSignal([]);
 
-  // Keep state on whether the project slug has changed
-  const [project_slug, setProjectSlug] = createSignal(props.project_slug());
-
   // Keep state on whether the resources have been refreshed
   const [tabular_refresh, setTabularRefresh] = createSignal();
 

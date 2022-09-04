@@ -1,9 +1,13 @@
 import axios from "axios";
-import { createEffect, createSignal } from "solid-js";
+import { useSearchParams } from "solid-app-router";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
 import { BENCHER_API_URL } from "../console/config/util";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
+import validator from "validator";
+
+const TOKEN_PARAM = "token";
 
 const AuthConfirmPage = (props: {
   config: any;
@@ -14,10 +18,36 @@ const AuthConfirmPage = (props: {
 }) => {
   props.handleTitle(props.config?.title);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  if (
+    !searchParams[TOKEN_PARAM] ||
+    !validator.isJWT(searchParams[TOKEN_PARAM])
+  ) {
+    setSearchParams({ [TOKEN_PARAM]: null });
+  }
+
+  const token = createMemo(() => searchParams[TOKEN_PARAM]);
+
+  const [submitted, setSubmitted] = createSignal();
+
+  createEffect(() => {
+    const jwt = token();
+    if (jwt && validator.isJWT(jwt) && jwt !== submitted()) {
+      setSubmitted(jwt);
+      handleFormSubmit();
+    }
+  });
+
   const [form, setForm] = createSignal(initForm());
 
   createEffect(() => {
-    var valid = form()?.token?.valid;
+    const value = form()?.token?.value;
+    if (value.length > 0) {
+      setSearchParams({ [TOKEN_PARAM]: value });
+    }
+
+    const valid = form()?.token?.valid;
     if (valid !== form()?.valid) {
       setForm({ ...form(), valid: valid });
     }
@@ -33,15 +63,13 @@ const AuthConfirmPage = (props: {
     });
   };
 
-  const handleFormSubmit = (event) => {
-    event.preventDefault();
+  const handleFormSubmit = () => {
     handleFormSubmitting(true);
     const json_data = {
-      token: form()?.token?.value,
+      token: token(),
     };
     fetchData(json_data)
       .then((resp) => {
-        console.log(resp);
         props.handleUser(resp.data);
         props.handleNotification({ status: "ok", text: "Hello" });
         props.handleRedirect(props.config?.form?.redirect);
@@ -102,7 +130,10 @@ const AuthConfirmPage = (props: {
               <button
                 class="button is-primary is-fullwidth"
                 disabled={!form()?.valid || form()?.submitting}
-                onClick={(e) => handleFormSubmit(e)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleFormSubmit();
+                }}
               >
                 Submit
               </button>
