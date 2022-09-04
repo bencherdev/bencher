@@ -3,7 +3,6 @@ import axios from "axios";
 
 import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
-import authForms from "./authForms";
 import { Field } from "../console/config/types";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;

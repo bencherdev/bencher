@@ -3,12 +3,14 @@ import { createSignal, createEffect, Accessor } from "solid-js";
 
 import authForms from "./authForms";
 import { AuthForm } from "./AuthForm";
+import { Auth } from "./config/types";
 
 const SIGNUP = "signup";
 const LOGIN = "login";
 
 const AuthFormPage = (props: {
   kind: "signup" | "login";
+  config: any;
   handleTitle: Function;
   handleRedirect: Function;
   user: Function;
@@ -39,10 +41,10 @@ const AuthFormPage = (props: {
             <p class="has-text-centered">
               <small>
                 switch to{" "}
-                {props.kind === SIGNUP && (
+                {props.config?.auth === Auth.SIGNUP && (
                   <Link href="/auth/login">log in</Link>
                 )}
-                {props.kind === LOGIN && (
+                {props.config?.auth === Auth.LOGIN && (
                   <Link href="/auth/signup">sign up</Link>
                 )}
               </small>

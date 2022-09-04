@@ -8,13 +8,14 @@ const SIGNUP = "signup";
 const LOGIN = "login";
 
 const AuthLogoutPage = (props: {
+  config: any;
   handleTitle: Function;
   handleRedirect: Function;
   removeUser: Function;
 }) => {
-  props.handleTitle("Log out");
+  props.handleTitle(props.config?.title);
   props.removeUser();
-  props.handleRedirect("/auth/login");
+  props.handleRedirect(props.config?.redirect);
   return <></>;
 };
 
