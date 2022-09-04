@@ -1,4 +1,5 @@
 use chrono::Utc;
+use derive_more::Display;
 use jsonwebtoken::{
     decode,
     encode,
@@ -9,7 +10,6 @@ use jsonwebtoken::{
     TokenData,
     Validation,
 };
-use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -32,6 +32,14 @@ lazy_static::lazy_static! {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonToken {
     pub token: JsonWebToken,
+}
+
+impl From<String> for JsonToken {
+    fn from(token: String) -> Self {
+        Self {
+            token: JsonWebToken::from(token),
+        }
+    }
 }
 
 #[derive(Debug, Display, Serialize, Deserialize)]
