@@ -31,6 +31,8 @@ ordered-float = { version = "3.0.0" }
 statrs = "0.16.0"
 literally = { version = "0.1.3", optional = true }
 lazy_static = "1.4.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
 
 [[bin]]
 name = "api"

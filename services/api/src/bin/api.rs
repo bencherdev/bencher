@@ -9,9 +9,13 @@ use bencher_api::{
 use tokio::sync::Mutex;
 
 const API_NAME: &str = "Bencher API";
+const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    // install global subscriber configured based on RUST_LOG envvar.
+    tracing_subscriber::fmt::init();
+    tracing::info!("Bencher API Server v{}", env!("CARGO_PKG_VERSION"));
     run().await
 }
 
