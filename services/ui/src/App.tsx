@@ -18,8 +18,7 @@ import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
 
-const AuthFormPage = lazy(() => import("./components/auth/AuthFormPage"));
-const AuthLogoutPage = lazy(() => import("./components/auth/AuthLogoutPage"));
+const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
@@ -159,7 +158,6 @@ const App: Component = () => {
           <div class="container">{getNotification()}</div>
         </section>
       )}
-      {/* <div id="swagger" /> */}
 
       <Routes>
         <Route
@@ -175,41 +173,13 @@ const App: Component = () => {
 
         {/* Auth Routes */}
         <Route path="/auth">
-          <Route
-            path="/signup"
-            element={
-              <AuthFormPage
-                kind="signup"
-                handleTitle={handleTitle}
-                handleRedirect={setRedirect}
-                user={user}
-                handleUser={handleUser}
-                handleNotification={handleNotification}
-              />
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <AuthFormPage
-                kind="login"
-                handleTitle={handleTitle}
-                handleRedirect={setRedirect}
-                user={user}
-                handleUser={handleUser}
-                handleNotification={handleNotification}
-              />
-            }
-          />
-          <Route
-            path="/logout"
-            element={
-              <AuthLogoutPage
-                handleTitle={handleTitle}
-                handleRedirect={setRedirect}
-                removeUser={removeUser}
-              />
-            }
+          <AuthRoutes
+            handleTitle={handleTitle}
+            handleRedirect={setRedirect}
+            user={user}
+            handleUser={handleUser}
+            removeUser={removeUser}
+            handleNotification={handleNotification}
           />
         </Route>
 
