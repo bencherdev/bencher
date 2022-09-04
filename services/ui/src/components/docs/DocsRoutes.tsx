@@ -1,11 +1,5 @@
-import { lazy } from "solid-js";
 import { Route, Navigate } from "solid-app-router";
-import SwaggerUI from "swagger-ui";
 import DocsPage from "./DocsPage";
-
-import swagger from "./api/swagger.json";
-
-const Example = lazy(() => import("./Example.mdx"));
 
 const DocsRoutes = (props) => {
   const docsPage = (page) => {

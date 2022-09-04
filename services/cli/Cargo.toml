@@ -2,12 +2,6 @@
 name = "bencher_cli"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
-description = "Track Your Benchmarks"
-readme = "README.md"
-homepage = "https://bencher.dev"
-keywords = ["cli", "bench", "benchmark", "benchmarking", "profiling"]
-categories = ["command-line-utilities", "development-tools::profiling", "wasm"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
