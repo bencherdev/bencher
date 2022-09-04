@@ -1,4 +1,5 @@
-import { Link } from "solid-app-router";
+import { Link, Navigate } from "solid-app-router";
+import { createSignal } from "solid-js";
 import validator from "validator";
 
 import { AuthForm } from "./AuthForm";
@@ -14,9 +15,11 @@ const AuthFormPage = (props: {
 }) => {
   props.handleTitle(props.config?.title);
 
+  const [authenticated, setAuthenticated] = createSignal(false);
+
   setInterval(() => {
     if (validator.isJWT(props.user()?.token)) {
-      props.handleRedirect("/console");
+      setAuthenticated(true);
     }
   }, 1000);
 
@@ -25,6 +28,7 @@ const AuthFormPage = (props: {
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
+            {authenticated() && <Navigate href={"/console"} />}
             <h2 class="title">{props.config?.title}</h2>
 
             <AuthForm
