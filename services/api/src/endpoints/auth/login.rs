@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{
+    token::JsonWebToken,
     JsonLogin,
-    JsonUser,
 };
 use diesel::{
     QueryDsl,
@@ -17,6 +17,7 @@ use dropshot::{
     RequestContext,
     TypedBody,
 };
+use tracing::info;
 
 use crate::{
     db::{
@@ -51,18 +52,24 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonLogin>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<()>, CorsHeaders>, HttpError> {
     let json_login = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
+
     let conn = &mut context.db;
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))
         .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to login user."))?;
-    let json_user = query_user.to_json()?;
+
+    let token = JsonWebToken::new_auth(&context.key, query_user.email)
+        .map_err(|_| http_error!("Failed to login user."))?;
+
+    // TODO log this as trace if SMTP is configured
+    info!("Confirm \"{}\" with: {token}", json_login.email);
 
     Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json_user),
+        HttpResponseAccepted(()),
         CorsHeaders::new_pub("POST".into()),
     ))
 }

@@ -9,6 +9,7 @@ use jsonwebtoken::{
     TokenData,
     Validation,
 };
+use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -33,7 +34,7 @@ pub struct JsonToken {
     pub token: JsonWebToken,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Display, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonWebToken(pub String);
 

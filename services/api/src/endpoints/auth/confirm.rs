@@ -70,10 +70,12 @@ pub async fn post(
         .map_err(|_| http_error!("Failed to login user."))?;
     let json_user = query_user.to_json()?;
 
+    let token = JsonWebToken::new_client(&context.key, token_data.claims.email().to_string())
+        .map_err(|_| http_error!("Failed to login user."))?;
+
     let json_confirmed = JsonConfirmed {
-        user:  json_user,
-        token: JsonWebToken::new_client(&context.key, token_data.claims.email().to_string())
-            .map_err(|_| http_error!("Failed to login user."))?,
+        user: json_user,
+        token,
     };
 
     Ok(HttpResponseHeaders::new(
