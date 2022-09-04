@@ -29,7 +29,6 @@ const fetchProjects = async () => {
       return [all_projects];
     }
 
-    console.log(token);
     const resp = await axios(options(token));
     let data = resp?.data;
     data.push(all_projects);
@@ -44,7 +43,6 @@ const fetchProjects = async () => {
 const ProjectSelect = (props) => {
   const getSelected = () => {
     const slug = props.project_slug();
-    console.log(slug);
     if (slug === null) {
       return BENCHER_ALL_PROJECTS;
     } else {
@@ -76,7 +74,6 @@ const ProjectSelect = (props) => {
 
   const handleInput = (e) => {
     const target_slug = e.currentTarget.value;
-    console.log(target_slug);
     if (target_slug === BENCHER_ALL_PROJECTS) {
       setSelected(target_slug);
       props.handleProjectSlug(null);
