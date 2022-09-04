@@ -4,11 +4,12 @@ import axios from "axios";
 import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import { Field } from "../console/config/types";
+import { FormKind } from "./config/types";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 export interface Props {
-  kind: "signup" | "login";
+  config: any;
   handleRedirect: Function;
   user: Function;
   handleUser: Function;
@@ -41,11 +42,11 @@ export const AuthForm = (props: Props) => {
 
   const validateForm = () => {
     if (form()?.email?.valid) {
-      if (props.kind === "login") {
+      if (props.config?.kind === FormKind.LOGIN) {
         return true;
       }
       if (
-        props.kind === "signup" &&
+        props.config?.kind === FormKind.SIGNUP &&
         form()?.username?.valid &&
         form()?.consent?.value
       ) {
@@ -60,7 +61,7 @@ export const AuthForm = (props: Props) => {
     handleFormSubmitting(true);
     let json_data;
     let notification: string;
-    if (props.kind === "signup") {
+    if (props.config?.kind === FormKind.SIGNUP) {
       const signup_form = form();
       json_data = {
         name: signup_form.username.value,
@@ -69,7 +70,7 @@ export const AuthForm = (props: Props) => {
         free: null,
       };
       notification = "Successful signup!";
-    } else if (props.kind === "login") {
+    } else if (props.config?.kind === FormKind.LOGIN) {
       const login_form = form();
       json_data = {
         email: login_form.email.value,
@@ -81,12 +82,12 @@ export const AuthForm = (props: Props) => {
       .then((resp) => {
         props.handleUser(resp.data);
         props.handleNotification({ status: "ok", text: notification });
-        props.handleRedirect("/console");
+        props.handleRedirect(props.config?.redirect);
       })
       .catch((e) => {
         props.handleNotification({
           status: "error",
-          text: `Failed to ${props.kind}: ${e}`,
+          text: `Failed to ${props.config?.kind}: ${e}`,
         });
       });
     handleFormSubmitting(false);
@@ -98,12 +99,10 @@ export const AuthForm = (props: Props) => {
 
   const request_config = (data) => {
     return {
-      url: `${BENCHER_API_URL}/v0/auth/${props.kind}`,
+      url: `${BENCHER_API_URL}/v0/auth/${props.config?.kind}`,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Only use with explicit CORS
-        // Authorization: `Bearer ${window.localStorage.authToken}`
       },
       data: data,
     };
@@ -121,7 +120,7 @@ export const AuthForm = (props: Props) => {
 
   return (
     <form class="box">
-      {props.kind === "signup" && (
+      {props.config?.kind === FormKind.SIGNUP && (
         <SiteField
           kind={Field.INPUT}
           fieldKey="username"
@@ -145,7 +144,7 @@ export const AuthForm = (props: Props) => {
 
       <br />
 
-      {props.kind === "signup" &&
+      {props.config?.kind === FormKind.SIGNUP &&
         form()?.username?.valid &&
         form()?.email?.valid && (
           <SiteField

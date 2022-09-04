@@ -1,12 +1,10 @@
-const AuthLogoutPage = (props: {
+const AuthConfirmPage = (props: {
+  config: any;
   handleTitle: Function;
   handleRedirect: Function;
   removeUser: Function;
 }) => {
-  props.handleTitle("Log out");
-  props.removeUser();
-  props.handleRedirect("/auth/login");
-  return <></>;
+  return <div>TODO</div>;
 };
 
-export default AuthLogoutPage;
+export default AuthConfirmPage;

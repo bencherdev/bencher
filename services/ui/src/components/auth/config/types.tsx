@@ -4,3 +4,8 @@ export enum Auth {
   CONFIRM,
   LOGOUT,
 }
+
+export enum FormKind {
+  SIGNUP = "signup",
+  LOGIN = "login",
+}

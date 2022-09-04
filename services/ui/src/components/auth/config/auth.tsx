@@ -1,12 +1,13 @@
-import { Auth } from "./types";
+import { Auth, FormKind } from "./types";
 
 const authConfig = {
   [Auth.SIGNUP]: {
     auth: Auth.SIGNUP,
-    heading: "Sign up",
+    title: "Sign up",
     form: {
+      kind: FormKind.SIGNUP,
       token: true,
-      redirect: "/dashboard",
+      redirect: "/auth/confirm",
       notification: {
         success: "Sign up successful",
         danger: "Sign up failed",
@@ -15,10 +16,11 @@ const authConfig = {
   },
   [Auth.LOGIN]: {
     auth: Auth.LOGIN,
-    heading: "Log in",
+    title: "Log in",
     form: {
+      kind: FormKind.LOGIN,
       token: true,
-      redirect: "/dashboard",
+      redirect: "/auth/confirm",
       notification: {
         success: "Log in successful",
         danger: "Log in failed",

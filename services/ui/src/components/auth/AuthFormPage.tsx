@@ -1,12 +1,8 @@
 import { Link, Navigate } from "solid-app-router";
 import { createSignal, createEffect, Accessor } from "solid-js";
 
-import authForms from "./authForms";
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
-
-const SIGNUP = "signup";
-const LOGIN = "login";
 
 const AuthFormPage = (props: {
   kind: "signup" | "login";
@@ -17,7 +13,7 @@ const AuthFormPage = (props: {
   handleUser: Function;
   handleNotification: Function;
 }) => {
-  props.handleTitle(authForms[props.kind]?.heading);
+  props.handleTitle(props.config?.title);
 
   return (
     <section class="section">
@@ -25,11 +21,11 @@ const AuthFormPage = (props: {
         <div class="columns is-centered">
           <div class="column is-two-fifths">
             <h2 class="title">
-              <span>{authForms[props.kind]?.heading}</span>
+              <span>{props.config?.title}</span>
             </h2>
 
             <AuthForm
-              kind={props.kind}
+              config={props.config?.form}
               handleRedirect={props.handleRedirect}
               user={props.user}
               handleUser={props.handleUser}
