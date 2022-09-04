@@ -33,6 +33,7 @@
     "bulma-pricingtable": "^0.2.0",
     "bulma-switch": "^2.0.4",
     "d3": "^7.6.1",
+    "remark-gfm": "^3.0.1",
     "slugify": "^1.6.5",
     "solid-app-router": "^0.4.1",
     "solid-js": "^1.5.0",

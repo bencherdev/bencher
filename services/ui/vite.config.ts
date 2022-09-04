@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
+import remarkGfm from "remark-gfm";
 import mdx from "@mdx-js/rollup"
 
 export default defineConfig({
-  plugins: [solidPlugin(), mdx({ jsxImportSource: "solid-jsx"})],
+  plugins: [mdx({ jsxImportSource: "solid-jsx", remarkPlugins: [remarkGfm] }), solidPlugin()],
   build: {
     target: "esnext",
     polyfillDynamicImport: false,
