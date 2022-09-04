@@ -2,7 +2,7 @@ import axios from "axios";
 import { createSignal, For } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import validator from "validator";
-import { LOCAL_USER_KEY } from "../../config/util";
+import { getToken } from "../../../site/util";
 
 const initForm = (fields) => {
   let newForm = {};
@@ -37,9 +37,7 @@ const Poster = (props) => {
 
   const postData = async (url, data) => {
     try {
-      const token = JSON.parse(
-        window.localStorage.getItem(LOCAL_USER_KEY)
-      )?.token;
+      const token = getToken();
       if (!validator.isJWT(token)) {
         return;
       }

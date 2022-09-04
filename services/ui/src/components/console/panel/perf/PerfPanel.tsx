@@ -7,7 +7,7 @@ import {
   createSignal,
 } from "solid-js";
 import { isPerfKind, isPerfTab, PerfTab, PerKind } from "../../config/types";
-import { LOCAL_USER_KEY } from "../../config/util";
+import { getToken } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import validator from "validator";
@@ -189,9 +189,7 @@ const PerfPanel = (props) => {
 
   const fetchPerfData = async () => {
     try {
-      const token = JSON.parse(
-        window.localStorage.getItem(LOCAL_USER_KEY)
-      )?.token;
+      const token = getToken();
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
       if (isPlotInit() || !validator.isJWT(token)) {
         return {};
@@ -236,9 +234,7 @@ const PerfPanel = (props) => {
 
   const fetchPerfTab = async (perf_tab: PerfTab) => {
     try {
-      const token = JSON.parse(
-        window.localStorage.getItem(LOCAL_USER_KEY)
-      )?.token;
+      const token = getToken();
       if (!validator.isJWT(token)) {
         return [];
       }

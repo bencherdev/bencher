@@ -4,7 +4,7 @@ import Table from "./Table";
 import validator from "validator";
 
 import TableHeader from "./TableHeader";
-import { LOCAL_USER_KEY } from "../../config/util";
+import { getToken } from "../../../site/util";
 
 const TablePanel = (props) => {
   const options = (token: string) => {
@@ -20,9 +20,7 @@ const TablePanel = (props) => {
 
   const fetchData = async (refresh) => {
     try {
-      const token = JSON.parse(
-        window.localStorage.getItem(LOCAL_USER_KEY)
-      )?.token;
+      const token = getToken();
       if (!validator.isJWT(token)) {
         return [];
       }

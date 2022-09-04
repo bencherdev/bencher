@@ -4,7 +4,7 @@ import { createSignal, createResource } from "solid-js";
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
 import Card from "./Card";
-import { LOCAL_USER_KEY } from "../../config/util";
+import { getToken } from "../../../site/util";
 import validator from "validator";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
@@ -25,9 +25,7 @@ const DeckPanel = (props) => {
 
   const fetchData = async () => {
     try {
-      const token = JSON.parse(
-        window.localStorage.getItem(LOCAL_USER_KEY)
-      )?.token;
+      const token = getToken();
       if (!validator.isJWT(token)) {
         return {};
       }

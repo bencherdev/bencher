@@ -2,7 +2,7 @@ import axios from "axios";
 import { createEffect, createResource, createSignal, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
-import { LOCAL_USER_KEY } from "../../../config/util";
+import { getToken } from "../../../../site/util";
 import validator from "validator";
 
 const PlotKey = (props) => {
@@ -20,9 +20,7 @@ const PlotKey = (props) => {
   const fetchKeyData = async (perf_tab: PerfTab, uuids: any[]) => {
     const key_data = {};
 
-    const token = JSON.parse(
-      window.localStorage.getItem(LOCAL_USER_KEY)
-    )?.token;
+    const token = getToken();
     if (!validator.isJWT(token)) {
       return key_data;
     }

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { createSignal, createResource, createEffect, For } from "solid-js";
-import { LOCAL_USER_KEY } from "../../console/config/util";
+import { getToken } from "../../site/util";
 import validator from "validator";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
@@ -24,9 +24,7 @@ const fetchProjects = async () => {
   };
 
   try {
-    const token = JSON.parse(
-      window.localStorage.getItem(LOCAL_USER_KEY)
-    )?.token;
+    const token = getToken();
     if (!validator.isJWT(token)) {
       return [all_projects];
     }

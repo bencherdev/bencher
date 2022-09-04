@@ -17,7 +17,7 @@ import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
-import { LOCAL_USER_KEY } from "./components/console/config/util";
+import { getToken, LOCAL_USER_KEY } from "./components/site/util";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
