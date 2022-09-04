@@ -75,11 +75,10 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonThreshold>>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonThreshold> = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
@@ -128,11 +127,10 @@ pub async fn post(
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonThreshold>, CorsHeaders>, HttpError> {
     const ERROR: &str = "Failed to create thresholds.";
 
-    let api_context = rqctx.context();
     let json_threshold = body.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
 
     let branch_id = QueryBranch::get_id(conn, &json_threshold.branch)?;
     let testbed_id = QueryTestbed::get_id(conn, &json_threshold.testbed)?;
@@ -195,12 +193,11 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonThreshold>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
     let threshold_uuid = path_params.threshold.to_string();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))

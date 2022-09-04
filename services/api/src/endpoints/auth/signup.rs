@@ -55,11 +55,9 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonSignup>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonUser>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
-
     let json_signup = body.into_inner();
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let insert_user = InsertUser::from_json(conn, json_signup)?;
     diesel::insert_into(schema::user::table)
         .values(&insert_user)

@@ -21,10 +21,8 @@ use crate::util::{
 pub async fn api_get_ping(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
-
-    let api_context = &mut *api_context.lock().await;
-    let _conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let _conn = &mut context.db;
 
     let resp = HttpResponseHeaders::new(
         HttpResponseOk("PONG".into()),

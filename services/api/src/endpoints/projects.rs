@@ -63,10 +63,9 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
     let uuid = get_token(&rqctx).await?;
-    let api_context = rqctx.context();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let owner_id = QueryUser::get_id(conn, &uuid)?;
     let json: Vec<JsonProject> = schema::project::table
         .filter(schema::project::owner_id.eq(owner_id))
@@ -93,11 +92,11 @@ pub async fn post(
     body: TypedBody<JsonNewProject>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonProject>, CorsHeaders>, HttpError> {
     let user_uuid = get_token(&rqctx).await?;
-    let api_context = rqctx.context();
+
     let json_project = body.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let insert_project = InsertProject::from_json(conn, &user_uuid, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
@@ -142,11 +141,10 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let query = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json = query.to_json(conn)?;
 

@@ -31,8 +31,6 @@ use util::{
 pub async fn api_get_metrics(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<MetaMetrics>>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
-
     if let Ok(db_conn) = db_connection.lock() {
         let db_conn = &*db_conn;
         let reports: Vec<DbReport> = report::table

@@ -104,8 +104,6 @@ struct CounterValue {
 async fn example_api_get_counter(
     rqctx: Arc<RequestContext<ExampleContext>>,
 ) -> Result<HttpResponseOk<CounterValue>, HttpError> {
-    let api_context = rqctx.context();
-
     Ok(HttpResponseOk(CounterValue {
         counter: api_context.counter.load(Ordering::SeqCst),
     }))
@@ -121,7 +119,6 @@ async fn example_api_put_counter(
     rqctx: Arc<RequestContext<ExampleContext>>,
     update: TypedBody<CounterValue>,
 ) -> Result<HttpResponseUpdatedNoContent, HttpError> {
-    let api_context = rqctx.context();
     let updated_value = update.into_inner();
 
     if updated_value.counter == 10 {

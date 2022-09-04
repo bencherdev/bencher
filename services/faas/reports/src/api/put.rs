@@ -45,8 +45,6 @@ pub async fn api_put_reports(
     rqctx: Arc<RequestContext<Mutex<PgConnection>>>,
     body: TypedBody<Report>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
-    let api_context = rqctx.context();
-
     let report = body.into_inner();
     let Report {
         email,

@@ -64,11 +64,10 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonBenchmark>>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonBenchmark> = schema::benchmark::table
         .filter(schema::benchmark::project_id.eq(&query_project.id))
@@ -112,12 +111,11 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonBenchmark>, CorsHeaders>, HttpError> {
-    let api_context = rqctx.context();
     let path_params = path_params.into_inner();
     let benchmark = path_params.benchmark.to_string();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::benchmark::table
         .filter(

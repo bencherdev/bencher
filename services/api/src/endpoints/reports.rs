@@ -78,11 +78,11 @@ pub async fn get_ls(
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
     let user_uuid = get_token(&rqctx).await?;
-    let api_context = rqctx.context();
+
     let path_params = path_params.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     // Verify that the user has access to the project
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     QueryUser::has_access(conn, query_project.id, user_uuid)?;
@@ -140,11 +140,11 @@ pub async fn post(
     const ERROR: &str = "Failed to create report.";
 
     let user_uuid = get_token(&rqctx).await?;
-    let api_context = rqctx.context();
+
     let json_report = body.into_inner();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
 
     // Verify that the branch and testbed are part of the same project
     let branch_id = QueryBranch::get_id(conn, &json_report.branch)?;
@@ -253,12 +253,12 @@ pub async fn get_one(
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
     let user_uuid = get_token(&rqctx).await?;
-    let api_context = rqctx.context();
+
     let path_params = path_params.into_inner();
     let report_uuid = path_params.report_uuid.to_string();
 
-    let api_context = &mut *api_context.lock().await;
-    let conn = &mut api_context.db;
+    let context = &mut *rqctx.context().lock().await;
+    let conn = &mut context.db;
     // Verify that the user has access to the project
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     QueryUser::has_access(conn, query_project.id, user_uuid)?;
