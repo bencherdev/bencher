@@ -5,7 +5,6 @@ use bencher_json::{
         Audience,
         JsonToken,
     },
-    JsonLogin,
     JsonUser,
 };
 use diesel::{

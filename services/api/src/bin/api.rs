@@ -61,6 +61,13 @@ async fn run() -> Result<(), String> {
 
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), String> {
+    let secret_key: String = std::env::var(BENCHER_SECRET_KEY).unwrap_or_else(|e| {
+        tracing::info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
+        let secret_key = uuid::Uuid::new_v4().to_string();
+        tracing::info!("Generated temporary secret key: {secret_key}");
+        secret_key
+    });
+
     let mut db_connection = get_db_connection().map_err(|e| e.to_string())?;
     run_migration(&mut db_connection).map_err(|e| e.to_string())?;
     get_server(API_NAME, Mutex::new(db_connection)).await?.await
