@@ -3,7 +3,7 @@ import solidPlugin from "vite-plugin-solid";
 import mdx from "@mdx-js/rollup"
 
 export default defineConfig({
-  plugins: [mdx({ jsxImportSource: 'solid-jsx'}), solidPlugin()],
+  plugins: [solidPlugin(), mdx({ jsxImportSource: "solid-jsx"})],
   build: {
     target: "esnext",
     polyfillDynamicImport: false,

@@ -1,10 +1,10 @@
-# Bencher
+# 🐰 Bencher
 
-Bencher is a suite of tools designed to help catch performance regressions in CI.
+[Bencher](https://bencher.dev) is a suite of tools designed to help catch performance regressions in CI.
 
 It consists of:
 - `bencher` CLI
-- Bencher API server
+- Bencher API Server
 - Bencher Web UI
 
 ## License
