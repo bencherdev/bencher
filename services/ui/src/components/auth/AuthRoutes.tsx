@@ -44,6 +44,7 @@ const AuthRoutes = (props) => {
         path="/confirm"
         element={
           <AuthConfirmPage
+            user={props.user}
             config={config[Auth.CONFIRM]}
             handleTitle={props.handleTitle}
             handleRedirect={props.handleRedirect}

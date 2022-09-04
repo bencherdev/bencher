@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useSearchParams } from "solid-app-router";
+import { Navigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
@@ -9,6 +9,7 @@ import validator from "validator";
 const TOKEN_PARAM = "token";
 
 const AuthConfirmPage = (props: {
+  user: Function;
   config: any;
   handleTitle: Function;
   handleRedirect: Function;
@@ -16,6 +17,14 @@ const AuthConfirmPage = (props: {
   handleNotification: Function;
 }) => {
   props.handleTitle(props.config?.title);
+
+  const [authenticated, setAuthenticated] = createSignal(false);
+
+  setInterval(() => {
+    if (props.user()?.token && validator.isJWT(props.user()?.token)) {
+      setAuthenticated(true);
+    }
+  }, 1000);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -108,6 +117,8 @@ const AuthConfirmPage = (props: {
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
+            {authenticated() && <Navigate href={"/console"} />}
+
             <h2 class="title">{props.config?.title}</h2>
             <h3 class="subtitle">{props.config?.sub}</h3>
 
