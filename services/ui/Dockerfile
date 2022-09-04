@@ -11,4 +11,4 @@ COPY package.json /usr/src/ui/package.json
 RUN npm install
 
 # Start server
-CMD ["npm", "run", "preview"]
+CMD ["npm", "run", "host"]

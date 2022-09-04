@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "wasm": "wasm-pack build ../lib/bencher_json --target web --features wasm",
-    "dev": "npm run wasm && vite",
+    "dev": "vite",
     "host": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
