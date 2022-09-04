@@ -13,7 +13,9 @@ const DocsPanel = (props) => {
           <SwaggerPage />
         </>
       </Match>
-      <Match when={props.page === true}>{/* <Example /> */}</Match>
+      <Match when={props.page === true}>
+        <Example />
+      </Match>
     </Switch>
   );
 };
