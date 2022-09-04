@@ -1,9 +1,7 @@
-use bencher_api::{
+use bencher_api::util::{
     db::get_db_connection,
-    util::{
-        migrate::run_migration,
-        server::get_server,
-    },
+    migrate::run_migration,
+    server::get_server,
 };
 use tokio::sync::Mutex;
 
@@ -64,7 +62,10 @@ async fn run() -> Result<(), String> {
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), String> {
     use bencher_api::util::ApiContext;
+    use dotenvy::dotenv;
     use tracing::info;
+
+    dotenv().map_err(|e| e.to_string())?;
 
     let secret_key = std::env::var(BENCHER_SECRET_KEY).unwrap_or_else(|e| {
         info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
