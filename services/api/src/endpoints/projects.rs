@@ -35,7 +35,6 @@ use crate::{
     },
     diesel::ExpressionMethods,
     util::{
-        auth::get_token,
         cors::get_cors,
         headers::CorsHeaders,
         http_error,

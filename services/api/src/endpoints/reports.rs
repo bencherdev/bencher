@@ -77,18 +77,14 @@ pub async fn get_ls(
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
-
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    // Verify that the user has access to the project
-    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
-    QueryUser::has_access(conn, query_project.id, user_id)?;
-
     let json: Vec<JsonReport> = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
+        .filter(schema::testbed::project_id.eq(project_id))
         .select((
             schema::report::id,
             schema::report::uuid,
@@ -164,7 +160,7 @@ pub async fn post(
     let project_id = branch_project_id;
 
     // Verify that the user has access to the project
-    QueryUser::has_access(conn, project_id, user_id)?;
+    QueryUser::has_access(conn, user_id, project_id)?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -252,21 +248,17 @@ pub async fn get_one(
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
-
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
     let report_uuid = path_params.report_uuid.to_string();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    // Verify that the user has access to the project
-    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
-    QueryUser::has_access(conn, query_project.id, user_id)?;
-
     let query_report = if let Ok(query) = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
-                .eq(query_project.id)
+                .eq(project_id)
                 .and(schema::report::uuid.eq(report_uuid)),
         )
         .select((

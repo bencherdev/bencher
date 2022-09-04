@@ -16,7 +16,10 @@ use diesel::{
     RunQueryDsl,
     SqliteConnection,
 };
-use dropshot::HttpError;
+use dropshot::{
+    HttpError,
+    RequestContext,
+};
 use url::Url;
 use uuid::Uuid;
 
@@ -27,7 +30,10 @@ use crate::{
         project as project_table,
     },
     diesel::ExpressionMethods,
-    util::http_error,
+    util::{
+        http_error,
+        Context,
+    },
 };
 
 const PROJECT_ERROR: &str = "Failed to get project.";
@@ -151,6 +157,30 @@ impl QueryProject {
             .first(conn)
             .map_err(|_| http_error!(PROJECT_ERROR))?;
         Uuid::from_str(&uuid).map_err(|_| http_error!(PROJECT_ERROR))
+    }
+
+    pub async fn connection(
+        rqctx: &RequestContext<Context>,
+        user_id: i32,
+        project: &ResourceId,
+    ) -> Result<i32, HttpError> {
+        let context = &mut *rqctx.context().lock().await;
+        let conn = &mut context.db;
+
+        let project = &project.0;
+        let project_id = schema::project::table
+            .filter(
+                schema::project::slug
+                    .eq(project)
+                    .or(schema::project::uuid.eq(project)),
+            )
+            .select(schema::project::id)
+            .first::<i32>(conn)
+            .map_err(|_| http_error!(PROJECT_ERROR))?;
+
+        QueryUser::has_access(conn, user_id, project_id)?;
+
+        Ok(project_id)
     }
 }
 

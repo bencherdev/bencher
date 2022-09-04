@@ -179,8 +179,8 @@ impl QueryUser {
 
     pub fn has_access(
         conn: &mut SqliteConnection,
-        project_id: i32,
         user_id: i32,
+        project_id: i32,
     ) -> Result<(), HttpError> {
         schema::project::table
             .filter(
@@ -190,7 +190,7 @@ impl QueryUser {
             )
             .select(schema::project::id)
             .first::<i32>(conn)
-            .map_err(|_| http_error!("Failed to get user."))?;
+            .map_err(|_| http_error!("Access denied."))?;
 
         Ok(())
     }
