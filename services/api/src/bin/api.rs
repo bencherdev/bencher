@@ -63,20 +63,23 @@ async fn run() -> Result<(), String> {
 
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), String> {
-    // TODO add secret key to context
-
     use bencher_api::util::ApiContext;
-    let secret_key: String = std::env::var(BENCHER_SECRET_KEY).unwrap_or_else(|e| {
-        tracing::info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
+    use tracing::info;
+
+    let secret_key = std::env::var(BENCHER_SECRET_KEY).unwrap_or_else(|e| {
+        info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
         let secret_key = uuid::Uuid::new_v4().to_string();
-        tracing::info!("Generated temporary secret key: {secret_key}");
+        info!("Generated temporary secret key: {secret_key}");
         secret_key
     });
 
     let mut conn = get_db_connection().map_err(|e| e.to_string())?;
     run_migration(&mut conn).map_err(|e| e.to_string())?;
 
-    let context = Mutex::new(ApiContext { db: conn });
+    let context = Mutex::new(ApiContext {
+        db:     conn,
+        secret: secret_key,
+    });
 
     get_server(API_NAME, context).await?.await
 }
