@@ -1,5 +1,4 @@
 export const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
-export const LOCAL_USER_KEY: string = "USER_KEY";
 
 export const parentPath = (pathname) => {
   return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
