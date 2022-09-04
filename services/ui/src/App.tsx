@@ -17,6 +17,7 @@ import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
+import { LOCAL_USER_KEY } from "./components/console/config/util";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -42,8 +43,6 @@ const initNotification = () => {
   };
 };
 
-// console.log(Example()());
-
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [redirect, setRedirect] = createSignal<null | string>();
@@ -65,7 +64,7 @@ const App: Component = () => {
   });
 
   const handleUser = (user) => {
-    window.localStorage.setItem("user", JSON.stringify(user));
+    window.localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
     setUser(user);
   };
 
@@ -89,9 +88,10 @@ const App: Component = () => {
   };
 
   setInterval(() => {
-    if (user()?.uuid === null) {
-      const user = JSON.parse(window.localStorage.getItem("user"));
-      if (typeof user?.uuid === "string") {
+    if (user()?.token === null) {
+      const user = JSON.parse(window.localStorage.getItem(LOCAL_USER_KEY));
+      // TODO properly validate user
+      if (typeof user?.token === "string") {
         setUser(user);
       }
     }

@@ -1,11 +1,7 @@
 import axios from "axios";
-import {
-  createSignal,
-  createResource,
-  createEffect,
-  Suspense,
-  For,
-} from "solid-js";
+import { createSignal, createResource, createEffect, For } from "solid-js";
+import { LOCAL_USER_KEY } from "../../console/config/util";
+import validator from "validator";
 
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
@@ -22,20 +18,28 @@ const options = (token: string) => {
 };
 
 const fetchProjects = async () => {
+  const all_projects = {
+    name: "All Projects",
+    slug: BENCHER_ALL_PROJECTS,
+  };
+
   try {
-    const token = JSON.parse(window.localStorage.getItem("user"))?.uuid;
-    if (typeof token !== "string") {
-      return;
+    const token = JSON.parse(
+      window.localStorage.getItem(LOCAL_USER_KEY)
+    )?.token;
+    if (!validator.isJWT(token)) {
+      return [all_projects];
     }
+
+    console.log(token);
     const resp = await axios(options(token));
     let data = resp?.data;
-    data.push({
-      name: "All Projects",
-      slug: BENCHER_ALL_PROJECTS,
-    });
+    data.push(all_projects);
+
     return data;
   } catch (error) {
     console.error(error);
+    return [all_projects];
   }
 };
 
@@ -92,14 +96,6 @@ const ProjectSelect = (props) => {
         break;
       }
     }
-  };
-
-  const isSelected = (slug) => {
-    return slug === selected();
-  };
-
-  const isAllProjects = () => {
-    return BENCHER_ALL_PROJECTS === selected();
   };
 
   return (

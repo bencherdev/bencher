@@ -1,7 +1,5 @@
 import { Link } from "solid-app-router";
 
-import ProjectSelect from "./ProjectSelect";
-
 const ConsoleMenu = (props) => {
   const getProjectPath = (section: string) => {
     return `/console/projects/${props.project_slug()}/${section}`;

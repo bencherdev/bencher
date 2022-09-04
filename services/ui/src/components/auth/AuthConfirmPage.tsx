@@ -2,7 +2,6 @@ import axios from "axios";
 import { useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
-import { BENCHER_API_URL } from "../console/config/util";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
 import validator from "validator";

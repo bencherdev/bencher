@@ -22,7 +22,6 @@ const ConsolePage = (props) => {
 
   const params = useParams();
   const path_params = createMemo(() => params);
-  console.log(path_params());
 
   createEffect(() => {
     const slug = projectSlug(props.pathname);
