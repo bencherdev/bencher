@@ -26,6 +26,7 @@ use crate::{
         model::{
             benchmark::QueryBenchmark,
             project::QueryProject,
+            user::QueryUser,
         },
         schema,
     },
@@ -64,13 +65,14 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonBenchmark>>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonBenchmark> = schema::benchmark::table
-        .filter(schema::benchmark::project_id.eq(&query_project.id))
+        .filter(schema::benchmark::project_id.eq(&project_id))
         .order(schema::benchmark::name)
         .load::<QueryBenchmark>(conn)
         .map_err(|_| http_error!("Failed to get benchmarks."))?
@@ -111,16 +113,17 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonBenchmark>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
     let benchmark = path_params.benchmark.to_string();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::benchmark::table
         .filter(
             schema::benchmark::project_id
-                .eq(project.id)
+                .eq(project_id)
                 .and(schema::benchmark::uuid.eq(&benchmark)),
         )
         .first::<QueryBenchmark>(conn)

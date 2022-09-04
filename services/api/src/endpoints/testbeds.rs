@@ -31,6 +31,7 @@ use crate::{
                 InsertTestbed,
                 QueryTestbed,
             },
+            user::QueryUser,
         },
         schema,
     },
@@ -69,13 +70,14 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonTestbed>>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonTestbed> = schema::testbed::table
-        .filter(schema::testbed::project_id.eq(&query_project.id))
+        .filter(schema::testbed::project_id.eq(project_id))
         .order(schema::testbed::name)
         .load::<QueryTestbed>(conn)
         .map_err(|_| http_error!("Failed to get testbeds."))?
@@ -109,6 +111,7 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonTestbed>, CorsHeaders>, HttpError> {
+    QueryUser::auth(&rqctx).await?;
     let json_testbed = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
@@ -158,15 +161,16 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
     let resource_id = path_params.testbed.as_str();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::testbed::table
         .filter(
-            schema::testbed::project_id.eq(project.id).and(
+            schema::testbed::project_id.eq(project_id).and(
                 schema::testbed::slug
                     .eq(resource_id)
                     .or(schema::testbed::uuid.eq(resource_id)),

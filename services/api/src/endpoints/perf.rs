@@ -37,7 +37,7 @@ use crate::{
                 resource::QueryResource,
                 throughput::QueryThroughput,
             },
-            report::to_date_time,
+            report::to_date_time, user::QueryUser,
         },
         schema,
     },
@@ -73,6 +73,8 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPerf>, CorsHeaders>, HttpError> {
+    QueryUser::auth(&rqctx).await?;
+
     let JsonPerfQuery {
         branches,
         testbeds,

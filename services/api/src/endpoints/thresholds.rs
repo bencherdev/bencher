@@ -36,7 +36,7 @@ use crate::{
             threshold::{
                 InsertThreshold,
                 QueryThreshold,
-            },
+            }, user::QueryUser,
         },
         schema,
     },
@@ -75,14 +75,15 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonThreshold>>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let json: Vec<JsonThreshold> = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
+        .filter(schema::testbed::project_id.eq(project_id))
         .order(schema::threshold::id)
         .select((
             schema::threshold::id,
@@ -125,6 +126,8 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonThreshold>, CorsHeaders>, HttpError> {
+    QueryUser::auth(&rqctx).await?;
+
     const ERROR: &str = "Failed to create thresholds.";
 
     let json_threshold = body.into_inner();
@@ -193,17 +196,18 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonThreshold>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
+    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
     let threshold_uuid = path_params.threshold.to_string();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     let query = if let Ok(query) = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
-                .eq(query_project.id)
+                .eq(project_id)
                 .and(schema::threshold::uuid.eq(&threshold_uuid)),
         )
         .select((

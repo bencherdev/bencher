@@ -6,6 +6,8 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{
+    BoolExpressionMethods,
+    ExpressionMethods,
     QueryDsl,
     RunQueryDsl,
 };
@@ -33,7 +35,6 @@ use crate::{
         },
         schema,
     },
-    diesel::ExpressionMethods,
     util::{
         cors::get_cors,
         headers::CorsHeaders,
@@ -139,11 +140,23 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<PathParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query = QueryProject::from_resource_id(conn, &path_params.project)?;
+
+    let project = &path_params.project.0;
+    let query = schema::project::table
+        .filter(
+            schema::project::slug
+                .eq(project)
+                .or(schema::project::uuid.eq(project)),
+        )
+        .first::<QueryProject>(conn)
+        .map_err(|_| http_error!("Failed to get project."))?;
+
+    QueryUser::has_access(conn, user_id, query.id)?;
     let json = query.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
