@@ -16,6 +16,10 @@ use super::QueryUser;
 
 const TOKEN_ERROR: &str = "Failed to get token.";
 
+// ~365 days / years * 24 hours / day * 60 minutes / hour * 60 seconds / minute
+#[cfg(not(debug_assert))]
+const MAX_TTL: u64 = 365 * 24 * 60 * 60;
+
 #[derive(Queryable)]
 pub struct QueryToken {
     pub id: i32,
@@ -96,6 +100,13 @@ impl InsertToken {
 
         // TODO make smarter once permissions are a thing
         if query_user.id != requester_id {
+            return Err(http_error!(TOKEN_ERROR));
+        }
+
+        // Only in production, set a max TTL of approximately one year
+        // Disabled in development to enable long lived testing tokens
+        #[cfg(not(debug_assert))]
+        if ttl > MAX_TTL {
             return Err(http_error!(TOKEN_ERROR));
         }
 
