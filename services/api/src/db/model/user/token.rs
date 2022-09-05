@@ -83,11 +83,17 @@ impl InsertToken {
     pub fn from_json(
         conn: &mut SqliteConnection,
         token: JsonNewToken,
+        requester_id: i32,
         key: &str,
     ) -> Result<Self, HttpError> {
         let JsonNewToken { user, ttl } = token;
 
         let query_user = QueryUser::from_resource_id(conn, &user)?;
+
+        // TODO make smarter once permissions are a thing
+        if query_user.id != requester_id {
+            return Err(http_error!(TOKEN_ERROR));
+        }
 
         let jwt = JsonWebToken::new_api_key(key, query_user.email, ttl as usize)
             .map_err(|_| http_error!(TOKEN_ERROR))?;

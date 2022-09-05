@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{JsonAuthToken, JsonNewToken, JsonToken, ResourceId};
+use bencher_json::{JsonNewToken, JsonToken, ResourceId};
 use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
@@ -8,6 +8,7 @@ use dropshot::{
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
     db::{
@@ -52,8 +53,15 @@ pub async fn get_ls(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+
+    // TODO make smarter once permissions are a thing
+    if query_user.id != user_id {
+        return Err(http_error!("Failed to get token."));
+    }
+
     let json: Vec<JsonToken> = schema::token::table
-        .filter(schema::token::user_id.eq(user_id))
+        .filter(schema::token::user_id.eq(query_user.id))
         .order((schema::token::creation, schema::token::expiration))
         .load::<QueryToken>(conn)
         .map_err(|_| http_error!("Failed to get tokens."))?
@@ -86,23 +94,23 @@ pub async fn post_options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewToken>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonAuthToken>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
-    let json_branch = body.into_inner();
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonToken>, CorsHeaders>, HttpError> {
+    let user_id = QueryUser::auth(&rqctx).await?;
+    let json_token = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let insert_branch = InsertToken::from_json(conn, json_branch)?;
+    let insert_token = InsertToken::from_json(conn, json_token, user_id, &context.key)?;
     diesel::insert_into(schema::token::table)
-        .values(&insert_branch)
+        .values(&insert_token)
         .execute(conn)
         .map_err(|_| http_error!("Failed to create token."))?;
 
-    let query_branch = schema::token::table
-        .filter(schema::token::uuid.eq(&insert_branch.uuid))
+    let query_token = schema::token::table
+        .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
         .map_err(|_| http_error!("Failed to create token."))?;
-    let json = query_branch.to_json(conn)?;
+    let json = query_token.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -136,21 +144,24 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonAuthToken>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonToken>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.user).await?;
-    let resource_id = path_params.token.as_str();
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+
+    // TODO make smarter once permissions are a thing
+    if query_user.id != user_id {
+        return Err(http_error!("Failed to get token."));
+    }
+
     let query = if let Ok(query) = schema::token::table
         .filter(
-            schema::token::project_id.eq(project_id).and(
-                schema::token::slug
-                    .eq(resource_id)
-                    .or(schema::token::uuid.eq(resource_id)),
-            ),
+            schema::token::user_id
+                .eq(query_user.id)
+                .and(schema::token::uuid.eq(&path_params.token.to_string())),
         )
         .first::<QueryToken>(conn)
     {

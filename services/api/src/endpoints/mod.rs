@@ -69,6 +69,14 @@ impl Registrar<Context> for Api {
         api.register(thresholds::one_options)?;
         api.register(thresholds::get_one)?;
 
+        // Tokens
+        api.register(users::tokens::dir_options)?;
+        api.register(users::tokens::get_ls)?;
+        api.register(users::tokens::post_options)?;
+        api.register(users::tokens::post)?;
+        api.register(users::tokens::one_options)?;
+        api.register(users::tokens::get_one)?;
+
         Ok(())
     }
 }
