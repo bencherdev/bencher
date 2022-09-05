@@ -82,18 +82,15 @@ pub struct InsertToken {
 impl InsertToken {
     pub fn from_json(
         conn: &mut SqliteConnection,
-        key: &str,
-        user_id: i32,
         token: JsonNewToken,
+        key: &str,
     ) -> Result<Self, HttpError> {
-        let JsonNewToken { ttl } = token;
+        let JsonNewToken { user, ttl } = token;
 
-        let jwt = JsonWebToken::new_api_key(
-            key,
-            QueryUser::get_email_from_id(conn, user_id)?,
-            ttl as usize,
-        )
-        .map_err(|_| http_error!(TOKEN_ERROR))?;
+        let query_user = QueryUser::from_resource_id(conn, &user)?;
+
+        let jwt = JsonWebToken::new_api_key(key, query_user.email, ttl as usize)
+            .map_err(|_| http_error!(TOKEN_ERROR))?;
 
         let token_data = jwt
             .validate_api_key(key)
@@ -101,7 +98,7 @@ impl InsertToken {
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            user_id,
+            user_id: query_user.id,
             jwt: jwt.to_string(),
             creation: token_data.claims.iat as i64,
             expiration: token_data.claims.exp as i64,

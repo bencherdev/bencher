@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser};
+use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
 use diesel::{
     expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
@@ -15,7 +15,7 @@ use crate::{
     util::{http_error, Context},
 };
 
-mod token;
+pub mod token;
 
 const USER_ERROR: &str = "Failed to get user.";
 
@@ -113,6 +113,17 @@ impl QueryUser {
         schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)
+            .first(conn)
+            .map_err(|_| http_error!(USER_ERROR))
+    }
+
+    pub fn from_resource_id(
+        conn: &mut SqliteConnection,
+        user: &ResourceId,
+    ) -> Result<Self, HttpError> {
+        let user = &user.0;
+        schema::user::table
+            .filter(schema::user::slug.eq(user).or(schema::user::uuid.eq(user)))
             .first(conn)
             .map_err(|_| http_error!(USER_ERROR))
     }

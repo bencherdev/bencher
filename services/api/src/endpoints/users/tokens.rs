@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{JsonNewToken, JsonAuthToken, ResourceId};
+use bencher_json::{JsonAuthToken, JsonNewToken, JsonToken, ResourceId};
 use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
@@ -12,8 +12,7 @@ use serde::Deserialize;
 use crate::{
     db::{
         model::{
-            token::{InsertToken, QueryToken},
-            user::QueryProject,
+            user::token::{InsertToken, QueryToken},
             user::QueryUser,
         },
         schema,
@@ -47,16 +46,15 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonAuthToken>>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonToken>>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.user).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let json: Vec<JsonAuthToken> = schema::token::table
-        .filter(schema::token::project_id.eq(&project_id))
-        .order(schema::token::name)
+    let json: Vec<JsonToken> = schema::token::table
+        .filter(schema::token::user_id.eq(user_id))
+        .order((schema::token::creation, schema::token::expiration))
         .load::<QueryToken>(conn)
         .map_err(|_| http_error!("Failed to get tokens."))?
         .into_iter()
@@ -115,7 +113,7 @@ pub async fn post(
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
     pub user: ResourceId,
-    pub token: ResourceId,
+    pub token: Uuid,
 }
 
 #[endpoint {
