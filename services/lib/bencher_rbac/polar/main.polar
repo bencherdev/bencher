@@ -27,8 +27,8 @@ resource Project {
   "maintainer" if "admin" on "host";
 }
 
-has_relation(server: Server, "host", project: Project) if
-  server = project.server;
+has_relation(_server: Server, "host", _project: Project) if
+  true;
 
 # This rule tells Oso how to fetch roles for a project
 has_role(user: User, role_name: String, project: Project) if
