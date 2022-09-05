@@ -8,7 +8,7 @@ const Plot = (props) => {
 
   const [_perf_active] = createResource(props.perf_data, (json_perf) => {
     const active = [];
-    json_perf?.benchmarks.forEach(() => {
+    json_perf?.benchmarks?.forEach(() => {
       active.push(true);
     });
     setPerfActive(active);
