@@ -132,7 +132,6 @@ dependencies = [
  "lazy_static",
  "literally",
  "ordered-float",
- "oso",
  "rand",
  "schemars",
  "serde",
@@ -189,6 +188,13 @@ dependencies = [
  "slug",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "bencher_rbac"
+version = "0.1.0"
+dependencies = [
+ "oso",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 use oso::{Oso, PolarClass};
 
-pub const POLAR_MAIN: &str = include_str!("../../polar/main.polar");
+pub const POLAR_MAIN: &str = include_str!("../polar/main.polar");
 
 #[derive(Clone, PolarClass)]
 struct User {

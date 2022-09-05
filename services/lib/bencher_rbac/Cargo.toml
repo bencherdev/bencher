@@ -1,0 +1,9 @@
+[package]
+name = "bencher_rbac"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+oso = { version = "0.26.2", features = ["uuid-10"] }
