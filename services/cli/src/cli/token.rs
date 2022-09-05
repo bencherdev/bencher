@@ -1,5 +1,6 @@
 use bencher_json::ResourceId;
 use clap::{Parser, Subcommand};
+use uuid::Uuid;
 
 use super::CliBackend;
 
@@ -44,12 +45,12 @@ pub struct CliTokenCreate {
 
 #[derive(Parser, Debug)]
 pub struct CliTokenView {
-    /// Project slug or UUID
+    /// User slug or UUID
     #[clap(long)]
-    pub project: ResourceId,
+    pub user: ResourceId,
 
-    /// Token slug or UUID
-    pub token: ResourceId,
+    /// Token UUID
+    pub token: Uuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,
