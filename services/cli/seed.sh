@@ -3,11 +3,8 @@ RUST_BACKTRACE=1 cargo test --features seed --test seed -- --nocapture
 
 export BENCHER_HOST=http://localhost:8080
 
-LOGIN=$(cargo run -- auth login muriel.bagge@nowhere.com)
-LOGIN_UUID=$(echo "$LOGIN" | sed -n -e 's/^.*"uuid": //p')
-LOGIN_UUID=$(echo "$LOGIN_UUID" | tr -d '"')
-echo $LOGIN_UUID
-export BENCHER_TOKEN=$LOGIN_UUID
+# Valid until 2027-09-05T19:03:59Z
+export BENCHER_TOKEN=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjoxODIwMTcxMDM5LCJpYXQiOjE2NjIzODY0MDksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIn0.sfAJmF9qIl_QRNnh8uLYuODHnxufXt_3m7skcNp1kMs
 
 BRANCH=$(cargo run -- branch view --project the-computer master)
 BRANCH_UUID=$(echo "$BRANCH" | sed -n -e 's/^.*"uuid": //p')
@@ -21,4 +18,4 @@ TESTBED_UUID=$(echo "$TESTBED_UUID" | tr -d '"')
 echo $TESTBED_UUID
 export BENCHER_TESTBED=$TESTBED_UUID
 
-cargo run -- run --adapter rust --iter 3 "cargo bench"
+cargo run -- run --adapter rust_bench --iter 3 "cargo bench"

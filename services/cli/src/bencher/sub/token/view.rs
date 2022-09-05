@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct View {
     pub user: ResourceId,
-    pub token: Uuid,
+    pub uuid: Uuid,
     pub backend: Backend,
 }
 
@@ -23,12 +23,12 @@ impl TryFrom<CliTokenView> for View {
     fn try_from(view: CliTokenView) -> Result<Self, Self::Error> {
         let CliTokenView {
             user,
-            token,
+            uuid,
             backend,
         } = view;
         Ok(Self {
             user,
-            token,
+            uuid,
             backend: backend.try_into()?,
         })
     }
@@ -41,7 +41,7 @@ impl SubCmd for View {
             .get(&format!(
                 "/v0/users/{}/tokens/{}",
                 self.user.as_str(),
-                self.token.to_string()
+                self.uuid.to_string()
             ))
             .await?;
         Ok(())

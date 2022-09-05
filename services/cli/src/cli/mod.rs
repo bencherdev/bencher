@@ -89,11 +89,11 @@ pub struct CliLocality {
         .args(&["token", "host"]),
 ))]
 pub struct CliBackend {
+    /// Backend host URL (default https://api.bencher.dev)
+    #[clap(long)]
+    pub host: Option<String>,
+
     /// User API token
     #[clap(long)]
     pub token: Option<String>,
-
-    /// Backend host URL (default http://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
 }

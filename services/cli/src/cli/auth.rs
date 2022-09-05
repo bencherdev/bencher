@@ -1,7 +1,4 @@
-use clap::{
-    Parser,
-    Subcommand,
-};
+use clap::{Parser, Subcommand};
 
 #[derive(Subcommand, Debug)]
 pub enum CliAuth {
@@ -15,6 +12,10 @@ pub enum CliAuth {
 
 #[derive(Parser, Debug)]
 pub struct CliAuthSignup {
+    /// Backend host URL (default https://api.bencher.dev)
+    #[clap(long)]
+    pub host: Option<String>,
+
     /// User name
     #[clap(long)]
     pub name: String,
@@ -25,28 +26,24 @@ pub struct CliAuthSignup {
 
     /// User email
     pub email: String,
-
-    /// Backend host URL (default http://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliAuthLogin {
-    /// User email
-    pub email: String,
-
-    /// Backend host URL (default http://api.bencher.dev)
+    /// Backend host URL (default https://api.bencher.dev)
     #[clap(long)]
     pub host: Option<String>,
+
+    /// User email
+    pub email: String,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliAuthConfirm {
-    /// Confirmation token
-    pub token: String,
-
-    /// Backend host URL (default http://api.bencher.dev)
+    /// Backend host URL (default https://api.bencher.dev)
     #[clap(long)]
     pub host: Option<String>,
+
+    /// Confirmation token
+    pub token: String,
 }
