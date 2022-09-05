@@ -20,3 +20,8 @@ command = "vite build"
 [[plugins]]
 # Installs the Lighthouse Build Plugin for all deploy contexts
 package = "@netlify/plugin-lighthouse"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
