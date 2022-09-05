@@ -36,8 +36,5 @@ has_role(user: User, role_name: String, project: Project) if
   role.name = role_name and
   role.project = project;
 
-has_permission(_actor: User, "read", project: Project) if
-  project.is_public;
-
 allow(actor, action, resource) if
   has_permission(actor, action, resource);
