@@ -2,37 +2,18 @@ use std::sync::Arc;
 
 use bencher_json::{
     auth::JsonConfirm,
-    token::{
-        JsonToken,
-        JsonWebToken,
-    },
+    token::{JsonAuthToken, JsonWebToken},
 };
-use diesel::{
-    QueryDsl,
-    RunQueryDsl,
-};
+use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseAccepted,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    RequestContext,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
     TypedBody,
 };
 
 use crate::{
-    db::{
-        model::user::QueryUser,
-        schema,
-    },
+    db::{model::user::QueryUser, schema},
     diesel::ExpressionMethods,
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 #[endpoint {
@@ -53,7 +34,7 @@ pub async fn options(
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    body: TypedBody<JsonToken>,
+    body: TypedBody<JsonAuthToken>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonConfirm>, CorsHeaders>, HttpError> {
     let context = &mut *rqctx.context().lock().await;
 

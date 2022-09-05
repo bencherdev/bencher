@@ -1,21 +1,11 @@
 use chrono::Utc;
 use derive_more::Display;
 use jsonwebtoken::{
-    decode,
-    encode,
-    Algorithm,
-    DecodingKey,
-    EncodingKey,
-    Header,
-    TokenData,
-    Validation,
+    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
@@ -30,11 +20,11 @@ lazy_static::lazy_static! {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonToken {
+pub struct JsonAuthToken {
     pub token: JsonWebToken,
 }
 
-impl From<String> for JsonToken {
+impl From<String> for JsonAuthToken {
     fn from(token: String) -> Self {
         Self {
             token: JsonWebToken::from(token),

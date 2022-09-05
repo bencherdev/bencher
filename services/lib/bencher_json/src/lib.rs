@@ -1,9 +1,6 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 pub mod alert;
 pub mod auth;
@@ -17,38 +14,16 @@ pub mod testbed;
 pub mod threshold;
 pub mod token;
 
-pub use auth::{
-    JsonLogin,
-    JsonSignup,
-    JsonUser,
-};
+pub use auth::{JsonLogin, JsonSignup, JsonUser};
 pub use benchmark::JsonBenchmark;
-pub use branch::{
-    JsonBranch,
-    JsonNewBranch,
-};
+pub use branch::{JsonBranch, JsonNewBranch};
 pub use params::ResourceId;
-pub use perf::{
-    JsonPerf,
-    JsonPerfQuery,
-};
-pub use project::{
-    JsonNewProject,
-    JsonProject,
-};
-pub use report::{
-    JsonNewReport,
-    JsonReport,
-};
-pub use testbed::{
-    JsonNewTestbed,
-    JsonTestbed,
-};
-pub use threshold::{
-    JsonNewThreshold,
-    JsonThreshold,
-};
-pub use token::JsonToken;
+pub use perf::{JsonPerf, JsonPerfQuery};
+pub use project::{JsonNewProject, JsonProject};
+pub use report::{JsonNewReport, JsonReport};
+pub use testbed::{JsonNewTestbed, JsonTestbed};
+pub use threshold::{JsonNewThreshold, JsonThreshold};
+pub use token::JsonAuthToken;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

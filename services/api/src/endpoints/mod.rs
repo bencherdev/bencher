@@ -9,11 +9,9 @@ pub mod projects;
 pub mod reports;
 pub mod testbeds;
 pub mod thresholds;
+pub mod users;
 
-use crate::util::{
-    registrar::Registrar,
-    Context,
-};
+use crate::util::{registrar::Registrar, Context};
 
 pub struct Api;
 
