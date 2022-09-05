@@ -1,45 +1,30 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    token::JsonWebToken,
-    JsonSignup,
-    JsonUser,
-};
+use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser};
 use diesel::{
-    expression_methods::BoolExpressionMethods,
-    Insertable,
-    QueryDsl,
-    Queryable,
-    RunQueryDsl,
+    expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
 };
-use dropshot::{
-    HttpError,
-    RequestContext,
-};
+use dropshot::{HttpError, RequestContext};
 use email_address_parser::EmailAddress;
 use uuid::Uuid;
 
 use crate::{
-    db::schema::{
-        self,
-        user as user_table,
-    },
+    db::schema::{self, user as user_table},
     diesel::ExpressionMethods,
-    util::{
-        http_error,
-        Context,
-    },
+    util::{http_error, Context},
 };
+
+// mod token;
 
 const USER_ERROR: &str = "Failed to get user.";
 
 #[derive(Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
-    pub uuid:  String,
-    pub name:  String,
-    pub slug:  String,
+    pub uuid: String,
+    pub name: String,
+    pub slug: String,
     pub email: String,
 }
 
@@ -91,10 +76,10 @@ fn validate_email(email: String) -> Result<String, HttpError> {
 
 #[derive(Queryable)]
 pub struct QueryUser {
-    pub id:    i32,
-    pub uuid:  String,
-    pub name:  String,
-    pub slug:  String,
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub slug: String,
     pub email: String,
 }
 

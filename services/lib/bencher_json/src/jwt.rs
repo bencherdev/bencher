@@ -18,20 +18,6 @@ lazy_static::lazy_static! {
     static ref ALGORITHM: Algorithm = Algorithm::default();
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAuthToken {
-    pub token: JsonWebToken,
-}
-
-impl From<String> for JsonAuthToken {
-    fn from(token: String) -> Self {
-        Self {
-            token: JsonWebToken::from(token),
-        }
-    }
-}
-
 #[derive(Debug, Display, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonWebToken(pub String);

@@ -1,33 +1,16 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    token::JsonWebToken,
-    JsonEmpty,
-    JsonSignup,
-};
+use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
 use diesel::RunQueryDsl;
 use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseAccepted,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    RequestContext,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
     TypedBody,
 };
 use tracing::info;
 
 use crate::{
-    db::{
-        model::user::InsertUser,
-        schema,
-    },
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    db::{model::user::InsertUser, schema},
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 #[endpoint {

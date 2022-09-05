@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    auth::JsonConfirm,
-    token::{JsonAuthToken, JsonWebToken},
+    auth::{JsonAuthToken, JsonConfirm},
+    jwt::JsonWebToken,
 };
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{
