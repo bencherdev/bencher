@@ -1,9 +1,4 @@
-use clap::{
-    ArgGroup,
-    Args,
-    Parser,
-    Subcommand,
-};
+use clap::{ArgGroup, Args, Parser, Subcommand};
 
 pub mod auth;
 pub mod benchmark;
@@ -14,6 +9,7 @@ pub mod report;
 pub mod run;
 pub mod testbed;
 pub mod threshold;
+pub mod token;
 
 use auth::CliAuth;
 use benchmark::CliBenchmark;
@@ -24,6 +20,7 @@ use report::CliReport;
 use run::CliRun;
 use testbed::CliTestbed;
 use threshold::CliThreshold;
+use token::CliToken;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]

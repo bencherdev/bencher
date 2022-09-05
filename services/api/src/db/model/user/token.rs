@@ -21,6 +21,7 @@ pub struct QueryToken {
     pub id: i32,
     pub uuid: String,
     pub user_id: i32,
+    pub name: String,
     pub jwt: String,
     pub creation: i64,
     pub expiration: i64,
@@ -49,6 +50,7 @@ impl QueryToken {
             id: _,
             uuid,
             user_id,
+            name,
             jwt,
             creation,
             expiration,
@@ -56,6 +58,7 @@ impl QueryToken {
         Ok(JsonToken {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(TOKEN_ERROR))?,
             user: QueryUser::get_uuid(conn, user_id)?,
+            name,
             token: jwt,
             creation: to_date_time(creation)?,
             expiration: to_date_time(expiration)?,
@@ -74,6 +77,7 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
 pub struct InsertToken {
     pub uuid: String,
     pub user_id: i32,
+    pub name: String,
     pub jwt: String,
     pub creation: i64,
     pub expiration: i64,
@@ -86,7 +90,7 @@ impl InsertToken {
         requester_id: i32,
         key: &str,
     ) -> Result<Self, HttpError> {
-        let JsonNewToken { user, ttl } = token;
+        let JsonNewToken { user, name, ttl } = token;
 
         let query_user = QueryUser::from_resource_id(conn, &user)?;
 
@@ -105,6 +109,7 @@ impl InsertToken {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             user_id: query_user.id,
+            name,
             jwt: jwt.to_string(),
             creation: token_data.claims.iat as i64,
             expiration: token_data.claims.exp as i64,

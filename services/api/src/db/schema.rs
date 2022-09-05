@@ -147,6 +147,7 @@ table! {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
+        name -> Text,
         jwt -> Text,
         creation -> BigInt,
         expiration -> BigInt,

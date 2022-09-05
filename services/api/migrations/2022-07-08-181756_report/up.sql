@@ -11,6 +11,7 @@ CREATE TABLE token (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
     jwt TEXT NOT NULL,
     creation BIGINT NOT NULL,
     expiration BIGINT NOT NULL,

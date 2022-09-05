@@ -1,0 +1,56 @@
+use bencher_json::ResourceId;
+use clap::{Parser, Subcommand};
+
+use super::CliBackend;
+
+#[derive(Subcommand, Debug)]
+pub enum CliToken {
+    /// List tokens
+    #[clap(alias = "ls")]
+    List(CliTokenList),
+    /// Create a token
+    #[clap(alias = "add")]
+    Create(CliTokenCreate),
+    /// View a token
+    View(CliTokenView),
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTokenList {
+    /// User slug or UUID
+    #[clap(long)]
+    pub user: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTokenCreate {
+    /// User slug or UUID
+    #[clap(long)]
+    pub user: ResourceId,
+
+    /// Time to live (TTL)
+    #[clap(long)]
+    pub ttl: u64,
+
+    /// Token name
+    pub name: String,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTokenView {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Token slug or UUID
+    pub token: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}

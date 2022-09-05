@@ -10,6 +10,7 @@ use crate::ResourceId;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {
     pub user: ResourceId,
+    pub name: String,
     pub ttl: u64,
 }
 
@@ -18,6 +19,7 @@ pub struct JsonNewToken {
 pub struct JsonToken {
     pub uuid: Uuid,
     pub user: Uuid,
+    pub name: String,
     pub token: String,
     pub creation: DateTime<Utc>,
     pub expiration: DateTime<Utc>,
