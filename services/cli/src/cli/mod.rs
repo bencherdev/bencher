@@ -65,6 +65,10 @@ pub enum CliSub {
     Benchmark(CliBenchmark),
     /// Query benchmark data
     Perf(CliPerf),
+
+    /// User API tokens
+    #[clap(subcommand)]
+    Token(CliToken),
 }
 
 #[derive(Args, Debug)]
