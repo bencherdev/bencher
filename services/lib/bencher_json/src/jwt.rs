@@ -84,6 +84,13 @@ impl JsonWebToken {
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         self.validate(key, &[Audience::Client, Audience::ApiKey])
     }
+
+    pub fn validate_api_key(
+        &self,
+        key: &str,
+    ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
+        self.validate(key, &[Audience::ApiKey])
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

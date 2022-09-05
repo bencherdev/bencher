@@ -148,8 +148,8 @@ table! {
         uuid -> Text,
         user_id -> Integer,
         jwt -> Text,
-        creation -> Integer,
-        expiration -> Integer,
+        creation -> BigInt,
+        expiration -> BigInt,
     }
 }
 

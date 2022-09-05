@@ -12,8 +12,8 @@ CREATE TABLE token (
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
     jwt TEXT NOT NULL,
-    creation INTEGER NOT NULL,
-    expiration INTEGER NOT NULL,
+    creation BIGINT NOT NULL,
+    expiration BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id)
 );
 CREATE TABLE project (
