@@ -23,7 +23,9 @@ const Plot = (props) => {
 
   return (
     <div class="container">
-      <div class="columns is-reverse-mobile is-vcentered">
+      <div
+        class={`columns is-reverse-mobile ${props.key() ? "" : "is-vcentered"}`}
+      >
         <div class="column is-narrow">
           <PlotKey
             config={props.config}
