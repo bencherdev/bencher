@@ -54,7 +54,7 @@ table! {
         id -> Integer,
         user_id -> Integer,
         organization_id -> Integer,
-        role -> Integer,
+        role -> Text,
     }
 }
 
@@ -91,7 +91,7 @@ table! {
         id -> Integer,
         user_id -> Integer,
         project_id -> Integer,
-        role -> Integer,
+        role -> Text,
     }
 }
 

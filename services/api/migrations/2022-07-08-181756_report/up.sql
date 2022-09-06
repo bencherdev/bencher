@@ -29,7 +29,7 @@ CREATE TABLE organization_role (
     id INTEGER PRIMARY KEY NOT NULL,
     user_id INTEGER NOT NULL,
     organization_id INTEGER NOT NULL,
-    role INTEGER NOT NULL,
+    role TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
     FOREIGN KEY (organization_id) REFERENCES organization (id),
     UNIQUE(user_id, organization_id)
@@ -49,7 +49,7 @@ CREATE TABLE project_role (
     id INTEGER PRIMARY KEY NOT NULL,
     user_id INTEGER NOT NULL,
     project_id INTEGER NOT NULL,
-    role INTEGER NOT NULL,
+    role TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
     FOREIGN KEY (project_id) REFERENCES project (id),
     UNIQUE(user_id, project_id)

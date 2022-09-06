@@ -16,6 +16,8 @@ use crate::{
 };
 
 pub mod token;
+pub mod organization;
+pub mod project;
 
 const USER_ERROR: &str = "Failed to get user.";
 
