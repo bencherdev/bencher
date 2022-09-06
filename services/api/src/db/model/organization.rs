@@ -16,7 +16,7 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
-    pub fn for_user(
+    pub fn from_user(
         conn: &mut SqliteConnection,
         insert_user: &InsertUser,
     ) -> Result<Self, HttpError> {

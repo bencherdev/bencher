@@ -3,6 +3,7 @@ use std::sync::Arc;
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
 use diesel::dsl::count;
 use diesel::QueryDsl;
+use diesel::ExpressionMethods;
 use diesel::RunQueryDsl;
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
@@ -10,6 +11,7 @@ use dropshot::{
 };
 use tracing::info;
 
+use crate::db::model::organization::InsertOrganization;
 use crate::{
     db::{model::user::InsertUser, schema},
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
@@ -49,6 +51,17 @@ pub async fn post(
     if count == 0 {
         insert_user.admin = true;
     }
+
+    let insert_org = InsertOrganization::from_user(conn, &insert_user)?;
+    diesel::insert_into(schema::organization::table)
+        .values(&insert_org)
+        .execute(conn)
+        .map_err(|_| http_error!("Failed to signup user."))?;
+    let org_id = schema::organization::table
+        .filter(schema::organization::uuid.eq(&insert_org.uuid))
+        .select(schema::organization::id)
+        .first::<i32>(conn)
+        .map_err(|_| http_error!("Failed to create organization."))?;
 
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
