@@ -1,8 +1,5 @@
 use bencher_json::ResourceId;
-use clap::{
-    Parser,
-    Subcommand,
-};
+use clap::{Parser, Subcommand};
 
 use super::CliBackend;
 
@@ -26,6 +23,9 @@ pub struct CliProjectList {
 
 #[derive(Parser, Debug)]
 pub struct CliProjectCreate {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
     /// Project name
     pub name: String,
 

@@ -1,28 +1,25 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonNewProject;
+use bencher_json::{JsonNewProject, ResourceId};
 use url::Url;
 
 use super::PROJECTS_PATH;
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectCreate,
     BencherError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Project {
-    pub name:        String,
-    pub slug:        Option<String>,
+    pub organization: ResourceId,
+    pub name: String,
+    pub slug: Option<String>,
     pub description: Option<String>,
-    pub url:         Option<Url>,
-    pub public:      bool,
-    pub backend:     Backend,
+    pub url: Option<Url>,
+    pub public: bool,
+    pub backend: Backend,
 }
 
 impl TryFrom<CliProjectCreate> for Project {
@@ -30,6 +27,7 @@ impl TryFrom<CliProjectCreate> for Project {
 
     fn try_from(create: CliProjectCreate) -> Result<Self, Self::Error> {
         let CliProjectCreate {
+            organization,
             name,
             slug,
             description,
@@ -38,6 +36,7 @@ impl TryFrom<CliProjectCreate> for Project {
             backend,
         } = create;
         Ok(Self {
+            organization,
             name,
             slug,
             description,
@@ -56,16 +55,32 @@ pub fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
     })
 }
 
+impl Into<JsonNewProject> for Project {
+    fn into(self) -> JsonNewProject {
+        let Self {
+            organization,
+            name,
+            slug,
+            description,
+            url,
+            public,
+            backend: _,
+        } = self;
+        JsonNewProject {
+            organization,
+            name,
+            slug,
+            description,
+            url,
+            public,
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Project {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let project = JsonNewProject {
-            name:        self.name.clone(),
-            slug:        self.slug.clone(),
-            description: self.description.clone(),
-            url:         self.url.clone(),
-            public:      self.public,
-        };
+        let project: JsonNewProject = self.clone().into();
         self.backend.post(PROJECTS_PATH, &project).await?;
         Ok(())
     }
