@@ -39,6 +39,10 @@ impl JsonWebToken {
         encode(&*HEADER, &claims, &EncodingKey::from_secret(key.as_bytes())).map(Into::into)
     }
 
+    pub fn new_invite(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
+        Self::new(key, Audience::Invite, email, CLIENT_TOKEN_TTL)
+    }
+
     pub fn new_auth(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL)
     }
@@ -69,6 +73,13 @@ impl JsonWebToken {
             &DecodingKey::from_secret(key.as_bytes()),
             &validation,
         )
+    }
+
+    pub fn validate_invite(
+        &self,
+        key: &str,
+    ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
+        self.validate(key, &[Audience::Invite])
     }
 
     pub fn validate_auth(
@@ -122,11 +133,13 @@ impl JsonClaims {
 
 #[derive(Debug, Copy, Clone)]
 pub enum Audience {
+    Invite,
     Auth,
     Client,
     ApiKey,
 }
 
+const AUDIENCE_INVITE: &str = "invite";
 const AUDIENCE_AUTH: &str = "auth";
 const AUDIENCE_CLIENT: &str = "client";
 const AUDIENCE_API_KEY: &str = "api_key";
@@ -134,6 +147,7 @@ const AUDIENCE_API_KEY: &str = "api_key";
 impl ToString for Audience {
     fn to_string(&self) -> String {
         match self {
+            Self::Invite => AUDIENCE_INVITE.into(),
             Self::Auth => AUDIENCE_AUTH.into(),
             Self::Client => AUDIENCE_CLIENT.into(),
             Self::ApiKey => AUDIENCE_API_KEY.into(),
