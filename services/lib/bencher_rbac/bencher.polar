@@ -16,7 +16,7 @@ resource Server {
 # This rule tells Oso how to fetch roles for a server
 has_role(user: User, role_name: String, _server: Server) if
   (user.locked = false and user.admin = true and role_name = "admin") or
-  (user.locked = false and role_name = "user") or
+  (user.locked = false and user.admin = false and role_name = "user") or
   (user.locked = true and role_name = "locked");
 
 # resource Org {
