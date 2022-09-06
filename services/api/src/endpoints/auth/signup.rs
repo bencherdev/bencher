@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
+use bencher_rbac::organization::Role;
 use diesel::dsl::count;
 use diesel::QueryDsl;
-use diesel::ExpressionMethods;
 use diesel::RunQueryDsl;
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
@@ -12,6 +12,9 @@ use dropshot::{
 use tracing::info;
 
 use crate::db::model::organization::InsertOrganization;
+use crate::db::model::organization::QueryOrganization;
+use crate::db::model::user::organization::InsertOrganizationRole;
+use crate::db::model::user::QueryUser;
 use crate::{
     db::{model::user::InsertUser, schema},
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
@@ -52,19 +55,29 @@ pub async fn post(
         insert_user.admin = true;
     }
 
+    // Insert user
+    diesel::insert_into(schema::user::table)
+        .values(&insert_user)
+        .execute(conn)
+        .map_err(|_| http_error!("Failed to signup user."))?;
+    let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
+
+    // Create an organization for the user
     let insert_org = InsertOrganization::from_user(conn, &insert_user)?;
     diesel::insert_into(schema::organization::table)
         .values(&insert_org)
         .execute(conn)
         .map_err(|_| http_error!("Failed to signup user."))?;
-    let org_id = schema::organization::table
-        .filter(schema::organization::uuid.eq(&insert_org.uuid))
-        .select(schema::organization::id)
-        .first::<i32>(conn)
-        .map_err(|_| http_error!("Failed to create organization."))?;
+    let organization_id = QueryOrganization::get_id(conn, &insert_org.uuid)?;
 
-    diesel::insert_into(schema::user::table)
-        .values(&insert_user)
+    // Connect the user to the organization as a `Leader`
+    let insert_org_role = InsertOrganizationRole {
+        user_id,
+        organization_id,
+        role: Role::Leader.to_string(),
+    };
+    diesel::insert_into(schema::organization_role::table)
+        .values(&insert_org_role)
         .execute(conn)
         .map_err(|_| http_error!("Failed to signup user."))?;
 

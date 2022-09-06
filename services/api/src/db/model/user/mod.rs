@@ -15,9 +15,9 @@ use crate::{
     util::{http_error, Context},
 };
 
-pub mod token;
 pub mod organization;
 pub mod project;
+pub mod token;
 
 const USER_ERROR: &str = "Failed to get user.";
 
@@ -190,15 +190,16 @@ impl QueryUser {
         user_id: i32,
         project_id: i32,
     ) -> Result<(), HttpError> {
-        schema::project::table
-            .filter(
-                schema::project::id
-                    .eq(project_id)
-                    .and(schema::project::owner_id.eq(user_id)),
-            )
-            .select(schema::project::id)
-            .first::<i32>(conn)
-            .map_err(|_| http_error!("Access denied."))?;
+        // TODO check with `bencher_rbac`
+        // schema::project::table
+        //     .filter(
+        //         schema::project::id
+        //             .eq(project_id)
+        //             .and(schema::project::owner_id.eq(user_id)),
+        //     )
+        //     .select(schema::project::id)
+        //     .first::<i32>(conn)
+        //     .map_err(|_| http_error!("Access denied."))?;
 
         Ok(())
     }
