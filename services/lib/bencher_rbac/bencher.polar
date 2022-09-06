@@ -42,15 +42,22 @@ resource Org {
   "delete_role_assignments" if "leader";
 
   "member" if "leader";
-
-  "leader" if "admin" on "host";
 }
 
-has_role(user: User, role: String, org: Org) if
-    user_role in user.roles and
-    user_role matches [org.uuid, role];
-
 has_relation(_server: Server, "host", _org: Org);
+
+has_role(user: User, role: String, org: Org) if
+    (
+      server = new Server() and
+      has_relation(server, "host", org) and
+      has_role(user, "admin", server)
+    )
+    or
+    (
+      user_role in user.roles and
+      user_role matches [org.uuid, role]
+    );
+
 
 # resource Project {
 #   permissions = ["view", "create", "edit", "delete", "manage"];

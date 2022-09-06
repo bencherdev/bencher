@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use oso::{Oso, PolarClass};
+use oso::{ClassBuilder, Oso, PolarClass};
 use uuid::Uuid;
 
 pub const POLAR: &str = include_str!("../bencher.polar");
@@ -20,6 +20,7 @@ struct Server {}
 
 #[derive(Clone, Copy, PolarClass)]
 struct Org {
+    #[polar(attribute)]
     uuid: Uuid,
 }
 
@@ -35,7 +36,8 @@ fn test_user() {
     )
     .unwrap();
 
-    oso.register_class(Server::get_polar_class()).unwrap();
+    oso.register_class(ClassBuilder::with_constructor(|| Server {}).build())
+        .unwrap();
 
     oso.register_class(
         Org::get_polar_class_builder()
@@ -54,7 +56,7 @@ fn test_user() {
         roles: HashMap::new(),
     };
 
-    assert!(oso.is_allowed(admin, "administer", server).unwrap());
+    assert!(oso.is_allowed(admin.clone(), "administer", server).unwrap());
 
     let user = User {
         admin: false,
@@ -63,7 +65,7 @@ fn test_user() {
     };
 
     assert!(!oso.is_allowed(user.clone(), "administer", server).unwrap());
-    assert!(oso.is_allowed(user, "session", server).unwrap());
+    assert!(oso.is_allowed(user.clone(), "session", server).unwrap());
 
     let locked_admin = User {
         admin: true,
@@ -89,7 +91,7 @@ fn test_user() {
 
     let org_uuid = Uuid::new_v4();
 
-    let user = User {
+    let org_user = User {
         admin: false,
         locked: false,
         roles: literally::hmap! {
@@ -99,8 +101,36 @@ fn test_user() {
 
     let org = Org { uuid: org_uuid };
 
-    assert!(oso.is_allowed(user.clone(), "read", org).unwrap());
-    assert!(!oso.is_allowed(user, "create_projects", org).unwrap());
+    assert!(!oso.is_allowed(user.clone(), "read", org).unwrap());
+    assert!(!oso
+        .is_allowed(user.clone(), "create_projects", org)
+        .unwrap());
+
+    assert!(oso.is_allowed(org_user.clone(), "read", org).unwrap());
+    assert!(!oso
+        .is_allowed(org_user.clone(), "create_projects", org)
+        .unwrap());
+
+    let other_org = Org {
+        uuid: Uuid::new_v4(),
+    };
+
+    assert!(!oso.is_allowed(user.clone(), "read", other_org).unwrap());
+    assert!(!oso
+        .is_allowed(user.clone(), "create_projects", other_org)
+        .unwrap());
+
+    assert!(!oso.is_allowed(org_user.clone(), "read", other_org).unwrap());
+    assert!(!oso
+        .is_allowed(org_user, "create_projects", other_org)
+        .unwrap());
+
+    assert!(oso.is_allowed(admin.clone(), "read", org).unwrap());
+    assert!(oso
+        .is_allowed(admin.clone(), "create_projects", org)
+        .unwrap());
+    assert!(oso.is_allowed(admin.clone(), "read", other_org).unwrap());
+    assert!(oso.is_allowed(admin, "create_projects", other_org).unwrap());
 }
 
 #[derive(Clone, PolarClass)]
