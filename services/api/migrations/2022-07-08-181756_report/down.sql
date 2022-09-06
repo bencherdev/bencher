@@ -12,5 +12,6 @@ DROP TABLE testbed;
 DROP TABLE version;
 DROP TABLE branch;
 DROP TABLE project;
+DROP TABLE organization;
 DROP TABLE token;
 DROP TABLE user;

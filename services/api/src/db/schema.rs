@@ -41,6 +41,15 @@ table! {
 }
 
 table! {
+    organization (id) {
+        id -> Integer,
+        uuid -> Text,
+        name -> Text,
+        slug -> Text,
+    }
+}
+
+table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
@@ -201,6 +210,7 @@ allow_tables_to_appear_in_same_query!(
     benchmark,
     branch,
     latency,
+    organization,
     perf,
     project,
     report,

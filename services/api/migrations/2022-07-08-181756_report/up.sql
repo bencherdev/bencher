@@ -19,6 +19,12 @@ CREATE TABLE token (
     expiration BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id)
 );
+CREATE TABLE organization (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE
+);
 CREATE TABLE project (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
