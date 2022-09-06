@@ -194,7 +194,9 @@ dependencies = [
 name = "bencher_rbac"
 version = "0.1.0"
 dependencies = [
+ "literally",
  "oso",
+ "uuid",
 ]
 
 [[package]]

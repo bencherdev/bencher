@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 oso = { version = "0.26.2", features = ["uuid-10"] }
+uuid = { version = "1.1.2", features = ["v4"] }
+
+[dev-dependencies]
+literally = "0.1.3"

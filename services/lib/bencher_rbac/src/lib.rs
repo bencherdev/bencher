@@ -1,17 +1,27 @@
+use std::collections::HashMap;
+
 use oso::{Oso, PolarClass};
+use uuid::Uuid;
 
 pub const POLAR: &str = include_str!("../bencher.polar");
 
-#[derive(Clone, Copy, PolarClass)]
+#[derive(Clone, PolarClass)]
 struct User {
     #[polar(attribute)]
     pub admin: bool,
     #[polar(attribute)]
     pub locked: bool,
+    #[polar(attribute)]
+    pub roles: HashMap<String, String>,
 }
 
 #[derive(Clone, Copy, PolarClass)]
 struct Server {}
+
+#[derive(Clone, Copy, PolarClass)]
+struct Org {
+    uuid: Uuid,
+}
 
 #[test]
 fn test_user() {
@@ -27,7 +37,12 @@ fn test_user() {
 
     oso.register_class(Server::get_polar_class()).unwrap();
 
-    println!("POLAR: {POLAR}");
+    oso.register_class(
+        Org::get_polar_class_builder()
+            .add_attribute_getter("uuid", |org| org.uuid.to_string())
+            .build(),
+    )
+    .unwrap();
 
     oso.load_str(POLAR).unwrap();
 
@@ -36,6 +51,7 @@ fn test_user() {
     let admin = User {
         admin: true,
         locked: false,
+        roles: HashMap::new(),
     };
 
     assert!(oso.is_allowed(admin, "administer", server).unwrap());
@@ -43,26 +59,48 @@ fn test_user() {
     let user = User {
         admin: false,
         locked: false,
+        roles: HashMap::new(),
     };
 
-    assert!(!oso.is_allowed(user, "administer", server).unwrap());
+    assert!(!oso.is_allowed(user.clone(), "administer", server).unwrap());
     assert!(oso.is_allowed(user, "session", server).unwrap());
 
     let locked_admin = User {
         admin: true,
         locked: true,
+        roles: HashMap::new(),
     };
 
-    assert!(!oso.is_allowed(locked_admin, "administer", server).unwrap());
+    assert!(!oso
+        .is_allowed(locked_admin.clone(), "administer", server)
+        .unwrap());
     assert!(!oso.is_allowed(locked_admin, "session", server).unwrap());
 
     let locked_user = User {
         admin: false,
         locked: true,
+        roles: HashMap::new(),
     };
 
-    assert!(!oso.is_allowed(locked_user, "administer", server).unwrap());
+    assert!(!oso
+        .is_allowed(locked_user.clone(), "administer", server)
+        .unwrap());
     assert!(!oso.is_allowed(locked_user, "session", server).unwrap());
+
+    let org_uuid = Uuid::new_v4();
+
+    let user = User {
+        admin: false,
+        locked: false,
+        roles: literally::hmap! {
+            org_uuid.to_string() => "member"
+        },
+    };
+
+    let org = Org { uuid: org_uuid };
+
+    assert!(oso.is_allowed(user.clone(), "read", org).unwrap());
+    assert!(!oso.is_allowed(user, "create_projects", org).unwrap());
 }
 
 #[derive(Clone, PolarClass)]
