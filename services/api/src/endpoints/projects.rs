@@ -1,25 +1,11 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    JsonNewProject,
-    JsonProject,
-    ResourceId,
-};
-use diesel::{
-    BoolExpressionMethods,
-    ExpressionMethods,
-    QueryDsl,
-    RunQueryDsl,
-};
+use bencher_json::{JsonNewProject, JsonProject, ResourceId};
+use bencher_rbac::project::Role;
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseAccepted,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    Path,
-    RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
+    RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -27,20 +13,12 @@ use serde::Deserialize;
 use crate::{
     db::{
         model::{
-            project::{
-                InsertProject,
-                QueryProject,
-            },
-            user::QueryUser,
+            project::{InsertProject, QueryProject},
+            user::{project::InsertProjectRole, QueryUser},
         },
         schema,
     },
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 #[endpoint {
@@ -96,16 +74,29 @@ pub async fn post(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
+
+    // Create the project
     let insert_project = InsertProject::from_json(conn, user_id, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)
         .map_err(|_| http_error!("Failed to create project."))?;
-
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn)
         .map_err(|_| http_error!("Failed to create project."))?;
+
+    // Connect the user to the project as a `Maintainer`
+    let insert_proj_role = InsertProjectRole {
+        user_id,
+        project_id: query_project.id,
+        role: Role::Maintainer.to_string(),
+    };
+    diesel::insert_into(schema::project_role::table)
+        .values(&insert_proj_role)
+        .execute(conn)
+        .map_err(|_| http_error!("Failed to create project."))?;
+
     let json = query_project.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
