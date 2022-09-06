@@ -43,6 +43,11 @@ pub async fn post(
         .first::<QueryUser>(conn)
         .map_err(|_| http_error!("Failed to login user."))?;
 
+    // Check to see if the user account has been locked
+    if query_user.locked {
+        return Err(http_error!("Failed to login user."));
+    }
+
     let token = JsonWebToken::new_auth(&context.key, query_user.email)
         .map_err(|_| http_error!("Failed to login user."))?;
 

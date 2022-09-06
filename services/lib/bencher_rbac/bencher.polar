@@ -56,15 +56,31 @@ has_role(user: User, role: String, org: Organization) if
 
 
 resource Project {
-  permissions = ["view", "create", "edit", "delete", "manage"];
+  permissions = [
+    "view",
+    "create",
+    "edit",
+    "delete",
+    "manage",
+    "create_role_assignments",
+    "list_role_assignments",
+    "update_role_assignments",
+    "delete_role_assignments",
+  ];
   roles = ["viewer", "developer", "maintainer"];
   relations = { parent: Organization };
 
   "view" if "viewer";
+  "list_role_assignments" if "viewer";
+
   "create" if "developer";
   "edit" if "developer";
   "delete" if "developer";
+
   "manage" if "maintainer";
+  "create_role_assignments" if "maintainer";
+  "update_role_assignments" if "maintainer";
+  "delete_role_assignments" if "maintainer";
 
   "developer" if "maintainer";
   "viewer" if "developer";

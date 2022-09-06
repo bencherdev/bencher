@@ -26,6 +26,8 @@ pub struct InsertUser {
     pub name: String,
     pub slug: String,
     pub email: String,
+    pub admin: bool,
+    pub locked: bool,
 }
 
 impl InsertUser {
@@ -37,6 +39,8 @@ impl InsertUser {
             name,
             slug,
             email: validate_email(email)?,
+            admin: false,
+            locked: false,
         })
     }
 }
@@ -81,6 +85,8 @@ pub struct QueryUser {
     pub name: String,
     pub slug: String,
     pub email: String,
+    pub admin: bool,
+    pub locked: bool,
 }
 
 impl QueryUser {
@@ -135,12 +141,16 @@ impl QueryUser {
             name,
             slug,
             email,
+            admin,
+            locked,
         } = self;
         Ok(JsonUser {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get user."))?,
             name,
             slug,
             email,
+            admin,
+            locked,
         })
     }
 

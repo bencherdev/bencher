@@ -10,4 +10,6 @@ pub struct JsonUser {
     pub name: String,
     pub slug: String,
     pub email: String,
+    pub admin: bool,
+    pub locked: bool,
 }

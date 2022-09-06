@@ -161,6 +161,8 @@ table! {
         name -> Text,
         slug -> Text,
         email -> Text,
+        admin -> Bool,
+        locked -> Bool,
     }
 }
 

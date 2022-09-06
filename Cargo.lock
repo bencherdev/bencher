@@ -194,6 +194,7 @@ dependencies = [
 name = "bencher_rbac"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "literally",
  "oso",
  "uuid",
@@ -1532,7 +1533,6 @@ dependencies = [
  "thiserror",
  "tracing",
  "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

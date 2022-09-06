@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
+use diesel::dsl::count;
+use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
@@ -37,7 +39,17 @@ pub async fn post(
     let context = &mut *rqctx.context().lock().await;
 
     let conn = &mut context.db;
-    let insert_user = InsertUser::from_json(conn, json_signup)?;
+    let mut insert_user = InsertUser::from_json(conn, json_signup)?;
+
+    let count = schema::user::table
+        .select(count(schema::user::id))
+        .first::<i64>(conn)
+        .map_err(|_| http_error!("Failed to signup user."))?;
+    // The first user to signup is admin
+    if count == 0 {
+        insert_user.admin = true;
+    }
+
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
         .execute(conn)
