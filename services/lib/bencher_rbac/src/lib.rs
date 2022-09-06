@@ -2,7 +2,7 @@ use oso::{Oso, PolarClass};
 
 pub const POLAR: &str = include_str!("../bencher.polar");
 
-#[derive(Clone, PolarClass)]
+#[derive(Clone, Copy, PolarClass)]
 struct User {
     #[polar(attribute)]
     pub admin: bool,
@@ -10,7 +10,7 @@ struct User {
     pub locked: bool,
 }
 
-#[derive(Clone, PolarClass)]
+#[derive(Clone, Copy, PolarClass)]
 struct Server {}
 
 #[test]
@@ -31,14 +31,38 @@ fn test_user() {
 
     oso.load_str(POLAR).unwrap();
 
-    let user = User {
+    let server = Server {};
+
+    let admin = User {
         admin: true,
         locked: false,
     };
 
-    let server = Server {};
+    assert!(oso.is_allowed(admin, "administer", server).unwrap());
 
-    assert!(oso.is_allowed(user, "administer", server).unwrap());
+    let user = User {
+        admin: false,
+        locked: false,
+    };
+
+    assert!(!oso.is_allowed(user, "administer", server).unwrap());
+    assert!(oso.is_allowed(user, "session", server).unwrap());
+
+    let locked_admin = User {
+        admin: true,
+        locked: true,
+    };
+
+    assert!(!oso.is_allowed(locked_admin, "administer", server).unwrap());
+    assert!(!oso.is_allowed(locked_admin, "session", server).unwrap());
+
+    let locked_user = User {
+        admin: false,
+        locked: true,
+    };
+
+    assert!(!oso.is_allowed(locked_user, "administer", server).unwrap());
+    assert!(!oso.is_allowed(locked_user, "session", server).unwrap());
 }
 
 #[derive(Clone, PolarClass)]
