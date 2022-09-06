@@ -14,6 +14,7 @@ impl User {
     }
 }
 
+#[test]
 fn demo() {
     let mut oso = Oso::new();
 

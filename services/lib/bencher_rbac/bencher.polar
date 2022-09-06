@@ -61,6 +61,11 @@ resource Project {
 
 has_relation(_server: Server, "host", _project: Project);
 
+# This rule tells Oso how to fetch roles for a server
+has_role(user: User, role_name: String, _server: Server) if
+  (user.admin = true and role_name = "admin") or
+  (user.locked = true and role_name = "locked");
+
 # This rule tells Oso how to fetch roles for a project
 has_role(user: User, role_name: String, project: Project) if
   role in user.roles and
