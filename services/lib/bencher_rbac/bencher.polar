@@ -19,7 +19,7 @@ has_role(user: User, role: String, _server: Server) if
   (user.locked = false and user.admin = false and role = "user") or
   (user.locked = true and role = "locked");
 
-resource Org {
+resource Organization {
   permissions = [
     "read",
     "create_projects",
@@ -30,7 +30,6 @@ resource Org {
     "delete_role_assignments",
   ];
   roles = ["member", "leader"];
-  relations = { host: Server };
 
   "read" if "member";
   "list_projects" if "member";
@@ -44,45 +43,49 @@ resource Org {
   "member" if "leader";
 }
 
-has_relation(_server: Server, "host", _org: Org);
-
-has_role(user: User, role: String, org: Org) if
-    (
-      server = new Server() and
-      has_relation(server, "host", org) and
-      has_role(user, "admin", server)
-    )
-    or
-    (
-      user_role in user.roles and
-      user_role matches [org.uuid, role]
-    );
+has_role(user: User, role: String, org: Organization) if
+  (
+    server := new Server() and
+    has_role(user, "admin", server)
+  )
+  or
+  (
+    user_role in user.organizations and
+    user_role matches [org.uuid, role]
+  );
 
 
-# resource Project {
-#   permissions = ["view", "create", "edit", "delete", "manage"];
-#   roles = ["viewer", "developer", "owner"];
-#   relations = { host: Server, parent: Org };
+resource Project {
+  permissions = ["view", "create", "edit", "delete", "manage"];
+  roles = ["viewer", "developer", "maintainer"];
+  relations = { parent: Organization };
 
-#   "view" if "viewer";
-#   "create" if "developer";
-#   "edit" if "developer";
-#   "delete" if "owner";
-#   "manage" if "owner";
+  "view" if "viewer";
+  "create" if "developer";
+  "edit" if "developer";
+  "delete" if "developer";
+  "manage" if "maintainer";
 
-#   "developer" if "owner";
-#   "viewer" if "developer";
+  "developer" if "maintainer";
+  "viewer" if "developer";
+}
 
-#   "viewer" if "member" on "parent";
-#   "owner" if "leader" on "parent";
+has_relation(org: Organization, "parent", project: Project) if
+  org.uuid = project.parent;
 
-#   "owner" if "admin" on "host";
-# }
 
-# has_relation(_server: Server, "host", _project: Project);
-
-# # This rule tells Oso how to fetch roles for a project
-# has_role(user: User, role_name: String, project: Project) if
-#   role in user.roles and
-#   role.name = role_name and
-#   role.project = project;
+has_role(user: User, role: String, project: Project) if
+  (
+    server := new Server() and
+    has_role(user, "admin", server)
+  )
+  or
+  (
+    org := new Organization(project.parent) and
+    has_role(user, "leader", org)
+  )
+  or
+  (
+    user_role in user.projects and
+    user_role matches [project.uuid, role]
+  );
