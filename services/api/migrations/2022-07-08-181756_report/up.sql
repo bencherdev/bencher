@@ -25,6 +25,15 @@ CREATE TABLE organization (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE
 );
+CREATE TABLE organization_role (
+    id INTEGER PRIMARY KEY NOT NULL,
+    user_id INTEGER NOT NULL,
+    organization_id INTEGER NOT NULL,
+    role INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (organization_id) REFERENCES organization (id),
+    UNIQUE(user_id, organization_id)
+);
 CREATE TABLE project (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -35,6 +44,15 @@ CREATE TABLE project (
     url TEXT,
     public BOOLEAN NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES user (id)
+);
+CREATE TABLE project_role (
+    id INTEGER PRIMARY KEY NOT NULL,
+    user_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    role INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    UNIQUE(user_id, project_id)
 );
 CREATE TABLE branch (
     id INTEGER PRIMARY KEY NOT NULL,

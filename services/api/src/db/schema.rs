@@ -50,6 +50,15 @@ table! {
 }
 
 table! {
+    organization_role (id) {
+        id -> Integer,
+        user_id -> Integer,
+        organization_id -> Integer,
+        role -> Integer,
+    }
+}
+
+table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
@@ -74,6 +83,15 @@ table! {
         description -> Nullable<Text>,
         url -> Nullable<Text>,
         public -> Bool,
+    }
+}
+
+table! {
+    project_role (id) {
+        id -> Integer,
+        user_id -> Integer,
+        project_id -> Integer,
+        role -> Integer,
     }
 }
 
@@ -190,11 +208,15 @@ joinable!(alert -> statistic (statistic_id));
 joinable!(alert -> threshold (threshold_id));
 joinable!(benchmark -> project (project_id));
 joinable!(branch -> project (project_id));
+joinable!(organization_role -> organization (organization_id));
+joinable!(organization_role -> user (user_id));
 joinable!(perf -> benchmark (benchmark_id));
 joinable!(perf -> latency (latency_id));
 joinable!(perf -> report (report_id));
 joinable!(perf -> throughput (throughput_id));
 joinable!(project -> user (owner_id));
+joinable!(project_role -> project (project_id));
+joinable!(project_role -> user (user_id));
 joinable!(report -> testbed (testbed_id));
 joinable!(report -> user (user_id));
 joinable!(report -> version (version_id));
@@ -211,8 +233,10 @@ allow_tables_to_appear_in_same_query!(
     branch,
     latency,
     organization,
+    organization_role,
     perf,
     project,
+    project_role,
     report,
     resource,
     statistic,
