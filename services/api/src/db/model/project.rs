@@ -1,39 +1,19 @@
-use std::{
-    str::FromStr,
-    string::ToString,
-};
+use std::{str::FromStr, string::ToString};
 
-use bencher_json::{
-    JsonNewProject,
-    JsonProject,
-    ResourceId,
-};
+use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use diesel::{
-    expression_methods::BoolExpressionMethods,
-    Insertable,
-    QueryDsl,
-    Queryable,
-    RunQueryDsl,
+    expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
 };
-use dropshot::{
-    HttpError,
-    RequestContext,
-};
+use dropshot::{HttpError, RequestContext};
 use url::Url;
 use uuid::Uuid;
 
 use super::user::QueryUser;
 use crate::{
-    db::schema::{
-        self,
-        project as project_table,
-    },
+    db::schema::{self, project as project_table},
     diesel::ExpressionMethods,
-    util::{
-        http_error,
-        Context,
-    },
+    util::{http_error, Context},
 };
 
 const PROJECT_ERROR: &str = "Failed to get project.";
@@ -41,13 +21,13 @@ const PROJECT_ERROR: &str = "Failed to get project.";
 #[derive(Insertable)]
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
-    pub uuid:        String,
-    pub owner_id:    i32,
-    pub name:        String,
-    pub slug:        String,
+    pub uuid: String,
+    pub owner_id: i32,
+    pub name: String,
+    pub slug: String,
     pub description: Option<String>,
-    pub url:         Option<String>,
-    pub public:      bool,
+    pub url: Option<String>,
+    pub public: bool,
 }
 
 impl InsertProject {
@@ -57,6 +37,7 @@ impl InsertProject {
         project: JsonNewProject,
     ) -> Result<Self, HttpError> {
         let JsonNewProject {
+            organization: _,
             name,
             slug,
             description,
@@ -102,14 +83,14 @@ fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) 
 
 #[derive(Queryable)]
 pub struct QueryProject {
-    pub id:          i32,
-    pub uuid:        String,
-    pub owner_id:    i32,
-    pub name:        String,
-    pub slug:        String,
+    pub id: i32,
+    pub uuid: String,
+    pub owner_id: i32,
+    pub name: String,
+    pub slug: String,
     pub description: Option<String>,
-    pub url:         Option<String>,
-    pub public:      bool,
+    pub url: Option<String>,
+    pub public: bool,
 }
 
 impl QueryProject {

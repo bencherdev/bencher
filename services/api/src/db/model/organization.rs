@@ -1,7 +1,11 @@
-use std::string::ToString;
 use std::str::FromStr;
+use std::string::ToString;
 
-use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, ExpressionMethods, SqliteConnection};
+use bencher_json::ResourceId;
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
+    SqliteConnection,
+};
 use dropshot::HttpError;
 use uuid::Uuid;
 
@@ -58,5 +62,20 @@ impl QueryOrganization {
             .first(conn)
             .map_err(|_| http_error!(ORGANIZATION_ERROR))?;
         Uuid::from_str(&uuid).map_err(|_| http_error!(ORGANIZATION_ERROR))
+    }
+
+    pub fn from_resource_id(
+        conn: &mut SqliteConnection,
+        org: &ResourceId,
+    ) -> Result<Self, HttpError> {
+        let org = &org.0;
+        schema::organization::table
+            .filter(
+                schema::organization::slug
+                    .eq(org)
+                    .or(schema::organization::uuid.eq(org)),
+            )
+            .first::<QueryOrganization>(conn)
+            .map_err(|_| http_error!(ORGANIZATION_ERROR))
     }
 }

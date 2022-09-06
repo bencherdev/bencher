@@ -13,6 +13,7 @@ use serde::Deserialize;
 use crate::{
     db::{
         model::{
+            organization::QueryOrganization,
             project::{InsertProject, QueryProject},
             user::{project::InsertProjectRole, QueryUser},
         },
@@ -76,6 +77,7 @@ pub async fn post(
     let conn = &mut context.db;
 
     // Create the project
+    let org_id = QueryOrganization::from_resource_id(conn, &json_project.organization)?;
     let insert_project = InsertProject::from_json(conn, user_id, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
