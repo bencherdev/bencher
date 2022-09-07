@@ -1,3 +1,5 @@
+HOST=$1
+
 sudo apt update
 
 sudo apt install git
@@ -8,4 +10,5 @@ sudo sh get-docker.sh
 
 cd bencher
 touch ./services/api/bencher.db
+echo "VITE_BENCHER_API_URL=http://$HOST:8080" > ./services/ui/.env.development
 sudo docker compose up --build --detach --remove-orphans

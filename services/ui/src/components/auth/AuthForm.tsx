@@ -76,8 +76,7 @@ export const AuthForm = (props: Props) => {
       };
     }
     fetchData(json_data)
-      .then((resp) => {
-        props.handleUser(resp.data);
+      .then((_resp) => {
         props.handleRedirect(props.config?.redirect);
       })
       .catch((e) => {
