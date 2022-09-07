@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
-use bencher_rbac::organization::Role;
+use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup,auth::Role };
+use bencher_rbac::organization::MEMBER_ROLE;
+use bencher_rbac::organization::LEADER_ROLE;
 use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
@@ -67,14 +68,18 @@ pub async fn post(
         let token_data = invite
             .validate_invite(&context.key)
             .map_err(|_| http_error!("Failed to signup user."))?;
+        let org_claims = token_data
+            .claims
+            .org()
+            .ok_or(http_error!("Failed to signup user."))?;
 
         // Connect the user to the organization with the given role
-        let organization_id = QueryOrganization::get_id(conn, &json_invite.organization)?;
+        let organization_id = QueryOrganization::get_id(conn, org_claims.uuid)?;
         InsertOrganizationRole {
             user_id,
             organization_id,
             // TODO better type casting
-            role: match json_invite.role {
+            role: match org_claims.role {
                 Role::Member => MEMBER_ROLE,
                 Role::Leader => LEADER_ROLE,
             }

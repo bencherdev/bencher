@@ -134,8 +134,8 @@ pub struct JsonClaims {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct OrgClaims {
-    uuid: Uuid,
-    role: Role,
+    pub uuid: Uuid,
+    pub role: Role,
 }
 
 impl JsonClaims {
@@ -153,6 +153,10 @@ impl JsonClaims {
 
     pub fn email(&self) -> &str {
         &self.sub
+    }
+
+    pub fn org(&self) -> Option<&OrgClaims> {
+        self.org.as_ref()
     }
 }
 
