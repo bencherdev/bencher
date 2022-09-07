@@ -195,7 +195,6 @@ dependencies = [
 name = "bencher_rbac"
 version = "0.1.0"
 dependencies = [
- "bencher_json",
  "lazy_static",
  "literally",
  "oso",
