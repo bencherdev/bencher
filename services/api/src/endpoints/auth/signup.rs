@@ -40,10 +40,11 @@ pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonSignup>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonEmpty>, CorsHeaders>, HttpError> {
-    let json_signup = body.into_inner();
+    let mut json_signup = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
 
     let conn = &mut context.db;
+    let invite = json_signup.invite.take();
     let mut insert_user = InsertUser::from_json(conn, json_signup)?;
 
     let count = schema::user::table
@@ -62,20 +63,40 @@ pub async fn post(
         .map_err(|_| http_error!("Failed to signup user."))?;
     let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
 
-    // Create an organization for the user
-    let insert_org = InsertOrganization::from_user(conn, &insert_user)?;
-    diesel::insert_into(schema::organization::table)
-        .values(&insert_org)
-        .execute(conn)
-        .map_err(|_| http_error!("Failed to signup user."))?;
-    let organization_id = QueryOrganization::get_id(conn, &insert_org.uuid)?;
+    let insert_org_role = if let Some(invite) = invite {
+        let token_data = invite
+            .validate_invite(&context.key)
+            .map_err(|_| http_error!("Failed to signup user."))?;
 
-    // Connect the user to the organization as a `Leader`
-    let insert_org_role = InsertOrganizationRole {
-        user_id,
-        organization_id,
-        role: Role::Leader.to_string(),
+        // Connect the user to the organization with the given role
+        let organization_id = QueryOrganization::get_id(conn, &json_invite.organization)?;
+        InsertOrganizationRole {
+            user_id,
+            organization_id,
+            // TODO better type casting
+            role: match json_invite.role {
+                Role::Member => MEMBER_ROLE,
+                Role::Leader => LEADER_ROLE,
+            }
+            .into(),
+        }
+    } else {
+        // Create an organization for the user
+        let insert_org = InsertOrganization::from_user(conn, &insert_user)?;
+        diesel::insert_into(schema::organization::table)
+            .values(&insert_org)
+            .execute(conn)
+            .map_err(|_| http_error!("Failed to signup user."))?;
+        let organization_id = QueryOrganization::get_id(conn, &insert_org.uuid)?;
+
+        // Connect the user to the organization as a `Leader`
+        InsertOrganizationRole {
+            user_id,
+            organization_id,
+            role: Role::Leader.to_string(),
+        }
     };
+
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)

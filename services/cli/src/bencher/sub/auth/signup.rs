@@ -55,7 +55,7 @@ impl Into<JsonSignup> for Signup {
             name,
             slug,
             email,
-            invite,
+            invite: invite.map(Into::into),
         }
     }
 }

@@ -43,7 +43,10 @@ impl Into<JsonLogin> for Login {
             invite,
             backend: _,
         } = self;
-        JsonLogin { email, invite }
+        JsonLogin {
+            email,
+            invite: invite.map(Into::into),
+        }
     }
 }
 
