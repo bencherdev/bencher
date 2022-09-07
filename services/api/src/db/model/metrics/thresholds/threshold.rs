@@ -1,25 +1,18 @@
 use diesel::{
-    expression_methods::BoolExpressionMethods,
-    JoinOnDsl,
-    QueryDsl,
-    RunQueryDsl,
-    SqliteConnection,
+    expression_methods::BoolExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection,
 };
 use dropshot::HttpError;
 
 use crate::{
     db::{
-        model::threshold::{
-            statistic::QueryStatistic,
-            PerfKind,
-        },
+        model::threshold::{statistic::QueryStatistic, PerfKind},
         schema,
     },
     diesel::ExpressionMethods,
 };
 
 pub struct Threshold {
-    pub id:        i32,
+    pub id: i32,
     pub statistic: QueryStatistic,
 }
 

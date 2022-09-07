@@ -2,10 +2,7 @@ use async_trait::async_trait;
 
 use super::Run as Create;
 use crate::{
-    bencher::{
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{sub::SubCmd, wide::Wide},
     cli::report::CliReport,
     BencherError,
 };

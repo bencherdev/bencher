@@ -1,32 +1,15 @@
 use std::collections::VecDeque;
 
-use bencher_json::report::{
-    JsonLatency,
-    JsonResource,
-    JsonThroughput,
-};
+use bencher_json::report::{JsonLatency, JsonResource, JsonThroughput};
 use chrono::offset::Utc;
-use diesel::{
-    JoinOnDsl,
-    NullableExpressionMethods,
-    QueryDsl,
-    RunQueryDsl,
-    SqliteConnection,
-};
+use diesel::{JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 
 use crate::{
     db::{
         model::{
-            perf::{
-                latency::QueryLatency,
-                resource::QueryResource,
-                throughput::QueryThroughput,
-            },
-            threshold::{
-                statistic::QueryStatistic,
-                PerfKind,
-            },
+            perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
+            threshold::{statistic::QueryStatistic, PerfKind},
         },
         schema,
     },

@@ -1,10 +1,7 @@
 use std::env;
 
 use diesel::{
-    prelude::{
-        ConnectionResult,
-        *,
-    },
+    prelude::{ConnectionResult, *},
     sqlite::SqliteConnection,
 };
 

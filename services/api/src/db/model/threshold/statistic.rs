@@ -1,24 +1,12 @@
 use std::str::FromStr;
 
-use bencher_json::threshold::{
-    JsonNewStatistic,
-    JsonStatistic,
-    JsonStatisticKind,
-};
-use diesel::{
-    Insertable,
-    QueryDsl,
-    RunQueryDsl,
-    SqliteConnection,
-};
+use bencher_json::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind};
+use diesel::{Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::statistic as statistic_table,
-    },
+    db::{schema, schema::statistic as statistic_table},
     diesel::ExpressionMethods,
     util::http_error,
 };
@@ -27,13 +15,13 @@ const STATISTIC_ERROR: &str = "Failed to get statistic.";
 
 #[derive(Queryable)]
 pub struct QueryStatistic {
-    pub id:          i32,
-    pub uuid:        String,
-    pub test:        i32,
+    pub id: i32,
+    pub uuid: String,
+    pub test: i32,
     pub sample_size: Option<i64>,
-    pub window:      Option<i64>,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
+    pub window: Option<i64>,
+    pub left_side: Option<f32>,
+    pub right_side: Option<f32>,
 }
 
 impl QueryStatistic {
@@ -65,12 +53,12 @@ impl QueryStatistic {
             right_side,
         } = self;
         Ok(JsonStatistic {
-            uuid:        Uuid::from_str(&uuid).map_err(|_| http_error!(STATISTIC_ERROR))?,
-            test:        StatisticKind::try_from(test)?.into(),
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(STATISTIC_ERROR))?,
+            test: StatisticKind::try_from(test)?.into(),
             sample_size: sample_size.map(|ss| ss as u32),
-            window:      window.map(|w| w as u32),
-            left_side:   left_side.map(Into::into),
-            right_side:  right_side.map(Into::into),
+            window: window.map(|w| w as u32),
+            left_side: left_side.map(Into::into),
+            right_side: right_side.map(Into::into),
         })
     }
 }
@@ -114,12 +102,12 @@ impl Into<JsonStatisticKind> for StatisticKind {
 #[derive(Insertable)]
 #[diesel(table_name = statistic_table)]
 pub struct InsertStatistic {
-    pub uuid:        String,
-    pub test:        i32,
+    pub uuid: String,
+    pub test: i32,
     pub sample_size: Option<i64>,
-    pub window:      Option<i64>,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
+    pub window: Option<i64>,
+    pub left_side: Option<f32>,
+    pub right_side: Option<f32>,
 }
 
 impl InsertStatistic {
@@ -132,12 +120,12 @@ impl InsertStatistic {
             right_side,
         } = json_statistic;
         Ok(Self {
-            uuid:        Uuid::new_v4().to_string(),
-            test:        StatisticKind::from(test) as i32,
+            uuid: Uuid::new_v4().to_string(),
+            test: StatisticKind::from(test) as i32,
             sample_size: sample_size.map(|ss| ss as i64),
-            window:      window.map(|w| w as i64),
-            left_side:   left_side.map(Into::into),
-            right_side:  right_side.map(Into::into),
+            window: window.map(|w| w as i64),
+            left_side: left_side.map(Into::into),
+            right_side: right_side.map(Into::into),
         })
     }
 }

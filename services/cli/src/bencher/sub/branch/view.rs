@@ -4,11 +4,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::branch::CliBranchView,
     BencherError,
 };
@@ -16,7 +12,7 @@ use crate::{
 #[derive(Debug)]
 pub struct View {
     pub project: ResourceId,
-    pub branch:  ResourceId,
+    pub branch: ResourceId,
     pub backend: Backend,
 }
 

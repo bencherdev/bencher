@@ -1,21 +1,12 @@
-use bencher_json::report::new::{
-    JsonBenchmarks,
-    JsonMetrics,
-};
-use diesel::{
-    RunQueryDsl,
-    SqliteConnection,
-};
+use bencher_json::report::new::{JsonBenchmarks, JsonMetrics};
+use diesel::{RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 
 use crate::{
     db::{
         model::{
             benchmark::QueryBenchmark,
-            perf::{
-                InsertPerf,
-                QueryPerf,
-            },
+            perf::{InsertPerf, QueryPerf},
         },
         schema,
     },
@@ -31,7 +22,7 @@ const PERF_ERROR: &str = "Failed to create perf metrics.";
 
 pub struct Metrics {
     pub project_id: i32,
-    pub report_id:  i32,
+    pub report_id: i32,
     pub thresholds: Thresholds,
 }
 

@@ -1,13 +1,7 @@
-use chrono::{
-    DateTime,
-    Utc,
-};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::JsonAdapter;
@@ -21,22 +15,19 @@ pub mod metrics_map;
 pub mod resource;
 pub mod throughput;
 
-pub use benchmarks::{
-    JsonBenchmarks,
-    JsonBenchmarksMap,
-};
+pub use benchmarks::{JsonBenchmarks, JsonBenchmarksMap};
 pub use metrics::JsonMetrics;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
-    pub branch:     Uuid,
+    pub branch: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub hash:       Option<String>,
-    pub testbed:    Uuid,
-    pub adapter:    JsonAdapter,
+    pub hash: Option<String>,
+    pub testbed: Uuid,
+    pub adapter: JsonAdapter,
     pub start_time: DateTime<Utc>,
-    pub end_time:   DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     #[serde(flatten)]
     pub benchmarks: JsonBenchmarks,
 }

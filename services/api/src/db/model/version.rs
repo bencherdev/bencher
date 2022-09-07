@@ -1,20 +1,13 @@
 use std::str::FromStr;
 
 use diesel::{
-    expression_methods::BoolExpressionMethods,
-    QueryDsl,
-    Queryable,
-    RunQueryDsl,
-    SqliteConnection,
+    expression_methods::BoolExpressionMethods, QueryDsl, Queryable, RunQueryDsl, SqliteConnection,
 };
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::version as version_table,
-    },
+    db::{schema, schema::version as version_table},
     diesel::ExpressionMethods,
     util::http_error,
 };
@@ -23,11 +16,11 @@ const VERSION_ERROR: &str = "Failed to get version.";
 
 #[derive(Queryable)]
 pub struct QueryVersion {
-    pub id:        i32,
-    pub uuid:      String,
+    pub id: i32,
+    pub uuid: String,
     pub branch_id: i32,
-    pub number:    i32,
-    pub hash:      Option<String>,
+    pub number: i32,
+    pub hash: Option<String>,
 }
 
 impl QueryVersion {
@@ -44,10 +37,10 @@ impl QueryVersion {
 #[derive(Insertable)]
 #[diesel(table_name = version_table)]
 pub struct InsertVersion {
-    pub uuid:      String,
+    pub uuid: String,
     pub branch_id: i32,
-    pub number:    i32,
-    pub hash:      Option<String>,
+    pub number: i32,
+    pub hash: Option<String>,
 }
 
 impl InsertVersion {

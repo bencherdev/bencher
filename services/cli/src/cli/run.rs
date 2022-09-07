@@ -1,8 +1,4 @@
-use clap::{
-    Args,
-    Parser,
-    ValueEnum,
-};
+use clap::{Args, Parser, ValueEnum};
 use uuid::Uuid;
 
 use super::CliLocality;

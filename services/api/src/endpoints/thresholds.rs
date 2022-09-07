@@ -1,27 +1,13 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    threshold::{
-        JsonNewThreshold,
-        JsonThreshold,
-    },
+    threshold::{JsonNewThreshold, JsonThreshold},
     ResourceId,
 };
-use diesel::{
-    expression_methods::BoolExpressionMethods,
-    JoinOnDsl,
-    QueryDsl,
-    RunQueryDsl,
-};
+use diesel::{expression_methods::BoolExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseAccepted,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    Path,
-    RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
+    RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -33,20 +19,13 @@ use crate::{
             branch::QueryBranch,
             project::QueryProject,
             testbed::QueryTestbed,
-            threshold::{
-                InsertThreshold,
-                QueryThreshold,
-            }, user::QueryUser,
+            threshold::{InsertThreshold, QueryThreshold},
+            user::QueryUser,
         },
         schema,
     },
     diesel::ExpressionMethods,
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -171,7 +150,7 @@ pub async fn post(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
-    pub project:   ResourceId,
+    pub project: ResourceId,
     pub threshold: Uuid,
 }
 

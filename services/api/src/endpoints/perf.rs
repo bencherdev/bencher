@@ -1,53 +1,26 @@
-use std::{
-    str::FromStr,
-    sync::Arc,
-};
+use std::{str::FromStr, sync::Arc};
 
 use bencher_json::{
-    perf::{
-        JsonPerfData,
-        JsonPerfDatum,
-        JsonPerfDatumKind,
-        JsonPerfKind,
-    },
-    JsonPerf,
-    JsonPerfQuery,
+    perf::{JsonPerfData, JsonPerfDatum, JsonPerfDatumKind, JsonPerfKind},
+    JsonPerf, JsonPerfQuery,
 };
-use diesel::{
-    JoinOnDsl,
-    NullableExpressionMethods,
-    QueryDsl,
-    RunQueryDsl,
-};
+use diesel::{JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext, TypedBody,
 };
 use uuid::Uuid;
 
 use crate::{
     db::{
         model::{
-            perf::{
-                latency::QueryLatency,
-                resource::QueryResource,
-                throughput::QueryThroughput,
-            },
-            report::to_date_time, user::QueryUser,
+            perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
+            report::to_date_time,
+            user::QueryUser,
         },
         schema,
     },
     diesel::ExpressionMethods,
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 const PERF_ERROR: &str = "Failed to get benchmark data.";
@@ -520,13 +493,13 @@ fn to_json(
 
 #[derive(Debug)]
 pub struct QueryPerfDatum {
-    pub uuid:           String,
-    pub iteration:      i32,
-    pub start_time:     i64,
-    pub end_time:       i64,
+    pub uuid: String,
+    pub iteration: i32,
+    pub start_time: i64,
+    pub end_time: i64,
     pub version_number: i32,
-    pub version_hash:   Option<String>,
-    pub metrics:        QueryPerfMetrics,
+    pub version_hash: Option<String>,
+    pub metrics: QueryPerfMetrics,
 }
 
 impl QueryPerfDatum {

@@ -1,17 +1,10 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{
-    JsonEmpty,
-    JsonSignup,
-};
+use bencher_json::{JsonEmpty, JsonSignup};
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::auth::CliAuthSignup,
     BencherError,
 };
@@ -20,9 +13,9 @@ const SIGNUP_PATH: &str = "/v0/auth/signup";
 
 #[derive(Debug, Clone)]
 pub struct Signup {
-    pub name:    String,
-    pub slug:    Option<String>,
-    pub email:   String,
+    pub name: String,
+    pub slug: Option<String>,
+    pub email: String,
     pub backend: Backend,
 }
 

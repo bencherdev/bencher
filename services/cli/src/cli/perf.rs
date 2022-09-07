@@ -1,11 +1,5 @@
-use chrono::{
-    DateTime,
-    Utc,
-};
-use clap::{
-    Parser,
-    ValueEnum,
-};
+use chrono::{DateTime, Utc};
+use clap::{Parser, ValueEnum};
 use uuid::Uuid;
 
 use super::CliBackend;

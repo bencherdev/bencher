@@ -1,43 +1,20 @@
-use std::{
-    collections::BTreeMap,
-    str::FromStr,
-    time::Duration,
-};
+use std::{collections::BTreeMap, str::FromStr, time::Duration};
 
 use bencher_json::report::{
-    new::{
-        JsonBenchmarksMap,
-        JsonMetrics,
-    },
+    new::{JsonBenchmarksMap, JsonMetrics},
     JsonLatency,
 };
 use nom::{
     branch::alt,
-    bytes::complete::{
-        tag,
-        take_until1,
-    },
-    character::complete::{
-        digit1,
-        line_ending,
-        space1,
-    },
-    combinator::{
-        map,
-        success,
-    },
-    multi::{
-        many0,
-        many1,
-    },
+    bytes::complete::{tag, take_until1},
+    character::complete::{digit1, line_ending, space1},
+    combinator::{map, success},
+    multi::{many0, many1},
     sequence::tuple,
     IResult,
 };
 
-use crate::{
-    bencher::sub::run::perf::Output,
-    BencherError,
-};
+use crate::{bencher::sub::run::perf::Output, BencherError};
 
 pub fn parse(output: &Output) -> Result<JsonBenchmarksMap, BencherError> {
     let (_, report) = parse_stdout(output.as_str()).unwrap();
@@ -141,7 +118,7 @@ fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
             let duration = to_duration(to_u64(duration), &units);
             let variance = to_duration(to_u64(variance), &units);
             JsonLatency {
-                duration:       duration.as_nanos() as u64,
+                duration: duration.as_nanos() as u64,
                 lower_variance: variance.as_nanos() as u64,
                 upper_variance: variance.as_nanos() as u64,
             }

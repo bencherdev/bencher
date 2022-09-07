@@ -1,17 +1,10 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{
-    JsonEmpty,
-    JsonLogin,
-};
+use bencher_json::{JsonEmpty, JsonLogin};
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::auth::CliAuthLogin,
     BencherError,
 };
@@ -20,7 +13,7 @@ const LOGIN_PATH: &str = "/v0/auth/login";
 
 #[derive(Debug, Clone)]
 pub struct Login {
-    pub email:   String,
+    pub email: String,
     pub backend: Backend,
 }
 

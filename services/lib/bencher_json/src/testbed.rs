@@ -1,9 +1,6 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::ResourceId;

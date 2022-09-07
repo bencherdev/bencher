@@ -1,8 +1,4 @@
-use bencher_api::util::{
-    db::get_db_connection,
-    migrate::run_migration,
-    server::get_server,
-};
+use bencher_api::util::{db::get_db_connection, migrate::run_migration, server::get_server};
 use tokio::sync::Mutex;
 
 const API_NAME: &str = "Bencher API";
@@ -20,16 +16,8 @@ async fn main() -> Result<(), String> {
 async fn run() -> Result<(), String> {
     use std::fs::File;
 
-    use bencher_api::{
-        endpoints::Api,
-        util::registrar::Registrar,
-    };
-    use dropshot::{
-        ApiDescription,
-        EndpointTagPolicy,
-        TagConfig,
-        TagDetails,
-    };
+    use bencher_api::{endpoints::Api, util::registrar::Registrar};
+    use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 
     const API_VERSION: &str = env!("CARGO_PKG_VERSION");
     const SWAGGER_PATH: &str = "../ui/src/components/docs/api/swagger.json";
@@ -78,7 +66,7 @@ async fn run() -> Result<(), String> {
     run_migration(&mut db_conn).map_err(|e| e.to_string())?;
 
     let context = Mutex::new(ApiContext {
-        db:  db_conn,
+        db: db_conn,
         key: secret_key,
     });
 

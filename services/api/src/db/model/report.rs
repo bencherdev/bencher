@@ -2,46 +2,20 @@ use std::str::FromStr;
 
 use bencher_json::{
     report::{
-        data::{
-            JsonReportAlert,
-            JsonReportAlerts,
-            JsonReportBenchmark,
-            JsonReportBenchmarks,
-        },
+        data::{JsonReportAlert, JsonReportAlerts, JsonReportBenchmark, JsonReportBenchmarks},
         JsonAdapter,
     },
-    JsonNewReport,
-    JsonReport,
+    JsonNewReport, JsonReport,
 };
-use chrono::{
-    DateTime,
-    TimeZone,
-    Utc,
-};
-use diesel::{
-    Insertable,
-    JoinOnDsl,
-    Queryable,
-    SqliteConnection,
-};
+use chrono::{DateTime, TimeZone, Utc};
+use diesel::{Insertable, JoinOnDsl, Queryable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use super::{
-    testbed::QueryTestbed,
-    user::QueryUser,
-    version::QueryVersion,
-};
+use super::{testbed::QueryTestbed, user::QueryUser, version::QueryVersion};
 use crate::{
-    db::{
-        schema,
-        schema::report as report_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::report as report_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
@@ -49,14 +23,14 @@ const REPORT_ERROR: &str = "Failed to get report.";
 
 #[derive(Queryable)]
 pub struct QueryReport {
-    pub id:         i32,
-    pub uuid:       String,
-    pub user_id:    i32,
+    pub id: i32,
+    pub uuid: String,
+    pub user_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
-    pub adapter:    i32,
+    pub adapter: i32,
     pub start_time: i64,
-    pub end_time:   i64,
+    pub end_time: i64,
 }
 
 impl QueryReport {
@@ -146,8 +120,8 @@ const RUST_TEST: isize = 100;
 const RUST_BENCH: isize = 150;
 
 pub enum Adapter {
-    Json      = JSON,
-    RustTest  = RUST_TEST,
+    Json = JSON,
+    RustTest = RUST_TEST,
     RustBench = RUST_BENCH,
 }
 
@@ -187,13 +161,13 @@ impl Into<JsonAdapter> for Adapter {
 #[derive(Insertable)]
 #[diesel(table_name = report_table)]
 pub struct InsertReport {
-    pub uuid:       String,
-    pub user_id:    i32,
+    pub uuid: String,
+    pub user_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
-    pub adapter:    i32,
+    pub adapter: i32,
     pub start_time: i64,
-    pub end_time:   i64,
+    pub end_time: i64,
 }
 
 impl InsertReport {

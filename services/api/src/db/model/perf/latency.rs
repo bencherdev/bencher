@@ -1,21 +1,11 @@
 use bencher_json::report::JsonLatency;
-use diesel::{
-    Insertable,
-    SqliteConnection,
-};
+use diesel::{Insertable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::latency as latency_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::latency as latency_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
@@ -40,7 +30,7 @@ impl QueryLatency {
         Ok(JsonLatency {
             lower_variance: lower_variance as u64,
             upper_variance: upper_variance as u64,
-            duration:       duration as u64,
+            duration: duration as u64,
         })
     }
 }
@@ -48,10 +38,10 @@ impl QueryLatency {
 #[derive(Insertable)]
 #[diesel(table_name = latency_table)]
 pub struct InsertLatency {
-    pub uuid:           String,
+    pub uuid: String,
     pub lower_variance: i64,
     pub upper_variance: i64,
-    pub duration:       i64,
+    pub duration: i64,
 }
 
 impl From<JsonLatency> for InsertLatency {
@@ -62,10 +52,10 @@ impl From<JsonLatency> for InsertLatency {
             duration,
         } = latency;
         Self {
-            uuid:           Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4().to_string(),
             lower_variance: lower_variance as i64,
             upper_variance: upper_variance as i64,
-            duration:       duration as i64,
+            duration: duration as i64,
         }
     }
 }

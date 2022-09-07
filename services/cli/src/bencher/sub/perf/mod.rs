@@ -2,17 +2,11 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::JsonPerfQuery;
-use chrono::{
-    DateTime,
-    Utc,
-};
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, wide::Wide},
     cli::perf::CliPerf,
     BencherError,
 };
@@ -27,13 +21,13 @@ const PERF_PATH: &str = "/v0/perf";
 
 #[derive(Debug)]
 pub struct Perf {
-    branches:   Vec<Uuid>,
-    testbeds:   Vec<Uuid>,
+    branches: Vec<Uuid>,
+    testbeds: Vec<Uuid>,
     benchmarks: Vec<Uuid>,
-    kind:       Kind,
+    kind: Kind,
     start_time: Option<DateTime<Utc>>,
-    end_time:   Option<DateTime<Utc>>,
-    backend:    Backend,
+    end_time: Option<DateTime<Utc>>,
+    backend: Backend,
 }
 
 impl TryFrom<CliPerf> for Perf {
@@ -66,12 +60,12 @@ impl SubCmd for Perf {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         // TODO break this out into an Into impl
         let perf = JsonPerfQuery {
-            branches:   self.branches.clone(),
-            testbeds:   self.testbeds.clone(),
+            branches: self.branches.clone(),
+            testbeds: self.testbeds.clone(),
             benchmarks: self.benchmarks.clone(),
-            kind:       self.kind.into(),
+            kind: self.kind.into(),
             start_time: self.start_time,
-            end_time:   self.end_time,
+            end_time: self.end_time,
         };
         self.backend.post(PERF_PATH, &perf).await?;
         Ok(())

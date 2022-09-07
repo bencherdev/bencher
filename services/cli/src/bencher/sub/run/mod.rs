@@ -1,28 +1,14 @@
-use std::{
-    convert::TryFrom,
-    str::FromStr,
-};
+use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{
-    report::new::JsonBenchmarks,
-    JsonNewReport,
-    JsonReport,
-};
+use bencher_json::{report::new::JsonBenchmarks, JsonNewReport, JsonReport};
 use chrono::Utc;
 use git2::Oid;
 use uuid::Uuid;
 
 use crate::{
-    bencher::{
-        locality::Locality,
-        wide::Wide,
-    },
-    cli::run::{
-        CliRun,
-        CliRunAdapter,
-        CliRunFold,
-    },
+    bencher::{locality::Locality, wide::Wide},
+    cli::run::{CliRun, CliRunAdapter, CliRunFold},
     BencherError,
 };
 
@@ -41,14 +27,14 @@ const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 #[derive(Debug)]
 pub struct Run {
     locality: Locality,
-    perf:     Perf,
-    branch:   Uuid,
-    hash:     Option<Oid>,
-    testbed:  Uuid,
-    adapter:  Adapter,
-    iter:     usize,
-    fold:     Option<Fold>,
-    err:      bool,
+    perf: Perf,
+    branch: Uuid,
+    hash: Option<Oid>,
+    testbed: Uuid,
+    adapter: Adapter,
+    iter: usize,
+    fold: Option<Fold>,
+    err: bool,
 }
 
 impl TryFrom<CliRun> for Run {

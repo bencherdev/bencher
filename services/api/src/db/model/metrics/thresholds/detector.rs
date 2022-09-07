@@ -1,19 +1,9 @@
-use std::collections::{
-    HashMap,
-    VecDeque,
-};
+use std::collections::{HashMap, VecDeque};
 
 use bencher_json::report::JsonMetricsMap;
-use diesel::{
-    RunQueryDsl,
-    SqliteConnection,
-};
+use diesel::{RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
-use statrs::distribution::{
-    ContinuousCDF,
-    Normal,
-    StudentsT,
-};
+use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;
 
 use super::threshold::Threshold;
@@ -22,10 +12,7 @@ use crate::{
         model::{
             metrics::data::MetricsData,
             threshold::{
-                alert::{
-                    InsertAlert,
-                    Side,
-                },
+                alert::{InsertAlert, Side},
                 statistic::StatisticKind,
                 PerfKind,
             },
@@ -39,7 +26,7 @@ const PERF_ERROR: &str = "Failed to run metrics detector.";
 
 pub struct Detector {
     pub threshold: Threshold,
-    pub data:      HashMap<String, MetricsData>,
+    pub data: HashMap<String, MetricsData>,
 }
 
 impl Detector {
@@ -205,12 +192,7 @@ fn mean(data: &VecDeque<f64>) -> Option<f64> {
 #[cfg(test)]
 mod test {
     use statrs::{
-        distribution::{
-            Continuous,
-            ContinuousCDF,
-            Normal,
-            StudentsT,
-        },
+        distribution::{Continuous, ContinuousCDF, Normal, StudentsT},
         statistics::Distribution,
     };
 

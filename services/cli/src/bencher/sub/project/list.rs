@@ -4,11 +4,7 @@ use async_trait::async_trait;
 
 use super::PROJECTS_PATH;
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectList,
     BencherError,
 };

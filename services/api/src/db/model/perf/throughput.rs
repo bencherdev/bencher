@@ -1,21 +1,11 @@
 use bencher_json::report::JsonThroughput;
-use diesel::{
-    Insertable,
-    SqliteConnection,
-};
+use diesel::{Insertable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::throughput as throughput_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::throughput as throughput_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
@@ -42,8 +32,8 @@ impl QueryThroughput {
         Ok(JsonThroughput {
             lower_variance: lower_variance.into(),
             upper_variance: upper_variance.into(),
-            events:         events.into(),
-            unit_time:      unit_time as u64,
+            events: events.into(),
+            unit_time: unit_time as u64,
         })
     }
 }
@@ -51,11 +41,11 @@ impl QueryThroughput {
 #[derive(Insertable)]
 #[diesel(table_name = throughput_table)]
 pub struct InsertThroughput {
-    pub uuid:           String,
+    pub uuid: String,
     pub lower_variance: f64,
     pub upper_variance: f64,
-    pub events:         f64,
-    pub unit_time:      i64,
+    pub events: f64,
+    pub unit_time: i64,
 }
 
 impl From<JsonThroughput> for InsertThroughput {
@@ -67,11 +57,11 @@ impl From<JsonThroughput> for InsertThroughput {
             unit_time,
         } = throughput;
         Self {
-            uuid:           Uuid::new_v4().to_string(),
+            uuid: Uuid::new_v4().to_string(),
             lower_variance: lower_variance.into(),
             upper_variance: upper_variance.into(),
-            events:         events.into(),
-            unit_time:      unit_time as i64,
+            events: events.into(),
+            unit_time: unit_time as i64,
         }
     }
 }

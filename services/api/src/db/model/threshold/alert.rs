@@ -1,31 +1,13 @@
 use std::str::FromStr;
 
-use bencher_json::alert::{
-    JsonAlert,
-    JsonSide,
-};
-use diesel::{
-    Insertable,
-    QueryDsl,
-    Queryable,
-    RunQueryDsl,
-    SqliteConnection,
-};
+use bencher_json::alert::{JsonAlert, JsonSide};
+use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use super::{
-    statistic::QueryStatistic,
-    QueryThreshold,
-};
+use super::{statistic::QueryStatistic, QueryThreshold};
 use crate::{
-    db::{
-        model::{
-            perf::QueryPerf,
-        },
-        schema,
-        schema::alert as alert_table,
-    },
+    db::{model::perf::QueryPerf, schema, schema::alert as alert_table},
     diesel::ExpressionMethods,
     util::http_error,
 };
@@ -34,14 +16,14 @@ const ALERT_ERROR: &str = "Failed to get alert.";
 
 #[derive(Queryable)]
 pub struct QueryAlert {
-    pub id:           i32,
-    pub uuid:         String,
-    pub perf_id:      i32,
+    pub id: i32,
+    pub uuid: String,
+    pub perf_id: i32,
     pub threshold_id: i32,
     pub statistic_id: i32,
-    pub side:         bool,
-    pub boundary:     f32,
-    pub outlier:      f32,
+    pub side: bool,
+    pub boundary: f32,
+    pub outlier: f32,
 }
 
 impl QueryAlert {
@@ -74,19 +56,19 @@ impl QueryAlert {
             outlier,
         } = self;
         Ok(JsonAlert {
-            uuid:      Uuid::from_str(&uuid).map_err(|_| http_error!(ALERT_ERROR))?,
-            perf:      QueryPerf::get_uuid(conn, perf_id)?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(ALERT_ERROR))?,
+            perf: QueryPerf::get_uuid(conn, perf_id)?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             statistic: QueryStatistic::get_uuid(conn, statistic_id)?,
-            side:      Side::from(side).into(),
-            boundary:  boundary.into(),
-            outlier:   outlier.into(),
+            side: Side::from(side).into(),
+            boundary: boundary.into(),
+            outlier: outlier.into(),
         })
     }
 }
 
 pub enum Side {
-    Left  = 0,
+    Left = 0,
     Right = 1,
 }
 
@@ -120,11 +102,11 @@ impl Into<JsonSide> for Side {
 #[derive(Insertable)]
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
-    pub uuid:         String,
-    pub perf_id:      i32,
+    pub uuid: String,
+    pub perf_id: i32,
     pub threshold_id: i32,
     pub statistic_id: i32,
-    pub side:         bool,
-    pub boundary:     f32,
-    pub outlier:      f32,
+    pub side: bool,
+    pub boundary: f32,
+    pub outlier: f32,
 }

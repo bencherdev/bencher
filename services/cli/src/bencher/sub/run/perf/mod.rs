@@ -1,12 +1,6 @@
-use std::convert::{
-    TryFrom,
-    TryInto,
-};
+use std::convert::{TryFrom, TryInto};
 
-use crate::{
-    cli::run::CliRunCommand,
-    BencherError,
-};
+use crate::{cli::run::CliRunCommand, BencherError};
 
 mod command;
 mod flag;

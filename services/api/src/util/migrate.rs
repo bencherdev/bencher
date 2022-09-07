@@ -1,9 +1,5 @@
 use diesel::sqlite::SqliteConnection;
-use diesel_migrations::{
-    embed_migrations,
-    EmbeddedMigrations,
-    MigrationHarness
-};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::HttpError;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");

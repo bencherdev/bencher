@@ -1,19 +1,7 @@
-use std::{
-    collections::HashSet,
-    sync::Arc,
-};
+use std::{collections::HashSet, sync::Arc};
 
-use dropshot::{
-    HttpError,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    RequestContext,
-    ServerContext,
-};
-use http::{
-    header::HeaderValue,
-    StatusCode,
-};
+use dropshot::{HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext, ServerContext};
+use http::{header::HeaderValue, StatusCode};
 
 // https://githu.com/oxidecomputer/cio/blob/95545d29f25712a917b85593492217f4e989b04c/webhooky/src/cors.rs
 
@@ -145,17 +133,9 @@ pub fn validate_header(
 
 #[cfg(test)]
 mod tests {
-    use http::{
-        header::HeaderValue,
-        Method,
-    };
+    use http::{header::HeaderValue, Method};
 
-    use super::{
-        get_cors_method_header,
-        validate_header,
-        CorsError,
-        CorsFailure,
-    };
+    use super::{get_cors_method_header, validate_header, CorsError, CorsFailure};
 
     #[test]
     fn test_cors_simple_origin() {
@@ -185,10 +165,10 @@ mod tests {
     fn test_cors_returns_values_when_all_are_valid() {
         assert_eq!(
             Ok(HeaderValue::from_static("Content-Type, X-Nonstandard")),
-            validate_header("Content-Type, X-Nonstandard", &[
-                "Content-Type",
-                "X-Nonstandard"
-            ])
+            validate_header(
+                "Content-Type, X-Nonstandard",
+                &["Content-Type", "X-Nonstandard"]
+            )
         )
     }
 

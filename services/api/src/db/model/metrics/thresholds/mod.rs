@@ -1,8 +1,5 @@
 use bencher_json::report::{
-    new::{
-        JsonBenchmarks,
-        JsonMetrics,
-    },
+    new::{JsonBenchmarks, JsonMetrics},
     JsonMetricsMap,
 };
 use diesel::SqliteConnection;
@@ -10,20 +7,17 @@ use dropshot::HttpError;
 
 use self::detector::Detector;
 pub use self::threshold::Threshold;
-use crate::db::model::{
-    benchmark::QueryBenchmark,
-    threshold::PerfKind,
-};
+use crate::db::model::{benchmark::QueryBenchmark, threshold::PerfKind};
 
 pub mod detector;
 pub mod threshold;
 
 pub struct Thresholds {
-    pub latency:    Option<Detector>,
+    pub latency: Option<Detector>,
     pub throughput: Option<Detector>,
-    pub compute:    Option<Detector>,
-    pub memory:     Option<Detector>,
-    pub storage:    Option<Detector>,
+    pub compute: Option<Detector>,
+    pub memory: Option<Detector>,
+    pub storage: Option<Detector>,
 }
 
 impl Thresholds {
@@ -48,7 +42,7 @@ impl Thresholds {
             .collect();
 
         Ok(Self {
-            latency:    Detector::new(
+            latency: Detector::new(
                 conn,
                 branch_id,
                 testbed_id,
@@ -57,9 +51,9 @@ impl Thresholds {
                 PerfKind::Latency,
             )?,
             throughput: None,
-            compute:    None,
-            memory:     None,
-            storage:    None,
+            compute: None,
+            memory: None,
+            storage: None,
         })
     }
 

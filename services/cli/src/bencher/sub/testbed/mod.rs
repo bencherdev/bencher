@@ -1,10 +1,7 @@
 use async_trait::async_trait;
 
 use crate::{
-    bencher::{
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{sub::SubCmd, wide::Wide},
     cli::testbed::CliTestbed,
     BencherError,
 };

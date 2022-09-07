@@ -1,40 +1,34 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use super::{
-    benchmarks::OrdKind,
-    latency::JsonLatency,
-    resource::JsonResource,
-    throughput::JsonThroughput,
+    benchmarks::OrdKind, latency::JsonLatency, resource::JsonResource, throughput::JsonThroughput,
 };
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetrics {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub latency:    Option<JsonLatency>,
+    pub latency: Option<JsonLatency>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub throughput: Option<JsonThroughput>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub compute:    Option<JsonResource>,
+    pub compute: Option<JsonResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory:     Option<JsonResource>,
+    pub memory: Option<JsonResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub storage:    Option<JsonResource>,
+    pub storage: Option<JsonResource>,
 }
 
 impl JsonMetrics {
     pub(crate) fn ord(self, other: Self, ord_kind: OrdKind) -> Self {
         JsonMetrics {
-            latency:    ord_map(self.latency, other.latency, ord_kind),
+            latency: ord_map(self.latency, other.latency, ord_kind),
             throughput: ord_map(self.throughput, other.throughput, ord_kind),
-            compute:    ord_map(self.compute, other.compute, ord_kind),
-            memory:     ord_map(self.memory, other.memory, ord_kind),
-            storage:    ord_map(self.storage, other.storage, ord_kind),
+            compute: ord_map(self.compute, other.compute, ord_kind),
+            memory: ord_map(self.memory, other.memory, ord_kind),
+            storage: ord_map(self.storage, other.storage, ord_kind),
         }
     }
 }
@@ -60,11 +54,11 @@ impl std::ops::Add for JsonMetrics {
 
     fn add(self, other: Self) -> Self {
         Self {
-            latency:    add_map(self.latency, other.latency),
+            latency: add_map(self.latency, other.latency),
             throughput: add_map(self.throughput, other.throughput),
-            compute:    add_map(self.compute, other.compute),
-            memory:     add_map(self.memory, other.memory),
-            storage:    add_map(self.storage, other.storage),
+            compute: add_map(self.compute, other.compute),
+            memory: add_map(self.memory, other.memory),
+            storage: add_map(self.storage, other.storage),
         }
     }
 }
@@ -87,11 +81,11 @@ impl std::ops::Div<usize> for JsonMetrics {
 
     fn div(self, rhs: usize) -> Self::Output {
         Self {
-            latency:    div_map(self.latency, rhs),
+            latency: div_map(self.latency, rhs),
             throughput: div_map(self.throughput, rhs),
-            compute:    div_map(self.compute, rhs),
-            memory:     div_map(self.memory, rhs),
-            storage:    div_map(self.storage, rhs),
+            compute: div_map(self.compute, rhs),
+            memory: div_map(self.memory, rhs),
+            storage: div_map(self.storage, rhs),
         }
     }
 }

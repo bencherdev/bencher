@@ -3,10 +3,7 @@ use std::convert::TryFrom;
 use serde::Serialize;
 use url::Url;
 
-use crate::{
-    cli::CliBackend,
-    BencherError,
-};
+use crate::{cli::CliBackend, BencherError};
 
 pub const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
 pub const BENCHER_URL: &str = "BENCHER_URL";
@@ -16,7 +13,7 @@ pub const DEFAULT_URL: &str = "https://api.bencher.dev";
 #[derive(Debug, Clone)]
 pub struct Backend {
     pub token: Option<String>,
-    pub host:  Url,
+    pub host: Url,
 }
 
 impl TryFrom<CliBackend> for Backend {
@@ -25,7 +22,7 @@ impl TryFrom<CliBackend> for Backend {
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
         Ok(Self {
             token: map_token(backend.token)?,
-            host:  unwrap_host(backend.host)?,
+            host: unwrap_host(backend.host)?,
         })
     }
 }

@@ -1,25 +1,19 @@
 use std::convert::TryFrom;
 
-use bencher_json::threshold::{
-    JsonNewStatistic,
-    JsonStatisticKind,
-};
+use bencher_json::threshold::{JsonNewStatistic, JsonStatisticKind};
 
 use crate::{
-    cli::threshold::{
-        CliStatisticCreate,
-        CliStatisticKind,
-    },
+    cli::threshold::{CliStatisticCreate, CliStatisticKind},
     BencherError,
 };
 
 #[derive(Debug, Clone, Copy)]
 pub struct Statistic {
-    pub test:        StatisticKind,
+    pub test: StatisticKind,
     pub sample_size: Option<u32>,
-    pub window:      Option<u32>,
-    pub left_side:   Option<f32>,
-    pub right_side:  Option<f32>,
+    pub window: Option<u32>,
+    pub left_side: Option<f32>,
+    pub right_side: Option<f32>,
 }
 
 impl TryFrom<CliStatisticCreate> for Statistic {

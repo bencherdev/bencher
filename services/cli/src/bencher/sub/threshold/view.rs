@@ -5,20 +5,16 @@ use bencher_json::ResourceId;
 use uuid::Uuid;
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::threshold::CliThresholdView,
     BencherError,
 };
 
 #[derive(Debug)]
 pub struct View {
-    pub project:   ResourceId,
+    pub project: ResourceId,
     pub threshold: Uuid,
-    pub backend:   Backend,
+    pub backend: Backend,
 }
 
 impl TryFrom<CliThresholdView> for View {

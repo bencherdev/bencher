@@ -1,28 +1,14 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    JsonBranch,
-    JsonNewBranch,
-};
-use diesel::{
-    Insertable,
-    Queryable,
-    SqliteConnection,
-};
+use bencher_json::{JsonBranch, JsonNewBranch};
+use diesel::{Insertable, Queryable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
 use crate::{
-    db::{
-        schema,
-        schema::branch as branch_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::branch as branch_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
@@ -30,11 +16,11 @@ const BRANCH_ERROR: &str = "Failed to get branch.";
 
 #[derive(Queryable)]
 pub struct QueryBranch {
-    pub id:         i32,
-    pub uuid:       String,
+    pub id: i32,
+    pub uuid: String,
     pub project_id: i32,
-    pub name:       String,
-    pub slug:       String,
+    pub name: String,
+    pub slug: String,
 }
 
 impl QueryBranch {
@@ -75,10 +61,10 @@ impl QueryBranch {
 #[derive(Insertable)]
 #[diesel(table_name = branch_table)]
 pub struct InsertBranch {
-    pub uuid:       String,
+    pub uuid: String,
     pub project_id: i32,
-    pub name:       String,
-    pub slug:       String,
+    pub name: String,
+    pub slug: String,
 }
 
 impl InsertBranch {

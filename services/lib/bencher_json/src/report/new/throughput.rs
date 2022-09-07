@@ -1,30 +1,20 @@
-use std::{
-    cmp::Ordering,
-    iter::Sum,
-    ops::Add,
-};
+use std::{cmp::Ordering, iter::Sum, ops::Add};
 
 use num::integer::lcm;
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use super::{
-    mean::Mean,
-    median::Median,
-};
+use super::{mean::Mean, median::Median};
 
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThroughput {
     pub lower_variance: OrderedFloat<f64>,
     pub upper_variance: OrderedFloat<f64>,
-    pub events:         OrderedFloat<f64>,
-    pub unit_time:      u64,
+    pub events: OrderedFloat<f64>,
+    pub unit_time: u64,
 }
 
 impl PartialEq for JsonThroughput {
@@ -109,8 +99,8 @@ impl std::ops::Div<usize> for JsonThroughput {
         Self {
             lower_variance: self.lower_variance / rhs as f64,
             upper_variance: self.upper_variance / rhs as f64,
-            events:         self.events / rhs as f64,
-            unit_time:      self.unit_time / rhs as u64,
+            events: self.events / rhs as f64,
+            unit_time: self.unit_time / rhs as u64,
         }
     }
 }

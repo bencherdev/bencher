@@ -1,24 +1,13 @@
 use std::str::FromStr;
 
 use bencher_json::report::new::JsonMetrics;
-use diesel::{
-    Insertable,
-    Queryable,
-    SqliteConnection,
-};
+use diesel::{Insertable, Queryable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::perf as perf_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::perf as perf_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
@@ -68,15 +57,15 @@ impl QueryPerf {
 #[derive(Insertable)]
 #[diesel(table_name = perf_table)]
 pub struct InsertPerf {
-    pub uuid:          String,
-    pub report_id:     i32,
-    pub iteration:     i32,
-    pub benchmark_id:  i32,
-    pub latency_id:    Option<i32>,
+    pub uuid: String,
+    pub report_id: i32,
+    pub iteration: i32,
+    pub benchmark_id: i32,
+    pub latency_id: Option<i32>,
     pub throughput_id: Option<i32>,
-    pub compute_id:    Option<i32>,
-    pub memory_id:     Option<i32>,
-    pub storage_id:    Option<i32>,
+    pub compute_id: Option<i32>,
+    pub memory_id: Option<i32>,
+    pub storage_id: Option<i32>,
 }
 
 impl InsertPerf {

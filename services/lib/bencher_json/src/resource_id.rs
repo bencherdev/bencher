@@ -1,19 +1,10 @@
-use std::{
-    fmt,
-    str::FromStr,
-};
+use std::{fmt, str::FromStr};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
-    de::{
-        self,
-        Deserializer,
-        Unexpected,
-        Visitor,
-    },
-    Deserialize,
-    Serialize,
+    de::{self, Deserializer, Unexpected, Visitor},
+    Deserialize, Serialize,
 };
 use uuid::Uuid;
 

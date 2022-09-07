@@ -1,13 +1,7 @@
-use chrono::{
-    DateTime,
-    Utc,
-};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::JsonAdapter;
@@ -15,15 +9,15 @@ use super::JsonAdapter;
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
-    pub uuid:       Uuid,
-    pub user:       Uuid,
-    pub version:    Uuid,
-    pub testbed:    Uuid,
-    pub adapter:    JsonAdapter,
+    pub uuid: Uuid,
+    pub user: Uuid,
+    pub version: Uuid,
+    pub testbed: Uuid,
+    pub adapter: JsonAdapter,
     pub start_time: DateTime<Utc>,
-    pub end_time:   DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub benchmarks: JsonReportBenchmarks,
-    pub alerts:     JsonReportAlerts,
+    pub alerts: JsonReportAlerts,
 }
 
 pub type JsonReportBenchmarks = Vec<JsonReportBenchmark>;

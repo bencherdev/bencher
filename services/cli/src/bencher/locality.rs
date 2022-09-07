@@ -1,10 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{
-    bencher::backend::Backend,
-    cli::CliLocality,
-    BencherError,
-};
+use crate::{bencher::backend::Backend, cli::CliLocality, BencherError};
 
 #[derive(Debug)]
 pub enum Locality {

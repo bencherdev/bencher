@@ -1,10 +1,4 @@
-use dropshot::{
-    ApiDescription,
-    ConfigDropshot,
-    ConfigLogging,
-    ConfigLoggingLevel,
-    HttpServer,
-};
+use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpServer};
 
 const PORT_KEY: &str = "BENCHER_PORT";
 const DEFAULT_IP: &str = "0.0.0.0";

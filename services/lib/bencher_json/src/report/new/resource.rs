@@ -1,21 +1,12 @@
 use std::cmp::Ordering;
 
-use derive_more::{
-    Add,
-    Sum,
-};
+use derive_more::{Add, Sum};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use super::{
-    mean::Mean,
-    median::Median,
-};
+use super::{mean::Mean, median::Median};
 
 #[derive(Debug, Copy, Clone, Default, Eq, Add, Sum, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

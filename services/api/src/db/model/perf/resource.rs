@@ -1,31 +1,21 @@
 use bencher_json::report::JsonResource;
-use diesel::{
-    Insertable,
-    SqliteConnection,
-};
+use diesel::{Insertable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        schema,
-        schema::resource as resource_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::resource as resource_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
 #[derive(Queryable, Debug)]
 pub struct QueryResource {
-    pub id:   i32,
+    pub id: i32,
     pub uuid: String,
-    pub min:  f64,
-    pub max:  f64,
-    pub avg:  f64,
+    pub min: f64,
+    pub max: f64,
+    pub avg: f64,
 }
 
 impl QueryResource {
@@ -49,9 +39,9 @@ impl QueryResource {
 #[diesel(table_name = resource_table)]
 pub struct InsertResource {
     pub uuid: String,
-    pub min:  f64,
-    pub max:  f64,
-    pub avg:  f64,
+    pub min: f64,
+    pub max: f64,
+    pub avg: f64,
 }
 
 impl From<JsonResource> for InsertResource {
@@ -59,9 +49,9 @@ impl From<JsonResource> for InsertResource {
         let JsonResource { min, max, avg } = resource;
         Self {
             uuid: Uuid::new_v4().to_string(),
-            min:  min.into(),
-            max:  max.into(),
-            avg:  avg.into(),
+            min: min.into(),
+            max: max.into(),
+            avg: avg.into(),
         }
     }
 }

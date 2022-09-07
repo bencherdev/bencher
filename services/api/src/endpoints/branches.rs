@@ -1,24 +1,10 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    JsonBranch,
-    JsonNewBranch,
-    ResourceId,
-};
-use diesel::{
-    expression_methods::BoolExpressionMethods,
-    QueryDsl,
-    RunQueryDsl,
-};
+use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
+use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseAccepted,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    Path,
-    RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
+    RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -26,22 +12,14 @@ use serde::Deserialize;
 use crate::{
     db::{
         model::{
-            branch::{
-                InsertBranch,
-                QueryBranch,
-            },
+            branch::{InsertBranch, QueryBranch},
             project::QueryProject,
             user::QueryUser,
         },
         schema,
     },
     diesel::ExpressionMethods,
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -137,7 +115,7 @@ pub async fn post(
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
     pub project: ResourceId,
-    pub branch:  ResourceId,
+    pub branch: ResourceId,
 }
 
 #[endpoint {

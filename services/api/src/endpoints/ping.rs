@@ -1,17 +1,8 @@
 use std::sync::Arc;
 
-use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    RequestContext,
-};
+use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
-use crate::util::{
-    headers::CorsHeaders,
-    Context,
-};
+use crate::util::{headers::CorsHeaders, Context};
 
 #[endpoint {
     method = GET,

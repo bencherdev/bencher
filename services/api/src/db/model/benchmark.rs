@@ -1,26 +1,14 @@
 use std::str::FromStr;
 
 use bencher_json::JsonBenchmark;
-use diesel::{
-    expression_methods::BoolExpressionMethods,
-    Insertable,
-    Queryable,
-    SqliteConnection,
-};
+use diesel::{expression_methods::BoolExpressionMethods, Insertable, Queryable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
 use crate::{
-    db::{
-        schema,
-        schema::benchmark as benchmark_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::benchmark as benchmark_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 
@@ -28,10 +16,10 @@ const BENCHMARK_ERROR: &str = "Failed to get benchmark.";
 
 #[derive(Queryable)]
 pub struct QueryBenchmark {
-    pub id:         i32,
-    pub uuid:       String,
+    pub id: i32,
+    pub uuid: String,
     pub project_id: i32,
-    pub name:       String,
+    pub name: String,
 }
 
 impl QueryBenchmark {
@@ -110,9 +98,9 @@ impl QueryBenchmark {
 #[derive(Insertable)]
 #[diesel(table_name = benchmark_table)]
 pub struct InsertBenchmark {
-    pub uuid:       String,
+    pub uuid: String,
     pub project_id: i32,
-    pub name:       String,
+    pub name: String,
 }
 
 impl InsertBenchmark {

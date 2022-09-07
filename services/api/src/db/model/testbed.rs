@@ -1,28 +1,14 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    JsonNewTestbed,
-    JsonTestbed,
-};
-use diesel::{
-    Insertable,
-    Queryable,
-    SqliteConnection,
-};
+use bencher_json::{JsonNewTestbed, JsonTestbed};
+use diesel::{Insertable, Queryable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
 use crate::{
-    db::{
-        schema,
-        schema::testbed as testbed_table,
-    },
-    diesel::{
-        ExpressionMethods,
-        QueryDsl,
-        RunQueryDsl,
-    },
+    db::{schema, schema::testbed as testbed_table},
+    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     util::http_error,
 };
 

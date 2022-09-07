@@ -2,16 +2,9 @@ use std::collections::BTreeMap;
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-use super::{
-    mean::Mean,
-    metrics::JsonMetrics,
-    metrics_map::JsonMetricsMap,
-};
+use super::{mean::Mean, metrics::JsonMetrics, metrics_map::JsonMetricsMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

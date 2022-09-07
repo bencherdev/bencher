@@ -1,15 +1,8 @@
 use bencher_json::ResourceId;
-use clap::{
-    Parser,
-    Subcommand,
-    ValueEnum,
-};
+use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use super::{
-    perf::CliPerfKind,
-    CliBackend,
-};
+use super::{perf::CliPerfKind, CliBackend};
 
 #[derive(Subcommand, Debug)]
 pub enum CliThreshold {

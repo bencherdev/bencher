@@ -1,10 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::{
-    benchmarks::{
-        JsonBenchmarks,
-        JsonBenchmarksMap,
-    },
+    benchmarks::{JsonBenchmarks, JsonBenchmarksMap},
     latency::JsonLatency,
     median::Median,
     metrics::JsonMetrics,
@@ -44,24 +41,27 @@ impl JsonMetricsMap {
                 metricss.memory.push(memory);
                 metricss.storage.push(storage);
             } else {
-                self.inner.insert(benchmark_name, JsonMetricsList {
-                    latency:    vec![latency],
-                    throughput: vec![throughput],
-                    compute:    vec![compute],
-                    memory:     vec![memory],
-                    storage:    vec![storage],
-                });
+                self.inner.insert(
+                    benchmark_name,
+                    JsonMetricsList {
+                        latency: vec![latency],
+                        throughput: vec![throughput],
+                        compute: vec![compute],
+                        memory: vec![memory],
+                        storage: vec![storage],
+                    },
+                );
             }
         }
     }
 }
 
 pub struct JsonMetricsList {
-    pub latency:    Vec<Option<JsonLatency>>,
+    pub latency: Vec<Option<JsonLatency>>,
     pub throughput: Vec<Option<JsonThroughput>>,
-    pub compute:    Vec<Option<JsonResource>>,
-    pub memory:     Vec<Option<JsonResource>>,
-    pub storage:    Vec<Option<JsonResource>>,
+    pub compute: Vec<Option<JsonResource>>,
+    pub memory: Vec<Option<JsonResource>>,
+    pub storage: Vec<Option<JsonResource>>,
 }
 
 impl JsonMetricsList {
@@ -74,11 +74,11 @@ impl JsonMetricsList {
             storage,
         } = self;
         JsonMetrics {
-            latency:    JsonLatency::median(latency),
+            latency: JsonLatency::median(latency),
             throughput: JsonThroughput::median(throughput),
-            compute:    JsonResource::median(compute),
-            memory:     JsonResource::median(memory),
-            storage:    JsonResource::median(storage),
+            compute: JsonResource::median(compute),
+            memory: JsonResource::median(memory),
+            storage: JsonResource::median(storage),
         }
     }
 }

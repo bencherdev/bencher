@@ -1,42 +1,19 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    JsonBenchmark,
-    ResourceId,
-};
-use diesel::{
-    expression_methods::BoolExpressionMethods,
-    QueryDsl,
-    RunQueryDsl,
-};
-use dropshot::{
-    endpoint,
-    HttpError,
-    HttpResponseHeaders,
-    HttpResponseOk,
-    Path,
-    RequestContext,
-};
+use bencher_json::{JsonBenchmark, ResourceId};
+use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
     db::{
-        model::{
-            benchmark::QueryBenchmark,
-            project::QueryProject,
-            user::QueryUser,
-        },
+        model::{benchmark::QueryBenchmark, project::QueryProject, user::QueryUser},
         schema,
     },
     diesel::ExpressionMethods,
-    util::{
-        cors::get_cors,
-        headers::CorsHeaders,
-        http_error,
-        Context,
-    },
+    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -88,7 +65,7 @@ pub async fn get_ls(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
-    pub project:   ResourceId,
+    pub project: ResourceId,
     pub benchmark: Uuid,
 }
 

@@ -1,20 +1,14 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 pub mod data;
 pub mod new;
 
 pub use data::JsonReport;
 pub use new::{
-    latency::JsonLatency,
-    metrics_map::JsonMetricsMap,
-    resource::JsonResource,
-    throughput::JsonThroughput,
-    JsonNewReport,
+    latency::JsonLatency, metrics_map::JsonMetricsMap, resource::JsonResource,
+    throughput::JsonThroughput, JsonNewReport,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,8 +1,5 @@
 use bencher_json::ResourceId;
-use clap::{
-    Parser,
-    Subcommand,
-};
+use clap::{Parser, Subcommand};
 
 use super::CliBackend;
 

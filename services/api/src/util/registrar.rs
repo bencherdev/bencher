@@ -1,7 +1,4 @@
-use dropshot::{
-    ApiDescription,
-    ServerContext,
-};
+use dropshot::{ApiDescription, ServerContext};
 
 pub trait Registrar<Context> {
     fn register(api: &mut ApiDescription<Context>) -> Result<(), String>

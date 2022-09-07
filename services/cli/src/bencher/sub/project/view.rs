@@ -1,18 +1,11 @@
-use std::{
-    convert::TryFrom,
-    path::Path,
-};
+use std::{convert::TryFrom, path::Path};
 
 use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use super::PROJECTS_PATH;
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::SubCmd,
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectView,
     BencherError,
 };
