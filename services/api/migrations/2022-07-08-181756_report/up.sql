@@ -37,13 +37,13 @@ CREATE TABLE organization_role (
 CREATE TABLE project (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    owner_id INTEGER NOT NULL,
+    organization_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
     url TEXT,
     public BOOLEAN NOT NULL,
-    FOREIGN KEY (owner_id) REFERENCES user (id)
+    FOREIGN KEY (organization_id) REFERENCES organization (id)
 );
 CREATE TABLE project_role (
     id INTEGER PRIMARY KEY NOT NULL,

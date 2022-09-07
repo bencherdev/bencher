@@ -41,12 +41,12 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+    QueryUser::auth(&rqctx).await?;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
     let json: Vec<JsonProject> = schema::project::table
-        .filter(schema::project::owner_id.eq(user_id))
+        // .filter(schema::project::owner_id.eq(user_id))
         .order(schema::project::name)
         .load::<QueryProject>(conn)
         .map_err(|_| http_error!("Failed to get projects."))?
@@ -77,8 +77,7 @@ pub async fn post(
     let conn = &mut context.db;
 
     // Create the project
-    let org_id = QueryOrganization::from_resource_id(conn, &json_project.organization)?;
-    let insert_project = InsertProject::from_json(conn, user_id, json_project)?;
+    let insert_project = InsertProject::from_json(conn, json_project)?;
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)

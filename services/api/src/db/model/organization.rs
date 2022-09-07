@@ -66,9 +66,9 @@ impl QueryOrganization {
 
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
-        org: &ResourceId,
+        organization: &ResourceId,
     ) -> Result<Self, HttpError> {
-        let org = &org.0;
+        let org = &organization.0;
         schema::organization::table
             .filter(
                 schema::organization::slug

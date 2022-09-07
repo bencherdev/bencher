@@ -9,7 +9,7 @@ use dropshot::{HttpError, RequestContext};
 use url::Url;
 use uuid::Uuid;
 
-use super::user::QueryUser;
+use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
     db::schema::{self, project as project_table},
     diesel::ExpressionMethods,
@@ -22,7 +22,7 @@ const PROJECT_ERROR: &str = "Failed to get project.";
 #[diesel(table_name = project_table)]
 pub struct InsertProject {
     pub uuid: String,
-    pub owner_id: i32,
+    pub organization_id: i32,
     pub name: String,
     pub slug: String,
     pub description: Option<String>,
@@ -33,11 +33,10 @@ pub struct InsertProject {
 impl InsertProject {
     pub fn from_json(
         conn: &mut SqliteConnection,
-        owner_id: i32,
         project: JsonNewProject,
     ) -> Result<Self, HttpError> {
         let JsonNewProject {
-            organization: _,
+            organization,
             name,
             slug,
             description,
@@ -47,7 +46,7 @@ impl InsertProject {
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            owner_id,
+            organization_id: QueryOrganization::from_resource_id(conn, &organization)?.id,
             name,
             slug,
             description,
@@ -85,7 +84,7 @@ fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) 
 pub struct QueryProject {
     pub id: i32,
     pub uuid: String,
-    pub owner_id: i32,
+    pub organization_id: i32,
     pub name: String,
     pub slug: String,
     pub description: Option<String>,
@@ -98,7 +97,7 @@ impl QueryProject {
         let Self {
             id: _,
             uuid,
-            owner_id,
+            organization_id,
             name,
             slug,
             description,
@@ -107,7 +106,7 @@ impl QueryProject {
         } = self;
         Ok(JsonProject {
             uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(PROJECT_ERROR))?,
-            owner_uuid: QueryUser::get_uuid(conn, owner_id)?,
+            organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name,
             slug,
             description,

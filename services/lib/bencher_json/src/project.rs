@@ -24,7 +24,7 @@ pub struct JsonNewProject {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProject {
     pub uuid: Uuid,
-    pub owner_uuid: Uuid,
+    pub organization: Uuid,
     pub name: String,
     pub slug: String,
     #[serde(skip_serializing_if = "Option::is_none")]

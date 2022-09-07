@@ -77,7 +77,7 @@ table! {
     project (id) {
         id -> Integer,
         uuid -> Text,
-        owner_id -> Integer,
+        organization_id -> Integer,
         name -> Text,
         slug -> Text,
         description -> Nullable<Text>,
@@ -214,7 +214,7 @@ joinable!(perf -> benchmark (benchmark_id));
 joinable!(perf -> latency (latency_id));
 joinable!(perf -> report (report_id));
 joinable!(perf -> throughput (throughput_id));
-joinable!(project -> user (owner_id));
+joinable!(project -> organization (organization_id));
 joinable!(project_role -> project (project_id));
 joinable!(project_role -> user (user_id));
 joinable!(report -> testbed (testbed_id));
