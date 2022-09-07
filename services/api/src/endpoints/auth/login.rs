@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonLogin};
+use crate::db::model::organization::QueryOrganization;
+use crate::db::model::user::organization::InsertOrganizationRole;
+use bencher_json::{auth::Role, jwt::JsonWebToken, JsonEmpty, JsonLogin};
+use bencher_rbac::organization::LEADER_ROLE;
+use bencher_rbac::organization::MEMBER_ROLE;
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
@@ -46,6 +50,34 @@ pub async fn post(
     // Check to see if the user account has been locked
     if query_user.locked {
         return Err(http_error!("Failed to login user."));
+    }
+
+    if let Some(invite) = json_login.invite {
+        let token_data = invite
+            .validate_invite(&context.key)
+            .map_err(|_| http_error!("Failed to login user."))?;
+        let org_claims = token_data
+            .claims
+            .org()
+            .ok_or(http_error!("Failed to login user."))?;
+
+        // Connect the user to the organization with the given role
+        let organization_id = QueryOrganization::get_id(conn, org_claims.uuid)?;
+        let insert_org_role = InsertOrganizationRole {
+            user_id: query_user.id,
+            organization_id,
+            // TODO better type casting
+            role: match org_claims.role {
+                Role::Member => MEMBER_ROLE,
+                Role::Leader => LEADER_ROLE,
+            }
+            .into(),
+        };
+
+        diesel::insert_into(schema::organization_role::table)
+            .values(&insert_org_role)
+            .execute(conn)
+            .map_err(|_| http_error!("Failed to login user."))?;
     }
 
     let token = JsonWebToken::new_auth(&context.key, query_user.email)

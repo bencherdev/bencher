@@ -98,7 +98,8 @@ pub async fn post(
         InsertOrganizationRole {
             user_id,
             organization_id,
-            role: Role::Leader.to_string(),
+            // TODO better type casting
+            role: LEADER_ROLE.into(),
         }
     };
 
