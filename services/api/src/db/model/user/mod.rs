@@ -34,7 +34,12 @@ pub struct InsertUser {
 
 impl InsertUser {
     pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
-        let JsonSignup { name, slug, email } = signup;
+        let JsonSignup {
+            name,
+            slug,
+            email,
+            invite: _,
+        } = signup;
         validate_email(&email)?;
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {

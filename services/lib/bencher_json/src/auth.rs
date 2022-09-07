@@ -11,12 +11,14 @@ pub struct JsonSignup {
     pub name: String,
     pub slug: Option<String>,
     pub email: String,
+    pub invite: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLogin {
     pub email: String,
+    pub invite: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

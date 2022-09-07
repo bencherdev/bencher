@@ -14,6 +14,7 @@ const LOGIN_PATH: &str = "/v0/auth/login";
 #[derive(Debug, Clone)]
 pub struct Login {
     pub email: String,
+    pub invite: Option<String>,
     pub backend: Backend,
 }
 
@@ -21,16 +22,28 @@ impl TryFrom<CliAuthLogin> for Login {
     type Error = BencherError;
 
     fn try_from(login: CliAuthLogin) -> Result<Self, Self::Error> {
-        let CliAuthLogin { email, host } = login;
+        let CliAuthLogin {
+            email,
+            invite,
+            host,
+        } = login;
         let backend = Backend::new(None, host)?;
-        Ok(Self { email, backend })
+        Ok(Self {
+            email,
+            invite,
+            backend,
+        })
     }
 }
 
 impl Into<JsonLogin> for Login {
     fn into(self) -> JsonLogin {
-        let Self { email, backend: _ } = self;
-        JsonLogin { email }
+        let Self {
+            email,
+            invite,
+            backend: _,
+        } = self;
+        JsonLogin { email, invite }
     }
 }
 

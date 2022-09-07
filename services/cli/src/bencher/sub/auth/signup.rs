@@ -16,6 +16,7 @@ pub struct Signup {
     pub name: String,
     pub slug: Option<String>,
     pub email: String,
+    pub invite: Option<String>,
     pub backend: Backend,
 }
 
@@ -27,6 +28,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             name,
             slug,
             email,
+            invite,
             host,
         } = signup;
         let backend = Backend::new(None, host)?;
@@ -34,6 +36,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             name,
             slug,
             email,
+            invite,
             backend,
         })
     }
@@ -45,9 +48,15 @@ impl Into<JsonSignup> for Signup {
             name,
             slug,
             email,
+            invite,
             backend: _,
         } = self;
-        JsonSignup { name, slug, email }
+        JsonSignup {
+            name,
+            slug,
+            email,
+            invite,
+        }
     }
 }
 

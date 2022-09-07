@@ -24,6 +24,10 @@ pub struct CliAuthSignup {
     #[clap(long)]
     pub slug: Option<String>,
 
+    /// User invitation JWT (JSON Web Token)
+    #[clap(long)]
+    pub invite: Option<String>,
+
     /// User email
     pub email: String,
 }
@@ -33,6 +37,10 @@ pub struct CliAuthLogin {
     /// Backend host URL (default https://api.bencher.dev)
     #[clap(long)]
     pub host: Option<String>,
+
+    /// User invitation JWT (JSON Web Token)
+    #[clap(long)]
+    pub invite: Option<String>,
 
     /// User email
     pub email: String,
