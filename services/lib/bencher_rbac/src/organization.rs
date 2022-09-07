@@ -38,11 +38,6 @@ impl fmt::Display for Role {
     }
 }
 
-impl ToPolar for Role {
-    fn to_polar(self) -> PolarValue {
-        PolarValue::String(self.to_string())
-    }
-}
 
 #[derive(Clone, Copy)]
 pub enum Permission {

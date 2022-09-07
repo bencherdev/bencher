@@ -46,6 +46,7 @@ pub async fn get_ls(
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
     let json: Vec<JsonProject> = schema::project::table
+        // TODO actually filter here with `bencher_rbac`
         // .filter(schema::project::owner_id.eq(user_id))
         .order(schema::project::name)
         .load::<QueryProject>(conn)

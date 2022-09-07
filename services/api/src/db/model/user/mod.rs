@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
+use bencher_json::{auth::JsonInvite, jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
 use diesel::{
     expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
@@ -35,12 +35,13 @@ pub struct InsertUser {
 impl InsertUser {
     pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup { name, slug, email } = signup;
+        validate_email(&email)?;
         let slug = validate_slug(conn, &name, slug);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,
             slug,
-            email: validate_email(email)?,
+            email,
             admin: false,
             locked: false,
         })
@@ -71,13 +72,8 @@ fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) 
     }
 }
 
-fn validate_email(email: String) -> Result<String, HttpError> {
-    EmailAddress::parse(&email, None)
-        .ok_or(HttpError::for_bad_request(
-            Some(String::from("BadInput")),
-            format!("Failed to parse email: {email}"),
-        ))
-        .map(|email| email.to_string())
+fn validate_email(email: &str) -> Result<EmailAddress, HttpError> {
+    EmailAddress::parse(email, None).ok_or(http_error!(USER_ERROR))
 }
 
 #[derive(Queryable)]
