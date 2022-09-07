@@ -8,6 +8,8 @@ services:
     container_name: bencher_api
     ports:
       - 8080:8080
+    volumes:
+      - "./services/api/bencher.db:/bencher.db"
     environment:
       - BENCHER_DB=bencher.db
 
@@ -17,5 +19,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - 80:3000
+      - 3001:3001
     depends_on:
       - bencher_api

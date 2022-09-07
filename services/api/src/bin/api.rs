@@ -1,14 +1,18 @@
 use bencher_api::util::{db::get_db_connection, migrate::run_migration, server::get_server};
 use tokio::sync::Mutex;
+use tracing::info;
 
 const API_NAME: &str = "Bencher API";
 const BENCHER_SECRET: &str = "BENCHER_SECRET";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    // install global subscriber configured based on RUST_LOG envvar.
-    tracing_subscriber::fmt::init();
-    tracing::info!("Bencher API Server v{}", env!("CARGO_PKG_VERSION"));
+    // Install global subscriber configured based on RUST_LOG envvar.
+    let subscriber = tracing_subscriber::FmtSubscriber::new();
+    tracing::subscriber::set_global_default(subscriber)
+        .map_err(|e| format!("Failed to setup logging: {e}"))?;
+
+    info!("Bencher API Server v{}", env!("CARGO_PKG_VERSION"));
     run().await
 }
 
@@ -22,10 +26,13 @@ async fn run() -> Result<(), String> {
     const API_VERSION: &str = env!("CARGO_PKG_VERSION");
     const SWAGGER_PATH: &str = "../ui/src/components/docs/api/swagger.json";
 
-    let mut db_connection = get_db_connection().map_err(|e| e.to_string())?;
+    info!("Generating Swagger JSON file");
+    let mut db_connection =
+        get_db_connection().map_err(|e| format!("Failed to get database connection: {e}"))?;
     let mut api_description = ApiDescription::new();
     Api::register(&mut api_description)?;
-    let mut swagger_file = File::create(SWAGGER_PATH).map_err(|e| e.to_string())?;
+    let mut swagger_file = File::create(SWAGGER_PATH)
+        .map_err(|e| format!("Failed to create Swagger JSON file: {e}"))?;
 
     api_description.tag_config(TagConfig {
         allow_other_tags: false,
@@ -51,8 +58,8 @@ async fn run() -> Result<(), String> {
 async fn run() -> Result<(), String> {
     use bencher_api::util::ApiContext;
     use dotenvy::dotenv;
-    use tracing::info;
 
+    info!("Importing .env file");
     dotenv().map_err(|e| e.to_string())?;
 
     let secret_key = std::env::var(BENCHER_SECRET).unwrap_or_else(|e| {
@@ -62,13 +69,16 @@ async fn run() -> Result<(), String> {
         secret_key
     });
 
-    let mut db_conn = get_db_connection().map_err(|e| e.to_string())?;
-    run_migration(&mut db_conn).map_err(|e| e.to_string())?;
+    info!("Connecting to database");
+    let mut db_conn =
+        get_db_connection().map_err(|e| format!("Failed to get database connection: {e}"))?;
+    run_migration(&mut db_conn).map_err(|e| format!("Failed to run database migration: {e}"))?;
 
     let context = Mutex::new(ApiContext {
         db: db_conn,
         key: secret_key,
     });
 
+    info!("Creating server");
     get_server(API_NAME, context).await?.await
 }
