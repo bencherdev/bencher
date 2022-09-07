@@ -6,6 +6,9 @@ use jsonwebtoken::{
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+use crate::auth::Role;
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
@@ -29,22 +32,23 @@ impl From<String> for JsonWebToken {
 }
 
 impl JsonWebToken {
-    pub fn new(
+    fn new(
         key: &str,
         audience: Audience,
         email: String,
         ttl: usize,
+        org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
-        let claims = JsonClaims::new(audience, email, ttl);
+        let claims = JsonClaims::new(audience, email, ttl, org);
         encode(&*HEADER, &claims, &EncodingKey::from_secret(key.as_bytes())).map(Into::into)
     }
 
     pub fn new_auth(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL)
+        Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL, None)
     }
 
     pub fn new_client(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Client, email, CLIENT_TOKEN_TTL)
+        Self::new(key, Audience::Client, email, CLIENT_TOKEN_TTL, None)
     }
 
     pub fn new_api_key(
@@ -52,14 +56,26 @@ impl JsonWebToken {
         email: String,
         ttl: usize,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::ApiKey, email, ttl)
+        Self::new(key, Audience::ApiKey, email, ttl, None)
     }
 
-    pub fn new_invite(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Invite, email, CLIENT_TOKEN_TTL)
+    pub fn new_invite(
+        key: &str,
+        email: String,
+        org: Uuid,
+        role: Role,
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
+        let org_claims = OrgClaims { uuid: org, role };
+        Self::new(
+            key,
+            Audience::Invite,
+            email,
+            CLIENT_TOKEN_TTL,
+            Some(org_claims),
+        )
     }
 
-    pub fn validate(
+    fn validate(
         &self,
         key: &str,
         audience: &[Audience],
@@ -107,15 +123,23 @@ impl JsonWebToken {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaims {
-    pub aud: String, // Audience
-    pub exp: usize,  // Expiration time (as UTC timestamp)
-    pub iat: usize,  // Issued at (as UTC timestamp)
-    pub iss: String, // Issuer
-    pub sub: String, // Subject (whom token refers to)
+    pub aud: String,            // Audience
+    pub exp: usize,             // Expiration time (as UTC timestamp)
+    pub iat: usize,             // Issued at (as UTC timestamp)
+    pub iss: String,            // Issuer
+    pub sub: String,            // Subject (whom token refers to)
+    pub org: Option<OrgClaims>, // Organization (for invitation)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct OrgClaims {
+    uuid: Uuid,
+    role: Role,
 }
 
 impl JsonClaims {
-    fn new(audience: Audience, email: String, ttl: usize) -> Self {
+    fn new(audience: Audience, email: String, ttl: usize, org: Option<OrgClaims>) -> Self {
         let now = Utc::now().timestamp() as usize;
         Self {
             aud: audience.into(),
@@ -123,6 +147,7 @@ impl JsonClaims {
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: email,
+            org,
         }
     }
 

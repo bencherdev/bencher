@@ -45,7 +45,7 @@ pub struct JsonConfirm {
 pub struct JsonInvite {
     pub organization: Uuid,
     pub role: Role,
-    pub signup: JsonSignup,
+    pub email: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,5 +53,5 @@ pub struct JsonInvite {
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     Member,
-    Leader
+    Leader,
 }
