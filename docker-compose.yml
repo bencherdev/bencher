@@ -9,6 +9,8 @@ services:
     ports:
       - 8080:8080
     volumes:
+      # This file needs to exist before calling `docker compose`
+      # `touch ./services/api/bencher.db`
       - "./services/api/bencher.db:/bencher.db"
     environment:
       - BENCHER_DB=bencher.db
@@ -17,6 +19,8 @@ services:
     build:
       context: ./services/ui
       dockerfile: Dockerfile
+    image: benhcer-ui
+    container_name: bencher_ui
     ports:
       - 80:3000
       - 3001:3001
