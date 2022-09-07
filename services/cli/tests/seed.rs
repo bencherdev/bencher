@@ -18,12 +18,12 @@ const BRANCH_SLUG: &str = "master";
 const TESTBED_ARG: &str = "--testbed";
 const TESTBED_SLUG: &str = "base";
 
-const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
+const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 
 // Valid until 2027-09-05T19:03:59Z
-const TEST_BENCHER_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjoxODIwMTcxMDM5LCJpYXQiOjE2NjIzODY0MDksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIn0.sfAJmF9qIl_QRNnh8uLYuODHnxufXt_3m7skcNp1kMs";
+const TEST_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjoxODIwMTcxMDM5LCJpYXQiOjE2NjIzODY0MDksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIn0.sfAJmF9qIl_QRNnh8uLYuODHnxufXt_3m7skcNp1kMs";
 
 // cargo test --features seed --test seed
 #[test]
@@ -67,10 +67,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
 
     // cargo run -- auth confirm --host http://localhost:8080 [AUTH_TOKEN]
     // cargo run -- token ls --host http://localhost:8080 --user muriel-bagge
-    // cargo run -- token create --host http://localhost:8080 --user muriel-bagge --ttl 157784630 TEST_BENCHER_TOKEN
+    // cargo run -- token create --host http://localhost:8080 --user muriel-bagge --ttl 157784630 TEST_BENCHER_API_TOKEN
 
-    // export BENCHER_TOKEN=[USER_TOKEN]
-    env::set_var(BENCHER_TOKEN, TEST_BENCHER_TOKEN);
+    // export BENCHER_API_TOKEN=[USER_TOKEN]
+    env::set_var(BENCHER_API_TOKEN, TEST_BENCHER_API_TOKEN);
 
     // cargo run -- project ls --host http://localhost:8080
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -103,7 +103,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         LOCALHOST,
         TOKEN_ARG,
-        TEST_BENCHER_TOKEN,
+        TEST_BENCHER_API_TOKEN,
         PROJECT_SLUG,
     ]);
     cmd.assert().success();
@@ -113,7 +113,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "project",
         "ls",
         TOKEN_ARG,
-        TEST_BENCHER_TOKEN,
+        TEST_BENCHER_API_TOKEN,
         HOST_ARG,
         LOCALHOST,
     ]);
@@ -172,7 +172,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         LOCALHOST,
         TOKEN_ARG,
-        TEST_BENCHER_TOKEN,
+        TEST_BENCHER_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
     ]);
@@ -231,7 +231,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         LOCALHOST,
         TOKEN_ARG,
-        TEST_BENCHER_TOKEN,
+        TEST_BENCHER_API_TOKEN,
         PROJECT_ARG,
         PROJECT_SLUG,
     ]);
@@ -294,7 +294,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     //     HOST_ARG,
     //     LOCALHOST,
     //     TOKEN_ARG,
-    //     TEST_BENCHER_TOKEN,
+    //     TEST_BENCHER_API_TOKEN,
     //     PROJECT_ARG,
     //     PROJECT_SLUG,
     // ]);

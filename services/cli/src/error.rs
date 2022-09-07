@@ -2,7 +2,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum BencherError {
-    #[error("Failed to find Bencher user API token. Set the `--token` flag or the `BENCHER_TOKEN` environment variable.")]
+    #[error("Failed to find Bencher user API token. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
     TokenNotFound,
     #[error("Failed to find Bencher project branch. Set the `--branch` flag or the `BENCHER_BRANCH` environment variable.")]
     BranchNotFound,

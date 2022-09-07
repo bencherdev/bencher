@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::{cli::CliBackend, BencherError};
 
-pub const BENCHER_TOKEN: &str = "BENCHER_TOKEN";
+pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 pub const BENCHER_URL: &str = "BENCHER_URL";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const DEFAULT_URL: &str = "https://api.bencher.dev";
@@ -31,7 +31,7 @@ fn map_token(token: Option<String>) -> Result<Option<String>, BencherError> {
     // TODO add first pass token validation
     if let Some(token) = token {
         Ok(Some(token))
-    } else if let Ok(token) = std::env::var(BENCHER_TOKEN) {
+    } else if let Ok(token) = std::env::var(BENCHER_API_TOKEN) {
         Ok(Some(token))
     } else {
         Err(BencherError::TokenNotFound)
