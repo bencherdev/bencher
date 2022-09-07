@@ -24,10 +24,8 @@ pub struct CliProjectList {
 #[derive(Parser, Debug)]
 pub struct CliProjectCreate {
     /// Organization slug or UUID
-    pub organization: ResourceId,
-
-    /// Project name
-    pub name: String,
+    #[clap(long)]
+    pub org: ResourceId,
 
     /// Project slug
     #[clap(long)]
@@ -44,6 +42,9 @@ pub struct CliProjectCreate {
     /// Set project as public
     #[clap(long)]
     pub public: bool,
+
+    /// Project name
+    pub name: String,
 
     #[clap(flatten)]
     pub backend: CliBackend,

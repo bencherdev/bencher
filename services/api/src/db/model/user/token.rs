@@ -99,9 +99,9 @@ impl InsertToken {
         let query_user = QueryUser::from_resource_id(conn, &user)?;
 
         // TODO make smarter once permissions are a thing
-        // if query_user.id != requester_id {
-        //     return Err(http_error!(TOKEN_ERROR));
-        // }
+        if query_user.id != requester_id {
+            return Err(http_error!(TOKEN_ERROR));
+        }
 
         // Only in production, set a max TTL of approximately one year
         // Disabled in development to enable long lived testing tokens

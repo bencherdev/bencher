@@ -13,7 +13,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Project {
-    pub organization: ResourceId,
+    pub org: ResourceId,
     pub name: String,
     pub slug: Option<String>,
     pub description: Option<String>,
@@ -27,7 +27,7 @@ impl TryFrom<CliProjectCreate> for Project {
 
     fn try_from(create: CliProjectCreate) -> Result<Self, Self::Error> {
         let CliProjectCreate {
-            organization,
+            org,
             name,
             slug,
             description,
@@ -36,7 +36,7 @@ impl TryFrom<CliProjectCreate> for Project {
             backend,
         } = create;
         Ok(Self {
-            organization,
+            org,
             name,
             slug,
             description,
@@ -58,7 +58,7 @@ pub fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
 impl Into<JsonNewProject> for Project {
     fn into(self) -> JsonNewProject {
         let Self {
-            organization,
+            org,
             name,
             slug,
             description,
@@ -67,7 +67,7 @@ impl Into<JsonNewProject> for Project {
             backend: _,
         } = self;
         JsonNewProject {
-            organization,
+            organization: org,
             name,
             slug,
             description,

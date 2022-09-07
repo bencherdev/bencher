@@ -84,6 +84,8 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "create",
         HOST_ARG,
         LOCALHOST,
+        "--org",
+        "muriel-bagge",
         "--slug",
         PROJECT_SLUG,
         "The Computer",
