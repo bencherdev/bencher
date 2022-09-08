@@ -1,0 +1,9 @@
+meta:
+  vendor: Bencher
+  maintainer: Bencher <info@bencher.dev>
+  description: Track your benchmarks. Catch performance regressions in CI.
+files:
+  "/usr/local/bin/bencher":
+    file: bencher
+    mode: "0755"
+    user: "root"

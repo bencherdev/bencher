@@ -24,3 +24,25 @@ jobs:
         with:
           name: bencher
           path: target/release/bencher
+
+  deb:
+    name: .deb Package CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: bencher
+      - uses: kentik/pkg@v1
+        with:
+          name: bencher
+          version: 0.1.0
+          arch: x86_64
+          format: deb
+          package: ./services/cli/pkg.yml
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: bencher.deb
+          path: bencher.deb
