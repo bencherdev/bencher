@@ -34,7 +34,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: bencher
-      - uses: kentik/pkg@v1
+      - uses: kentik/pkg@v1.0.0-rc8
         with:
           name: bencher
           version: 0.1.0
