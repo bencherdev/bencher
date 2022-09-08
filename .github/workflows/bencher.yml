@@ -1,7 +1,6 @@
 name: Bencher
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
@@ -19,12 +18,11 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: cargo build CLI
-        working-directory: ./services/cli
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release
+        working-directory: ./services/cli
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
