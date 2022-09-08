@@ -1,9 +1,9 @@
 VERSION=$1
-ARCH=amd64
+ARCH=$2
 TRIPLE=bencher_${VERSION}_${ARCH}
 DEB_PATH=deb/$TRIPLE
 
-cd ../services/cli
+cd ./services/cli
 cargo build --release --target x86_64-unknown-linux-gnu
 
 cd ../..

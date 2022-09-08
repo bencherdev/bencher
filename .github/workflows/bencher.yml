@@ -9,9 +9,12 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  BIN_NAME: bencher
+  BIN_VERSION: 0.1.0
+  BIN_ARCH: x86_64
 
 jobs:
-  cli_build:
+  cli_build_linux:
     name: Build CLI
     runs-on: ubuntu-latest
     steps:
@@ -25,9 +28,9 @@ jobs:
           name: bencher
           path: target/release/bencher
 
-  cli_deb:
-    name: .deb Package CLI
-    needs: cli_build
+  cli_package_deb:
+    name: Package CLI (.deb)
+    needs: cli_build_linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -37,13 +40,13 @@ jobs:
           name: bencher
       - uses: kentik/pkg@v1.0.0-rc8
         with:
-          name: bencher
-          version: 0.1.0
-          arch: x86_64
+          name: ${{ env.BIN_NAME }}
+          version: ${{ env.BIN_VERSION }}
+          arch: ${{ env.BIN_ARCH }}
           format: deb
           package: ./services/cli/pkg.yml
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: bencher.deb
-          path: bencher.deb
+          name: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}
+          path: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}
