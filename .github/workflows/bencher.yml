@@ -12,8 +12,22 @@ env:
   BIN_NAME: bencher
   BIN_VERSION: 0.1.0
   BIN_ARCH: amd64
+  DEB_DIR: deb
+  DEB_FILE: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}.deb
 
 jobs:
+  # fmt:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - run: cargo fmt -- --check
+
+  # clippy:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - run: cargo clippy --no-deps -- -Dwarnings
+
   cli_build_linux:
     name: Build CLI
     runs-on: ubuntu-latest
@@ -25,8 +39,8 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: bencher
-          path: target/release/bencher
+          name: ${{ env.BIN_NAME }}
+          path: target/release/${{ env.BIN_NAME }}
 
   cli_package_deb:
     name: Package CLI (.deb)
@@ -37,11 +51,11 @@ jobs:
       - name: Download CLI Artifact
         uses: actions/download-artifact@v3
         with:
-          name: bencher
+          name: ${{ env.BIN_NAME }}
       - name: Build .deb package
-        run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH
+        run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}.deb
-          path: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}.deb
+          name: ${{ env.DEB_FILE }}
+          path: ${{ env.DEB_DIR }}/${{ env.DEB_FILE }}
