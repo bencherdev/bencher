@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
   BIN_NAME: bencher
   BIN_VERSION: 0.1.0
-  BIN_ARCH: x86_64
+  BIN_ARCH: amd64
 
 jobs:
   cli_build_linux:
@@ -38,15 +38,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: bencher
-      - uses: kentik/pkg@v1.0.0-rc8
-        with:
-          name: ${{ env.BIN_NAME }}
-          version: ${{ env.BIN_VERSION }}
-          arch: ${{ env.BIN_ARCH }}
-          format: deb
-          package: ./services/cli/pkg.yml
+      - name: Build .deb package
+        run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}
-          path: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}
+          name: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}.deb
+          path: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}.deb

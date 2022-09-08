@@ -1,20 +1,17 @@
-VERSION=$1
-ARCH=$2
-TRIPLE=bencher_${VERSION}_${ARCH}
+NAME=$1
+VERSION=$2
+ARCH=$3
+TRIPLE=${NAME}_${VERSION}_${ARCH}
 DEB_PATH=deb/$TRIPLE
-
-cd ./services/cli
-cargo build --release --target x86_64-unknown-linux-gnu
-
-cd ../..
 BIN_PATH=$DEB_PATH/usr/local/bin
+
 mkdir -p $BIN_PATH
-cp target/release/bencher $BIN_PATH
+cp $NAME $BIN_PATH
 
 DEBIAN_PATH=$DEB_PATH/DEBIAN
 mkdir $DEBIAN_PATH
 echo \
-"Package: bencher
+"Package: $NAME
 Version: $VERSION
 Architecture: $ARCH
 Maintainer: Bencher <info@bencher.dev>
