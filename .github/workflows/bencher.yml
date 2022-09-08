@@ -1,4 +1,4 @@
-name: Bencher CI/CD
+name: Bencher
 
 on:
   push:
