@@ -32,7 +32,7 @@ jobs:
   #         args: --all-features
 
   cli_build_linux:
-    name: Build CLI
+    name: Build CLI (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -56,10 +56,11 @@ jobs:
         with:
           name: ${{ env.BIN_NAME }}
       - name: Build .deb package
+        run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
+      - name: export DEB_FILE
         run: |
           export DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
           echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
-          ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -67,17 +68,21 @@ jobs:
           path: ${{ env.DEB_DIR }}/${{ env.DEB_FILE }}
 
   release:
-    name: Bencher Release
+    name: Release
     needs: cli_package_deb
     runs-on: ubuntu-latest
     steps:
+      - name: export DEB_FILE
+        run: |
+          export DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
+          echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
       - name: Download CLI .deb Artifact
         uses: actions/download-artifact@v3
         with:
-          name: ${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
+          name: ${{ env.DEB_FILE }}
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         # if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
+            ${{ env.DEB_FILE }}
