@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  cli_build:
     name: Build CLI
     runs-on: ubuntu-latest
     steps:
@@ -25,8 +25,9 @@ jobs:
           name: bencher
           path: target/release/bencher
 
-  deb:
+  cli_deb:
     name: .deb Package CLI
+    needs: cli_build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
