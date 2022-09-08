@@ -4,8 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
+    tags:
+      - "v*.*.*"
   pull_request:
     branches: [ master ]
+    tags:
+      - "v*.*.*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -82,7 +86,6 @@ jobs:
           name: ${{ env.DEB_FILE }}
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
-        # if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             ${{ env.DEB_FILE }}
