@@ -1,12 +1,11 @@
 name: Bencher
 
-on: [
-  workflow_dispatch,
+on:
+  workflow_dispatch:
   push:
-    branches: [ main ],
+    branches: [ main ]
   pull_request:
-    branches: [ main ],
-]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
