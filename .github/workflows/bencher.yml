@@ -1,7 +1,6 @@
 name: Bencher
 
 on:
-  workflow_dispatch: true
   push:
     branches: [ main ]
   pull_request:
