@@ -13,7 +13,6 @@ env:
   BIN_VERSION: 0.1.0
   BIN_ARCH: amd64
   DEB_DIR: deb
-  DEB_FILE: ${{ env.BIN_NAME }}_${{ env.BIN_VERSION }}_${{ env.BIN_ARCH }}.deb
 
 jobs:
   # fmt:
@@ -53,7 +52,10 @@ jobs:
         with:
           name: ${{ env.BIN_NAME }}
       - name: Build .deb package
-        run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
+        run: |
+          export DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
+          echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+          ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
