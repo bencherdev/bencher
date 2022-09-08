@@ -65,3 +65,19 @@ jobs:
         with:
           name: ${{ env.DEB_FILE }}
           path: ${{ env.DEB_DIR }}/${{ env.DEB_FILE }}
+
+  release:
+    name: Bencher Release
+    needs: cli_package_deb
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download CLI .deb Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        # if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
