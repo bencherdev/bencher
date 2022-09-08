@@ -24,7 +24,7 @@ use token::CliToken;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[clap(name = "bencher", author, version, about, long_about = None)]
 pub struct CliBencher {
     /// Bencher CLI wide flags
     #[clap(flatten)]
