@@ -19,22 +19,6 @@ env:
   DEB_DIR: deb
 
 jobs:
-  # fmt:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - run: cargo fmt -- --check
-
-  # clippy:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v1
-  #     - run: rustup component add clippy
-  #     - uses: actions-rs/clippy-check@v1
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #         args: --all-features
-
   cli_build_linux:
     name: Build CLI (Linux)
     runs-on: ubuntu-latest
@@ -54,6 +38,8 @@ jobs:
     needs: cli_build_linux
     runs-on: ubuntu-latest
     steps:
+      - name: export DEB_FILE
+        run: echo "DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Download CLI Artifact
         uses: actions/download-artifact@v3
@@ -61,10 +47,6 @@ jobs:
           name: ${{ env.BIN_NAME }}
       - name: Build .deb package
         run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
-      - name: export DEB_FILE
-        run: |
-          export DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
-          echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -77,9 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: export DEB_FILE
-        run: |
-          export DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb
-          echo "DEB_FILE=$DEB_FILE" >> $GITHUB_ENV
+        run: echo "DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb" >> $GITHUB_ENV
       - name: Download CLI .deb Artifact
         uses: actions/download-artifact@v3
         with:

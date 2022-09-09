@@ -1,0 +1,38 @@
+name: Release API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    # tags:
+    #   - "v*.*.*"
+  pull_request:
+    branches: [ master ]
+    # tags:
+    #   - "v*.*.*"
+
+env:
+  CARGO_TERM_COLOR: always
+  DOCKER_HUB_URL: epompeii/bencher-api
+
+jobs:
+  api_build_linux:
+    name: Build API (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: export RELEASE_VERSION
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build and Push to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services
+          file: ./api/Dockerfile
+          push: true
+          tags: ${{ env.DOCKER_HUB_URL }}:latest
+          # tags: ${{ env.DOCKER_HUB_URL }}:latest,${{ env.DOCKER_HUB_URL }}:${{ env.RELEASE_VERSION }}
