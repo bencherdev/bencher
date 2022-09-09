@@ -1,4 +1,4 @@
-name: Release API
+name: Release UI
 
 on:
   workflow_dispatch:
@@ -7,13 +7,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DOCKER_IMAGE: bencher-api
+  DOCKER_IMAGE: bencher-ui
 
 jobs:
   api_build_linux:
-    name: Build API (Linux)
+    name: Build UI (Linux)
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    # if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: export DOCKER_HUB_URL and RELEASE_VERSION
         run: |
@@ -28,9 +28,9 @@ jobs:
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v3
         with:
-          context: ./services
-          file: ./services/api/Dockerfile
+          context: ./services/ui
           push: true
-          tags: |
-            ${{ env.DOCKER_HUB_URL }}:latest
-            ${{ env.DOCKER_HUB_URL }}:${{ env.RELEASE_VERSION }}
+          tags: ${{ env.DOCKER_HUB_URL }}:latest
+          # tags: |
+          #   ${{ env.DOCKER_HUB_URL }}:latest
+          #   ${{ env.DOCKER_HUB_URL }}:${{ env.RELEASE_VERSION }}
