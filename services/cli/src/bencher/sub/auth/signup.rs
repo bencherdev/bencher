@@ -42,16 +42,16 @@ impl TryFrom<CliAuthSignup> for Signup {
     }
 }
 
-impl Into<JsonSignup> for Signup {
-    fn into(self) -> JsonSignup {
-        let Self {
+impl From<Signup> for JsonSignup {
+    fn from(signup: Signup) -> Self {
+        let Signup {
             name,
             slug,
             email,
             invite,
             backend: _,
-        } = self;
-        JsonSignup {
+        } = signup;
+        Self {
             name,
             slug,
             email,

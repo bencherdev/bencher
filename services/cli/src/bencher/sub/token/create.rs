@@ -11,7 +11,7 @@ use crate::{
 
 const BRANCHES_PATH: &str = "/v0/tokens";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Create {
     pub user: ResourceId,
     pub ttl: u64,
@@ -38,14 +38,22 @@ impl TryFrom<CliTokenCreate> for Create {
     }
 }
 
+impl From<Create> for JsonNewToken {
+    fn from(create: Create) -> Self {
+        let Create {
+            user,
+            ttl,
+            name,
+            backend: _,
+        } = create;
+        Self { user, ttl, name }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let token = JsonNewToken {
-            user: self.user.clone(),
-            ttl: self.ttl,
-            name: self.name.clone(),
-        };
+        let token: JsonNewToken = self.clone().into();
         self.backend.post(BRANCHES_PATH, &token).await?;
         Ok(())
     }

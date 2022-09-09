@@ -12,10 +12,10 @@ impl TryFrom<CliLocality> for Locality {
     type Error = BencherError;
 
     fn try_from(locality: CliLocality) -> Result<Self, Self::Error> {
-        if locality.local == true {
-            Ok(Self::Local)
+        Ok(if locality.local {
+            Self::Local
         } else {
-            Ok(Self::Backend(locality.backend.try_into()?))
-        }
+            Self::Backend(locality.backend.try_into()?)
+        })
     }
 }

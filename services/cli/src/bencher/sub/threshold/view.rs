@@ -40,7 +40,7 @@ impl SubCmd for View {
         self.backend
             .get(&format!(
                 "/v0/projects/{}/thresholds/{}",
-                self.project.as_str(),
+                self.project,
                 self.threshold.to_string()
             ))
             .await?;

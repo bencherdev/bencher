@@ -31,10 +31,7 @@ impl TryFrom<CliBenchmarkList> for List {
 impl SubCmd for List {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/benchmarks",
-                self.project.as_str()
-            ))
+            .get(&format!("/v0/projects/{}/benchmarks", self.project))
             .await?;
         Ok(())
     }

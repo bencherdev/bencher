@@ -48,7 +48,7 @@ fn unwrap_host(host: Option<String>) -> Result<Url, url::ParseError> {
     } else {
         DEFAULT_URL.into()
     };
-    Ok(Url::parse(&url)?)
+    Url::parse(&url)
 }
 
 impl Backend {

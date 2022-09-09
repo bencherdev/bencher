@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 
+use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -8,7 +9,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Display, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ResourceId(pub String);
 

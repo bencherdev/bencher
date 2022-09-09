@@ -17,7 +17,7 @@ use crate::{
 
 const THRESHOLDS_PATH: &str = "/v0/thresholds";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Create {
     pub branch: Uuid,
     pub testbed: Uuid,
@@ -47,15 +47,28 @@ impl TryFrom<CliThresholdCreate> for Create {
     }
 }
 
+impl From<Create> for JsonNewThreshold {
+    fn from(create: Create) -> Self {
+        let Create {
+            branch,
+            testbed,
+            kind,
+            statistic,
+            backend: _,
+        } = create;
+        Self {
+            branch,
+            testbed,
+            kind: kind.into(),
+            statistic: statistic.into(),
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let threshold = JsonNewThreshold {
-            branch: self.branch.clone(),
-            testbed: self.testbed.clone(),
-            kind: self.kind.into(),
-            statistic: self.statistic.into(),
-        };
+        let threshold: JsonNewThreshold = self.clone().into();
         self.backend.post(THRESHOLDS_PATH, &threshold).await?;
         Ok(())
     }

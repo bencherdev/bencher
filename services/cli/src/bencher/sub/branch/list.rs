@@ -31,7 +31,7 @@ impl TryFrom<CliBranchList> for List {
 impl SubCmd for List {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         self.backend
-            .get(&format!("/v0/projects/{}/branches", self.project.as_str()))
+            .get(&format!("/v0/projects/{}/branches", self.project))
             .await?;
         Ok(())
     }

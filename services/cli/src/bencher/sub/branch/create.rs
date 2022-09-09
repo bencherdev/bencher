@@ -11,7 +11,7 @@ use crate::{
 
 const BRANCHES_PATH: &str = "/v0/branches";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
     pub name: String,
@@ -38,14 +38,26 @@ impl TryFrom<CliBranchCreate> for Create {
     }
 }
 
+impl From<Create> for JsonNewBranch {
+    fn from(create: Create) -> Self {
+        let Create {
+            project,
+            name,
+            slug,
+            backend: _,
+        } = create;
+        Self {
+            project,
+            name,
+            slug,
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let branch = JsonNewBranch {
-            project: self.project.clone(),
-            name: self.name.clone(),
-            slug: self.slug.clone(),
-        };
+        let branch: JsonNewBranch = self.clone().into();
         self.backend.post(BRANCHES_PATH, &branch).await?;
         Ok(())
     }

@@ -36,14 +36,14 @@ impl TryFrom<CliAuthLogin> for Login {
     }
 }
 
-impl Into<JsonLogin> for Login {
-    fn into(self) -> JsonLogin {
-        let Self {
+impl From<Login> for JsonLogin {
+    fn from(login: Login) -> Self {
+        let Login {
             email,
             invite,
             backend: _,
-        } = self;
-        JsonLogin {
+        } = login;
+        Self {
             email,
             invite: invite.map(Into::into),
         }

@@ -39,8 +39,7 @@ impl SubCmd for View {
         self.backend
             .get(&format!(
                 "/v0/projects/{}/branches/{}",
-                self.project.as_str(),
-                self.branch.as_str()
+                self.project, self.branch
             ))
             .await?;
         Ok(())

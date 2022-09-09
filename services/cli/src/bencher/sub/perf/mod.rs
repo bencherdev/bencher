@@ -19,7 +19,7 @@ use super::SubCmd;
 
 const PERF_PATH: &str = "/v0/perf";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Perf {
     branches: Vec<Uuid>,
     testbeds: Vec<Uuid>,
@@ -55,18 +55,32 @@ impl TryFrom<CliPerf> for Perf {
     }
 }
 
+impl From<Perf> for JsonPerfQuery {
+    fn from(perf: Perf) -> Self {
+        let Perf {
+            branches,
+            testbeds,
+            benchmarks,
+            kind,
+            start_time,
+            end_time,
+            backend: _,
+        } = perf;
+        Self {
+            branches,
+            testbeds,
+            benchmarks,
+            kind: kind.into(),
+            start_time,
+            end_time,
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Perf {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        // TODO break this out into an Into impl
-        let perf = JsonPerfQuery {
-            branches: self.branches.clone(),
-            testbeds: self.testbeds.clone(),
-            benchmarks: self.benchmarks.clone(),
-            kind: self.kind.into(),
-            start_time: self.start_time,
-            end_time: self.end_time,
-        };
+        let perf: JsonPerfQuery = self.clone().into();
         self.backend.post(PERF_PATH, &perf).await?;
         Ok(())
     }

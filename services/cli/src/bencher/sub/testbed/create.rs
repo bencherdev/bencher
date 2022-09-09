@@ -11,7 +11,7 @@ use crate::{
 
 const TESTBEDS_PATH: &str = "/v0/testbeds";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
     pub name: String,
@@ -59,21 +59,40 @@ impl TryFrom<CliTestbedCreate> for Create {
     }
 }
 
+impl From<Create> for JsonNewTestbed {
+    fn from(create: Create) -> Self {
+        let Create {
+            project,
+            name,
+            slug,
+            os_name,
+            os_version,
+            runtime_name,
+            runtime_version,
+            cpu,
+            ram,
+            disk,
+            backend: _,
+        } = create;
+        Self {
+            project,
+            name,
+            slug,
+            os_name,
+            os_version,
+            runtime_name,
+            runtime_version,
+            cpu,
+            ram,
+            disk,
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
-        let testbed = JsonNewTestbed {
-            project: self.project.clone(),
-            name: self.name.clone(),
-            slug: self.slug.clone(),
-            os_name: self.os_name.clone(),
-            os_version: self.os_version.clone(),
-            runtime_name: self.runtime_name.clone(),
-            runtime_version: self.runtime_version.clone(),
-            cpu: self.cpu.clone(),
-            ram: self.ram.clone(),
-            disk: self.disk.clone(),
-        };
+        let testbed: JsonNewTestbed = self.clone().into();
         self.backend.post(TESTBEDS_PATH, &testbed).await?;
         Ok(())
     }

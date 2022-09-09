@@ -116,16 +116,17 @@ impl SubCmd for Run {
         }
 
         let report = JsonNewReport {
-            branch: self.branch.clone(),
-            hash: self.hash.clone().map(|hash| hash.to_string()),
-            testbed: self.testbed.clone(),
+            branch: self.branch,
+            hash: self.hash.map(|hash| hash.to_string()),
+            testbed: self.testbed,
             adapter: self.adapter.into(),
             start_time,
             end_time: Utc::now(),
             benchmarks,
         };
+
         match &self.locality {
-            Locality::Local => Ok(println!("{}", serde_json::to_string_pretty(&report)?)),
+            Locality::Local => println!("{}", serde_json::to_string_pretty(&report)?),
             Locality::Backend(backend) => {
                 let value = backend.post(REPORTS_PATH, &report).await?;
                 if self.err {
@@ -134,9 +135,10 @@ impl SubCmd for Run {
                         return Err(BencherError::Alerts);
                     }
                 }
-                Ok(())
             },
         }
+
+        Ok(())
     }
 }
 
