@@ -1,4 +1,4 @@
-name: Bencher
+name: Release CLI
 
 on:
   workflow_dispatch:
