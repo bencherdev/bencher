@@ -184,8 +184,8 @@ impl ToString for Audience {
     }
 }
 
-impl Into<String> for Audience {
-    fn into(self) -> String {
-        self.to_string()
+impl From<Audience> for String {
+    fn from(audience: Audience) -> Self {
+        audience.to_string()
     }
 }
