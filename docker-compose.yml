@@ -18,5 +18,8 @@ services:
     ports:
       - 80:3000
       - 3001:3001
+    environment:
+      # Set this to your actual host
+      - VITE_BENCHER_API_URL=http://localhost:8080
     depends_on:
       - bencher_api

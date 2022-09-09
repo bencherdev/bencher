@@ -10,5 +10,6 @@ sudo sh get-docker.sh
 
 cd bencher
 touch ./services/api/bencher.db
-echo "VITE_BENCHER_API_URL=http://$HOST:8080" > ./services/ui/.env.development
+# If not set in docker-compose.yml
+# echo "VITE_BENCHER_API_URL=http://$HOST:8080" > ./services/ui/.env.development
 sudo docker compose --file build.docker-compose.yml up --build --detach --remove-orphans
