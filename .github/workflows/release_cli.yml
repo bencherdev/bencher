@@ -4,12 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
-    tags:
-      - "v*.*.*"
   pull_request:
     branches: [ master ]
-    tags:
-      - "v*.*.*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -57,6 +53,7 @@ jobs:
     name: Release
     needs: cli_package_deb
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: export DEB_FILE
         run: echo "DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb" >> $GITHUB_ENV
