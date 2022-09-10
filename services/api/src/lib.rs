@@ -19,6 +19,11 @@ pub trait ToMethod {
     fn to_method(&self) -> http::Method;
 }
 
+pub trait WordStr {
+    fn singular(&self) -> &str;
+    fn plural(&self) -> &str;
+}
+
 pub trait IntoEndpoint {
     fn into_endpoint(self) -> Endpoint;
 }

@@ -75,7 +75,7 @@ pub fn impl_display(name_ident: &Ident, method_variants: &Vec<MethodVariant>) ->
 
         },
         Kind::Parents => quote! {
-            write!(f, "{}", self.to_method())
+            write!(f, "{} {}", self.to_method(), self.as_str())
         },
     };
 

@@ -8,3 +8,11 @@ use tokens::Method as TokenMethod;
 pub enum Endpoint {
     Token(TokenMethod),
 }
+
+impl Endpoint {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Token(_) => "token",
+        }
+    }
+}
