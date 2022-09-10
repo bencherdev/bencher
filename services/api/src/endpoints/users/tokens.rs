@@ -11,6 +11,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    endpoints::endpoint::{Endpoint, Method},
     model::{
         user::token::{InsertToken, QueryToken},
         user::QueryUser,
@@ -22,7 +23,7 @@ use crate::{
 
 use super::Resource;
 
-const TOKEN: Resource = Resource::Token;
+const TOKEN_RESOURCE: Resource = Resource::Token;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -51,31 +52,29 @@ pub async fn get_ls(
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonToken>>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
+    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
 
     let context = rqctx.context();
+    let path_params = path_params.into_inner();
     let json = get_ls_inner(user_id, context, path_params)
         .await
-        .map_err(|_| ApiError::GetOne(TOKEN.into()))?;
+        .map_err(|e| endpoint.err(e))?;
 
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+    Ok(endpoint.response_headers(json))
 }
 
 pub async fn get_ls_inner(
     user_id: i32,
     context: &Context,
     path_params: GetLsParams,
-) -> Result<Vec<JsonToken>, HttpError> {
+) -> Result<Vec<JsonToken>, ApiError> {
     let mut context = context.lock().await;
     let conn = &mut context.db;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     // TODO make smarter once permissions are a thing
     if query_user.id != user_id {
-        return Err(http_error!("Failed to get token."));
+        return Err(http_error!("Failed to get token.").into());
     }
 
     let json: Vec<JsonToken> = schema::token::table

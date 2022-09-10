@@ -1,7 +1,7 @@
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::endpoints::Endpoint;
+use crate::endpoints::Resource;
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -30,15 +30,19 @@ pub enum ApiError {
     WriteSwaggerFile(serde_json::Error),
 
     #[error("Failed to GET {}", _0.singular())]
-    GetOne(Endpoint),
+    GetOne(Resource),
     #[error("Failed to GET {}", _0.plural())]
-    GetLs(Endpoint),
+    GetLs(Resource),
     #[error("Failed to POST {}", _0.singular())]
-    Post(Endpoint),
+    Post(Resource),
     #[error("Failed to PUT {}", _0.singular())]
-    Put(Endpoint),
+    Put(Resource),
     #[error("Failed to DELETE {}", _0.singular())]
-    Delete(Endpoint),
+    Delete(Resource),
+
+    // TODO remove once no longer needed
+    #[error(transparent)]
+    Http(#[from] HttpError),
 }
 
 impl From<ApiError> for HttpError {

@@ -1,13 +1,14 @@
 use dropshot::ApiDescription;
 
 pub mod auth;
-pub mod endpoint;
+mod endpoint;
 pub mod orgs;
 pub mod ping;
+pub mod resource;
 pub mod users;
 
-pub use endpoint::Endpoint;
 use orgs::*;
+pub use resource::Resource;
 
 use crate::{
     util::{registrar::Registrar, Context},
