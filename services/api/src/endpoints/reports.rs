@@ -110,8 +110,6 @@ pub async fn post(
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
 
-    const ERROR: &str = "Failed to create report.";
-
     let json_report = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
@@ -124,14 +122,14 @@ pub async fn post(
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!(ERROR))?;
+        .map_err(|_| http_error!("Failed to create report."))?;
     let testbed_project_id = schema::testbed::table
         .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!(ERROR))?;
+        .map_err(|_| http_error!("Failed to create report."))?;
     if branch_project_id != testbed_project_id {
-        return Err(http_error!(ERROR));
+        return Err(http_error!("Failed to create report."));
     }
     let project_id = branch_project_id;
 

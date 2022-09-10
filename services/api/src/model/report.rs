@@ -17,8 +17,6 @@ use uuid::Uuid;
 use super::{testbed::QueryTestbed, user::QueryUser, version::QueryVersion};
 use crate::{schema, schema::report as report_table, util::http_error};
 
-const REPORT_ERROR: &str = "Failed to get report.";
-
 #[derive(Queryable)]
 pub struct QueryReport {
     pub id: i32,
@@ -37,8 +35,8 @@ impl QueryReport {
             .filter(schema::report::id.eq(id))
             .select(schema::report::uuid)
             .first(conn)
-            .map_err(|_| http_error!(REPORT_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(REPORT_ERROR))
+            .map_err(|_| http_error!("Failed to get report."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get report."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, HttpError> {
@@ -55,7 +53,7 @@ impl QueryReport {
             end_time,
         } = self;
         Ok(JsonReport {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(REPORT_ERROR))?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get report."))?,
             user: QueryUser::get_uuid(conn, user_id)?,
             version: QueryVersion::get_uuid(conn, version_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
@@ -79,7 +77,7 @@ impl QueryReport {
             .select(schema::perf::uuid)
             .order(schema::benchmark::name)
             .load::<String>(conn)
-            .map_err(|_| http_error!(REPORT_ERROR))?
+            .map_err(|_| http_error!("Failed to get report."))?
             .iter()
             .filter_map(|uuid| {
                 Uuid::from_str(uuid)
@@ -96,7 +94,7 @@ impl QueryReport {
             .select(schema::alert::uuid)
             .order(schema::alert::id)
             .load::<String>(conn)
-            .map_err(|_| http_error!(REPORT_ERROR))?
+            .map_err(|_| http_error!("Failed to get report."))?
             .iter()
             .filter_map(|uuid| Uuid::from_str(uuid).ok().map(|uuid| JsonReportAlert(uuid)))
             .collect())
@@ -110,7 +108,7 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
         (timestamp % 1_000_000_000) as u32,
     )
     .single()
-    .ok_or(http_error!(REPORT_ERROR))
+    .ok_or(http_error!("Failed to get report."))
 }
 
 const JSON: isize = 0;
@@ -131,7 +129,7 @@ impl TryFrom<i32> for Adapter {
             JSON => Ok(Self::Json),
             RUST_TEST => Ok(Self::RustTest),
             RUST_BENCH => Ok(Self::RustBench),
-            _ => Err(http_error!(REPORT_ERROR)),
+            _ => Err(http_error!("Failed to get report.")),
         }
     }
 }

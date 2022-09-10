@@ -7,7 +7,6 @@ use uuid::Uuid;
 
 use crate::{schema, schema::statistic as statistic_table, util::http_error};
 
-const STATISTIC_ERROR: &str = "Failed to get statistic.";
 
 #[derive(Queryable)]
 pub struct QueryStatistic {
@@ -26,7 +25,7 @@ impl QueryStatistic {
             .filter(schema::statistic::uuid.eq(uuid.to_string()))
             .select(schema::statistic::id)
             .first(conn)
-            .map_err(|_| http_error!(STATISTIC_ERROR))
+            .map_err(|_| http_error!("Failed to get statistic."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -34,8 +33,8 @@ impl QueryStatistic {
             .filter(schema::statistic::id.eq(id))
             .select(schema::statistic::uuid)
             .first(conn)
-            .map_err(|_| http_error!(STATISTIC_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(STATISTIC_ERROR))
+            .map_err(|_| http_error!("Failed to get statistic."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get statistic."))
     }
 
     pub fn to_json(self) -> Result<JsonStatistic, HttpError> {
@@ -49,7 +48,7 @@ impl QueryStatistic {
             right_side,
         } = self;
         Ok(JsonStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(STATISTIC_ERROR))?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get statistic."))?,
             test: StatisticKind::try_from(test)?.into(),
             sample_size: sample_size.map(|ss| ss as u32),
             window: window.map(|w| w as u32),
@@ -72,7 +71,7 @@ impl TryFrom<i32> for StatisticKind {
         match kind {
             0 => Ok(Self::Z),
             1 => Ok(Self::T),
-            _ => Err(http_error!(STATISTIC_ERROR)),
+            _ => Err(http_error!("Failed to get statistic.")),
         }
     }
 }

@@ -20,8 +20,6 @@ use crate::{
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
-const PERF_ERROR: &str = "Failed to get benchmark data.";
-
 // TODO figure out why this doesn't work as a PUT
 #[endpoint {
     method = OPTIONS,
@@ -135,7 +133,7 @@ pub async fn post(
                             i64,
                             i64,
                         )>(conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?
+                        .map_err(|_| http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -204,7 +202,7 @@ pub async fn post(
                                 f64,
                                 i64,
                             )>(conn)
-                            .map_err(|_| http_error!(PERF_ERROR))?
+                            .map_err(|_| http_error!("Failed to get benchmark data."))?
                             .into_iter()
                             .map(
                                 |(
@@ -274,7 +272,7 @@ pub async fn post(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?
+                        .map_err(|_| http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -341,7 +339,7 @@ pub async fn post(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?
+                        .map_err(|_| http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -408,7 +406,7 @@ pub async fn post(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(|_| http_error!(PERF_ERROR))?
+                        .map_err(|_| http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -511,7 +509,8 @@ impl QueryPerfDatum {
             metrics,
         } = self;
         Ok(JsonPerfDatum {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(PERF_ERROR))?,
+            uuid: Uuid::from_str(&uuid)
+                .map_err(|_| http_error!("Failed to get benchmark data."))?,
             iteration: iteration as u32,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,

@@ -11,8 +11,6 @@ use uuid::Uuid;
 use super::project::QueryProject;
 use crate::{schema, schema::benchmark as benchmark_table, util::http_error};
 
-const BENCHMARK_ERROR: &str = "Failed to get benchmark.";
-
 #[derive(Queryable)]
 pub struct QueryBenchmark {
     pub id: i32,
@@ -27,7 +25,7 @@ impl QueryBenchmark {
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(|_| http_error!(BENCHMARK_ERROR))
+            .map_err(|_| http_error!("Failed to get benchmark."))
     }
 
     pub fn get_id_from_name(
@@ -43,7 +41,7 @@ impl QueryBenchmark {
             )
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(|_| http_error!(BENCHMARK_ERROR))
+            .map_err(|_| http_error!("Failed to get benchmark."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -51,8 +49,8 @@ impl QueryBenchmark {
             .filter(schema::benchmark::id.eq(id))
             .select(schema::benchmark::uuid)
             .first(conn)
-            .map_err(|_| http_error!(BENCHMARK_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(BENCHMARK_ERROR))
+            .map_err(|_| http_error!("Failed to get benchmark."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get benchmark."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, HttpError> {
@@ -63,7 +61,7 @@ impl QueryBenchmark {
             name,
         } = self;
         Ok(JsonBenchmark {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(BENCHMARK_ERROR))?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get benchmark."))?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
         })
@@ -84,13 +82,13 @@ impl QueryBenchmark {
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)
-            .map_err(|_| http_error!(BENCHMARK_ERROR))?;
+            .map_err(|_| http_error!("Failed to get benchmark."))?;
 
         schema::benchmark::table
             .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
             .select(schema::benchmark::id)
             .first::<i32>(conn)
-            .map_err(|_| http_error!(BENCHMARK_ERROR))
+            .map_err(|_| http_error!("Failed to get benchmark."))
     }
 }
 

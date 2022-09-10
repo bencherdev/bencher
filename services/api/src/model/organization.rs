@@ -15,8 +15,6 @@ use crate::{
     util::http_error,
 };
 
-const ORGANIZATION_ERROR: &str = "Failed to create organization.";
-
 #[derive(Insertable)]
 #[diesel(table_name = organization_table)]
 pub struct InsertOrganization {
@@ -49,7 +47,7 @@ impl QueryOrganization {
             .filter(schema::organization::uuid.eq(uuid.to_string()))
             .select(schema::organization::id)
             .first(conn)
-            .map_err(|_| http_error!(ORGANIZATION_ERROR))
+            .map_err(|_| http_error!("Failed to create organization."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -57,8 +55,8 @@ impl QueryOrganization {
             .filter(schema::organization::id.eq(id))
             .select(schema::organization::uuid)
             .first(conn)
-            .map_err(|_| http_error!(ORGANIZATION_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(ORGANIZATION_ERROR))
+            .map_err(|_| http_error!("Failed to create organization."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to create organization."))
     }
 
     pub fn from_resource_id(
@@ -73,6 +71,6 @@ impl QueryOrganization {
                     .or(schema::organization::uuid.eq(org)),
             )
             .first::<QueryOrganization>(conn)
-            .map_err(|_| http_error!(ORGANIZATION_ERROR))
+            .map_err(|_| http_error!("Failed to create organization."))
     }
 }

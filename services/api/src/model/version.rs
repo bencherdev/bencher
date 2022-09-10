@@ -9,8 +9,6 @@ use uuid::Uuid;
 
 use crate::{schema, schema::version as version_table, util::http_error};
 
-const VERSION_ERROR: &str = "Failed to get version.";
-
 #[derive(Queryable)]
 pub struct QueryVersion {
     pub id: i32,
@@ -26,8 +24,8 @@ impl QueryVersion {
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
             .first(conn)
-            .map_err(|_| http_error!(VERSION_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(VERSION_ERROR))
+            .map_err(|_| http_error!("Failed to get version."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get version."))
     }
 }
 

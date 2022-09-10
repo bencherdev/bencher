@@ -20,7 +20,6 @@ pub use latency::InsertLatency;
 pub use resource::InsertResource;
 pub use throughput::InsertThroughput;
 
-const PERF_ERROR: &str = "Failed to get perf.";
 
 #[derive(Queryable)]
 pub struct QueryPerf {
@@ -42,7 +41,7 @@ impl QueryPerf {
             .filter(schema::perf::uuid.eq(uuid.to_string()))
             .select(schema::perf::id)
             .first(conn)
-            .map_err(|_| http_error!(PERF_ERROR))
+            .map_err(|_| http_error!("Failed to get perf."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -50,8 +49,8 @@ impl QueryPerf {
             .filter(schema::perf::id.eq(id))
             .select(schema::perf::uuid)
             .first(conn)
-            .map_err(|_| http_error!(PERF_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(PERF_ERROR))
+            .map_err(|_| http_error!("Failed to get perf."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get perf."))
     }
 }
 

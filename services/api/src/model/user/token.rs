@@ -10,8 +10,6 @@ use crate::{schema, schema::token as token_table, util::http_error};
 
 use super::QueryUser;
 
-const TOKEN_ERROR: &str = "Failed to get token.";
-
 // ~365 days / years * 24 hours / day * 60 minutes / hour * 60 seconds / minute
 #[cfg(not(debug_assert))]
 const MAX_TTL: u64 = 365 * 24 * 60 * 60;
@@ -33,7 +31,7 @@ impl QueryToken {
             .filter(schema::token::uuid.eq(uuid.to_string()))
             .select(schema::token::id)
             .first(conn)
-            .map_err(|_| http_error!(TOKEN_ERROR))
+            .map_err(|_| http_error!("Failed to get token."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -41,8 +39,8 @@ impl QueryToken {
             .filter(schema::token::id.eq(id))
             .select(schema::token::uuid)
             .first(conn)
-            .map_err(|_| http_error!(TOKEN_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(TOKEN_ERROR))
+            .map_err(|_| http_error!("Failed to get token."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get token."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonToken, HttpError> {
@@ -56,7 +54,7 @@ impl QueryToken {
             expiration,
         } = self;
         Ok(JsonToken {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(TOKEN_ERROR))?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get token."))?,
             user: QueryUser::get_uuid(conn, user_id)?,
             name,
             token: jwt,
@@ -69,7 +67,7 @@ impl QueryToken {
 pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
     Utc.timestamp_opt(timestamp, 0)
         .single()
-        .ok_or(http_error!(TOKEN_ERROR))
+        .ok_or(http_error!("Failed to get token."))
 }
 
 #[derive(Insertable)]
@@ -96,22 +94,22 @@ impl InsertToken {
 
         // TODO make smarter once permissions are a thing
         if query_user.id != requester_id {
-            return Err(http_error!(TOKEN_ERROR));
+            return Err(http_error!("Failed to get token."));
         }
 
         // Only in production, set a max TTL of approximately one year
         // Disabled in development to enable long lived testing tokens
         #[cfg(not(debug_assert))]
         if ttl > MAX_TTL {
-            return Err(http_error!(TOKEN_ERROR));
+            return Err(http_error!("Failed to get token."));
         }
 
         let jwt = JsonWebToken::new_api_key(key, query_user.email, ttl as usize)
-            .map_err(|_| http_error!(TOKEN_ERROR))?;
+            .map_err(|_| http_error!("Failed to get token."))?;
 
         let token_data = jwt
             .validate_api_key(key)
-            .map_err(|_| http_error!(TOKEN_ERROR))?;
+            .map_err(|_| http_error!("Failed to get token."))?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),

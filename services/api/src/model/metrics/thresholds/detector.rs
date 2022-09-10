@@ -20,7 +20,6 @@ use crate::{
     util::http_error,
 };
 
-const PERF_ERROR: &str = "Failed to run metrics detector.";
 
 pub struct Detector {
     pub threshold: Threshold,
@@ -108,12 +107,12 @@ impl Detector {
                     let percentile = match self.threshold.statistic.test.try_into()? {
                         StatisticKind::Z => {
                             let normal =
-                                Normal::new(mean, std_dev).map_err(|_| http_error!(PERF_ERROR))?;
+                                Normal::new(mean, std_dev).map_err(|_| http_error!("Failed to run metrics detector."))?;
                             normal.cdf(abs_datum)
                         },
                         StatisticKind::T => {
                             let students_t = StudentsT::new(mean, std_dev, (data.len() - 1) as f64)
-                                .map_err(|_| http_error!(PERF_ERROR))?;
+                                .map_err(|_| http_error!("Failed to run metrics detector."))?;
                             students_t.cdf(abs_datum)
                         },
                     };
@@ -149,7 +148,7 @@ impl Detector {
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
             .execute(conn)
-            .map_err(|_| http_error!(PERF_ERROR))?;
+            .map_err(|_| http_error!("Failed to run metrics detector."))?;
 
         Ok(())
     }

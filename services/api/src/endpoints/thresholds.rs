@@ -106,8 +106,6 @@ pub async fn post(
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonThreshold>, CorsHeaders>, HttpError> {
     QueryUser::auth(&rqctx).await?;
 
-    const ERROR: &str = "Failed to create thresholds.";
-
     let json_threshold = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
@@ -119,26 +117,26 @@ pub async fn post(
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!(ERROR))?;
+        .map_err(|_| http_error!("Failed to create thresholds."))?;
     let testbed_project_id = schema::testbed::table
         .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!(ERROR))?;
+        .map_err(|_| http_error!("Failed to create thresholds."))?;
     if branch_project_id != testbed_project_id {
-        return Err(http_error!(ERROR));
+        return Err(http_error!("Failed to create thresholds."));
     }
 
     let insert_threshold = InsertThreshold::from_json(conn, json_threshold)?;
     diesel::insert_into(schema::threshold::table)
         .values(&insert_threshold)
         .execute(conn)
-        .map_err(|_| http_error!(ERROR))?;
+        .map_err(|_| http_error!("Failed to create thresholds."))?;
 
     let query_threshold = schema::threshold::table
         .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
         .first::<QueryThreshold>(conn)
-        .map_err(|_| http_error!(ERROR))?;
+        .map_err(|_| http_error!("Failed to create thresholds."))?;
     let json = query_threshold.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(

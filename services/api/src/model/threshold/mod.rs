@@ -15,7 +15,6 @@ use crate::{schema, schema::threshold as threshold_table, util::http_error};
 pub mod alert;
 pub mod statistic;
 
-const THRESHOLD_ERROR: &str = "Failed to get threshold.";
 
 #[derive(Queryable)]
 pub struct QueryThreshold {
@@ -33,7 +32,7 @@ impl QueryThreshold {
             .filter(schema::threshold::uuid.eq(uuid.to_string()))
             .select(schema::threshold::id)
             .first(conn)
-            .map_err(|_| http_error!(THRESHOLD_ERROR))
+            .map_err(|_| http_error!("Failed to get threshold."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -41,8 +40,8 @@ impl QueryThreshold {
             .filter(schema::threshold::id.eq(id))
             .select(schema::threshold::uuid)
             .first(conn)
-            .map_err(|_| http_error!(THRESHOLD_ERROR))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!(THRESHOLD_ERROR))
+            .map_err(|_| http_error!("Failed to get threshold."))?;
+        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get threshold."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, HttpError> {
@@ -55,7 +54,7 @@ impl QueryThreshold {
             statistic_id,
         } = self;
         Ok(JsonThreshold {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!(THRESHOLD_ERROR))?,
+            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get threshold."))?,
             branch: QueryBranch::get_uuid(conn, branch_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
             kind: PerfKind::try_from(kind)?.into(),
@@ -83,7 +82,7 @@ impl TryFrom<i32> for PerfKind {
             2 => Ok(Self::Compute),
             3 => Ok(Self::Memory),
             4 => Ok(Self::Storage),
-            _ => Err(http_error!(THRESHOLD_ERROR)),
+            _ => Err(http_error!("Failed to get threshold.")),
         }
     }
 }
@@ -138,7 +137,7 @@ impl InsertThreshold {
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
-            .map_err(|_| http_error!(THRESHOLD_ERROR))?;
+            .map_err(|_| http_error!("Failed to get threshold."))?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
