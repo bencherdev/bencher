@@ -53,13 +53,29 @@ pub async fn get_ls(
     let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = rqctx.context();
+    let json = get_ls_inner(user_id, context, path_params)
+        .await
+        .map_err(|_| ApiError::GetOne(TOKEN.into()))?;
+
+    Ok(HttpResponseHeaders::new(
+        HttpResponseOk(json),
+        CorsHeaders::new_pub("GET".into()),
+    ))
+}
+
+pub async fn get_ls_inner(
+    user_id: i32,
+    context: &Context,
+    path_params: GetLsParams,
+) -> Result<Vec<JsonToken>, HttpError> {
+    let mut context = context.lock().await;
     let conn = &mut context.db;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     // TODO make smarter once permissions are a thing
     if query_user.id != user_id {
-        return Err(ApiError::GetOne(TOKEN.into()).into());
+        return Err(http_error!("Failed to get token."));
     }
 
     let json: Vec<JsonToken> = schema::token::table
@@ -71,10 +87,7 @@ pub async fn get_ls(
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
 
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+    Ok(json)
 }
 
 #[endpoint {
