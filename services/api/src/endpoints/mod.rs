@@ -1,15 +1,11 @@
 use dropshot::ApiDescription;
 
 pub mod auth;
-pub mod benchmarks;
-pub mod branches;
-pub mod perf;
+pub mod org;
 pub mod ping;
-pub mod projects;
-pub mod reports;
-pub mod testbeds;
-pub mod thresholds;
 pub mod users;
+
+use org::*;
 
 use crate::{
     util::{registrar::Registrar, Context},
