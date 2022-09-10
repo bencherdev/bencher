@@ -18,6 +18,7 @@ async fn main() -> Result<(), ApiError> {
     run().await
 }
 
+// This is run via a `pre-push` git hook
 #[cfg(feature = "swagger")]
 async fn run() -> Result<(), ApiError> {
     use std::fs::File;
