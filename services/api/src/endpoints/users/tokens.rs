@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewToken, JsonToken, ResourceId};
+use bencher_macros::ToMethod;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
@@ -18,6 +19,13 @@ use crate::{
     schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
 };
+
+#[derive(Debug, Clone, Copy, ToMethod)]
+pub enum Method {
+    GetOne,
+    GetLs,
+    Post,
+}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {

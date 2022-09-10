@@ -22,10 +22,10 @@ pub enum MethodVariant {
 }
 
 impl MethodVariant {
-    //  ResourceVariant(MethodEnum),
+    //  ParentVariant(ChildEnum),
     //  MethodVariant,
     fn new(token_tree: &mut IntoIter) -> Option<MethodVariant> {
-        //  ResourceVariant(MethodEnum),
+        //  ParentVariant(ChildEnum),
         //  ^^^^^^^^^^^^^^^
         //  MethodVariant,
         //  ^^^^^^^^^^^^^
@@ -57,7 +57,7 @@ impl MethodVariant {
                         });
                     }
                 },
-                //  ResourceVariant(MethodEnum),
+                //  ParentVariant(ChildEnum),
                 //                 ^          ^
                 TokenTree::Group(paren_group) => {
                     if let Delimiter::Parenthesis = paren_group.delimiter() {
@@ -65,7 +65,7 @@ impl MethodVariant {
                         return None;
                     }
 
-                    //  ResourceVariant(MethodEnum),
+                    //  ParentVariant(ChildEnum),
                     //                  ^^^^^^^^^^
                     let mut paren_token_tree = paren_group.stream().into_iter();
                     let child_ident = if let TokenTree::Ident(ident) = paren_token_tree.next()? {
@@ -74,7 +74,7 @@ impl MethodVariant {
                         return None;
                     };
 
-                    //  ResourceVariant(MethodEnum),
+                    //  ParentVariant(ChildEnum),
                     //                            ^^
                     if let TokenTree::Punct(punct) = token_tree.next()? {
                         if paren_token_tree.next().is_none() && punct.as_char() == ',' {

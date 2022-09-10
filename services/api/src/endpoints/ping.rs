@@ -1,7 +1,6 @@
-use std::{fmt, sync::Arc};
+use std::sync::Arc;
 
 use bencher_macros::ToMethod;
-use derive_more::Display;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
@@ -11,8 +10,7 @@ use crate::{
 
 const PONG: &str = "PONG";
 
-#[derive(Debug, Display, Clone, Copy, ToMethod)]
-#[display(fmt = "{}", self.to_method())]
+#[derive(Debug, Clone, Copy, ToMethod)]
 pub enum Method {
     GetOne,
 }

@@ -1,8 +1,10 @@
-use derive_more::Display;
+use bencher_macros::ToMethod;
 
 pub mod tokens;
 
-#[derive(Debug, Display, Clone, Copy)]
+use tokens::Method as TokenMethod;
+
+#[derive(Debug, Clone, Copy, ToMethod)]
 pub enum Endpoint {
-    Token,
+    Token(TokenMethod),
 }
