@@ -17,11 +17,14 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
+    util::{
+        cors::get_cors, endpoint::method_into_endpoint, headers::CorsHeaders, http_error,
+        map_http_error, Context,
+    },
     ApiError, IntoEndpoint,
 };
 
-use super::Endpoint;
+use super::Resource;
 
 #[derive(Debug, Clone, Copy, ToMethod)]
 pub enum Method {
@@ -30,11 +33,7 @@ pub enum Method {
     Post,
 }
 
-impl IntoEndpoint for Method {
-    fn into_endpoint(self) -> crate::Endpoint {
-        Endpoint::Token(self).into_endpoint()
-    }
-}
+method_into_endpoint!(Resource, Token, Method);
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {

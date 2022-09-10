@@ -1,6 +1,7 @@
 pub mod context;
 pub mod cors;
 pub mod db;
+pub mod endpoint;
 pub mod error;
 pub mod headers;
 pub mod migrate;

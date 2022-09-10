@@ -32,6 +32,17 @@ pub enum ApiError {
     // TODO impl display
     #[error("{0}")]
     IntoEndpoint(Endpoint),
+
+    #[error("")]
+    GetOne,
+    #[error("")]
+    GetLs,
+    #[error("")]
+    Post,
+    #[error("")]
+    Put,
+    #[error("")]
+    Delete,
 }
 
 impl From<ApiError> for HttpError {

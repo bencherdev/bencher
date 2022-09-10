@@ -13,15 +13,10 @@ pub mod util;
 pub use error::ApiError;
 
 use endpoints::auth::Endpoint as AuthEndpoint;
-use endpoints::users::Endpoint as UsersEndpoint;
+use endpoints::users::Resource as UsersResource;
 
 pub trait ToMethod {
     fn to_method(&self) -> http::Method;
-}
-
-pub trait WordStr {
-    fn singular(&self) -> &str;
-    fn plural(&self) -> &str;
 }
 
 pub trait IntoEndpoint {
@@ -31,7 +26,7 @@ pub trait IntoEndpoint {
 #[derive(Debug, Display, Clone, Copy)]
 pub enum Endpoint {
     Auth(AuthEndpoint),
-    Users(UsersEndpoint),
+    Users(UsersResource),
     Orgs(OrgsEndpoint),
     Ping(PingMethod),
 }

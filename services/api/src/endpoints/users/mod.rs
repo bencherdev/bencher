@@ -4,20 +4,16 @@ pub mod tokens;
 
 use tokens::Method as TokenMethod;
 
-use crate::IntoEndpoint;
+use crate::util::endpoint::into_endpoint;
 
 #[derive(Debug, Clone, Copy, ToMethod)]
-pub enum Endpoint {
+pub enum Resource {
     Token(TokenMethod),
 }
 
-impl IntoEndpoint for Endpoint {
-    fn into_endpoint(self) -> crate::Endpoint {
-        crate::Endpoint::Users(self)
-    }
-}
+into_endpoint!(Users, Resource);
 
-impl Endpoint {
+impl Resource {
     fn as_str(&self) -> &str {
         match self {
             Self::Token(_) => "token",
