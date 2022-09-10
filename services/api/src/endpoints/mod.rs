@@ -21,8 +21,8 @@ pub struct Api;
 impl Registrar<Context> for Api {
     fn register(api: &mut ApiDescription<Context>) -> Result<(), ApiError> {
         // Ping
-        // api.register(ping::api_get_ping)
-        //     .map_err(ApiError::Endpoint)?;
+        api.register(ping::api_get_ping)
+            .map_err(ApiError::Endpoint)?;
         // Auth
         api.register(auth::signup::options)
             .map_err(ApiError::Endpoint)?;
