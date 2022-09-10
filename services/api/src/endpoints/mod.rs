@@ -2,11 +2,14 @@ use dropshot::ApiDescription;
 
 pub mod auth;
 mod endpoint;
+pub mod method;
 pub mod orgs;
 pub mod ping;
 pub mod resource;
 pub mod users;
 
+pub use endpoint::Endpoint;
+pub use method::Method;
 use orgs::*;
 pub use resource::Resource;
 

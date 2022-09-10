@@ -4,21 +4,12 @@ use serde::Serialize;
 
 use crate::{util::headers::CorsHeaders, ApiError};
 
-use super::Resource;
+use super::{Method, Resource};
 
 #[derive(Copy, Clone)]
 pub struct Endpoint {
     resource: Resource,
     method: Method,
-}
-
-#[derive(Copy, Clone)]
-pub enum Method {
-    GetOne,
-    GetLs,
-    Post,
-    Put,
-    Delete,
 }
 
 impl Endpoint {
@@ -80,17 +71,6 @@ impl From<&Endpoint> for ApiError {
             Method::Post => ApiError::Post(endpoint.resource),
             Method::Put => ApiError::Put(endpoint.resource),
             Method::Delete => ApiError::Delete(endpoint.resource),
-        }
-    }
-}
-
-impl From<Method> for http::Method {
-    fn from(method: Method) -> Self {
-        match method {
-            Method::GetOne | Method::GetLs => http::Method::GET,
-            Method::Post => http::Method::POST,
-            Method::Put => http::Method::PUT,
-            Method::Delete => http::Method::DELETE,
         }
     }
 }

@@ -11,7 +11,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    endpoints::endpoint::{Endpoint, Method},
+    endpoints::{Endpoint, Method},
     model::{
         user::token::{InsertToken, QueryToken},
         user::QueryUser,
