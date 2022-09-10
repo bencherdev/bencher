@@ -19,6 +19,8 @@ async fn main() -> Result<(), ApiError> {
 }
 
 // This is run via a `pre-push` git hook
+// So if the `SWAGGER_PATH` below is ever updated
+// also update `./git/hooks/pre-push` accordingly.
 #[cfg(feature = "swagger")]
 async fn run() -> Result<(), ApiError> {
     use std::fs::File;
