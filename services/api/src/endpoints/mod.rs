@@ -1,11 +1,11 @@
 use dropshot::ApiDescription;
 
 pub mod auth;
-pub mod org;
+pub mod orgs;
 pub mod ping;
 pub mod users;
 
-use org::*;
+use orgs::*;
 
 use crate::{
     util::{registrar::Registrar, Context},
