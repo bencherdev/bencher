@@ -1,3 +1,5 @@
+#!/bin/bash
+
 HOST=$1
 
 sudo apt update
