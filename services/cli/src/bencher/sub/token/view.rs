@@ -38,11 +38,7 @@ impl TryFrom<CliTokenView> for View {
 impl SubCmd for View {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         self.backend
-            .get(&format!(
-                "/v0/users/{}/tokens/{}",
-                self.user.as_str(),
-                self.uuid.to_string()
-            ))
+            .get(&format!("/v0/users/{}/tokens/{}", self.user, self.uuid))
             .await?;
         Ok(())
     }

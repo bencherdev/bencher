@@ -38,16 +38,16 @@ impl TryFrom<CliStatisticCreate> for Statistic {
     }
 }
 
-impl Into<JsonNewStatistic> for Statistic {
-    fn into(self) -> JsonNewStatistic {
-        let Self {
+impl From<Statistic> for JsonNewStatistic {
+    fn from(statistic: Statistic) -> Self {
+        let Statistic {
             test,
             sample_size,
             window,
             left_side,
             right_side,
-        } = self;
-        JsonNewStatistic {
+        } = statistic;
+        Self {
             test: test.into(),
             sample_size,
             window,
@@ -72,11 +72,11 @@ impl From<CliStatisticKind> for StatisticKind {
     }
 }
 
-impl Into<JsonStatisticKind> for StatisticKind {
-    fn into(self) -> JsonStatisticKind {
-        match self {
-            Self::Z => JsonStatisticKind::Z,
-            Self::T => JsonStatisticKind::T,
+impl From<StatisticKind> for JsonStatisticKind {
+    fn from(kind: StatisticKind) -> Self {
+        match kind {
+            StatisticKind::Z => Self::Z,
+            StatisticKind::T => Self::T,
         }
     }
 }

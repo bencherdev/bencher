@@ -23,14 +23,14 @@ impl From<CliPerfKind> for Kind {
     }
 }
 
-impl Into<JsonPerfKind> for Kind {
-    fn into(self) -> JsonPerfKind {
-        match self {
-            Self::Latency => JsonPerfKind::Latency,
-            Self::Throughput => JsonPerfKind::Throughput,
-            Self::Compute => JsonPerfKind::Compute,
-            Self::Memory => JsonPerfKind::Memory,
-            Self::Storage => JsonPerfKind::Storage,
+impl From<Kind> for JsonPerfKind {
+    fn from(kind: Kind) -> Self {
+        match kind {
+            Kind::Latency => Self::Latency,
+            Kind::Throughput => Self::Throughput,
+            Kind::Compute => Self::Compute,
+            Kind::Memory => Self::Memory,
+            Kind::Storage => Self::Storage,
         }
     }
 }

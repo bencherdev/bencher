@@ -14,7 +14,7 @@ pub const PROJECTS_PATH: &str = "/v0/projects";
 
 #[derive(Debug)]
 pub enum Project {
-    Create(create::Project),
+    Create(create::Create),
     List(list::List),
     View(view::View),
 }

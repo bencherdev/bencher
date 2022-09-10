@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Project {
+pub struct Create {
     pub org: ResourceId,
     pub name: String,
     pub slug: Option<String>,
@@ -22,7 +22,7 @@ pub struct Project {
     pub backend: Backend,
 }
 
-impl TryFrom<CliProjectCreate> for Project {
+impl TryFrom<CliProjectCreate> for Create {
     type Error = BencherError;
 
     fn try_from(create: CliProjectCreate) -> Result<Self, Self::Error> {
@@ -55,9 +55,9 @@ pub fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
     })
 }
 
-impl Into<JsonNewProject> for Project {
-    fn into(self) -> JsonNewProject {
-        let Self {
+impl From<Create> for JsonNewProject {
+    fn from(create: Create) -> Self {
+        let Create {
             org,
             name,
             slug,
@@ -65,8 +65,8 @@ impl Into<JsonNewProject> for Project {
             url,
             public,
             backend: _,
-        } = self;
-        JsonNewProject {
+        } = create;
+        Self {
             organization: org,
             name,
             slug,
@@ -78,7 +78,7 @@ impl Into<JsonNewProject> for Project {
 }
 
 #[async_trait]
-impl SubCmd for Project {
+impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
         let project: JsonNewProject = self.clone().into();
         self.backend.post(PROJECTS_PATH, &project).await?;
