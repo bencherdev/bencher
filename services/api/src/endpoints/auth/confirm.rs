@@ -17,6 +17,11 @@ use crate::{
     util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
+#[derive(Debug, Clone, Copy)]
+pub enum Method {
+    Post,
+}
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/confirm",

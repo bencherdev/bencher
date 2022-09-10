@@ -2,7 +2,7 @@
 extern crate diesel;
 
 use derive_more::Display;
-use endpoints::ping::PingMethod;
+use endpoints::ping::Method as PingMethod;
 
 pub mod endpoints;
 pub mod error;
@@ -11,6 +11,8 @@ pub mod schema;
 pub mod util;
 
 pub use error::ApiError;
+
+use endpoints::auth::Endpoint as AuthEndpoint;
 
 pub trait ToMethod {
     fn to_method(&self) -> http::Method;
@@ -26,14 +28,6 @@ pub enum Endpoint {
     User(UserEndpoint),
     Org(OrgEndpoint),
     Ping(PingMethod),
-}
-
-#[derive(Debug, Display, Clone, Copy)]
-pub enum AuthEndpoint {
-    Confirm,
-    Invite,
-    Login,
-    Signup,
 }
 
 #[derive(Debug, Display, Clone, Copy)]

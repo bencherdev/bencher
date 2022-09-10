@@ -1,5 +1,6 @@
 use std::{fmt, sync::Arc};
 
+use derive_more::Display;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
@@ -9,28 +10,23 @@ use crate::{
 
 const PONG: &str = "PONG";
 
-#[derive(Debug, Clone, Copy)]
-pub enum PingMethod {
+#[derive(Debug, Display, Clone, Copy)]
+#[display(fmt = "{}", self.to_method())]
+pub enum Method {
     Get,
 }
 
-impl IntoEndpoint for PingMethod {
+impl IntoEndpoint for Method {
     fn into_endpoint(self) -> Endpoint {
         Endpoint::Ping(self)
     }
 }
 
-impl ToMethod for PingMethod {
+impl ToMethod for Method {
     fn to_method(&self) -> http::Method {
         match self {
             Self::Get => http::Method::GET,
         }
-    }
-}
-
-impl fmt::Display for PingMethod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_method())
     }
 }
 
@@ -42,7 +38,7 @@ impl fmt::Display for PingMethod {
 pub async fn api_get_ping(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
-    let endpoint = PingMethod::Get;
+    let endpoint = Method::Get;
 
     let _context = &mut *rqctx.context().lock().await;
 
