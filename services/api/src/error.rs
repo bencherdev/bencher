@@ -30,7 +30,7 @@ pub enum ApiError {
     #[error("{0}")]
     Endpoint(String),
     // TODO impl display
-    #[error("{0}")]
+    #[error("")]
     IntoEndpoint(Endpoint),
 
     #[error("Failed to GET {}", _0.singular())]

@@ -35,7 +35,7 @@ pub async fn api_get_ping(
 
     let resp = HttpResponseHeaders::new(
         HttpResponseOk(PONG.into()),
-        CorsHeaders::new_pub_endpoint(endpoint),
+        CorsHeaders::new_pub(http::Method::GET.to_string()),
     );
 
     Ok(resp)

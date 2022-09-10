@@ -28,12 +28,18 @@ pub trait IntoEndpoint {
     fn into_endpoint(self) -> Endpoint;
 }
 
-#[derive(Debug, Display, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Endpoint {
     Auth(AuthResource),
     Users(UsersResource),
     Orgs(OrgsResource),
     Ping(PingMethod),
+}
+
+impl From<UsersResource> for Endpoint {
+    fn from(users: UsersResource) -> Self {
+        Self::Users(users)
+    }
 }
 
 impl WordStr for Endpoint {

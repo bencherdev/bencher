@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewToken, JsonToken, ResourceId};
-use bencher_macros::ToMethod;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
@@ -17,23 +16,13 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{
-        cors::get_cors, endpoint::method_into_endpoint, headers::CorsHeaders, http_error,
-        map_http_error, Context,
-    },
-    ApiError, IntoEndpoint,
+    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
+    ApiError,
 };
 
 use super::Resource;
 
-#[derive(Debug, Clone, Copy, ToMethod)]
-pub enum Method {
-    GetOne,
-    GetLs,
-    Post,
-}
-
-method_into_endpoint!(Resource, Token, Method);
+const TOKEN: Resource = Resource::Token;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -61,8 +50,6 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonToken>>, CorsHeaders>, HttpError> {
-    let endpoint = Method::GetOne;
-
     let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
 
@@ -72,7 +59,7 @@ pub async fn get_ls(
 
     // TODO make smarter once permissions are a thing
     if query_user.id != user_id {
-        return Err(ApiError::IntoEndpoint(endpoint.into_endpoint()).into());
+        return Err(ApiError::GetOne(TOKEN.into()).into());
     }
 
     let json: Vec<JsonToken> = schema::token::table

@@ -30,14 +30,6 @@ impl CorsHeaders {
         Self::new_origin_all(methods, "Content-Type".into(), None)
     }
 
-    pub fn new_pub_endpoint(endpoint: impl IntoEndpoint) -> Self {
-        Self::new_origin_all(
-            endpoint.into_endpoint().to_string(),
-            "Content-Type".into(),
-            None,
-        )
-    }
-
     pub fn new_auth(methods: String) -> Self {
         Self::new_origin_all(methods, "Content-Type, Authorization".into(), None)
     }
