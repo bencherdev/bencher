@@ -23,6 +23,12 @@ fn match_arms(method_variants: &Vec<MethodVariant>, tokens: &mut TokenStream) {
             MethodVariant::Method { ident, method } => tokens.extend(quote! {
                 Self::#ident => http::Method::#method,
             }),
+            MethodVariant::Parent {
+                parent_ident,
+                child_ident: _,
+            } => tokens.extend(quote! {
+                Self::#parent_ident(method) => method.to_method(),
+            }),
         }
     }
 }

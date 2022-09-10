@@ -1,4 +1,4 @@
-use proc_macro2::{token_stream::IntoIter, Ident, TokenStream, TokenTree};
+use proc_macro2::{token_stream::IntoIter, Delimiter, Ident, TokenStream, TokenTree};
 use quote::quote;
 
 use crate::enum_keyword::Keyword;
@@ -11,7 +11,14 @@ const DELETE: &str = "Delete";
 
 #[derive(Debug)]
 pub enum MethodVariant {
-    Method { ident: Ident, method: TokenStream },
+    Method {
+        ident: Ident,
+        method: TokenStream,
+    },
+    Parent {
+        parent_ident: Ident,
+        child_ident: Ident,
+    },
 }
 
 impl MethodVariant {
@@ -23,30 +30,62 @@ impl MethodVariant {
         //  MethodVariant,
         //  ^^^^^^^^^^^^^
         if let TokenTree::Ident(variant_ident) = token_tree.next()? {
-            let method = match variant_ident.to_string().as_str() {
-                GET_ONE | GET_LS => {
-                    quote! {GET}
+            match token_tree.next()? {
+                //  MethodVariant,
+                //               ^
+                TokenTree::Punct(punct) => {
+                    if punct.as_char() == ',' {
+                        let method = match variant_ident.to_string().as_str() {
+                            GET_ONE | GET_LS => {
+                                quote! {GET}
+                            },
+                            POST => {
+                                quote! {POST}
+                            },
+                            PUT => {
+                                quote! {PUT}
+                            },
+                            DELETE => {
+                                quote! {DELETE}
+                            },
+                            _ => return None,
+                        };
+
+                        return Some(MethodVariant::Method {
+                            ident: variant_ident,
+                            method,
+                        });
+                    }
                 },
-                POST => {
-                    quote! {POST}
+                //  ResourceVariant(MethodEnum),
+                //                 ^          ^
+                TokenTree::Group(paren_group) => {
+                    if let Delimiter::Parenthesis = paren_group.delimiter() {
+                    } else {
+                        return None;
+                    }
+
+                    //  ResourceVariant(MethodEnum),
+                    //                  ^^^^^^^^^^
+                    let mut paren_token_tree = paren_group.stream().into_iter();
+                    let child_ident = if let TokenTree::Ident(ident) = paren_token_tree.next()? {
+                        ident
+                    } else {
+                        return None;
+                    };
+
+                    //  ResourceVariant(MethodEnum),
+                    //                            ^^
+                    if let TokenTree::Punct(punct) = token_tree.next()? {
+                        if paren_token_tree.next().is_none() && punct.as_char() == ',' {
+                            return Some(MethodVariant::Parent {
+                                parent_ident: variant_ident,
+                                child_ident,
+                            });
+                        }
+                    }
                 },
-                PUT => {
-                    quote! {PUT}
-                },
-                DELETE => {
-                    quote! {DELETE}
-                },
-                _ => return None,
-            };
-            //  MethodVariant,
-            //               ^
-            if let TokenTree::Punct(comma_punct) = token_tree.next()? {
-                if comma_punct.as_char() == ',' {
-                    return Some(MethodVariant::Method {
-                        ident: variant_ident,
-                        method,
-                    });
-                }
+                _ => {},
             }
         }
         None
