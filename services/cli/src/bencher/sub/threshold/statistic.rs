@@ -4,7 +4,7 @@ use bencher_json::threshold::{JsonNewStatistic, JsonStatisticKind};
 
 use crate::{
     cli::threshold::{CliStatisticCreate, CliStatisticKind},
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -17,7 +17,7 @@ pub struct Statistic {
 }
 
 impl TryFrom<CliStatisticCreate> for Statistic {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(create: CliStatisticCreate) -> Result<Self, Self::Error> {
         let CliStatisticCreate {

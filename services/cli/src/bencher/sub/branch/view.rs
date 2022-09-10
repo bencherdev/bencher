@@ -6,7 +6,7 @@ use bencher_json::ResourceId;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::branch::CliBranchView,
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug)]
@@ -17,7 +17,7 @@ pub struct View {
 }
 
 impl TryFrom<CliBranchView> for View {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(view: CliBranchView) -> Result<Self, Self::Error> {
         let CliBranchView {
@@ -35,7 +35,7 @@ impl TryFrom<CliBranchView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         self.backend
             .get(&format!(
                 "/v0/projects/{}/branches/{}",

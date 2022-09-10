@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
     cli::project::CliProject,
-    BencherError,
+    CliError,
 };
 
 mod create;
@@ -20,7 +20,7 @@ pub enum Project {
 }
 
 impl TryFrom<CliProject> for Project {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(project: CliProject) -> Result<Self, Self::Error> {
         Ok(match project {
@@ -33,7 +33,7 @@ impl TryFrom<CliProject> for Project {
 
 #[async_trait]
 impl SubCmd for Project {
-    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::Create(create) => create.exec(wide).await,
             Self::List(list) => list.exec(wide).await,

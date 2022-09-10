@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use crate::{cli::run::CliRunCommand, BencherError};
+use crate::{cli::run::CliRunCommand, CliError};
 
 mod command;
 mod flag;
@@ -19,7 +19,7 @@ pub enum Perf {
 }
 
 impl TryFrom<CliRunCommand> for Perf {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
         Ok(if let Some(cmd) = command.cmd {
@@ -27,7 +27,7 @@ impl TryFrom<CliRunCommand> for Perf {
         } else {
             let input = Input::new()?;
             if input.is_empty() {
-                return Err(BencherError::NoPerf);
+                return Err(CliError::NoPerf);
             }
             Self::Input(input)
         })
@@ -35,7 +35,7 @@ impl TryFrom<CliRunCommand> for Perf {
 }
 
 impl Perf {
-    pub fn run(&self) -> Result<Output, BencherError> {
+    pub fn run(&self) -> Result<Output, CliError> {
         let result = match self {
             Self::Input(input) => input.to_string(),
             Self::Command(command) => command.try_into()?,

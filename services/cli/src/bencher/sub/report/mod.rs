@@ -4,7 +4,7 @@ use super::Run as Create;
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
     cli::report::CliReport,
-    BencherError,
+    CliError,
 };
 
 mod list;
@@ -18,7 +18,7 @@ pub enum Report {
 }
 
 impl TryFrom<CliReport> for Report {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(report: CliReport) -> Result<Self, Self::Error> {
         Ok(match report {
@@ -31,7 +31,7 @@ impl TryFrom<CliReport> for Report {
 
 #[async_trait]
 impl SubCmd for Report {
-    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::List(list) => list.exec(wide).await,
             Self::Create(create) => create.exec(wide).await,

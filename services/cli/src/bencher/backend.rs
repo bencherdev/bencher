@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use serde::Serialize;
 use url::Url;
 
-use crate::{cli::CliBackend, BencherError};
+use crate::{cli::CliBackend, CliError};
 
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 pub const BENCHER_URL: &str = "BENCHER_URL";
@@ -17,7 +17,7 @@ pub struct Backend {
 }
 
 impl TryFrom<CliBackend> for Backend {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -27,14 +27,14 @@ impl TryFrom<CliBackend> for Backend {
     }
 }
 
-fn map_token(token: Option<String>) -> Result<Option<String>, BencherError> {
+fn map_token(token: Option<String>) -> Result<Option<String>, CliError> {
     // TODO add first pass token validation
     if let Some(token) = token {
         Ok(Some(token))
     } else if let Ok(token) = std::env::var(BENCHER_API_TOKEN) {
         Ok(Some(token))
     } else {
-        Err(BencherError::TokenNotFound)
+        Err(CliError::TokenNotFound)
     }
 }
 
@@ -52,18 +52,18 @@ fn unwrap_host(host: Option<String>) -> Result<Url, url::ParseError> {
 }
 
 impl Backend {
-    pub fn new(token: Option<String>, host: Option<String>) -> Result<Self, BencherError> {
+    pub fn new(token: Option<String>, host: Option<String>) -> Result<Self, CliError> {
         Ok(Self {
             token,
             host: unwrap_host(host)?,
         })
     }
 
-    pub async fn get(&self, path: &str) -> Result<serde_json::Value, BencherError> {
+    pub async fn get(&self, path: &str) -> Result<serde_json::Value, CliError> {
         self.send::<()>(Method::Get, path).await
     }
 
-    pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
+    pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
@@ -71,18 +71,14 @@ impl Backend {
     }
 
     #[allow(dead_code)]
-    pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, BencherError>
+    pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
         self.send(Method::Put(json), path).await
     }
 
-    async fn send<T>(
-        &self,
-        method: Method<&T>,
-        path: &str,
-    ) -> Result<serde_json::Value, BencherError>
+    async fn send<T>(&self, method: Method<&T>, path: &str) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 
-use crate::{bencher::wide::Wide, cli::CliSub, BencherError};
+use crate::{bencher::wide::Wide, cli::CliSub, CliError};
 
 mod auth;
 mod benchmark;
@@ -43,7 +43,7 @@ pub enum Sub {
 }
 
 impl TryFrom<CliSub> for Sub {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
@@ -61,7 +61,7 @@ impl TryFrom<CliSub> for Sub {
     }
 }
 
-pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, BencherError> {
+pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, CliError> {
     if let Some(sub) = sub {
         Ok(Some(sub.try_into()?))
     } else {
@@ -71,7 +71,7 @@ pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, BencherError> {
 
 #[async_trait]
 impl SubCmd for Sub {
-    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::Auth(auth) => auth.exec(wide).await,
             Self::Project(project) => project.exec(wide).await,

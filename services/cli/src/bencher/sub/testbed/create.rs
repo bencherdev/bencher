@@ -6,7 +6,7 @@ use bencher_json::{JsonNewTestbed, ResourceId};
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::testbed::CliTestbedCreate,
-    BencherError,
+    CliError,
 };
 
 const TESTBEDS_PATH: &str = "/v0/testbeds";
@@ -27,7 +27,7 @@ pub struct Create {
 }
 
 impl TryFrom<CliTestbedCreate> for Create {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(create: CliTestbedCreate) -> Result<Self, Self::Error> {
         let CliTestbedCreate {
@@ -91,7 +91,7 @@ impl From<Create> for JsonNewTestbed {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let testbed: JsonNewTestbed = self.clone().into();
         self.backend.post(TESTBEDS_PATH, &testbed).await?;
         Ok(())

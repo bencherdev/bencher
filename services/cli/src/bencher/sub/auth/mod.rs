@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
     cli::auth::CliAuth,
-    BencherError,
+    CliError,
 };
 
 mod confirm;
@@ -22,7 +22,7 @@ pub enum Auth {
 }
 
 impl TryFrom<CliAuth> for Auth {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(auth: CliAuth) -> Result<Self, Self::Error> {
         Ok(match auth {
@@ -35,7 +35,7 @@ impl TryFrom<CliAuth> for Auth {
 
 #[async_trait]
 impl SubCmd for Auth {
-    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::Signup(signup) => signup.exec(wide).await,
             Self::Login(login) => login.exec(wide).await,

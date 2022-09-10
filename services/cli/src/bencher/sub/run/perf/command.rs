@@ -1,7 +1,7 @@
 use std::convert::{TryFrom, TryInto};
 
 use super::{flag::Flag, shell::Shell};
-use crate::{cli::run::CliRunShell, BencherError};
+use crate::{cli::run::CliRunShell, CliError};
 
 #[derive(Debug)]
 pub struct Command {
@@ -11,7 +11,7 @@ pub struct Command {
 }
 
 impl TryFrom<(CliRunShell, String)> for Command {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(shell_cmd: (CliRunShell, String)) -> Result<Self, Self::Error> {
         let (shell, cmd) = shell_cmd;
@@ -24,7 +24,7 @@ impl TryFrom<(CliRunShell, String)> for Command {
 }
 
 impl TryInto<String> for &Command {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_into(self) -> Result<String, Self::Error> {
         let output = std::process::Command::new(self.shell.to_string())

@@ -6,7 +6,7 @@ use bencher_json::{JsonNewToken, ResourceId};
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::token::CliTokenCreate,
-    BencherError,
+    CliError,
 };
 
 const BRANCHES_PATH: &str = "/v0/tokens";
@@ -20,7 +20,7 @@ pub struct Create {
 }
 
 impl TryFrom<CliTokenCreate> for Create {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(create: CliTokenCreate) -> Result<Self, Self::Error> {
         let CliTokenCreate {
@@ -52,7 +52,7 @@ impl From<Create> for JsonNewToken {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let token: JsonNewToken = self.clone().into();
         self.backend.post(BRANCHES_PATH, &token).await?;
         Ok(())

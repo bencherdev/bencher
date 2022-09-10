@@ -14,9 +14,9 @@ use nom::{
     IResult,
 };
 
-use crate::{bencher::sub::run::perf::Output, BencherError};
+use crate::{bencher::sub::run::perf::Output, CliError};
 
-pub fn parse(output: &Output) -> Result<JsonBenchmarksMap, BencherError> {
+pub fn parse(output: &Output) -> Result<JsonBenchmarksMap, CliError> {
     let (_, report) = parse_stdout(output.as_str()).unwrap();
     Ok(report)
 }

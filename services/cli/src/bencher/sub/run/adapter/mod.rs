@@ -1,7 +1,7 @@
 use bencher_json::report::{new::JsonBenchmarksMap, JsonAdapter};
 use smart_default::SmartDefault;
 
-use crate::{bencher::sub::run::perf::Output, cli::run::CliRunAdapter, BencherError};
+use crate::{bencher::sub::run::perf::Output, cli::run::CliRunAdapter, CliError};
 
 pub mod json;
 pub mod rust;
@@ -35,7 +35,7 @@ impl From<Adapter> for JsonAdapter {
 }
 
 impl Adapter {
-    pub fn convert(&self, output: &Output) -> Result<JsonBenchmarksMap, BencherError> {
+    pub fn convert(&self, output: &Output) -> Result<JsonBenchmarksMap, CliError> {
         match &self {
             Self::Json => json::parse(output),
             Self::RustTest => {

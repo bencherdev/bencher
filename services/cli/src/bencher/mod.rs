@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use clap::Parser;
 
-use crate::{cli::CliBencher, BencherError};
+use crate::{cli::CliBencher, CliError};
 
 pub mod backend;
 pub mod locality;
@@ -19,7 +19,7 @@ pub struct Bencher {
 }
 
 impl TryFrom<CliBencher> for Bencher {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -30,11 +30,11 @@ impl TryFrom<CliBencher> for Bencher {
 }
 
 impl Bencher {
-    pub fn new() -> Result<Self, BencherError> {
+    pub fn new() -> Result<Self, CliError> {
         CliBencher::parse().try_into()
     }
 
-    pub async fn exec(&self) -> Result<(), BencherError> {
+    pub async fn exec(&self) -> Result<(), CliError> {
         if let Some(sub) = &self.sub {
             sub.exec(&self.wide).await
         } else {
@@ -43,7 +43,7 @@ impl Bencher {
     }
 
     // TODO actually implement this ping / check auth endpoint
-    pub async fn ping(&self) -> Result<(), BencherError> {
+    pub async fn ping(&self) -> Result<(), CliError> {
         Ok(())
     }
 }

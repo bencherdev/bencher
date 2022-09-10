@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{bencher::backend::Backend, cli::CliLocality, BencherError};
+use crate::{bencher::backend::Backend, cli::CliLocality, CliError};
 
 #[derive(Debug)]
 pub enum Locality {
@@ -9,7 +9,7 @@ pub enum Locality {
 }
 
 impl TryFrom<CliLocality> for Locality {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(locality: CliLocality) -> Result<Self, Self::Error> {
         Ok(if locality.local {

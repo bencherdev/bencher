@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     bencher::{backend::Backend, wide::Wide},
     cli::perf::CliPerf,
-    BencherError,
+    CliError,
 };
 
 pub mod kind;
@@ -31,7 +31,7 @@ pub struct Perf {
 }
 
 impl TryFrom<CliPerf> for Perf {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(perf: CliPerf) -> Result<Self, Self::Error> {
         let CliPerf {
@@ -79,7 +79,7 @@ impl From<Perf> for JsonPerfQuery {
 
 #[async_trait]
 impl SubCmd for Perf {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
         self.backend.post(PERF_PATH, &perf).await?;
         Ok(())

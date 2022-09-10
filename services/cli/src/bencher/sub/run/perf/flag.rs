@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt};
 
-use crate::BencherError;
+use crate::CliError;
 
 const UNIX_FLAG: &str = "-c";
 const WINDOWS_FLAG: &str = "/C";
@@ -13,7 +13,7 @@ pub enum Flag {
 }
 
 impl TryFrom<Option<String>> for Flag {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(shell: Option<String>) -> Result<Self, Self::Error> {
         Ok(if let Some(shell) = shell {
@@ -23,7 +23,7 @@ impl TryFrom<Option<String>> for Flag {
         } else if cfg!(target_family = "windows") {
             Self::Windows
         } else {
-            return Err(BencherError::Flag);
+            return Err(CliError::Flag);
         })
     }
 }

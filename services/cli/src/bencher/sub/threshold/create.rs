@@ -12,7 +12,7 @@ use crate::{
         wide::Wide,
     },
     cli::threshold::CliThresholdCreate,
-    BencherError,
+    CliError,
 };
 
 const THRESHOLDS_PATH: &str = "/v0/thresholds";
@@ -27,7 +27,7 @@ pub struct Create {
 }
 
 impl TryFrom<CliThresholdCreate> for Create {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(create: CliThresholdCreate) -> Result<Self, Self::Error> {
         let CliThresholdCreate {
@@ -67,7 +67,7 @@ impl From<Create> for JsonNewThreshold {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let threshold: JsonNewThreshold = self.clone().into();
         self.backend.post(THRESHOLDS_PATH, &threshold).await?;
         Ok(())

@@ -8,7 +8,7 @@ use super::PROJECTS_PATH;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectCreate,
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug, Clone)]
@@ -23,7 +23,7 @@ pub struct Create {
 }
 
 impl TryFrom<CliProjectCreate> for Create {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(create: CliProjectCreate) -> Result<Self, Self::Error> {
         let CliProjectCreate {
@@ -79,7 +79,7 @@ impl From<Create> for JsonNewProject {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let project: JsonNewProject = self.clone().into();
         self.backend.post(PROJECTS_PATH, &project).await?;
         Ok(())

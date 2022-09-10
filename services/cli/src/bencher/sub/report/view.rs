@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::report::CliReportView,
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub struct View {
 }
 
 impl TryFrom<CliReportView> for View {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(view: CliReportView) -> Result<Self, Self::Error> {
         let CliReportView {
@@ -36,7 +36,7 @@ impl TryFrom<CliReportView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         self.backend
             .get(&format!(
                 "/v0/projects/{}/reports/{}",

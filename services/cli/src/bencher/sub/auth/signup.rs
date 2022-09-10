@@ -6,7 +6,7 @@ use bencher_json::{JsonEmpty, JsonSignup};
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::auth::CliAuthSignup,
-    BencherError,
+    CliError,
 };
 
 const SIGNUP_PATH: &str = "/v0/auth/signup";
@@ -21,7 +21,7 @@ pub struct Signup {
 }
 
 impl TryFrom<CliAuthSignup> for Signup {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(signup: CliAuthSignup) -> Result<Self, Self::Error> {
         let CliAuthSignup {
@@ -62,7 +62,7 @@ impl From<Signup> for JsonSignup {
 
 #[async_trait]
 impl SubCmd for Signup {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let json_signup: JsonSignup = self.clone().into();
         let res = self.backend.post(SIGNUP_PATH, &json_signup).await?;
         let _: JsonEmpty = serde_json::from_value(res)?;

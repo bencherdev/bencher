@@ -7,7 +7,7 @@ use super::PROJECTS_PATH;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectView,
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug)]
@@ -17,7 +17,7 @@ pub struct View {
 }
 
 impl TryFrom<CliProjectView> for View {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(view: CliProjectView) -> Result<Self, Self::Error> {
         let CliProjectView { project, backend } = view;
@@ -30,7 +30,7 @@ impl TryFrom<CliProjectView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let path = Path::new(PROJECTS_PATH);
         let path = path.join(self.project.as_str());
         self.backend

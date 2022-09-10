@@ -6,7 +6,7 @@ use super::PROJECTS_PATH;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectList,
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug)]
@@ -15,7 +15,7 @@ pub struct List {
 }
 
 impl TryFrom<CliProjectList> for List {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(list: CliProjectList) -> Result<Self, Self::Error> {
         let CliProjectList { backend } = list;
@@ -27,7 +27,7 @@ impl TryFrom<CliProjectList> for List {
 
 #[async_trait]
 impl SubCmd for List {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         self.backend.get(PROJECTS_PATH).await?;
         Ok(())
     }

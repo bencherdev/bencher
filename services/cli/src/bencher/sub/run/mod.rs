@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     bencher::{locality::Locality, wide::Wide},
     cli::run::{CliRun, CliRunAdapter, CliRunFold},
-    BencherError,
+    CliError,
 };
 
 mod adapter;
@@ -38,7 +38,7 @@ pub struct Run {
 }
 
 impl TryFrom<CliRun> for Run {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         let CliRun {
@@ -66,17 +66,17 @@ impl TryFrom<CliRun> for Run {
     }
 }
 
-fn unwrap_branch(branch: Option<Uuid>) -> Result<Uuid, BencherError> {
+fn unwrap_branch(branch: Option<Uuid>) -> Result<Uuid, CliError> {
     Ok(if let Some(branch) = branch {
         branch
     } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
         Uuid::from_str(&branch)?
     } else {
-        return Err(BencherError::BranchNotFound);
+        return Err(CliError::BranchNotFound);
     })
 }
 
-fn map_hash(hash: Option<String>) -> Result<Option<Oid>, BencherError> {
+fn map_hash(hash: Option<String>) -> Result<Option<Oid>, CliError> {
     Ok(if let Some(hash) = hash {
         Some(Oid::from_str(&hash)?)
     } else {
@@ -84,13 +84,13 @@ fn map_hash(hash: Option<String>) -> Result<Option<Oid>, BencherError> {
     })
 }
 
-fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, BencherError> {
+fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, CliError> {
     Ok(if let Some(testbed) = testbed {
         testbed
     } else if let Ok(testbed) = std::env::var(BENCHER_TESTBED) {
         Uuid::from_str(&testbed)?
     } else {
-        return Err(BencherError::TestbedNotFound);
+        return Err(CliError::TestbedNotFound);
     })
 }
 
@@ -100,7 +100,7 @@ fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
 
 #[async_trait]
 impl SubCmd for Run {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let start_time = Utc::now();
 
         let mut benchmarks = Vec::with_capacity(self.iter);
@@ -132,7 +132,7 @@ impl SubCmd for Run {
                 if self.err {
                     let json_report: JsonReport = serde_json::from_value(value)?;
                     if !json_report.alerts.is_empty() {
-                        return Err(BencherError::Alerts);
+                        return Err(CliError::Alerts);
                     }
                 }
             },

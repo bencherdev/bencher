@@ -1,12 +1,12 @@
 use std::io::BufRead;
 
-use crate::BencherError;
+use crate::CliError;
 
 #[derive(Debug)]
 pub struct Input(String);
 
 impl Input {
-    pub fn new() -> Result<Self, BencherError> {
+    pub fn new() -> Result<Self, CliError> {
         let mut stdin_buf = String::new();
         let stdin = std::io::stdin();
         let mut handle = stdin.lock();

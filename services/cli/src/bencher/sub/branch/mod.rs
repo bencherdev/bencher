@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
     cli::branch::CliBranch,
-    BencherError,
+    CliError,
 };
 
 mod create;
@@ -18,7 +18,7 @@ pub enum Branch {
 }
 
 impl TryFrom<CliBranch> for Branch {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(branch: CliBranch) -> Result<Self, Self::Error> {
         Ok(match branch {
@@ -31,7 +31,7 @@ impl TryFrom<CliBranch> for Branch {
 
 #[async_trait]
 impl SubCmd for Branch {
-    async fn exec(&self, wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::List(list) => list.exec(wide).await,
             Self::Create(create) => create.exec(wide).await,

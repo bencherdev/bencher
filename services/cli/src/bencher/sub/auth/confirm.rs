@@ -6,7 +6,7 @@ use bencher_json::{auth::JsonConfirm, JsonAuthToken};
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::auth::CliAuthConfirm,
-    BencherError,
+    CliError,
 };
 
 const CONFIRM_PATH: &str = "/v0/auth/confirm";
@@ -18,7 +18,7 @@ pub struct Confirm {
 }
 
 impl TryFrom<CliAuthConfirm> for Confirm {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
         let CliAuthConfirm { token, host } = confirm;
@@ -29,7 +29,7 @@ impl TryFrom<CliAuthConfirm> for Confirm {
 
 #[async_trait]
 impl SubCmd for Confirm {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let json_token: JsonAuthToken = self.token.clone().into();
         let res = self.backend.post(CONFIRM_PATH, &json_token).await?;
         let _: JsonConfirm = serde_json::from_value(res)?;

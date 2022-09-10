@@ -6,7 +6,7 @@ use bencher_json::ResourceId;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::branch::CliBranchList,
-    BencherError,
+    CliError,
 };
 
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub struct List {
 }
 
 impl TryFrom<CliBranchList> for List {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(list: CliBranchList) -> Result<Self, Self::Error> {
         let CliBranchList { project, backend } = list;
@@ -29,7 +29,7 @@ impl TryFrom<CliBranchList> for List {
 
 #[async_trait]
 impl SubCmd for List {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         self.backend
             .get(&format!("/v0/projects/{}/branches", self.project))
             .await?;

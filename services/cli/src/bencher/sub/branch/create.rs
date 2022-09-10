@@ -6,7 +6,7 @@ use bencher_json::{JsonNewBranch, ResourceId};
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::branch::CliBranchCreate,
-    BencherError,
+    CliError,
 };
 
 const BRANCHES_PATH: &str = "/v0/branches";
@@ -20,7 +20,7 @@ pub struct Create {
 }
 
 impl TryFrom<CliBranchCreate> for Create {
-    type Error = BencherError;
+    type Error = CliError;
 
     fn try_from(create: CliBranchCreate) -> Result<Self, Self::Error> {
         let CliBranchCreate {
@@ -56,7 +56,7 @@ impl From<Create> for JsonNewBranch {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), BencherError> {
+    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let branch: JsonNewBranch = self.clone().into();
         self.backend.post(BRANCHES_PATH, &branch).await?;
         Ok(())
