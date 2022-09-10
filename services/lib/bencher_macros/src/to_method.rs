@@ -18,9 +18,11 @@ pub fn impl_to_method(name_ident: &Ident, method_variants: &Vec<MethodVariant>) 
 }
 
 fn match_arms(method_variants: &Vec<MethodVariant>, tokens: &mut TokenStream) {
-    for MethodVariant(variant_ident, method) in method_variants {
-        tokens.extend(quote! {
-            Self::#variant_ident => http::Method::#method,
-        })
+    for method_variants in method_variants {
+        match method_variants {
+            MethodVariant::Method { ident, method } => tokens.extend(quote! {
+                Self::#ident => http::Method::#method,
+            }),
+        }
     }
 }

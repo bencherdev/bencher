@@ -10,11 +10,16 @@ const PUT: &str = "Put";
 const DELETE: &str = "Delete";
 
 #[derive(Debug)]
-pub struct MethodVariant(pub Ident, pub TokenStream);
+pub enum MethodVariant {
+    Method { ident: Ident, method: TokenStream },
+}
 
 impl MethodVariant {
+    //  ResourceVariant(MethodEnum),
     //  MethodVariant,
     fn new(token_tree: &mut IntoIter) -> Option<MethodVariant> {
+        //  ResourceVariant(MethodEnum),
+        //  ^^^^^^^^^^^^^^^
         //  MethodVariant,
         //  ^^^^^^^^^^^^^
         if let TokenTree::Ident(variant_ident) = token_tree.next()? {
@@ -37,7 +42,10 @@ impl MethodVariant {
             //               ^
             if let TokenTree::Punct(comma_punct) = token_tree.next()? {
                 if comma_punct.as_char() == ',' {
-                    return Some(MethodVariant(variant_ident, method));
+                    return Some(MethodVariant::Method {
+                        ident: variant_ident,
+                        method,
+                    });
                 }
             }
         }
