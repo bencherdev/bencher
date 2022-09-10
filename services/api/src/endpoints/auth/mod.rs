@@ -6,7 +6,7 @@ pub mod login;
 pub mod signup;
 
 #[derive(Debug, Display, Clone, Copy)]
-pub enum Endpoint {
+pub enum Resource {
     Confirm,
     Invite,
     Login,

@@ -1,7 +1,7 @@
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::Endpoint;
+use crate::{Endpoint, WordStr};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -33,16 +33,16 @@ pub enum ApiError {
     #[error("{0}")]
     IntoEndpoint(Endpoint),
 
-    #[error("")]
-    GetOne,
-    #[error("")]
-    GetLs,
-    #[error("")]
-    Post,
-    #[error("")]
-    Put,
-    #[error("")]
-    Delete,
+    #[error("Failed to GET {}", _0.singular())]
+    GetOne(Endpoint),
+    #[error("Failed to GET {}", _0.plural())]
+    GetLs(Endpoint),
+    #[error("Failed to POST {}", _0.singular())]
+    Post(Endpoint),
+    #[error("Failed to PUT {}", _0.singular())]
+    Put(Endpoint),
+    #[error("Failed to DELETE {}", _0.singular())]
+    Delete(Endpoint),
 }
 
 impl From<ApiError> for HttpError {
