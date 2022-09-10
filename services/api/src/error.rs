@@ -17,6 +17,13 @@ pub enum ApiError {
     #[error("Shutting down server: {0}")]
     RunServer(String),
 
+    #[cfg(feature = "swagger")]
+    #[error("Failed to create swagger file: {0}")]
+    CreateSwaggerFile(std::io::Error),
+    #[cfg(feature = "swagger")]
+    #[error("Failed to create swagger file: {0}")]
+    WriteSwaggerFile(serde_json::Error),
+
     #[error("{0}")]
     Endpoint(String),
 }

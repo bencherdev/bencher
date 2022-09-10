@@ -29,12 +29,10 @@ async fn run() -> Result<(), ApiError> {
     const SWAGGER_PATH: &str = "../ui/src/components/docs/api/swagger.json";
 
     trace!("Generating Swagger JSON file at: {SWAGGER_PATH}");
-    let mut db_connection =
-        get_db_connection().map_err(|e| format!("Failed to get database connection: {e}"))?;
+    let mut db_connection = get_db_connection()?;
     let mut api_description = ApiDescription::new();
     Api::register(&mut api_description)?;
-    let mut swagger_file = File::create(SWAGGER_PATH)
-        .map_err(|e| format!("Failed to create Swagger JSON file: {e}"))?;
+    let mut swagger_file = File::create(SWAGGER_PATH).map_err(ApiError::CreateSwaggerFile)?;
 
     trace!("Creating API description");
     api_description.tag_config(TagConfig {
@@ -52,7 +50,7 @@ async fn run() -> Result<(), ApiError> {
     }})
         .openapi(API_NAME, API_VERSION)
         .write(&mut swagger_file)
-        .map_err(|e| e.to_string())?;
+        .map_err(ApiError::WriteSwaggerFile)?;
 
     Ok(())
 }

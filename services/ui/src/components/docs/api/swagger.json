@@ -5,6 +5,188 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/v0/auth/confirm": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonAuthToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonConfirm"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/auth/invite": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEmpty"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/auth/login": {
       "post": {
         "tags": [
@@ -57,7 +239,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonUser"
+                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -148,7 +330,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonUser"
+                  "$ref": "#/components/schemas/JsonEmpty"
                 }
               }
             }
@@ -2116,6 +2298,331 @@
           }
         }
       }
+    },
+    "/v0/tokens": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "operationId": "post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonToken"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "tokens"
+        ],
+        "operationId": "post_options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/users/{user}/tokens": {
+      "get": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "operationId": "get_ls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_JsonToken",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JsonToken"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "operationId": "dir_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/users/{user}/tokens/{token}": {
+      "get": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonToken"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2155,7 +2662,19 @@
         "type": "string",
         "enum": [
           "json",
-          "rust"
+          "rust_test",
+          "rust_bench"
+        ]
+      },
+      "JsonAuthToken": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/JsonWebToken"
+          }
+        },
+        "required": [
+          "token"
         ]
       },
       "JsonBenchmark": {
@@ -2207,6 +2726,44 @@
           "uuid"
         ]
       },
+      "JsonConfirm": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/JsonWebToken"
+          },
+          "user": {
+            "$ref": "#/components/schemas/JsonUser"
+          }
+        },
+        "required": [
+          "token",
+          "user"
+        ]
+      },
+      "JsonEmpty": {
+        "type": "object"
+      },
+      "JsonInvite": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "email",
+          "organization",
+          "role"
+        ]
+      },
       "JsonLatency": {
         "type": "object",
         "properties": {
@@ -2237,6 +2794,14 @@
         "properties": {
           "email": {
             "type": "string"
+          },
+          "invite": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonWebToken"
+              }
+            ]
           }
         },
         "required": [
@@ -2288,28 +2853,6 @@
           }
         }
       },
-      "JsonResource": {
-        "type": "object",
-        "properties": {
-          "avg": {
-            "type": "number",
-            "format": "double"
-          },
-          "max": {
-            "type": "number",
-            "format": "double"
-          },
-          "min": {
-            "type": "number",
-            "format": "double"
-          }
-        },
-        "required": [
-          "avg",
-          "max",
-          "min"
-        ]
-      },
       "JsonNewBranch": {
         "type": "object",
         "properties": {
@@ -2339,6 +2882,9 @@
           "name": {
             "type": "string"
           },
+          "organization": {
+            "$ref": "#/components/schemas/ResourceId"
+          },
           "public": {
             "type": "boolean"
           },
@@ -2354,6 +2900,7 @@
         },
         "required": [
           "name",
+          "organization",
           "public"
         ]
       },
@@ -2502,6 +3049,27 @@
           "kind",
           "statistic",
           "testbed"
+        ]
+      },
+      "JsonNewToken": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ttl": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "user": {
+            "$ref": "#/components/schemas/ResourceId"
+          }
+        },
+        "required": [
+          "name",
+          "ttl",
+          "user"
         ]
       },
       "JsonPerf": {
@@ -2687,7 +3255,7 @@
           "name": {
             "type": "string"
           },
-          "owner_uuid": {
+          "organization": {
             "type": "string",
             "format": "uuid"
           },
@@ -2709,7 +3277,7 @@
         },
         "required": [
           "name",
-          "owner_uuid",
+          "organization",
           "public",
           "slug",
           "uuid"
@@ -2778,11 +3346,41 @@
         "type": "string",
         "format": "uuid"
       },
+      "JsonResource": {
+        "type": "object",
+        "properties": {
+          "avg": {
+            "type": "number",
+            "format": "double"
+          },
+          "max": {
+            "type": "number",
+            "format": "double"
+          },
+          "min": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "avg",
+          "max",
+          "min"
+        ]
+      },
       "JsonSignup": {
         "type": "object",
         "properties": {
           "email": {
             "type": "string"
+          },
+          "invite": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonWebToken"
+              }
+            ]
           },
           "name": {
             "type": "string"
@@ -2916,11 +3514,52 @@
           "upper_variance"
         ]
       },
+      "JsonToken": {
+        "type": "object",
+        "properties": {
+          "creation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiration": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "creation",
+          "expiration",
+          "name",
+          "token",
+          "user",
+          "uuid"
+        ]
+      },
       "JsonUser": {
         "type": "object",
         "properties": {
+          "admin": {
+            "type": "boolean"
+          },
           "email": {
             "type": "string"
+          },
+          "locked": {
+            "type": "boolean"
           },
           "name": {
             "type": "string"
@@ -2934,14 +3573,26 @@
           }
         },
         "required": [
+          "admin",
           "email",
+          "locked",
           "name",
           "slug",
           "uuid"
         ]
       },
+      "JsonWebToken": {
+        "type": "string"
+      },
       "ResourceId": {
         "type": "string"
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "member",
+          "leader"
+        ]
       }
     }
   },
@@ -2980,6 +3631,12 @@
     {
       "name": "thresholds",
       "description": "Thresholds"
+    },
+    {
+      "name": "tokens"
+    },
+    {
+      "name": "users"
     }
   ]
 }
