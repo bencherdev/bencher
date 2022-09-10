@@ -2,7 +2,7 @@
 extern crate diesel;
 
 use derive_more::Display;
-use std::fmt;
+use endpoints::ping::PingMethod;
 
 pub mod endpoints;
 pub mod error;
@@ -26,31 +26,6 @@ pub enum Endpoint {
     User(UserEndpoint),
     Org(OrgEndpoint),
     Ping(PingMethod),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PingMethod {
-    Get,
-}
-
-impl IntoEndpoint for PingMethod {
-    fn into_endpoint(self) -> Endpoint {
-        Endpoint::Ping(self)
-    }
-}
-
-impl ToMethod for PingMethod {
-    fn to_method(&self) -> http::Method {
-        match self {
-            Self::Get => http::Method::GET,
-        }
-    }
-}
-
-impl fmt::Display for PingMethod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_method())
-    }
 }
 
 #[derive(Debug, Display, Clone, Copy)]

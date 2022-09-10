@@ -10,11 +10,11 @@ pub enum ApiError {
     DotEnv(#[from] dotenvy::Error),
     #[error("Failed to create database connection")]
     Connection(#[from] diesel::result::ConnectionError),
-    #[error("Failed to run database migrations")]
+    #[error("Failed to run database migrations: {0}")]
     Migrations(Box<dyn std::error::Error + Send + Sync>),
-    #[error("Failed to create server logger")]
+    #[error("Failed to create server logger: {0}")]
     CreateLogger(std::io::Error),
-    #[error("Failed to create server")]
+    #[error("Failed to create server: {0}")]
     CreateServer(Box<dyn std::error::Error + Send + Sync>),
     #[error("Shutting down server: {0}")]
     RunServer(String),
@@ -29,6 +29,6 @@ pub enum ApiError {
     #[error("{0}")]
     Endpoint(String),
     // TODO impl display
-    #[error("{0:?}")]
+    #[error("{0}")]
     IntoEndpoint(Endpoint),
 }
