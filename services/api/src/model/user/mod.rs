@@ -187,9 +187,9 @@ impl QueryUser {
     }
 
     pub fn has_access(
-        conn: &mut SqliteConnection,
-        user_id: i32,
-        project_id: i32,
+        _conn: &mut SqliteConnection,
+        _user_id: i32,
+        _project_id: i32,
     ) -> Result<(), HttpError> {
         // TODO check with `bencher_rbac`
         // schema::project::table
