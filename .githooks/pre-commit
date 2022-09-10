@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Format code
+cargo fmt
+
+# If there was a change/the git tree is diry add all updated files and commit
+git diff --quiet || git add .
