@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::Endpoint;
+
 #[derive(Debug, Error)]
 pub enum ApiError {
     #[error("Failed to set global default logger")]
@@ -26,4 +28,7 @@ pub enum ApiError {
 
     #[error("{0}")]
     Endpoint(String),
+    // TODO impl display
+    #[error("{0:?}")]
+    IntoEndpoint(Endpoint),
 }
