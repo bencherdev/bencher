@@ -4,7 +4,6 @@ FROM rust:1.63.0-bullseye as builder
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_json bencher_json
-COPY lib/bencher_macros bencher_macros
 COPY lib/bencher_rbac bencher_rbac
 
 WORKDIR /usr/src/api

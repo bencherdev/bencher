@@ -1,7 +1,7 @@
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::{Endpoint, WordStr};
+use crate::endpoints::Endpoint;
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -17,6 +17,8 @@ pub enum ApiError {
     CreateLogger(std::io::Error),
     #[error("Failed to create server: {0}")]
     CreateServer(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Failed to register endpoint: {0}")]
+    Register(String),
     #[error("Shutting down server: {0}")]
     RunServer(String),
 
@@ -26,12 +28,6 @@ pub enum ApiError {
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]
     WriteSwaggerFile(serde_json::Error),
-
-    #[error("{0}")]
-    Endpoint(String),
-    // TODO impl display
-    #[error("")]
-    IntoEndpoint(Endpoint),
 
     #[error("Failed to GET {}", _0.singular())]
     GetOne(Endpoint),
@@ -52,4 +48,9 @@ impl From<ApiError> for HttpError {
             error.to_string(),
         )
     }
+}
+
+pub trait WordStr {
+    fn singular(&self) -> &str;
+    fn plural(&self) -> &str;
 }

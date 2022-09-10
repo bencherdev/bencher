@@ -121,7 +121,6 @@ name = "bencher_api"
 version = "0.1.0"
 dependencies = [
  "bencher_json",
- "bencher_macros",
  "bencher_rbac",
  "chrono",
  "derive_more",

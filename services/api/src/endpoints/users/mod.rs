@@ -1,13 +1,13 @@
 pub mod tokens;
 
-use crate::{util::endpoint::into_endpoint, WordStr};
+use derive_more::Display;
 
-#[derive(Debug, Clone, Copy)]
+use crate::WordStr;
+
+#[derive(Debug, Display, Clone, Copy)]
 pub enum Resource {
     Token,
 }
-
-into_endpoint!(Users, Resource);
 
 impl WordStr for Resource {
     fn singular(&self) -> &str {

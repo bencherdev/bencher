@@ -1,8 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::IntoEndpoint;
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CorsHeaders {
     #[serde(rename = "Access-Control-Allow-Origin")]
