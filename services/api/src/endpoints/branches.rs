@@ -16,7 +16,7 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -55,7 +55,7 @@ pub async fn get_ls(
         .filter(schema::branch::project_id.eq(&project_id))
         .order(schema::branch::name)
         .load::<QueryBranch>(conn)
-        .map_err(|_| http_error!("Failed to get branches."))?
+        .map_err(map_http_error!("Failed to get branches."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -95,12 +95,12 @@ pub async fn post(
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create branch."))?;
+        .map_err(map_http_error!("Failed to create branch."))?;
 
     let query_branch = schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
         .first::<QueryBranch>(conn)
-        .map_err(|_| http_error!("Failed to create branch."))?;
+        .map_err(map_http_error!("Failed to create branch."))?;
     let json = query_branch.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
@@ -143,7 +143,7 @@ pub async fn get_one(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query = if let Ok(query) = schema::branch::table
+    let json = schema::branch::table
         .filter(
             schema::branch::project_id.eq(project_id).and(
                 schema::branch::slug
@@ -152,12 +152,8 @@ pub async fn get_one(
             ),
         )
         .first::<QueryBranch>(conn)
-    {
-        Ok(query)
-    } else {
-        Err(http_error!("Failed to get branch."))
-    }?;
-    let json = query.to_json(conn)?;
+        .map_err(map_http_error!("Failed to get branch."))?
+        .to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

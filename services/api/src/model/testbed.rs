@@ -6,7 +6,7 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{schema, schema::testbed as testbed_table, util::http_error};
+use crate::{schema, schema::testbed as testbed_table, util::map_http_error};
 
 #[derive(Queryable)]
 pub struct QueryTestbed {
@@ -30,7 +30,7 @@ impl QueryTestbed {
             .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .select(schema::testbed::id)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get testbed."))
+            .map_err(map_http_error!("Failed to get testbed."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -38,8 +38,8 @@ impl QueryTestbed {
             .filter(schema::testbed::id.eq(id))
             .select(schema::testbed::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get testbed."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get testbed."))
+            .map_err(map_http_error!("Failed to get testbed."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get testbed."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, HttpError> {
@@ -58,7 +58,7 @@ impl QueryTestbed {
             disk,
         } = self;
         Ok(JsonTestbed {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get testbed."))?,
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get testbed."))?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,

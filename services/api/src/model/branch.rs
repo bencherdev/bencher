@@ -6,7 +6,7 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{schema, schema::branch as branch_table, util::http_error};
+use crate::{schema, schema::branch as branch_table, util::map_http_error};
 
 #[derive(Queryable)]
 pub struct QueryBranch {
@@ -23,7 +23,7 @@ impl QueryBranch {
             .filter(schema::branch::uuid.eq(uuid.to_string()))
             .select(schema::branch::id)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get branch."))
+            .map_err(map_http_error!("Failed to get branch."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -31,8 +31,8 @@ impl QueryBranch {
             .filter(schema::branch::id.eq(id))
             .select(schema::branch::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get branch."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get branch."))
+            .map_err(map_http_error!("Failed to get branch."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get branch."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, HttpError> {
@@ -44,7 +44,7 @@ impl QueryBranch {
             slug,
         } = self;
         Ok(JsonBranch {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get branch."))?,
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get branch."))?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,

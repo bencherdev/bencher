@@ -19,7 +19,7 @@ use crate::model::user::QueryUser;
 use crate::{
     model::user::InsertUser,
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
 };
 
 #[endpoint {
@@ -52,7 +52,7 @@ pub async fn post(
     let count = schema::user::table
         .select(count(schema::user::id))
         .first::<i64>(conn)
-        .map_err(|_| http_error!("Failed to signup user."))?;
+        .map_err(map_http_error!("Failed to signup user."))?;
     // The first user to signup is admin
     if count == 0 {
         insert_user.admin = true;
@@ -62,13 +62,13 @@ pub async fn post(
     diesel::insert_into(schema::user::table)
         .values(&insert_user)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to signup user."))?;
+        .map_err(map_http_error!("Failed to signup user."))?;
     let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = invite {
         let token_data = invite
             .validate_invite(&context.key)
-            .map_err(|_| http_error!("Failed to signup user."))?;
+            .map_err(map_http_error!("Failed to signup user."))?;
         let org_claims = token_data
             .claims
             .org()
@@ -92,7 +92,7 @@ pub async fn post(
         diesel::insert_into(schema::organization::table)
             .values(&insert_org)
             .execute(conn)
-            .map_err(|_| http_error!("Failed to signup user."))?;
+            .map_err(map_http_error!("Failed to signup user."))?;
         let organization_id = QueryOrganization::get_id(conn, &insert_org.uuid)?;
 
         // Connect the user to the organization as a `Leader`
@@ -107,10 +107,10 @@ pub async fn post(
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to signup user."))?;
+        .map_err(map_http_error!("Failed to signup user."))?;
 
     let token = JsonWebToken::new_auth(&context.key, insert_user.email.clone())
-        .map_err(|_| http_error!("Failed to login user."))?;
+        .map_err(map_http_error!("Failed to login user."))?;
 
     // TODO log this as trace if SMTP is configured
     info!("Confirm \"{}\" with: {token}", insert_user.email);

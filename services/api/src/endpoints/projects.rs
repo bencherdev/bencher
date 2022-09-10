@@ -16,7 +16,7 @@ use crate::{
         user::{project::InsertProjectRole, QueryUser},
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
 #[endpoint {
@@ -47,7 +47,7 @@ pub async fn get_ls(
         // .filter(schema::project::owner_id.eq(user_id))
         .order(schema::project::name)
         .load::<QueryProject>(conn)
-        .map_err(|_| http_error!("Failed to get projects."))?
+        .map_err(map_http_error!("Failed to get projects."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -79,11 +79,11 @@ pub async fn post(
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create project."))?;
+        .map_err(map_http_error!("Failed to create project."))?;
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn)
-        .map_err(|_| http_error!("Failed to create project."))?;
+        .map_err(map_http_error!("Failed to create project."))?;
 
     // Connect the user to the project as a `Maintainer`
     let insert_proj_role = InsertProjectRole {
@@ -94,7 +94,7 @@ pub async fn post(
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create project."))?;
+        .map_err(map_http_error!("Failed to create project."))?;
 
     let json = query_project.to_json(conn)?;
 
@@ -144,7 +144,7 @@ pub async fn get_one(
                 .or(schema::project::uuid.eq(project)),
         )
         .first::<QueryProject>(conn)
-        .map_err(|_| http_error!("Failed to get project."))?;
+        .map_err(map_http_error!("Failed to get project."))?;
 
     QueryUser::has_access(conn, user_id, query.id)?;
     let json = query.to_json(conn)?;

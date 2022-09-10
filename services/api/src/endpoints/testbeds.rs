@@ -16,7 +16,7 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -55,7 +55,7 @@ pub async fn get_ls(
         .filter(schema::testbed::project_id.eq(project_id))
         .order(schema::testbed::name)
         .load::<QueryTestbed>(conn)
-        .map_err(|_| http_error!("Failed to get testbeds."))?
+        .map_err(map_http_error!("Failed to get testbeds."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -95,12 +95,12 @@ pub async fn post(
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create testbed."))?;
+        .map_err(map_http_error!("Failed to create testbed."))?;
 
     let query_testbed = schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
         .first::<QueryTestbed>(conn)
-        .map_err(|_| http_error!("Failed to create testbed."))?;
+        .map_err(map_http_error!("Failed to create testbed."))?;
     let json = query_testbed.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
@@ -143,7 +143,7 @@ pub async fn get_one(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query = if let Ok(query) = schema::testbed::table
+    let json = schema::testbed::table
         .filter(
             schema::testbed::project_id.eq(project_id).and(
                 schema::testbed::slug
@@ -152,12 +152,8 @@ pub async fn get_one(
             ),
         )
         .first::<QueryTestbed>(conn)
-    {
-        Ok(query)
-    } else {
-        Err(http_error!("Failed to get testbed."))
-    }?;
-    let json = query.to_json(conn)?;
+        .map_err(map_http_error!("Failed to get testbed."))?
+        .to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

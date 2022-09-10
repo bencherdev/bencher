@@ -10,7 +10,7 @@ use tracing::info;
 
 use crate::{
     model::user::QueryUser,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
 #[endpoint {
@@ -44,7 +44,7 @@ pub async fn post(
         json_invite.organization,
         json_invite.role,
     )
-    .map_err(|_| http_error!("Failed to invite user."))?;
+    .map_err(map_http_error!("Failed to invite user."))?;
 
     // TODO log this as trace if SMTP is configured
     info!("Accept invite for \"{}\" with: {token}", json_invite.email);

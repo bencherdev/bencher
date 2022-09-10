@@ -14,7 +14,7 @@ use crate::{
         threshold::{statistic::QueryStatistic, PerfKind},
     },
     schema,
-    util::http_error,
+    util::map_http_error,
 };
 
 pub struct MetricsData {
@@ -86,7 +86,7 @@ impl MetricsData {
                         .order(&order_by)
                         .limit(sample_size)
                         .load::<QueryLatency>(conn)
-                        .map_err(|_| http_error!("Failed to get perf data."))?
+                        .map_err(map_http_error!("Failed to get perf data."))?
                         .into_iter()
                         .filter_map(|query| query.to_json().ok())
                         .collect();
@@ -110,7 +110,7 @@ impl MetricsData {
                             .order(&order_by)
                             .limit(sample_size)
                             .load::<QueryThroughput>(conn)
-                            .map_err(|_| http_error!("Failed to get perf data."))?
+                            .map_err(map_http_error!("Failed to get perf data."))?
                             .into_iter()
                             .filter_map(|query| query.to_json().ok())
                             .collect();
@@ -137,7 +137,7 @@ impl MetricsData {
                                 .order(&order_by)
                                 .limit(sample_size)
                                 .load::<QueryResource>(conn)
-                                .map_err(|_| http_error!("Failed to get perf data."))?
+                                .map_err(map_http_error!("Failed to get perf data."))?
                                 .into_iter()
                                 .map(|query| query.to_json())
                                 .collect(),
@@ -155,7 +155,7 @@ impl MetricsData {
                                 .order(&order_by)
                                 .limit(sample_size)
                                 .load::<QueryResource>(conn)
-                                .map_err(|_| http_error!("Failed to get perf data."))?
+                                .map_err(map_http_error!("Failed to get perf data."))?
                                 .into_iter()
                                 .map(|query| query.to_json())
                                 .collect(),
@@ -173,7 +173,7 @@ impl MetricsData {
                                 .order(&order_by)
                                 .limit(sample_size)
                                 .load::<QueryResource>(conn)
-                                .map_err(|_| http_error!("Failed to get perf data."))?
+                                .map_err(map_http_error!("Failed to get perf data."))?
                                 .into_iter()
                                 .map(|query| query.to_json())
                                 .collect(),

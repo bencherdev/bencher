@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::user::InsertUser;
 use crate::{
     schema::{self, organization as organization_table},
-    util::http_error,
+    util::map_http_error,
 };
 
 #[derive(Insertable)]
@@ -47,7 +47,7 @@ impl QueryOrganization {
             .filter(schema::organization::uuid.eq(uuid.to_string()))
             .select(schema::organization::id)
             .first(conn)
-            .map_err(|_| http_error!("Failed to create organization."))
+            .map_err(map_http_error!("Failed to create organization."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -55,8 +55,8 @@ impl QueryOrganization {
             .filter(schema::organization::id.eq(id))
             .select(schema::organization::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to create organization."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to create organization."))
+            .map_err(map_http_error!("Failed to create organization."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to create organization."))
     }
 
     pub fn from_resource_id(
@@ -71,6 +71,6 @@ impl QueryOrganization {
                     .or(schema::organization::uuid.eq(org)),
             )
             .first::<QueryOrganization>(conn)
-            .map_err(|_| http_error!("Failed to create organization."))
+            .map_err(map_http_error!("Failed to create organization."))
     }
 }

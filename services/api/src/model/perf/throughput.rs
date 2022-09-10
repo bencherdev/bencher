@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnect
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::throughput as throughput_table, util::http_error};
+use crate::{schema, schema::throughput as throughput_table, util::map_http_error};
 
 #[derive(Queryable, Debug)]
 pub struct QueryThroughput {
@@ -72,14 +72,14 @@ impl InsertThroughput {
             diesel::insert_into(schema::throughput::table)
                 .values(&insert_throughput)
                 .execute(conn)
-                .map_err(|_| http_error!("Failed to create benchmark data."))?;
+                .map_err(map_http_error!("Failed to create benchmark data."))?;
 
             Some(
                 schema::throughput::table
                     .filter(schema::throughput::uuid.eq(&insert_throughput.uuid))
                     .select(schema::throughput::id)
                     .first::<i32>(conn)
-                    .map_err(|_| http_error!("Failed to create benchmark data."))?,
+                    .map_err(map_http_error!("Failed to create benchmark data."))?,
             )
         } else {
             None

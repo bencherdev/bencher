@@ -5,8 +5,11 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnect
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::statistic as statistic_table, util::http_error};
-
+use crate::{
+    schema,
+    schema::statistic as statistic_table,
+    util::{http_error, map_http_error},
+};
 
 #[derive(Queryable)]
 pub struct QueryStatistic {
@@ -25,7 +28,7 @@ impl QueryStatistic {
             .filter(schema::statistic::uuid.eq(uuid.to_string()))
             .select(schema::statistic::id)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get statistic."))
+            .map_err(map_http_error!("Failed to get statistic."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -33,8 +36,8 @@ impl QueryStatistic {
             .filter(schema::statistic::id.eq(id))
             .select(schema::statistic::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get statistic."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get statistic."))
+            .map_err(map_http_error!("Failed to get statistic."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get statistic."))
     }
 
     pub fn to_json(self) -> Result<JsonStatistic, HttpError> {
@@ -48,7 +51,7 @@ impl QueryStatistic {
             right_side,
         } = self;
         Ok(JsonStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get statistic."))?,
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get statistic."))?,
             test: StatisticKind::try_from(test)?.into(),
             sample_size: sample_size.map(|ss| ss as u32),
             window: window.map(|w| w as u32),

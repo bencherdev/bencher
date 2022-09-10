@@ -13,7 +13,7 @@ use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, project as project_table},
-    util::{http_error, Context},
+    util::{map_http_error, Context},
 };
 
 #[derive(Insertable)]
@@ -103,7 +103,7 @@ impl QueryProject {
             public,
         } = self;
         Ok(JsonProject {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get project."))?,
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get project."))?,
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name,
             slug,
@@ -125,7 +125,7 @@ impl QueryProject {
                     .or(schema::project::uuid.eq(project)),
             )
             .first::<QueryProject>(conn)
-            .map_err(|_| http_error!("Failed to get project."))
+            .map_err(map_http_error!("Failed to get project."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -133,8 +133,8 @@ impl QueryProject {
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get project."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get project."))
+            .map_err(map_http_error!("Failed to get project."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get project."))
     }
 
     pub async fn connection(
@@ -154,7 +154,7 @@ impl QueryProject {
             )
             .select(schema::project::id)
             .first::<i32>(conn)
-            .map_err(|_| http_error!("Failed to get project."))?;
+            .map_err(map_http_error!("Failed to get project."))?;
 
         QueryUser::has_access(conn, user_id, project_id)?;
 
@@ -164,7 +164,7 @@ impl QueryProject {
 
 fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
     Ok(if let Some(url) = url {
-        Some(Url::parse(url).map_err(|_| http_error!("Failed to get project."))?)
+        Some(Url::parse(url).map_err(map_http_error!("Failed to get project."))?)
     } else {
         None
     })

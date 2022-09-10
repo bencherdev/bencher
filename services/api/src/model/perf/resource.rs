@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnect
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::resource as resource_table, util::http_error};
+use crate::{schema, schema::resource as resource_table, util::map_http_error};
 
 #[derive(Queryable, Debug)]
 pub struct QueryResource {
@@ -62,14 +62,14 @@ impl InsertResource {
             diesel::insert_into(schema::resource::table)
                 .values(&insert_min_max_avg)
                 .execute(conn)
-                .map_err(|_| http_error!("Failed to create benchmark data."))?;
+                .map_err(map_http_error!("Failed to create benchmark data."))?;
 
             Some(
                 schema::resource::table
                     .filter(schema::resource::uuid.eq(&insert_min_max_avg.uuid))
                     .select(schema::resource::id)
                     .first::<i32>(conn)
-                    .map_err(|_| http_error!("Failed to create benchmark data."))?,
+                    .map_err(map_http_error!("Failed to create benchmark data."))?,
             )
         } else {
             None

@@ -17,7 +17,7 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
 // TODO figure out why this doesn't work as a PUT
@@ -133,7 +133,7 @@ pub async fn post(
                             i64,
                             i64,
                         )>(conn)
-                        .map_err(|_| http_error!("Failed to get benchmark data."))?
+                        .map_err(map_http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -202,7 +202,7 @@ pub async fn post(
                                 f64,
                                 i64,
                             )>(conn)
-                            .map_err(|_| http_error!("Failed to get benchmark data."))?
+                            .map_err(map_http_error!("Failed to get benchmark data."))?
                             .into_iter()
                             .map(
                                 |(
@@ -272,7 +272,7 @@ pub async fn post(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(|_| http_error!("Failed to get benchmark data."))?
+                        .map_err(map_http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -339,7 +339,7 @@ pub async fn post(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(|_| http_error!("Failed to get benchmark data."))?
+                        .map_err(map_http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -406,7 +406,7 @@ pub async fn post(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(|_| http_error!("Failed to get benchmark data."))?
+                        .map_err(map_http_error!("Failed to get benchmark data."))?
                         .into_iter()
                         .map(
                             |(
@@ -510,7 +510,7 @@ impl QueryPerfDatum {
         } = self;
         Ok(JsonPerfDatum {
             uuid: Uuid::from_str(&uuid)
-                .map_err(|_| http_error!("Failed to get benchmark data."))?,
+                .map_err(map_http_error!("Failed to get benchmark data."))?,
             iteration: iteration as u32,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,

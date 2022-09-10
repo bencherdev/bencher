@@ -8,4 +8,4 @@ pub mod registrar;
 pub mod server;
 
 pub use context::{ApiContext, Context};
-pub(crate) use error::http_error;
+pub(crate) use error::{http_error, map_http_error};

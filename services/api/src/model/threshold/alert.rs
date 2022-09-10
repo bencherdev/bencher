@@ -6,8 +6,7 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{statistic::QueryStatistic, QueryThreshold};
-use crate::{model::perf::QueryPerf, schema, schema::alert as alert_table, util::http_error};
-
+use crate::{model::perf::QueryPerf, schema, schema::alert as alert_table, util::map_http_error};
 
 #[derive(Queryable)]
 pub struct QueryAlert {
@@ -27,7 +26,7 @@ impl QueryAlert {
             .filter(schema::alert::uuid.eq(uuid.to_string()))
             .select(schema::alert::id)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get alert."))
+            .map_err(map_http_error!("Failed to get alert."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -35,8 +34,8 @@ impl QueryAlert {
             .filter(schema::alert::id.eq(id))
             .select(schema::alert::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get alert."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get alert."))
+            .map_err(map_http_error!("Failed to get alert."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get alert."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonAlert, HttpError> {
@@ -51,7 +50,7 @@ impl QueryAlert {
             outlier,
         } = self;
         Ok(JsonAlert {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get alert."))?,
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get alert."))?,
             perf: QueryPerf::get_uuid(conn, perf_id)?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             statistic: QueryStatistic::get_uuid(conn, statistic_id)?,

@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     model::{benchmark::QueryBenchmark, project::QueryProject, user::QueryUser},
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -49,7 +49,7 @@ pub async fn get_ls(
         .filter(schema::benchmark::project_id.eq(&project_id))
         .order(schema::benchmark::name)
         .load::<QueryBenchmark>(conn)
-        .map_err(|_| http_error!("Failed to get benchmarks."))?
+        .map_err(map_http_error!("Failed to get benchmarks."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -94,19 +94,15 @@ pub async fn get_one(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query = if let Ok(query) = schema::benchmark::table
+    let json = schema::benchmark::table
         .filter(
             schema::benchmark::project_id
                 .eq(project_id)
                 .and(schema::benchmark::uuid.eq(&benchmark)),
         )
         .first::<QueryBenchmark>(conn)
-    {
-        Ok(query)
-    } else {
-        Err(http_error!("Failed to get benchmark."))
-    }?;
-    let json = query.to_json(conn)?;
+        .map_err(map_http_error!("Failed to get benchmark."))?
+        .to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

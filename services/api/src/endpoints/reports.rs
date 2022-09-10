@@ -23,7 +23,7 @@ use crate::{
         version::InsertVersion,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -73,7 +73,7 @@ pub async fn get_ls(
         ))
         .order(schema::report::start_time.desc())
         .load::<QueryReport>(conn)
-        .map_err(|_| http_error!("Failed to get reports."))?
+        .map_err(map_http_error!("Failed to get reports."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -122,12 +122,12 @@ pub async fn post(
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!("Failed to create report."))?;
+        .map_err(map_http_error!("Failed to create report."))?;
     let testbed_project_id = schema::testbed::table
         .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!("Failed to create report."))?;
+        .map_err(map_http_error!("Failed to create report."))?;
     if branch_project_id != testbed_project_id {
         return Err(http_error!("Failed to create report."));
     }
@@ -163,12 +163,12 @@ pub async fn post(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create report."))?;
+        .map_err(map_http_error!("Failed to create report."))?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
         .first::<QueryReport>(conn)
-        .map_err(|_| http_error!("Failed to create report."))?;
+        .map_err(map_http_error!("Failed to create report."))?;
 
     // Metrics is used to add benchmarks, perf metrics, and alerts.
     let mut metrics = Metrics::new(
@@ -228,7 +228,7 @@ pub async fn get_one(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query_report = if let Ok(query) = schema::report::table
+    let json = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
@@ -246,12 +246,8 @@ pub async fn get_one(
             schema::report::end_time,
         ))
         .first::<QueryReport>(conn)
-    {
-        Ok(query)
-    } else {
-        Err(http_error!("Failed to get report."))
-    }?;
-    let json = query_report.to_json(conn)?;
+        .map_err(map_http_error!("Failed to get report."))?
+        .to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

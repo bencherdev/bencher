@@ -6,7 +6,11 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::token as token_table, util::http_error};
+use crate::{
+    schema,
+    schema::token as token_table,
+    util::{http_error, map_http_error},
+};
 
 use super::QueryUser;
 
@@ -31,7 +35,7 @@ impl QueryToken {
             .filter(schema::token::uuid.eq(uuid.to_string()))
             .select(schema::token::id)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get token."))
+            .map_err(map_http_error!("Failed to get token."))
     }
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
@@ -39,8 +43,8 @@ impl QueryToken {
             .filter(schema::token::id.eq(id))
             .select(schema::token::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get token."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get token."))
+            .map_err(map_http_error!("Failed to get token."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get token."))
     }
 
     pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonToken, HttpError> {
@@ -54,7 +58,7 @@ impl QueryToken {
             expiration,
         } = self;
         Ok(JsonToken {
-            uuid: Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get token."))?,
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get token."))?,
             user: QueryUser::get_uuid(conn, user_id)?,
             name,
             token: jwt,
@@ -105,11 +109,11 @@ impl InsertToken {
         }
 
         let jwt = JsonWebToken::new_api_key(key, query_user.email, ttl as usize)
-            .map_err(|_| http_error!("Failed to get token."))?;
+            .map_err(map_http_error!("Failed to get token."))?;
 
         let token_data = jwt
             .validate_api_key(key)
-            .map_err(|_| http_error!("Failed to get token."))?;
+            .map_err(map_http_error!("Failed to get token."))?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),

@@ -8,14 +8,13 @@ use crate::{
         perf::{InsertPerf, QueryPerf},
     },
     schema,
-    util::http_error,
+    util::map_http_error,
 };
 
 pub mod data;
 pub mod thresholds;
 
 use self::thresholds::Thresholds;
-
 
 pub struct Metrics {
     pub project_id: i32,
@@ -55,7 +54,7 @@ impl Metrics {
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
             .execute(conn)
-            .map_err(|_| http_error!("Failed to create perf metrics."))?;
+            .map_err(map_http_error!("Failed to create perf metrics."))?;
 
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 

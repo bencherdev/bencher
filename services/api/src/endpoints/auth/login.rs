@@ -16,7 +16,7 @@ use crate::{
     model::user::organization::InsertOrganizationRole,
     model::user::QueryUser,
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
 };
 
 #[endpoint {
@@ -46,17 +46,17 @@ pub async fn post(
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))
         .first::<QueryUser>(conn)
-        .map_err(|_| http_error!("Failed to login user."))?;
+        .map_err(map_http_error!("Failed to login user."))?;
 
     // Check to see if the user account has been locked
     if query_user.locked {
-        return Err(http_error!("Failed to login user."));
+        return Err(http_error!("Failed to login user account locked."));
     }
 
     if let Some(invite) = json_login.invite {
         let token_data = invite
             .validate_invite(&context.key)
-            .map_err(|_| http_error!("Failed to login user."))?;
+            .map_err(map_http_error!("Failed to login user."))?;
         let org_claims = token_data
             .claims
             .org()
@@ -78,11 +78,11 @@ pub async fn post(
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
             .execute(conn)
-            .map_err(|_| http_error!("Failed to login user."))?;
+            .map_err(map_http_error!("Failed to login user."))?;
     }
 
     let token = JsonWebToken::new_auth(&context.key, query_user.email)
-        .map_err(|_| http_error!("Failed to login user."))?;
+        .map_err(map_http_error!("Failed to login user."))?;
 
     // TODO log this as trace if SMTP is configured
     info!("Confirm \"{}\" with: {token}", json_login.email);

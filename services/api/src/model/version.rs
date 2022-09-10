@@ -7,7 +7,7 @@ use diesel::{
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::version as version_table, util::http_error};
+use crate::{schema, schema::version as version_table, util::map_http_error};
 
 #[derive(Queryable)]
 pub struct QueryVersion {
@@ -24,8 +24,8 @@ impl QueryVersion {
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
             .first(conn)
-            .map_err(|_| http_error!("Failed to get version."))?;
-        Uuid::from_str(&uuid).map_err(|_| http_error!("Failed to get version."))
+            .map_err(map_http_error!("Failed to get version."))?;
+        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get version."))
     }
 }
 
@@ -67,7 +67,7 @@ impl InsertVersion {
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
             .execute(conn)
-            .map_err(|_| http_error!("Failed to create version."))?;
+            .map_err(map_http_error!("Failed to create version."))?;
 
         schema::version::table
             .filter(
@@ -77,6 +77,6 @@ impl InsertVersion {
             )
             .select(schema::version::id)
             .first::<i32>(conn)
-            .map_err(|_| http_error!("Failed to create version."))
+            .map_err(map_http_error!("Failed to create version."))
     }
 }

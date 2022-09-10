@@ -16,7 +16,7 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -61,7 +61,7 @@ pub async fn get_ls(
         .filter(schema::token::user_id.eq(query_user.id))
         .order((schema::token::creation, schema::token::expiration))
         .load::<QueryToken>(conn)
-        .map_err(|_| http_error!("Failed to get tokens."))?
+        .map_err(map_http_error!("Failed to get tokens."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -101,12 +101,12 @@ pub async fn post(
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create token."))?;
+        .map_err(map_http_error!("Failed to create token."))?;
 
     let query_token = schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
-        .map_err(|_| http_error!("Failed to create token."))?;
+        .map_err(map_http_error!("Failed to create token."))?;
     let json = query_token.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
@@ -154,19 +154,15 @@ pub async fn get_one(
         return Err(http_error!("Failed to get token."));
     }
 
-    let query = if let Ok(query) = schema::token::table
+    let json = schema::token::table
         .filter(
             schema::token::user_id
                 .eq(query_user.id)
                 .and(schema::token::uuid.eq(&path_params.token.to_string())),
         )
         .first::<QueryToken>(conn)
-    {
-        Ok(query)
-    } else {
-        Err(http_error!("Failed to get token."))
-    }?;
-    let json = query.to_json(conn)?;
+        .map_err(map_http_error!("Failed to get token."))?
+        .to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

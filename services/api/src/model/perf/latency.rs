@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnect
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::latency as latency_table, util::http_error};
+use crate::{schema, schema::latency as latency_table, util::map_http_error};
 
 #[derive(Queryable, Debug)]
 pub struct QueryLatency {
@@ -66,14 +66,14 @@ impl InsertLatency {
             diesel::insert_into(schema::latency::table)
                 .values(&insert_latency)
                 .execute(conn)
-                .map_err(|_| http_error!("Failed to create benchmark data."))?;
+                .map_err(map_http_error!("Failed to create benchmark data."))?;
 
             Some(
                 schema::latency::table
                     .filter(schema::latency::uuid.eq(&insert_latency.uuid))
                     .select(schema::latency::id)
                     .first::<i32>(conn)
-                    .map_err(|_| http_error!("Failed to create benchmark data."))?,
+                    .map_err(map_http_error!("Failed to create benchmark data."))?,
             )
         } else {
             None

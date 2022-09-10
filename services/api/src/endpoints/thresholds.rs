@@ -24,7 +24,7 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
+    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -73,7 +73,7 @@ pub async fn get_ls(
         ))
         .order(schema::threshold::id)
         .load::<QueryThreshold>(conn)
-        .map_err(|_| http_error!("Failed to get threshold."))?
+        .map_err(map_http_error!("Failed to get threshold."))?
         .into_iter()
         .filter_map(|query| query.to_json(conn).ok())
         .collect();
@@ -117,12 +117,12 @@ pub async fn post(
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!("Failed to create thresholds."))?;
+        .map_err(map_http_error!("Failed to create thresholds."))?;
     let testbed_project_id = schema::testbed::table
         .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
         .first::<i32>(conn)
-        .map_err(|_| http_error!("Failed to create thresholds."))?;
+        .map_err(map_http_error!("Failed to create thresholds."))?;
     if branch_project_id != testbed_project_id {
         return Err(http_error!("Failed to create thresholds."));
     }
@@ -131,12 +131,12 @@ pub async fn post(
     diesel::insert_into(schema::threshold::table)
         .values(&insert_threshold)
         .execute(conn)
-        .map_err(|_| http_error!("Failed to create thresholds."))?;
+        .map_err(map_http_error!("Failed to create thresholds."))?;
 
     let query_threshold = schema::threshold::table
         .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
         .first::<QueryThreshold>(conn)
-        .map_err(|_| http_error!("Failed to create thresholds."))?;
+        .map_err(map_http_error!("Failed to create thresholds."))?;
     let json = query_threshold.to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
@@ -179,7 +179,7 @@ pub async fn get_one(
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db;
-    let query = if let Ok(query) = schema::threshold::table
+    let json = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
@@ -195,12 +195,8 @@ pub async fn get_one(
             schema::threshold::statistic_id,
         ))
         .first::<QueryThreshold>(conn)
-    {
-        Ok(query)
-    } else {
-        Err(http_error!("Failed to get threshold."))
-    }?;
-    let json = query.to_json(conn)?;
+        .map_err(map_http_error!("Failed to get threshold."))?
+        .to_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
