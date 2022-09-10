@@ -32,7 +32,7 @@ impl Keyword {
     pub fn name(token_tree: &mut IntoIter) -> Option<Ident> {
         let mut keyword_token_tree = token_tree.clone();
         let mut is_enum = false;
-        while let Some(TokenTree::Ident(ident)) = keyword_token_tree.next() {
+        while let TokenTree::Ident(ident) = keyword_token_tree.next()? {
             match Keyword::from(ident) {
                 // pub enum MyEnum
                 // ^^^
@@ -60,7 +60,7 @@ impl Keyword {
         let mut keyword_token_tree = token_tree.clone();
         //  pub enum MyEnum { ... }
         //                  ^     ^
-        if let Some(TokenTree::Group(brace_group)) = keyword_token_tree.next() {
+        if let TokenTree::Group(brace_group) = keyword_token_tree.next()? {
             if let Delimiter::Brace = brace_group.delimiter() {
                 *token_tree = keyword_token_tree;
                 return Some(brace_group);
