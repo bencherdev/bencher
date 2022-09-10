@@ -1,3 +1,4 @@
+use dropshot::HttpError;
 use thiserror::Error;
 
 use crate::Endpoint;
@@ -31,4 +32,13 @@ pub enum ApiError {
     // TODO impl display
     #[error("{0}")]
     IntoEndpoint(Endpoint),
+}
+
+impl From<ApiError> for HttpError {
+    fn from(error: ApiError) -> Self {
+        dropshot::HttpError::for_bad_request(
+            Some(http::status::StatusCode::BAD_REQUEST.to_string()),
+            error.to_string(),
+        )
+    }
 }

@@ -18,13 +18,22 @@ use crate::{
     },
     schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
+    ApiError, IntoEndpoint,
 };
+
+use super::Endpoint;
 
 #[derive(Debug, Clone, Copy, ToMethod)]
 pub enum Method {
     GetOne,
     GetLs,
     Post,
+}
+
+impl IntoEndpoint for Method {
+    fn into_endpoint(self) -> crate::Endpoint {
+        Endpoint::Token(self).into_endpoint()
+    }
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -53,6 +62,8 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonToken>>, CorsHeaders>, HttpError> {
+    let endpoint = Method::GetOne;
+
     let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
 
@@ -62,7 +73,7 @@ pub async fn get_ls(
 
     // TODO make smarter once permissions are a thing
     if query_user.id != user_id {
-        return Err(http_error!("Failed to get token."));
+        return Err(ApiError::IntoEndpoint(endpoint.into_endpoint()).into());
     }
 
     let json: Vec<JsonToken> = schema::token::table
