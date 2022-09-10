@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use super::threshold::Threshold;
 use crate::{
-    db::model::{
+    model::{
         metrics::data::MetricsData,
         threshold::{
             alert::{InsertAlert, Side},

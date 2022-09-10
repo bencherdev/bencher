@@ -12,12 +12,12 @@ use dropshot::{
 };
 use tracing::info;
 
-use crate::db::model::organization::InsertOrganization;
-use crate::db::model::organization::QueryOrganization;
-use crate::db::model::user::organization::InsertOrganizationRole;
-use crate::db::model::user::QueryUser;
+use crate::model::organization::InsertOrganization;
+use crate::model::organization::QueryOrganization;
+use crate::model::user::organization::InsertOrganizationRole;
+use crate::model::user::QueryUser;
 use crate::{
-    db::model::user::InsertUser,
+    model::user::InsertUser,
     schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
@@ -88,7 +88,7 @@ pub async fn post(
         }
     } else {
         // Create an organization for the user
-        let insert_org = InsertOrganization::from_user(conn, &insert_user)?;
+        let insert_org = InsertOrganization::from_user(&insert_user)?;
         diesel::insert_into(schema::organization::table)
             .values(&insert_org)
             .execute(conn)

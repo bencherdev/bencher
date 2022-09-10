@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{auth::JsonInvite, jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
+use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
 use diesel::{
     expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,

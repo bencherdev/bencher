@@ -3,7 +3,7 @@ use diesel::{RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 
 use crate::{
-    db::model::{
+    model::{
         benchmark::QueryBenchmark,
         perf::{InsertPerf, QueryPerf},
     },

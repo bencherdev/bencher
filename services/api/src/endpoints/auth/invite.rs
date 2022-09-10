@@ -9,7 +9,7 @@ use dropshot::{
 use tracing::info;
 
 use crate::{
-    db::model::user::QueryUser,
+    model::user::QueryUser,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
@@ -38,7 +38,6 @@ pub async fn post(
 
     let json_invite = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
     let token = JsonWebToken::new_invite(
         &context.key,
         json_invite.email.clone(),

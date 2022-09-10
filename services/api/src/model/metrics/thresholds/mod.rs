@@ -7,7 +7,7 @@ use dropshot::HttpError;
 
 use self::detector::Detector;
 pub use self::threshold::Threshold;
-use crate::db::model::{benchmark::QueryBenchmark, threshold::PerfKind};
+use crate::model::{benchmark::QueryBenchmark, threshold::PerfKind};
 
 pub mod detector;
 pub mod threshold;

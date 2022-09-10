@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    db::model::{
+    model::{
         project::QueryProject,
         testbed::{InsertTestbed, QueryTestbed},
         user::QueryUser,

@@ -16,7 +16,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::model::{
+    model::{
         branch::QueryBranch,
         project::QueryProject,
         testbed::QueryTestbed,

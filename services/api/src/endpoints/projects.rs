@@ -11,7 +11,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    db::model::{
+    model::{
         project::{InsertProject, QueryProject},
         user::{project::InsertProjectRole, QueryUser},
     },

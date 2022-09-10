@@ -26,10 +26,7 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
-    pub fn from_user(
-        conn: &mut SqliteConnection,
-        insert_user: &InsertUser,
-    ) -> Result<Self, HttpError> {
+    pub fn from_user(insert_user: &InsertUser) -> Result<Self, HttpError> {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name: insert_user.name.clone(),

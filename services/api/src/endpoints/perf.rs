@@ -11,7 +11,7 @@ use dropshot::{
 use uuid::Uuid;
 
 use crate::{
-    db::model::{
+    model::{
         perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
         report::to_date_time,
         user::QueryUser,

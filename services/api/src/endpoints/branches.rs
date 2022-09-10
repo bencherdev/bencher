@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    db::model::{
+    model::{
         branch::{InsertBranch, QueryBranch},
         project::QueryProject,
         user::QueryUser,

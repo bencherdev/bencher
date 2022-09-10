@@ -13,7 +13,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::model::{
+    model::{
         branch::QueryBranch,
         metrics::Metrics,
         project::QueryProject,

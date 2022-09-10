@@ -6,7 +6,7 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{statistic::QueryStatistic, QueryThreshold};
-use crate::{db::model::perf::QueryPerf, schema, schema::alert as alert_table, util::http_error};
+use crate::{model::perf::QueryPerf, schema, schema::alert as alert_table, util::http_error};
 
 const ALERT_ERROR: &str = "Failed to get alert.";
 

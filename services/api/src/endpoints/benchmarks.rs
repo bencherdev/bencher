@@ -8,7 +8,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::model::{benchmark::QueryBenchmark, project::QueryProject, user::QueryUser},
+    model::{benchmark::QueryBenchmark, project::QueryProject, user::QueryUser},
     schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };

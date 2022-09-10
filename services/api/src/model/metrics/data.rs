@@ -9,7 +9,7 @@ use diesel::{
 use dropshot::HttpError;
 
 use crate::{
-    db::model::{
+    model::{
         perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
         threshold::{statistic::QueryStatistic, PerfKind},
     },

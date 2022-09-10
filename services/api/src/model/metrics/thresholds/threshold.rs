@@ -4,8 +4,8 @@ use diesel::{
 use dropshot::HttpError;
 
 use crate::{
-    db::model::threshold::{statistic::QueryStatistic, PerfKind},
     diesel::ExpressionMethods,
+    model::threshold::{statistic::QueryStatistic, PerfKind},
     schema,
 };
 

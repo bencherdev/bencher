@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use crate::db::model::organization::QueryOrganization;
-use crate::db::model::user::organization::InsertOrganizationRole;
 use bencher_json::{auth::Role, jwt::JsonWebToken, JsonEmpty, JsonLogin};
 use bencher_rbac::organization::LEADER_ROLE;
 use bencher_rbac::organization::MEMBER_ROLE;
@@ -13,8 +11,10 @@ use dropshot::{
 use tracing::info;
 
 use crate::{
-    db::model::user::QueryUser,
     diesel::ExpressionMethods,
+    model::organization::QueryOrganization,
+    model::user::organization::InsertOrganizationRole,
+    model::user::QueryUser,
     schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
