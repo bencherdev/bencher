@@ -35,6 +35,7 @@ lazy_static = "1.4.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
 thiserror = "1.0.34"
+derive_more = "0.99.17"
 
 [[bin]]
 name = "api"

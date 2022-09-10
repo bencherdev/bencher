@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate diesel;
 
+use derive_more::Display;
 use std::fmt;
 
 pub mod endpoints;
@@ -19,7 +20,7 @@ pub trait IntoEndpoint {
     fn into_endpoint(self) -> Endpoint;
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Display, Clone, Copy)]
 pub enum Endpoint {
     Auth(AuthEndpoint),
     User(UserEndpoint),
@@ -52,7 +53,7 @@ impl fmt::Display for PingMethod {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Display, Clone, Copy)]
 pub enum AuthEndpoint {
     Confirm,
     Invite,
@@ -60,12 +61,12 @@ pub enum AuthEndpoint {
     Signup,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Display, Clone, Copy)]
 pub enum UserEndpoint {
     Token,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Display, Clone, Copy)]
 pub enum OrgEndpoint {
     Benchmark,
     Branch,

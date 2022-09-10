@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::IntoEndpoint;
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CorsHeaders {
     #[serde(rename = "Access-Control-Allow-Origin")]
@@ -26,6 +28,14 @@ impl CorsHeaders {
 
     pub fn new_pub(methods: String) -> Self {
         Self::new_origin_all(methods, "Content-Type".into(), None)
+    }
+
+    pub fn new_pub_endpoint(endpoint: impl IntoEndpoint) -> Self {
+        Self::new_origin_all(
+            endpoint.into_endpoint().to_string(),
+            "Content-Type".into(),
+            None,
+        )
     }
 
     pub fn new_auth(methods: String) -> Self {
