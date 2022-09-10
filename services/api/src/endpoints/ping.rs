@@ -1,32 +1,25 @@
 use std::{fmt, sync::Arc};
 
+use bencher_macros::ToMethod;
 use derive_more::Display;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
     util::{headers::CorsHeaders, Context},
-    Endpoint, IntoEndpoint, ToMethod,
+    Endpoint, IntoEndpoint,
 };
 
 const PONG: &str = "PONG";
 
-#[derive(Debug, Display, Clone, Copy)]
+#[derive(Debug, Display, Clone, Copy, ToMethod)]
 #[display(fmt = "{}", self.to_method())]
 pub enum Method {
-    Get,
+    GetOne,
 }
 
 impl IntoEndpoint for Method {
     fn into_endpoint(self) -> Endpoint {
         Endpoint::Ping(self)
-    }
-}
-
-impl ToMethod for Method {
-    fn to_method(&self) -> http::Method {
-        match self {
-            Self::Get => http::Method::GET,
-        }
     }
 }
 
@@ -38,7 +31,7 @@ impl ToMethod for Method {
 pub async fn api_get_ping(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
-    let endpoint = Method::Get;
+    let endpoint = Method::GetOne;
 
     let _context = &mut *rqctx.context().lock().await;
 

@@ -121,6 +121,7 @@ name = "bencher_api"
 version = "0.1.0"
 dependencies = [
  "bencher_json",
+ "bencher_macros",
  "bencher_rbac",
  "chrono",
  "derive_more",
@@ -191,6 +192,14 @@ dependencies = [
  "slug",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "bencher_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]
@@ -642,14 +651,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9852635589dc9f9ea1b6fe9f05b50ef208c85c834a562f0c6abb1c475736ec2b"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "endpoint_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
 ]
 
 [[package]]
