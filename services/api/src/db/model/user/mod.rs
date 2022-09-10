@@ -10,8 +10,8 @@ use email_address_parser::EmailAddress;
 use uuid::Uuid;
 
 use crate::{
-    db::schema::{self, user as user_table},
     diesel::ExpressionMethods,
+    schema::{self, user as user_table},
     util::{http_error, Context},
 };
 

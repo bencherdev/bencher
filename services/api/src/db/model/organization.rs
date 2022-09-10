@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::user::InsertUser;
 use crate::{
-    db::schema::{self, organization as organization_table},
+    schema::{self, organization as organization_table},
     util::http_error,
 };
 

@@ -6,8 +6,9 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    db::{schema, schema::perf as perf_table},
     diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
+    schema,
+    schema::perf as perf_table,
     util::http_error,
 };
 

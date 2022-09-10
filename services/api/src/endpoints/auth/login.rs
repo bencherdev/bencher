@@ -13,8 +13,9 @@ use dropshot::{
 use tracing::info;
 
 use crate::{
-    db::{model::user::QueryUser, schema},
+    db::model::user::QueryUser,
     diesel::ExpressionMethods,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

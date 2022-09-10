@@ -4,7 +4,9 @@ use bencher_json::{
     threshold::{JsonNewThreshold, JsonThreshold},
     ResourceId,
 };
-use diesel::{expression_methods::BoolExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{
+    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
+};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -14,17 +16,14 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        model::{
-            branch::QueryBranch,
-            project::QueryProject,
-            testbed::QueryTestbed,
-            threshold::{InsertThreshold, QueryThreshold},
-            user::QueryUser,
-        },
-        schema,
+    db::model::{
+        branch::QueryBranch,
+        project::QueryProject,
+        testbed::QueryTestbed,
+        threshold::{InsertThreshold, QueryThreshold},
+        user::QueryUser,
     },
-    diesel::ExpressionMethods,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

@@ -8,16 +8,14 @@ use bencher_json::{
     JsonNewReport, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
-use diesel::{Insertable, JoinOnDsl, Queryable, SqliteConnection};
+use diesel::{
+    ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection,
+};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{testbed::QueryTestbed, user::QueryUser, version::QueryVersion};
-use crate::{
-    db::{schema, schema::report as report_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::report as report_table, util::http_error};
 
 const REPORT_ERROR: &str = "Failed to get report.";
 

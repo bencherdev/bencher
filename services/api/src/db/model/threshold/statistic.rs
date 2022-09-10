@@ -1,15 +1,11 @@
 use std::str::FromStr;
 
 use bencher_json::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind};
-use diesel::{Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{
-    db::{schema, schema::statistic as statistic_table},
-    diesel::ExpressionMethods,
-    util::http_error,
-};
+use crate::{schema, schema::statistic as statistic_table, util::http_error};
 
 const STATISTIC_ERROR: &str = "Failed to get statistic.";
 

@@ -2,15 +2,11 @@ use std::str::FromStr;
 
 use bencher_json::{jwt::JsonWebToken, JsonNewToken, JsonToken};
 use chrono::{DateTime, TimeZone, Utc};
-use diesel::{Insertable, Queryable, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{
-    db::{schema, schema::token as token_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::token as token_table, util::http_error};
 
 use super::QueryUser;
 

@@ -1,6 +1,6 @@
 use diesel::{Insertable, Queryable};
 
-use crate::db::schema::organization_role as organization_role_table;
+use crate::schema::organization_role as organization_role_table;
 
 #[derive(Insertable)]
 #[diesel(table_name = organization_role_table)]

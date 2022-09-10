@@ -11,14 +11,11 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    db::{
-        model::{
-            organization::QueryOrganization,
-            project::{InsertProject, QueryProject},
-            user::{project::InsertProjectRole, QueryUser},
-        },
-        schema,
+    db::model::{
+        project::{InsertProject, QueryProject},
+        user::{project::InsertProjectRole, QueryUser},
     },
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

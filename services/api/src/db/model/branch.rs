@@ -1,16 +1,12 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonBranch, JsonNewBranch};
-use diesel::{Insertable, Queryable, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{
-    db::{schema, schema::branch as branch_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::branch as branch_table, util::http_error};
 
 const BRANCH_ERROR: &str = "Failed to get branch.";
 

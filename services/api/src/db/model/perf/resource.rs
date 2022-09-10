@@ -1,13 +1,9 @@
 use bencher_json::report::JsonResource;
-use diesel::{Insertable, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{
-    db::{schema, schema::resource as resource_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::resource as resource_table, util::http_error};
 
 #[derive(Queryable, Debug)]
 pub struct QueryResource {

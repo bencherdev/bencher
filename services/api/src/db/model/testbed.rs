@@ -1,16 +1,12 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonNewTestbed, JsonTestbed};
-use diesel::{Insertable, Queryable, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{
-    db::{schema, schema::testbed as testbed_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::testbed as testbed_table, util::http_error};
 
 const TESTBED_ERROR: &str = "Failed to get testbed.";
 

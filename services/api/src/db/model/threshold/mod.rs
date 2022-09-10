@@ -4,17 +4,13 @@ use bencher_json::{
     perf::JsonPerfKind,
     threshold::{JsonNewThreshold, JsonThreshold},
 };
-use diesel::{Insertable, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{branch::QueryBranch, testbed::QueryTestbed};
-use crate::{
-    db::{schema, schema::threshold as threshold_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::threshold as threshold_table, util::http_error};
 
 pub mod alert;
 pub mod statistic;

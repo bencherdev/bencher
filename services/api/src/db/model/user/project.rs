@@ -1,6 +1,6 @@
 use diesel::{Insertable, Queryable};
 
-use crate::db::schema::project_role as project_role_table;
+use crate::schema::project_role as project_role_table;
 
 #[derive(Insertable)]
 #[diesel(table_name = project_role_table)]

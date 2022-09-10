@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewToken, JsonToken, ResourceId};
-use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -11,14 +11,11 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        model::{
-            user::token::{InsertToken, QueryToken},
-            user::QueryUser,
-        },
-        schema,
+    db::model::{
+        user::token::{InsertToken, QueryToken},
+        user::QueryUser,
     },
-    diesel::ExpressionMethods,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

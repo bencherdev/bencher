@@ -17,7 +17,8 @@ use crate::db::model::organization::QueryOrganization;
 use crate::db::model::user::organization::InsertOrganizationRole;
 use crate::db::model::user::QueryUser;
 use crate::{
-    db::{model::user::InsertUser, schema},
+    db::model::user::InsertUser,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

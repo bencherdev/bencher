@@ -1,13 +1,9 @@
 use bencher_json::report::JsonThroughput;
-use diesel::{Insertable, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{
-    db::{schema, schema::throughput as throughput_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::throughput as throughput_table, util::http_error};
 
 #[derive(Queryable, Debug)]
 pub struct QueryThroughput {

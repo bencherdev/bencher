@@ -1,16 +1,13 @@
 use std::str::FromStr;
 
 use diesel::{
-    expression_methods::BoolExpressionMethods, QueryDsl, Queryable, RunQueryDsl, SqliteConnection,
+    expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, Queryable, RunQueryDsl,
+    SqliteConnection,
 };
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{
-    db::{schema, schema::version as version_table},
-    diesel::ExpressionMethods,
-    util::http_error,
-};
+use crate::{schema, schema::version as version_table, util::http_error};
 
 const VERSION_ERROR: &str = "Failed to get version.";
 

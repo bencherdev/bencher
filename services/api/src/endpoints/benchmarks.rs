@@ -1,18 +1,15 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonBenchmark, ResourceId};
-use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        model::{benchmark::QueryBenchmark, project::QueryProject, user::QueryUser},
-        schema,
-    },
-    diesel::ExpressionMethods,
+    db::model::{benchmark::QueryBenchmark, project::QueryProject, user::QueryUser},
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

@@ -1,16 +1,12 @@
 use std::str::FromStr;
 
 use bencher_json::alert::{JsonAlert, JsonSide};
-use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{statistic::QueryStatistic, QueryThreshold};
-use crate::{
-    db::{model::perf::QueryPerf, schema, schema::alert as alert_table},
-    diesel::ExpressionMethods,
-    util::http_error,
-};
+use crate::{db::model::perf::QueryPerf, schema, schema::alert as alert_table, util::http_error};
 
 const ALERT_ERROR: &str = "Failed to get alert.";
 

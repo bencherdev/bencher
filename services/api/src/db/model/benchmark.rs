@@ -1,16 +1,15 @@
 use std::str::FromStr;
 
 use bencher_json::JsonBenchmark;
-use diesel::{expression_methods::BoolExpressionMethods, Insertable, Queryable, SqliteConnection};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
+    SqliteConnection,
+};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{
-    db::{schema, schema::benchmark as benchmark_table},
-    diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
-    util::http_error,
-};
+use crate::{schema, schema::benchmark as benchmark_table, util::http_error};
 
 const BENCHMARK_ERROR: &str = "Failed to get benchmark.";
 

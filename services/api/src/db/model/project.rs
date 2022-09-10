@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
-    db::schema::{self, project as project_table},
     diesel::ExpressionMethods,
+    schema::{self, project as project_table},
     util::{http_error, Context},
 };
 

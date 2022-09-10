@@ -4,22 +4,19 @@ use bencher_json::{
     perf::{JsonPerfData, JsonPerfDatum, JsonPerfDatumKind, JsonPerfKind},
     JsonPerf, JsonPerfQuery,
 };
-use diesel::{JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext, TypedBody,
 };
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        model::{
-            perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
-            report::to_date_time,
-            user::QueryUser,
-        },
-        schema,
+    db::model::{
+        perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
+        report::to_date_time,
+        user::QueryUser,
     },
-    diesel::ExpressionMethods,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

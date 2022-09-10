@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
-use diesel::{expression_methods::BoolExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -10,15 +10,12 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    db::{
-        model::{
-            branch::{InsertBranch, QueryBranch},
-            project::QueryProject,
-            user::QueryUser,
-        },
-        schema,
+    db::model::{
+        branch::{InsertBranch, QueryBranch},
+        project::QueryProject,
+        user::QueryUser,
     },
-    diesel::ExpressionMethods,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 

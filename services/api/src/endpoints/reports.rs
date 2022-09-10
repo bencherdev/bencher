@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
-use diesel::{expression_methods::BoolExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{
+    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
+};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -11,19 +13,16 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    db::{
-        model::{
-            branch::QueryBranch,
-            metrics::Metrics,
-            project::QueryProject,
-            report::{InsertReport, QueryReport},
-            testbed::QueryTestbed,
-            user::QueryUser,
-            version::InsertVersion,
-        },
-        schema,
+    db::model::{
+        branch::QueryBranch,
+        metrics::Metrics,
+        project::QueryProject,
+        report::{InsertReport, QueryReport},
+        testbed::QueryTestbed,
+        user::QueryUser,
+        version::InsertVersion,
     },
-    diesel::ExpressionMethods,
+    schema,
     util::{cors::get_cors, headers::CorsHeaders, http_error, Context},
 };
 
