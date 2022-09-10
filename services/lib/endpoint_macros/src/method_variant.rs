@@ -20,16 +20,16 @@ impl MethodVariant {
         if let TokenTree::Ident(variant_ident) = token_tree.next()? {
             let method = match variant_ident.to_string().as_str() {
                 GET_ONE | GET_LS => {
-                    quote! {http::Method::GET}
+                    quote! {GET}
                 },
                 POST => {
-                    quote! {http::Method::POST}
+                    quote! {POST}
                 },
                 PUT => {
-                    quote! {http::Method::PUT}
+                    quote! {PUT}
                 },
                 DELETE => {
-                    quote! {http::Method::DELETE}
+                    quote! {DELETE}
                 },
                 _ => return None,
             };

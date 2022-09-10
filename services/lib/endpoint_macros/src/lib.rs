@@ -6,6 +6,7 @@ mod to_method;
 use enum_keyword::Keyword;
 use method_variant::MethodVariant;
 use strip::strip_proc_attributes;
+use to_method::impl_to_method;
 
 #[proc_macro_derive(IntoEndpoint)]
 pub fn derive_into_endpoint(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -27,10 +28,9 @@ pub fn derive_to_method(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let mut token_tree = input.into_iter();
 
     strip_proc_attributes(&mut token_tree);
-    let _name = Keyword::name(&mut token_tree);
-    let _brace_group = Keyword::brace(&mut token_tree);
+    let name = Keyword::name(&mut token_tree).expect("Failed to find enum name.");
+    let method_variants =
+        MethodVariant::get_all(&mut token_tree).expect("Failed to parse method variants.");
 
-    let token_stream = proc_macro2::TokenStream::new();
-
-    token_stream.into()
+    impl_to_method(&name, &method_variants).into()
 }
