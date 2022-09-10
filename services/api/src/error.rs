@@ -2,8 +2,21 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ApiError {
-    #[error("the data for key `{0}` is not available")]
-    Redaction(String),
-    #[error("unknown data store error")]
-    Unknown,
+    #[error("Failed to set global default logger")]
+    SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
+    #[error("Failed to import .env file")]
+    DotEnv(#[from] dotenvy::Error),
+    #[error("Failed to create database connection")]
+    Connection(#[from] diesel::result::ConnectionError),
+    #[error("Failed to run database migrations")]
+    Migrations(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Failed to create server logger")]
+    CreateLogger(std::io::Error),
+    #[error("Failed to create server")]
+    CreateServer(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Shutting down server: {0}")]
+    RunServer(String),
+
+    #[error("{0}")]
+    Endpoint(String),
 }

@@ -9,9 +9,9 @@ const DEFAULT_PORT: &str = "8080";
 const MAX_BODY_SIZE: usize = 1 << 20;
 
 use super::{registrar::Registrar, Context};
-use crate::endpoints::Api;
+use crate::{endpoints::Api, ApiError};
 
-pub async fn get_server(api_name: &str, private: Context) -> Result<HttpServer<Context>, String> {
+pub async fn get_server(api_name: &str, private: Context) -> Result<HttpServer<Context>, ApiError> {
     let config = get_config();
 
     let mut api = ApiDescription::new();
@@ -21,7 +21,7 @@ pub async fn get_server(api_name: &str, private: Context) -> Result<HttpServer<C
 
     Ok(
         dropshot::HttpServerStarter::new(&config, api, private, &log)
-            .map_err(|error| format!("Failed to create server for {api_name}: {error}"))?
+            .map_err(ApiError::CreateServer)?
             .start(),
     )
 }
@@ -37,11 +37,12 @@ pub fn get_config() -> ConfigDropshot {
     }
 }
 
-pub fn get_logger(api_name: &str) -> Result<slog::Logger, String> {
+// TODO set logging level the same as tracing
+pub fn get_logger(api_name: &str) -> Result<slog::Logger, ApiError> {
     let config_logging = ConfigLogging::StderrTerminal {
         level: ConfigLoggingLevel::Info,
     };
     config_logging
         .to_logger(api_name)
-        .map_err(|error| format!("Failed to create logger for {api_name}: {error}"))
+        .map_err(ApiError::CreateLogger)
 }
