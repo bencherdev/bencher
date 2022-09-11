@@ -66,7 +66,7 @@ pub async fn get_ls(
     response_ok!(endpoint, json)
 }
 
-pub async fn get_ls_inner(
+async fn get_ls_inner(
     user_id: i32,
     context: &Context,
     path_params: GetLsParams,
@@ -124,7 +124,7 @@ pub async fn post(
     response_accepted!(endpoint, json)
 }
 
-pub async fn post_inner(
+async fn post_inner(
     user_id: i32,
     context: &Context,
     json_token: JsonNewToken,
@@ -173,18 +173,32 @@ pub async fn get_one(
     path_params: Path<GetOneParams>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonToken>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
+    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = rqctx.context();
+    let path_params = path_params.into_inner();
+    let json = get_one_inner(user_id, context, path_params)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_inner(
+    user_id: i32,
+    context: &Context,
+    path_params: GetOneParams,
+) -> Result<JsonToken, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     // TODO make smarter once permissions are a thing
     if query_user.id != user_id {
-        return Err(http_error!("Failed to get token."));
+        return Err(http_error!("Failed to get token.").into());
     }
 
-    let json = schema::token::table
+    schema::token::table
         .filter(
             schema::token::user_id
                 .eq(query_user.id)
@@ -192,10 +206,6 @@ pub async fn get_one(
         )
         .first::<QueryToken>(conn)
         .map_err(map_http_error!("Failed to get token."))?
-        .to_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .to_json(conn)
+        .map_err(Into::into)
 }
