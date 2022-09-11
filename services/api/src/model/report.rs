@@ -43,7 +43,7 @@ impl QueryReport {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get report."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, HttpError> {
         let benchmarks = self.get_benchmarks(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {

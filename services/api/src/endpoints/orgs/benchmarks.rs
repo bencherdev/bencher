@@ -51,7 +51,7 @@ pub async fn get_ls(
         .load::<QueryBenchmark>(conn)
         .map_err(map_http_error!("Failed to get benchmarks."))?
         .into_iter()
-        .filter_map(|query| query.to_json(conn).ok())
+        .filter_map(|query| query.into_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -102,7 +102,7 @@ pub async fn get_one(
         )
         .first::<QueryBenchmark>(conn)
         .map_err(map_http_error!("Failed to get benchmark."))?
-        .to_json(conn)?;
+        .into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

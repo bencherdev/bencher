@@ -47,7 +47,7 @@ impl QueryThreshold {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get threshold."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, HttpError> {
         let Self {
             id: _,
             uuid,

@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
 
-use bencher_json::report::{JsonLatency, JsonResource, JsonThroughput};
 use chrono::offset::Utc;
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl,
@@ -86,7 +85,7 @@ impl MetricsData {
                 .load::<QueryLatency>(conn)
                 .map_err(map_http_error!("Failed to get perf data."))?
                 .into_iter()
-                .filter_map(|query| query.to_json().ok())
+                .filter_map(|query| query.into_json().ok())
                 .map(|d| d.duration as f64)
                 .collect(),
             MetricsKind::Throughput => query
@@ -107,7 +106,7 @@ impl MetricsData {
                 .load::<QueryThroughput>(conn)
                 .map_err(map_http_error!("Failed to get perf data."))?
                 .into_iter()
-                .filter_map(|query| query.to_json().ok())
+                .filter_map(|query| query.into_json().ok())
                 .map(|d| d.per_unit_time(&d.events).into())
                 .collect(),
             MetricsKind::MinMaxAvg(mma) => match mma {
@@ -128,7 +127,7 @@ impl MetricsData {
                     .load::<QueryResource>(conn)
                     .map_err(map_http_error!("Failed to get perf data."))?
                     .into_iter()
-                    .map(|query| query.to_json().avg.into())
+                    .map(|query| query.into_json().avg.into())
                     .collect(),
                 MinMaxAvgKind::Memory => query
                     .inner_join(
@@ -147,7 +146,7 @@ impl MetricsData {
                     .load::<QueryResource>(conn)
                     .map_err(map_http_error!("Failed to get perf data."))?
                     .into_iter()
-                    .map(|query| query.to_json().avg.into())
+                    .map(|query| query.into_json().avg.into())
                     .collect(),
                 MinMaxAvgKind::Storage => query
                     .inner_join(
@@ -166,7 +165,7 @@ impl MetricsData {
                     .load::<QueryResource>(conn)
                     .map_err(map_http_error!("Failed to get perf data."))?
                     .into_iter()
-                    .map(|query| query.to_json().avg.into())
+                    .map(|query| query.into_json().avg.into())
                     .collect(),
             },
         };

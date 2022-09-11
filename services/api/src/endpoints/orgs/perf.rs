@@ -463,12 +463,7 @@ async fn post_inner(
                         .collect(),
                 };
 
-                let json_perf_data = to_json(
-                    branch.clone(),
-                    testbed.clone(),
-                    benchmark.clone(),
-                    query_data,
-                )?;
+                let json_perf_data = into_json(*branch, *testbed, *benchmark, query_data)?;
 
                 data.push(json_perf_data);
             }
@@ -483,7 +478,7 @@ async fn post_inner(
     })
 }
 
-fn to_json(
+fn into_json(
     branch: Uuid,
     testbed: Uuid,
     benchmark: Uuid,
@@ -491,7 +486,7 @@ fn to_json(
 ) -> Result<JsonPerfData, HttpError> {
     let mut data = Vec::new();
     for query_datum in query_data {
-        data.push(QueryPerfDatum::to_json(query_datum)?)
+        data.push(QueryPerfDatum::into_json(query_datum)?)
     }
     Ok(JsonPerfData {
         branch,
@@ -513,7 +508,7 @@ pub struct QueryPerfDatum {
 }
 
 impl QueryPerfDatum {
-    fn to_json(self) -> Result<JsonPerfDatum, HttpError> {
+    fn into_json(self) -> Result<JsonPerfDatum, HttpError> {
         let Self {
             uuid,
             iteration,
@@ -531,7 +526,7 @@ impl QueryPerfDatum {
             end_time: to_date_time(end_time)?,
             version_number: version_number as u32,
             version_hash,
-            metrics: QueryPerfMetrics::to_json(metrics)?,
+            metrics: QueryPerfMetrics::into_json(metrics)?,
         })
     }
 }
@@ -546,15 +541,19 @@ pub enum QueryPerfMetrics {
 }
 
 impl QueryPerfMetrics {
-    fn to_json(self) -> Result<JsonPerfDatumKind, HttpError> {
+    fn into_json(self) -> Result<JsonPerfDatumKind, HttpError> {
         Ok(match self {
-            Self::Latency(latency) => JsonPerfDatumKind::Latency(QueryLatency::to_json(latency)?),
+            Self::Latency(latency) => JsonPerfDatumKind::Latency(QueryLatency::into_json(latency)?),
             Self::Throughput(throughput) => {
-                JsonPerfDatumKind::Throughput(QueryThroughput::to_json(throughput)?)
+                JsonPerfDatumKind::Throughput(QueryThroughput::into_json(throughput)?)
             },
-            Self::Compute(resource) => JsonPerfDatumKind::Compute(QueryResource::to_json(resource)),
-            Self::Memory(resource) => JsonPerfDatumKind::Memory(QueryResource::to_json(resource)),
-            Self::Storage(resource) => JsonPerfDatumKind::Storage(QueryResource::to_json(resource)),
+            Self::Compute(resource) => {
+                JsonPerfDatumKind::Compute(QueryResource::into_json(resource))
+            },
+            Self::Memory(resource) => JsonPerfDatumKind::Memory(QueryResource::into_json(resource)),
+            Self::Storage(resource) => {
+                JsonPerfDatumKind::Storage(QueryResource::into_json(resource))
+            },
         })
     }
 }

@@ -15,7 +15,7 @@ pub struct QueryResource {
 }
 
 impl QueryResource {
-    pub fn to_json(self) -> JsonResource {
+    pub fn into_json(self) -> JsonResource {
         let Self {
             id: _,
             uuid: _,

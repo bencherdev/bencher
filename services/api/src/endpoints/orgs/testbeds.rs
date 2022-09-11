@@ -57,7 +57,7 @@ pub async fn get_ls(
         .load::<QueryTestbed>(conn)
         .map_err(map_http_error!("Failed to get testbeds."))?
         .into_iter()
-        .filter_map(|query| query.to_json(conn).ok())
+        .filter_map(|query| query.into_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -101,7 +101,7 @@ pub async fn post(
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
         .first::<QueryTestbed>(conn)
         .map_err(map_http_error!("Failed to create testbed."))?;
-    let json = query_testbed.to_json(conn)?;
+    let json = query_testbed.into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -153,7 +153,7 @@ pub async fn get_one(
         )
         .first::<QueryTestbed>(conn)
         .map_err(map_http_error!("Failed to get testbed."))?
-        .to_json(conn)?;
+        .into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

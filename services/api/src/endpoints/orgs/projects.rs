@@ -49,7 +49,7 @@ pub async fn get_ls(
         .load::<QueryProject>(conn)
         .map_err(map_http_error!("Failed to get projects."))?
         .into_iter()
-        .filter_map(|query| query.to_json(conn).ok())
+        .filter_map(|query| query.into_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -96,7 +96,7 @@ pub async fn post(
         .execute(conn)
         .map_err(map_http_error!("Failed to create project."))?;
 
-    let json = query_project.to_json(conn)?;
+    let json = query_project.into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -147,7 +147,7 @@ pub async fn get_one(
         .map_err(map_http_error!("Failed to get project."))?;
 
     QueryUser::has_access(conn, user_id, query.id)?;
-    let json = query.to_json(conn)?;
+    let json = query.into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),

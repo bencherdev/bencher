@@ -40,7 +40,7 @@ impl QueryStatistic {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get statistic."))
     }
 
-    pub fn to_json(self) -> Result<JsonStatistic, HttpError> {
+    pub fn into_json(self) -> Result<JsonStatistic, HttpError> {
         let Self {
             id: _,
             uuid,

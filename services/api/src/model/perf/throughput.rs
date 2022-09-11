@@ -16,7 +16,7 @@ pub struct QueryThroughput {
 }
 
 impl QueryThroughput {
-    pub fn to_json(self) -> Result<JsonThroughput, HttpError> {
+    pub fn into_json(self) -> Result<JsonThroughput, HttpError> {
         let Self {
             id: _,
             uuid: _,

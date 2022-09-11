@@ -15,7 +15,7 @@ pub struct QueryLatency {
 }
 
 impl QueryLatency {
-    pub fn to_json(self) -> Result<JsonLatency, HttpError> {
+    pub fn into_json(self) -> Result<JsonLatency, HttpError> {
         let Self {
             id: _,
             uuid: _,

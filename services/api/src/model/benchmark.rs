@@ -53,7 +53,7 @@ impl QueryBenchmark {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get benchmark."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, HttpError> {
         let QueryBenchmark {
             id: _,
             uuid,

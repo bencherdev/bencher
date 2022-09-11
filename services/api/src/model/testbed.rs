@@ -42,7 +42,7 @@ impl QueryTestbed {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get testbed."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, HttpError> {
         let Self {
             id: _,
             uuid,

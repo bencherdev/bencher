@@ -91,7 +91,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, HttpError> {
         let Self {
             id: _,
             uuid,

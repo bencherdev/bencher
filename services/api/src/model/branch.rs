@@ -35,7 +35,7 @@ impl QueryBranch {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get branch."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, HttpError> {
         let Self {
             id: _,
             uuid,

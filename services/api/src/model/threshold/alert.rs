@@ -38,7 +38,7 @@ impl QueryAlert {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get alert."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonAlert, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonAlert, HttpError> {
         let Self {
             id: _,
             uuid,

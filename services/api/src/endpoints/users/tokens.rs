@@ -86,7 +86,7 @@ async fn get_ls_inner(
         .load::<QueryToken>(conn)
         .map_err(map_http_error!("Failed to get tokens."))?
         .into_iter()
-        .filter_map(|query| query.to_json(conn).ok())
+        .filter_map(|query| query.into_json(conn).ok())
         .collect();
 
     Ok(json)
@@ -141,7 +141,7 @@ async fn post_inner(
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
         .map_err(map_http_error!("Failed to create token."))?
-        .to_json(conn)
+        .into_json(conn)
         .map_err(Into::into)
 }
 
@@ -206,6 +206,6 @@ async fn get_one_inner(
         )
         .first::<QueryToken>(conn)
         .map_err(map_http_error!("Failed to get token."))?
-        .to_json(conn)
+        .into_json(conn)
         .map_err(Into::into)
 }

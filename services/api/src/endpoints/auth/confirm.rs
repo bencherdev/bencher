@@ -55,7 +55,7 @@ pub async fn post(
         .filter(schema::user::email.eq(token_data.claims.email()))
         .first::<QueryUser>(conn)
         .map_err(map_http_error!("Failed to login user."))?;
-    let json_user = query_user.to_json()?;
+    let json_user = query_user.into_json()?;
 
     let token = JsonWebToken::new_client(&context.key, token_data.claims.email().to_string())
         .map_err(map_http_error!("Failed to login user."))?;

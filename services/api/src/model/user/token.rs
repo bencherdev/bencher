@@ -47,7 +47,7 @@ impl QueryToken {
         Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get token."))
     }
 
-    pub fn to_json(self, conn: &mut SqliteConnection) -> Result<JsonToken, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonToken, HttpError> {
         let Self {
             id: _,
             uuid,

@@ -135,7 +135,7 @@ impl QueryUser {
             .map_err(map_http_error!("Failed to get user."))
     }
 
-    pub fn to_json(self) -> Result<JsonUser, HttpError> {
+    pub fn into_json(self) -> Result<JsonUser, HttpError> {
         let Self {
             id: _,
             uuid,

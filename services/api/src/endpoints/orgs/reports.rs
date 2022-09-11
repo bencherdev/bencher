@@ -75,7 +75,7 @@ pub async fn get_ls(
         .load::<QueryReport>(conn)
         .map_err(map_http_error!("Failed to get reports."))?
         .into_iter()
-        .filter_map(|query| query.to_json(conn).ok())
+        .filter_map(|query| query.into_json(conn).ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -186,7 +186,7 @@ pub async fn post(
         }
     }
 
-    let json = query_report.to_json(conn)?;
+    let json = query_report.into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -247,7 +247,7 @@ pub async fn get_one(
         ))
         .first::<QueryReport>(conn)
         .map_err(map_http_error!("Failed to get report."))?
-        .to_json(conn)?;
+        .into_json(conn)?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
