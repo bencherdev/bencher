@@ -477,8 +477,8 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "successful operation",
+          "202": {
+            "description": "successfully enqueued operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -556,7 +556,7 @@
         "tags": [
           "ping"
         ],
-        "operationId": "api_get_ping",
+        "operationId": "get",
         "responses": {
           "200": {
             "description": "successful operation",
