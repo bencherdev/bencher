@@ -88,11 +88,11 @@ impl From<JsonStatisticKind> for StatisticKind {
     }
 }
 
-impl Into<JsonStatisticKind> for StatisticKind {
-    fn into(self) -> JsonStatisticKind {
-        match self {
-            Self::Z => JsonStatisticKind::Z,
-            Self::T => JsonStatisticKind::T,
+impl From<StatisticKind> for JsonStatisticKind {
+    fn from(kind: StatisticKind) -> Self {
+        match kind {
+            StatisticKind::Z => Self::Z,
+            StatisticKind::T => Self::T,
         }
     }
 }

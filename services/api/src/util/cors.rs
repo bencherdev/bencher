@@ -5,7 +5,7 @@ use http::{header::HeaderValue, StatusCode};
 
 // https://githu.com/oxidecomputer/cio/blob/95545d29f25712a917b85593492217f4e989b04c/webhooky/src/cors.rs
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum CorsFailure {
     InvalidValue(String),
     Missing,

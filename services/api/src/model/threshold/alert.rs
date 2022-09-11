@@ -75,20 +75,20 @@ impl From<bool> for Side {
     }
 }
 
-impl Into<bool> for Side {
-    fn into(self) -> bool {
-        match self {
-            Self::Left => false,
-            Self::Right => true,
+impl From<Side> for bool {
+    fn from(side: Side) -> Self {
+        match side {
+            Side::Left => false,
+            Side::Right => true,
         }
     }
 }
 
-impl Into<JsonSide> for Side {
-    fn into(self) -> JsonSide {
-        match self {
-            Self::Left => JsonSide::Left,
-            Self::Right => JsonSide::Right,
+impl From<Side> for JsonSide {
+    fn from(side: Side) -> Self {
+        match side {
+            Side::Left => Self::Left,
+            Side::Right => Self::Right,
         }
     }
 }

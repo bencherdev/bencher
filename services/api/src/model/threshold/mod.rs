@@ -102,14 +102,14 @@ impl From<JsonPerfKind> for PerfKind {
     }
 }
 
-impl Into<JsonPerfKind> for PerfKind {
-    fn into(self) -> JsonPerfKind {
-        match self {
-            Self::Throughput => JsonPerfKind::Throughput,
-            Self::Latency => JsonPerfKind::Latency,
-            Self::Compute => JsonPerfKind::Compute,
-            Self::Memory => JsonPerfKind::Memory,
-            Self::Storage => JsonPerfKind::Storage,
+impl From<PerfKind> for JsonPerfKind {
+    fn from(kind: PerfKind) -> Self {
+        match kind {
+            PerfKind::Throughput => Self::Throughput,
+            PerfKind::Latency => Self::Latency,
+            PerfKind::Compute => Self::Compute,
+            PerfKind::Memory => Self::Memory,
+            PerfKind::Storage => Self::Storage,
         }
     }
 }

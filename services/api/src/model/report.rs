@@ -144,12 +144,12 @@ impl From<&JsonAdapter> for Adapter {
     }
 }
 
-impl Into<JsonAdapter> for Adapter {
-    fn into(self) -> JsonAdapter {
-        match self {
-            Self::Json => JsonAdapter::Json,
-            Self::RustTest => JsonAdapter::RustTest,
-            Self::RustBench => JsonAdapter::RustBench,
+impl From<Adapter> for JsonAdapter {
+    fn from(adapter: Adapter) -> Self {
+        match adapter {
+            Adapter::Json => Self::Json,
+            Adapter::RustTest => Self::RustTest,
+            Adapter::RustBench => Self::RustBench,
         }
     }
 }

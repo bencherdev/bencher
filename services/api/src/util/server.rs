@@ -27,7 +27,7 @@ pub async fn get_server(api_name: &str, private: Context) -> Result<HttpServer<C
 }
 
 pub fn get_config() -> ConfigDropshot {
-    let port = std::env::var(PORT_KEY).unwrap_or(DEFAULT_PORT.into());
+    let port = std::env::var(PORT_KEY).unwrap_or_else(|_| DEFAULT_PORT.into());
     let address = format!("{DEFAULT_IP}:{port}");
 
     ConfigDropshot {
