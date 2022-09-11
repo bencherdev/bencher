@@ -72,7 +72,7 @@ impl From<&Endpoint> for ApiError {
 }
 
 macro_rules! pub_response_ok {
-    ($endpoint:expr, $body:ident) => {
+    ($endpoint:expr, $body:expr) => {
         Ok($endpoint.pub_response_headers(dropshot::HttpResponseOk($body)))
     };
 }
@@ -80,7 +80,7 @@ macro_rules! pub_response_ok {
 pub(crate) use pub_response_ok;
 
 macro_rules! pub_response_accepted {
-    ($endpoint:expr, $body:ident) => {
+    ($endpoint:expr, $body:expr) => {
         Ok($endpoint.pub_response_headers(dropshot::HttpResponseAccepted($body)))
     };
 }
@@ -88,7 +88,7 @@ macro_rules! pub_response_accepted {
 pub(crate) use pub_response_accepted;
 
 macro_rules! response_ok {
-    ($endpoint:expr, $body:ident) => {
+    ($endpoint:expr, $body:expr) => {
         Ok($endpoint.response_headers(dropshot::HttpResponseOk($body)))
     };
 }
@@ -96,7 +96,7 @@ macro_rules! response_ok {
 pub(crate) use response_ok;
 
 macro_rules! response_accepted {
-    ($endpoint:expr, $body:ident) => {
+    ($endpoint:expr, $body:expr) => {
         Ok($endpoint.response_headers(dropshot::HttpResponseAccepted($body)))
     };
 }
