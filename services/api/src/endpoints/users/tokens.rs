@@ -11,7 +11,10 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    endpoints::{Endpoint, Method},
+    endpoints::{
+        endpoint::{response_accepted, response_ok},
+        Endpoint, Method,
+    },
     model::{
         user::token::{InsertToken, QueryToken},
         user::QueryUser,
@@ -60,7 +63,7 @@ pub async fn get_ls(
         .await
         .map_err(|e| endpoint.err(e))?;
 
-    Ok(endpoint.response_headers(HttpResponseOk(json)))
+    response_ok!(endpoint, json)
 }
 
 pub async fn get_ls_inner(
@@ -118,7 +121,7 @@ pub async fn post(
         .await
         .map_err(|e| endpoint.err(e))?;
 
-    Ok(endpoint.response_headers(HttpResponseAccepted(json)))
+    response_accepted!(endpoint, json)
 }
 
 pub async fn post_inner(

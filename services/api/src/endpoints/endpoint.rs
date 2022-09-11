@@ -26,22 +26,12 @@ impl Endpoint {
         api_error
     }
 
-    pub fn pub_response_headers<T>(
-        &self,
-        body: T,
-    ) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    pub fn pub_response_headers<R, T>(&self, body: R) -> HttpResponseHeaders<R, CorsHeaders>
     where
+        R: HttpCodedResponse<Body = T>,
         T: JsonSchema + Serialize + Send + Sync,
     {
-        HttpResponseHeaders::new(HttpResponseOk(body), self.pub_header())
-    }
-
-    pub fn pub_header(&self) -> CorsHeaders {
-        CorsHeaders::new_origin_all(
-            http::Method::from(self.method).to_string(),
-            "Content-Type".into(),
-            None,
-        )
+        HttpResponseHeaders::new(body, self.pub_header())
     }
 
     pub fn response_headers<R, T>(&self, body: R) -> HttpResponseHeaders<R, CorsHeaders>
@@ -50,6 +40,14 @@ impl Endpoint {
         T: JsonSchema + Serialize + Send + Sync,
     {
         HttpResponseHeaders::new(body, self.header())
+    }
+
+    pub fn pub_header(&self) -> CorsHeaders {
+        CorsHeaders::new_origin_all(
+            http::Method::from(self.method).to_string(),
+            "Content-Type".into(),
+            None,
+        )
     }
 
     pub fn header(&self) -> CorsHeaders {
@@ -72,3 +70,35 @@ impl From<&Endpoint> for ApiError {
         }
     }
 }
+
+macro_rules! pub_response_ok {
+    ($endpoint:expr, $body:ident) => {
+        Ok($endpoint.pub_response_headers(dropshot::HttpResponseOk($body)))
+    };
+}
+
+pub(crate) use pub_response_ok;
+
+macro_rules! pub_response_accepted {
+    ($endpoint:expr, $body:ident) => {
+        Ok($endpoint.pub_response_headers(dropshot::HttpResponseAccepted($body)))
+    };
+}
+
+pub(crate) use pub_response_accepted;
+
+macro_rules! response_ok {
+    ($endpoint:expr, $body:ident) => {
+        Ok($endpoint.response_headers(dropshot::HttpResponseOk($body)))
+    };
+}
+
+pub(crate) use response_ok;
+
+macro_rules! response_accepted {
+    ($endpoint:expr, $body:ident) => {
+        Ok($endpoint.response_headers(dropshot::HttpResponseAccepted($body)))
+    };
+}
+
+pub(crate) use response_accepted;
