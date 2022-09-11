@@ -16,7 +16,11 @@ use crate::{
         user::{project::InsertProjectRole, QueryUser},
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
+    util::{
+        cors::{get_cors, CorsResponse},
+        headers::CorsHeaders,
+        map_http_error, Context,
+    },
 };
 
 #[endpoint {
@@ -24,9 +28,7 @@ use crate::{
     path =  "/v0/projects",
     tags = ["projects"]
 }]
-pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -117,7 +119,7 @@ pub struct PathParams {
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 

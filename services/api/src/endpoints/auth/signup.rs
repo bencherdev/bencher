@@ -7,8 +7,7 @@ use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
 };
 use tracing::info;
 
@@ -16,6 +15,7 @@ use crate::model::organization::InsertOrganization;
 use crate::model::organization::QueryOrganization;
 use crate::model::user::organization::InsertOrganizationRole;
 use crate::model::user::QueryUser;
+use crate::util::cors::CorsResponse;
 use crate::{
     model::user::InsertUser,
     schema,
@@ -27,9 +27,7 @@ use crate::{
     path =  "/v0/auth/signup",
     tags = ["auth"]
 }]
-pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 

@@ -5,11 +5,11 @@ use bencher_rbac::organization::LEADER_ROLE;
 use bencher_rbac::organization::MEMBER_ROLE;
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
 };
 use tracing::info;
 
+use crate::util::cors::CorsResponse;
 use crate::{
     diesel::ExpressionMethods,
     model::organization::QueryOrganization,
@@ -24,9 +24,7 @@ use crate::{
     path =  "/v0/auth/login",
     tags = ["auth"]
 }]
-pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 

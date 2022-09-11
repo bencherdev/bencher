@@ -3,6 +3,8 @@ use std::{collections::HashSet, sync::Arc};
 use dropshot::{HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext, ServerContext};
 use http::{header::HeaderValue, StatusCode};
 
+pub type CorsResponse = HttpResponseHeaders<HttpResponseOk<String>>;
+
 // https://githu.com/oxidecomputer/cio/blob/95545d29f25712a917b85593492217f4e989b04c/webhooky/src/cors.rs
 
 #[derive(Debug, PartialEq, Eq)]

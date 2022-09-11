@@ -6,15 +6,18 @@ use bencher_json::{
 };
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
 };
 
 use crate::{
     diesel::ExpressionMethods,
     model::user::QueryUser,
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
+    util::{
+        cors::{get_cors, CorsResponse},
+        headers::CorsHeaders,
+        map_http_error, Context,
+    },
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -27,9 +30,7 @@ pub enum Method {
     path =  "/v0/auth/confirm",
     tags = ["auth"]
 }]
-pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 

@@ -3,14 +3,17 @@ use std::sync::Arc;
 use bencher_json::{auth::JsonInvite, jwt::JsonWebToken, JsonEmpty};
 
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
 };
 use tracing::info;
 
 use crate::{
     model::user::QueryUser,
-    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
+    util::{
+        cors::{get_cors, CorsResponse},
+        headers::CorsHeaders,
+        map_http_error, Context,
+    },
 };
 
 #[endpoint {
@@ -18,9 +21,7 @@ use crate::{
     path =  "/v0/auth/invite",
     tags = ["auth"]
 }]
-pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 

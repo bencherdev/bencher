@@ -23,7 +23,11 @@ use crate::{
         version::InsertVersion,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
+    util::{
+        cors::{get_cors, CorsResponse},
+        headers::CorsHeaders,
+        http_error, map_http_error, Context,
+    },
 };
 
 #[derive(Deserialize, JsonSchema)]
@@ -39,7 +43,7 @@ pub struct GetLsParams {
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -89,9 +93,7 @@ pub async fn get_ls(
     path =  "/v0/reports",
     tags = ["reports"]
 }]
-pub async fn post_options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -208,7 +210,7 @@ pub struct GetOneParams {
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 

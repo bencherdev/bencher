@@ -6,8 +6,7 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
-    TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
 };
 use uuid::Uuid;
 
@@ -19,7 +18,11 @@ use crate::{
         user::QueryUser,
     },
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
+    util::{
+        cors::{get_cors, CorsResponse},
+        headers::CorsHeaders,
+        map_http_error, Context,
+    },
     ApiError,
 };
 
@@ -29,9 +32,7 @@ use crate::{
     path =  "/v0/perf",
     tags = ["perf"]
 }]
-pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
