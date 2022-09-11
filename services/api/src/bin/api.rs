@@ -1,4 +1,4 @@
-use bencher_api::{util::db::get_db_connection, ApiError};
+use bencher_api::ApiError;
 use tracing::{info, trace};
 
 const API_NAME: &str = "Bencher API";
@@ -27,7 +27,6 @@ async fn run() -> Result<(), ApiError> {
     const SWAGGER_PATH: &str = "../ui/src/components/docs/api/swagger.json";
 
     trace!("Generating Swagger JSON file at: {SWAGGER_PATH}");
-    let db_connection = get_db_connection()?;
     let mut api_description = ApiDescription::new();
     Api::register(&mut api_description)?;
     let mut swagger_file = File::create(SWAGGER_PATH).map_err(ApiError::CreateSwaggerFile)?;
@@ -55,7 +54,9 @@ async fn run() -> Result<(), ApiError> {
 
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), ApiError> {
-    use bencher_api::util::{migrate::run_migrations, server::get_server, ApiContext};
+    use bencher_api::util::{
+        db::get_db_connection, migrate::run_migrations, server::get_server, ApiContext,
+    };
     use dotenvy::dotenv;
     use tokio::sync::Mutex;
 
