@@ -60,7 +60,7 @@ pub async fn post(
         let org_claims = token_data
             .claims
             .org()
-            .ok_or(http_error!("Failed to login user."))?;
+            .ok_or_else(|| http_error!("Failed to login user."))?;
 
         // Connect the user to the organization with the given role
         let organization_id = QueryOrganization::get_id(conn, org_claims.uuid)?;

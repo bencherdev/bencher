@@ -71,7 +71,7 @@ impl QueryToken {
 pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
     Utc.timestamp_opt(timestamp, 0)
         .single()
-        .ok_or(http_error!("Failed to get token."))
+        .ok_or_else(|| http_error!("Failed to get token."))
 }
 
 #[derive(Insertable)]

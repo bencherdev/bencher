@@ -83,11 +83,7 @@ impl QueryReport {
             .load::<String>(conn)
             .map_err(map_http_error!("Failed to get report."))?
             .iter()
-            .filter_map(|uuid| {
-                Uuid::from_str(uuid)
-                    .ok()
-                    .map(|uuid| JsonReportBenchmark(uuid))
-            })
+            .filter_map(|uuid| Uuid::from_str(uuid).ok().map(JsonReportBenchmark))
             .collect())
     }
 
@@ -100,7 +96,7 @@ impl QueryReport {
             .load::<String>(conn)
             .map_err(map_http_error!("Failed to get report."))?
             .iter()
-            .filter_map(|uuid| Uuid::from_str(uuid).ok().map(|uuid| JsonReportAlert(uuid)))
+            .filter_map(|uuid| Uuid::from_str(uuid).ok().map(JsonReportAlert))
             .collect())
     }
 }
@@ -112,7 +108,7 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
         (timestamp % 1_000_000_000) as u32,
     )
     .single()
-    .ok_or(http_error!("Failed to get report."))
+    .ok_or_else(|| http_error!("Failed to get report."))
 }
 
 const JSON: isize = 0;

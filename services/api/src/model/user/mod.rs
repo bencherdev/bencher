@@ -76,7 +76,7 @@ fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) 
 }
 
 fn validate_email(email: &str) -> Result<EmailAddress, HttpError> {
-    EmailAddress::parse(email, None).ok_or(http_error!("Failed to get user."))
+    EmailAddress::parse(email, None).ok_or_else(|| http_error!("Failed to get user."))
 }
 
 #[derive(Queryable)]
@@ -161,12 +161,12 @@ impl QueryUser {
         let headers = request
             .headers()
             .get("Authorization")
-            .ok_or(http_error!("Missing \"Authorization\" header."))?
+            .ok_or_else(|| http_error!("Missing \"Authorization\" header."))?
             .to_str()
             .map_err(map_http_error!("Invalid \"Authorization\" header."))?;
         let (_, token) = headers
             .split_once("Bearer ")
-            .ok_or(http_error!("Missing \"Authorization\" Bearer."))?;
+            .ok_or_else(|| http_error!("Missing \"Authorization\" Bearer."))?;
         let jwt: JsonWebToken = token.to_string().into();
 
         let context = &mut *rqctx.context().lock().await;
