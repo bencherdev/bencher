@@ -1,4 +1,4 @@
-use dropshot::{HttpCodedResponse, HttpResponseHeaders, HttpResponseOk};
+use dropshot::{HttpCodedResponse, HttpResponseHeaders};
 use schemars::JsonSchema;
 use serde::Serialize;
 

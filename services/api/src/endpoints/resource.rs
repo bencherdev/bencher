@@ -1,8 +1,8 @@
 use crate::WordStr;
 
 use super::auth::Resource as AuthResource;
+use super::orgs::Resource as OrgsResource;
 use super::users::Resource as UsersResource;
-use super::users::Resource as OrgsResource;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Resource {
@@ -12,9 +12,21 @@ pub enum Resource {
     Ping,
 }
 
+impl From<AuthResource> for Resource {
+    fn from(resource: AuthResource) -> Self {
+        Self::Auth(resource)
+    }
+}
+
 impl From<UsersResource> for Resource {
-    fn from(users: UsersResource) -> Self {
-        Self::Users(users)
+    fn from(resource: UsersResource) -> Self {
+        Self::Users(resource)
+    }
+}
+
+impl From<OrgsResource> for Resource {
+    fn from(resource: OrgsResource) -> Self {
+        Self::Orgs(resource)
     }
 }
 

@@ -1,7 +1,3 @@
-use dropshot::HttpCodedResponse;
-use schemars::JsonSchema;
-use serde::Serialize;
-
 #[derive(Copy, Clone)]
 pub enum Method {
     GetOne,

@@ -6,11 +6,13 @@ use bencher_json::{
 };
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext, TypedBody,
+    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, RequestContext,
+    TypedBody,
 };
 use uuid::Uuid;
 
 use crate::{
+    endpoints::{endpoint::pub_response_accepted, orgs::Resource, Endpoint, Method},
     model::{
         perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
         report::to_date_time,
@@ -18,6 +20,7 @@ use crate::{
     },
     schema,
     util::{cors::get_cors, headers::CorsHeaders, map_http_error, Context},
+    ApiError,
 };
 
 // TODO figure out why this doesn't work as a PUT
@@ -40,9 +43,26 @@ pub async fn options(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonPerfQuery>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPerf>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
+) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonPerf>, CorsHeaders>, HttpError> {
+    // This is both a public and auth route
+    // Only public projects are allowed to use it as a public route though
+    let user_id = QueryUser::auth(&rqctx).await.ok();
+    let endpoint = Endpoint::new(Resource::Perf, Method::Post);
 
+    let context = rqctx.context();
+    let json_perf_query = body.into_inner();
+    let json = post_inner(user_id, context, json_perf_query)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    pub_response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    _user_id: Option<i32>,
+    context: &Context,
+    json_perf_query: JsonPerfQuery,
+) -> Result<JsonPerf, ApiError> {
     let JsonPerfQuery {
         branches,
         testbeds,
@@ -50,7 +70,7 @@ pub async fn post(
         kind,
         start_time,
         end_time,
-    } = body.into_inner();
+    } = json_perf_query;
 
     // In order to make the type system happy, always query a start and end time.
     // If either is missing then just default to the extremes: zero and max.
@@ -69,7 +89,7 @@ pub async fn post(
         schema::perf::iteration,
     );
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = &mut *context.lock().await;
     let conn = &mut context.db;
     let mut data = Vec::new();
     for branch in &branches {
@@ -455,17 +475,12 @@ pub async fn post(
         }
     }
 
-    let json_perf = JsonPerf {
+    Ok(JsonPerf {
         kind,
         start_time,
         end_time,
         benchmarks: data,
-    };
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json_perf),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    })
 }
 
 fn to_json(
