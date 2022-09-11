@@ -28,7 +28,7 @@ impl Registrar<Context> for Api {
 
 fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Ping
-    api.register(ping::api_get_ping)?;
+    api.register(ping::get)?;
     // Auth
     api.register(auth::signup::options)?;
     api.register(auth::signup::post)?;

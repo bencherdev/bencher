@@ -14,7 +14,7 @@ const PONG: &str = "PONG";
     path = "/v0/ping",
     tags = ["ping"]
 }]
-pub async fn api_get_ping(
+pub async fn get(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(Resource::Ping, Method::GetOne);
