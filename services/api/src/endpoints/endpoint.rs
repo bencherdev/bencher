@@ -1,4 +1,4 @@
-use dropshot::{HttpResponseHeaders, HttpResponseOk};
+use dropshot::{HttpCodedResponse, HttpResponseHeaders, HttpResponseOk};
 use schemars::JsonSchema;
 use serde::Serialize;
 
@@ -44,14 +44,12 @@ impl Endpoint {
         )
     }
 
-    pub fn response_headers<T>(
-        &self,
-        body: T,
-    ) -> HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>
+    pub fn response_headers<R, T>(&self, body: R) -> HttpResponseHeaders<R, CorsHeaders>
     where
+        R: HttpCodedResponse<Body = T>,
         T: JsonSchema + Serialize + Send + Sync,
     {
-        HttpResponseHeaders::new(HttpResponseOk(body), self.header())
+        HttpResponseHeaders::new(body, self.header())
     }
 
     pub fn header(&self) -> CorsHeaders {

@@ -60,7 +60,7 @@ pub async fn get_ls(
         .await
         .map_err(|e| endpoint.err(e))?;
 
-    Ok(endpoint.response_headers(json))
+    Ok(endpoint.response_headers(HttpResponseOk(json)))
 }
 
 pub async fn get_ls_inner(
@@ -68,7 +68,7 @@ pub async fn get_ls_inner(
     context: &Context,
     path_params: GetLsParams,
 ) -> Result<Vec<JsonToken>, ApiError> {
-    let mut context = context.lock().await;
+    let context = &mut *context.lock().await;
     let conn = &mut context.db;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
@@ -110,9 +110,23 @@ pub async fn post(
     body: TypedBody<JsonNewToken>,
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonToken>, CorsHeaders>, HttpError> {
     let user_id = QueryUser::auth(&rqctx).await?;
-    let json_token = body.into_inner();
+    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::Post);
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = rqctx.context();
+    let json_token = body.into_inner();
+    let json = post_inner(user_id, context, json_token)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    Ok(endpoint.response_headers(HttpResponseAccepted(json)))
+}
+
+pub async fn post_inner(
+    user_id: i32,
+    context: &Context,
+    json_token: JsonNewToken,
+) -> Result<JsonToken, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db;
     let insert_token = InsertToken::from_json(conn, json_token, user_id, &context.key)?;
     diesel::insert_into(schema::token::table)
@@ -120,16 +134,12 @@ pub async fn post(
         .execute(conn)
         .map_err(map_http_error!("Failed to create token."))?;
 
-    let query_token = schema::token::table
+    schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
-        .map_err(map_http_error!("Failed to create token."))?;
-    let json = query_token.to_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+        .map_err(map_http_error!("Failed to create token."))?
+        .to_json(conn)
+        .map_err(Into::into)
 }
 
 #[derive(Deserialize, JsonSchema)]
