@@ -46,6 +46,9 @@ pub enum ApiError {
     #[error("Failed to DELETE {}", _0.singular())]
     Delete(Resource),
 
+    #[error("Failed to query database: {0}")]
+    Query(#[from] diesel::result::Error),
+
     // TODO remove once no longer needed
     #[error(transparent)]
     Http(#[from] HttpError),
@@ -64,3 +67,15 @@ pub trait WordStr {
     fn singular(&self) -> &str;
     fn plural(&self) -> &str;
 }
+
+macro_rules! query_error {
+    () => {
+        |e| {
+            let err: crate::error::ApiError = e.into();
+            tracing::info!("{err}");
+            err
+        }
+    };
+}
+
+pub(crate) use query_error;

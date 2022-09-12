@@ -1,6 +1,6 @@
 use crate::{
+    error::query_error,
     schema::{self, organization_role as organization_role_table},
-    util::map_http_error,
     ApiError,
 };
 use bencher_rbac::user::OrganizationRoles;
@@ -36,7 +36,7 @@ impl QueryOrganizationRole {
                 schema::organization_role::role,
             ))
             .load::<(i32, String)>(conn)
-            .map_err(map_http_error!("Failed to get organization roles."))?
+            .map_err(query_error!())?
             .into_iter()
             .filter_map(|(org_id, role)| match role.parse() {
                 Ok(role) => Some((org_id.to_string(), role)),

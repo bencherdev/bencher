@@ -3,8 +3,8 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use tracing::error;
 
 use crate::{
+    error::query_error,
     schema::{self, project_role as project_role_table},
-    util::map_http_error,
     ApiError,
 };
 
@@ -34,7 +34,7 @@ impl QueryProjectRole {
             .order(schema::project_role::project_id)
             .select((schema::project_role::project_id, schema::project_role::role))
             .load::<(i32, String)>(conn)
-            .map_err(map_http_error!("Failed to get project roles."))?
+            .map_err(query_error!())?
             .into_iter()
             .filter_map(|(proj_id, role)| match role.parse() {
                 Ok(role) => Some((proj_id.to_string(), role)),
