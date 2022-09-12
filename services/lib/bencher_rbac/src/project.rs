@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use oso::{PolarClass, PolarValue, ToPolar};
 
@@ -48,6 +48,19 @@ impl fmt::Display for Role {
 impl ToPolar for Role {
     fn to_polar(self) -> PolarValue {
         PolarValue::String(self.to_string())
+    }
+}
+
+impl FromStr for Role {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            VIEWER_ROLE => Ok(Role::Viewer),
+            DEVELOPER_ROLE => Ok(Role::Developer),
+            MAINTAINER_ROLE => Ok(Role::Maintainer),
+            _ => Err(s.into()),
+        }
     }
 }
 
