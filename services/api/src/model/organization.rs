@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::user::InsertUser;
 use crate::{
     schema::{self, organization as organization_table},
-    util::map_http_error,
+    util::{map_http_error, slug::validate_slug},
 };
 
 #[derive(Insertable)]
@@ -29,7 +29,17 @@ impl InsertOrganization {
         organization: JsonNewOrganization,
     ) -> Result<Self, HttpError> {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = validate_slug(conn, &name, slug);
+        let slug = validate_slug(
+            conn,
+            &name,
+            slug,
+            Box::new(|conn, slug| {
+                schema::organization::table
+                    .filter(schema::organization::slug.eq(slug))
+                    .first::<QueryOrganization>(conn)
+                    .is_ok()
+            }),
+        );
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,
@@ -43,30 +53,6 @@ impl InsertOrganization {
             name: insert_user.name.clone(),
             slug: insert_user.slug.clone(),
         })
-    }
-}
-
-fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
-    let mut slug = slug
-        .map(|s| {
-            if s == slug::slugify(&s) {
-                s
-            } else {
-                slug::slugify(name)
-            }
-        })
-        .unwrap_or_else(|| slug::slugify(name));
-
-    if schema::organization::table
-        .filter(schema::organization::slug.eq(&slug))
-        .first::<QueryOrganization>(conn)
-        .is_ok()
-    {
-        let rand_suffix = rand::random::<u32>().to_string();
-        slug.push_str(&rand_suffix);
-        slug
-    } else {
-        slug
     }
 }
 
