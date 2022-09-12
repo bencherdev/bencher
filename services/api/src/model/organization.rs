@@ -87,7 +87,7 @@ impl QueryOrganization {
             .map_err(map_http_error!("Failed to create organization."))
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonOrganization, HttpError> {
+    pub fn into_json(self) -> Result<JsonOrganization, HttpError> {
         let Self {
             id: _,
             uuid,

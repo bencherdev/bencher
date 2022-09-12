@@ -51,7 +51,7 @@ pub async fn get_ls(
         .load::<QueryOrganization>(conn)
         .map_err(map_http_error!("Failed to get organizations."))?
         .into_iter()
-        .filter_map(|query| query.into_json(conn).ok())
+        .filter_map(|query| query.into_json().ok())
         .collect();
 
     Ok(HttpResponseHeaders::new(
@@ -98,7 +98,7 @@ pub async fn post(
         .execute(conn)
         .map_err(map_http_error!("Failed to create organization."))?;
 
-    let json = query_organization.into_json(conn)?;
+    let json = query_organization.into_json()?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseAccepted(json),
@@ -149,7 +149,7 @@ pub async fn get_one(
         .map_err(map_http_error!("Failed to get organization."))?;
 
     QueryUser::has_access(conn, user_id, query.id)?;
-    let json = query.into_json(conn)?;
+    let json = query.into_json()?;
 
     Ok(HttpResponseHeaders::new(
         HttpResponseOk(json),
