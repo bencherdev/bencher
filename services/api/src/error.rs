@@ -13,6 +13,10 @@ pub enum ApiError {
     Connection(#[from] diesel::result::ConnectionError),
     #[error("Failed to run database migrations: {0}")]
     Migrations(Box<dyn std::error::Error + Send + Sync>),
+    #[error("Failed to parse IP address or port number: {0}")]
+    IpAddress(#[from] std::net::AddrParseError),
+    #[error("Failed to request max body size: {0}")]
+    MaxBodySize(#[from] std::num::ParseIntError),
     #[error("Failed to create server logger: {0}")]
     CreateLogger(std::io::Error),
     #[error("Failed to create server: {0}")]

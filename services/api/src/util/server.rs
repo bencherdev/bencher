@@ -10,15 +10,17 @@ use crate::{endpoints::Api, ApiError};
 const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
 const BENCHER_DB: &str = "BENCHER_DB";
 const DATABASE_URL: &str = "DATABASE_URL";
+const BENCHER_IP_ADDRESS: &str = "BENCHER_IP_ADDRESS";
+const BENCHER_PORT: &str = "BENCHER_PORT";
+const BENCHER_MAX_BODY_SIZE: &str = "BENCHER_MAX_BODY_SIZE";
 
-const PORT_KEY: &str = "BENCHER_PORT";
-const DEFAULT_IP: &str = "0.0.0.0";
-const DEFAULT_PORT: &str = "8080";
 const DEFAULT_DB: &str = "bencher.db";
-
-// TODO increase and add as a customizable feature
+const DEFAULT_IP_ADDRESS: &str = "0.0.0.0";
+// Dynamic and/or Private Ports (49152-65535)
+// https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
+const DEFAULT_PORT: &str = "61016";
 // 1 megabyte or 1_048_576 bytes
-const MAX_BODY_SIZE: usize = 1 << 20;
+const DEFAULT_MAX_BODY_SIZE: usize = 1 << 20;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
@@ -35,7 +37,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     });
 
     trace!("Getting server configuration");
-    let config = get_config();
+    let config = get_config()?;
     let mut api = ApiDescription::new();
     trace!("Registering server APIs");
     Api::register(&mut api)?;
@@ -91,15 +93,35 @@ fn run_migrations(conn: &mut SqliteConnection) -> Result<(), ApiError> {
     Ok(())
 }
 
-fn get_config() -> ConfigDropshot {
-    let port = std::env::var(PORT_KEY).unwrap_or_else(|_| DEFAULT_PORT.into());
-    let address = format!("{DEFAULT_IP}:{port}");
+fn get_config() -> Result<ConfigDropshot, ApiError> {
+    let ip_address = std::env::var(BENCHER_IP_ADDRESS).unwrap_or_else(|e| {
+        trace!("Failed to find \"{BENCHER_IP_ADDRESS}\": {e}");
+        trace!("Defaulting \"{BENCHER_IP_ADDRESS}\" to: {DEFAULT_IP_ADDRESS}");
+        DEFAULT_IP_ADDRESS.into()
+    });
+    let port = std::env::var(BENCHER_PORT).unwrap_or_else(|e| {
+        trace!("Failed to find \"{BENCHER_PORT}\": {e}");
+        trace!("Defaulting \"{BENCHER_PORT}\" to: {DEFAULT_PORT}");
+        DEFAULT_PORT.into()
+    });
+    let bind_address = format!("{ip_address}:{port}").parse()?;
+    trace!("Binding to socket address: {bind_address}");
 
-    ConfigDropshot {
-        bind_address: address.parse().unwrap(),
-        request_body_max_bytes: MAX_BODY_SIZE,
+    let request_body_max_bytes = match std::env::var(BENCHER_MAX_BODY_SIZE) {
+        Ok(max) => max.parse()?,
+        Err(e) => {
+            trace!("Failed to find \"{BENCHER_MAX_BODY_SIZE}\": {e}");
+            trace!("Defaulting \"{BENCHER_MAX_BODY_SIZE}\" to: {DEFAULT_MAX_BODY_SIZE}");
+            DEFAULT_MAX_BODY_SIZE
+        },
+    };
+    trace!("Request body max bytes set to: {request_body_max_bytes}");
+
+    Ok(ConfigDropshot {
+        bind_address,
+        request_body_max_bytes,
         tls: None,
-    }
+    })
 }
 
 // TODO set logging level the same as tracing

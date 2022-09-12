@@ -8,7 +8,7 @@ use bencher_json::{JsonBranch, JsonTestbed};
 const BENCHER_CMD: &str = "bencher";
 
 const HOST_ARG: &str = "--host";
-const LOCALHOST: &str = "http://localhost:8080";
+const LOCALHOST: &str = "http://localhost:61016";
 
 const TOKEN_ARG: &str = "--token";
 const PROJECT_ARG: &str = "--project";
@@ -28,7 +28,7 @@ const TEST_BENCHER_API_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhd
 // cargo test --features seed --test seed
 #[test]
 fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
-    // cargo run -- auth signup --host http://localhost:8080 --name "Eustace Bagge" eustace.bagge@nowhere.com
+    // cargo run -- auth signup --host http://localhost:61016 --name "Eustace Bagge" eustace.bagge@nowhere.com
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "auth",
@@ -41,7 +41,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- auth signup --host http://localhost:8080 --name "Muriel Bagge" muriel.bagge@nowhere.com
+    // cargo run -- auth signup --host http://localhost:61016 --name "Muriel Bagge" muriel.bagge@nowhere.com
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "auth",
@@ -54,7 +54,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- auth login --host http://localhost:8080 muriel.bagge@nowhere.com
+    // cargo run -- auth login --host http://localhost:61016 muriel.bagge@nowhere.com
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "auth",
@@ -65,19 +65,19 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- auth confirm --host http://localhost:8080 [AUTH_TOKEN]
-    // cargo run -- token ls --host http://localhost:8080 --user muriel-bagge
-    // cargo run -- token create --host http://localhost:8080 --user muriel-bagge --ttl 157784630 TEST_BENCHER_API_TOKEN
+    // cargo run -- auth confirm --host http://localhost:61016 [AUTH_TOKEN]
+    // cargo run -- token ls --host http://localhost:61016 --user muriel-bagge
+    // cargo run -- token create --host http://localhost:61016 --user muriel-bagge --ttl 157784630 TEST_BENCHER_API_TOKEN
 
     // export BENCHER_API_TOKEN=[USER_TOKEN]
     env::set_var(BENCHER_API_TOKEN, TEST_BENCHER_API_TOKEN);
 
-    // cargo run -- project ls --host http://localhost:8080
+    // cargo run -- project ls --host http://localhost:61016
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args(["project", "ls", HOST_ARG, LOCALHOST]);
     cmd.assert().success();
 
-    // cargo run -- project create --host http://localhost:8080 "The Computer"
+    // cargo run -- project create --host http://localhost:61016 "The Computer"
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "project",
@@ -92,7 +92,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- project view --host http://localhost:8080 the-computer
+    // cargo run -- project view --host http://localhost:61016 the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args(["project", "view", HOST_ARG, LOCALHOST, PROJECT_SLUG]);
     cmd.assert().success();
@@ -119,7 +119,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- branch ls --host http://localhost:8080 --project the-computer
+    // cargo run -- branch ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "branch",
@@ -131,7 +131,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- branch create --host http://localhost:8080 --project the-computer master
+    // cargo run -- branch create --host http://localhost:61016 --project the-computer master
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "branch",
@@ -146,7 +146,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- branch view --host http://localhost:8080 --project the-computer master
+    // cargo run -- branch view --host http://localhost:61016 --project the-computer master
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "branch",
@@ -178,7 +178,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- testbed ls --host http://localhost:8080 --project the-computer
+    // cargo run -- testbed ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "testbed",
@@ -190,7 +190,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- testbed create --host http://localhost:8080 --project the-computer base
+    // cargo run -- testbed create --host http://localhost:61016 --project the-computer base
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "testbed",
@@ -205,7 +205,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- testbed view --host http://localhost:8080 --project the-computer base
+    // cargo run -- testbed view --host http://localhost:61016 --project the-computer base
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "testbed",
@@ -237,7 +237,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- threshold ls --host http://localhost:8080 --project the-computer
+    // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "threshold",
@@ -249,7 +249,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- threshold create --host http://localhost:8080 --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --kind z
+    // cargo run -- threshold create --host http://localhost:61016 --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --kind z
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "threshold",
@@ -274,7 +274,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     // let threshold: JsonThreshold = serde_json::from_slice(&threshold).unwrap();
     // let threshold = threshold.uuid.to_string();
 
-    // // cargo run -- threshold view --host http://localhost:8080 --project the-computer [THRESHOLD_UUID]
+    // // cargo run -- threshold view --host http://localhost:61016 --project the-computer [THRESHOLD_UUID]
     // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     // cmd.args([
     //     "threshold",

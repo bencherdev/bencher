@@ -27,7 +27,7 @@ RUN dpkg -i litestream-v0.3.9-linux-amd64.deb
 COPY api/litestream.yml /etc/litestream.yml
 
 COPY api/entrypoint.sh /entrypoint.sh
-ENV PORT 8080
+ENV PORT 61016
 # USER 1000
 
 CMD ["/entrypoint.sh"]

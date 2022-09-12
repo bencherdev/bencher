@@ -7,7 +7,7 @@ services:
     image: bencher-api
     container_name: bencher_api
     ports:
-      - 8080:8080
+      - 61016:61016
     volumes:
       # This file needs to exist before calling `docker compose`
       # `touch ./services/api/bencher.db`
@@ -28,6 +28,6 @@ services:
       - 3001:3001
     environment:
       # Set this to your actual host
-      - VITE_BENCHER_API_URL=http://localhost:8080
+      - VITE_BENCHER_API_URL=http://localhost:61016
     depends_on:
       - bencher_api

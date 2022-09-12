@@ -25,7 +25,7 @@ COPY --from=builder /usr/src/api/.env /.env
 RUN apt-get update \
     && apt-get install -y sqlite3
 
-ENV PORT 8080
+ENV PORT 61016
 # USER 1000
 
 CMD ["/api"]
