@@ -11,13 +11,8 @@ pub use server::Server;
 pub use user::User;
 
 pub const POLAR: &str = include_str!("../bencher.polar");
-const OSO_ERROR: &str = "Failed to initialize RBAC";
 
-lazy_static::lazy_static! {
-    pub static ref OSO: Oso = init_oso().expect(OSO_ERROR);
-}
-
-fn init_oso() -> oso::Result<Oso> {
+pub fn init_rbac() -> oso::Result<Oso> {
     let mut oso = Oso::new();
     oso.register_class(User::get_polar_class())?;
     oso.register_class(ClassBuilder::with_constructor(|| Server {}).build())?;
@@ -42,6 +37,12 @@ mod test {
     use crate::project::Role as ProjRole;
     use crate::server::Permission as SvrPerm;
     use uuid::Uuid;
+
+    const OSO_ERROR: &str = "Failed to initialize RBAC";
+
+    lazy_static::lazy_static! {
+        static ref OSO: Oso = init_rbac().expect(OSO_ERROR);
+    }
 
     #[test]
     fn test_rbac() {

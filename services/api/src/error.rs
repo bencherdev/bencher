@@ -7,9 +7,11 @@ use crate::endpoints::Resource;
 pub enum ApiError {
     #[error("Failed to set global default logger")]
     SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
-    #[error("Failed to import .env file")]
+    #[error("Failed to import .env file: {0}")]
     DotEnv(#[from] dotenvy::Error),
-    #[error("Failed to create database connection")]
+    #[error("Failed to parse role based access control (RBAC) rules: {0}")]
+    Polar(oso::OsoError),
+    #[error("Failed to create database connection: {0}")]
     Connection(#[from] diesel::result::ConnectionError),
     #[error("Failed to run database migrations: {0}")]
     Migrations(Box<dyn std::error::Error + Send + Sync>),
