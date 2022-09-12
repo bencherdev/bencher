@@ -4,6 +4,7 @@ use crate::WordStr;
 
 pub mod benchmarks;
 pub mod branches;
+pub mod organizations;
 pub mod perf;
 pub mod projects;
 pub mod reports;

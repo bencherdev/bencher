@@ -47,7 +47,7 @@ pub async fn post(
 ) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonPerf>, CorsHeaders>, HttpError> {
     // This is both a public and auth route
     // Only public projects are allowed to use it as a public route though
-    let user_id = QueryUser::auth(&rqctx).await.ok();
+    let user_id = Some(QueryUser::auth(&rqctx).await?);
     let endpoint = Endpoint::new(Resource::Perf, Method::Post);
 
     let context = rqctx.context();

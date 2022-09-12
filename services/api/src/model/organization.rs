@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::string::ToString;
 
-use bencher_json::ResourceId;
+use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
@@ -24,12 +24,49 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
+    pub fn from_json(
+        conn: &mut SqliteConnection,
+        organization: JsonNewOrganization,
+    ) -> Result<Self, HttpError> {
+        let JsonNewOrganization { name, slug } = organization;
+        let slug = validate_slug(conn, &name, slug);
+        Ok(Self {
+            uuid: Uuid::new_v4().to_string(),
+            name,
+            slug,
+        })
+    }
+
     pub fn from_user(insert_user: &InsertUser) -> Result<Self, HttpError> {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name: insert_user.name.clone(),
             slug: insert_user.slug.clone(),
         })
+    }
+}
+
+fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
+    let mut slug = slug
+        .map(|s| {
+            if s == slug::slugify(&s) {
+                s
+            } else {
+                slug::slugify(name)
+            }
+        })
+        .unwrap_or_else(|| slug::slugify(name));
+
+    if schema::organization::table
+        .filter(schema::organization::slug.eq(&slug))
+        .first::<QueryOrganization>(conn)
+        .is_ok()
+    {
+        let rand_suffix = rand::random::<u32>().to_string();
+        slug.push_str(&rand_suffix);
+        slug
+    } else {
+        slug
     }
 }
 
@@ -72,5 +109,19 @@ impl QueryOrganization {
             )
             .first::<QueryOrganization>(conn)
             .map_err(map_http_error!("Failed to create organization."))
+    }
+
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonOrganization, HttpError> {
+        let Self {
+            id: _,
+            uuid,
+            name,
+            slug,
+        } = self;
+        Ok(JsonOrganization {
+            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get organization."))?,
+            name,
+            slug,
+        })
     }
 }
