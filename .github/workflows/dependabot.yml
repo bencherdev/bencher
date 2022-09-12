@@ -1,4 +1,10 @@
-version: 2
+name: Dependabot for Actions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"

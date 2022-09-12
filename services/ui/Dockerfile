@@ -10,7 +10,6 @@ RUN npm install
 
 COPY public public
 COPY src src
-COPY .env.development .env.development
 COPY index.html index.html
 COPY tsconfig.json tsconfig.json
 COPY vite.config.ts vite.config.ts
