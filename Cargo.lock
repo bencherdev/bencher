@@ -194,14 +194,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
-]
-
-[[package]]
 name = "bencher_rbac"
 version = "0.1.0"
 dependencies = [

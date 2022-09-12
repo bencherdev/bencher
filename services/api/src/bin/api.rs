@@ -54,35 +54,15 @@ async fn run() -> Result<(), ApiError> {
 
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), ApiError> {
-    use bencher_api::util::{
-        db::get_db_connection, migrate::run_migrations, server::get_server, ApiContext,
-    };
-    use dotenvy::dotenv;
-    use tokio::sync::Mutex;
+    use bencher_api::util::server::get_server;
 
-    const BENCHER_SECRET: &str = "BENCHER_SECRET";
+    #[cfg(debug_assertions)]
+    {
+        trace!("Importing .env file");
+        dotenvy::dotenv()?;
+    }
 
-    trace!("Importing .env file");
-    dotenv()?;
-
-    let secret_key = std::env::var(BENCHER_SECRET).unwrap_or_else(|e| {
-        info!("Failed to find \"{BENCHER_SECRET}\": {e}");
-        let secret_key = uuid::Uuid::new_v4().to_string();
-        info!("Generated temporary secret key: {secret_key}");
-        secret_key
-    });
-
-    trace!("Connecting to database");
-    let mut db_conn = get_db_connection()?;
-    run_migrations(&mut db_conn)?;
-
-    let context = Mutex::new(ApiContext {
-        db: db_conn,
-        key: secret_key,
-    });
-
-    trace!("Starting server");
-    get_server(API_NAME, context)
+    get_server(API_NAME)
         .await?
         .await
         .map_err(ApiError::RunServer)
