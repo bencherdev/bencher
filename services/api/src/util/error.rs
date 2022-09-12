@@ -16,7 +16,7 @@ macro_rules! map_http_error {
     ($message:expr, $($field:tt)*) => {
         |e| {
             let m = format!($message, $($field)*);
-            tracing::error!("{m}: {e}");
+            tracing::info!("{m}: {e}");
             dropshot::HttpError::for_bad_request(
                 Some(http::status::StatusCode::BAD_REQUEST.to_string()),
                 m,
