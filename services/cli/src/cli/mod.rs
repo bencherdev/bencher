@@ -3,6 +3,7 @@ use clap::{ArgGroup, Args, Parser, Subcommand};
 pub mod auth;
 pub mod benchmark;
 pub mod branch;
+pub mod organization;
 pub mod perf;
 pub mod project;
 pub mod report;
@@ -14,6 +15,7 @@ pub mod token;
 use auth::CliAuth;
 use benchmark::CliBenchmark;
 use branch::CliBranch;
+use organization::CliOrganization;
 use perf::CliPerf;
 use project::CliProject;
 use report::CliReport;
@@ -43,6 +45,9 @@ pub enum CliSub {
     /// Backend authentication
     #[clap(subcommand)]
     Auth(CliAuth),
+    /// Manage organization
+    #[clap(subcommand, alias = "org")]
+    Organization(CliOrganization),
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),

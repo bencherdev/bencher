@@ -7,6 +7,7 @@ use crate::{bencher::wide::Wide, cli::CliSub, CliError};
 mod auth;
 mod benchmark;
 mod branch;
+mod organization;
 mod perf;
 mod project;
 mod report;
@@ -19,6 +20,7 @@ mod token;
 use auth::Auth;
 use benchmark::Benchmark;
 use branch::Branch;
+use organization::Organization;
 use perf::Perf;
 use project::Project;
 use report::Report;
@@ -31,6 +33,7 @@ use token::Token;
 #[derive(Debug)]
 pub enum Sub {
     Auth(Auth),
+    Organization(Organization),
     Project(Project),
     Report(Report),
     Branch(Branch),
@@ -48,6 +51,7 @@ impl TryFrom<CliSub> for Sub {
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
+            CliSub::Organization(organization) => Self::Organization(organization.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
             CliSub::Report(report) => Self::Report(report.try_into()?),
             CliSub::Branch(branch) => Self::Branch(branch.try_into()?),
@@ -74,6 +78,7 @@ impl SubCmd for Sub {
     async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::Auth(auth) => auth.exec(wide).await,
+            Self::Organization(organization) => organization.exec(wide).await,
             Self::Project(project) => project.exec(wide).await,
             Self::Report(report) => report.exec(wide).await,
             Self::Branch(branch) => branch.exec(wide).await,
