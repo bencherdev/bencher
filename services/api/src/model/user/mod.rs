@@ -15,6 +15,7 @@ use crate::{
     util::{http_error, map_http_error, slug::unwrap_slug, Context},
 };
 
+pub mod auth;
 pub mod organization;
 pub mod project;
 pub mod token;
