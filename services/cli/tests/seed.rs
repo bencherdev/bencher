@@ -3,7 +3,7 @@
 use std::{env, process::Command};
 
 use assert_cmd::prelude::*;
-use bencher_json::{JsonBranch, JsonTestbed, JsonThreshold, JsonUser};
+use bencher_json::{JsonBranch, JsonTestbed};
 
 const BENCHER_CMD: &str = "bencher";
 
