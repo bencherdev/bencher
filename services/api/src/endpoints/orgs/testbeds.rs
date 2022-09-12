@@ -54,7 +54,7 @@ pub async fn get_ls(
     let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json: Vec<JsonTestbed> = schema::testbed::table
         .filter(schema::testbed::project_id.eq(project_id))
         .order(schema::testbed::name)
@@ -92,7 +92,7 @@ pub async fn post(
     let json_testbed = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let insert_testbed = InsertTestbed::from_json(conn, json_testbed)?;
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
@@ -144,7 +144,7 @@ pub async fn get_one(
     let resource_id = path_params.testbed.as_str();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json = schema::testbed::table
         .filter(
             schema::testbed::project_id.eq(project_id).and(

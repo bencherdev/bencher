@@ -54,7 +54,7 @@ pub async fn get_ls(
     let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json: Vec<JsonBranch> = schema::branch::table
         .filter(schema::branch::project_id.eq(&project_id))
         .order(schema::branch::name)
@@ -92,7 +92,7 @@ pub async fn post(
     let json_branch = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let insert_branch = InsertBranch::from_json(conn, json_branch)?;
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
@@ -144,7 +144,7 @@ pub async fn get_one(
     let resource_id = path_params.branch.as_str();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json = schema::branch::table
         .filter(
             schema::branch::project_id.eq(project_id).and(

@@ -40,7 +40,7 @@ pub async fn post(
     let json_login = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
 
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))
         .first::<QueryUser>(conn)
@@ -53,7 +53,7 @@ pub async fn post(
 
     if let Some(invite) = json_login.invite {
         let token_data = invite
-            .validate_invite(&context.key)
+            .validate_invite(&context.secret_key)
             .map_err(map_http_error!("Failed to login user."))?;
         let org_claims = token_data
             .claims
@@ -79,7 +79,7 @@ pub async fn post(
             .map_err(map_http_error!("Failed to login user."))?;
     }
 
-    let token = JsonWebToken::new_auth(&context.key, query_user.email)
+    let token = JsonWebToken::new_auth(&context.secret_key, query_user.email)
         .map_err(map_http_error!("Failed to login user."))?;
 
     // TODO log this as trace if SMTP is configured

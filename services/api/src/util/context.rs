@@ -1,6 +1,6 @@
 pub type Context = tokio::sync::Mutex<ApiContext>;
 
 pub struct ApiContext {
-    pub key: String,
-    pub db: diesel::SqliteConnection,
+    pub secret_key: String,
+    pub db_conn: diesel::SqliteConnection,
 }

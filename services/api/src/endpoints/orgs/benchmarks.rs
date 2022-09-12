@@ -48,7 +48,7 @@ pub async fn get_ls(
     let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json: Vec<JsonBenchmark> = schema::benchmark::table
         .filter(schema::benchmark::project_id.eq(&project_id))
         .order(schema::benchmark::name)
@@ -97,7 +97,7 @@ pub async fn get_one(
     let benchmark = path_params.benchmark.to_string();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json = schema::benchmark::table
         .filter(
             schema::benchmark::project_id

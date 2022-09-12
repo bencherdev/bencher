@@ -134,6 +134,7 @@ dependencies = [
  "lazy_static",
  "literally",
  "ordered-float",
+ "oso",
  "rand",
  "schemars",
  "serde",

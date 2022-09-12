@@ -76,7 +76,7 @@ async fn get_ls_inner(
     path_params: GetLsParams,
 ) -> Result<Vec<JsonToken>, ApiError> {
     let context = &mut *context.lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     // TODO make smarter once permissions are a thing
@@ -132,8 +132,8 @@ async fn post_inner(
     json_token: JsonNewToken,
 ) -> Result<JsonToken, ApiError> {
     let context = &mut *context.lock().await;
-    let conn = &mut context.db;
-    let insert_token = InsertToken::from_json(conn, json_token, user_id, &context.key)?;
+    let conn = &mut context.db_conn;
+    let insert_token = InsertToken::from_json(conn, json_token, user_id, &context.secret_key)?;
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
         .execute(conn)
@@ -192,7 +192,7 @@ async fn get_one_inner(
     path_params: GetOneParams,
 ) -> Result<JsonToken, ApiError> {
     let context = &mut *context.lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     // TODO make smarter once permissions are a thing

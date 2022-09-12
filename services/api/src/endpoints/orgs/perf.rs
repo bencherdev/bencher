@@ -91,7 +91,7 @@ async fn post_inner(
     );
 
     let context = &mut *context.lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let mut data = Vec::new();
     for branch in &branches {
         for testbed in &testbeds {

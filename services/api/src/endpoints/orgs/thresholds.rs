@@ -62,7 +62,7 @@ pub async fn get_ls(
     let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json: Vec<JsonThreshold> = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(schema::testbed::project_id.eq(project_id))
@@ -111,7 +111,7 @@ pub async fn post(
     let json_threshold = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
 
     let branch_id = QueryBranch::get_id(conn, &json_threshold.branch)?;
     let testbed_id = QueryTestbed::get_id(conn, &json_threshold.testbed)?;
@@ -180,7 +180,7 @@ pub async fn get_one(
     let threshold_uuid = path_params.threshold.to_string();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json = schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(

@@ -61,7 +61,7 @@ pub async fn get_ls(
     let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json: Vec<JsonReport> = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(schema::testbed::project_id.eq(project_id))
@@ -115,7 +115,7 @@ pub async fn post(
     let json_report = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
 
     // Verify that the branch and testbed are part of the same project
     let branch_id = QueryBranch::get_id(conn, &json_report.branch)?;
@@ -229,7 +229,7 @@ pub async fn get_one(
     let report_uuid = path_params.report_uuid.to_string();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(

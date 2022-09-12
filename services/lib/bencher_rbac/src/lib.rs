@@ -30,6 +30,7 @@ fn init_oso() -> oso::Result<Oso> {
     oso.load_str(POLAR)?;
     Ok(oso)
 }
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;

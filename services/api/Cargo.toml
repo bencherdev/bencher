@@ -36,6 +36,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
 thiserror = "1.0.34"
 derive_more = "0.99.17"
+oso = "0.26.2"
 
 [[bin]]
 name = "api"

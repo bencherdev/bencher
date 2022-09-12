@@ -43,7 +43,7 @@ pub async fn get_ls(
     QueryUser::auth(&rqctx).await?;
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let json: Vec<JsonProject> = schema::project::table
         // TODO actually filter here with `bencher_rbac`
         // .filter(schema::project::owner_id.eq(user_id))
@@ -74,7 +74,7 @@ pub async fn post(
     let json_project = body.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
 
     // Create the project
     let insert_project = InsertProject::from_json(conn, json_project)?;
@@ -136,7 +136,7 @@ pub async fn get_one(
     let path_params = path_params.into_inner();
 
     let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
 
     let project = &path_params.project.0;
     let query = schema::project::table

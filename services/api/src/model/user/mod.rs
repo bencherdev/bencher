@@ -147,10 +147,10 @@ impl QueryUser {
 
         let context = &mut *rqctx.context().lock().await;
         let token_data = jwt
-            .validate_user(&context.key)
+            .validate_user(&context.secret_key)
             .map_err(map_http_error!("Invalid JWT (JSON Web Token)."))?;
 
-        let conn = &mut context.db;
+        let conn = &mut context.db_conn;
         schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select(schema::user::id)

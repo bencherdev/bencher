@@ -48,18 +48,19 @@ pub async fn post(
     let json_token = body.into_inner();
     let token_data = json_token
         .token
-        .validate_auth(&context.key)
+        .validate_auth(&context.secret_key)
         .map_err(map_http_error!("Failed to login user."))?;
 
-    let conn = &mut context.db;
+    let conn = &mut context.db_conn;
     let query_user = schema::user::table
         .filter(schema::user::email.eq(token_data.claims.email()))
         .first::<QueryUser>(conn)
         .map_err(map_http_error!("Failed to login user."))?;
     let json_user = query_user.into_json()?;
 
-    let token = JsonWebToken::new_client(&context.key, token_data.claims.email().to_string())
-        .map_err(map_http_error!("Failed to login user."))?;
+    let token =
+        JsonWebToken::new_client(&context.secret_key, token_data.claims.email().to_string())
+            .map_err(map_http_error!("Failed to login user."))?;
 
     let json_confirmed = JsonConfirm {
         user: json_user,

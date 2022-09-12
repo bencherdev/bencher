@@ -119,7 +119,7 @@ impl QueryProject {
         project: &ResourceId,
     ) -> Result<i32, HttpError> {
         let context = &mut *rqctx.context().lock().await;
-        let conn = &mut context.db;
+        let conn = &mut context.db_conn;
 
         let project = &project.0;
         let project_id = schema::project::table

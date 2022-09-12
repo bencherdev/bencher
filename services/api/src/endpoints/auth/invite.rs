@@ -40,7 +40,7 @@ pub async fn post(
     let json_invite = body.into_inner();
     let context = &mut *rqctx.context().lock().await;
     let token = JsonWebToken::new_invite(
-        &context.key,
+        &context.secret_key,
         json_invite.email.clone(),
         json_invite.organization,
         json_invite.role,
