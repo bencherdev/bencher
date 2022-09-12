@@ -1,6 +1,12 @@
-use diesel::{Insertable, Queryable};
+use bencher_rbac::user::ProjectRoles;
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use tracing::error;
 
-use crate::schema::project_role as project_role_table;
+use crate::{
+    schema::{self, project_role as project_role_table},
+    util::map_http_error,
+    ApiError,
+};
 
 #[derive(Insertable)]
 #[diesel(table_name = project_role_table)]
@@ -16,4 +22,28 @@ pub struct QueryProjectRole {
     pub user_id: i32,
     pub project_id: i32,
     pub role: String,
+}
+
+impl QueryProjectRole {
+    pub fn project_roles(
+        conn: &mut SqliteConnection,
+        user_id: i32,
+    ) -> Result<ProjectRoles, ApiError> {
+        Ok(schema::project_role::table
+            .filter(schema::project_role::user_id.eq(user_id))
+            .order(schema::project_role::project_id)
+            .select((schema::project_role::project_id, schema::project_role::role))
+            .load::<(i32, String)>(conn)
+            .map_err(map_http_error!("Failed to get project roles."))?
+            .into_iter()
+            .filter_map(|(proj_id, role)| match role.parse() {
+                Ok(role) => Some((proj_id.to_string(), role)),
+                Err(e) => {
+                    error!("Failed to parse project role {role}: {e}");
+                    debug_assert!(false, "Failed to parse project role {role}: {e}");
+                    None
+                },
+            })
+            .collect())
+    }
 }
