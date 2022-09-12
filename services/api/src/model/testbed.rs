@@ -9,7 +9,7 @@ use super::project::QueryProject;
 use crate::{
     schema,
     schema::testbed as testbed_table,
-    util::{map_http_error, slug::validate_slug},
+    util::{map_http_error, slug::unwrap_slug},
 };
 
 #[derive(Queryable)]
@@ -110,17 +110,7 @@ impl InsertTestbed {
             ram,
             disk,
         } = testbed;
-        let slug = validate_slug(
-            conn,
-            &name,
-            slug,
-            Box::new(|conn, slug| {
-                schema::testbed::table
-                    .filter(schema::testbed::slug.eq(slug))
-                    .first::<QueryTestbed>(conn)
-                    .is_ok()
-            }),
-        );
+        let slug = unwrap_slug!(conn, &name, slug, testbed, QueryTestbed);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             project_id: QueryProject::from_resource_id(conn, &project)?.id,

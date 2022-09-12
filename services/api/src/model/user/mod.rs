@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, user as user_table},
-    util::{http_error, map_http_error, slug::validate_slug, Context},
+    util::{http_error, map_http_error, slug::unwrap_slug, Context},
 };
 
 pub mod organization;
@@ -39,17 +39,7 @@ impl InsertUser {
             invite: _,
         } = signup;
         validate_email(&email)?;
-        let slug = validate_slug(
-            conn,
-            &name,
-            slug,
-            Box::new(|conn, slug| {
-                schema::user::table
-                    .filter(schema::user::slug.eq(slug))
-                    .first::<QueryUser>(conn)
-                    .is_ok()
-            }),
-        );
+        let slug = unwrap_slug!(conn, &name, slug, user, QueryUser);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,

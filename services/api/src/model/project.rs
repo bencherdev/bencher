@@ -13,7 +13,7 @@ use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, project as project_table},
-    util::{map_http_error, slug::validate_slug, Context},
+    util::{map_http_error, slug::unwrap_slug, Context},
 };
 
 #[derive(Insertable)]
@@ -41,17 +41,7 @@ impl InsertProject {
             url,
             public,
         } = project;
-        let slug = validate_slug(
-            conn,
-            &name,
-            slug,
-            Box::new(|conn, slug| {
-                schema::project::table
-                    .filter(schema::project::slug.eq(slug))
-                    .first::<QueryProject>(conn)
-                    .is_ok()
-            }),
-        );
+        let slug = unwrap_slug!(conn, &name, slug, project, QueryProject);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             organization_id: QueryOrganization::from_resource_id(conn, &organization)?.id,

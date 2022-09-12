@@ -12,7 +12,7 @@ use uuid::Uuid;
 use super::user::InsertUser;
 use crate::{
     schema::{self, organization as organization_table},
-    util::{map_http_error, slug::validate_slug},
+    util::{map_http_error, slug::unwrap_slug},
 };
 
 #[derive(Insertable)]
@@ -29,17 +29,7 @@ impl InsertOrganization {
         organization: JsonNewOrganization,
     ) -> Result<Self, HttpError> {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = validate_slug(
-            conn,
-            &name,
-            slug,
-            Box::new(|conn, slug| {
-                schema::organization::table
-                    .filter(schema::organization::slug.eq(slug))
-                    .first::<QueryOrganization>(conn)
-                    .is_ok()
-            }),
-        );
+        let slug = unwrap_slug!(conn, &name, slug, organization, QueryOrganization);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,

@@ -1,5 +1,18 @@
 use diesel::SqliteConnection;
 
+macro_rules! unwrap_slug {
+    ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
+        crate::util::slug::validate_slug(
+            $conn,
+            $name,
+            $slug,
+            crate::util::slug::slug_exists!($table, $query),
+        )
+    };
+}
+
+pub(crate) use unwrap_slug;
+
 pub fn validate_slug(
     conn: &mut SqliteConnection,
     name: &str,
@@ -24,3 +37,16 @@ pub fn validate_slug(
         slug
     }
 }
+
+macro_rules! slug_exists {
+    ($table:ident, $query:ident) => {
+        Box::new(|conn, slug| {
+            schema::$table::table
+                .filter(schema::$table::slug.eq(slug))
+                .first::<$query>(conn)
+                .is_ok()
+        })
+    };
+}
+
+pub(crate) use slug_exists;

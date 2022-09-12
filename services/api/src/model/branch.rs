@@ -9,7 +9,7 @@ use super::project::QueryProject;
 use crate::{
     schema,
     schema::branch as branch_table,
-    util::{map_http_error, slug::validate_slug},
+    util::{map_http_error, slug::unwrap_slug},
 };
 
 #[derive(Queryable)]
@@ -75,17 +75,7 @@ impl InsertBranch {
             name,
             slug,
         } = branch;
-        let slug = validate_slug(
-            conn,
-            &name,
-            slug,
-            Box::new(|conn, slug| {
-                schema::branch::table
-                    .filter(schema::branch::slug.eq(slug))
-                    .first::<QueryBranch>(conn)
-                    .is_ok()
-            }),
-        );
+        let slug = unwrap_slug!(conn, &name, slug, branch, QueryBranch);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             project_id: QueryProject::from_resource_id(conn, &project)?.id,
