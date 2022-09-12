@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, user as user_table},
-    util::{http_error, map_http_error, Context},
+    util::{http_error, map_http_error, slug::validate_slug, Context},
 };
 
 pub mod organization;
@@ -39,7 +39,17 @@ impl InsertUser {
             invite: _,
         } = signup;
         validate_email(&email)?;
-        let slug = validate_slug(conn, &name, slug);
+        let slug = validate_slug(
+            conn,
+            &name,
+            slug,
+            Box::new(|conn, slug| {
+                schema::user::table
+                    .filter(schema::user::slug.eq(slug))
+                    .first::<QueryUser>(conn)
+                    .is_ok()
+            }),
+        );
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name,
@@ -48,30 +58,6 @@ impl InsertUser {
             admin: false,
             locked: false,
         })
-    }
-}
-
-fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
-    let mut slug = slug
-        .map(|s| {
-            if s == slug::slugify(&s) {
-                s
-            } else {
-                slug::slugify(name)
-            }
-        })
-        .unwrap_or_else(|| slug::slugify(name));
-
-    if schema::user::table
-        .filter(schema::user::slug.eq(&slug))
-        .first::<QueryUser>(conn)
-        .is_ok()
-    {
-        let rand_suffix = rand::random::<u32>().to_string();
-        slug.push_str(&rand_suffix);
-        slug
-    } else {
-        slug
     }
 }
 

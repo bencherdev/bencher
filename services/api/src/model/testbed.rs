@@ -6,7 +6,11 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{schema, schema::testbed as testbed_table, util::map_http_error};
+use crate::{
+    schema,
+    schema::testbed as testbed_table,
+    util::{map_http_error, slug::validate_slug},
+};
 
 #[derive(Queryable)]
 pub struct QueryTestbed {
@@ -106,7 +110,17 @@ impl InsertTestbed {
             ram,
             disk,
         } = testbed;
-        let slug = validate_slug(conn, &name, slug);
+        let slug = validate_slug(
+            conn,
+            &name,
+            slug,
+            Box::new(|conn, slug| {
+                schema::testbed::table
+                    .filter(schema::testbed::slug.eq(slug))
+                    .first::<QueryTestbed>(conn)
+                    .is_ok()
+            }),
+        );
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             project_id: QueryProject::from_resource_id(conn, &project)?.id,
@@ -120,29 +134,5 @@ impl InsertTestbed {
             ram,
             disk,
         })
-    }
-}
-
-fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
-    let mut slug = slug
-        .map(|s| {
-            if s == slug::slugify(&s) {
-                s
-            } else {
-                slug::slugify(name)
-            }
-        })
-        .unwrap_or_else(|| slug::slugify(name));
-
-    if schema::testbed::table
-        .filter(schema::testbed::slug.eq(&slug))
-        .first::<QueryTestbed>(conn)
-        .is_ok()
-    {
-        let rand_suffix = rand::random::<u32>().to_string();
-        slug.push_str(&rand_suffix);
-        slug
-    } else {
-        slug
     }
 }

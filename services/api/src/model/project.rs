@@ -13,7 +13,7 @@ use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, project as project_table},
-    util::{map_http_error, Context},
+    util::{map_http_error, slug::validate_slug, Context},
 };
 
 #[derive(Insertable)]
@@ -41,7 +41,17 @@ impl InsertProject {
             url,
             public,
         } = project;
-        let slug = validate_slug(conn, &name, slug);
+        let slug = validate_slug(
+            conn,
+            &name,
+            slug,
+            Box::new(|conn, slug| {
+                schema::project::table
+                    .filter(schema::project::slug.eq(slug))
+                    .first::<QueryProject>(conn)
+                    .is_ok()
+            }),
+        );
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             organization_id: QueryOrganization::from_resource_id(conn, &organization)?.id,
@@ -51,30 +61,6 @@ impl InsertProject {
             url: url.map(|u| u.to_string()),
             public,
         })
-    }
-}
-
-fn validate_slug(conn: &mut SqliteConnection, name: &str, slug: Option<String>) -> String {
-    let mut slug = slug
-        .map(|s| {
-            if s == slug::slugify(&s) {
-                s
-            } else {
-                slug::slugify(name)
-            }
-        })
-        .unwrap_or_else(|| slug::slugify(name));
-
-    if schema::project::table
-        .filter(schema::project::slug.eq(&slug))
-        .first::<QueryProject>(conn)
-        .is_ok()
-    {
-        let rand_suffix = rand::random::<u32>().to_string();
-        slug.push_str(&rand_suffix);
-        slug
-    } else {
-        slug
     }
 }
 
