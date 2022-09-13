@@ -2,13 +2,14 @@ use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
     User as RbacUser,
 };
-use tracing::error;
 
 use bencher_json::jwt::JsonWebToken;
 use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 
-use crate::{diesel::ExpressionMethods, error::api_error, schema, util::Context, ApiError};
+use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
+
+const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
 macro_rules! auth_error {
     ($message:expr) => {
@@ -28,6 +29,27 @@ macro_rules! map_auth_error {
     };
 }
 
+macro_rules! roles {
+    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {
+        Ok(schema::$table::table
+            .filter(schema::$table::$user_id_field.eq($user_id))
+            .order(schema::$table::$field)
+            .select((schema::$table::$field, schema::$table::$role_field))
+            .load::<(i32, String)>($conn)
+            .map_err(map_auth_error!(INVALID_JWT))?
+            .into_iter()
+            .filter_map(|(id, role)| match role.parse() {
+                Ok(role) => Some((id.to_string(), role)),
+                Err(e) => {
+                    tracing::error!($msg, role, e);
+                    debug_assert!(false, $msg, role, e);
+                    None
+                },
+            })
+            .collect())
+    };
+}
+
 pub struct AuthUser {
     pub id: i32,
     pub rbac: RbacUser,
@@ -40,25 +62,25 @@ impl AuthUser {
         let headers = request
             .headers()
             .get("Authorization")
-            .ok_or_else(auth_error!("Missing \"Authorization\" header."))?
+            .ok_or_else(auth_error!("Missing \"Authorization\" header"))?
             .to_str()
-            .map_err(map_auth_error!("Invalid \"Authorization\" header."))?;
+            .map_err(map_auth_error!("Invalid \"Authorization\" header"))?;
         let (_, token) = headers
             .split_once("Bearer ")
-            .ok_or_else(auth_error!("Missing \"Authorization\" Bearer."))?;
+            .ok_or_else(auth_error!("Missing \"Authorization\" Bearer"))?;
         let jwt: JsonWebToken = token.trim().to_string().into();
 
         let context = &mut *rqctx.context().lock().await;
         let token_data = jwt
             .validate_user(&context.secret_key)
-            .map_err(map_auth_error!("Invalid JWT (JSON Web Token)."))?;
+            .map_err(map_auth_error!(INVALID_JWT))?;
 
         let conn = &mut context.db_conn;
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
             .first::<(i32, bool, bool)>(conn)
-            .map_err(map_auth_error!("Invalid JWT (JSON Web Token)."))?;
+            .map_err(map_auth_error!(INVALID_JWT))?;
 
         let rbac = RbacUser {
             admin,
@@ -70,50 +92,30 @@ impl AuthUser {
         Ok(Self { id: user_id, rbac })
     }
 
-    pub fn organization_roles(
+    fn organization_roles(
         conn: &mut SqliteConnection,
         user_id: i32,
     ) -> Result<OrganizationRoles, ApiError> {
-        Ok(schema::organization_role::table
-            .filter(schema::organization_role::user_id.eq(user_id))
-            .order(schema::organization_role::organization_id)
-            .select((
-                schema::organization_role::organization_id,
-                schema::organization_role::role,
-            ))
-            .load::<(i32, String)>(conn)
-            .map_err(api_error!())?
-            .into_iter()
-            .filter_map(|(org_id, role)| match role.parse() {
-                Ok(role) => Some((org_id.to_string(), role)),
-                Err(e) => {
-                    error!("Failed to parse organization role {role}: {e}");
-                    debug_assert!(false, "Failed to parse organization role {role}: {e}");
-                    None
-                },
-            })
-            .collect())
+        roles!(
+            conn,
+            user_id,
+            organization_role,
+            user_id,
+            organization_id,
+            role,
+            "Failed to parse organization role {}: {}"
+        )
     }
 
-    pub fn project_roles(
-        conn: &mut SqliteConnection,
-        user_id: i32,
-    ) -> Result<ProjectRoles, ApiError> {
-        Ok(schema::project_role::table
-            .filter(schema::project_role::user_id.eq(user_id))
-            .order(schema::project_role::project_id)
-            .select((schema::project_role::project_id, schema::project_role::role))
-            .load::<(i32, String)>(conn)
-            .map_err(api_error!())?
-            .into_iter()
-            .filter_map(|(proj_id, role)| match role.parse() {
-                Ok(role) => Some((proj_id.to_string(), role)),
-                Err(e) => {
-                    error!("Failed to parse project role {role}: {e}");
-                    debug_assert!(false, "Failed to parse project role {role}: {e}");
-                    None
-                },
-            })
-            .collect())
+    fn project_roles(conn: &mut SqliteConnection, user_id: i32) -> Result<ProjectRoles, ApiError> {
+        roles!(
+            conn,
+            user_id,
+            project_role,
+            user_id,
+            project_id,
+            role,
+            "Failed to parse project role {}: {}"
+        )
     }
 }
