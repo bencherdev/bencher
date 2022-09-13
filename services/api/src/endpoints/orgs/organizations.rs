@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
-use bencher_rbac::organization::Role;
+use bencher_rbac::organization::{Permission, Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
@@ -64,21 +64,24 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    _auth_user: &AuthUser,
+    auth_user: &AuthUser,
     context: &Context,
 ) -> Result<Vec<JsonOrganization>, ApiError> {
     let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
 
     let json: Vec<JsonOrganization> = schema::organization::table
-    // TODO actually filter here with `bencher_rbac`
-    // .filter(schema::organization::owner_id.eq(user_id))
-    .order(schema::organization::name)
-    .load::<QueryOrganization>(conn)
-    .map_err(api_error!())?
-    .into_iter()
-    .filter_map(|query| query.into_json().ok())
-    .collect();
+        .order(schema::organization::name)
+        .load::<QueryOrganization>(conn)
+        .map_err(api_error!())?
+        .into_iter()
+        .filter_map(|query| {
+            context
+                .rbac
+                .is_allowed_organization(auth_user, Permission::View, query)
+        })
+        .filter_map(|query| query.into_json().ok())
+        .collect();
 
     Ok(json)
 }

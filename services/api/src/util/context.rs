@@ -42,7 +42,7 @@ impl Rbac {
         })
     }
 
-    fn is_allowed_organization(
+    pub fn is_allowed_organization(
         &self,
         auth_user: &AuthUser,
         action: bencher_rbac::organization::Permission,
@@ -53,7 +53,7 @@ impl Rbac {
             .then_some(organization)
     }
 
-    fn is_allowed_project(
+    pub fn is_allowed_project(
         &self,
         auth_user: &AuthUser,
         action: bencher_rbac::project::Permission,
