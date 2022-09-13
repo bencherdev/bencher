@@ -3,6 +3,7 @@ use std::{str::FromStr, string::ToString};
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::{HttpError, RequestContext};
+use oso::{PolarValue, ToPolar};
 use url::Url;
 use uuid::Uuid;
 
@@ -128,4 +129,14 @@ fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
     } else {
         None
     })
+}
+
+impl ToPolar for &QueryProject {
+    fn to_polar(self) -> PolarValue {
+        bencher_rbac::project::Project {
+            uuid: self.id.to_string(),
+            parent: self.organization_id.to_string(),
+        }
+        .to_polar()
+    }
 }

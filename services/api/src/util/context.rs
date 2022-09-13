@@ -1,8 +1,9 @@
+use std::fmt;
+
 use oso::{Oso, ToPolar};
 
-use crate::diesel::ExpressionMethods;
 use crate::{
-    model::{organization::QueryOrganization, user::auth::AuthUser},
+    model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
     ApiError,
 };
 
@@ -45,18 +46,21 @@ impl Rbac {
         &self,
         auth_user: &AuthUser,
         action: bencher_rbac::organization::Permission,
-        organization: &QueryOrganization,
-    ) -> Box<
-        dyn diesel::BoxableExpression<
-            crate::schema::organization::table,
-            diesel::sqlite::Sqlite,
-            SqlType = diesel::sql_types::Bool,
-        >,
-    > {
-        let is = self
-            .is_allowed(auth_user, action, organization)
-            .unwrap_or_default();
+        organization: QueryOrganization,
+    ) -> Option<QueryOrganization> {
+        self.is_allowed(auth_user, action, &organization)
+            .unwrap_or_default()
+            .then_some(organization)
+    }
 
-        Box::new(crate::schema::organization::id.eq(0))
+    fn is_allowed_project(
+        &self,
+        auth_user: &AuthUser,
+        action: bencher_rbac::project::Permission,
+        project: QueryProject,
+    ) -> Option<QueryProject> {
+        self.is_allowed(auth_user, action, &project)
+            .unwrap_or_default()
+            .then_some(project)
     }
 }
