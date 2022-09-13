@@ -106,6 +106,32 @@ impl AuthUser {
     fn project_roles(conn: &mut SqliteConnection, user_id: i32) -> Result<ProjectRoles, ApiError> {
         proj_roles_map!(conn, user_id)
     }
+
+    pub fn organizations(
+        &self,
+        conn: &mut SqliteConnection,
+        action: bencher_rbac::organization::Permission,
+    ) -> Result<Vec<i32>, ApiError> {
+        // let roles: Vec<i32> = roles_vec!(
+        //     conn,
+        //     self.id,
+        //     organization_role,
+        //     user_id,
+        //     organization_id,
+        //     role
+        // )?;
+        let mut ids = Vec::new();
+        // for id in self.rbac.organizations.keys().cloned() {
+        //     if rbac.unwrap_is_allowed(self, action, Organization { uuid: id }) {
+        //         // ids.push(id.parse().unwrap())
+        //     }
+        // }
+        Ok(ids)
+    }
+
+    pub fn projects(&self, conn: &mut SqliteConnection) -> Result<Vec<i32>, ApiError> {
+        todo!()
+    }
 }
 
 impl ToPolar for &AuthUser {
