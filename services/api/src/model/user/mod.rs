@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod auth;
+mod macros;
 pub mod organization;
 pub mod project;
 pub mod token;

@@ -1,6 +1,6 @@
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
-    Organization, User as RbacUser,
+    User as RbacUser,
 };
 
 use bencher_json::jwt::JsonWebToken;
@@ -8,12 +8,7 @@ use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
 
-use crate::{
-    diesel::ExpressionMethods,
-    schema,
-    util::{context::Rbac, Context},
-    ApiError,
-};
+use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
 
 const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
@@ -35,20 +30,14 @@ macro_rules! map_auth_error {
     };
 }
 
-macro_rules! query_roles {
-    ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $select:expr, $load:ty) => {
-        schema::$table::table
+macro_rules! roles {
+    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {
+        Ok(schema::$table::table
             .filter(schema::$table::$user_id_field.eq($user_id))
             .order(schema::$table::$field)
-            .select($select)
-            .load::<$load>($conn)
-            .map_err(map_auth_error!(INVALID_JWT))
-    };
-}
-
-macro_rules! filter_roles {
-    ($query:ident, $msg:expr) => {
-        $query
+            .select((schema::$table::$field, schema::$table::$role_field))
+            .load::<(i32, String)>($conn)
+            .map_err(map_auth_error!(INVALID_JWT))?
             .into_iter()
             .filter_map(|(id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
@@ -58,44 +47,14 @@ macro_rules! filter_roles {
                     None
                 },
             })
-            .collect()
+            .collect())
     };
 }
 
-macro_rules! roles_map {
-    ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {{
-        let query = query_roles!(
-            $conn,
-            $user_id,
-            $table,
-            $user_id_field,
-            $field,
-            (schema::$table::$field, schema::$table::$role_field),
-            (i32, String)
-        )?;
-        Ok(filter_roles!(query, $msg))
-    }};
-}
-
-macro_rules! roles_vec {
-    ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident) => {
-        query_roles!(
-            $conn,
-            $user_id,
-            $table,
-            $user_id_field,
-            $field,
-            schema::$table::$field,
-            i32
-        )
-    };
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AuthUser {
     pub id: i32,
-    pub admin: bool,
-    pub locked: bool,
+    pub rbac: RbacUser,
 }
 
 impl AuthUser {
@@ -119,29 +78,27 @@ impl AuthUser {
             .map_err(map_auth_error!(INVALID_JWT))?;
 
         let conn = &mut context.db_conn;
-        schema::user::table
+        let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
             .first::<(i32, bool, bool)>(conn)
-            .map(|(id, admin, locked)| Self { id, admin, locked })
-            .map_err(map_auth_error!(INVALID_JWT))
-    }
+            .map_err(map_auth_error!(INVALID_JWT))?;
 
-    fn into_rbac(self, conn: &mut SqliteConnection) -> Result<RbacUser, ApiError> {
-        let AuthUser { id, admin, locked } = self;
-        Ok(RbacUser {
+        let rbac = RbacUser {
             admin,
             locked,
-            organizations: Self::organization_roles(conn, id)?,
-            projects: Self::project_roles(conn, id)?,
-        })
+            organizations: Self::organization_roles(conn, user_id)?,
+            projects: Self::project_roles(conn, user_id)?,
+        };
+
+        Ok(Self { id: user_id, rbac })
     }
 
     fn organization_roles(
         conn: &mut SqliteConnection,
         user_id: i32,
     ) -> Result<OrganizationRoles, ApiError> {
-        roles_map!(
+        roles!(
             conn,
             user_id,
             organization_role,
@@ -153,7 +110,7 @@ impl AuthUser {
     }
 
     fn project_roles(conn: &mut SqliteConnection, user_id: i32) -> Result<ProjectRoles, ApiError> {
-        roles_map!(
+        roles!(
             conn,
             user_id,
             project_role,
@@ -163,26 +120,10 @@ impl AuthUser {
             "Failed to parse project role {}: {}"
         )
     }
+}
 
-    pub fn organizations(
-        &self,
-        conn: &mut SqliteConnection,
-        action: bencher_rbac::organization::Permission,
-    ) -> Result<Vec<i32>, ApiError> {
-        let roles: Vec<i32> = roles_vec!(
-            conn,
-            self.id,
-            organization_role,
-            user_id,
-            organization_id,
-            role
-        )?;
-        let mut ids = Vec::new();
-        // for id in self.rbac.organizations.keys().cloned() {
-        //     if rbac.unwrap_is_allowed(self, action, Organization { uuid: id }) {
-        //         // ids.push(id.parse().unwrap())
-        //     }
-        // }
-        Ok(ids)
+impl ToPolar for &AuthUser {
+    fn to_polar(self) -> PolarValue {
+        self.rbac.clone().to_polar()
     }
 }

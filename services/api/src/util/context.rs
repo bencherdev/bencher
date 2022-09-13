@@ -1,7 +1,6 @@
 use std::fmt;
 
 use bencher_rbac::Organization;
-use bencher_rbac::User as RbacUser;
 use oso::{Oso, PolarClass, ToPolar};
 
 use crate::{
@@ -60,19 +59,19 @@ impl Rbac {
 
     pub fn is_allowed_organization(
         &self,
-        rbac_user: RbacUser,
+        auth_user: &AuthUser,
         action: bencher_rbac::organization::Permission,
         organization: &QueryOrganization,
     ) -> bool {
-        self.unwrap_is_allowed(rbac_user, action, organization)
+        self.unwrap_is_allowed(auth_user, action, organization)
     }
 
     pub fn is_allowed_project(
         &self,
-        rbac_user: RbacUser,
+        auth_user: &AuthUser,
         action: bencher_rbac::project::Permission,
         project: &QueryProject,
     ) -> bool {
-        self.unwrap_is_allowed(rbac_user, action, project)
+        self.unwrap_is_allowed(auth_user, action, project)
     }
 }
