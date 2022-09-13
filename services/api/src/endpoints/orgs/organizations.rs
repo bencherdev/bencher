@@ -71,15 +71,16 @@ async fn get_ls_inner(
     let conn = &mut context.db_conn;
 
     let json: Vec<JsonOrganization> = schema::organization::table
+        // .filter(schema::organization::id.eq_any(auth_user.))
         .order(schema::organization::name)
         .load::<QueryOrganization>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(|query| {
-            context
-                .rbac
-                .is_allowed_organization(auth_user, Permission::View, query)
-        })
+        // .filter_map(|query| {
+        //     context
+        //         .rbac
+        //         .is_allowed_organization(auth_user, Permission::View, query)
+        // })
         .filter_map(|query| query.into_json().ok())
         .collect();
 

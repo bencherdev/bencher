@@ -1,5 +1,7 @@
 use std::fmt;
 
+use bencher_rbac::Organization;
+use bencher_rbac::User as RbacUser;
 use oso::{Oso, PolarClass, ToPolar};
 
 use crate::{
@@ -42,25 +44,35 @@ impl Rbac {
         })
     }
 
+    pub fn unwrap_is_allowed<Actor, Action, Resource>(
+        &self,
+        actor: Actor,
+        action: Action,
+        resource: Resource,
+    ) -> bool
+    where
+        Actor: ToPolar,
+        Action: ToPolar,
+        Resource: ToPolar,
+    {
+        self.is_allowed(actor, action, resource).unwrap_or_default()
+    }
+
     pub fn is_allowed_organization(
         &self,
-        auth_user: &AuthUser,
+        rbac_user: RbacUser,
         action: bencher_rbac::organization::Permission,
-        organization: QueryOrganization,
-    ) -> Option<QueryOrganization> {
-        self.is_allowed(auth_user, action, &organization)
-            .unwrap_or_default()
-            .then_some(organization)
+        organization: &QueryOrganization,
+    ) -> bool {
+        self.unwrap_is_allowed(rbac_user, action, organization)
     }
 
     pub fn is_allowed_project(
         &self,
-        auth_user: &AuthUser,
+        rbac_user: RbacUser,
         action: bencher_rbac::project::Permission,
-        project: QueryProject,
-    ) -> Option<QueryProject> {
-        self.is_allowed(auth_user, action, &project)
-            .unwrap_or_default()
-            .then_some(project)
+        project: &QueryProject,
+    ) -> bool {
+        self.unwrap_is_allowed(rbac_user, action, project)
     }
 }

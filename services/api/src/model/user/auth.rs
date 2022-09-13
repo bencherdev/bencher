@@ -1,6 +1,6 @@
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
-    User as RbacUser,
+    Organization, User as RbacUser,
 };
 
 use bencher_json::jwt::JsonWebToken;
@@ -8,7 +8,12 @@ use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
 
-use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
+use crate::{
+    diesel::ExpressionMethods,
+    schema,
+    util::{context::Rbac, Context},
+    ApiError,
+};
 
 const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
@@ -51,10 +56,11 @@ macro_rules! roles {
     };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AuthUser {
     pub id: i32,
-    pub rbac: RbacUser,
+    pub admin: bool,
+    pub locked: bool,
 }
 
 impl AuthUser {
@@ -78,20 +84,22 @@ impl AuthUser {
             .map_err(map_auth_error!(INVALID_JWT))?;
 
         let conn = &mut context.db_conn;
-        let (user_id, admin, locked) = schema::user::table
+        schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
             .first::<(i32, bool, bool)>(conn)
-            .map_err(map_auth_error!(INVALID_JWT))?;
+            .map(|(id, admin, locked)| Self { id, admin, locked })
+            .map_err(map_auth_error!(INVALID_JWT))
+    }
 
-        let rbac = RbacUser {
+    fn into_rbac(self, conn: &mut SqliteConnection) -> Result<RbacUser, ApiError> {
+        let AuthUser { id, admin, locked } = self;
+        Ok(RbacUser {
             admin,
             locked,
-            organizations: Self::organization_roles(conn, user_id)?,
-            projects: Self::project_roles(conn, user_id)?,
-        };
-
-        Ok(Self { id: user_id, rbac })
+            organizations: Self::organization_roles(conn, id)?,
+            projects: Self::project_roles(conn, id)?,
+        })
     }
 
     fn organization_roles(
@@ -120,10 +128,18 @@ impl AuthUser {
             "Failed to parse project role {}: {}"
         )
     }
-}
 
-impl ToPolar for &AuthUser {
-    fn to_polar(self) -> PolarValue {
-        self.rbac.clone().to_polar()
+    pub fn organizations(
+        &self,
+        rbac: &Rbac,
+        action: bencher_rbac::organization::Permission,
+    ) -> Result<Vec<i32>, ApiError> {
+        let mut ids = Vec::new();
+        // for id in self.rbac.organizations.keys().cloned() {
+        //     if rbac.unwrap_is_allowed(self, action, Organization { uuid: id }) {
+        //         // ids.push(id.parse().unwrap())
+        //     }
+        // }
+        Ok(ids)
     }
 }
