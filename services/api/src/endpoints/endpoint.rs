@@ -22,7 +22,7 @@ impl Endpoint {
 
     pub fn err(&self, e: ApiError) -> ApiError {
         let api_error: ApiError = self.into();
-        tracing::error!("{api_error}: {e}");
+        tracing::info!("{api_error}: {e}");
         api_error
     }
 

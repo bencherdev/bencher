@@ -50,6 +50,8 @@ pub enum ApiError {
     Query(#[from] diesel::result::Error),
     #[error("{0}")]
     Auth(String),
+    #[error("Invalid user: {0}")]
+    User(String),
 
     // TODO remove once no longer needed
     #[error(transparent)]
