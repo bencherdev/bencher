@@ -10,6 +10,16 @@ pub use project::Project;
 pub use server::Server;
 pub use user::User;
 
+const VIEW_PERM: &str = "view";
+const CREATE_PERM: &str = "create";
+const EDIT_PERM: &str = "edit";
+const DELETE_PERM: &str = "delete";
+const MANAGE_PERM: &str = "manage";
+const CREATE_ROLE_ASSIGNMENTS_PERM: &str = "create_role_assignments";
+const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
+const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
+const DELETE_ROLE_ASSIGNMENTS_PERM: &str = "delete_role_assignments";
+
 pub const POLAR: &str = include_str!("../bencher.polar");
 
 pub fn init_rbac() -> oso::Result<Oso> {

@@ -2,18 +2,13 @@ use std::{fmt, str::FromStr};
 
 use oso::{PolarClass, PolarValue, ToPolar};
 
+use crate::{
+    CREATE_PERM, CREATE_ROLE_ASSIGNMENTS_PERM, DELETE_PERM, DELETE_ROLE_ASSIGNMENTS_PERM,
+    EDIT_PERM, LIST_ROLE_ASSIGNMENTS_PERM, MANAGE_PERM, UPDATE_ROLE_ASSIGNMENTS_PERM, VIEW_PERM,
+};
+
 pub const MEMBER_ROLE: &str = "member";
 pub const LEADER_ROLE: &str = "leader";
-
-pub const VIEW_PERM: &str = "view";
-pub const CREATE_PERM: &str = "create";
-pub const EDIT_PERM: &str = "edit";
-pub const DELETE_PERM: &str = "delete";
-pub const MANAGE_PERM: &str = "manage";
-pub const CREATE_ROLE_ASSIGNMENTS_PERM: &str = "create_role_assignments";
-pub const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
-pub const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
-pub const DELETE_ROLE_ASSIGNMENTS_PERM: &str = "delete_role_assignments";
 
 #[derive(Debug, Clone, PolarClass)]
 pub struct Organization {
