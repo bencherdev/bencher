@@ -11,9 +11,14 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_ok, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
         organization::{InsertOrganization, QueryOrganization},
-        user::{organization::InsertOrganizationRole, QueryUser},
+        user::{auth::AuthUser, organization::InsertOrganizationRole, QueryUser},
     },
     schema,
     util::{
@@ -21,7 +26,12 @@ use crate::{
         headers::CorsHeaders,
         map_http_error, Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
 
 #[endpoint {
     method = OPTIONS,
@@ -39,25 +49,36 @@ pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRes
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonOrganization>>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseOk<Vec<JsonOrganization>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = rqctx.context();
+    let json = get_ls_inner(&auth_user, context)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    _auth_user: &AuthUser,
+    context: &Context,
+) -> Result<Vec<JsonOrganization>, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
-    let json: Vec<JsonOrganization> = schema::organization::table
-        // TODO actually filter here with `bencher_rbac`
-        // .filter(schema::organization::owner_id.eq(user_id))
-        .order(schema::organization::name)
-        .load::<QueryOrganization>(conn)
-        .map_err(map_http_error!("Failed to get organizations."))?
-        .into_iter()
-        .filter_map(|query| query.into_json().ok())
-        .collect();
 
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_auth("GET".into()),
-    ))
+    let json: Vec<JsonOrganization> = schema::organization::table
+    // TODO actually filter here with `bencher_rbac`
+    // .filter(schema::organization::owner_id.eq(user_id))
+    .order(schema::organization::name)
+    .load::<QueryOrganization>(conn)
+    .map_err(api_error!())?
+    .into_iter()
+    .filter_map(|query| query.into_json().ok())
+    .collect();
+
+    Ok(json)
 }
 
 #[endpoint {
