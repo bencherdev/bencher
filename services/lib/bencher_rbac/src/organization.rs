@@ -5,9 +5,11 @@ use oso::{PolarClass, PolarValue, ToPolar};
 pub const MEMBER_ROLE: &str = "member";
 pub const LEADER_ROLE: &str = "leader";
 
-pub const READ_PERM: &str = "read";
-pub const CREATE_PROJECTS_PERM: &str = "create_projects";
-pub const LIST_PROJECTS_PERM: &str = "list_projects";
+pub const VIEW_PERM: &str = "view";
+pub const CREATE_PERM: &str = "create";
+pub const EDIT_PERM: &str = "edit";
+pub const DELETE_PERM: &str = "delete";
+pub const MANAGE_PERM: &str = "manage";
 pub const CREATE_ROLE_ASSIGNMENTS_PERM: &str = "create_role_assignments";
 pub const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
 pub const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
@@ -58,9 +60,11 @@ impl FromStr for Role {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Permission {
-    Read,
-    CreateProjects,
-    ListProjects,
+    View,
+    Create,
+    Edit,
+    Delete,
+    Manage,
     CreateRoleAssignments,
     ListRoleAssignments,
     UpdateRoleAssignments,
@@ -73,9 +77,11 @@ impl fmt::Display for Permission {
             f,
             "{}",
             match self {
-                Self::Read => READ_PERM,
-                Self::CreateProjects => CREATE_PROJECTS_PERM,
-                Self::ListProjects => LIST_PROJECTS_PERM,
+                Self::View => VIEW_PERM,
+                Self::Create => CREATE_PERM,
+                Self::Edit => EDIT_PERM,
+                Self::Delete => DELETE_PERM,
+                Self::Manage => MANAGE_PERM,
                 Self::CreateRoleAssignments => CREATE_ROLE_ASSIGNMENTS_PERM,
                 Self::ListRoleAssignments => LIST_ROLE_ASSIGNMENTS_PERM,
                 Self::UpdateRoleAssignments => UPDATE_ROLE_ASSIGNMENTS_PERM,

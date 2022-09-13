@@ -147,38 +147,38 @@ mod test {
         };
 
         assert!(oso
-            .is_allowed(admin.clone(), OrgPerm::Read, org.clone())
+            .is_allowed(admin.clone(), OrgPerm::View, org.clone())
             .unwrap());
         assert!(oso
-            .is_allowed(admin.clone(), OrgPerm::CreateProjects, org.clone())
+            .is_allowed(admin.clone(), OrgPerm::Create, org.clone())
             .unwrap());
 
         assert!(!oso
-            .is_allowed(user.clone(), OrgPerm::Read, org.clone())
+            .is_allowed(user.clone(), OrgPerm::View, org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(user.clone(), OrgPerm::CreateProjects, org.clone())
+            .is_allowed(user.clone(), OrgPerm::Create, org.clone())
             .unwrap());
 
         assert!(oso
-            .is_allowed(org_leader.clone(), OrgPerm::Read, org.clone())
+            .is_allowed(org_leader.clone(), OrgPerm::View, org.clone())
             .unwrap());
         assert!(oso
-            .is_allowed(org_leader.clone(), OrgPerm::CreateProjects, org.clone())
+            .is_allowed(org_leader.clone(), OrgPerm::Create, org.clone())
             .unwrap());
 
         assert!(oso
-            .is_allowed(org_member.clone(), OrgPerm::Read, org.clone())
+            .is_allowed(org_member.clone(), OrgPerm::View, org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(org_member.clone(), OrgPerm::CreateProjects, org.clone())
+            .is_allowed(org_member.clone(), OrgPerm::Create, org.clone())
             .unwrap());
 
         assert!(oso
-            .is_allowed(proj_member.clone(), OrgPerm::Read, org.clone())
+            .is_allowed(proj_member.clone(), OrgPerm::View, org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(proj_member.clone(), OrgPerm::CreateProjects, org.clone())
+            .is_allowed(proj_member.clone(), OrgPerm::Create, org.clone())
             .unwrap());
 
         assert!(oso
@@ -226,39 +226,31 @@ mod test {
         };
 
         assert!(oso
-            .is_allowed(admin.clone(), OrgPerm::Read, other_org.clone())
+            .is_allowed(admin.clone(), OrgPerm::View, other_org.clone())
             .unwrap());
         assert!(oso
-            .is_allowed(admin.clone(), OrgPerm::CreateProjects, other_org.clone())
+            .is_allowed(admin.clone(), OrgPerm::Create, other_org.clone())
             .unwrap());
 
         assert!(!oso
-            .is_allowed(user.clone(), OrgPerm::Read, other_org.clone())
+            .is_allowed(user.clone(), OrgPerm::View, other_org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(user.clone(), OrgPerm::CreateProjects, other_org.clone())
-            .unwrap());
-
-        assert!(!oso
-            .is_allowed(org_leader.clone(), OrgPerm::Read, other_org.clone())
-            .unwrap());
-        assert!(!oso
-            .is_allowed(
-                org_leader.clone(),
-                OrgPerm::CreateProjects,
-                other_org.clone()
-            )
+            .is_allowed(user.clone(), OrgPerm::Create, other_org.clone())
             .unwrap());
 
         assert!(!oso
-            .is_allowed(org_member.clone(), OrgPerm::Read, other_org.clone())
+            .is_allowed(org_leader.clone(), OrgPerm::View, other_org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(
-                org_member.clone(),
-                OrgPerm::CreateProjects,
-                other_org.clone()
-            )
+            .is_allowed(org_leader.clone(), OrgPerm::Create, other_org.clone())
+            .unwrap());
+
+        assert!(!oso
+            .is_allowed(org_member.clone(), OrgPerm::View, other_org.clone())
+            .unwrap());
+        assert!(!oso
+            .is_allowed(org_member.clone(), OrgPerm::Create, other_org.clone())
             .unwrap());
 
         assert!(oso

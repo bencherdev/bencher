@@ -21,9 +21,11 @@ has_role(user: User, role: String, _server: Server) if
 
 resource Organization {
   permissions = [
-    "read",
-    "create_projects",
-    "list_projects",
+    "view",
+    "create",
+    "edit",
+    "delete",
+    "manage",
     "create_role_assignments",
     "list_role_assignments",
     "update_role_assignments",
@@ -31,11 +33,13 @@ resource Organization {
   ];
   roles = ["member", "leader"];
 
-  "read" if "member";
-  "list_projects" if "member";
+  "view" if "member";
   "list_role_assignments" if "member";
 
-  "create_projects" if "leader";
+  "create" if "leader";
+  "edit" if "leader";
+  "delete" if "leader";
+  "manage" if "leader";
   "create_role_assignments" if "leader";
   "update_role_assignments" if "leader";
   "delete_role_assignments" if "leader";

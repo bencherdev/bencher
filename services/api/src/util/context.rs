@@ -1,6 +1,6 @@
 use std::fmt;
 
-use oso::{Oso, ToPolar};
+use oso::{Oso, PolarClass, ToPolar};
 
 use crate::{
     model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
