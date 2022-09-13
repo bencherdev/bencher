@@ -153,7 +153,7 @@ pub async fn get_one(
         .filter(
             schema::branch::project_id
                 .eq(project_id)
-                .and(resource_id(&branch)),
+                .and(resource_id(&branch)?),
         )
         .first::<QueryBranch>(conn)
         .map_err(map_http_error!("Failed to get branch."))?

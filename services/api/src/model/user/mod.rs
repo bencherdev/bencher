@@ -105,7 +105,7 @@ impl QueryUser {
         user: &ResourceId,
     ) -> Result<Self, HttpError> {
         schema::user::table
-            .filter(resource_id(user))
+            .filter(resource_id(user)?)
             .first(conn)
             .map_err(map_http_error!("Failed to get user."))
     }

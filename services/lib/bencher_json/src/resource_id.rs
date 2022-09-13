@@ -11,9 +11,12 @@ use uuid::Uuid;
 
 #[derive(Debug, Display, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub enum ResourceId {
-    Uuid(Uuid),
-    Slug(String),
+pub struct ResourceId(pub String);
+
+impl ResourceId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl FromStr for ResourceId {
@@ -21,13 +24,13 @@ impl FromStr for ResourceId {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         if let Ok(uuid) = Uuid::try_parse(value) {
-            return Ok(ResourceId::Uuid(uuid));
+            return Ok(ResourceId(uuid.to_string()));
         }
         let slug = slug::slugify(value);
         if value == slug {
-            return Ok(ResourceId::Slug(slug));
+            return Ok(ResourceId(slug));
         }
-        Err("Failed to convert to resource ID".into())
+        Err("Failed to to convert to string".into())
     }
 }
 

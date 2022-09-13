@@ -77,7 +77,7 @@ impl QueryOrganization {
         organization: &ResourceId,
     ) -> Result<Self, HttpError> {
         schema::organization::table
-            .filter(resource_id(organization))
+            .filter(resource_id(organization)?)
             .first::<QueryOrganization>(conn)
             .map_err(map_http_error!("Failed to create organization."))
     }

@@ -165,7 +165,7 @@ pub async fn get_one(
 
     let organization = path_params.organization;
     let query = schema::organization::table
-        .filter(resource_id(&organization))
+        .filter(resource_id(&organization)?)
         .first::<QueryOrganization>(conn)
         .map_err(map_http_error!("Failed to get organization."))?;
 

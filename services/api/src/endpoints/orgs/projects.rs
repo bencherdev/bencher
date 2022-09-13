@@ -144,7 +144,7 @@ pub async fn get_one(
 
     let project = path_params.project;
     let query = schema::project::table
-        .filter(resource_id(&project))
+        .filter(resource_id(&project)?)
         .first::<QueryProject>(conn)
         .map_err(map_http_error!("Failed to get project."))?;
 

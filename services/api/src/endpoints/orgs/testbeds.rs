@@ -153,7 +153,7 @@ pub async fn get_one(
         .filter(
             schema::testbed::project_id
                 .eq(project_id)
-                .and(resource_id(&testbed)),
+                .and(resource_id(&testbed)?),
         )
         .first::<QueryTestbed>(conn)
         .map_err(map_http_error!("Failed to get testbed."))?

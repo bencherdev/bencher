@@ -93,7 +93,7 @@ impl QueryProject {
         project: &ResourceId,
     ) -> Result<Self, HttpError> {
         schema::project::table
-            .filter(resource_id(project))
+            .filter(resource_id(project)?)
             .first::<QueryProject>(conn)
             .map_err(map_http_error!("Failed to get project."))
     }
