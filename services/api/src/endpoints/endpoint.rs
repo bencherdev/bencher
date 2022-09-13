@@ -1,10 +1,13 @@
-use dropshot::{HttpCodedResponse, HttpResponseHeaders};
+use dropshot::{HttpCodedResponse, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk};
 use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::{util::headers::CorsHeaders, ApiError};
 
 use super::{Method, Resource};
+
+pub type ResponseOk<T> = HttpResponseHeaders<HttpResponseOk<T>, CorsHeaders>;
+pub type ResponseAccepted<T> = HttpResponseHeaders<HttpResponseAccepted<T>, CorsHeaders>;
 
 #[derive(Copy, Clone)]
 pub struct Endpoint {

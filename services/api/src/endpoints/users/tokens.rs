@@ -2,17 +2,14 @@ use std::sync::Arc;
 
 use bencher_json::{JsonNewToken, JsonToken, ResourceId};
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
     endpoints::{
-        endpoint::{response_accepted, response_ok},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -26,7 +23,6 @@ use crate::{
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
         Context,
     },
     ApiError,
@@ -72,7 +68,7 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonToken>>, CorsHeaders>, HttpError> {
+) -> Result<ResponseOk<Vec<JsonToken>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
 
@@ -125,7 +121,7 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewToken>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonToken>, CorsHeaders>, HttpError> {
+) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::Post);
 
@@ -185,7 +181,7 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonToken>, CorsHeaders>, HttpError> {
+) -> Result<ResponseOk<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetOne);
 
