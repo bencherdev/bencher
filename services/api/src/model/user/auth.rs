@@ -10,6 +10,8 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
 
+use super::macros::{org_roles_map, proj_roles_map, roles_map};
+
 const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
 macro_rules! auth_error {
@@ -98,27 +100,11 @@ impl AuthUser {
         conn: &mut SqliteConnection,
         user_id: i32,
     ) -> Result<OrganizationRoles, ApiError> {
-        roles!(
-            conn,
-            user_id,
-            organization_role,
-            user_id,
-            organization_id,
-            role,
-            "Failed to parse organization role {}: {}"
-        )
+        org_roles_map!(conn, user_id)
     }
 
     fn project_roles(conn: &mut SqliteConnection, user_id: i32) -> Result<ProjectRoles, ApiError> {
-        roles!(
-            conn,
-            user_id,
-            project_role,
-            user_id,
-            project_id,
-            role,
-            "Failed to parse project role {}: {}"
-        )
+        proj_roles_map!(conn, user_id)
     }
 }
 

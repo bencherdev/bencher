@@ -9,6 +9,8 @@ macro_rules! query_roles {
     };
 }
 
+pub(crate) use query_roles;
+
 macro_rules! filter_roles_map {
     ($query:ident, $msg:expr) => {
         $query
@@ -25,9 +27,11 @@ macro_rules! filter_roles_map {
     };
 }
 
+pub(crate) use filter_roles_map;
+
 macro_rules! roles_map {
     ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {{
-        let query = query_roles!(
+        let query = super::macros::query_roles!(
             $conn,
             $user_id,
             $table,
@@ -36,11 +40,43 @@ macro_rules! roles_map {
             (schema::$table::$field, schema::$table::$role_field),
             (i32, String)
         )?;
-        Ok(filter_roles_map!(query, $msg))
+        Ok(super::macros::filter_roles_map!(query, $msg))
     }};
 }
 
 pub(crate) use roles_map;
+
+macro_rules! org_roles_map {
+    ($conn:ident, $user_id:expr) => {
+        super::macros::roles_map!(
+            $conn,
+            $user_id,
+            organization_role,
+            user_id,
+            organization_id,
+            role,
+            "Failed to parse organization role {}: {}"
+        )
+    };
+}
+
+pub(crate) use org_roles_map;
+
+macro_rules! proj_roles_map {
+    ($conn:ident, $user_id:expr) => {
+        super::macros::roles_map!(
+            $conn,
+            $user_id,
+            project_role,
+            user_id,
+            project_id,
+            role,
+            "Failed to parse project role {}: {}"
+        )
+    };
+}
+
+pub(crate) use proj_roles_map;
 
 macro_rules! roles_vec {
     ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident) => {
