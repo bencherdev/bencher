@@ -8,13 +8,25 @@ use bencher_json::jwt::JsonWebToken;
 use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 
-use crate::{
-    diesel::ExpressionMethods,
-    error::{api_error, auth_error, map_auth_error},
-    schema::{self},
-    util::Context,
-    ApiError,
-};
+use crate::{diesel::ExpressionMethods, error::api_error, schema, util::Context, ApiError};
+
+macro_rules! auth_error {
+    ($message:expr) => {
+        || {
+            tracing::info!($message);
+            crate::error::ApiError::Auth($message.into())
+        }
+    };
+}
+
+macro_rules! map_auth_error {
+    ($message:expr) => {
+        |e| {
+            tracing::info!("{}: {}", $message, e);
+            crate::error::ApiError::Auth($message.into())
+        }
+    };
+}
 
 pub struct AuthUser {
     pub id: i32,
