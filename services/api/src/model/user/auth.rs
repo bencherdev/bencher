@@ -35,85 +35,14 @@ macro_rules! map_auth_error {
     };
 }
 
-macro_rules! user_roles {
-    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $load:expr) => {
-        schema::$table::table
-            .filter(schema::$table::$user_id_field.eq($user_id))
-            .order(schema::$table::$field)
-            .select((schema::$table::$field, schema::$table::$role_field))
-            .load::<$load>($conn)
-            .map_err(map_auth_error!(INVALID_JWT))?
-    };
-}
-
-macro_rules! roles_filter_map {
-    ($msg:expr) => {
-        .into_iter()
-        .filter_map(|(id, role)| match role.parse() {
-            Ok(role) => Some((id.to_string(), role)),
-            Err(e) => {
-                tracing::error!($msg, role, e);
-                debug_assert!(false, $msg, role, e);
-                None
-            },
-        })
-        .collect()
-    };
-}
-
-macro_rules! org_roles {
-    ($conn:ident, $user_id:ident, $load:expr) => {
-        user_roles!(
-            $conn,
-            user_id,
-            Organization,
-            user_id,
-            organization_id,
-            role,
-            $load
-        )
-    };
-}
-
-macro_rules! org_roles_vec {
-    ($conn:ident, $user_id:ident, $load:expr) => {
-        org_roles!($conn, user_id, i32)
-    };
-}
-
-macro_rules! org_roles_map {
-    ($conn:ident, $user_id:ident, $load:expr, $msg:expr) => {
-        org_roles!($conn, user_id, (i32, String))
-        roles_filter_map!($msg)
-    };
-}
-
-macro_rules! proj_roles {
-    ($conn:ident, $user_id:ident, $load:expr) => {
-        user_roles!($conn, user_id, Project, user_id, project_id, role, $load)
-    };
-}
-
-macro_rules! proj_roles_vec {
-    ($conn:ident, $user_id:ident, $load:expr) => {
-        proj_roles!($conn, user_id, i32)
-    };
-}
-
-macro_rules! proj_roles_map {
-    ($conn:ident, $user_id:ident, $load:expr) => {
-        proj_roles!($conn, user_id, (i32, String))
-    };
-}
-
 macro_rules! query_roles {
-    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $load:ty) => {
+    ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $select:expr, $load:ty) => {
         schema::$table::table
             .filter(schema::$table::$user_id_field.eq($user_id))
             .order(schema::$table::$field)
-            .select((schema::$table::$field, schema::$table::$role_field))
+            .select($select)
             .load::<$load>($conn)
-            .map_err(map_auth_error!(INVALID_JWT))?
+            .map_err(map_auth_error!(INVALID_JWT))
     };
 }
 
@@ -134,18 +63,32 @@ macro_rules! filter_roles {
 }
 
 macro_rules! roles_map {
-    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {{
+    ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {{
         let query = query_roles!(
             $conn,
             $user_id,
             $table,
             $user_id_field,
             $field,
-            $role_field,
+            (schema::$table::$field, schema::$table::$role_field),
             (i32, String)
-        );
+        )?;
         Ok(filter_roles!(query, $msg))
     }};
+}
+
+macro_rules! roles_vec {
+    ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident) => {
+        query_roles!(
+            $conn,
+            $user_id,
+            $table,
+            $user_id_field,
+            $field,
+            schema::$table::$field,
+            i32
+        )
+    };
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -223,9 +166,17 @@ impl AuthUser {
 
     pub fn organizations(
         &self,
-        rbac: &Rbac,
+        conn: &mut SqliteConnection,
         action: bencher_rbac::organization::Permission,
     ) -> Result<Vec<i32>, ApiError> {
+        let roles: Vec<i32> = roles_vec!(
+            conn,
+            self.id,
+            organization_role,
+            user_id,
+            organization_id,
+            role
+        )?;
         let mut ids = Vec::new();
         // for id in self.rbac.organizations.keys().cloned() {
         //     if rbac.unwrap_is_allowed(self, action, Organization { uuid: id }) {
