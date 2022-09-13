@@ -35,6 +35,9 @@ pub enum ApiError {
     #[error("Failed to create swagger file: {0}")]
     WriteSwaggerFile(serde_json::Error),
 
+    #[error("Permission denied: {0}")]
+    IsAllowed(oso::OsoError),
+
     #[error("Failed to GET {}", _0.singular())]
     GetOne(Resource),
     #[error("Failed to GET {}", _0.plural())]

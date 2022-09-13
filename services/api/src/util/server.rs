@@ -29,14 +29,14 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     trace!("Setting secret key");
     let secret_key = get_secret();
     trace!("Parsing role based access control (RBAC) rules");
-    let oso_rbac = init_rbac().map_err(|e| ApiError::Polar(e))?;
+    let rbac = init_rbac().map_err(|e| ApiError::Polar(e))?.into();
     trace!("Getting database connection");
     let mut db_conn = get_db_conn()?;
     trace!("Running database migrations");
     run_migrations(&mut db_conn)?;
     let private = Mutex::new(ApiContext {
         secret_key,
-        oso_rbac,
+        rbac,
         db_conn,
     });
 

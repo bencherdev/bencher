@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use oso::PolarClass;
 
 // TODO once it supported by PolarClass, switch over to UUIDs as the HashMap keys
-#[derive(Clone, PolarClass)]
+#[derive(Debug, Clone, PolarClass)]
 pub struct User {
     #[polar(attribute)]
     pub admin: bool,

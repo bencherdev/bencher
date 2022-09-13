@@ -16,7 +16,7 @@ pub const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
 pub const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
 pub const DELETE_ROLE_ASSIGNMENTS_PERM: &str = "delete_role_assignments";
 
-#[derive(Clone, PolarClass)]
+#[derive(Debug, Clone, PolarClass)]
 pub struct Project {
     #[polar(attribute)]
     pub uuid: String,
@@ -24,7 +24,7 @@ pub struct Project {
     pub parent: String,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Role {
     Viewer,
     Developer,
