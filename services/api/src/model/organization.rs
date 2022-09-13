@@ -2,17 +2,14 @@ use std::str::FromStr;
 use std::string::ToString;
 
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
-    SqliteConnection,
-};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::user::InsertUser;
 use crate::{
     schema::{self, organization as organization_table},
-    util::{map_http_error, slug::unwrap_slug},
+    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug},
 };
 
 #[derive(Insertable)]
@@ -46,6 +43,8 @@ impl InsertOrganization {
     }
 }
 
+fn_resource_id!(organization);
+
 #[derive(Queryable)]
 pub struct QueryOrganization {
     pub id: i32,
@@ -76,13 +75,8 @@ impl QueryOrganization {
         conn: &mut SqliteConnection,
         organization: &ResourceId,
     ) -> Result<Self, HttpError> {
-        let org = &organization.0;
         schema::organization::table
-            .filter(
-                schema::organization::slug
-                    .eq(org)
-                    .or(schema::organization::uuid.eq(org)),
-            )
+            .filter(resource_id(organization))
             .first::<QueryOrganization>(conn)
             .map_err(map_http_error!("Failed to create organization."))
     }

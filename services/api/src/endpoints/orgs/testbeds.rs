@@ -19,7 +19,9 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
-        map_http_error, Context,
+        map_http_error,
+        resource_id::fn_resource_id,
+        Context,
     },
 };
 
@@ -129,6 +131,8 @@ pub async fn one_options(
     Ok(get_cors::<Context>())
 }
 
+fn_resource_id!(testbed);
+
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/testbeds/{testbed}",
@@ -141,17 +145,15 @@ pub async fn get_one(
     let user_id = QueryUser::auth(&rqctx).await?;
     let path_params = path_params.into_inner();
     let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
-    let resource_id = path_params.testbed.as_str();
+    let testbed = path_params.testbed;
 
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db_conn;
     let json = schema::testbed::table
         .filter(
-            schema::testbed::project_id.eq(project_id).and(
-                schema::testbed::slug
-                    .eq(resource_id)
-                    .or(schema::testbed::uuid.eq(resource_id)),
-            ),
+            schema::testbed::project_id
+                .eq(project_id)
+                .and(resource_id(&testbed)),
         )
         .first::<QueryTestbed>(conn)
         .map_err(map_http_error!("Failed to get testbed."))?

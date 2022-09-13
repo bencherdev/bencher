@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
-use diesel::{
-    expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
-    SqliteConnection,
-};
+use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::{HttpError, RequestContext};
 use email_address_parser::EmailAddress;
 use uuid::Uuid;
@@ -12,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, user as user_table},
-    util::{http_error, map_http_error, slug::unwrap_slug, Context},
+    util::{http_error, map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, Context},
 };
 
 pub mod auth;
@@ -55,6 +52,8 @@ impl InsertUser {
 fn validate_email(email: &str) -> Result<EmailAddress, HttpError> {
     EmailAddress::parse(email, None).ok_or_else(|| http_error!("Failed to get user."))
 }
+
+fn_resource_id!(user);
 
 #[derive(Queryable)]
 pub struct QueryUser {
@@ -105,9 +104,8 @@ impl QueryUser {
         conn: &mut SqliteConnection,
         user: &ResourceId,
     ) -> Result<Self, HttpError> {
-        let user = &user.0;
         schema::user::table
-            .filter(schema::user::slug.eq(user).or(schema::user::uuid.eq(user)))
+            .filter(resource_id(user))
             .first(conn)
             .map_err(map_http_error!("Failed to get user."))
     }

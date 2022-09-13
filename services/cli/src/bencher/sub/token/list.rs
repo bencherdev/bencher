@@ -31,7 +31,7 @@ impl TryFrom<CliTokenList> for List {
 impl SubCmd for List {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         self.backend
-            .get(&format!("/v0/users/{}/tokens", self.user.as_str()))
+            .get(&format!("/v0/users/{}/tokens", self.user))
             .await?;
         Ok(())
     }

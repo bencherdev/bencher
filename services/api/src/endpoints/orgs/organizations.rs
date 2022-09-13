@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
 use bencher_rbac::organization::Role;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -24,7 +24,9 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
-        map_http_error, Context,
+        map_http_error,
+        resource_id::fn_resource_id,
+        Context,
     },
     ApiError,
 };
@@ -144,6 +146,8 @@ pub async fn one_options(
     Ok(get_cors::<Context>())
 }
 
+fn_resource_id!(organization);
+
 #[endpoint {
     method = GET,
     path = "/v0/organizations/{organization}",
@@ -159,13 +163,9 @@ pub async fn get_one(
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db_conn;
 
-    let organization = &path_params.organization.0;
+    let organization = path_params.organization;
     let query = schema::organization::table
-        .filter(
-            schema::organization::slug
-                .eq(organization)
-                .or(schema::organization::uuid.eq(organization)),
-        )
+        .filter(resource_id(&organization))
         .first::<QueryOrganization>(conn)
         .map_err(map_http_error!("Failed to get organization."))?;
 

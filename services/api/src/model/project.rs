@@ -1,10 +1,7 @@
 use std::{str::FromStr, string::ToString};
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
-use diesel::{
-    expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
-    SqliteConnection,
-};
+use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::{HttpError, RequestContext};
 use url::Url;
 use uuid::Uuid;
@@ -13,7 +10,7 @@ use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
     diesel::ExpressionMethods,
     schema::{self, project as project_table},
-    util::{map_http_error, slug::unwrap_slug, Context},
+    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, Context},
 };
 
 #[derive(Insertable)]
@@ -54,6 +51,8 @@ impl InsertProject {
     }
 }
 
+fn_resource_id!(project);
+
 #[derive(Queryable)]
 pub struct QueryProject {
     pub id: i32,
@@ -93,13 +92,8 @@ impl QueryProject {
         conn: &mut SqliteConnection,
         project: &ResourceId,
     ) -> Result<Self, HttpError> {
-        let project = &project.0;
         schema::project::table
-            .filter(
-                schema::project::slug
-                    .eq(project)
-                    .or(schema::project::uuid.eq(project)),
-            )
+            .filter(resource_id(project))
             .first::<QueryProject>(conn)
             .map_err(map_http_error!("Failed to get project."))
     }
@@ -121,20 +115,10 @@ impl QueryProject {
         let context = &mut *rqctx.context().lock().await;
         let conn = &mut context.db_conn;
 
-        let project = &project.0;
-        let project_id = schema::project::table
-            .filter(
-                schema::project::slug
-                    .eq(project)
-                    .or(schema::project::uuid.eq(project)),
-            )
-            .select(schema::project::id)
-            .first::<i32>(conn)
-            .map_err(map_http_error!("Failed to get project."))?;
+        let project = Self::from_resource_id(conn, project)?;
+        QueryUser::has_access(conn, user_id, project.id)?;
 
-        QueryUser::has_access(conn, user_id, project_id)?;
-
-        Ok(project_id)
+        Ok(project.id)
     }
 }
 

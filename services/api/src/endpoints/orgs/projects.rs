@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::project::Role;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -19,7 +19,9 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
-        map_http_error, Context,
+        map_http_error,
+        resource_id::fn_resource_id,
+        Context,
     },
 };
 
@@ -123,6 +125,8 @@ pub async fn one_options(
     Ok(get_cors::<Context>())
 }
 
+fn_resource_id!(project);
+
 #[endpoint {
     method = GET,
     path = "/v0/projects/{project}",
@@ -138,13 +142,9 @@ pub async fn get_one(
     let context = &mut *rqctx.context().lock().await;
     let conn = &mut context.db_conn;
 
-    let project = &path_params.project.0;
+    let project = path_params.project;
     let query = schema::project::table
-        .filter(
-            schema::project::slug
-                .eq(project)
-                .or(schema::project::uuid.eq(project)),
-        )
+        .filter(resource_id(&project))
         .first::<QueryProject>(conn)
         .map_err(map_http_error!("Failed to get project."))?;
 
