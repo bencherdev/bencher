@@ -48,6 +48,8 @@ pub enum ApiError {
 
     #[error("Failed to query database: {0}")]
     Query(#[from] diesel::result::Error),
+    #[error("{0}")]
+    Auth(String),
 
     // TODO remove once no longer needed
     #[error(transparent)]
@@ -68,7 +70,7 @@ pub trait WordStr {
     fn plural(&self) -> &str;
 }
 
-macro_rules! query_error {
+macro_rules! api_error {
     () => {
         |e| {
             let err: crate::error::ApiError = e.into();
@@ -78,4 +80,26 @@ macro_rules! query_error {
     };
 }
 
-pub(crate) use query_error;
+pub(crate) use api_error;
+
+macro_rules! auth_error {
+    ($message:expr) => {
+        || {
+            tracing::info!($message);
+            crate::error::ApiError::Auth($message.into())
+        }
+    };
+}
+
+pub(crate) use auth_error;
+
+macro_rules! map_auth_error {
+    ($message:expr) => {
+        |e| {
+            tracing::info!("{}: {}", $message, e);
+            crate::error::ApiError::Auth($message.into())
+        }
+    };
+}
+
+pub(crate) use map_auth_error;
