@@ -10,52 +10,15 @@ use oso::{PolarValue, ToPolar};
 
 use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
 
-use super::macros::{org_roles_map, proj_roles_map, roles_map};
+use super::macros::{auth_error, map_auth_error, org_roles_map, proj_roles_map};
 
 const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
-
-macro_rules! auth_error {
-    ($message:expr) => {
-        || {
-            tracing::info!($message);
-            crate::error::ApiError::Auth($message.into())
-        }
-    };
-}
-
-macro_rules! map_auth_error {
-    ($message:expr) => {
-        |e| {
-            tracing::info!("{}: {}", $message, e);
-            crate::error::ApiError::Auth($message.into())
-        }
-    };
-}
-
-macro_rules! roles {
-    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {
-        Ok(schema::$table::table
-            .filter(schema::$table::$user_id_field.eq($user_id))
-            .order(schema::$table::$field)
-            .select((schema::$table::$field, schema::$table::$role_field))
-            .load::<(i32, String)>($conn)
-            .map_err(map_auth_error!(INVALID_JWT))?
-            .into_iter()
-            .filter_map(|(id, role)| match role.parse() {
-                Ok(role) => Some((id.to_string(), role)),
-                Err(e) => {
-                    tracing::error!($msg, role, e);
-                    debug_assert!(false, $msg, role, e);
-                    None
-                },
-            })
-            .collect())
-    };
-}
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub id: i32,
+    pub organizations: Vec<i32>,
+    pub projects: Vec<i32>,
     pub rbac: RbacUser,
 }
 
@@ -86,24 +49,34 @@ impl AuthUser {
             .first::<(i32, bool, bool)>(conn)
             .map_err(map_auth_error!(INVALID_JWT))?;
 
+        let (org_ids, org_roles) = Self::organization_roles(conn, user_id)?;
+        let (proj_ids, proj_roles) = Self::project_roles(conn, user_id)?;
         let rbac = RbacUser {
             admin,
             locked,
-            organizations: Self::organization_roles(conn, user_id)?,
-            projects: Self::project_roles(conn, user_id)?,
+            organizations: org_roles,
+            projects: proj_roles,
         };
 
-        Ok(Self { id: user_id, rbac })
+        Ok(Self {
+            id: user_id,
+            organizations: org_ids,
+            projects: proj_ids,
+            rbac,
+        })
     }
 
     fn organization_roles(
         conn: &mut SqliteConnection,
         user_id: i32,
-    ) -> Result<OrganizationRoles, ApiError> {
+    ) -> Result<(Vec<i32>, OrganizationRoles), ApiError> {
         org_roles_map!(conn, user_id)
     }
 
-    fn project_roles(conn: &mut SqliteConnection, user_id: i32) -> Result<ProjectRoles, ApiError> {
+    fn project_roles(
+        conn: &mut SqliteConnection,
+        user_id: i32,
+    ) -> Result<(Vec<i32>, ProjectRoles), ApiError> {
         proj_roles_map!(conn, user_id)
     }
 
