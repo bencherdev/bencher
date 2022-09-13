@@ -3,8 +3,8 @@ use std::{fmt, str::FromStr};
 use oso::{PolarClass, PolarValue, ToPolar};
 
 use crate::{
-    CREATE_PERM, CREATE_ROLE_ASSIGNMENTS_PERM, DELETE_PERM, DELETE_ROLE_ASSIGNMENTS_PERM,
-    EDIT_PERM, LIST_ROLE_ASSIGNMENTS_PERM, MANAGE_PERM, UPDATE_ROLE_ASSIGNMENTS_PERM, VIEW_PERM,
+    CREATE_PERM, CREATE_ROLE_PERM, DELETE_PERM, DELETE_ROLE_PERM, EDIT_PERM, EDIT_ROLE_PERM,
+    MANAGE_PERM, VIEW_PERM, VIEW_ROLE_PERM,
 };
 
 pub const VIEWER_ROLE: &str = "viewer";
@@ -83,10 +83,10 @@ impl fmt::Display for Permission {
                 Self::Edit => EDIT_PERM,
                 Self::Delete => DELETE_PERM,
                 Self::Manage => MANAGE_PERM,
-                Self::CreateRoleAssignments => CREATE_ROLE_ASSIGNMENTS_PERM,
-                Self::ListRoleAssignments => LIST_ROLE_ASSIGNMENTS_PERM,
-                Self::UpdateRoleAssignments => UPDATE_ROLE_ASSIGNMENTS_PERM,
-                Self::DeleteRoleAssignments => DELETE_ROLE_ASSIGNMENTS_PERM,
+                Self::CreateRoleAssignments => CREATE_ROLE_PERM,
+                Self::ListRoleAssignments => VIEW_ROLE_PERM,
+                Self::UpdateRoleAssignments => EDIT_ROLE_PERM,
+                Self::DeleteRoleAssignments => DELETE_ROLE_PERM,
             }
         )
     }

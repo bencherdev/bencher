@@ -15,10 +15,10 @@ const CREATE_PERM: &str = "create";
 const EDIT_PERM: &str = "edit";
 const DELETE_PERM: &str = "delete";
 const MANAGE_PERM: &str = "manage";
-const CREATE_ROLE_ASSIGNMENTS_PERM: &str = "create_role_assignments";
-const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
-const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
-const DELETE_ROLE_ASSIGNMENTS_PERM: &str = "delete_role_assignments";
+const VIEW_ROLE_PERM: &str = "view_role";
+const CREATE_ROLE_PERM: &str = "create_role";
+const EDIT_ROLE_PERM: &str = "edit_role";
+const DELETE_ROLE_PERM: &str = "delete_role";
 
 pub const POLAR: &str = include_str!("../bencher.polar");
 
