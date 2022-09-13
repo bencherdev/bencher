@@ -4,6 +4,7 @@ use std::string::ToString;
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
+use oso::{PolarValue, ToPolar};
 use uuid::Uuid;
 
 use super::user::InsertUser;
@@ -93,5 +94,14 @@ impl QueryOrganization {
             name,
             slug,
         })
+    }
+}
+
+impl ToPolar for &QueryOrganization {
+    fn to_polar(self) -> PolarValue {
+        bencher_rbac::organization::Organization {
+            uuid: self.id.to_string(),
+        }
+        .to_polar()
     }
 }

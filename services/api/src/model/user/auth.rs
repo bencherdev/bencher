@@ -6,7 +6,7 @@ use bencher_rbac::{
 use bencher_json::jwt::JsonWebToken;
 use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
-use oso::{Oso, PolarValue, ToPolar};
+use oso::{PolarValue, ToPolar};
 
 use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
 
@@ -120,25 +120,10 @@ impl AuthUser {
             "Failed to parse project role {}: {}"
         )
     }
-
-    pub fn is_allowed<Action, Resource>(
-        &self,
-        oso_rbac: &Oso,
-        action: Action,
-        resource: Resource,
-    ) -> Result<bool, ApiError>
-    where
-        Action: ToPolar,
-        Resource: ToPolar,
-    {
-        oso_rbac
-            .is_allowed(self.clone(), action, resource)
-            .map_err(|e| ApiError::IsAllowed(e))
-    }
 }
 
-impl ToPolar for AuthUser {
+impl ToPolar for &AuthUser {
     fn to_polar(self) -> PolarValue {
-        self.rbac.to_polar()
+        self.rbac.clone().to_polar()
     }
 }

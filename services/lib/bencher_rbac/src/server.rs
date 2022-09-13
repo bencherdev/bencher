@@ -39,7 +39,7 @@ impl ToPolar for Role {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Permission {
     Session,
     Administer,

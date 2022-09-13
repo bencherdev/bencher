@@ -64,7 +64,7 @@ impl FromStr for Role {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Permission {
     View,
     Create,
