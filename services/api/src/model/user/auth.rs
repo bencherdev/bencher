@@ -35,14 +35,91 @@ macro_rules! map_auth_error {
     };
 }
 
-macro_rules! roles {
-    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {
-        Ok(schema::$table::table
+macro_rules! user_roles {
+    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $load:expr) => {
+        schema::$table::table
             .filter(schema::$table::$user_id_field.eq($user_id))
             .order(schema::$table::$field)
             .select((schema::$table::$field, schema::$table::$role_field))
-            .load::<(i32, String)>($conn)
+            .load::<$load>($conn)
             .map_err(map_auth_error!(INVALID_JWT))?
+    };
+}
+
+macro_rules! roles_filter_map {
+    ($msg:expr) => {
+        .into_iter()
+        .filter_map(|(id, role)| match role.parse() {
+            Ok(role) => Some((id.to_string(), role)),
+            Err(e) => {
+                tracing::error!($msg, role, e);
+                debug_assert!(false, $msg, role, e);
+                None
+            },
+        })
+        .collect()
+    };
+}
+
+macro_rules! org_roles {
+    ($conn:ident, $user_id:ident, $load:expr) => {
+        user_roles!(
+            $conn,
+            user_id,
+            Organization,
+            user_id,
+            organization_id,
+            role,
+            $load
+        )
+    };
+}
+
+macro_rules! org_roles_vec {
+    ($conn:ident, $user_id:ident, $load:expr) => {
+        org_roles!($conn, user_id, i32)
+    };
+}
+
+macro_rules! org_roles_map {
+    ($conn:ident, $user_id:ident, $load:expr, $msg:expr) => {
+        org_roles!($conn, user_id, (i32, String))
+        roles_filter_map!($msg)
+    };
+}
+
+macro_rules! proj_roles {
+    ($conn:ident, $user_id:ident, $load:expr) => {
+        user_roles!($conn, user_id, Project, user_id, project_id, role, $load)
+    };
+}
+
+macro_rules! proj_roles_vec {
+    ($conn:ident, $user_id:ident, $load:expr) => {
+        proj_roles!($conn, user_id, i32)
+    };
+}
+
+macro_rules! proj_roles_map {
+    ($conn:ident, $user_id:ident, $load:expr) => {
+        proj_roles!($conn, user_id, (i32, String))
+    };
+}
+
+macro_rules! query_roles {
+    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $load:ty) => {
+        schema::$table::table
+            .filter(schema::$table::$user_id_field.eq($user_id))
+            .order(schema::$table::$field)
+            .select((schema::$table::$field, schema::$table::$role_field))
+            .load::<$load>($conn)
+            .map_err(map_auth_error!(INVALID_JWT))?
+    };
+}
+
+macro_rules! filter_roles {
+    ($query:ident, $msg:expr) => {
+        $query
             .into_iter()
             .filter_map(|(id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
@@ -52,8 +129,23 @@ macro_rules! roles {
                     None
                 },
             })
-            .collect())
+            .collect()
     };
+}
+
+macro_rules! roles_map {
+    ($conn:ident, $user_id:ident, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {{
+        let query = query_roles!(
+            $conn,
+            $user_id,
+            $table,
+            $user_id_field,
+            $field,
+            $role_field,
+            (i32, String)
+        );
+        Ok(filter_roles!(query, $msg))
+    }};
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -106,7 +198,7 @@ impl AuthUser {
         conn: &mut SqliteConnection,
         user_id: i32,
     ) -> Result<OrganizationRoles, ApiError> {
-        roles!(
+        roles_map!(
             conn,
             user_id,
             organization_role,
@@ -118,7 +210,7 @@ impl AuthUser {
     }
 
     fn project_roles(conn: &mut SqliteConnection, user_id: i32) -> Result<ProjectRoles, ApiError> {
-        roles!(
+        roles_map!(
             conn,
             user_id,
             project_role,
