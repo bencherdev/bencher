@@ -1,6 +1,6 @@
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
-    Organization, User as RbacUser,
+    Organization, Project, User as RbacUser,
 };
 
 use bencher_json::jwt::JsonWebToken;
@@ -66,6 +66,15 @@ impl From<OrganizationId> for Organization {
 pub struct ProjectId {
     pub id: i32,
     pub organization_id: i32,
+}
+
+impl From<ProjectId> for Project {
+    fn from(proj_id: ProjectId) -> Self {
+        Self {
+            uuid: proj_id.id.to_string(),
+            parent: proj_id.organization_id.to_string(),
+        }
+    }
 }
 
 impl AuthUser {
@@ -198,23 +207,16 @@ impl AuthUser {
     }
 
     pub fn projects(&self, rbac: &Rbac, action: bencher_rbac::project::Permission) -> Vec<i32> {
-        // self.projects
-        //     .iter()
-        //     .filter_map(|id| {
-        //         if rbac.unwrap_is_allowed(
-        //             self,
-        //             action,
-        //             Project {
-        //                 uuid: id.to_string(),
-        //             },
-        //         ) {
-        //             Some(*id)
-        //         } else {
-        //             None
-        //         }
-        //     })
-        //     .collect()
-        Vec::new()
+        self.projects
+            .iter()
+            .filter_map(|proj_id| {
+                if rbac.unwrap_is_allowed(self, action, Project::from(*proj_id)) {
+                    Some(proj_id.id)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
 
