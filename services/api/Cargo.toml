@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-swagger = ["literally"]
+swagger = ["dep:literally"]
 
 [dependencies]
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
