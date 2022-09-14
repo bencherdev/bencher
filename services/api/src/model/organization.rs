@@ -2,8 +2,8 @@ use std::str::FromStr;
 use std::string::ToString;
 
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
+use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use oso::{PolarValue, ToPolar};
 use uuid::Uuid;
 
 use super::user::InsertUser;
@@ -95,11 +95,10 @@ impl QueryOrganization {
     }
 }
 
-impl ToPolar for &QueryOrganization {
-    fn to_polar(self) -> PolarValue {
-        bencher_rbac::organization::Organization {
-            id: self.id.to_string(),
+impl From<&QueryOrganization> for Organization {
+    fn from(organization: &QueryOrganization) -> Self {
+        Organization {
+            id: organization.id.to_string(),
         }
-        .to_polar()
     }
 }

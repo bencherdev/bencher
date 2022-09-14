@@ -1,9 +1,7 @@
+use bencher_rbac::{Organization, Project};
 use oso::{Oso, ToPolar};
 
-use crate::{
-    model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
-    ApiError,
-};
+use crate::{model::user::auth::AuthUser, ApiError};
 
 pub type Context = tokio::sync::Mutex<ApiContext>;
 
@@ -60,14 +58,15 @@ impl Rbac {
         &self,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
-        query_organization: &QueryOrganization,
+        organization: impl Into<Organization>,
     ) -> Result<(), ApiError> {
-        self.is_allowed_unwrap(auth_user, permission, query_organization)
+        let organization = organization.into();
+        self.is_allowed_unwrap(auth_user, permission, organization.clone())
             .then_some(())
             .ok_or_else(|| ApiError::IsAllowedOrganization {
                 auth_user: auth_user.clone(),
                 permission,
-                query_organization: query_organization.clone(),
+                organization,
             })
     }
 
@@ -75,14 +74,15 @@ impl Rbac {
         &self,
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
-        query_project: &QueryProject,
+        project: impl Into<Project>,
     ) -> Result<(), ApiError> {
-        self.is_allowed_unwrap(auth_user, permission, query_project)
+        let project = project.into();
+        self.is_allowed_unwrap(auth_user, permission, project.clone())
             .then_some(())
             .ok_or_else(|| ApiError::IsAllowedProject {
                 auth_user: auth_user.clone(),
                 permission,
-                query_project: query_project.clone(),
+                project,
             })
     }
 }

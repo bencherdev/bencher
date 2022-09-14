@@ -7,17 +7,17 @@ use bencher_rbac::{
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
+    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
+    error::api_error,
     model::{
         project::{InsertProject, QueryProject},
         user::{auth::AuthUser, project::InsertProjectRole, QueryUser},
@@ -57,8 +57,7 @@ pub async fn get_ls(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
-    let context = rqctx.context();
-    let json = get_ls_inner(&auth_user, context)
+    let json = get_ls_inner(&auth_user, rqctx.context())
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -83,7 +82,7 @@ async fn get_ls_inner(
         )
         .order(schema::project::name)
         .load::<QueryProject>(conn)
-        .map_err(map_http_error!("Failed to get projects."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
         .collect())
@@ -97,42 +96,56 @@ async fn get_ls_inner(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewProject>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonProject>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonProject>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Post);
 
-    let json_project = body.into_inner();
+    let json = post_inner(&auth_user, rqctx.context(), body.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    auth_user: &AuthUser,
+    context: &Context,
+    json_project: JsonNewProject,
+) -> Result<JsonProject, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
 
     // Create the project
     let insert_project = InsertProject::from_json(conn, json_project)?;
+
+    // Check to see if user has permission to create a project within the organization
+    context.rbac.is_allowed_organization(
+        auth_user,
+        OrganizationPermission::Create,
+        &insert_project,
+    )?;
+
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create project."))?;
+        .map_err(api_error!())?;
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn)
-        .map_err(map_http_error!("Failed to create project."))?;
+        .map_err(api_error!())?;
 
     // Connect the user to the project as a `Maintainer`
     let insert_proj_role = InsertProjectRole {
-        user_id,
+        user_id: auth_user.id,
         project_id: query_project.id,
         role: Role::Maintainer.to_string(),
     };
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create project."))?;
+        .map_err(api_error!())?;
 
-    let json = query_project.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    query_project.into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]

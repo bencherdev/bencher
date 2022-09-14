@@ -49,8 +49,7 @@ pub async fn get_ls(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
 
-    let context = rqctx.context();
-    let json = get_ls_inner(&auth_user, context)
+    let json = get_ls_inner(&auth_user, rqctx.context())
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -89,9 +88,7 @@ pub async fn post(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Post);
 
-    let context = rqctx.context();
-    let json_organization = body.into_inner();
-    let json = post_inner(&auth_user, context, json_organization)
+    let json = post_inner(&auth_user, rqctx.context(), body.into_inner())
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -160,9 +157,7 @@ pub async fn get_one(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
 
-    let context = rqctx.context();
-    let path_params = path_params.into_inner();
-    let json = get_one_inner(&auth_user, context, path_params)
+    let json = get_one_inner(&auth_user, rqctx.context(), path_params.into_inner())
         .await
         .map_err(|e| endpoint.err(e))?;
 

@@ -1,17 +1,19 @@
 use std::{str::FromStr, string::ToString};
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
+use bencher_rbac::{Organization, Project};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::{HttpError, RequestContext};
-use oso::{PolarValue, ToPolar};
 use url::Url;
 use uuid::Uuid;
 
 use super::{organization::QueryOrganization, user::QueryUser};
 use crate::{
     diesel::ExpressionMethods,
+    error::api_error,
     schema::{self, project as project_table},
     util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, Context},
+    ApiError,
 };
 
 #[derive(Insertable)]
@@ -67,7 +69,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -79,7 +81,7 @@ impl QueryProject {
             public,
         } = self;
         Ok(JsonProject {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get project."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name,
             slug,
@@ -131,12 +133,19 @@ fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
     })
 }
 
-impl ToPolar for &QueryProject {
-    fn to_polar(self) -> PolarValue {
-        bencher_rbac::project::Project {
-            id: self.id.to_string(),
-            organization_id: self.organization_id.to_string(),
+impl From<&InsertProject> for Organization {
+    fn from(project: &InsertProject) -> Self {
+        Organization {
+            id: project.organization_id.to_string(),
         }
-        .to_polar()
+    }
+}
+
+impl From<&QueryProject> for Project {
+    fn from(project: &QueryProject) -> Self {
+        Project {
+            id: project.id.to_string(),
+            organization_id: project.organization_id.to_string(),
+        }
     }
 }

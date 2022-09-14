@@ -1,3 +1,4 @@
+use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
 
@@ -61,17 +62,17 @@ pub enum ApiError {
     User(String),
     #[error("Failed to check permissions: {0}")]
     IsAllowed(oso::OsoError),
-    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({query_organization:?}")]
+    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({organization:?}")]
     IsAllowedOrganization {
         auth_user: AuthUser,
         permission: bencher_rbac::organization::Permission,
-        query_organization: QueryOrganization,
+        organization: Organization,
     },
-    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on project ({query_project:?}")]
+    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on project ({project:?}")]
     IsAllowedProject {
         auth_user: AuthUser,
         permission: bencher_rbac::project::Permission,
-        query_project: QueryProject,
+        project: Project,
     },
 
     // TODO remove once no longer needed
