@@ -1,25 +1,3 @@
-macro_rules! auth_error {
-    ($message:expr) => {
-        || {
-            tracing::info!($message);
-            crate::error::ApiError::Auth($message.into())
-        }
-    };
-}
-
-pub(crate) use auth_error;
-
-macro_rules! map_auth_error {
-    ($message:expr) => {
-        |e| {
-            tracing::info!("{}: {}", $message, e);
-            crate::error::ApiError::Auth($message.into())
-        }
-    };
-}
-
-pub(crate) use map_auth_error;
-
 macro_rules! query_roles {
     ($conn:ident, $user_id:expr, $table:ident, $user_id_field:ident, $field:ident, $role_field:ident, $msg:expr) => {{
         let roles = schema::$table::table

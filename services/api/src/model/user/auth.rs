@@ -11,21 +11,41 @@ use oso::{PolarValue, ToPolar};
 use crate::{
     diesel::ExpressionMethods,
     schema,
-    util::{context::Rbac, Context},
+    util::{context::Rbac, error::debug_error, Context},
     ApiError,
 };
 
-use super::macros::{auth_error, map_auth_error, org_roles_map, proj_roles_map};
+use super::macros::proj_roles_map;
+
+macro_rules! auth_error {
+    ($message:expr) => {
+        || {
+            tracing::info!($message);
+            crate::error::ApiError::Auth($message.into())
+        }
+    };
+}
+
+macro_rules! map_auth_error {
+    ($message:expr) => {
+        |e| {
+            tracing::info!("{}: {}", $message, e);
+            crate::error::ApiError::Auth($message.into())
+        }
+    };
+}
 
 const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub id: i32,
-    pub organizations: Vec<i32>,
+    pub organizations: Vec<OrganizationId>,
     pub projects: Vec<i32>,
     pub rbac: RbacUser,
 }
+
+type OrganizationId = i32;
 
 impl AuthUser {
     pub async fn new(rqctx: &RequestContext<Context>) -> Result<Self, ApiError> {
@@ -74,8 +94,30 @@ impl AuthUser {
     fn organization_roles(
         conn: &mut SqliteConnection,
         user_id: i32,
-    ) -> Result<(Vec<i32>, OrganizationRoles), ApiError> {
-        org_roles_map!(conn, user_id)
+    ) -> Result<(Vec<OrganizationId>, OrganizationRoles), ApiError> {
+        let roles = schema::organization_role::table
+            .filter(schema::organization_role::user_id.eq(user_id))
+            .order(schema::organization_role::organization_id)
+            .select((
+                schema::organization_role::organization_id,
+                schema::organization_role::role,
+            ))
+            .load::<(i32, String)>(conn)
+            .map_err(map_auth_error!(INVALID_JWT))?;
+
+        let ids = roles.iter().map(|(id, _)| *id).collect();
+        let roles = roles
+            .into_iter()
+            .filter_map(|(id, role)| match role.parse() {
+                Ok(role) => Some((id.to_string(), role)),
+                Err(e) => {
+                    debug_error!("Failed to parse organization role {role}: {e}");
+                    None
+                },
+            })
+            .collect();
+
+        Ok((ids, roles))
     }
 
     fn project_roles(
