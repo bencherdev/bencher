@@ -66,16 +66,21 @@ async fn get_ls_inner(
 ) -> Result<Vec<JsonProject>, ApiError> {
     let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
-    let organization = auth_user.organizations(&context.rbac, OrganizationPermission::View);
-    // This is actually redundant for view permissions
-    let projects = auth_user.projects(&context.rbac, ProjectPermission::View);
 
-    Ok(schema::project::table
-        .filter(
+    let mut sql = schema::project::table.into_boxed();
+
+    if !auth_user.is_admin(&context.rbac) {
+        let organization = auth_user.organizations(&context.rbac, OrganizationPermission::View);
+        // This is actually redundant for view permissions
+        let projects = auth_user.projects(&context.rbac, ProjectPermission::View);
+        sql = sql.filter(
             schema::project::organization_id
                 .eq_any(organization)
                 .or(schema::project::id.eq_any(projects)),
-        )
+        );
+    }
+
+    Ok(sql
         .order(schema::project::name)
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
@@ -191,7 +196,8 @@ async fn get_one_inner(
     let conn = &mut context.db_conn;
 
     let query = QueryProject::from_resource_id(conn, &path_params.project)?;
-    context
+    if !auth_user.is_admin(&context.rbac) {
+        context
         .rbac
         .is_allowed_organization(auth_user, OrganizationPermission::View, &query)
         // This is actually redundant for view permissions
@@ -200,6 +206,7 @@ async fn get_one_inner(
                 .rbac
                 .is_allowed_project(auth_user, ProjectPermission::View, &query)
         })?;
+    }
 
     query.into_json(conn)
 }

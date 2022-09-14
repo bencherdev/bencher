@@ -62,18 +62,21 @@ async fn get_ls_inner(
 ) -> Result<Vec<JsonOrganization>, ApiError> {
     let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
-    let organizations = auth_user.organizations(&context.rbac, Permission::View);
 
-    let json: Vec<JsonOrganization> = schema::organization::table
-        .filter(schema::organization::id.eq_any(organizations))
+    let mut sql = schema::organization::table.into_boxed();
+
+    if !auth_user.is_admin(&context.rbac) {
+        let organizations = auth_user.organizations(&context.rbac, Permission::View);
+        sql = sql.filter(schema::organization::id.eq_any(organizations));
+    }
+
+    Ok(sql
         .order(schema::organization::name)
         .load::<QueryOrganization>(conn)
         .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json().ok())
-        .collect();
-
-    Ok(json)
+        .collect())
 }
 
 #[endpoint {
@@ -173,9 +176,12 @@ async fn get_one_inner(
     let conn = &mut context.db_conn;
 
     let query = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-    context
-        .rbac
-        .is_allowed_organization(auth_user, Permission::View, &query)?;
+
+    if !auth_user.is_admin(&context.rbac) {
+        context
+            .rbac
+            .is_allowed_organization(auth_user, Permission::View, &query)?;
+    }
 
     query.into_json()
 }

@@ -1,6 +1,6 @@
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
-    Organization, Project, User as RbacUser,
+    Organization, Project, Server, User as RbacUser,
 };
 
 use bencher_json::jwt::JsonWebToken;
@@ -188,6 +188,14 @@ impl AuthUser {
             .collect();
 
         Ok((ids, roles))
+    }
+
+    pub fn is_admin(&self, rbac: &Rbac) -> bool {
+        rbac.is_allowed_unwrap(
+            self,
+            bencher_rbac::server::Permission::Administer,
+            Server {},
+        )
     }
 
     pub fn organizations(
