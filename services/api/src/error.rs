@@ -37,7 +37,7 @@ pub enum ApiError {
 
     #[error("Permission denied: {0}")]
     IsAllowed(oso::OsoError),
-    #[error("Failed to parse resource id")]
+    #[error("Failed to parse resource ID")]
     ResourceId,
 
     #[error("Failed to GET {}", _0.singular())]
