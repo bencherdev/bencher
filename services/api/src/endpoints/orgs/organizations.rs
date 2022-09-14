@@ -4,15 +4,14 @@ use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
 use bencher_rbac::organization::{Permission, Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
+    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -91,42 +90,50 @@ async fn get_ls_inner(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewOrganization>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonOrganization>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Post);
 
+    let context = rqctx.context();
     let json_organization = body.into_inner();
+    let json = post_inner(&auth_user, context, json_organization)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    auth_user: &AuthUser,
+    context: &Context,
+    json_organization: JsonNewOrganization,
+) -> Result<JsonOrganization, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
 
     // Create the organization
-    let insert_organization = InsertOrganization::from_json(conn, json_organization)?;
+    let insert_organization = InsertOrganization::from_json(conn, json_organization);
     diesel::insert_into(schema::organization::table)
         .values(&insert_organization)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create organization."))?;
+        .map_err(api_error!())?;
     let query_organization = schema::organization::table
         .filter(schema::organization::uuid.eq(&insert_organization.uuid))
         .first::<QueryOrganization>(conn)
-        .map_err(map_http_error!("Failed to create organization."))?;
+        .map_err(api_error!())?;
 
     // Connect the user to the organization as a `Maintainer`
     let insert_org_role = InsertOrganizationRole {
-        user_id,
+        user_id: auth_user.id,
         organization_id: query_organization.id,
         role: Role::Leader.to_string(),
     };
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create organization."))?;
+        .map_err(api_error!())?;
 
-    let json = query_organization.into_json()?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    query_organization.into_json()
 }
 
 #[derive(Deserialize, JsonSchema)]

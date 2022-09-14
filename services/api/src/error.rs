@@ -35,11 +35,6 @@ pub enum ApiError {
     #[error("Failed to create swagger file: {0}")]
     WriteSwaggerFile(serde_json::Error),
 
-    #[error("Permission denied: {0}")]
-    IsAllowed(oso::OsoError),
-    #[error("Failed to parse resource ID")]
-    ResourceId,
-
     #[error("Failed to GET {}", _0.singular())]
     GetOne(Resource),
     #[error("Failed to GET {}", _0.plural())]
@@ -51,8 +46,14 @@ pub enum ApiError {
     #[error("Failed to DELETE {}", _0.singular())]
     Delete(Resource),
 
+    #[error("Permission denied: {0}")]
+    IsAllowed(oso::OsoError),
+    #[error("Failed to parse resource ID")]
+    ResourceId,
     #[error("Failed to query database: {0}")]
     Query(#[from] diesel::result::Error),
+    #[error("Failed to parse UUID: {0}")]
+    Uuid(#[from] uuid::Error),
     #[error("{0}")]
     Auth(String),
     #[error("Invalid user: {0}")]

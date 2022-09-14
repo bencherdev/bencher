@@ -86,7 +86,7 @@ pub async fn post(
         }
     } else {
         // Create an organization for the user
-        let insert_org = InsertOrganization::from_user(&insert_user)?;
+        let insert_org = InsertOrganization::from_user(&insert_user);
         diesel::insert_into(schema::organization::table)
             .values(&insert_org)
             .execute(conn)
