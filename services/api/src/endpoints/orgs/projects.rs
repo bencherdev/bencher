@@ -6,9 +6,7 @@ use bencher_rbac::{
     project::{Permission as ProjectPermission, Role},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -20,13 +18,11 @@ use crate::{
     error::api_error,
     model::{
         project::{InsertProject, QueryProject},
-        user::{auth::AuthUser, project::InsertProjectRole, QueryUser},
+        user::{auth::AuthUser, project::InsertProjectRole},
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error,
         resource_id::fn_resource_id,
         Context,
     },
@@ -149,7 +145,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct PathParams {
+pub struct GetOneParams {
     pub project: ResourceId,
 }
 
@@ -160,7 +156,7 @@ pub struct PathParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<PathParams>,
+    _path_params: Path<GetOneParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -174,25 +170,36 @@ fn_resource_id!(project);
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
+    path_params: Path<GetOneParams>,
+) -> Result<ResponseOk<JsonProject>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
+    let json = get_one_inner(&auth_user, rqctx.context(), path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_inner(
+    auth_user: &AuthUser,
+    context: &Context,
+    path_params: GetOneParams,
+) -> Result<JsonProject, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
 
-    let project = path_params.project;
-    let query = schema::project::table
-        .filter(resource_id(&project)?)
-        .first::<QueryProject>(conn)
-        .map_err(map_http_error!("Failed to get project."))?;
+    let query = QueryProject::from_resource_id(conn, &path_params.project)?;
+    context
+        .rbac
+        .is_allowed_organization(auth_user, OrganizationPermission::View, &query)
+        // This is actually redundant for view permissions
+        .or_else(|_| {
+            context
+                .rbac
+                .is_allowed_project(auth_user, ProjectPermission::View, &query)
+        })?;
 
-    QueryUser::has_access(conn, user_id, query.id)?;
-    let json = query.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+    query.into_json(conn)
 }

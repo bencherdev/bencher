@@ -141,6 +141,14 @@ impl From<&InsertProject> for Organization {
     }
 }
 
+impl From<&QueryProject> for Organization {
+    fn from(project: &QueryProject) -> Self {
+        Organization {
+            id: project.organization_id.to_string(),
+        }
+    }
+}
+
 impl From<&QueryProject> for Project {
     fn from(project: &QueryProject) -> Self {
         Project {

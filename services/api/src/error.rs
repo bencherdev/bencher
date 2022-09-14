@@ -2,10 +2,7 @@ use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::{
-    endpoints::Resource,
-    model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
-};
+use crate::{endpoints::Resource, model::user::auth::AuthUser};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
