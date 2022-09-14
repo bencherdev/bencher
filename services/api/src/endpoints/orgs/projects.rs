@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
-use bencher_rbac::project::Role;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission,
+    project::{Permission as ProjectPermission, Role},
+};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{
     endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
     RequestContext, TypedBody,
@@ -11,9 +14,13 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_ok, ResponseOk},
+        Endpoint, Method,
+    },
     model::{
         project::{InsertProject, QueryProject},
-        user::{project::InsertProjectRole, QueryUser},
+        user::{auth::AuthUser, project::InsertProjectRole, QueryUser},
     },
     schema,
     util::{
@@ -23,7 +30,12 @@ use crate::{
         resource_id::fn_resource_id,
         Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const PROJECT_RESOURCE: Resource = Resource::Project;
 
 #[endpoint {
     method = OPTIONS,
@@ -41,25 +53,40 @@ pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRes
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = rqctx.context();
+    let json = get_ls_inner(&auth_user, context)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    auth_user: &AuthUser,
+    context: &Context,
+) -> Result<Vec<JsonProject>, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
-    let json: Vec<JsonProject> = schema::project::table
-        // TODO actually filter here with `bencher_rbac`
-        // .filter(schema::project::owner_id.eq(user_id))
+    let organization = auth_user.organizations(&context.rbac, OrganizationPermission::View);
+    // This is actually redundant for view permissions
+    let projects = auth_user.projects(&context.rbac, ProjectPermission::View);
+
+    Ok(schema::project::table
+        .filter(
+            schema::project::organization_id
+                .eq_any(organization)
+                .or(schema::project::id.eq_any(projects)),
+        )
         .order(schema::project::name)
         .load::<QueryProject>(conn)
         .map_err(map_http_error!("Failed to get projects."))?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_auth("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
