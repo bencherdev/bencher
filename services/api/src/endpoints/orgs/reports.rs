@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission,
+    project::{Permission as ProjectPermission, Role},
+};
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
@@ -13,13 +17,17 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_ok, ResponseOk},
+        Endpoint, Method,
+    },
     model::{
         branch::QueryBranch,
         metrics::Metrics,
         project::QueryProject,
         report::{InsertReport, QueryReport},
         testbed::QueryTestbed,
-        user::QueryUser,
+        user::{auth::AuthUser, QueryUser},
         version::InsertVersion,
     },
     schema,
@@ -28,7 +36,12 @@ use crate::{
         headers::CorsHeaders,
         http_error, map_http_error, Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const REPORT_RESOURCE: Resource = Resource::Report;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -55,16 +68,37 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
+) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
+    let json = get_ls_inner(&auth_user, rqctx.context(), path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    auth_user: &AuthUser,
+    context: &Context,
+    path_params: GetLsParams,
+) -> Result<Vec<JsonReport>, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
-    let json: Vec<JsonReport> = schema::report::table
+
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
+    context
+        .rbac
+        .is_allowed_organization(auth_user, OrganizationPermission::Manage, &query_project)
+        .or_else(|_| {
+            context
+                .rbac
+                .is_allowed_project(auth_user, ProjectPermission::View, &query_project)
+        })?;
+    Ok(schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(project_id))
+        .filter(schema::testbed::project_id.eq(query_project.id))
         .select((
             schema::report::id,
             schema::report::uuid,
@@ -80,12 +114,7 @@ pub async fn get_ls(
         .map_err(map_http_error!("Failed to get reports."))?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
