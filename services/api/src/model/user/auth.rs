@@ -4,7 +4,7 @@ use bencher_rbac::{
 };
 
 use bencher_json::jwt::JsonWebToken;
-use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
 
@@ -14,8 +14,6 @@ use crate::{
     util::{context::Rbac, error::debug_error, Context},
     ApiError,
 };
-
-use super::macros::proj_roles_map;
 
 macro_rules! auth_error {
     ($message:expr) => {
@@ -41,11 +39,34 @@ const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 pub struct AuthUser {
     pub id: i32,
     pub organizations: Vec<OrganizationId>,
-    pub projects: Vec<i32>,
+    pub projects: Vec<ProjectId>,
     pub rbac: RbacUser,
 }
 
-type OrganizationId = i32;
+#[derive(Debug, Clone, Copy)]
+pub struct OrganizationId {
+    pub id: i32,
+}
+
+impl From<i32> for OrganizationId {
+    fn from(id: i32) -> Self {
+        Self { id }
+    }
+}
+
+impl From<OrganizationId> for Organization {
+    fn from(org_id: OrganizationId) -> Self {
+        Self {
+            uuid: org_id.id.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ProjectId {
+    pub id: i32,
+    pub organization_id: i32,
+}
 
 impl AuthUser {
     pub async fn new(rqctx: &RequestContext<Context>) -> Result<Self, ApiError> {
@@ -105,13 +126,13 @@ impl AuthUser {
             .load::<(i32, String)>(conn)
             .map_err(map_auth_error!(INVALID_JWT))?;
 
-        let ids = roles.iter().map(|(id, _)| *id).collect();
+        let ids = roles.iter().map(|(id, _)| (*id).into()).collect();
         let roles = roles
             .into_iter()
             .filter_map(|(id, role)| match role.parse() {
                 Ok(role) => Some((id.to_string(), role)),
                 Err(e) => {
-                    debug_error!("Failed to parse organization role {role}: {e}");
+                    debug_error!("Failed to parse organization role \"{role}\": {e}");
                     None
                 },
             })
@@ -123,8 +144,40 @@ impl AuthUser {
     fn project_roles(
         conn: &mut SqliteConnection,
         user_id: i32,
-    ) -> Result<(Vec<i32>, ProjectRoles), ApiError> {
-        proj_roles_map!(conn, user_id)
+    ) -> Result<(Vec<ProjectId>, ProjectRoles), ApiError> {
+        let roles = schema::project_role::table
+            .filter(schema::project_role::user_id.eq(user_id))
+            .inner_join(
+                schema::project::table.on(schema::project_role::project_id.eq(schema::project::id)),
+            )
+            .order(schema::project_role::project_id)
+            .select((
+                schema::project::organization_id,
+                schema::project_role::project_id,
+                schema::project_role::role,
+            ))
+            .load::<(i32, i32, String)>(conn)
+            .map_err(map_auth_error!(INVALID_JWT))?;
+
+        let ids = roles
+            .iter()
+            .map(|(org_id, id, _)| ProjectId {
+                id: *id,
+                organization_id: *org_id,
+            })
+            .collect();
+        let roles = roles
+            .into_iter()
+            .filter_map(|(_, id, role)| match role.parse() {
+                Ok(role) => Some((id.to_string(), role)),
+                Err(e) => {
+                    debug_error!("Failed to parse project role \"{role}\": {e}");
+                    None
+                },
+            })
+            .collect();
+
+        Ok((ids, roles))
     }
 
     pub fn organizations(
@@ -134,15 +187,9 @@ impl AuthUser {
     ) -> Vec<i32> {
         self.organizations
             .iter()
-            .filter_map(|id| {
-                if rbac.unwrap_is_allowed(
-                    self,
-                    action,
-                    Organization {
-                        uuid: id.to_string(),
-                    },
-                ) {
-                    Some(*id)
+            .filter_map(|org_id| {
+                if rbac.unwrap_is_allowed(self, action, Organization::from(*org_id)) {
+                    Some(org_id.id)
                 } else {
                     None
                 }
