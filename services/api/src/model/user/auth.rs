@@ -98,6 +98,10 @@ impl AuthUser {
             .first::<(i32, bool, bool)>(conn)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
+        if locked {
+            return Err(ApiError::Locked(user_id, token_data.claims.email().into()));
+        }
+
         let (org_ids, org_roles) = Self::organization_roles(conn, user_id)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, user_id)?;
         let rbac = RbacUser {

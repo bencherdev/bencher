@@ -57,6 +57,8 @@ pub enum ApiError {
     AuthHeader(String),
     #[error("Invalid user: {0}")]
     User(String),
+    #[error("User account locked: ID {0} email {1}")]
+    Locked(i32, String),
     #[error("Failed to check permissions: {0}")]
     IsAllowed(oso::OsoError),
     #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({organization:?}")]
