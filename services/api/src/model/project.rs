@@ -54,7 +54,7 @@ impl InsertProject {
 
 fn_resource_id!(project);
 
-#[derive(Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct QueryProject {
     pub id: i32,
     pub uuid: String,

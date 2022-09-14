@@ -51,24 +51,38 @@ impl Rbac {
         Action: ToPolar,
         Resource: ToPolar,
     {
+        // If there is an error or if the bool is false, then false
+        // Otherwise, if the bool is true, then true
         self.is_allowed(actor, action, resource).unwrap_or_default()
     }
 
     pub fn is_allowed_organization(
         &self,
         auth_user: &AuthUser,
-        action: bencher_rbac::organization::Permission,
-        organization: &QueryOrganization,
-    ) -> bool {
-        self.is_allowed_unwrap(auth_user, action, organization)
+        permission: bencher_rbac::organization::Permission,
+        query_organization: &QueryOrganization,
+    ) -> Result<(), ApiError> {
+        self.is_allowed_unwrap(auth_user, permission, query_organization)
+            .then_some(())
+            .ok_or_else(|| ApiError::IsAllowedOrganization {
+                auth_user: auth_user.clone(),
+                permission,
+                query_organization: query_organization.clone(),
+            })
     }
 
     pub fn is_allowed_project(
         &self,
         auth_user: &AuthUser,
-        action: bencher_rbac::project::Permission,
-        project: &QueryProject,
-    ) -> bool {
-        self.is_allowed_unwrap(auth_user, action, project)
+        permission: bencher_rbac::project::Permission,
+        query_project: &QueryProject,
+    ) -> Result<(), ApiError> {
+        self.is_allowed_unwrap(auth_user, permission, query_project)
+            .then_some(())
+            .ok_or_else(|| ApiError::IsAllowedProject {
+                auth_user: auth_user.clone(),
+                permission,
+                query_project: query_project.clone(),
+            })
     }
 }

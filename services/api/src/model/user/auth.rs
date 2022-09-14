@@ -15,20 +15,20 @@ use crate::{
     ApiError,
 };
 
-macro_rules! auth_error {
+macro_rules! auth_header_error {
     ($message:expr) => {
         || {
             tracing::info!($message);
-            crate::error::ApiError::Auth($message.into())
+            crate::error::ApiError::AuthHeader($message.into())
         }
     };
 }
 
-macro_rules! map_auth_error {
+macro_rules! map_auth_header_error {
     ($message:expr) => {
         |e| {
             tracing::info!("{}: {}", $message, e);
-            crate::error::ApiError::Auth($message.into())
+            crate::error::ApiError::AuthHeader($message.into())
         }
     };
 }
@@ -78,25 +78,25 @@ impl AuthUser {
         let headers = request
             .headers()
             .get("Authorization")
-            .ok_or_else(auth_error!("Missing \"Authorization\" header"))?
+            .ok_or_else(auth_header_error!("Missing \"Authorization\" header"))?
             .to_str()
-            .map_err(map_auth_error!("Invalid \"Authorization\" header"))?;
+            .map_err(map_auth_header_error!("Invalid \"Authorization\" header"))?;
         let (_, token) = headers
             .split_once("Bearer ")
-            .ok_or_else(auth_error!("Missing \"Authorization\" Bearer"))?;
+            .ok_or_else(auth_header_error!("Missing \"Authorization\" Bearer"))?;
         let jwt: JsonWebToken = token.trim().to_string().into();
 
         let context = &mut *rqctx.context().lock().await;
         let token_data = jwt
             .validate_user(&context.secret_key)
-            .map_err(map_auth_error!(INVALID_JWT))?;
+            .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let conn = &mut context.db_conn;
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
             .first::<(i32, bool, bool)>(conn)
-            .map_err(map_auth_error!(INVALID_JWT))?;
+            .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let (org_ids, org_roles) = Self::organization_roles(conn, user_id)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, user_id)?;
@@ -127,7 +127,7 @@ impl AuthUser {
                 schema::organization_role::role,
             ))
             .load::<(i32, String)>(conn)
-            .map_err(map_auth_error!(INVALID_JWT))?;
+            .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let ids = roles
             .iter()
@@ -163,7 +163,7 @@ impl AuthUser {
                 schema::project_role::role,
             ))
             .load::<(i32, i32, String)>(conn)
-            .map_err(map_auth_error!(INVALID_JWT))?;
+            .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let ids = roles
             .iter()

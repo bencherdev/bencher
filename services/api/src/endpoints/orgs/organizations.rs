@@ -3,9 +3,7 @@ use std::sync::Arc;
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
 use bencher_rbac::organization::{Permission, Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -17,14 +15,11 @@ use crate::{
     error::api_error,
     model::{
         organization::{InsertOrganization, QueryOrganization},
-        user::{auth::AuthUser, organization::InsertOrganizationRole, QueryUser},
+        user::{auth::AuthUser, organization::InsertOrganizationRole},
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error,
-        resource_id::fn_resource_id,
         Context,
     },
     ApiError,
@@ -137,7 +132,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct PathParams {
+pub struct GetOneParams {
     pub organization: ResourceId,
 }
 
@@ -148,12 +143,10 @@ pub struct PathParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<PathParams>,
+    _path_params: Path<GetOneParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
-
-fn_resource_id!(organization);
 
 #[endpoint {
     method = GET,
@@ -162,25 +155,32 @@ fn_resource_id!(organization);
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonOrganization>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
+    path_params: Path<GetOneParams>,
+) -> Result<ResponseOk<JsonOrganization>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
+    let context = rqctx.context();
+    let path_params = path_params.into_inner();
+    let json = get_one_inner(&auth_user, context, path_params)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_inner(
+    auth_user: &AuthUser,
+    context: &Context,
+    path_params: GetOneParams,
+) -> Result<JsonOrganization, ApiError> {
+    let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
 
-    let organization = path_params.organization;
-    let query = schema::organization::table
-        .filter(resource_id(&organization)?)
-        .first::<QueryOrganization>(conn)
-        .map_err(map_http_error!("Failed to get organization."))?;
+    let query = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::View, &query)?;
 
-    QueryUser::has_access(conn, user_id, query.id)?;
-    let json = query.into_json()?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+    query.into_json()
 }

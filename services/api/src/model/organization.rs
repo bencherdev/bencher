@@ -44,7 +44,7 @@ impl InsertOrganization {
 
 fn_resource_id!(organization);
 
-#[derive(Queryable)]
+#[derive(Debug, Clone, Queryable)]
 pub struct QueryOrganization {
     pub id: i32,
     pub uuid: String,

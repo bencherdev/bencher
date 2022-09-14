@@ -1,7 +1,10 @@
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::endpoints::Resource;
+use crate::{
+    endpoints::Resource,
+    model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
+};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -46,8 +49,6 @@ pub enum ApiError {
     #[error("Failed to DELETE {}", _0.singular())]
     Delete(Resource),
 
-    #[error("Permission denied: {0}")]
-    IsAllowed(oso::OsoError),
     #[error("Failed to parse resource ID")]
     ResourceId,
     #[error("Failed to query database: {0}")]
@@ -55,9 +56,23 @@ pub enum ApiError {
     #[error("Failed to parse UUID: {0}")]
     Uuid(#[from] uuid::Error),
     #[error("{0}")]
-    Auth(String),
+    AuthHeader(String),
     #[error("Invalid user: {0}")]
     User(String),
+    #[error("Failed to check permissions: {0}")]
+    IsAllowed(oso::OsoError),
+    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({query_organization:?}")]
+    IsAllowedOrganization {
+        auth_user: AuthUser,
+        permission: bencher_rbac::organization::Permission,
+        query_organization: QueryOrganization,
+    },
+    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on project ({query_project:?}")]
+    IsAllowedProject {
+        auth_user: AuthUser,
+        permission: bencher_rbac::project::Permission,
+        query_project: QueryProject,
+    },
 
     // TODO remove once no longer needed
     #[error(transparent)]
