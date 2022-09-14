@@ -1,6 +1,6 @@
 use bencher_rbac::{
     user::{OrganizationRoles, ProjectRoles},
-    User as RbacUser,
+    Organization, User as RbacUser,
 };
 
 use bencher_json::jwt::JsonWebToken;
@@ -8,7 +8,12 @@ use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
 
-use crate::{diesel::ExpressionMethods, schema, util::Context, ApiError};
+use crate::{
+    diesel::ExpressionMethods,
+    schema,
+    util::{context::Rbac, Context},
+    ApiError,
+};
 
 use super::macros::{auth_error, map_auth_error, org_roles_map, proj_roles_map};
 
@@ -82,28 +87,45 @@ impl AuthUser {
 
     pub fn organizations(
         &self,
-        conn: &mut SqliteConnection,
+        rbac: &Rbac,
         action: bencher_rbac::organization::Permission,
-    ) -> Result<Vec<i32>, ApiError> {
-        // let roles: Vec<i32> = roles_vec!(
-        //     conn,
-        //     self.id,
-        //     organization_role,
-        //     user_id,
-        //     organization_id,
-        //     role
-        // )?;
-        let mut ids = Vec::new();
-        // for id in self.rbac.organizations.keys().cloned() {
-        //     if rbac.unwrap_is_allowed(self, action, Organization { uuid: id }) {
-        //         // ids.push(id.parse().unwrap())
-        //     }
-        // }
-        Ok(ids)
+    ) -> Vec<i32> {
+        self.organizations
+            .iter()
+            .filter_map(|id| {
+                if rbac.unwrap_is_allowed(
+                    self,
+                    action,
+                    Organization {
+                        uuid: id.to_string(),
+                    },
+                ) {
+                    Some(*id)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
-    pub fn projects(&self, conn: &mut SqliteConnection) -> Result<Vec<i32>, ApiError> {
-        todo!()
+    pub fn projects(&self, rbac: &Rbac, action: bencher_rbac::project::Permission) -> Vec<i32> {
+        // self.projects
+        //     .iter()
+        //     .filter_map(|id| {
+        //         if rbac.unwrap_is_allowed(
+        //             self,
+        //             action,
+        //             Project {
+        //                 uuid: id.to_string(),
+        //             },
+        //         ) {
+        //             Some(*id)
+        //         } else {
+        //             None
+        //         }
+        //     })
+        //     .collect()
+        Vec::new()
     }
 }
 
