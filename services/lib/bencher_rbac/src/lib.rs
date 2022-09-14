@@ -28,7 +28,7 @@ pub fn init_rbac() -> oso::Result<Oso> {
     oso.register_class(ClassBuilder::with_constructor(|| Server {}).build())?;
     oso.register_class(
         Organization::get_polar_class_builder()
-            .set_constructor(|uuid| Organization { uuid })
+            .set_constructor(|id| Organization { id })
             .build(),
     )?;
     oso.register_class(Project::get_polar_class())?;
@@ -116,14 +116,14 @@ mod test {
             .is_allowed(locked_user, SvrPerm::Session, server)
             .unwrap());
 
-        let org_uuid = Uuid::new_v4();
-        let proj_uuid = Uuid::new_v4();
+        let org_id = Uuid::new_v4();
+        let proj_id = Uuid::new_v4();
 
         let org_leader = User {
             admin: false,
             locked: false,
             organizations: literally::hmap! {
-                org_uuid.to_string() => OrgRole::Leader
+                org_id.to_string() => OrgRole::Leader
             },
             projects: HashMap::new(),
         };
@@ -132,7 +132,7 @@ mod test {
             admin: false,
             locked: false,
             organizations: literally::hmap! {
-                org_uuid.to_string() => OrgRole::Member
+                org_id.to_string() => OrgRole::Member
             },
             projects: HashMap::new(),
         };
@@ -141,19 +141,19 @@ mod test {
             admin: false,
             locked: false,
             organizations: literally::hmap! {
-                org_uuid.to_string() => OrgRole::Member
+                org_id.to_string() => OrgRole::Member
             },
             projects: literally::hmap! {
-                proj_uuid.to_string() => ProjRole::Developer
+                proj_id.to_string() => ProjRole::Developer
             },
         };
 
         let org = Organization {
-            uuid: org_uuid.to_string(),
+            id: org_id.to_string(),
         };
         let proj = Project {
-            uuid: proj_uuid.to_string(),
-            parent: org_uuid.to_string(),
+            id: proj_id.to_string(),
+            organization_id: org_id.to_string(),
         };
 
         assert!(oso
@@ -226,13 +226,13 @@ mod test {
             .is_allowed(proj_member.clone(), ProjPerm::Manage, proj.clone())
             .unwrap());
 
-        let other_org_uuid = Uuid::new_v4();
+        let other_org_id = Uuid::new_v4();
         let other_org = Organization {
-            uuid: other_org_uuid.to_string(),
+            id: other_org_id.to_string(),
         };
         let other_proj = Project {
-            uuid: Uuid::new_v4().to_string(),
-            parent: other_org_uuid.to_string(),
+            id: Uuid::new_v4().to_string(),
+            organization_id: other_org_id.to_string(),
         };
 
         assert!(oso

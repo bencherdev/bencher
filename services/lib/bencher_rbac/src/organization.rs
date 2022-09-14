@@ -13,7 +13,7 @@ pub const LEADER_ROLE: &str = "leader";
 #[derive(Debug, Clone, PolarClass)]
 pub struct Organization {
     #[polar(attribute)]
-    pub uuid: String,
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Copy)]

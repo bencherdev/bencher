@@ -100,7 +100,7 @@ impl QueryOrganization {
 impl ToPolar for &QueryOrganization {
     fn to_polar(self) -> PolarValue {
         bencher_rbac::organization::Organization {
-            uuid: self.id.to_string(),
+            id: self.id.to_string(),
         }
         .to_polar()
     }

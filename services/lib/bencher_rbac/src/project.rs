@@ -14,9 +14,9 @@ pub const MAINTAINER_ROLE: &str = "maintainer";
 #[derive(Debug, Clone, PolarClass)]
 pub struct Project {
     #[polar(attribute)]
-    pub uuid: String,
+    pub id: String,
     #[polar(attribute)]
-    pub parent: String,
+    pub organization_id: String,
 }
 
 #[derive(Debug, Clone, Copy)]

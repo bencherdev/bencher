@@ -13,7 +13,6 @@ resource Server {
   "user" if "admin";
 }
 
-# This rule tells Oso how to fetch roles for a server
 has_role(user: User, role: String, _server: Server) if
   (user.locked = false and user.admin = true and role = "admin") or
   (user.locked = false and user.admin = false and role = "user") or
@@ -55,9 +54,8 @@ has_role(user: User, role: String, org: Organization) if
   or
   (
     user_role in user.organizations and
-    user_role matches [org.uuid, role]
+    user_role matches [org.id, role]
   );
-
 
 resource Project {
   permissions = [
@@ -72,7 +70,7 @@ resource Project {
     "delete_role",
   ];
   roles = ["viewer", "developer", "maintainer"];
-  relations = { parent: Organization };
+  relations = { owner: Organization };
 
   "view" if "viewer";
   "view_role" if "viewer";
@@ -90,9 +88,8 @@ resource Project {
   "viewer" if "developer";
 }
 
-has_relation(org: Organization, "parent", project: Project) if
-  org.uuid = project.parent;
-
+has_relation(org: Organization, "owner", project: Project) if
+  org.id = project.organization_id;
 
 has_role(user: User, role: String, project: Project) if
   (
@@ -101,11 +98,11 @@ has_role(user: User, role: String, project: Project) if
   )
   or
   (
-    org := new Organization(project.parent) and
+    org := new Organization(project.organization_id) and
     has_role(user, "leader", org)
   )
   or
   (
     user_role in user.projects and
-    user_role matches [project.uuid, role]
+    user_role matches [project.id, role]
   );

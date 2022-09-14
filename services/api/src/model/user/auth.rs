@@ -48,16 +48,10 @@ pub struct OrganizationId {
     pub id: i32,
 }
 
-impl From<i32> for OrganizationId {
-    fn from(id: i32) -> Self {
-        Self { id }
-    }
-}
-
 impl From<OrganizationId> for Organization {
     fn from(org_id: OrganizationId) -> Self {
         Self {
-            uuid: org_id.id.to_string(),
+            id: org_id.id.to_string(),
         }
     }
 }
@@ -71,8 +65,8 @@ pub struct ProjectId {
 impl From<ProjectId> for Project {
     fn from(proj_id: ProjectId) -> Self {
         Self {
-            uuid: proj_id.id.to_string(),
-            parent: proj_id.organization_id.to_string(),
+            id: proj_id.id.to_string(),
+            organization_id: proj_id.organization_id.to_string(),
         }
     }
 }
@@ -135,7 +129,10 @@ impl AuthUser {
             .load::<(i32, String)>(conn)
             .map_err(map_auth_error!(INVALID_JWT))?;
 
-        let ids = roles.iter().map(|(id, _)| (*id).into()).collect();
+        let ids = roles
+            .iter()
+            .map(|(id, _)| OrganizationId { id: *id })
+            .collect();
         let roles = roles
             .into_iter()
             .filter_map(|(id, role)| match role.parse() {
@@ -197,7 +194,7 @@ impl AuthUser {
         self.organizations
             .iter()
             .filter_map(|org_id| {
-                if rbac.unwrap_is_allowed(self, action, Organization::from(*org_id)) {
+                if rbac.is_allowed_unwrap(self, action, Organization::from(*org_id)) {
                     Some(org_id.id)
                 } else {
                     None
@@ -210,7 +207,7 @@ impl AuthUser {
         self.projects
             .iter()
             .filter_map(|proj_id| {
-                if rbac.unwrap_is_allowed(self, action, Project::from(*proj_id)) {
+                if rbac.is_allowed_unwrap(self, action, Project::from(*proj_id)) {
                     Some(proj_id.id)
                 } else {
                     None

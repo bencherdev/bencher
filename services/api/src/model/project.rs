@@ -134,8 +134,8 @@ fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
 impl ToPolar for &QueryProject {
     fn to_polar(self) -> PolarValue {
         bencher_rbac::project::Project {
-            uuid: self.id.to_string(),
-            parent: self.organization_id.to_string(),
+            id: self.id.to_string(),
+            organization_id: self.organization_id.to_string(),
         }
         .to_polar()
     }
