@@ -19,18 +19,18 @@ use crate::{
     },
     error::api_error,
     model::{
-        branch::QueryBranch,
         metrics::Metrics,
         project::QueryProject,
         report::{InsertReport, QueryReport},
-        testbed::QueryTestbed,
         user::auth::AuthUser,
         version::InsertVersion,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        map_http_error, Context,
+        map_http_error,
+        same_project::SameProject,
+        Context,
     },
     ApiError,
 };
@@ -152,27 +152,11 @@ async fn post_inner(
     let conn = &mut api_context.db_conn;
 
     // Verify that the branch and testbed are part of the same project
-    let branch_id = QueryBranch::get_id(conn, &json_report.branch)?;
-    let testbed_id = QueryTestbed::get_id(conn, &json_report.testbed)?;
-    let branch_project_id = schema::branch::table
-        .filter(schema::branch::id.eq(&branch_id))
-        .select(schema::branch::project_id)
-        .first::<i32>(conn)
-        .map_err(api_error!())?;
-    let testbed_project_id = schema::testbed::table
-        .filter(schema::testbed::id.eq(&testbed_id))
-        .select(schema::testbed::project_id)
-        .first::<i32>(conn)
-        .map_err(api_error!())?;
-    if branch_project_id != testbed_project_id {
-        return Err(ApiError::BranchTestbedProject {
-            branch_id,
-            branch_project_id,
-            testbed_id,
-            testbed_project_id,
-        });
-    }
-    let project_id = branch_project_id;
+    let SameProject {
+        project_id,
+        branch_id,
+        testbed_id,
+    } = SameProject::validate(conn, json_report.branch, json_report.testbed)?;
 
     // Verify that the user is allowed
     QueryProject::is_allowed_id(

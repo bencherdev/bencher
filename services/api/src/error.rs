@@ -82,6 +82,8 @@ pub enum ApiError {
         testbed_id: i32,
         testbed_project_id: i32,
     },
+    #[error("Tried to query a private project: {0}")]
+    PrivateProject(i32),
 
     // TODO remove once no longer needed
     #[error(transparent)]
