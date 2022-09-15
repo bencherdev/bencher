@@ -15,11 +15,7 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{testbed::QueryTestbed, user::QueryUser, version::QueryVersion};
-use crate::{
-    schema,
-    schema::report as report_table,
-    util::{http_error, map_http_error},
-};
+use crate::{error::api_error, schema, schema::report as report_table, util::http_error, ApiError};
 
 #[derive(Queryable)]
 pub struct QueryReport {
@@ -34,16 +30,16 @@ pub struct QueryReport {
 }
 
 impl QueryReport {
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::report::table
             .filter(schema::report::id.eq(id))
             .select(schema::report::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get report."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get report."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, ApiError> {
         let benchmarks = self.get_benchmarks(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {
@@ -57,7 +53,7 @@ impl QueryReport {
             end_time,
         } = self;
         Ok(JsonReport {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get report."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             user: QueryUser::get_uuid(conn, user_id)?,
             version: QueryVersion::get_uuid(conn, version_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
@@ -72,7 +68,7 @@ impl QueryReport {
     fn get_benchmarks(
         &self,
         conn: &mut SqliteConnection,
-    ) -> Result<JsonReportBenchmarks, HttpError> {
+    ) -> Result<JsonReportBenchmarks, ApiError> {
         Ok(schema::perf::table
             .inner_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -81,20 +77,20 @@ impl QueryReport {
             .select(schema::perf::uuid)
             .order(schema::benchmark::name)
             .load::<String>(conn)
-            .map_err(map_http_error!("Failed to get report."))?
+            .map_err(api_error!())?
             .iter()
             .filter_map(|uuid| Uuid::from_str(uuid).ok().map(JsonReportBenchmark))
             .collect())
     }
 
-    fn get_alerts(&self, conn: &mut SqliteConnection) -> Result<JsonReportAlerts, HttpError> {
+    fn get_alerts(&self, conn: &mut SqliteConnection) -> Result<JsonReportAlerts, ApiError> {
         Ok(schema::alert::table
             .left_join(schema::perf::table.on(schema::perf::id.eq(schema::alert::perf_id)))
             .filter(schema::perf::report_id.eq(self.id))
             .select(schema::alert::uuid)
             .order(schema::alert::id)
             .load::<String>(conn)
-            .map_err(map_http_error!("Failed to get report."))?
+            .map_err(api_error!())?
             .iter()
             .filter_map(|uuid| Uuid::from_str(uuid).ok().map(JsonReportAlert))
             .collect())
@@ -102,13 +98,13 @@ impl QueryReport {
 }
 
 // https://docs.rs/chrono/latest/chrono/serde/ts_nanoseconds/index.html
-pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, HttpError> {
+pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
     Utc.timestamp_opt(
         timestamp / 1_000_000_000,
         (timestamp % 1_000_000_000) as u32,
     )
     .single()
-    .ok_or_else(|| http_error!("Failed to get report."))
+    .ok_or_else(|| ApiError::Timestamp(timestamp))
 }
 
 const JSON: isize = 0;
@@ -172,8 +168,8 @@ impl InsertReport {
         version_id: i32,
         testbed_id: i32,
         report: &JsonNewReport,
-    ) -> Result<Self, HttpError> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             uuid: Uuid::new_v4().to_string(),
             user_id,
             version_id,
@@ -181,6 +177,6 @@ impl InsertReport {
             adapter: Adapter::from(&report.adapter) as i32,
             start_time: report.start_time.timestamp_nanos(),
             end_time: report.end_time.timestamp_nanos(),
-        })
+        }
     }
 }

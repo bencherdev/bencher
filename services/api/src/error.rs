@@ -53,6 +53,8 @@ pub enum ApiError {
     Query(#[from] diesel::result::Error),
     #[error("Failed to parse UUID: {0}")]
     Uuid(#[from] uuid::Error),
+    #[error("Failed to parse timestamp: {0}")]
+    Timestamp(i64),
     #[error("{0}")]
     AuthHeader(String),
     #[error("Invalid user: {0}")]
@@ -73,6 +75,13 @@ pub enum ApiError {
         permission: bencher_rbac::project::Permission,
         project: Project,
     },
+    #[error("The branch ({branch_id}) project ID ({branch_project_id}) and testbed ({testbed_id}) project ID ({testbed_project_id}) do not match.")]
+    BranchTestbedProject {
+        branch_id: i32,
+        branch_project_id: i32,
+        testbed_id: i32,
+        testbed_project_id: i32,
+    },
 
     // TODO remove once no longer needed
     #[error(transparent)]
@@ -80,10 +89,11 @@ pub enum ApiError {
 }
 
 impl From<ApiError> for HttpError {
-    fn from(error: ApiError) -> Self {
+    fn from(api_error: ApiError) -> Self {
+        tracing::info!("{api_error}");
         dropshot::HttpError::for_bad_request(
             Some(http::status::StatusCode::BAD_REQUEST.to_string()),
-            error.to_string(),
+            api_error.to_string(),
         )
     }
 }

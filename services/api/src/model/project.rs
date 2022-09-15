@@ -113,7 +113,7 @@ impl QueryProject {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn is_allowed(
+    pub fn is_allowed_resource_id(
         api_context: &mut ApiContext,
         project: &ResourceId,
         auth_user: &AuthUser,
@@ -121,6 +121,28 @@ impl QueryProject {
         project_permission: bencher_rbac::project::Permission,
     ) -> Result<Self, ApiError> {
         let query_project = QueryProject::from_resource_id(&mut api_context.db_conn, project)?;
+
+        api_context.rbac.is_allowed_organization_or_project(
+            auth_user,
+            organization_permission,
+            project_permission,
+            &query_project,
+        )?;
+
+        Ok(query_project)
+    }
+
+    pub fn is_allowed_id(
+        api_context: &mut ApiContext,
+        project_id: i32,
+        auth_user: &AuthUser,
+        organization_permission: bencher_rbac::organization::Permission,
+        project_permission: bencher_rbac::project::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_project = schema::project::table
+            .filter(schema::project::id.eq(project_id))
+            .first(&mut api_context.db_conn)
+            .map_err(api_error!())?;
 
         api_context.rbac.is_allowed_organization_or_project(
             auth_user,

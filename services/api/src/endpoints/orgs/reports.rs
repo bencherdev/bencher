@@ -8,8 +8,7 @@ use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
 use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
+    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext, TypedBody,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -17,9 +16,10 @@ use uuid::Uuid;
 
 use crate::{
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
+    error::api_error,
     model::{
         branch::QueryBranch,
         metrics::Metrics,
@@ -84,7 +84,7 @@ async fn get_ls_inner(
     path_params: GetLsParams,
 ) -> Result<Vec<JsonReport>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_resource_id(
         api_context,
         &path_params.project,
         auth_user,
@@ -108,7 +108,7 @@ async fn get_ls_inner(
         ))
         .order(schema::report::start_time.desc())
         .load::<QueryReport>(conn)
-        .map_err(map_http_error!("Failed to get reports."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
         .collect())
@@ -135,13 +135,24 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewReport>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonReport>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Post);
 
-    let json_report = body.into_inner();
+    let json = post_inner(rqctx.context(), &auth_user, body.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db_conn;
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    json_report: JsonNewReport,
+) -> Result<JsonReport, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Verify that the branch and testbed are part of the same project
     let branch_id = QueryBranch::get_id(conn, &json_report.branch)?;
@@ -150,19 +161,31 @@ pub async fn post(
         .filter(schema::branch::id.eq(&branch_id))
         .select(schema::branch::project_id)
         .first::<i32>(conn)
-        .map_err(map_http_error!("Failed to create report."))?;
+        .map_err(api_error!())?;
     let testbed_project_id = schema::testbed::table
         .filter(schema::testbed::id.eq(&testbed_id))
         .select(schema::testbed::project_id)
         .first::<i32>(conn)
-        .map_err(map_http_error!("Failed to create report."))?;
+        .map_err(api_error!())?;
     if branch_project_id != testbed_project_id {
-        return Err(http_error!("Failed to create report."));
+        return Err(ApiError::BranchTestbedProject {
+            branch_id,
+            branch_project_id,
+            testbed_id,
+            testbed_project_id,
+        });
     }
     let project_id = branch_project_id;
 
-    // Verify that the user has access to the project
-    QueryUser::has_access(conn, user_id, project_id)?;
+    // Verify that the user is allowed
+    QueryProject::is_allowed_id(
+        api_context,
+        project_id,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::Create,
+    )?;
+    let conn = &mut api_context.db_conn;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -186,7 +209,7 @@ pub async fn post(
     };
 
     // Create a new report and add it to the database
-    let insert_report = InsertReport::from_json(user_id, version_id, testbed_id, &json_report)?;
+    let insert_report = InsertReport::from_json(auth_user.id, version_id, testbed_id, &json_report);
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
@@ -214,12 +237,7 @@ pub async fn post(
         }
     }
 
-    let json = query_report.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    query_report.into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]

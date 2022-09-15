@@ -194,7 +194,7 @@ async fn get_one_inner(
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
 
-    QueryProject::is_allowed(
+    QueryProject::is_allowed_resource_id(
         api_context,
         &path_params.project,
         auth_user,
