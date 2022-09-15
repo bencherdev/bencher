@@ -196,15 +196,13 @@ async fn get_one_inner(
     let conn = &mut context.db_conn;
 
     let query = QueryProject::from_resource_id(conn, &path_params.project)?;
-    context
-        .rbac
-        .is_allowed_organization(auth_user, OrganizationPermission::View, &query)
-        // This is actually redundant for view permissions
-        .or_else(|_| {
-            context
-                .rbac
-                .is_allowed_project(auth_user, ProjectPermission::View, &query)
-        })?;
+
+    context.rbac.is_allowed_organization_or_project(
+        auth_user,
+        OrganizationPermission::View,
+        ProjectPermission::View,
+        &query,
+    )?;
 
     query.into_json(conn)
 }

@@ -85,4 +85,17 @@ impl Rbac {
                 project,
             })
     }
+
+    pub fn is_allowed_organization_or_project(
+        &self,
+        auth_user: &AuthUser,
+        organization_permission: bencher_rbac::organization::Permission,
+        project_permission: bencher_rbac::project::Permission,
+        organization_project: impl Into<Organization> + Into<Project> + Copy,
+    ) -> Result<(), ApiError> {
+        self.is_allowed_organization(auth_user, organization_permission, organization_project)
+            .or_else(|_| {
+                self.is_allowed_project(auth_user, project_permission, organization_project)
+            })
+    }
 }
