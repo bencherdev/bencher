@@ -5,11 +5,10 @@ use diesel::{
     BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
 };
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
-use crate::{schema, schema::benchmark as benchmark_table, util::map_http_error};
+use crate::{error::api_error, schema, schema::benchmark as benchmark_table, ApiError};
 
 #[derive(Queryable)]
 pub struct QueryBenchmark {
@@ -20,19 +19,19 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::benchmark::table
             .filter(schema::benchmark::uuid.eq(uuid.to_string()))
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get benchmark."))
+            .map_err(api_error!())
     }
 
     pub fn get_id_from_name(
         conn: &mut SqliteConnection,
         project_id: i32,
         name: &str,
-    ) -> Result<i32, HttpError> {
+    ) -> Result<i32, ApiError> {
         schema::benchmark::table
             .filter(
                 schema::benchmark::project_id
@@ -41,19 +40,19 @@ impl QueryBenchmark {
             )
             .select(schema::benchmark::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get benchmark."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::benchmark::table
             .filter(schema::benchmark::id.eq(id))
             .select(schema::benchmark::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get benchmark."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get benchmark."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, ApiError> {
         let QueryBenchmark {
             id: _,
             uuid,
@@ -61,7 +60,7 @@ impl QueryBenchmark {
             name,
         } = self;
         Ok(JsonBenchmark {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get benchmark."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
         })
@@ -71,7 +70,7 @@ impl QueryBenchmark {
         conn: &mut SqliteConnection,
         project_id: i32,
         name: &str,
-    ) -> Result<i32, HttpError> {
+    ) -> Result<i32, ApiError> {
         let id = QueryBenchmark::get_id_from_name(conn, project_id, &name);
 
         if id.is_ok() {
@@ -82,13 +81,13 @@ impl QueryBenchmark {
         diesel::insert_into(schema::benchmark::table)
             .values(&insert_benchmark)
             .execute(conn)
-            .map_err(map_http_error!("Failed to get benchmark."))?;
+            .map_err(api_error!())?;
 
         schema::benchmark::table
             .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
             .select(schema::benchmark::id)
             .first::<i32>(conn)
-            .map_err(map_http_error!("Failed to get benchmark."))
+            .map_err(api_error!())
     }
 }
 
