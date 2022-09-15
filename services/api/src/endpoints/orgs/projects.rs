@@ -196,8 +196,7 @@ async fn get_one_inner(
     let conn = &mut context.db_conn;
 
     let query = QueryProject::from_resource_id(conn, &path_params.project)?;
-    if !auth_user.is_admin(&context.rbac) {
-        context
+    context
         .rbac
         .is_allowed_organization(auth_user, OrganizationPermission::View, &query)
         // This is actually redundant for view permissions
@@ -206,7 +205,6 @@ async fn get_one_inner(
                 .rbac
                 .is_allowed_project(auth_user, ProjectPermission::View, &query)
         })?;
-    }
 
     query.into_json(conn)
 }

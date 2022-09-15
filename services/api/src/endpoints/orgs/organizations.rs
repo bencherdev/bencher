@@ -177,11 +177,9 @@ async fn get_one_inner(
 
     let query = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
 
-    if !auth_user.is_admin(&context.rbac) {
-        context
-            .rbac
-            .is_allowed_organization(auth_user, Permission::View, &query)?;
-    }
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::View, &query)?;
 
     query.into_json()
 }

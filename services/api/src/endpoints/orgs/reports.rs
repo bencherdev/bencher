@@ -87,16 +87,15 @@ async fn get_ls_inner(
     let conn = &mut context.db_conn;
 
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
-    if !auth_user.is_admin(&context.rbac) {
-        context
-            .rbac
-            .is_allowed_organization(auth_user, OrganizationPermission::Manage, &query_project)
-            .or_else(|_| {
-                context
-                    .rbac
-                    .is_allowed_project(auth_user, ProjectPermission::View, &query_project)
-            })?;
-    }
+    context
+        .rbac
+        .is_allowed_organization(auth_user, OrganizationPermission::Manage, &query_project)
+        .or_else(|_| {
+            context
+                .rbac
+                .is_allowed_project(auth_user, ProjectPermission::View, &query_project)
+        })?;
+
     Ok(schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(schema::testbed::project_id.eq(query_project.id))
