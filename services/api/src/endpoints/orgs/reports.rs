@@ -7,9 +7,7 @@ use bencher_rbac::{
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
-use dropshot::{
-    endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -26,13 +24,12 @@ use crate::{
         project::QueryProject,
         report::{InsertReport, QueryReport},
         testbed::QueryTestbed,
-        user::{auth::AuthUser, QueryUser},
+        user::auth::AuthUser,
         version::InsertVersion,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
         map_http_error, Context,
     },
     ApiError,
@@ -270,7 +267,7 @@ pub async fn get_one(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(rqctx.context(), &auth_user, path_params.into_inner())
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -279,8 +276,8 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    auth_user: &AuthUser,
     path_params: GetOneParams,
+    auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
     let api_context = &mut *context.lock().await;
     let query_project = QueryProject::is_allowed_resource_id(

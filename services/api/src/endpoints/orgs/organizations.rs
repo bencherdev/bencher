@@ -160,7 +160,7 @@ pub async fn get_one(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(rqctx.context(), &auth_user, path_params.into_inner())
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -169,8 +169,8 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    auth_user: &AuthUser,
     path_params: GetOneParams,
+    auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
     let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
