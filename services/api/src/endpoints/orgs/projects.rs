@@ -53,7 +53,7 @@ pub async fn get_ls(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
-    let json = get_ls_inner(&auth_user, rqctx.context())
+    let json = get_ls_inner(rqctx.context(), &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -61,8 +61,8 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    auth_user: &AuthUser,
     context: &Context,
+    auth_user: &AuthUser,
 ) -> Result<Vec<JsonProject>, ApiError> {
     let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;
@@ -101,7 +101,7 @@ pub async fn post(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Post);
 
-    let json = post_inner(&auth_user, rqctx.context(), body.into_inner())
+    let json = post_inner(rqctx.context(), &auth_user, body.into_inner())
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -109,8 +109,8 @@ pub async fn post(
 }
 
 async fn post_inner(
-    auth_user: &AuthUser,
     context: &Context,
+    auth_user: &AuthUser,
     json_project: JsonNewProject,
 ) -> Result<JsonProject, ApiError> {
     let context = &mut *context.lock().await;
@@ -180,7 +180,7 @@ pub async fn get_one(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(&auth_user, rqctx.context(), path_params.into_inner())
+    let json = get_one_inner(rqctx.context(), &auth_user, path_params.into_inner())
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -188,8 +188,8 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    auth_user: &AuthUser,
     context: &Context,
+    auth_user: &AuthUser,
     path_params: GetOneParams,
 ) -> Result<JsonProject, ApiError> {
     let context = &mut *context.lock().await;
