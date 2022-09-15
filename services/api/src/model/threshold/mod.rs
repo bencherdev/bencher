@@ -11,9 +11,7 @@ use uuid::Uuid;
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{branch::QueryBranch, testbed::QueryTestbed};
 use crate::{
-    schema,
-    schema::threshold as threshold_table,
-    util::{http_error, map_http_error},
+    error::api_error, schema, schema::threshold as threshold_table, util::http_error, ApiError,
 };
 
 pub mod alert;
@@ -30,24 +28,24 @@ pub struct QueryThreshold {
 }
 
 impl QueryThreshold {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::threshold::table
             .filter(schema::threshold::uuid.eq(uuid.to_string()))
             .select(schema::threshold::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get threshold."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::threshold::table
             .filter(schema::threshold::id.eq(id))
             .select(schema::threshold::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get threshold."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get threshold."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -57,7 +55,7 @@ impl QueryThreshold {
             statistic_id,
         } = self;
         Ok(JsonThreshold {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get threshold."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             branch: QueryBranch::get_uuid(conn, branch_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
             kind: PerfKind::try_from(kind)?.into(),
@@ -127,26 +125,21 @@ pub struct InsertThreshold {
 impl InsertThreshold {
     pub fn from_json(
         conn: &mut SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
         json_threshold: JsonNewThreshold,
-    ) -> Result<Self, HttpError> {
-        let JsonNewThreshold {
-            branch,
-            testbed,
-            kind,
-            statistic,
-        } = json_threshold;
-
-        let insert_statistic = InsertStatistic::from_json(statistic)?;
+    ) -> Result<Self, ApiError> {
+        let insert_statistic = InsertStatistic::from_json(json_threshold.statistic)?;
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
-            .map_err(map_http_error!("Failed to get threshold."))?;
+            .map_err(api_error!())?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            branch_id: QueryBranch::get_id(conn, &branch)?,
-            testbed_id: QueryTestbed::get_id(conn, &testbed)?,
-            kind: PerfKind::from(kind) as i32,
+            branch_id,
+            testbed_id,
+            kind: PerfKind::from(json_threshold.kind) as i32,
             statistic_id: QueryStatistic::get_id(conn, &insert_statistic.uuid)?,
         })
     }

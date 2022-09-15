@@ -106,8 +106,21 @@ pub trait WordStr {
 }
 
 macro_rules! api_error {
+    ($message:expr, $($field:tt)*) => {
+        |e| {
+            let err: crate::error::ApiError = e.into();
+            tracing::info!("{err}");
+            tracing::info!($message, $($field:tt)*);
+            err
+        }
+    };
+    ($message:expr) => {$crate::util::error::debug_error!($message,)};
     () => {
-        Into::<crate::error::ApiError>::into
+        |e| {
+            let err: crate::error::ApiError = e.into();
+            tracing::info!("{err}");
+            err
+        }
     };
 }
 
