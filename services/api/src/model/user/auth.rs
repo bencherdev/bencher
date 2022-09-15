@@ -18,11 +18,13 @@ use crate::{
 macro_rules! auth_header_error {
     ($message:expr) => {
         || {
-            tracing::info!($message);
+            tracing::info!("{}", $message);
             crate::error::ApiError::AuthHeader($message.into())
         }
     };
 }
+
+pub(crate) use auth_header_error;
 
 macro_rules! map_auth_header_error {
     ($message:expr) => {
@@ -33,7 +35,9 @@ macro_rules! map_auth_header_error {
     };
 }
 
-const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
+pub(crate) use map_auth_header_error;
+
+pub const INVALID_JWT: &str = "Invalid JWT (JSON Web Token)";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {

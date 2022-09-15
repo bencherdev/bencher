@@ -63,6 +63,8 @@ pub enum ApiError {
     Locked(i32, String),
     #[error("Failed to check permissions: {0}")]
     IsAllowed(oso::OsoError),
+    #[error("Failed to create JWT (JSON Web Token): {0}")]
+    JsonWebToken(#[from] jsonwebtoken::errors::Error),
     #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({organization:?}")]
     IsAllowedOrganization {
         auth_user: AuthUser,
