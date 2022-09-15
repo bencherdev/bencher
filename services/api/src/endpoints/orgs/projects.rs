@@ -101,7 +101,7 @@ pub async fn post(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), &auth_user, body.into_inner())
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -110,8 +110,8 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
-    auth_user: &AuthUser,
     json_project: JsonNewProject,
+    auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let context = &mut *context.lock().await;
     let conn = &mut context.db_conn;

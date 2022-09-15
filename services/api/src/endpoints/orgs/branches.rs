@@ -115,7 +115,7 @@ pub async fn post(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), &auth_user, body.into_inner())
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -124,8 +124,8 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
-    auth_user: &AuthUser,
     json_branch: JsonNewBranch,
+    auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;
     let insert_branch = InsertBranch::from_json(&mut api_context.db_conn, json_branch)?;
