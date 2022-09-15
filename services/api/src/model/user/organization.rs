@@ -23,14 +23,15 @@ pub struct InsertOrganizationRole {
 impl InsertOrganizationRole {
     pub fn from_jwt(
         conn: &mut SqliteConnection,
-        jwt: JsonWebToken,
+        invite: &JsonWebToken,
         secret_key: &str,
         user_id: i32,
     ) -> Result<Self, ApiError> {
         // Validate the invite JWT
-        let token_data = jwt
+        let token_data = invite
             .validate_invite(secret_key)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
+
         // Make sure that there is an `org` field in the claims
         let org_claims = token_data
             .claims

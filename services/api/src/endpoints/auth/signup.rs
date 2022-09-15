@@ -15,9 +15,6 @@ use crate::endpoints::Method;
 use crate::error::api_error;
 use crate::model::organization::InsertOrganization;
 use crate::model::organization::QueryOrganization;
-use crate::model::user::auth::auth_header_error;
-use crate::model::user::auth::map_auth_header_error;
-use crate::model::user::auth::INVALID_JWT;
 use crate::model::user::organization::InsertOrganizationRole;
 use crate::model::user::QueryUser;
 use crate::util::cors::CorsResponse;
@@ -82,22 +79,8 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         .map_err(api_error!())?;
     let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
 
-    let insert_org_role = if let Some(invite) = invite {
-        let token_data = invite
-            .validate_invite(&api_context.secret_key)
-            .map_err(map_auth_header_error!(INVALID_JWT))?;
-        let org_claims = token_data
-            .claims
-            .org()
-            .ok_or_else(auth_header_error!(INVALID_JWT))?;
-
-        // Connect the user to the organization with the given role
-        let organization_id = QueryOrganization::get_id(conn, org_claims.uuid)?;
-        InsertOrganizationRole {
-            user_id,
-            organization_id,
-            role: Role::from(org_claims.role).to_string(),
-        }
+    let insert_org_role = if let Some(invite) = &invite {
+        InsertOrganizationRole::from_jwt(conn, invite, &api_context.secret_key, user_id)?
     } else {
         // Create an organization for the user
         let insert_org = InsertOrganization::from_user(&insert_user);

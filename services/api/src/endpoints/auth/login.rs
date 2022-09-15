@@ -1,12 +1,9 @@
 use std::sync::Arc;
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonLogin};
-use bencher_rbac::organization::Role;
-use bencher_rbac::organization::MEMBER_ROLE;
+
 use diesel::{QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tracing::info;
 
 use crate::endpoints::endpoint::pub_response_accepted;
@@ -14,18 +11,15 @@ use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
 use crate::error::api_error;
-use crate::model::user::auth::auth_header_error;
-use crate::model::user::auth::map_auth_header_error;
-use crate::model::user::auth::INVALID_JWT;
+
 use crate::util::cors::CorsResponse;
 use crate::ApiError;
 use crate::{
     diesel::ExpressionMethods,
-    model::organization::QueryOrganization,
     model::user::organization::InsertOrganizationRole,
     model::user::QueryUser,
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
+    util::{cors::get_cors, Context},
 };
 
 use super::Resource;
@@ -59,7 +53,7 @@ pub async fn post(
     pub_response_accepted!(endpoint, json)
 }
 
-async fn post_inner(context: &Context, mut json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
+async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.db_conn;
 
@@ -73,22 +67,9 @@ async fn post_inner(context: &Context, mut json_login: JsonLogin) -> Result<Json
         return Err(ApiError::Locked(query_user.id, query_user.email));
     }
 
-    if let Some(invite) = json_login.invite {
-        let token_data = invite
-            .validate_invite(&api_context.secret_key)
-            .map_err(map_auth_header_error!(INVALID_JWT))?;
-        let org_claims = token_data
-            .claims
-            .org()
-            .ok_or_else(auth_header_error!(INVALID_JWT))?;
-
-        // Connect the user to the organization with the given role
-        let organization_id = QueryOrganization::get_id(conn, org_claims.uuid)?;
-        let insert_org_role = InsertOrganizationRole {
-            user_id: query_user.id,
-            organization_id,
-            role: Role::from(org_claims.role).to_string(),
-        };
+    if let Some(invite) = &json_login.invite {
+        let insert_org_role =
+            InsertOrganizationRole::from_jwt(conn, invite, &api_context.secret_key, query_user.id)?;
 
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
