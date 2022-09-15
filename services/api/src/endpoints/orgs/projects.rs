@@ -193,16 +193,13 @@ async fn get_one_inner(
     path_params: GetOneParams,
 ) -> Result<JsonProject, ApiError> {
     let context = &mut *context.lock().await;
-    let conn = &mut context.db_conn;
 
-    let query = QueryProject::from_resource_id(conn, &path_params.project)?;
-
-    context.rbac.is_allowed_organization_or_project(
+    QueryProject::is_allowed(
+        context,
+        &path_params.project,
         auth_user,
         OrganizationPermission::View,
         ProjectPermission::View,
-        &query,
-    )?;
-
-    query.into_json(conn)
+    )?
+    .into_json(&mut context.db_conn)
 }

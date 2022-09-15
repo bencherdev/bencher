@@ -7,12 +7,15 @@ use dropshot::{HttpError, RequestContext};
 use url::Url;
 use uuid::Uuid;
 
-use super::{organization::QueryOrganization, user::QueryUser};
+use super::{
+    organization::QueryOrganization,
+    user::{auth::AuthUser, QueryUser},
+};
 use crate::{
     diesel::ExpressionMethods,
     error::api_error,
     schema::{self, project as project_table},
-    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, Context},
+    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, ApiContext, Context},
     ApiError,
 };
 
@@ -32,7 +35,7 @@ impl InsertProject {
     pub fn from_json(
         conn: &mut SqliteConnection,
         project: JsonNewProject,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         let JsonNewProject {
             organization,
             name,
@@ -94,20 +97,39 @@ impl QueryProject {
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
         project: &ResourceId,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         schema::project::table
             .filter(resource_id(project)?)
             .first::<QueryProject>(conn)
-            .map_err(map_http_error!("Failed to get project."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::project::table
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get project."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get project."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn is_allowed(
+        context: &mut ApiContext,
+        project: &ResourceId,
+        auth_user: &AuthUser,
+        organization_permission: bencher_rbac::organization::Permission,
+        project_permission: bencher_rbac::project::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_project = QueryProject::from_resource_id(&mut context.db_conn, project)?;
+
+        context.rbac.is_allowed_organization_or_project(
+            auth_user,
+            organization_permission,
+            project_permission,
+            &query_project,
+        )?;
+
+        Ok(query_project)
     }
 
     pub async fn connection(
