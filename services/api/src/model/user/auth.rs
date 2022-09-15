@@ -90,12 +90,12 @@ impl AuthUser {
             .ok_or_else(auth_header_error!("Missing \"Authorization\" Bearer"))?;
         let jwt: JsonWebToken = token.trim().to_string().into();
 
-        let context = &mut *rqctx.context().lock().await;
+        let api_context = &mut *rqctx.context().lock().await;
         let token_data = jwt
-            .validate_user(&context.secret_key)
+            .validate_user(&api_context.secret_key)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
-        let conn = &mut context.db_conn;
+        let conn = &mut api_context.db_conn;
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))

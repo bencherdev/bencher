@@ -60,13 +60,13 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
 ) -> Result<Vec<JsonOrganization>, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db_conn;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     let mut sql = schema::organization::table.into_boxed();
 
-    if !auth_user.is_admin(&context.rbac) {
-        let organizations = auth_user.organizations(&context.rbac, Permission::View);
+    if !auth_user.is_admin(&api_context.rbac) {
+        let organizations = auth_user.organizations(&api_context.rbac, Permission::View);
         sql = sql.filter(schema::organization::id.eq_any(organizations));
     }
 
@@ -103,8 +103,8 @@ async fn post_inner(
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db_conn;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Create the organization
     let insert_organization = InsertOrganization::from_json(conn, json_organization);
@@ -172,12 +172,12 @@ async fn get_one_inner(
     path_params: GetOneParams,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db_conn;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     let query = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
 
-    context
+    api_context
         .rbac
         .is_allowed_organization(auth_user, Permission::View, &query)?;
 

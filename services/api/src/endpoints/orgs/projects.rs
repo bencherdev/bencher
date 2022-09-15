@@ -63,15 +63,15 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
 ) -> Result<Vec<JsonProject>, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db_conn;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     let mut sql = schema::project::table.into_boxed();
 
-    if !auth_user.is_admin(&context.rbac) {
-        let organization = auth_user.organizations(&context.rbac, OrganizationPermission::View);
+    if !auth_user.is_admin(&api_context.rbac) {
+        let organization = auth_user.organizations(&api_context.rbac, OrganizationPermission::View);
         // This is actually redundant for view permissions
-        let projects = auth_user.projects(&context.rbac, ProjectPermission::View);
+        let projects = auth_user.projects(&api_context.rbac, ProjectPermission::View);
         sql = sql.filter(
             schema::project::organization_id
                 .eq_any(organization)
@@ -112,14 +112,14 @@ async fn post_inner(
     json_project: JsonNewProject,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db_conn;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Create the project
     let insert_project = InsertProject::from_json(conn, json_project)?;
 
     // Check to see if user has permission to create a project within the organization
-    context.rbac.is_allowed_organization(
+    api_context.rbac.is_allowed_organization(
         auth_user,
         OrganizationPermission::Create,
         &insert_project,
