@@ -104,7 +104,7 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
         (timestamp % 1_000_000_000) as u32,
     )
     .single()
-    .ok_or_else(|| ApiError::Timestamp(timestamp))
+    .ok_or(ApiError::Timestamp(timestamp))
 }
 
 const JSON: isize = 0;

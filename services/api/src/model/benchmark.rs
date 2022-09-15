@@ -71,7 +71,7 @@ impl QueryBenchmark {
         project_id: i32,
         name: &str,
     ) -> Result<i32, ApiError> {
-        let id = QueryBenchmark::get_id_from_name(conn, project_id, &name);
+        let id = QueryBenchmark::get_id_from_name(conn, project_id, name);
 
         if id.is_ok() {
             return id;

@@ -13,11 +13,13 @@ macro_rules! unwrap_slug {
 
 pub(crate) use unwrap_slug;
 
+pub type SlugExistsFn = dyn FnOnce(&mut SqliteConnection, &str) -> bool;
+
 pub fn validate_slug(
     conn: &mut SqliteConnection,
     name: &str,
     slug: Option<String>,
-    exists: Box<dyn FnOnce(&mut SqliteConnection, &str) -> bool>,
+    exists: Box<SlugExistsFn>,
 ) -> String {
     let mut slug = slug
         .map(|s| {

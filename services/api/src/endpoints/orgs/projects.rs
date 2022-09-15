@@ -23,7 +23,6 @@ use crate::{
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        resource_id::fn_resource_id,
         Context,
     },
     ApiError,
@@ -165,8 +164,6 @@ pub async fn one_options(
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
-
-fn_resource_id!(project);
 
 #[endpoint {
     method = GET,

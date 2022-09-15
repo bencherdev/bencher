@@ -3,19 +3,16 @@ use std::{str::FromStr, string::ToString};
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{Organization, Project};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::{HttpError, RequestContext};
+use dropshot::HttpError;
 use url::Url;
 use uuid::Uuid;
 
-use super::{
-    organization::QueryOrganization,
-    user::{auth::AuthUser, QueryUser},
-};
+use super::{organization::QueryOrganization, user::auth::AuthUser};
 use crate::{
     diesel::ExpressionMethods,
     error::api_error,
     schema::{self, project as project_table},
-    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, ApiContext, Context},
+    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, ApiContext},
     ApiError,
 };
 
@@ -152,20 +149,6 @@ impl QueryProject {
         )?;
 
         Ok(query_project)
-    }
-
-    pub async fn connection(
-        rqctx: &RequestContext<Context>,
-        user_id: i32,
-        project: &ResourceId,
-    ) -> Result<i32, HttpError> {
-        let context = &mut *rqctx.context().lock().await;
-        let conn = &mut context.db_conn;
-
-        let project = Self::from_resource_id(conn, project)?;
-        QueryUser::has_access(conn, user_id, project.id)?;
-
-        Ok(project.id)
     }
 }
 

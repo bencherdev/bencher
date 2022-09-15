@@ -29,7 +29,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     trace!("Setting secret key");
     let secret_key = get_secret();
     trace!("Parsing role based access control (RBAC) rules");
-    let rbac = init_rbac().map_err(|e| ApiError::Polar(e))?.into();
+    let rbac = init_rbac().map_err(ApiError::Polar)?.into();
     trace!("Getting database connection");
     let mut db_conn = get_db_conn()?;
     trace!("Running database migrations");
