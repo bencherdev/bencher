@@ -92,6 +92,8 @@ pub enum ApiError {
     },
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
+    #[error("Invalid email: {0}")]
+    Email(String),
 
     // TODO remove once no longer needed
     #[error(transparent)]

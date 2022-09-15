@@ -1,15 +1,16 @@
 use std::str::FromStr;
 
-use bencher_json::{jwt::JsonWebToken, JsonSignup, JsonUser, ResourceId};
+use bencher_json::{JsonSignup, JsonUser, ResourceId};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::{HttpError, RequestContext};
 use email_address_parser::EmailAddress;
 use uuid::Uuid;
 
 use crate::{
     diesel::ExpressionMethods,
+    error::api_error,
     schema::{self, user as user_table},
-    util::{http_error, map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, Context},
+    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    ApiError,
 };
 
 pub mod auth;
@@ -29,7 +30,7 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, HttpError> {
+    pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, ApiError> {
         let JsonSignup {
             name,
             slug,
@@ -49,8 +50,8 @@ impl InsertUser {
     }
 }
 
-fn validate_email(email: &str) -> Result<EmailAddress, HttpError> {
-    EmailAddress::parse(email, None).ok_or_else(|| http_error!("Failed to get user."))
+fn validate_email(email: &str) -> Result<EmailAddress, ApiError> {
+    EmailAddress::parse(email, None).ok_or_else(|| ApiError::Email(email.into()))
 }
 
 fn_resource_id!(user);
@@ -67,50 +68,50 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::user::table
             .filter(schema::user::uuid.eq(uuid.to_string()))
             .select(schema::user::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get user."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get user."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get user."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn get_id_from_email(conn: &mut SqliteConnection, email: &str) -> Result<i32, HttpError> {
+    pub fn get_id_from_email(conn: &mut SqliteConnection, email: &str) -> Result<i32, ApiError> {
         schema::user::table
             .filter(schema::user::email.eq(email))
             .select(schema::user::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get user."))
+            .map_err(api_error!())
     }
 
-    pub fn get_email_from_id(conn: &mut SqliteConnection, id: i32) -> Result<String, HttpError> {
+    pub fn get_email_from_id(conn: &mut SqliteConnection, id: i32) -> Result<String, ApiError> {
         schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)
             .first(conn)
-            .map_err(map_http_error!("Failed to get user."))
+            .map_err(api_error!())
     }
 
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
         user: &ResourceId,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         schema::user::table
             .filter(resource_id(user)?)
             .first(conn)
-            .map_err(map_http_error!("Failed to get user."))
+            .map_err(api_error!())
     }
 
-    pub fn into_json(self) -> Result<JsonUser, HttpError> {
+    pub fn into_json(self) -> Result<JsonUser, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -121,7 +122,7 @@ impl QueryUser {
             locked,
         } = self;
         Ok(JsonUser {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get user."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             name,
             slug,
             email,
