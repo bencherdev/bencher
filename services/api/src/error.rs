@@ -61,6 +61,12 @@ pub enum ApiError {
     User(String),
     #[error("User account locked: ID {0} email {1}")]
     Locked(i32, String),
+    #[error("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")]
+    InviteEmail {
+        user_id: i32,
+        email: String,
+        email_user_id: i32,
+    },
     #[error("Failed to check permissions: {0}")]
     IsAllowed(oso::OsoError),
     #[error("Failed to create JWT (JSON Web Token): {0}")]

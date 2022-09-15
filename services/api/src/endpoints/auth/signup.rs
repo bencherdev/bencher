@@ -2,14 +2,10 @@ use std::sync::Arc;
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
 use bencher_rbac::organization::Role;
-use bencher_rbac::organization::LEADER_ROLE;
-use bencher_rbac::organization::MEMBER_ROLE;
 use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tracing::info;
 
 use crate::endpoints::endpoint::pub_response_accepted;
@@ -29,7 +25,7 @@ use crate::ApiError;
 use crate::{
     model::user::InsertUser,
     schema,
-    util::{cors::get_cors, headers::CorsHeaders, http_error, map_http_error, Context},
+    util::{cors::get_cors, Context},
 };
 
 use super::Resource;
