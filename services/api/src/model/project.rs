@@ -114,15 +114,15 @@ impl QueryProject {
     }
 
     pub fn is_allowed(
-        context: &mut ApiContext,
+        api_context: &mut ApiContext,
         project: &ResourceId,
         auth_user: &AuthUser,
         organization_permission: bencher_rbac::organization::Permission,
         project_permission: bencher_rbac::project::Permission,
     ) -> Result<Self, ApiError> {
-        let query_project = QueryProject::from_resource_id(&mut context.db_conn, project)?;
+        let query_project = QueryProject::from_resource_id(&mut api_context.db_conn, project)?;
 
-        context.rbac.is_allowed_organization_or_project(
+        api_context.rbac.is_allowed_organization_or_project(
             auth_user,
             organization_permission,
             project_permission,

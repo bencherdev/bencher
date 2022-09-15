@@ -83,15 +83,15 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
     path_params: GetLsParams,
 ) -> Result<Vec<JsonReport>, ApiError> {
-    let context = &mut *context.lock().await;
+    let api_context = &mut *context.lock().await;
     let query_project = QueryProject::is_allowed(
-        context,
+        api_context,
         &path_params.project,
         auth_user,
         OrganizationPermission::Manage,
         ProjectPermission::View,
     )?;
-    let conn = &mut context.db_conn;
+    let conn = &mut api_context.db_conn;
 
     Ok(schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))

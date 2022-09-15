@@ -192,14 +192,14 @@ async fn get_one_inner(
     auth_user: &AuthUser,
     path_params: GetOneParams,
 ) -> Result<JsonProject, ApiError> {
-    let context = &mut *context.lock().await;
+    let api_context = &mut *context.lock().await;
 
     QueryProject::is_allowed(
-        context,
+        api_context,
         &path_params.project,
         auth_user,
         OrganizationPermission::View,
         ProjectPermission::View,
     )?
-    .into_json(&mut context.db_conn)
+    .into_json(&mut api_context.db_conn)
 }
