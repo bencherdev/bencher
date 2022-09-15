@@ -94,6 +94,8 @@ pub enum ApiError {
     PrivateProject(i32),
     #[error("Invalid email: {0}")]
     Email(String),
+    #[error("Requested TTL ({requested}) is greater than max ({max})")]
+    MaxTtl { requested: u64, max: u64 },
 
     // TODO remove once no longer needed
     #[error(transparent)]

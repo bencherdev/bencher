@@ -17,7 +17,7 @@ use crate::{
         user::QueryUser,
         user::{
             auth::AuthUser,
-            token::{InsertToken, QueryToken},
+            token::{same_user, InsertToken, QueryToken},
         },
     },
     schema,
@@ -31,17 +31,6 @@ use crate::{
 use super::Resource;
 
 const TOKEN_RESOURCE: Resource = Resource::Token;
-
-macro_rules! same_user {
-    ($param:expr, $token:expr) => {
-        if $param != $token {
-            return Err(crate::error::ApiError::User(format!(
-                "User IDs do not match for the path param ({}) and token ({})",
-                $param, $token
-            )));
-        }
-    };
-}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
