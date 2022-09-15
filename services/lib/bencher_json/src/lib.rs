@@ -17,6 +17,7 @@ pub mod threshold;
 pub mod token;
 pub mod user;
 
+pub use alert::JsonAlert;
 pub use auth::{JsonAuthToken, JsonLogin, JsonSignup};
 pub use benchmark::JsonBenchmark;
 pub use branch::{JsonBranch, JsonNewBranch};

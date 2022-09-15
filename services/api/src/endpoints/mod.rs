@@ -86,6 +86,11 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(thresholds::post)?;
     api.register(thresholds::one_options)?;
     api.register(thresholds::get_one)?;
+    // Alerts
+    api.register(alerts::dir_options)?;
+    api.register(alerts::get_ls)?;
+    api.register(alerts::one_options)?;
+    api.register(alerts::get_one)?;
 
     // Tokens
     api.register(users::tokens::dir_options)?;

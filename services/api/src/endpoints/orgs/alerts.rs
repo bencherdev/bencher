@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use bencher_json::{JsonBenchmark, ResourceId};
+use bencher_json::{JsonAlert, ResourceId};
 use bencher_rbac::{
     organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
 };
-use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -16,7 +16,7 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::{benchmark::QueryBenchmark, project::QueryProject, user::auth::AuthUser},
+    model::{project::QueryProject, threshold::alert::QueryAlert, user::auth::AuthUser},
     schema,
     util::{
         cors::{get_cors, CorsResponse},
@@ -27,7 +27,7 @@ use crate::{
 
 use super::Resource;
 
-const BENCHMARK_RESOURCE: Resource = Resource::Benchmark;
+const ALERT_RESOURCE: Resource = Resource::Alert;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -36,8 +36,8 @@ pub struct GetLsParams {
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/benchmarks",
-    tags = ["projects", "benchmarks"]
+    path =  "/v0/projects/{project}/alerts",
+    tags = ["projects", "alerts"]
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -48,15 +48,15 @@ pub async fn dir_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/benchmarks",
-    tags = ["projects", "benchmarks"]
+    path =  "/v0/projects/{project}/alerts",
+    tags = ["projects", "alerts"]
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<ResponseOk<Vec<JsonBenchmark>>, HttpError> {
+) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
 
     let json = get_ls_inner(rqctx.context(), &auth_user, path_params.into_inner())
         .await
@@ -69,7 +69,7 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
     path_params: GetLsParams,
-) -> Result<Vec<JsonBenchmark>, ApiError> {
+) -> Result<Vec<JsonAlert>, ApiError> {
     let api_context = &mut *context.lock().await;
     let query_project = QueryProject::is_allowed_resource_id(
         api_context,
@@ -80,10 +80,25 @@ async fn get_ls_inner(
     )?;
     let conn = &mut api_context.db_conn;
 
-    Ok(schema::benchmark::table
-        .filter(schema::benchmark::project_id.eq(&query_project.id))
-        .order(schema::benchmark::name)
-        .load::<QueryBenchmark>(conn)
+    Ok(schema::alert::table
+        .left_join(schema::perf::table.on(schema::alert::perf_id.eq(schema::perf::id)))
+        .left_join(
+            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+        )
+        .filter(schema::benchmark::project_id.eq(query_project.id))
+        .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+        .order((schema::report::start_time, schema::perf::iteration))
+        .select((
+            schema::alert::id,
+            schema::alert::uuid,
+            schema::alert::perf_id,
+            schema::alert::threshold_id,
+            schema::alert::statistic_id,
+            schema::alert::side,
+            schema::alert::boundary,
+            schema::alert::outlier,
+        ))
+        .load::<QueryAlert>(conn)
         .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
@@ -93,13 +108,13 @@ async fn get_ls_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
     pub project: ResourceId,
-    pub benchmark: Uuid,
+    pub alert: Uuid,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}",
-    tags = ["projects", "benchmarks"]
+    path =  "/v0/projects/{project}/alerts/{alert}",
+    tags = ["projects", "alerts"]
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -110,15 +125,15 @@ pub async fn one_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}",
-    tags = ["projects", "benchmarks"]
+    path =  "/v0/projects/{project}/alerts/{alert}",
+    tags = ["projects", "alerts"]
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<ResponseOk<JsonBenchmark>, HttpError> {
+) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetOne);
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
@@ -131,7 +146,7 @@ async fn get_one_inner(
     context: &Context,
     path_params: GetOneParams,
     auth_user: &AuthUser,
-) -> Result<JsonBenchmark, ApiError> {
+) -> Result<JsonAlert, ApiError> {
     let api_context = &mut *context.lock().await;
     let query_project = QueryProject::is_allowed_resource_id(
         api_context,
@@ -142,13 +157,24 @@ async fn get_one_inner(
     )?;
     let conn = &mut api_context.db_conn;
 
-    schema::benchmark::table
-        .filter(
-            schema::benchmark::project_id
-                .eq(query_project.id)
-                .and(schema::benchmark::uuid.eq(path_params.benchmark.to_string())),
+    schema::alert::table
+        .left_join(schema::perf::table.on(schema::alert::perf_id.eq(schema::perf::id)))
+        .left_join(
+            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )
-        .first::<QueryBenchmark>(conn)
+        .filter(schema::benchmark::project_id.eq(query_project.id))
+        .filter(schema::alert::uuid.eq(path_params.alert.to_string()))
+        .select((
+            schema::alert::id,
+            schema::alert::uuid,
+            schema::alert::perf_id,
+            schema::alert::threshold_id,
+            schema::alert::statistic_id,
+            schema::alert::side,
+            schema::alert::boundary,
+            schema::alert::outlier,
+        ))
+        .first::<QueryAlert>(conn)
         .map_err(api_error!())?
         .into_json(conn)
 }
