@@ -5,25 +5,27 @@ use bencher_json::{
     jwt::JsonWebToken,
 };
 use diesel::{QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
     diesel::ExpressionMethods,
+    endpoints::{
+        endpoint::{pub_response_accepted, ResponseAccepted},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::user::QueryUser,
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error, Context,
+        Context,
     },
+    ApiError,
 };
 
-#[derive(Debug, Clone, Copy)]
-pub enum Method {
-    Post,
-}
+use super::Resource;
+
+const CONFIRM_RESOURCE: Resource = Resource::Confirm;
 
 #[endpoint {
     method = OPTIONS,
@@ -42,33 +44,36 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonAuthToken>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonConfirm>, CorsHeaders>, HttpError> {
-    let context = &mut *rqctx.context().lock().await;
+) -> Result<ResponseAccepted<JsonConfirm>, HttpError> {
+    let endpoint = Endpoint::new(CONFIRM_RESOURCE, Method::Post);
 
-    let json_token = body.into_inner();
+    let json = post_inner(rqctx.context(), body.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    pub_response_accepted!(endpoint, json)
+}
+
+async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<JsonConfirm, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
+
     let token_data = json_token
         .token
-        .validate_auth(&context.secret_key)
-        .map_err(map_http_error!("Failed to login user."))?;
+        .validate_auth(&api_context.secret_key)
+        .map_err(api_error!())?;
 
-    let conn = &mut context.db_conn;
-    let query_user = schema::user::table
+    let user = schema::user::table
         .filter(schema::user::email.eq(token_data.claims.email()))
         .first::<QueryUser>(conn)
-        .map_err(map_http_error!("Failed to login user."))?;
-    let json_user = query_user.into_json()?;
+        .map_err(api_error!())?
+        .into_json()?;
 
-    let token =
-        JsonWebToken::new_client(&context.secret_key, token_data.claims.email().to_string())
-            .map_err(map_http_error!("Failed to login user."))?;
+    let token = JsonWebToken::new_client(
+        &api_context.secret_key,
+        token_data.claims.email().to_string(),
+    )
+    .map_err(api_error!())?;
 
-    let json_confirmed = JsonConfirm {
-        user: json_user,
-        token,
-    };
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json_confirmed),
-        CorsHeaders::new_pub("POST".into()),
-    ))
+    Ok(JsonConfirm { user, token })
 }
