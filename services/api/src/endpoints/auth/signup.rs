@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use bencher_json::{auth::Role, jwt::JsonWebToken, JsonEmpty, JsonSignup};
+use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonSignup};
+use bencher_rbac::organization::Role;
 use bencher_rbac::organization::LEADER_ROLE;
 use bencher_rbac::organization::MEMBER_ROLE;
 use diesel::dsl::count;
@@ -99,12 +100,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         InsertOrganizationRole {
             user_id,
             organization_id,
-            // TODO better type casting
-            role: match org_claims.role {
-                Role::Member => MEMBER_ROLE,
-                Role::Leader => LEADER_ROLE,
-            }
-            .into(),
+            role: Role::from(org_claims.role).to_string(),
         }
     } else {
         // Create an organization for the user
@@ -119,8 +115,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         InsertOrganizationRole {
             user_id,
             organization_id,
-            // TODO better type casting
-            role: LEADER_ROLE.into(),
+            role: Role::Leader.to_string(),
         }
     };
 

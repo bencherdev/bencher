@@ -21,7 +21,7 @@ lazy_static::lazy_static! {
     static ref ALGORITHM: Algorithm = Algorithm::default();
 }
 
-#[derive(Debug, Display, Serialize, Deserialize)]
+#[derive(Debug, Display, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonWebToken(pub String);
 
@@ -120,7 +120,7 @@ impl JsonWebToken {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaims {
     pub aud: String,            // Audience
@@ -131,7 +131,7 @@ pub struct JsonClaims {
     pub org: Option<OrgClaims>, // Organization (for invitation)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct OrgClaims {
     pub uuid: Uuid,

@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+json = ["dep:bencher_json"]
 
 [dependencies]
+bencher_json = { path = "../bencher_json", optional = true }
 oso = { version = "0.26.2" }
 
 [dev-dependencies]

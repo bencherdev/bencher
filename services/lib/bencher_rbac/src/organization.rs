@@ -53,6 +53,16 @@ impl FromStr for Role {
     }
 }
 
+#[cfg(feature = "json")]
+impl From<bencher_json::auth::Role> for Role {
+    fn from(role: bencher_json::auth::Role) -> Self {
+        match role {
+            bencher_json::auth::Role::Member => Self::Member,
+            bencher_json::auth::Role::Leader => Self::Leader,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum Permission {
     View,

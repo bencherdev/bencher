@@ -9,7 +9,7 @@ use super::{
     throughput::JsonThroughput,
 };
 
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct JsonMetricsMap {
     pub inner: BTreeMap<String, JsonMetricsList>,
 }
@@ -56,6 +56,7 @@ impl JsonMetricsMap {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct JsonMetricsList {
     pub latency: Vec<Option<JsonLatency>>,
     pub throughput: Vec<Option<JsonThroughput>>,

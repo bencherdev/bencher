@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::ResourceId;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewTestbed {
     pub project: ResourceId,
@@ -28,7 +28,7 @@ pub struct JsonNewTestbed {
     pub disk: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbed {
     pub uuid: Uuid,
