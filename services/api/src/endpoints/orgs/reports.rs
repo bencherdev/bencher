@@ -33,7 +33,7 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
-        http_error, map_http_error, Context,
+        map_http_error, Context,
     },
     ApiError,
 };
@@ -266,20 +266,38 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
-    let report_uuid = path_params.report_uuid.to_string();
+) -> Result<ResponseOk<JsonReport>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db_conn;
-    let json = schema::report::table
+    let json = get_one_inner(rqctx.context(), &auth_user, path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    path_params: GetOneParams,
+) -> Result<JsonReport, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
-                .eq(project_id)
-                .and(schema::report::uuid.eq(report_uuid)),
+                .eq(query_project.id)
+                .and(schema::report::uuid.eq(path_params.report_uuid.to_string())),
         )
         .select((
             schema::report::id,
@@ -292,11 +310,6 @@ pub async fn get_one(
             schema::report::end_time,
         ))
         .first::<QueryReport>(conn)
-        .map_err(map_http_error!("Failed to get report."))?
-        .into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }
