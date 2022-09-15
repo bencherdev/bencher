@@ -105,11 +105,7 @@ pub trait WordStr {
 
 macro_rules! api_error {
     () => {
-        |e| {
-            let err: crate::error::ApiError = e.into();
-            tracing::info!("{err}");
-            err
-        }
+        Into::<crate::error::ApiError>::into
     };
 }
 

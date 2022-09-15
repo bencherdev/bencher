@@ -1,29 +1,37 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
-use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
 };
+use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
         branch::{InsertBranch, QueryBranch},
         project::QueryProject,
-        user::QueryUser,
+        user::auth::AuthUser,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error,
         resource_id::fn_resource_id,
         Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const BRANCH_RESOURCE: Resource = Resource::Branch;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -50,26 +58,40 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonBranch>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
+) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db_conn;
-    let json: Vec<JsonBranch> = schema::branch::table
-        .filter(schema::branch::project_id.eq(&project_id))
+    let json = get_ls_inner(rqctx.context(), &auth_user, path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    path_params: GetLsParams,
+) -> Result<Vec<JsonBranch>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    Ok(schema::branch::table
+        .filter(schema::branch::project_id.eq(&query_project.id))
         .order(schema::branch::name)
         .load::<QueryBranch>(conn)
-        .map_err(map_http_error!("Failed to get branches."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
@@ -89,28 +111,44 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewBranch>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonBranch>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
-    let json_branch = body.into_inner();
+) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Post);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db_conn;
-    let insert_branch = InsertBranch::from_json(conn, json_branch)?;
+    let json = post_inner(rqctx.context(), &auth_user, body.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    json_branch: JsonNewBranch,
+) -> Result<JsonBranch, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let insert_branch = InsertBranch::from_json(&mut api_context.db_conn, json_branch)?;
+    // Verify that the user is allowed
+    QueryProject::is_allowed_id(
+        api_context,
+        insert_branch.project_id,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::Create,
+    )?;
+    let conn = &mut api_context.db_conn;
+
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create branch."))?;
+        .map_err(api_error!())?;
 
-    let query_branch = schema::branch::table
+    schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))
         .first::<QueryBranch>(conn)
-        .map_err(map_http_error!("Failed to create branch."))?;
-    let json = query_branch.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -131,8 +169,6 @@ pub async fn one_options(
     Ok(get_cors::<Context>())
 }
 
-fn_resource_id!(branch);
-
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/branches/{branch}",
@@ -141,26 +177,41 @@ fn_resource_id!(branch);
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonBranch>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
-    let branch = path_params.branch;
+) -> Result<ResponseOk<JsonBranch>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db_conn;
-    let json = schema::branch::table
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+fn_resource_id!(branch);
+
+async fn get_one_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonBranch, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    schema::branch::table
         .filter(
             schema::branch::project_id
-                .eq(project_id)
-                .and(resource_id(&branch)?),
+                .eq(query_project.id)
+                .and(resource_id(&path_params.branch)?),
         )
         .first::<QueryBranch>(conn)
-        .map_err(map_http_error!("Failed to get branch."))?
-        .into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }
