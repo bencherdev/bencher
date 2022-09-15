@@ -93,6 +93,18 @@ impl QueryOrganization {
             slug,
         })
     }
+
+    pub fn into_rbac(
+        conn: &mut SqliteConnection,
+        uuid: impl ToString,
+    ) -> Result<Organization, ApiError> {
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(uuid.to_string()))
+            .select(schema::organization::id)
+            .first::<i32>(conn)
+            .map(|id| Organization { id: id.to_string() })
+            .map_err(api_error!())
+    }
 }
 
 impl From<&QueryOrganization> for Organization {

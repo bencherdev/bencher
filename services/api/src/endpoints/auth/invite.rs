@@ -1,20 +1,27 @@
 use std::sync::Arc;
 
 use bencher_json::{auth::JsonInvite, jwt::JsonWebToken, JsonEmpty};
-
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
-};
+use bencher_rbac::organization::Permission as OrganizationPermission;
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tracing::info;
 
 use crate::{
-    model::user::QueryUser,
+    endpoints::{
+        endpoint::{response_accepted, ResponseAccepted},
+        Endpoint, Method,
+    },
+    error::api_error,
+    model::{organization::QueryOrganization, user::auth::AuthUser},
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error, Context,
+        Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const INVITE_RESOURCE: Resource = Resource::Invite;
 
 #[endpoint {
     method = OPTIONS,
@@ -33,25 +40,41 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonInvite>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonEmpty>, CorsHeaders>, HttpError> {
-    // TODO validate that user has the ability to invite users to said org
-    QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(INVITE_RESOURCE, Method::Post);
 
-    let json_invite = body.into_inner();
-    let context = &mut *rqctx.context().lock().await;
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    json_invite: JsonInvite,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let api_context = &mut *context.lock().await;
+
+    // Check to see if user has permission to create a project within the organization
+    api_context.rbac.is_allowed_organization(
+        auth_user,
+        OrganizationPermission::CreateRoleAssignments,
+        QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
+    )?;
+
     let token = JsonWebToken::new_invite(
-        &context.secret_key,
+        &api_context.secret_key,
         json_invite.email.clone(),
         json_invite.organization,
         json_invite.role,
     )
-    .map_err(map_http_error!("Failed to invite user."))?;
+    .map_err(api_error!())?;
 
     // TODO log this as trace if SMTP is configured
     info!("Accept invite for \"{}\" with: {token}", json_invite.email);
 
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(JsonEmpty::default()),
-        CorsHeaders::new_pub("POST".into()),
-    ))
+    Ok(JsonEmpty::default())
 }
