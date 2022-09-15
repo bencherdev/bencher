@@ -1,5 +1,6 @@
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
+pub mod alert;
 pub mod auth;
 pub mod benchmark;
 pub mod branch;
@@ -12,6 +13,7 @@ pub mod testbed;
 pub mod threshold;
 pub mod token;
 
+use alert::CliAlert;
 use auth::CliAuth;
 use benchmark::CliBenchmark;
 use branch::CliBranch;
@@ -70,6 +72,9 @@ pub enum CliSub {
     Benchmark(CliBenchmark),
     /// Query benchmark data
     Perf(CliPerf),
+    /// View alerts
+    #[clap(subcommand)]
+    Alert(CliAlert),
 
     /// User API tokens
     #[clap(subcommand)]

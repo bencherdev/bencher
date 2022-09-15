@@ -4,6 +4,7 @@ use async_trait::async_trait;
 
 use crate::{bencher::wide::Wide, cli::CliSub, CliError};
 
+mod alert;
 mod auth;
 mod benchmark;
 mod branch;
@@ -17,6 +18,7 @@ mod testbed;
 mod threshold;
 mod token;
 
+use alert::Alert;
 use auth::Auth;
 use benchmark::Benchmark;
 use branch::Branch;
@@ -42,6 +44,7 @@ pub enum Sub {
     Run(Run),
     Benchmark(Benchmark),
     Perf(Perf),
+    Alert(Alert),
     Token(Token),
 }
 
@@ -60,6 +63,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Run(run) => Self::Run(run.try_into()?),
             CliSub::Benchmark(benchmark) => Self::Benchmark(benchmark.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
+            CliSub::Alert(alert) => Self::Alert(alert.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
         })
     }
@@ -87,6 +91,7 @@ impl SubCmd for Sub {
             Self::Run(run) => run.exec(wide).await,
             Self::Benchmark(benchmark) => benchmark.exec(wide).await,
             Self::Perf(perf) => perf.exec(wide).await,
+            Self::Alert(alert) => alert.exec(wide).await,
             Self::Token(token) => token.exec(wide).await,
         }
     }
