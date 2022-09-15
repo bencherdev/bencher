@@ -1112,6 +1112,240 @@
         }
       }
     },
+    "/v0/projects/{project}/alerts": {
+      "get": {
+        "tags": [
+          "projects",
+          "alerts"
+        ],
+        "operationId": "get_ls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_JsonAlert",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JsonAlert"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects",
+          "alerts"
+        ],
+        "operationId": "dir_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/alerts/{alert}": {
+      "get": {
+        "tags": [
+          "projects",
+          "alerts"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAlert"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects",
+          "alerts"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/benchmarks": {
       "get": {
         "tags": [
@@ -2918,6 +3152,47 @@
           "rust_bench"
         ]
       },
+      "JsonAlert": {
+        "type": "object",
+        "properties": {
+          "boundary": {
+            "type": "number",
+            "format": "float"
+          },
+          "outlier": {
+            "type": "number",
+            "format": "float"
+          },
+          "perf": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "side": {
+            "$ref": "#/components/schemas/JsonSide"
+          },
+          "statistic": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "threshold": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "boundary",
+          "outlier",
+          "perf",
+          "side",
+          "statistic",
+          "threshold",
+          "uuid"
+        ]
+      },
       "JsonAuthToken": {
         "type": "object",
         "properties": {
@@ -3655,6 +3930,13 @@
           "min"
         ]
       },
+      "JsonSide": {
+        "type": "string",
+        "enum": [
+          "left",
+          "right"
+        ]
+      },
       "JsonSignup": {
         "type": "object",
         "properties": {
@@ -3884,6 +4166,9 @@
     }
   },
   "tags": [
+    {
+      "name": "alerts"
+    },
     {
       "name": "auth",
       "description": "User Authentication"
