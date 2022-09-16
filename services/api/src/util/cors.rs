@@ -13,7 +13,7 @@ pub enum CorsFailure {
     Missing,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CorsError {
     pub failures: Vec<CorsFailure>,
 }

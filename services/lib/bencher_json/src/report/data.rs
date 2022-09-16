@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use super::JsonAdapter;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid: Uuid,
@@ -21,12 +21,12 @@ pub struct JsonReport {
 }
 
 pub type JsonReportBenchmarks = Vec<JsonReportBenchmark>;
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportBenchmark(pub Uuid);
 
 pub type JsonReportAlerts = Vec<JsonReportAlert>;
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportAlert(pub Uuid);
 

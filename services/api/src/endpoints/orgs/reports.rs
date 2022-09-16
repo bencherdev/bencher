@@ -1,34 +1,43 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
+};
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
-        branch::QueryBranch,
         metrics::Metrics,
         project::QueryProject,
         report::{InsertReport, QueryReport},
-        testbed::QueryTestbed,
-        user::QueryUser,
+        user::auth::AuthUser,
         version::InsertVersion,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        http_error, map_http_error, Context,
+        map_http_error,
+        same_project::SameProject,
+        Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const REPORT_RESOURCE: Resource = Resource::Report;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -55,16 +64,35 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonReport>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
+) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json: Vec<JsonReport> = schema::report::table
+    let json = get_ls_inner(rqctx.context(), &auth_user, path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    path_params: GetLsParams,
+) -> Result<Vec<JsonReport>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    Ok(schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(project_id))
+        .filter(schema::testbed::project_id.eq(query_project.id))
         .select((
             schema::report::id,
             schema::report::uuid,
@@ -77,15 +105,10 @@ pub async fn get_ls(
         ))
         .order(schema::report::start_time.desc())
         .load::<QueryReport>(conn)
-        .map_err(map_http_error!("Failed to get reports."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
@@ -109,34 +132,41 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewReport>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonReport>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonReport>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Post);
 
-    let json_report = body.into_inner();
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    json_report: JsonNewReport,
+    auth_user: &AuthUser,
+) -> Result<JsonReport, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Verify that the branch and testbed are part of the same project
-    let branch_id = QueryBranch::get_id(conn, &json_report.branch)?;
-    let testbed_id = QueryTestbed::get_id(conn, &json_report.testbed)?;
-    let branch_project_id = schema::branch::table
-        .filter(schema::branch::id.eq(&branch_id))
-        .select(schema::branch::project_id)
-        .first::<i32>(conn)
-        .map_err(map_http_error!("Failed to create report."))?;
-    let testbed_project_id = schema::testbed::table
-        .filter(schema::testbed::id.eq(&testbed_id))
-        .select(schema::testbed::project_id)
-        .first::<i32>(conn)
-        .map_err(map_http_error!("Failed to create report."))?;
-    if branch_project_id != testbed_project_id {
-        return Err(http_error!("Failed to create report."));
-    }
-    let project_id = branch_project_id;
+    let SameProject {
+        project_id,
+        branch_id,
+        testbed_id,
+    } = SameProject::validate(conn, json_report.branch, json_report.testbed)?;
 
-    // Verify that the user has access to the project
-    QueryUser::has_access(conn, user_id, project_id)?;
+    // Verify that the user is allowed
+    QueryProject::is_allowed_id(
+        api_context,
+        project_id,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::Create,
+    )?;
+    let conn = &mut api_context.db_conn;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -160,7 +190,7 @@ pub async fn post(
     };
 
     // Create a new report and add it to the database
-    let insert_report = InsertReport::from_json(user_id, version_id, testbed_id, &json_report)?;
+    let insert_report = InsertReport::from_json(auth_user.id, version_id, testbed_id, &json_report);
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
@@ -188,12 +218,7 @@ pub async fn post(
         }
     }
 
-    let json = query_report.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    query_report.into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -222,20 +247,38 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonReport>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
-    let report_uuid = path_params.report_uuid.to_string();
+) -> Result<ResponseOk<JsonReport>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json = schema::report::table
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonReport, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
-                .eq(project_id)
-                .and(schema::report::uuid.eq(report_uuid)),
+                .eq(query_project.id)
+                .and(schema::report::uuid.eq(path_params.report_uuid.to_string())),
         )
         .select((
             schema::report::id,
@@ -248,11 +291,6 @@ pub async fn get_one(
             schema::report::end_time,
         ))
         .first::<QueryReport>(conn)
-        .map_err(map_http_error!("Failed to get report."))?
-        .into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }

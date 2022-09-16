@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::report::{JsonLatency, JsonResource, JsonThroughput};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQuery {
     pub branches: Vec<Uuid>,
@@ -17,7 +17,7 @@ pub struct JsonPerfQuery {
     pub end_time: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonPerfKind {
@@ -28,7 +28,7 @@ pub enum JsonPerfKind {
     Storage,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
     pub kind: JsonPerfKind,
@@ -37,7 +37,7 @@ pub struct JsonPerf {
     pub benchmarks: Vec<JsonPerfData>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfData {
     pub branch: Uuid,
@@ -46,7 +46,7 @@ pub struct JsonPerfData {
     pub data: Vec<JsonPerfDatum>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfDatum {
     pub uuid: Uuid,
@@ -58,7 +58,7 @@ pub struct JsonPerfDatum {
     pub metrics: JsonPerfDatumKind,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum JsonPerfDatumKind {

@@ -2,11 +2,12 @@ use std::str::FromStr;
 
 use bencher_json::alert::{JsonAlert, JsonSide};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{statistic::QueryStatistic, QueryThreshold};
-use crate::{model::perf::QueryPerf, schema, schema::alert as alert_table, util::map_http_error};
+use crate::{
+    error::api_error, model::perf::QueryPerf, schema, schema::alert as alert_table, ApiError,
+};
 
 #[derive(Queryable)]
 pub struct QueryAlert {
@@ -21,24 +22,24 @@ pub struct QueryAlert {
 }
 
 impl QueryAlert {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
             .select(schema::alert::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get alert."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::alert::table
             .filter(schema::alert::id.eq(id))
             .select(schema::alert::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get alert."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get alert."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonAlert, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonAlert, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -50,7 +51,7 @@ impl QueryAlert {
             outlier,
         } = self;
         Ok(JsonAlert {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get alert."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             perf: QueryPerf::get_uuid(conn, perf_id)?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             statistic: QueryStatistic::get_uuid(conn, statistic_id)?,

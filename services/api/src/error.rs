@@ -1,15 +1,18 @@
+use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::endpoints::Resource;
+use crate::{endpoints::Resource, model::user::auth::AuthUser};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
     #[error("Failed to set global default logger")]
     SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
-    #[error("Failed to import .env file")]
+    #[error("Failed to import .env file: {0}")]
     DotEnv(#[from] dotenvy::Error),
-    #[error("Failed to create database connection")]
+    #[error("Failed to parse role based access control (RBAC) rules: {0}")]
+    Polar(oso::OsoError),
+    #[error("Failed to create database connection: {0}")]
     Connection(#[from] diesel::result::ConnectionError),
     #[error("Failed to run database migrations: {0}")]
     Migrations(Box<dyn std::error::Error + Send + Sync>),
@@ -44,16 +47,67 @@ pub enum ApiError {
     #[error("Failed to DELETE {}", _0.singular())]
     Delete(Resource),
 
+    #[error("Failed to parse resource ID")]
+    ResourceId,
+    #[error("Failed to query database: {0}")]
+    Query(#[from] diesel::result::Error),
+    #[error("Failed to parse UUID: {0}")]
+    Uuid(#[from] uuid::Error),
+    #[error("Failed to parse timestamp: {0}")]
+    Timestamp(i64),
+    #[error("{0}")]
+    AuthHeader(String),
+    #[error("User is not admin and the authenticated user ({0}) does not match the requested user ({1})",)]
+    SameUser(i32, i32),
+    #[error("User account locked: ID {0} email {1}")]
+    Locked(i32, String),
+    #[error("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")]
+    InviteEmail {
+        user_id: i32,
+        email: String,
+        email_user_id: i32,
+    },
+    #[error("Failed to check permissions: {0}")]
+    IsAllowed(oso::OsoError),
+    #[error("Failed to create JWT (JSON Web Token): {0}")]
+    JsonWebToken(#[from] jsonwebtoken::errors::Error),
+    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on organization ({organization:?}")]
+    IsAllowedOrganization {
+        auth_user: AuthUser,
+        permission: bencher_rbac::organization::Permission,
+        organization: Organization,
+    },
+    #[error("Permission denied for user ({auth_user:?}) permission ({permission}) on project ({project:?}")]
+    IsAllowedProject {
+        auth_user: AuthUser,
+        permission: bencher_rbac::project::Permission,
+        project: Project,
+    },
+    #[error("The branch ({branch_id}) project ID ({branch_project_id}) and testbed ({testbed_id}) project ID ({testbed_project_id}) do not match.")]
+    BranchTestbedProject {
+        branch_id: i32,
+        branch_project_id: i32,
+        testbed_id: i32,
+        testbed_project_id: i32,
+    },
+    #[error("Tried to query a private project: {0}")]
+    PrivateProject(i32),
+    #[error("Invalid email: {0}")]
+    Email(String),
+    #[error("Requested TTL ({requested}) is greater than max ({max})")]
+    MaxTtl { requested: u64, max: u64 },
+
     // TODO remove once no longer needed
     #[error(transparent)]
     Http(#[from] HttpError),
 }
 
 impl From<ApiError> for HttpError {
-    fn from(error: ApiError) -> Self {
+    fn from(api_error: ApiError) -> Self {
+        tracing::info!("{api_error}");
         dropshot::HttpError::for_bad_request(
             Some(http::status::StatusCode::BAD_REQUEST.to_string()),
-            error.to_string(),
+            api_error.to_string(),
         )
     }
 }
@@ -62,3 +116,24 @@ pub trait WordStr {
     fn singular(&self) -> &str;
     fn plural(&self) -> &str;
 }
+
+macro_rules! api_error {
+    ($message:expr, $($field:tt)*) => {
+        |e| {
+            let err: crate::error::ApiError = e.into();
+            tracing::info!("{err}");
+            tracing::info!($message, $($field:tt)*);
+            err
+        }
+    };
+    ($message:expr) => {$crate::util::error::debug_error!($message,)};
+    () => {
+        |e| {
+            let err: crate::error::ApiError = e.into();
+            tracing::info!("{err}");
+            err
+        }
+    };
+}
+
+pub(crate) use api_error;

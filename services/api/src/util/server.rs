@@ -1,3 +1,4 @@
+use bencher_rbac::init_rbac;
 use diesel::{Connection, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpServer};
@@ -27,13 +28,16 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError> {
     trace!("Setting secret key");
     let secret_key = get_secret();
+    trace!("Parsing role based access control (RBAC) rules");
+    let rbac = init_rbac().map_err(ApiError::Polar)?.into();
     trace!("Getting database connection");
-    let mut conn = get_db()?;
+    let mut db_conn = get_db_conn()?;
     trace!("Running database migrations");
-    run_migrations(&mut conn)?;
+    run_migrations(&mut db_conn)?;
     let private = Mutex::new(ApiContext {
-        key: secret_key,
-        db: conn,
+        secret_key,
+        rbac,
+        db_conn,
     });
 
     trace!("Getting server configuration");
@@ -61,7 +65,7 @@ fn get_secret() -> String {
     })
 }
 
-fn get_db() -> Result<SqliteConnection, ApiError> {
+fn get_db_conn() -> Result<SqliteConnection, ApiError> {
     let db = std::env::var(BENCHER_DB).unwrap_or_else(|e| {
         info!("Failed to find \"{BENCHER_DB}\": {e}");
         info!("Defaulting \"{BENCHER_DB}\" to: {DEFAULT_DB}");

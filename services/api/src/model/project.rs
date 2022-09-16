@@ -1,19 +1,19 @@
 use std::{str::FromStr, string::ToString};
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
-use diesel::{
-    expression_methods::BoolExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
-    SqliteConnection,
-};
-use dropshot::{HttpError, RequestContext};
+use bencher_rbac::{Organization, Project};
+use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use dropshot::HttpError;
 use url::Url;
 use uuid::Uuid;
 
-use super::{organization::QueryOrganization, user::QueryUser};
+use super::{organization::QueryOrganization, user::auth::AuthUser};
 use crate::{
     diesel::ExpressionMethods,
+    error::api_error,
     schema::{self, project as project_table},
-    util::{map_http_error, slug::unwrap_slug, Context},
+    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, ApiContext},
+    ApiError,
 };
 
 #[derive(Insertable)]
@@ -32,7 +32,7 @@ impl InsertProject {
     pub fn from_json(
         conn: &mut SqliteConnection,
         project: JsonNewProject,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         let JsonNewProject {
             organization,
             name,
@@ -54,7 +54,9 @@ impl InsertProject {
     }
 }
 
-#[derive(Queryable)]
+fn_resource_id!(project);
+
+#[derive(Debug, Clone, Queryable)]
 pub struct QueryProject {
     pub id: i32,
     pub uuid: String,
@@ -67,7 +69,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -79,7 +81,7 @@ impl QueryProject {
             public,
         } = self;
         Ok(JsonProject {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get project."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name,
             slug,
@@ -92,49 +94,61 @@ impl QueryProject {
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
         project: &ResourceId,
-    ) -> Result<Self, HttpError> {
-        let project = &project.0;
+    ) -> Result<Self, ApiError> {
         schema::project::table
-            .filter(
-                schema::project::slug
-                    .eq(project)
-                    .or(schema::project::uuid.eq(project)),
-            )
+            .filter(resource_id(project)?)
             .first::<QueryProject>(conn)
-            .map_err(map_http_error!("Failed to get project."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::project::table
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get project."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get project."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub async fn connection(
-        rqctx: &RequestContext<Context>,
-        user_id: i32,
+    pub fn is_allowed_resource_id(
+        api_context: &mut ApiContext,
         project: &ResourceId,
-    ) -> Result<i32, HttpError> {
-        let context = &mut *rqctx.context().lock().await;
-        let conn = &mut context.db;
+        auth_user: &AuthUser,
+        organization_permission: bencher_rbac::organization::Permission,
+        project_permission: bencher_rbac::project::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_project = QueryProject::from_resource_id(&mut api_context.db_conn, project)?;
 
-        let project = &project.0;
-        let project_id = schema::project::table
-            .filter(
-                schema::project::slug
-                    .eq(project)
-                    .or(schema::project::uuid.eq(project)),
-            )
-            .select(schema::project::id)
-            .first::<i32>(conn)
-            .map_err(map_http_error!("Failed to get project."))?;
+        api_context.rbac.is_allowed_organization_or_project(
+            auth_user,
+            organization_permission,
+            project_permission,
+            &query_project,
+        )?;
 
-        QueryUser::has_access(conn, user_id, project_id)?;
+        Ok(query_project)
+    }
 
-        Ok(project_id)
+    pub fn is_allowed_id(
+        api_context: &mut ApiContext,
+        project_id: i32,
+        auth_user: &AuthUser,
+        organization_permission: bencher_rbac::organization::Permission,
+        project_permission: bencher_rbac::project::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_project = schema::project::table
+            .filter(schema::project::id.eq(project_id))
+            .first(&mut api_context.db_conn)
+            .map_err(api_error!())?;
+
+        api_context.rbac.is_allowed_organization_or_project(
+            auth_user,
+            organization_permission,
+            project_permission,
+            &query_project,
+        )?;
+
+        Ok(query_project)
     }
 }
 
@@ -144,4 +158,29 @@ fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
     } else {
         None
     })
+}
+
+impl From<&InsertProject> for Organization {
+    fn from(project: &InsertProject) -> Self {
+        Organization {
+            id: project.organization_id.to_string(),
+        }
+    }
+}
+
+impl From<&QueryProject> for Organization {
+    fn from(project: &QueryProject) -> Self {
+        Organization {
+            id: project.organization_id.to_string(),
+        }
+    }
+}
+
+impl From<&QueryProject> for Project {
+    fn from(project: &QueryProject) -> Self {
+        Project {
+            id: project.id.to_string(),
+            organization_id: project.organization_id.to_string(),
+        }
+    }
 }

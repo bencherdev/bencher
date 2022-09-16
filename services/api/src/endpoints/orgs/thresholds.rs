@@ -4,32 +4,40 @@ use bencher_json::{
     threshold::{JsonNewThreshold, JsonThreshold},
     ResourceId,
 };
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
+};
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
-        branch::QueryBranch,
         project::QueryProject,
-        testbed::QueryTestbed,
         threshold::{InsertThreshold, QueryThreshold},
-        user::QueryUser,
+        user::auth::AuthUser,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        http_error, map_http_error, Context,
+        same_project::SameProject,
+        Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const THRESHOLD_RESOURCE: Resource = Resource::Threshold;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -56,16 +64,35 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonThreshold>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
+) -> Result<ResponseOk<Vec<JsonThreshold>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json: Vec<JsonThreshold> = schema::threshold::table
+    let json = get_ls_inner(rqctx.context(), &auth_user, path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    path_params: GetLsParams,
+) -> Result<Vec<JsonThreshold>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    Ok(schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(project_id))
+        .filter(schema::testbed::project_id.eq(query_project.id))
         .order(schema::threshold::id)
         .select((
             schema::threshold::id,
@@ -77,15 +104,10 @@ pub async fn get_ls(
         ))
         .order(schema::threshold::id)
         .load::<QueryThreshold>(conn)
-        .map_err(map_http_error!("Failed to get threshold."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
@@ -105,46 +127,54 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewThreshold>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonThreshold>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::Post);
 
-    let json_threshold = body.into_inner();
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    response_accepted!(endpoint, json)
+}
 
-    let branch_id = QueryBranch::get_id(conn, &json_threshold.branch)?;
-    let testbed_id = QueryTestbed::get_id(conn, &json_threshold.testbed)?;
-    let branch_project_id = schema::branch::table
-        .filter(schema::branch::id.eq(&branch_id))
-        .select(schema::branch::project_id)
-        .first::<i32>(conn)
-        .map_err(map_http_error!("Failed to create thresholds."))?;
-    let testbed_project_id = schema::testbed::table
-        .filter(schema::testbed::id.eq(&testbed_id))
-        .select(schema::testbed::project_id)
-        .first::<i32>(conn)
-        .map_err(map_http_error!("Failed to create thresholds."))?;
-    if branch_project_id != testbed_project_id {
-        return Err(http_error!("Failed to create thresholds."));
-    }
+async fn post_inner(
+    context: &Context,
+    json_threshold: JsonNewThreshold,
+    auth_user: &AuthUser,
+) -> Result<JsonThreshold, ApiError> {
+    let api_context = &mut *context.lock().await;
+    // Verify that the branch and testbed are part of the same project
+    let SameProject {
+        project_id,
+        branch_id,
+        testbed_id,
+    } = SameProject::validate(
+        &mut api_context.db_conn,
+        json_threshold.branch,
+        json_threshold.testbed,
+    )?;
+    // Verify that the user is allowed
+    QueryProject::is_allowed_id(
+        api_context,
+        project_id,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::Create,
+    )?;
+    let conn = &mut api_context.db_conn;
 
-    let insert_threshold = InsertThreshold::from_json(conn, json_threshold)?;
+    let insert_threshold = InsertThreshold::from_json(conn, branch_id, testbed_id, json_threshold)?;
     diesel::insert_into(schema::threshold::table)
         .values(&insert_threshold)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create thresholds."))?;
+        .map_err(api_error!())?;
 
-    let query_threshold = schema::threshold::table
+    schema::threshold::table
         .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
         .first::<QueryThreshold>(conn)
-        .map_err(map_http_error!("Failed to create thresholds."))?;
-    let json = query_threshold.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -173,20 +203,38 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonThreshold>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
-    let threshold_uuid = path_params.threshold.to_string();
+) -> Result<ResponseOk<JsonThreshold>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json = schema::threshold::table
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonThreshold, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(
             schema::testbed::project_id
-                .eq(project_id)
-                .and(schema::threshold::uuid.eq(&threshold_uuid)),
+                .eq(query_project.id)
+                .and(schema::threshold::uuid.eq(path_params.threshold.to_string())),
         )
         .select((
             schema::threshold::id,
@@ -197,11 +245,6 @@ pub async fn get_one(
             schema::threshold::statistic_id,
         ))
         .first::<QueryThreshold>(conn)
-        .map_err(map_http_error!("Failed to get threshold."))?
-        .into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }

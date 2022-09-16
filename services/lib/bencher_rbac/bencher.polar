@@ -13,7 +13,6 @@ resource Server {
   "user" if "admin";
 }
 
-# This rule tells Oso how to fetch roles for a server
 has_role(user: User, role: String, _server: Server) if
   (user.locked = false and user.admin = true and role = "admin") or
   (user.locked = false and user.admin = false and role = "user") or
@@ -21,24 +20,28 @@ has_role(user: User, role: String, _server: Server) if
 
 resource Organization {
   permissions = [
-    "read",
-    "create_projects",
-    "list_projects",
-    "create_role_assignments",
-    "list_role_assignments",
-    "update_role_assignments",
-    "delete_role_assignments",
+    "view",
+    "create",
+    "edit",
+    "delete",
+    "manage",
+    "view_role",
+    "create_role",
+    "edit_role",
+    "delete_role",
   ];
   roles = ["member", "leader"];
 
-  "read" if "member";
-  "list_projects" if "member";
-  "list_role_assignments" if "member";
+  "view" if "member";
+  "view_role" if "member";
 
-  "create_projects" if "leader";
-  "create_role_assignments" if "leader";
-  "update_role_assignments" if "leader";
-  "delete_role_assignments" if "leader";
+  "create" if "leader";
+  "edit" if "leader";
+  "delete" if "leader";
+  "manage" if "leader";
+  "create_role" if "leader";
+  "edit_role" if "leader";
+  "delete_role" if "leader";
 
   "member" if "leader";
 }
@@ -51,9 +54,8 @@ has_role(user: User, role: String, org: Organization) if
   or
   (
     user_role in user.organizations and
-    user_role matches [org.uuid, role]
+    user_role matches [org.id, role]
   );
-
 
 resource Project {
   permissions = [
@@ -62,33 +64,32 @@ resource Project {
     "edit",
     "delete",
     "manage",
-    "create_role_assignments",
-    "list_role_assignments",
-    "update_role_assignments",
-    "delete_role_assignments",
+    "view_role",
+    "create_role",
+    "edit_role",
+    "delete_role",
   ];
   roles = ["viewer", "developer", "maintainer"];
-  relations = { parent: Organization };
+  relations = { owner: Organization };
 
   "view" if "viewer";
-  "list_role_assignments" if "viewer";
+  "view_role" if "viewer";
 
   "create" if "developer";
   "edit" if "developer";
   "delete" if "developer";
 
   "manage" if "maintainer";
-  "create_role_assignments" if "maintainer";
-  "update_role_assignments" if "maintainer";
-  "delete_role_assignments" if "maintainer";
+  "create_role" if "maintainer";
+  "edit_role" if "maintainer";
+  "delete_role" if "maintainer";
 
   "developer" if "maintainer";
   "viewer" if "developer";
 }
 
-has_relation(org: Organization, "parent", project: Project) if
-  org.uuid = project.parent;
-
+has_relation(org: Organization, "owner", project: Project) if
+  org.id = project.organization_id;
 
 has_role(user: User, role: String, project: Project) if
   (
@@ -97,11 +98,11 @@ has_role(user: User, role: String, project: Project) if
   )
   or
   (
-    org := new Organization(project.parent) and
+    org := new Organization(project.organization_id) and
     has_role(user, "leader", org)
   )
   or
   (
     user_role in user.projects and
-    user_role matches [project.uuid, role]
+    user_role matches [project.id, role]
   );

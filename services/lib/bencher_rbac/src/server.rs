@@ -9,10 +9,10 @@ pub const ADMIN_ROLE: &str = "admin";
 pub const SESSION_PEM: &str = "session";
 pub const ADMINISTER_PEM: &str = "administer";
 
-#[derive(Clone, Copy, PolarClass)]
+#[derive(Debug, Clone, Copy, PolarClass)]
 pub struct Server {}
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Role {
     Locked,
     User,
@@ -39,7 +39,7 @@ impl ToPolar for Role {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Permission {
     Session,
     Administer,

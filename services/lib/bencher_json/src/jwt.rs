@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::auth::Role;
+use crate::{invite::JsonInviteRole, JsonInvite};
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
@@ -21,7 +21,7 @@ lazy_static::lazy_static! {
     static ref ALGORITHM: Algorithm = Algorithm::default();
 }
 
-#[derive(Debug, Display, Serialize, Deserialize)]
+#[derive(Debug, Display, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonWebToken(pub String);
 
@@ -59,17 +59,15 @@ impl JsonWebToken {
         Self::new(key, Audience::ApiKey, email, ttl, None)
     }
 
-    pub fn new_invite(
-        key: &str,
-        email: String,
-        org: Uuid,
-        role: Role,
-    ) -> Result<Self, jsonwebtoken::errors::Error> {
-        let org_claims = OrgClaims { uuid: org, role };
+    pub fn new_invite(key: &str, invite: JsonInvite) -> Result<Self, jsonwebtoken::errors::Error> {
+        let org_claims = OrgClaims {
+            uuid: invite.organization,
+            role: invite.role,
+        };
         Self::new(
             key,
             Audience::Invite,
-            email,
+            invite.email,
             CLIENT_TOKEN_TTL,
             Some(org_claims),
         )
@@ -120,7 +118,7 @@ impl JsonWebToken {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaims {
     pub aud: String,            // Audience
@@ -131,11 +129,11 @@ pub struct JsonClaims {
     pub org: Option<OrgClaims>, // Organization (for invitation)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct OrgClaims {
     pub uuid: Uuid,
-    pub role: Role,
+    pub role: JsonInviteRole,
 }
 
 impl JsonClaims {

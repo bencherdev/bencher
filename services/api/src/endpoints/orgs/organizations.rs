@@ -1,27 +1,33 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
-use bencher_rbac::organization::Role;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
-};
+use bencher_rbac::organization::{Permission, Role};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
         organization::{InsertOrganization, QueryOrganization},
-        user::{organization::InsertOrganizationRole, QueryUser},
+        user::{auth::AuthUser, organization::InsertOrganizationRole},
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error, Context,
+        Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
 
 #[endpoint {
     method = OPTIONS,
@@ -39,25 +45,38 @@ pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRes
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonOrganization>>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseOk<Vec<JsonOrganization>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json: Vec<JsonOrganization> = schema::organization::table
-        // TODO actually filter here with `bencher_rbac`
-        // .filter(schema::organization::owner_id.eq(user_id))
+    let json = get_ls_inner(rqctx.context(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+) -> Result<Vec<JsonOrganization>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
+
+    let mut sql = schema::organization::table.into_boxed();
+
+    if !auth_user.is_admin(&api_context.rbac) {
+        let organizations = auth_user.organizations(&api_context.rbac, Permission::View);
+        sql = sql.filter(schema::organization::id.eq_any(organizations));
+    }
+
+    Ok(sql
         .order(schema::organization::name)
         .load::<QueryOrganization>(conn)
-        .map_err(map_http_error!("Failed to get organizations."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json().ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_auth("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
@@ -68,46 +87,52 @@ pub async fn get_ls(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewOrganization>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonOrganization>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Post);
 
-    let json_organization = body.into_inner();
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    json_organization: JsonNewOrganization,
+    auth_user: &AuthUser,
+) -> Result<JsonOrganization, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Create the organization
-    let insert_organization = InsertOrganization::from_json(conn, json_organization)?;
+    let insert_organization = InsertOrganization::from_json(conn, json_organization);
     diesel::insert_into(schema::organization::table)
         .values(&insert_organization)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create organization."))?;
+        .map_err(api_error!())?;
     let query_organization = schema::organization::table
         .filter(schema::organization::uuid.eq(&insert_organization.uuid))
         .first::<QueryOrganization>(conn)
-        .map_err(map_http_error!("Failed to create organization."))?;
+        .map_err(api_error!())?;
 
     // Connect the user to the organization as a `Maintainer`
     let insert_org_role = InsertOrganizationRole {
-        user_id,
+        user_id: auth_user.id,
         organization_id: query_organization.id,
         role: Role::Leader.to_string(),
     };
     diesel::insert_into(schema::organization_role::table)
         .values(&insert_org_role)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create organization."))?;
+        .map_err(api_error!())?;
 
-    let json = query_organization.into_json()?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    query_organization.into_json()
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct PathParams {
+pub struct GetOneParams {
     pub organization: ResourceId,
 }
 
@@ -118,7 +143,7 @@ pub struct PathParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<PathParams>,
+    _path_params: Path<GetOneParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -130,29 +155,31 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonOrganization>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
+    path_params: Path<GetOneParams>,
+) -> Result<ResponseOk<JsonOrganization>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let organization = &path_params.organization.0;
-    let query = schema::organization::table
-        .filter(
-            schema::organization::slug
-                .eq(organization)
-                .or(schema::organization::uuid.eq(organization)),
-        )
-        .first::<QueryOrganization>(conn)
-        .map_err(map_http_error!("Failed to get organization."))?;
+    response_ok!(endpoint, json)
+}
 
-    QueryUser::has_access(conn, user_id, query.id)?;
-    let json = query.into_json()?;
+async fn get_one_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonOrganization, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+    let query = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+
+    api_context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::View, &query)?;
+
+    query.into_json()
 }

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::ResourceId;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewBranch {
     pub project: ResourceId,
@@ -14,7 +14,7 @@ pub struct JsonNewBranch {
     pub slug: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranch {
     pub uuid: Uuid,

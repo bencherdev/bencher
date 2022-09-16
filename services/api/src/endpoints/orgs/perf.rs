@@ -4,27 +4,38 @@ use bencher_json::{
     perf::{JsonPerfData, JsonPerfDatum, JsonPerfDatumKind, JsonPerfKind},
     JsonPerf, JsonPerfQuery,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, RequestContext, TypedBody,
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
 };
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use uuid::Uuid;
 
 use crate::{
-    endpoints::{endpoint::pub_response_accepted, orgs::Resource, Endpoint, Method},
+    endpoints::{
+        endpoint::{pub_response_accepted, response_accepted, ResponseAccepted},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
         perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
+        project::QueryProject,
         report::to_date_time,
-        user::QueryUser,
+        user::auth::AuthUser,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error, Context,
+        map_http_error,
+        same_project::SameProject,
+        Context,
     },
     ApiError,
 };
+
+use super::Resource;
+
+const PERF_RESOURCE: Resource = Resource::Perf;
 
 // TODO figure out why this doesn't work as a PUT
 #[endpoint {
@@ -44,25 +55,25 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonPerfQuery>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonPerf>, CorsHeaders>, HttpError> {
-    // This is both a public and auth route
-    // Only public projects are allowed to use it as a public route though
-    let user_id = Some(QueryUser::auth(&rqctx).await?);
-    let endpoint = Endpoint::new(Resource::Perf, Method::Post);
+) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let endpoint = Endpoint::new(PERF_RESOURCE, Method::GetLs);
 
-    let context = rqctx.context();
-    let json_perf_query = body.into_inner();
-    let json = post_inner(user_id, context, json_perf_query)
+    let json = post_inner(rqctx.context(), body.into_inner(), auth_user.as_ref())
         .await
         .map_err(|e| endpoint.err(e))?;
 
-    pub_response_accepted!(endpoint, json)
+    if auth_user.is_some() {
+        response_accepted!(endpoint, json)
+    } else {
+        pub_response_accepted!(endpoint, json)
+    }
 }
 
 async fn post_inner(
-    _user_id: Option<i32>,
     context: &Context,
     json_perf_query: JsonPerfQuery,
+    auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {
     let JsonPerfQuery {
         branches,
@@ -90,37 +101,68 @@ async fn post_inner(
         schema::perf::iteration,
     );
 
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db;
+    let api_context = &mut *context.lock().await;
     let mut data = Vec::new();
     for branch in &branches {
         for testbed in &testbeds {
             for benchmark in &benchmarks {
+                // Verify that the branch and testbed are part of the same project
+                // If not then simply continue, this will allow for inter-project querying
+                let SameProject {
+                    project_id,
+                    branch_id,
+                    testbed_id,
+                } = if let Ok(same_project) =
+                    SameProject::validate(&mut api_context.db_conn, branch, testbed)
+                {
+                    same_project
+                } else {
+                    continue;
+                };
+
+                // If there is an `AuthUser` then validate access
+                // Otherwise, check to see if the project is public
+                if let Some(auth_user) = auth_user {
+                    // Verify that the user is allowed
+                    QueryProject::is_allowed_id(
+                        api_context,
+                        project_id,
+                        auth_user,
+                        OrganizationPermission::Manage,
+                        ProjectPermission::Create,
+                    )?;
+                } else {
+                    // Verify that the project is public
+                    let public: bool = schema::project::table
+                        .filter(schema::project::id.eq(project_id))
+                        .select(schema::project::public)
+                        .first(&mut api_context.db_conn)
+                        .map_err(api_error!())?;
+                    if !public {
+                        return Err(ApiError::PrivateProject(project_id));
+                    }
+                }
+
                 let query = schema::perf::table
                     .left_join(
                         schema::benchmark::table
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
                     )
                     .filter(schema::benchmark::uuid.eq(benchmark.to_string()))
+                    .filter(schema::benchmark::project_id.eq(project_id))
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
                     .filter(schema::report::start_time.ge(start_time_nanos))
                     .filter(schema::report::end_time.le(end_time_nanos))
-                    .left_join(
-                        schema::testbed::table
-                            .on(schema::report::testbed_id.eq(schema::testbed::id)),
-                    )
-                    .filter(schema::testbed::uuid.eq(testbed.to_string()))
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
                     )
-                    .left_join(
-                        schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)),
-                    )
-                    .filter(schema::branch::uuid.eq(branch.to_string()));
+                    .filter(schema::version::branch_id.eq(branch_id))
+                    .filter(schema::report::testbed_id.eq(testbed_id));
 
+                let conn = &mut api_context.db_conn;
                 let query_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query
                         .inner_join(
@@ -154,7 +196,7 @@ async fn post_inner(
                             i64,
                             i64,
                         )>(conn)
-                        .map_err(map_http_error!("Failed to get benchmark data."))?
+                        .map_err(api_error!())?
                         .into_iter()
                         .map(
                             |(
@@ -223,7 +265,7 @@ async fn post_inner(
                                 f64,
                                 i64,
                             )>(conn)
-                            .map_err(map_http_error!("Failed to get benchmark data."))?
+                            .map_err(api_error!())?
                             .into_iter()
                             .map(
                                 |(
@@ -293,7 +335,7 @@ async fn post_inner(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(map_http_error!("Failed to get benchmark data."))?
+                        .map_err(api_error!())?
                         .into_iter()
                         .map(
                             |(
@@ -360,7 +402,7 @@ async fn post_inner(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(map_http_error!("Failed to get benchmark data."))?
+                        .map_err(api_error!())?
                         .into_iter()
                         .map(
                             |(
@@ -427,7 +469,7 @@ async fn post_inner(
                             f64,
                             f64,
                         )>(conn)
-                        .map_err(map_http_error!("Failed to get benchmark data."))?
+                        .map_err(api_error!())?
                         .into_iter()
                         .map(
                             |(

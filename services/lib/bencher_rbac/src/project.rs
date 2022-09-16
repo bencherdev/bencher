@@ -1,30 +1,25 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use oso::{PolarClass, PolarValue, ToPolar};
+
+use crate::{
+    CREATE_PERM, CREATE_ROLE_PERM, DELETE_PERM, DELETE_ROLE_PERM, EDIT_PERM, EDIT_ROLE_PERM,
+    MANAGE_PERM, VIEW_PERM, VIEW_ROLE_PERM,
+};
 
 pub const VIEWER_ROLE: &str = "viewer";
 pub const DEVELOPER_ROLE: &str = "developer";
 pub const MAINTAINER_ROLE: &str = "maintainer";
 
-pub const VIEW_PERM: &str = "view";
-pub const CREATE_PERM: &str = "create";
-pub const EDIT_PERM: &str = "edit";
-pub const DELETE_PERM: &str = "delete";
-pub const MANAGE_PERM: &str = "manage";
-pub const CREATE_ROLE_ASSIGNMENTS_PERM: &str = "create_role_assignments";
-pub const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
-pub const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
-pub const DELETE_ROLE_ASSIGNMENTS_PERM: &str = "delete_role_assignments";
-
-#[derive(Clone, PolarClass)]
+#[derive(Debug, Clone, PolarClass)]
 pub struct Project {
     #[polar(attribute)]
-    pub uuid: String,
+    pub id: String,
     #[polar(attribute)]
-    pub parent: String,
+    pub organization_id: String,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Role {
     Viewer,
     Developer,
@@ -51,7 +46,20 @@ impl ToPolar for Role {
     }
 }
 
-#[derive(Clone, Copy)]
+impl FromStr for Role {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            VIEWER_ROLE => Ok(Role::Viewer),
+            DEVELOPER_ROLE => Ok(Role::Developer),
+            MAINTAINER_ROLE => Ok(Role::Maintainer),
+            _ => Err(s.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Permission {
     View,
     Create,
@@ -75,10 +83,10 @@ impl fmt::Display for Permission {
                 Self::Edit => EDIT_PERM,
                 Self::Delete => DELETE_PERM,
                 Self::Manage => MANAGE_PERM,
-                Self::CreateRoleAssignments => CREATE_ROLE_ASSIGNMENTS_PERM,
-                Self::ListRoleAssignments => LIST_ROLE_ASSIGNMENTS_PERM,
-                Self::UpdateRoleAssignments => UPDATE_ROLE_ASSIGNMENTS_PERM,
-                Self::DeleteRoleAssignments => DELETE_ROLE_ASSIGNMENTS_PERM,
+                Self::CreateRoleAssignments => CREATE_ROLE_PERM,
+                Self::ListRoleAssignments => VIEW_ROLE_PERM,
+                Self::UpdateRoleAssignments => EDIT_ROLE_PERM,
+                Self::DeleteRoleAssignments => DELETE_ROLE_PERM,
             }
         )
     }

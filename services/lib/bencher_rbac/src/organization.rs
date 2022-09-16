@@ -1,25 +1,22 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use oso::{PolarClass, PolarValue, ToPolar};
+
+use crate::{
+    CREATE_PERM, CREATE_ROLE_PERM, DELETE_PERM, DELETE_ROLE_PERM, EDIT_PERM, EDIT_ROLE_PERM,
+    MANAGE_PERM, VIEW_PERM, VIEW_ROLE_PERM,
+};
 
 pub const MEMBER_ROLE: &str = "member";
 pub const LEADER_ROLE: &str = "leader";
 
-pub const READ_PERM: &str = "read";
-pub const CREATE_PROJECTS_PERM: &str = "create_projects";
-pub const LIST_PROJECTS_PERM: &str = "list_projects";
-pub const CREATE_ROLE_ASSIGNMENTS_PERM: &str = "create_role_assignments";
-pub const LIST_ROLE_ASSIGNMENTS_PERM: &str = "list_role_assignments";
-pub const UPDATE_ROLE_ASSIGNMENTS_PERM: &str = "update_role_assignments";
-pub const DELETE_ROLE_ASSIGNMENTS_PERM: &str = "delete_role_assignments";
-
-#[derive(Clone, PolarClass)]
+#[derive(Debug, Clone, PolarClass)]
 pub struct Organization {
     #[polar(attribute)]
-    pub uuid: String,
+    pub id: String,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Role {
     Member,
     Leader,
@@ -44,15 +41,39 @@ impl ToPolar for Role {
     }
 }
 
-#[derive(Clone, Copy)]
+impl FromStr for Role {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            MEMBER_ROLE => Ok(Role::Member),
+            LEADER_ROLE => Ok(Role::Leader),
+            _ => Err(s.into()),
+        }
+    }
+}
+
+#[cfg(feature = "json")]
+impl From<bencher_json::invite::JsonInviteRole> for Role {
+    fn from(role: bencher_json::invite::JsonInviteRole) -> Self {
+        match role {
+            bencher_json::invite::JsonInviteRole::Member => Self::Member,
+            bencher_json::invite::JsonInviteRole::Leader => Self::Leader,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Permission {
-    Read,
-    CreateProjects,
-    ListProjects,
-    CreateRoleAssignments,
-    ListRoleAssignments,
-    UpdateRoleAssignments,
-    DeleteRoleAssignments,
+    View,
+    Create,
+    Edit,
+    Delete,
+    Manage,
+    ViewRole,
+    CreateRole,
+    EditRole,
+    DeleteRole,
 }
 
 impl fmt::Display for Permission {
@@ -61,13 +82,15 @@ impl fmt::Display for Permission {
             f,
             "{}",
             match self {
-                Self::Read => READ_PERM,
-                Self::CreateProjects => CREATE_PROJECTS_PERM,
-                Self::ListProjects => LIST_PROJECTS_PERM,
-                Self::CreateRoleAssignments => CREATE_ROLE_ASSIGNMENTS_PERM,
-                Self::ListRoleAssignments => LIST_ROLE_ASSIGNMENTS_PERM,
-                Self::UpdateRoleAssignments => UPDATE_ROLE_ASSIGNMENTS_PERM,
-                Self::DeleteRoleAssignments => DELETE_ROLE_ASSIGNMENTS_PERM,
+                Self::View => VIEW_PERM,
+                Self::Create => CREATE_PERM,
+                Self::Edit => EDIT_PERM,
+                Self::Delete => DELETE_PERM,
+                Self::Manage => MANAGE_PERM,
+                Self::ViewRole => VIEW_ROLE_PERM,
+                Self::CreateRole => CREATE_ROLE_PERM,
+                Self::EditRole => EDIT_ROLE_PERM,
+                Self::DeleteRole => DELETE_ROLE_PERM,
             }
         )
     }

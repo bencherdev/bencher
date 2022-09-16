@@ -134,6 +134,7 @@ dependencies = [
  "lazy_static",
  "literally",
  "ordered-float",
+ "oso",
  "rand",
  "schemars",
  "serde",
@@ -197,6 +198,7 @@ dependencies = [
 name = "bencher_rbac"
 version = "0.1.0"
 dependencies = [
+ "bencher_json",
  "lazy_static",
  "literally",
  "oso",

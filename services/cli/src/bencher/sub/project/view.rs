@@ -1,9 +1,8 @@
-use std::{convert::TryFrom, path::Path};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::ResourceId;
 
-use super::PROJECTS_PATH;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectView,
@@ -31,10 +30,8 @@ impl TryFrom<CliProjectView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
-        let path = Path::new(PROJECTS_PATH);
-        let path = path.join(self.project.as_str());
         self.backend
-            .get(path.to_str().unwrap_or(PROJECTS_PATH))
+            .get(&format!("/v0/projects/{}", self.project))
             .await?;
         Ok(())
     }

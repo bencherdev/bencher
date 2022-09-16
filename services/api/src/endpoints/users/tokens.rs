@@ -2,28 +2,28 @@ use std::sync::Arc;
 
 use bencher_json::{JsonNewToken, JsonToken, ResourceId};
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
-};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
     endpoints::{
-        endpoint::{response_accepted, response_ok},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
+    error::api_error,
     model::{
-        user::token::{InsertToken, QueryToken},
         user::QueryUser,
+        user::{
+            auth::AuthUser,
+            token::{same_user, InsertToken, QueryToken},
+        },
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        http_error, map_http_error, Context,
+        Context,
     },
     ApiError,
 };
@@ -57,13 +57,13 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonToken>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseOk<Vec<JsonToken>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
 
     let context = rqctx.context();
     let path_params = path_params.into_inner();
-    let json = get_ls_inner(user_id, context, path_params)
+    let json = get_ls_inner(context, path_params, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -71,29 +71,24 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    user_id: i32,
     context: &Context,
     path_params: GetLsParams,
+    auth_user: &AuthUser,
 ) -> Result<Vec<JsonToken>, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
+
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    same_user!(auth_user, api_context.rbac, query_user.id);
 
-    // TODO make smarter once permissions are a thing
-    if query_user.id != user_id {
-        return Err(http_error!("Failed to get token.").into());
-    }
-
-    let json: Vec<JsonToken> = schema::token::table
+    Ok(schema::token::table
         .filter(schema::token::user_id.eq(query_user.id))
         .order((schema::token::creation, schema::token::expiration))
         .load::<QueryToken>(conn)
-        .map_err(map_http_error!("Failed to get tokens."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(json)
+        .collect())
 }
 
 #[endpoint {
@@ -113,13 +108,13 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewToken>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonToken>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonToken>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::Post);
 
     let context = rqctx.context();
     let json_token = body.into_inner();
-    let json = post_inner(user_id, context, json_token)
+    let json = post_inner(context, json_token, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -127,24 +122,25 @@ pub async fn post(
 }
 
 async fn post_inner(
-    user_id: i32,
     context: &Context,
     json_token: JsonNewToken,
+    auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db;
-    let insert_token = InsertToken::from_json(conn, json_token, user_id, &context.key)?;
+    let api_context = &mut *context.lock().await;
+    let insert_token = InsertToken::from_json(api_context, json_token, auth_user)?;
+    let conn = &mut api_context.db_conn;
+
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create token."))?;
+        .map_err(api_error!())?;
 
     schema::token::table
         .filter(schema::token::uuid.eq(&insert_token.uuid))
         .first::<QueryToken>(conn)
-        .map_err(map_http_error!("Failed to create token."))?
+        .map_err(api_error!())?
         .into_json(conn)
-        .map_err(Into::into)
+        .map_err(api_error!())
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -173,13 +169,13 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonToken>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseOk<JsonToken>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetOne);
 
     let context = rqctx.context();
     let path_params = path_params.into_inner();
-    let json = get_one_inner(user_id, context, path_params)
+    let json = get_one_inner(context, path_params, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -187,18 +183,15 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    user_id: i32,
     context: &Context,
     path_params: GetOneParams,
+    auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
-    let context = &mut *context.lock().await;
-    let conn = &mut context.db;
-    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
-    // TODO make smarter once permissions are a thing
-    if query_user.id != user_id {
-        return Err(http_error!("Failed to get token.").into());
-    }
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    same_user!(auth_user, api_context.rbac, query_user.id);
 
     schema::token::table
         .filter(
@@ -207,7 +200,7 @@ async fn get_one_inner(
                 .and(schema::token::uuid.eq(&path_params.token.to_string())),
         )
         .first::<QueryToken>(conn)
-        .map_err(map_http_error!("Failed to get token."))?
+        .map_err(api_error!())?
         .into_json(conn)
-        .map_err(Into::into)
+        .map_err(api_error!())
 }

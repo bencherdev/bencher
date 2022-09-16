@@ -1,27 +1,36 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
-use bencher_rbac::project::Role;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission,
+    project::{Permission as ProjectPermission, Role},
 };
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
         project::{InsertProject, QueryProject},
-        user::{project::InsertProjectRole, QueryUser},
+        user::{auth::AuthUser, project::InsertProjectRole},
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error, Context,
+        Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const PROJECT_RESOURCE: Resource = Resource::Project;
 
 #[endpoint {
     method = OPTIONS,
@@ -39,25 +48,44 @@ pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRes
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonProject>>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json: Vec<JsonProject> = schema::project::table
-        // TODO actually filter here with `bencher_rbac`
-        // .filter(schema::project::owner_id.eq(user_id))
+    let json = get_ls_inner(rqctx.context(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+) -> Result<Vec<JsonProject>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
+
+    let mut sql = schema::project::table.into_boxed();
+
+    if !auth_user.is_admin(&api_context.rbac) {
+        let organization = auth_user.organizations(&api_context.rbac, OrganizationPermission::View);
+        // This is actually redundant for view permissions
+        let projects = auth_user.projects(&api_context.rbac, ProjectPermission::View);
+        sql = sql.filter(
+            schema::project::organization_id
+                .eq_any(organization)
+                .or(schema::project::id.eq_any(projects)),
+        );
+    }
+
+    Ok(sql
         .order(schema::project::name)
         .load::<QueryProject>(conn)
-        .map_err(map_http_error!("Failed to get projects."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_auth("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
@@ -68,46 +96,60 @@ pub async fn get_ls(
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewProject>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonProject>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
+) -> Result<ResponseAccepted<JsonProject>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Post);
 
-    let json_project = body.into_inner();
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    json_project: JsonNewProject,
+    auth_user: &AuthUser,
+) -> Result<JsonProject, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Create the project
     let insert_project = InsertProject::from_json(conn, json_project)?;
+
+    // Check to see if user has permission to create a project within the organization
+    api_context.rbac.is_allowed_organization(
+        auth_user,
+        OrganizationPermission::Create,
+        &insert_project,
+    )?;
+
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create project."))?;
+        .map_err(api_error!())?;
     let query_project = schema::project::table
         .filter(schema::project::uuid.eq(&insert_project.uuid))
         .first::<QueryProject>(conn)
-        .map_err(map_http_error!("Failed to create project."))?;
+        .map_err(api_error!())?;
 
     // Connect the user to the project as a `Maintainer`
     let insert_proj_role = InsertProjectRole {
-        user_id,
+        user_id: auth_user.id,
         project_id: query_project.id,
         role: Role::Maintainer.to_string(),
     };
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create project."))?;
+        .map_err(api_error!())?;
 
-    let json = query_project.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+    query_project.into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct PathParams {
+pub struct GetOneParams {
     pub project: ResourceId,
 }
 
@@ -118,7 +160,7 @@ pub struct PathParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<PathParams>,
+    _path_params: Path<GetOneParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -130,29 +172,31 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<PathParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonProject>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
+    path_params: Path<GetOneParams>,
+) -> Result<ResponseOk<JsonProject>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    let project = &path_params.project.0;
-    let query = schema::project::table
-        .filter(
-            schema::project::slug
-                .eq(project)
-                .or(schema::project::uuid.eq(project)),
-        )
-        .first::<QueryProject>(conn)
-        .map_err(map_http_error!("Failed to get project."))?;
+    response_ok!(endpoint, json)
+}
 
-    QueryUser::has_access(conn, user_id, query.id)?;
-    let json = query.into_json(conn)?;
+async fn get_one_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonProject, ApiError> {
+    let api_context = &mut *context.lock().await;
 
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+    QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::View,
+        ProjectPermission::View,
+    )?
+    .into_json(&mut api_context.db_conn)
 }

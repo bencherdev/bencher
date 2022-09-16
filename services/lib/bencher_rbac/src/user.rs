@@ -2,14 +2,18 @@ use std::collections::HashMap;
 
 use oso::PolarClass;
 
-#[derive(Clone, PolarClass)]
+// TODO once it supported by PolarClass, switch over to UUIDs as the HashMap keys
+#[derive(Debug, Clone, PolarClass)]
 pub struct User {
     #[polar(attribute)]
     pub admin: bool,
     #[polar(attribute)]
     pub locked: bool,
     #[polar(attribute)]
-    pub organizations: HashMap<String, crate::organization::Role>,
+    pub organizations: OrganizationRoles,
     #[polar(attribute)]
-    pub projects: HashMap<String, crate::project::Role>,
+    pub projects: ProjectRoles,
 }
+
+pub type OrganizationRoles = HashMap<String, crate::organization::Role>;
+pub type ProjectRoles = HashMap<String, crate::project::Role>;

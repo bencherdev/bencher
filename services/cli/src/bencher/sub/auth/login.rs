@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonEmpty, JsonLogin};
+use email_address_parser::EmailAddress;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
@@ -13,7 +14,7 @@ const LOGIN_PATH: &str = "/v0/auth/login";
 
 #[derive(Debug, Clone)]
 pub struct Login {
-    pub email: String,
+    pub email: EmailAddress,
     pub invite: Option<String>,
     pub backend: Backend,
 }
@@ -29,7 +30,7 @@ impl TryFrom<CliAuthLogin> for Login {
         } = login;
         let backend = Backend::new(None, host)?;
         Ok(Self {
-            email,
+            email: EmailAddress::parse(&email, None).ok_or(CliError::Email(email))?,
             invite,
             backend,
         })
@@ -44,7 +45,7 @@ impl From<Login> for JsonLogin {
             backend: _,
         } = login;
         Self {
-            email,
+            email: email.to_string(),
             invite: invite.map(Into::into),
         }
     }

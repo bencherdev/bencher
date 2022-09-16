@@ -2,14 +2,11 @@ use std::str::FromStr;
 
 use bencher_json::{JsonNewTestbed, JsonTestbed};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::project::QueryProject;
 use crate::{
-    schema,
-    schema::testbed as testbed_table,
-    util::{map_http_error, slug::unwrap_slug},
+    error::api_error, schema, schema::testbed as testbed_table, util::slug::unwrap_slug, ApiError,
 };
 
 #[derive(Queryable)]
@@ -29,24 +26,24 @@ pub struct QueryTestbed {
 }
 
 impl QueryTestbed {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::testbed::table
             .filter(schema::testbed::uuid.eq(uuid.to_string()))
             .select(schema::testbed::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get testbed."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::testbed::table
             .filter(schema::testbed::id.eq(id))
             .select(schema::testbed::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get testbed."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get testbed."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, HttpError> {
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -62,7 +59,7 @@ impl QueryTestbed {
             disk,
         } = self;
         Ok(JsonTestbed {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get testbed."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug,
@@ -97,7 +94,7 @@ impl InsertTestbed {
     pub fn from_json(
         conn: &mut SqliteConnection,
         testbed: JsonNewTestbed,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         let JsonNewTestbed {
             project,
             name,

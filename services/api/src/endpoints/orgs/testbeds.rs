@@ -1,27 +1,37 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId};
-use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{
-    endpoint, HttpError, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk, Path,
-    RequestContext, TypedBody,
+use bencher_rbac::{
+    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
 };
+use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    endpoints::{
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        Endpoint, Method,
+    },
+    error::api_error,
     model::{
         project::QueryProject,
         testbed::{InsertTestbed, QueryTestbed},
-        user::QueryUser,
+        user::auth::AuthUser,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        headers::CorsHeaders,
-        map_http_error, Context,
+        resource_id::fn_resource_id,
+        Context,
     },
+    ApiError,
 };
+
+use super::Resource;
+
+const TESTBED_RESOURCE: Resource = Resource::Testbed;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetLsParams {
@@ -48,26 +58,40 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<Vec<JsonTestbed>>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
+) -> Result<ResponseOk<Vec<JsonTestbed>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetLs);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json: Vec<JsonTestbed> = schema::testbed::table
-        .filter(schema::testbed::project_id.eq(project_id))
+    let json = get_ls_inner(rqctx.context(), &auth_user, path_params.into_inner())
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: &AuthUser,
+    path_params: GetLsParams,
+) -> Result<Vec<JsonTestbed>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    Ok(schema::testbed::table
+        .filter(schema::testbed::project_id.eq(query_project.id))
         .order(schema::testbed::name)
         .load::<QueryTestbed>(conn)
-        .map_err(map_http_error!("Failed to get testbeds."))?
+        .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .collect())
 }
 
 #[endpoint {
@@ -87,28 +111,44 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonNewTestbed>,
-) -> Result<HttpResponseHeaders<HttpResponseAccepted<JsonTestbed>, CorsHeaders>, HttpError> {
-    QueryUser::auth(&rqctx).await?;
-    let json_testbed = body.into_inner();
+) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::Post);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let insert_testbed = InsertTestbed::from_json(conn, json_testbed)?;
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    json_testbed: JsonNewTestbed,
+    auth_user: &AuthUser,
+) -> Result<JsonTestbed, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let insert_testbed = InsertTestbed::from_json(&mut api_context.db_conn, json_testbed)?;
+    // Verify that the user is allowed
+    QueryProject::is_allowed_id(
+        api_context,
+        insert_testbed.project_id,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::Create,
+    )?;
+    let conn = &mut api_context.db_conn;
+
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create testbed."))?;
+        .map_err(api_error!())?;
 
-    let query_testbed = schema::testbed::table
+    schema::testbed::table
         .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
         .first::<QueryTestbed>(conn)
-        .map_err(map_http_error!("Failed to create testbed."))?;
-    let json = query_testbed.into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseAccepted(json),
-        CorsHeaders::new_auth("POST".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -137,28 +177,41 @@ pub async fn one_options(
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonTestbed>, CorsHeaders>, HttpError> {
-    let user_id = QueryUser::auth(&rqctx).await?;
-    let path_params = path_params.into_inner();
-    let project_id = QueryProject::connection(&rqctx, user_id, &path_params.project).await?;
-    let resource_id = path_params.testbed.as_str();
+) -> Result<ResponseOk<JsonTestbed>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetOne);
 
-    let context = &mut *rqctx.context().lock().await;
-    let conn = &mut context.db;
-    let json = schema::testbed::table
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+fn_resource_id!(testbed);
+
+async fn get_one_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonTestbed, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_project = QueryProject::is_allowed_resource_id(
+        api_context,
+        &path_params.project,
+        auth_user,
+        OrganizationPermission::Manage,
+        ProjectPermission::View,
+    )?;
+    let conn = &mut api_context.db_conn;
+
+    schema::testbed::table
         .filter(
-            schema::testbed::project_id.eq(project_id).and(
-                schema::testbed::slug
-                    .eq(resource_id)
-                    .or(schema::testbed::uuid.eq(resource_id)),
-            ),
+            schema::testbed::project_id
+                .eq(query_project.id)
+                .and(resource_id(&path_params.testbed)?),
         )
         .first::<QueryTestbed>(conn)
-        .map_err(map_http_error!("Failed to get testbed."))?
-        .into_json(conn)?;
-
-    Ok(HttpResponseHeaders::new(
-        HttpResponseOk(json),
-        CorsHeaders::new_pub("GET".into()),
-    ))
+        .map_err(api_error!())?
+        .into_json(conn)
 }

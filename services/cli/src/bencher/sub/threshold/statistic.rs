@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct Statistic {
-    pub test: StatisticKind,
+    pub test: JsonStatisticKind,
     pub sample_size: Option<u32>,
     pub window: Option<u32>,
     pub left_side: Option<f32>,
@@ -38,6 +38,15 @@ impl TryFrom<CliStatisticCreate> for Statistic {
     }
 }
 
+impl From<CliStatisticKind> for JsonStatisticKind {
+    fn from(kind: CliStatisticKind) -> Self {
+        match kind {
+            CliStatisticKind::Z => Self::Z,
+            CliStatisticKind::T => Self::T,
+        }
+    }
+}
+
 impl From<Statistic> for JsonNewStatistic {
     fn from(statistic: Statistic) -> Self {
         let Statistic {
@@ -48,35 +57,11 @@ impl From<Statistic> for JsonNewStatistic {
             right_side,
         } = statistic;
         Self {
-            test: test.into(),
+            test,
             sample_size,
             window,
             left_side: left_side.map(|s| s.into()),
             right_side: right_side.map(|s| s.into()),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum StatisticKind {
-    Z,
-    T,
-}
-
-impl From<CliStatisticKind> for StatisticKind {
-    fn from(kind: CliStatisticKind) -> Self {
-        match kind {
-            CliStatisticKind::Z => Self::Z,
-            CliStatisticKind::T => Self::T,
-        }
-    }
-}
-
-impl From<StatisticKind> for JsonStatisticKind {
-    fn from(kind: StatisticKind) -> Self {
-        match kind {
-            StatisticKind::Z => Self::Z,
-            StatisticKind::T => Self::T,
         }
     }
 }

@@ -1,8 +1,10 @@
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
+pub mod alert;
 pub mod auth;
 pub mod benchmark;
 pub mod branch;
+pub mod invite;
 pub mod organization;
 pub mod perf;
 pub mod project;
@@ -12,9 +14,11 @@ pub mod testbed;
 pub mod threshold;
 pub mod token;
 
+use alert::CliAlert;
 use auth::CliAuth;
 use benchmark::CliBenchmark;
 use branch::CliBranch;
+use invite::CliInvite;
 use organization::CliOrganization;
 use perf::CliPerf;
 use project::CliProject;
@@ -48,6 +52,8 @@ pub enum CliSub {
     /// Manage organization
     #[clap(subcommand, alias = "org")]
     Organization(CliOrganization),
+    /// Invite user to organization
+    Invite(CliInvite),
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),
@@ -70,6 +76,9 @@ pub enum CliSub {
     Benchmark(CliBenchmark),
     /// Query benchmark data
     Perf(CliPerf),
+    /// View alerts
+    #[clap(subcommand)]
+    Alert(CliAlert),
 
     /// User API tokens
     #[clap(subcommand)]

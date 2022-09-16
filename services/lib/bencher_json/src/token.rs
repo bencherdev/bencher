@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::ResourceId;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {
     pub user: ResourceId,
@@ -14,7 +14,7 @@ pub struct JsonNewToken {
     pub ttl: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonToken {
     pub uuid: Uuid,
