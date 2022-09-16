@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{invite::JsonInviteRole, JsonInvite};
+use email_address_parser::EmailAddress;
 use uuid::Uuid;
 
 use crate::{
@@ -16,7 +17,7 @@ const INVITES_PATH: &str = "/v0/invites";
 
 #[derive(Debug, Clone)]
 pub struct Invite {
-    email: String,
+    email: EmailAddress,
     org: Uuid,
     role: JsonInviteRole,
     backend: Backend,
@@ -33,7 +34,7 @@ impl TryFrom<CliInvite> for Invite {
             backend,
         } = invite;
         Ok(Self {
-            email,
+            email: EmailAddress::parse(&email, None).ok_or(CliError::Email(email))?,
             org,
             role: role.into(),
             backend: backend.try_into()?,
@@ -59,7 +60,7 @@ impl From<Invite> for JsonInvite {
             backend: _,
         } = invite;
         Self {
-            email,
+            email: email.to_string(),
             organization: org,
             role,
         }
