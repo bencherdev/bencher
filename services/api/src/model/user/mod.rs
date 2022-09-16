@@ -50,7 +50,7 @@ impl InsertUser {
     }
 }
 
-fn validate_email(email: &str) -> Result<EmailAddress, ApiError> {
+pub fn validate_email(email: &str) -> Result<EmailAddress, ApiError> {
     EmailAddress::parse(email, None).ok_or_else(|| ApiError::Email(email.into()))
 }
 

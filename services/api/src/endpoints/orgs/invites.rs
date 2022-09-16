@@ -11,7 +11,10 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::{organization::QueryOrganization, user::auth::AuthUser},
+    model::{
+        organization::QueryOrganization,
+        user::{auth::AuthUser, validate_email},
+    },
     util::{
         cors::{get_cors, CorsResponse},
         Context,
@@ -65,12 +68,12 @@ async fn post_inner(
         QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
     )?;
 
-    let email = json_invite.email.clone();
+    let email = validate_email(&json_invite.email)?;
     let token =
         JsonWebToken::new_invite(&api_context.secret_key, json_invite).map_err(api_error!())?;
 
     // TODO log this as trace if SMTP is configured
-    info!("Accept invite for \"{}\" with: {token}", email);
+    info!("Accept invite for \"{email}\" with: {token}");
 
     Ok(JsonEmpty::default())
 }
