@@ -78,7 +78,7 @@ impl From<Perf> for JsonPerfQuery {
             branches,
             testbeds,
             benchmarks,
-            kind: kind.into(),
+            kind,
             start_time,
             end_time,
         }
