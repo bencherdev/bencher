@@ -1,18 +1,14 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonInvite;
+use bencher_json::{invite::JsonInviteRole, JsonInvite};
 use uuid::Uuid;
 
 use crate::{
     bencher::{backend::Backend, wide::Wide},
-    cli::invite::CliInvite,
+    cli::invite::{CliInvite, CliInviteRole},
     CliError,
 };
-
-pub mod role;
-
-use role::Role;
 
 use super::SubCmd;
 
@@ -22,7 +18,7 @@ const INVITES_PATH: &str = "/v0/invites";
 pub struct Invite {
     email: String,
     org: Uuid,
-    role: Role,
+    role: JsonInviteRole,
     backend: Backend,
 }
 
@@ -45,6 +41,15 @@ impl TryFrom<CliInvite> for Invite {
     }
 }
 
+impl From<CliInviteRole> for JsonInviteRole {
+    fn from(role: CliInviteRole) -> Self {
+        match role {
+            CliInviteRole::Member => Self::Member,
+            CliInviteRole::Leader => Self::Leader,
+        }
+    }
+}
+
 impl From<Invite> for JsonInvite {
     fn from(invite: Invite) -> Self {
         let Invite {
@@ -56,7 +61,7 @@ impl From<Invite> for JsonInvite {
         Self {
             email,
             organization: org,
-            role: role.into(),
+            role,
         }
     }
 }

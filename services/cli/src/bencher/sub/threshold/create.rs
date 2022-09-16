@@ -1,16 +1,12 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonNewThreshold;
+use bencher_json::{perf::JsonPerfKind, JsonNewThreshold};
 use uuid::Uuid;
 
 use super::statistic::Statistic;
 use crate::{
-    bencher::{
-        backend::Backend,
-        sub::{perf::kind::Kind, SubCmd},
-        wide::Wide,
-    },
+    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::threshold::CliThresholdCreate,
     CliError,
 };
@@ -21,7 +17,7 @@ const THRESHOLDS_PATH: &str = "/v0/thresholds";
 pub struct Create {
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: Kind,
+    pub kind: JsonPerfKind,
     pub statistic: Statistic,
     pub backend: Backend,
 }
@@ -59,7 +55,7 @@ impl From<Create> for JsonNewThreshold {
         Self {
             branch,
             testbed,
-            kind: kind.into(),
+            kind,
             statistic: statistic.into(),
         }
     }

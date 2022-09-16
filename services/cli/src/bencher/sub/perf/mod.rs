@@ -1,19 +1,15 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonPerfQuery;
+use bencher_json::{perf::JsonPerfKind, JsonPerfQuery};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::{
     bencher::{backend::Backend, wide::Wide},
-    cli::perf::CliPerf,
+    cli::perf::{CliPerf, CliPerfKind},
     CliError,
 };
-
-pub mod kind;
-
-use kind::Kind;
 
 use super::SubCmd;
 
@@ -24,7 +20,7 @@ pub struct Perf {
     branches: Vec<Uuid>,
     testbeds: Vec<Uuid>,
     benchmarks: Vec<Uuid>,
-    kind: Kind,
+    kind: JsonPerfKind,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
     backend: Backend,
@@ -52,6 +48,18 @@ impl TryFrom<CliPerf> for Perf {
             end_time,
             backend: backend.try_into()?,
         })
+    }
+}
+
+impl From<CliPerfKind> for JsonPerfKind {
+    fn from(kind: CliPerfKind) -> Self {
+        match kind {
+            CliPerfKind::Latency => Self::Latency,
+            CliPerfKind::Throughput => Self::Throughput,
+            CliPerfKind::Compute => Self::Compute,
+            CliPerfKind::Memory => Self::Memory,
+            CliPerfKind::Storage => Self::Storage,
+        }
     }
 }
 
