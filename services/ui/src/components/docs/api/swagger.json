@@ -96,97 +96,6 @@
         }
       }
     },
-    "/v0/auth/invite": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonInvite"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEmpty"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/auth/login": {
       "post": {
         "tags": [
@@ -439,6 +348,97 @@
           "branches"
         ],
         "operationId": "post_options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/invites": {
+      "post": {
+        "tags": [
+          "invites"
+        ],
+        "operationId": "post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEmpty"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "invites"
+        ],
+        "operationId": "options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -3282,13 +3282,20 @@
             "format": "uuid"
           },
           "role": {
-            "$ref": "#/components/schemas/Role"
+            "$ref": "#/components/schemas/JsonInviteRole"
           }
         },
         "required": [
           "email",
           "organization",
           "role"
+        ]
+      },
+      "JsonInviteRole": {
+        "type": "string",
+        "enum": [
+          "member",
+          "leader"
         ]
       },
       "JsonLatency": {
@@ -4155,13 +4162,6 @@
       },
       "ResourceId": {
         "type": "string"
-      },
-      "Role": {
-        "type": "string",
-        "enum": [
-          "member",
-          "leader"
-        ]
       }
     }
   },
@@ -4179,6 +4179,9 @@
     {
       "name": "branches",
       "description": "Branches"
+    },
+    {
+      "name": "invites"
     },
     {
       "name": "organizations"
