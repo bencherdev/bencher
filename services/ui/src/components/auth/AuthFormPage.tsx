@@ -1,8 +1,11 @@
-import { Link } from "solid-app-router";
+import { Link, useSearchParams } from "solid-app-router";
+import { createMemo } from "solid-js";
 import validator from "validator";
 
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
+
+const INVITE_PARAM = "invite";
 
 const AuthFormPage = (props: {
   config: any;
@@ -13,6 +16,17 @@ const AuthFormPage = (props: {
   handleNotification: Function;
 }) => {
   props.handleTitle(props.config?.title);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  if (
+    searchParams[INVITE_PARAM] &&
+    !validator.isJWT(searchParams[INVITE_PARAM])
+  ) {
+    setSearchParams({ [INVITE_PARAM]: null });
+  }
+
+  const invite = createMemo(() => searchParams[INVITE_PARAM]);
 
   return (
     <section class="section">
@@ -29,6 +43,7 @@ const AuthFormPage = (props: {
               config={props.config?.form}
               handleRedirect={props.handleRedirect}
               user={props.user}
+              invite={invite}
               handleUser={props.handleUser}
               handleNotification={props.handleNotification}
             />

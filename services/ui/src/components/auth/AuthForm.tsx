@@ -1,5 +1,6 @@
 import { createSignal, createEffect, Accessor } from "solid-js";
 import axios from "axios";
+import validator from "validator";
 
 import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
@@ -12,6 +13,7 @@ export interface Props {
   config: any;
   handleRedirect: Function;
   user: Function;
+  invite: Function;
   handleUser: Function;
   handleNotification: Function;
 }
@@ -59,6 +61,14 @@ export const AuthForm = (props: Props) => {
   const handleAuthFormSubmit = (event) => {
     event.preventDefault();
     handleFormSubmitting(true);
+    const invite_token = props.invite();
+    let invite: string | null;
+    if (invite_token && validator.isJWT(invite_token)) {
+      invite = invite_token;
+    } else {
+      invite = null;
+    }
+
     let json_data;
     if (props.config?.kind === FormKind.SIGNUP) {
       const signup_form = form();
@@ -66,13 +76,13 @@ export const AuthForm = (props: Props) => {
         name: signup_form.username.value,
         slug: null,
         email: signup_form.email.value,
-        free: null,
+        invite: invite,
       };
     } else if (props.config?.kind === FormKind.LOGIN) {
       const login_form = form();
       json_data = {
         email: login_form.email.value,
-        free: null,
+        invite: invite,
       };
     }
     fetchData(json_data)
