@@ -15,6 +15,7 @@ const CREATE_PERM: &str = "create";
 const EDIT_PERM: &str = "edit";
 const DELETE_PERM: &str = "delete";
 const MANAGE_PERM: &str = "manage";
+
 const VIEW_ROLE_PERM: &str = "view_role";
 const CREATE_ROLE_PERM: &str = "create_role";
 const EDIT_ROLE_PERM: &str = "edit_role";

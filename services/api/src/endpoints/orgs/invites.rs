@@ -61,7 +61,7 @@ async fn post_inner(
     // Check to see if user has permission to create a project within the organization
     api_context.rbac.is_allowed_organization(
         auth_user,
-        OrganizationPermission::CreateRoleAssignments,
+        OrganizationPermission::CreateRole,
         QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
     )?;
 
