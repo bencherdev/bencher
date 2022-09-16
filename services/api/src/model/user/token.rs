@@ -5,17 +5,14 @@ use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
-use crate::{error::api_error, schema, schema::token as token_table, ApiError};
+use crate::{error::api_error, schema, schema::token as token_table, util::ApiContext, ApiError};
 
-use super::QueryUser;
+use super::{auth::AuthUser, QueryUser};
 
 macro_rules! same_user {
-    ($param:expr, $token:expr) => {
-        if $param != $token {
-            return Err(crate::error::ApiError::User(format!(
-                "User IDs do not match for the path param ({}) and token ({})",
-                $param, $token
-            )));
+    ($auth_user:ident, $rbac:expr, $user_id:expr) => {
+        if !($auth_user.is_admin(&$rbac) || $auth_user.id == $user_id) {
+            return Err(crate::error::ApiError::SameUser($auth_user.id, $user_id));
         }
     };
 }
@@ -95,16 +92,14 @@ pub struct InsertToken {
 
 impl InsertToken {
     pub fn from_json(
-        conn: &mut SqliteConnection,
+        api_context: &mut ApiContext,
         token: JsonNewToken,
-        requester_id: i32,
-        key: &str,
+        auth_user: &AuthUser,
     ) -> Result<Self, ApiError> {
         let JsonNewToken { user, name, ttl } = token;
 
-        let query_user = QueryUser::from_resource_id(conn, &user)?;
-
-        same_user!(requester_id, query_user.id);
+        let query_user = QueryUser::from_resource_id(&mut api_context.db_conn, &user)?;
+        same_user!(auth_user, api_context.rbac, query_user.id);
 
         // Only in production, set a max TTL of approximately one year
         // Disabled in development to enable long lived testing tokens
@@ -117,9 +112,12 @@ impl InsertToken {
         }
 
         let jwt =
-            JsonWebToken::new_api_key(key, query_user.email, ttl as usize).map_err(api_error!())?;
+            JsonWebToken::new_api_key(&api_context.secret_key, query_user.email, ttl as usize)
+                .map_err(api_error!())?;
 
-        let token_data = jwt.validate_api_key(key).map_err(api_error!())?;
+        let token_data = jwt
+            .validate_api_key(&api_context.secret_key)
+            .map_err(api_error!())?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),

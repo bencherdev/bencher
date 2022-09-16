@@ -57,8 +57,8 @@ pub enum ApiError {
     Timestamp(i64),
     #[error("{0}")]
     AuthHeader(String),
-    #[error("Invalid user: {0}")]
-    User(String),
+    #[error("User is not admin and the authenticated user ({0}) does not match the requested user ({1})",)]
+    SameUser(i32, i32),
     #[error("User account locked: ID {0} email {1}")]
     Locked(i32, String),
     #[error("Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}")]

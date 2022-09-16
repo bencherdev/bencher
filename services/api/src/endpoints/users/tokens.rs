@@ -63,7 +63,7 @@ pub async fn get_ls(
 
     let context = rqctx.context();
     let path_params = path_params.into_inner();
-    let json = get_ls_inner(&auth_user, context, path_params)
+    let json = get_ls_inner(context, path_params, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -71,26 +71,24 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    auth_user: &AuthUser,
     context: &Context,
     path_params: GetLsParams,
+    auth_user: &AuthUser,
 ) -> Result<Vec<JsonToken>, ApiError> {
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.db_conn;
+
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    same_user!(auth_user, api_context.rbac, query_user.id);
 
-    same_user!(query_user.id, auth_user.id);
-
-    let json: Vec<JsonToken> = schema::token::table
+    Ok(schema::token::table
         .filter(schema::token::user_id.eq(query_user.id))
         .order((schema::token::creation, schema::token::expiration))
         .load::<QueryToken>(conn)
         .map_err(api_error!())?
         .into_iter()
         .filter_map(|query| query.into_json(conn).ok())
-        .collect();
-
-    Ok(json)
+        .collect())
 }
 
 #[endpoint {
@@ -116,7 +114,7 @@ pub async fn post(
 
     let context = rqctx.context();
     let json_token = body.into_inner();
-    let json = post_inner(&auth_user, context, json_token)
+    let json = post_inner(context, json_token, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -124,15 +122,14 @@ pub async fn post(
 }
 
 async fn post_inner(
-    auth_user: &AuthUser,
     context: &Context,
     json_token: JsonNewToken,
+    auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
     let api_context = &mut *context.lock().await;
+    let insert_token = InsertToken::from_json(api_context, json_token, auth_user)?;
     let conn = &mut api_context.db_conn;
 
-    let insert_token =
-        InsertToken::from_json(conn, json_token, auth_user.id, &api_context.secret_key)?;
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
         .execute(conn)
@@ -178,7 +175,7 @@ pub async fn get_one(
 
     let context = rqctx.context();
     let path_params = path_params.into_inner();
-    let json = get_one_inner(&auth_user, context, path_params)
+    let json = get_one_inner(context, path_params, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -186,15 +183,15 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    auth_user: &AuthUser,
     context: &Context,
     path_params: GetOneParams,
+    auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.db_conn;
-    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
-    same_user!(query_user.id, auth_user.id);
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    same_user!(auth_user, api_context.rbac, query_user.id);
 
     schema::token::table
         .filter(
