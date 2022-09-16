@@ -1,7 +1,6 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{jwt::JsonWebToken, JsonUser};
 
@@ -40,20 +39,4 @@ impl From<String> for JsonAuthToken {
 pub struct JsonConfirm {
     pub user: JsonUser,
     pub token: JsonWebToken,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonInvite {
-    pub organization: Uuid,
-    pub role: Role,
-    pub email: String,
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    Member,
-    Leader,
 }

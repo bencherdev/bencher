@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{auth::JsonInvite, jwt::JsonWebToken, JsonEmpty};
+use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonInvite};
 use bencher_rbac::organization::Permission as OrganizationPermission;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tracing::info;
@@ -65,16 +65,12 @@ async fn post_inner(
         QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
     )?;
 
-    let token = JsonWebToken::new_invite(
-        &api_context.secret_key,
-        json_invite.email.clone(),
-        json_invite.organization,
-        json_invite.role,
-    )
-    .map_err(api_error!())?;
+    let email = json_invite.email.clone();
+    let token =
+        JsonWebToken::new_invite(&api_context.secret_key, json_invite).map_err(api_error!())?;
 
     // TODO log this as trace if SMTP is configured
-    info!("Accept invite for \"{}\" with: {token}", json_invite.email);
+    info!("Accept invite for \"{}\" with: {token}", email);
 
     Ok(JsonEmpty::default())
 }
