@@ -36,14 +36,15 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(auth::login::post)?;
     api.register(auth::confirm::options)?;
     api.register(auth::confirm::post)?;
-    api.register(auth::invite::options)?;
-    api.register(auth::invite::post)?;
     // Organizations
     api.register(organizations::dir_options)?;
     api.register(organizations::get_ls)?;
     api.register(organizations::post)?;
     api.register(organizations::one_options)?;
     api.register(organizations::get_one)?;
+    // Invite
+    api.register(invites::options)?;
+    api.register(invites::post)?;
     // Projects
     api.register(projects::dir_options)?;
     api.register(projects::get_ls)?;

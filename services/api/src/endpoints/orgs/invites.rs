@@ -25,8 +25,8 @@ const INVITE_RESOURCE: Resource = Resource::Invite;
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/auth/invite",
-    tags = ["auth"]
+    path =  "/v0/invites",
+    tags = ["invites"]
 }]
 pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -34,8 +34,8 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 
 #[endpoint {
     method = POST,
-    path = "/v0/auth/invite",
-    tags = ["auth"]
+    path = "/v0/invites",
+    tags = ["invites"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
