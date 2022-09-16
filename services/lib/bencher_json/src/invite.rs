@@ -8,13 +8,13 @@ use uuid::Uuid;
 pub struct JsonInvite {
     pub email: String,
     pub organization: Uuid,
-    pub role: Role,
+    pub role: JsonInviteRole,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum Role {
+pub enum JsonInviteRole {
     Member,
     Leader,
 }

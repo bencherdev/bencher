@@ -54,11 +54,11 @@ impl FromStr for Role {
 }
 
 #[cfg(feature = "json")]
-impl From<bencher_json::invite::Role> for Role {
-    fn from(role: bencher_json::invite::Role) -> Self {
+impl From<bencher_json::invite::JsonInviteRole> for Role {
+    fn from(role: bencher_json::invite::JsonInviteRole) -> Self {
         match role {
-            bencher_json::invite::Role::Member => Self::Member,
-            bencher_json::invite::Role::Leader => Self::Leader,
+            bencher_json::invite::JsonInviteRole::Member => Self::Member,
+            bencher_json::invite::JsonInviteRole::Leader => Self::Leader,
         }
     }
 }

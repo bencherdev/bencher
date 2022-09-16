@@ -8,6 +8,7 @@ mod alert;
 mod auth;
 mod benchmark;
 mod branch;
+mod invite;
 mod organization;
 mod perf;
 mod project;
@@ -22,6 +23,7 @@ use alert::Alert;
 use auth::Auth;
 use benchmark::Benchmark;
 use branch::Branch;
+use invite::Invite;
 use organization::Organization;
 use perf::Perf;
 use project::Project;
@@ -36,6 +38,7 @@ use token::Token;
 pub enum Sub {
     Auth(Auth),
     Organization(Organization),
+    Invite(Invite),
     Project(Project),
     Report(Report),
     Branch(Branch),
@@ -55,6 +58,7 @@ impl TryFrom<CliSub> for Sub {
         Ok(match sub {
             CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
             CliSub::Organization(organization) => Self::Organization(organization.try_into()?),
+            CliSub::Invite(invite) => Self::Invite(invite.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
             CliSub::Report(report) => Self::Report(report.try_into()?),
             CliSub::Branch(branch) => Self::Branch(branch.try_into()?),
@@ -83,6 +87,7 @@ impl SubCmd for Sub {
         match self {
             Self::Auth(auth) => auth.exec(wide).await,
             Self::Organization(organization) => organization.exec(wide).await,
+            Self::Invite(invite) => invite.exec(wide).await,
             Self::Project(project) => project.exec(wide).await,
             Self::Report(report) => report.exec(wide).await,
             Self::Branch(branch) => branch.exec(wide).await,
