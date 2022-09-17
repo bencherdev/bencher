@@ -3,7 +3,7 @@
 use std::{env, process::Command};
 
 use assert_cmd::prelude::*;
-use bencher_json::{JsonBranch, JsonTestbed};
+use bencher_json::{JsonBranch, JsonOrganization, JsonTestbed};
 
 const BENCHER_CMD: &str = "bencher";
 
@@ -264,6 +264,30 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "latency",
         "--test",
         "z",
+    ]);
+    cmd.assert().success();
+
+    // cargo run -- org ls --host http://localhost:61016
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args(["org", "ls", HOST_ARG, LOCALHOST]);
+    cmd.assert().success();
+
+    let org = cmd.output().unwrap().stdout;
+    let mut org: Vec<JsonOrganization> = serde_json::from_slice(&org).unwrap();
+    let org_uuid = org.pop().unwrap().uuid.to_string();
+
+    // cargo run -- invite --host http://localhost:61016 --email courage@nowhere.com --org <ORG_UUID>
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "invite",
+        HOST_ARG,
+        LOCALHOST,
+        "--email",
+        "courage@nowhere.com",
+        "--org",
+        &org_uuid,
+        "--role",
+        "member",
     ]);
     cmd.assert().success();
 
