@@ -18,3 +18,5 @@ deb/
 
 # Ignore swap files on MacOS
 **.DS_Store
+
+out.txt
