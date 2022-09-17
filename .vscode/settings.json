@@ -37,6 +37,7 @@
     "rqctx",
     "schemars",
     "signup",
+    "udeps",
     "VITE"
   ]
 }

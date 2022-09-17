@@ -26,3 +26,12 @@ jobs:
       - run: |
           rustup component add clippy
           cargo clippy --no-deps -- -Dwarnings
+
+  udeps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          rustup toolchain install nightly
+          cargo install cargo-udeps --locked
+          cargo +nightly udeps
