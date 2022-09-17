@@ -11,7 +11,7 @@ swagger = ["dep:literally"]
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../lib/bencher_rbac", features = ["json"] }
 # Work off of repo until OPTIONS is released
-dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
+dropshot = { version = "0.8.0" }
 schemars = { version = "0.8.10", features = ["uuid1"] }
 tokio = "1.18.2"
 slog = "2.7.0"
