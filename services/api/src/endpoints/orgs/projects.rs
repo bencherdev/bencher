@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
-use bencher_rbac::{
-    organization::Permission as OrganizationPermission,
-    project::{Permission as ProjectPermission, Role},
-};
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use bencher_rbac::{organization::Permission as OrganizationPermission, project::Role};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -17,6 +14,7 @@ use crate::{
     },
     error::api_error,
     model::{
+        organization::QueryOrganization,
         project::{InsertProject, QueryProject},
         user::{auth::AuthUser, project::InsertProjectRole},
     },
@@ -32,27 +30,36 @@ use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
+#[derive(Deserialize, JsonSchema)]
+pub struct GetLsParams {
+    pub organization: ResourceId,
+}
+
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects",
-    tags = ["projects"]
+    path =  "/v0/organizations/{organization}/projects",
+    tags = ["organizations", "projects"]
 }]
-pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn dir_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GetLsParams>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
 #[endpoint {
     method = GET,
-    path = "/v0/projects",
-    tags = ["projects"]
+    path =  "/v0/organizations/{organization}/projects",
+    tags = ["organizations", "projects"]
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetLsParams>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
-    let json = get_ls_inner(rqctx.context(), &auth_user)
+    let json = get_ls_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -61,25 +68,20 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &Context,
+    path_params: GetLsParams,
     auth_user: &AuthUser,
 ) -> Result<Vec<JsonProject>, ApiError> {
     let api_context = &mut *context.lock().await;
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        api_context,
+        &path_params.organization,
+        auth_user,
+        OrganizationPermission::View,
+    )?;
     let conn = &mut api_context.db_conn;
 
-    let mut sql = schema::project::table.into_boxed();
-
-    if !auth_user.is_admin(&api_context.rbac) {
-        let organization = auth_user.organizations(&api_context.rbac, OrganizationPermission::View);
-        // This is actually redundant for view permissions
-        let projects = auth_user.projects(&api_context.rbac, ProjectPermission::View);
-        sql = sql.filter(
-            schema::project::organization_id
-                .eq_any(organization)
-                .or(schema::project::id.eq_any(projects)),
-        );
-    }
-
-    Ok(sql
+    Ok(schema::project::table
+        .filter(schema::project::organization_id.eq(query_organization.id))
         .order(schema::project::name)
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
@@ -150,13 +152,14 @@ async fn post_inner(
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
+    pub organization: ResourceId,
     pub project: ResourceId,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}",
-    tags = ["projects"]
+    path =  "/v0/organizations/{organization}/projects/{project}",
+    tags = ["organizations", "projects"]
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -167,8 +170,8 @@ pub async fn one_options(
 
 #[endpoint {
     method = GET,
-    path = "/v0/projects/{project}",
-    tags = ["projects"]
+    path =  "/v0/organizations/{organization}/projects/{project}",
+    tags = ["organizations", "projects"]
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
@@ -191,12 +194,13 @@ async fn get_one_inner(
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
 
-    QueryProject::is_allowed_resource_id(
+    QueryOrganization::is_allowed_resource_id(
         api_context,
-        &path_params.project,
+        &path_params.organization,
         auth_user,
         OrganizationPermission::View,
-        ProjectPermission::View,
-    )?
-    .into_json(&mut api_context.db_conn)
+    )?;
+
+    let conn = &mut api_context.db_conn;
+    QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
 }

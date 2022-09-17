@@ -173,13 +173,12 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
 
-    let query = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-
-    api_context
-        .rbac
-        .is_allowed_organization(auth_user, Permission::View, &query)?;
-
-    query.into_json()
+    QueryOrganization::is_allowed_resource_id(
+        api_context,
+        &path_params.organization,
+        auth_user,
+        Permission::View,
+    )?
+    .into_json()
 }
