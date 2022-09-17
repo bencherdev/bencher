@@ -11,32 +11,32 @@ swagger = ["dep:literally"]
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../lib/bencher_rbac", features = ["json"] }
 # Work off of repo until OPTIONS is released
-dropshot = { version = "0.8.0" }
-schemars = { version = "0.8.10", features = ["uuid1"] }
-tokio = "1.18.2"
-slog = "2.7.0"
-email-address-parser = "1.0.3"
-jsonwebtoken = "8.1.1"
-slug = "0.1.4"
-chrono = { version = "0.4.20" }
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = "1.0.81"
-diesel = { version = "2.0.0", features = ["sqlite", "chrono"] }
-diesel_migrations = "2.0.0"
+dropshot = "0.8"
+schemars = { version = "0.8", features = ["uuid1"] }
+tokio = "1.21"
+slog = "2.7"
+email-address-parser = "1.0"
+jsonwebtoken = "8.1"
+slug = "0.1"
+chrono = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+diesel = { version = "2.0", features = ["sqlite", "chrono"] }
+diesel_migrations = "2.0"
 dotenvy = "0.15"
-uuid = { version = "1.1.2", features = ["v4", "serde"] }
-rand = "0.8.5"
-url = "2.2.2"
-http = "0.2.8"
-ordered-float = { version = "3.0.0" }
-statrs = "0.16.0"
-literally = { version = "0.1.3", optional = true }
-lazy_static = "1.4.0"
+uuid = { version = "1.1", features = ["v4", "serde"] }
+rand = "0.8"
+url = "2.2"
+http = "0.2"
+ordered-float = "3.0"
+statrs = "0.16"
+literally = { version = "0.1", optional = true }
+lazy_static = "1.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
-thiserror = "1.0.34"
-derive_more = "0.99.17"
-oso = "0.26.2"
+thiserror = "1.0"
+derive_more = "0.99"
+oso = "0.26"
 
 [[bin]]
 name = "api"
