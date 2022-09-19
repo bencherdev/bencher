@@ -55,6 +55,7 @@ const App: Component = () => {
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
 
+  const [organization_slug, setOrganizationSlug] = createSignal<null | String>(null);
   // The project slug can't be a resource because it isn't 100% tied to the URL
   const [project_slug, setProjectSlug] = createSignal<String>(
     projectSlug(pathname)
@@ -154,6 +155,7 @@ const App: Component = () => {
       <GoogleAnalytics />
       <Navbar
         user={user}
+        organization_slug={organization_slug}
         project_slug={project_slug}
         handleRedirect={setRedirect}
         handleProjectSlug={setProjectSlug}
@@ -195,6 +197,7 @@ const App: Component = () => {
           <ConsoleRoutes
             user={user}
             pathname={pathname}
+            organization_slug={organization_slug}
             project_slug={project_slug}
             handleTitle={handleTitle}
             handleRedirect={setRedirect}

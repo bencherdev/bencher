@@ -148,7 +148,11 @@ const projectsConfig = {
           key: "public",
         },
       ],
-      buttons: true,
+      buttons: {
+        path: (path_params) => {
+          return `/console/projects/${path_params?.project_slug}/perf`
+        },
+      },
     },
   },
   [Operation.PERF]: {

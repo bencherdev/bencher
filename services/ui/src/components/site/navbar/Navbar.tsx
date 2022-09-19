@@ -6,6 +6,7 @@ const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
 
 export interface Props {
   user: Function;
+  organization_slug: Function;
 }
 
 export const Navbar = (props) => {
@@ -53,7 +54,7 @@ export const Navbar = (props) => {
             GitHub
           </a>
 
-          {props.user()?.token && (
+          {props.user()?.token && props.organization_slug (
             <div class="navbar-item">
               <ProjectSelect
                 project_slug={props?.project_slug}

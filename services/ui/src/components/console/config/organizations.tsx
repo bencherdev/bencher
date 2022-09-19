@@ -56,7 +56,11 @@ const organizationsConfig = {
           key: "slug",
         },
       ],
-      buttons: true,
+      buttons: {
+        path: (path_params) => {
+          return `/console/organizations/${path_params?.organization_slug}/projects`
+        },
+      },
     },
   },
 };

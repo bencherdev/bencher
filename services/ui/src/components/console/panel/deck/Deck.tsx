@@ -9,7 +9,8 @@ const Deck = (props) => {
     <>
       {props.config?.buttons && (
         <DeckButton
-          pathname={props.pathname}
+          config={props.config?.buttons}
+          path_params={props.path_params}
           handleRedirect={props.handleRedirect}
         />
       )}
@@ -30,7 +31,8 @@ const Deck = (props) => {
       </For>
       {props.config?.buttons && (
         <DeckButton
-          pathname={props.pathname}
+          config={props.config?.buttons}
+          path_params={props.path_params}
           handleRedirect={props.handleRedirect}
         />
       )}

@@ -59,6 +59,7 @@ const DeckPanel = (props) => {
       <Deck
         config={props.config?.deck}
         data={deck_data()}
+        path_params={props.path_params}
         pathname={props.pathname}
         handleRedirect={props.handleRedirect}
       />
