@@ -78,7 +78,7 @@ const ProjectSelect = (props) => {
     if (target_slug === BENCHER_ALL_PROJECTS) {
       setSelected(target_slug);
       props.handleProjectSlug(null);
-      props.handleRedirect("/console/projects");
+      props.handleRedirect(`/console/organizations/${props.organization_slug()}/projects`);
       return;
     }
 
