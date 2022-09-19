@@ -202,3 +202,59 @@ async fn get_one_inner(
     let conn = &mut api_context.db_conn;
     QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
 }
+
+#[derive(Deserialize, JsonSchema)]
+pub struct GetOneProjectParams {
+    pub project: ResourceId,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}",
+    tags = ["projects"]
+}]
+pub async fn one_project_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GetOneProjectParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects/{project}",
+    tags = [ "projects"]
+}]
+pub async fn get_one_project(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetOneProjectParams>,
+) -> Result<ResponseOk<JsonProject>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
+
+    let json = get_one_project_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_one_project_inner(
+    context: &Context,
+    path_params: GetOneProjectParams,
+    auth_user: &AuthUser,
+) -> Result<JsonProject, ApiError> {
+    let api_context = &mut *context.lock().await;
+
+    let query_project =
+        QueryProject::from_resource_id(&mut api_context.db_conn, &path_params.project)?;
+
+    QueryOrganization::is_allowed_id(
+        api_context,
+        query_project.organization_id,
+        auth_user,
+        Permission::View,
+    )?;
+
+    query_project.into_json(&mut api_context.db_conn)
+}

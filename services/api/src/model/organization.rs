@@ -96,6 +96,24 @@ impl QueryOrganization {
         Ok(query_organization)
     }
 
+    pub fn is_allowed_id(
+        api_context: &mut ApiContext,
+        organization_id: i32,
+        auth_user: &AuthUser,
+        permission: bencher_rbac::organization::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_organization = schema::organization::table
+            .filter(schema::organization::id.eq(organization_id))
+            .first(&mut api_context.db_conn)
+            .map_err(api_error!())?;
+
+        api_context
+            .rbac
+            .is_allowed_organization(auth_user, permission, &query_organization)?;
+
+        Ok(query_organization)
+    }
+
     pub fn into_json(self) -> Result<JsonOrganization, ApiError> {
         let Self {
             id: _,
