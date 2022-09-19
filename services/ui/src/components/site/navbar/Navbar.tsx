@@ -54,9 +54,10 @@ export const Navbar = (props) => {
             GitHub
           </a>
 
-          {props.user()?.token && props.organization_slug (
+          {props.user()?.token && props.organization_slug() && (
             <div class="navbar-item">
               <ProjectSelect
+                organization_slug={props.organization_slug}
                 project_slug={props?.project_slug}
                 handleRedirect={props?.handleRedirect}
                 handleProjectSlug={props?.handleProjectSlug}

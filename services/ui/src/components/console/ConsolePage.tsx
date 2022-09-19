@@ -3,6 +3,23 @@ import { createEffect, createMemo, createSignal } from "solid-js";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 
+export const organizationSlug = (pathname) => {
+  const path = pathname().split("/");
+  console.log(path);
+  if (
+    path.length < 5 ||
+    path[0] ||
+    path[1] !== "console" ||
+    path[2] !== "organizations" ||
+    !path[3] ||
+    path[4] !== "projects"
+  ) {
+    return null;
+  }
+  console.log(path[3]);
+  return path[3];
+};
+
 export const projectSlug = (pathname) => {
   const path = pathname().split("/");
   if (
@@ -14,6 +31,7 @@ export const projectSlug = (pathname) => {
   ) {
     return null;
   }
+  console.log(path[3]);
   return path[3];
 };
 
@@ -22,6 +40,11 @@ const ConsolePage = (props) => {
 
   const params = useParams();
   const path_params = createMemo(() => params);
+
+  createEffect(() => {
+    const slug = organizationSlug(props.pathname);
+    props.handleOrganizationSlug(slug);
+  });
 
   createEffect(() => {
     const slug = projectSlug(props.pathname);

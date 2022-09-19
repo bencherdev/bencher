@@ -6,41 +6,42 @@ import validator from "validator";
 const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
-const options = (token: string) => {
-  return {
-    url: `${BENCHER_API_URL}/v0/projects`,
-    method: "get",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
-const fetchProjects = async () => {
-  const all_projects = {
-    name: "All Projects",
-    slug: BENCHER_ALL_PROJECTS,
-  };
-
-  try {
-    const token = getToken();
-    if (token && !validator.isJWT(token)) {
-      return [all_projects];
-    }
-
-    const resp = await axios(options(token));
-    let data = resp?.data;
-    data.push(all_projects);
-
-    return data;
-  } catch (error) {
-    console.error(error);
-    return [all_projects];
-  }
-};
 
 const ProjectSelect = (props) => {
+  const options = (token: string) => {
+    return {
+      url: `${BENCHER_API_URL}/v0/organizations/${props.organization_slug()}/projects`,
+      method: "get",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
+  const fetchProjects = async () => {
+    const all_projects = {
+      name: "All Projects",
+      slug: BENCHER_ALL_PROJECTS,
+    };
+
+    try {
+      const token = getToken();
+      if (token && !validator.isJWT(token)) {
+        return [all_projects];
+      }
+
+      const resp = await axios(options(token));
+      let data = resp?.data;
+      data.push(all_projects);
+
+      return data;
+    } catch (error) {
+      console.error(error);
+      return [all_projects];
+    }
+  };
+
   const getSelected = () => {
     const slug = props.project_slug();
     if (slug === null) {
@@ -65,7 +66,7 @@ const ProjectSelect = (props) => {
   const handleSelectedRedirect = () => {
     let path: string;
     if (selected() === BENCHER_ALL_PROJECTS) {
-      path = "/console/projects";
+      path = `/console/organizations/${props.organization_slug()}/projects`;
     } else {
       path = `/console/projects/${selected()}/perf`;
     }

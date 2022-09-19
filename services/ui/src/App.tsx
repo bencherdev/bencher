@@ -97,7 +97,6 @@ const App: Component = () => {
       const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
       // TODO properly validate entire user
       if (user?.token && validator.isJWT(user.token)) {
-        console.log(user);
         setUser(user);
       }
     }
@@ -201,6 +200,7 @@ const App: Component = () => {
             project_slug={project_slug}
             handleTitle={handleTitle}
             handleRedirect={setRedirect}
+            handleOrganizationSlug={setOrganizationSlug}
             handleProjectSlug={setProjectSlug}
           />
         </Route>

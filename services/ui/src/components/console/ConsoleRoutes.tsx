@@ -18,6 +18,7 @@ const ConsoleRoutes = (props) => {
         project_slug={props.project_slug}
         handleTitle={props.handleTitle}
         handleRedirect={props.handleRedirect}
+        handleOrganizationSlug={props.handleOrganizationSlug}
         handleProjectSlug={props.handleProjectSlug}
       />
     );
