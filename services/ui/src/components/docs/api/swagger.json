@@ -712,6 +712,238 @@
         }
       }
     },
+    "/v0/organizations/{organization}/projects": {
+      "get": {
+        "tags": [
+          "organizations",
+          "projects"
+        ],
+        "operationId": "get_ls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_JsonProject",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JsonProject"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "projects"
+        ],
+        "operationId": "dir_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/organizations/{organization}/projects/{project}": {
+      "get": {
+        "tags": [
+          "organizations",
+          "projects"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonProject"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "projects"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/perf": {
       "post": {
         "tags": [
@@ -861,64 +1093,6 @@
       }
     },
     "/v0/projects": {
-      "get": {
-        "tags": [
-          "projects"
-        ],
-        "operationId": "get_ls",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "Array_of_JsonProject",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonProject"
-                  }
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
       "post": {
         "tags": [
           "projects"
@@ -982,31 +1156,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects"
-        ],
-        "operationId": "dir_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}": {
@@ -1014,7 +1163,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "get_one",
+        "operationId": "get_one_project",
         "parameters": [
           {
             "in": "path",
@@ -1079,7 +1228,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "one_options",
+        "operationId": "one_project_options",
         "parameters": [
           {
             "in": "path",
