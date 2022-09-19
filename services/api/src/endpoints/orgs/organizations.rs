@@ -106,6 +106,10 @@ async fn post_inner(
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.db_conn;
 
+    if !auth_user.is_admin(&api_context.rbac) {
+        return Err(ApiError::CreateOrganization(auth_user.id));
+    }
+
     // Create the organization
     let insert_organization = InsertOrganization::from_json(conn, json_organization);
     diesel::insert_into(schema::organization::table)

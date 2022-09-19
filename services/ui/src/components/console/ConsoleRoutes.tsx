@@ -26,18 +26,27 @@ const ConsoleRoutes = (props) => {
   return (
     <>
       {/* Console Routes */}
-      <Route path="/" element={<Navigate href="/console/projects" />} />
+      {/* TODO add a smarter automatic redirect if the user only belongs to a single organization */}
+      <Route path="/" element={<Navigate href="/console/organizations" />} />
       {/* Console Projects Routes */}
       <Route
-        path="/projects"
+        path="/organizations"
+        element={consolePage(config?.[Resource.ORGANIZATIONS]?.[Operation.LIST])}
+      />
+      <Route
+        path="/organizations/:organization_slug"
+        element={consolePage(config?.[Resource.ORGANIZATIONS]?.[Operation.VIEW])}
+      />
+      <Route
+        path="/organizations/:organization_slug/projects"
         element={consolePage(config?.[Resource.PROJECTS]?.[Operation.LIST])}
       />
       <Route
-        path="/projects/add"
+        path="/organizations/:organization_slug/projects/add"
         element={consolePage(config?.[Resource.PROJECTS]?.[Operation.ADD])}
       />
       <Route
-        path="/projects/:project_slug"
+        path="/organizations/:organization_slug/projects/:project_slug"
         element={consolePage(config?.[Resource.PROJECTS]?.[Operation.VIEW])}
       />
       <Route

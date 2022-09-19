@@ -17,7 +17,7 @@ import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
-import { getToken, LOCAL_USER_KEY } from "./components/site/util";
+import { BENCHER_USER_KEY } from "./components/site/util";
 import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
@@ -32,6 +32,8 @@ const initUser = () => {
       name: null,
       slug: null,
       email: null,
+      admin: null,
+      locked: null,
     },
     token: null,
   };
@@ -65,7 +67,8 @@ const App: Component = () => {
   });
 
   const handleUser = (user) => {
-    window.localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
+    window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
+    console.log(user);
     setUser(user);
   };
 
@@ -90,9 +93,10 @@ const App: Component = () => {
 
   setInterval(() => {
     if (user()?.token === null) {
-      const user = JSON.parse(window.localStorage.getItem(LOCAL_USER_KEY));
+      const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
       // TODO properly validate entire user
       if (user?.token && validator.isJWT(user.token)) {
+        console.log(user);
         setUser(user);
       }
     }

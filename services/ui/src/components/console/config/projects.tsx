@@ -1,4 +1,4 @@
-import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
+import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 
@@ -18,8 +18,8 @@ const projectsConfig = {
       ],
     },
     table: {
-      url: (_path_params) => {
-        return `${BENCHER_API_URL}/v0/projects`;
+      url: (path_params) => {
+        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects`;
       },
       add: {
         path: (pathname) => {
@@ -119,7 +119,7 @@ const projectsConfig = {
     },
     deck: {
       url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}`;
+        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects/${path_params?.project_slug}`;
       },
       cards: [
         {

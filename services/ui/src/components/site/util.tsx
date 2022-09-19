@@ -1,4 +1,4 @@
-export const LOCAL_USER_KEY: string = "USER_KEY";
+export const BENCHER_USER_KEY: string = "BENCHER_USER";
 
 export const getToken = () =>
-  JSON.parse(window.localStorage.getItem(LOCAL_USER_KEY))?.token;
+  JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY))?.token;

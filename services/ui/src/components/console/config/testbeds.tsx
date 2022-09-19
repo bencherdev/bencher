@@ -1,5 +1,5 @@
-import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
-import testbedFieldsConfig from "../../fields/config/project/testbedFieldsConfig";
+import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
+import testbedFieldsConfig from "../../fields/config/org/testbedFieldsConfig";
 import { Button, Card, Field, Operation, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 

@@ -1,5 +1,5 @@
-import projectFieldsConfig from "../../fields/config/project/projectFieldsConfig";
-import thresholdFieldsConfig from "../../fields/config/project/thresholdFieldsConfig";
+import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
+import thresholdFieldsConfig from "../../fields/config/org/thresholdFieldsConfig";
 import { Button, Card, Field, Operation, Row } from "./types";
 import {
   BENCHER_API_URL,

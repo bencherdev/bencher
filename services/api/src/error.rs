@@ -96,6 +96,8 @@ pub enum ApiError {
     Email(String),
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u64, max: u64 },
+    #[error("User ({0}) cannot create a new organization")]
+    CreateOrganization(i32),
 
     // TODO remove once no longer needed
     #[error(transparent)]

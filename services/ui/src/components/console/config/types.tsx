@@ -14,6 +14,7 @@ export enum Button {
 }
 
 export enum Resource {
+  ORGANIZATIONS,
   PROJECTS,
   REPORTS,
   BRANCHES,
