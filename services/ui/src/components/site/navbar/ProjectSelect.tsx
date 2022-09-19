@@ -2,8 +2,8 @@ import axios from "axios";
 import { createSignal, createResource, createEffect, For } from "solid-js";
 import { getToken } from "../../site/util";
 import validator from "validator";
+import { BENCHER_API_URL } from "../../console/config/util";
 
-const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 
@@ -11,7 +11,7 @@ const ProjectSelect = (props) => {
   const options = (token: string) => {
     return {
       url: `${BENCHER_API_URL}/v0/organizations/${props.organization_slug()}/projects`,
-      method: "get",
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
