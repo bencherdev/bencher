@@ -4,9 +4,7 @@ use bencher_json::{
     threshold::{JsonNewThreshold, JsonThreshold},
     ResourceId,
 };
-use bencher_rbac::{
-    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
-};
+use bencher_rbac::project::Permission;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
@@ -85,8 +83,7 @@ async fn get_ls_inner(
         api_context,
         &path_params.project,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 
@@ -155,13 +152,7 @@ async fn post_inner(
         json_threshold.testbed,
     )?;
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
-        api_context,
-        project_id,
-        auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::Create,
-    )?;
+    QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
     let conn = &mut api_context.db_conn;
 
     let insert_threshold = InsertThreshold::from_json(conn, branch_id, testbed_id, json_threshold)?;
@@ -224,8 +215,7 @@ async fn get_one_inner(
         api_context,
         &path_params.project,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 

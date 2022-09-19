@@ -84,16 +84,14 @@ impl QueryOrganization {
         api_context: &mut ApiContext,
         organization: &ResourceId,
         auth_user: &AuthUser,
-        organization_permission: bencher_rbac::organization::Permission,
+        permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, ApiError> {
         let query_organization =
             QueryOrganization::from_resource_id(&mut api_context.db_conn, organization)?;
 
-        api_context.rbac.is_allowed_organization(
-            auth_user,
-            organization_permission,
-            &query_organization,
-        )?;
+        api_context
+            .rbac
+            .is_allowed_organization(auth_user, permission, &query_organization)?;
 
         Ok(query_organization)
     }

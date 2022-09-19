@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonInvite};
-use bencher_rbac::organization::Permission as OrganizationPermission;
+use bencher_rbac::organization::Permission;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tracing::info;
 
@@ -64,7 +64,7 @@ async fn post_inner(
     // Check to see if user has permission to create a project within the organization
     api_context.rbac.is_allowed_organization(
         auth_user,
-        OrganizationPermission::CreateRole,
+        Permission::CreateRole,
         QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
     )?;
 

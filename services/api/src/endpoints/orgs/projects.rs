@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
-use bencher_rbac::{organization::Permission as OrganizationPermission, project::Role};
+use bencher_rbac::{organization::Permission, project::Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -76,7 +76,7 @@ async fn get_ls_inner(
         api_context,
         &path_params.organization,
         auth_user,
-        OrganizationPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 
@@ -121,11 +121,9 @@ async fn post_inner(
     let insert_project = InsertProject::from_json(conn, json_project)?;
 
     // Check to see if user has permission to create a project within the organization
-    api_context.rbac.is_allowed_organization(
-        auth_user,
-        OrganizationPermission::Create,
-        &insert_project,
-    )?;
+    api_context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Create, &insert_project)?;
 
     diesel::insert_into(schema::project::table)
         .values(&insert_project)
@@ -198,7 +196,7 @@ async fn get_one_inner(
         api_context,
         &path_params.organization,
         auth_user,
-        OrganizationPermission::View,
+        Permission::View,
     )?;
 
     let conn = &mut api_context.db_conn;

@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
-use bencher_rbac::{
-    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
-};
+use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -79,8 +77,7 @@ async fn get_ls_inner(
         api_context,
         &path_params.project,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 
@@ -134,8 +131,7 @@ async fn post_inner(
         api_context,
         insert_branch.project_id,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::Create,
+        Permission::Create,
     )?;
     let conn = &mut api_context.db_conn;
 
@@ -200,8 +196,7 @@ async fn get_one_inner(
         api_context,
         &path_params.project,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 

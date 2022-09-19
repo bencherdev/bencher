@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
-use bencher_rbac::{
-    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
-};
+use bencher_rbac::project::Permission;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
@@ -85,8 +83,7 @@ async fn get_ls_inner(
         api_context,
         &path_params.project,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 
@@ -159,13 +156,7 @@ async fn post_inner(
     } = SameProject::validate(conn, json_report.branch, json_report.testbed)?;
 
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
-        api_context,
-        project_id,
-        auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::Create,
-    )?;
+    QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
     let conn = &mut api_context.db_conn;
 
     // If there is a hash then try to see if there is already a code version for
@@ -268,8 +259,7 @@ async fn get_one_inner(
         api_context,
         &path_params.project,
         auth_user,
-        OrganizationPermission::Manage,
-        ProjectPermission::View,
+        Permission::View,
     )?;
     let conn = &mut api_context.db_conn;
 

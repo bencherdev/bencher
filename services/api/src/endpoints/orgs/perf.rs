@@ -4,9 +4,7 @@ use bencher_json::{
     perf::{JsonPerfData, JsonPerfDatum, JsonPerfDatumKind, JsonPerfKind},
     JsonPerf, JsonPerfQuery,
 };
-use bencher_rbac::{
-    organization::Permission as OrganizationPermission, project::Permission as ProjectPermission,
-};
+use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use uuid::Uuid;
@@ -128,8 +126,7 @@ async fn post_inner(
                         api_context,
                         project_id,
                         auth_user,
-                        OrganizationPermission::Manage,
-                        ProjectPermission::Create,
+                        Permission::Create,
                     )?;
                 } else {
                     // Verify that the project is public
