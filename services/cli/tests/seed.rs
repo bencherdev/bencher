@@ -72,12 +72,19 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     // export BENCHER_API_TOKEN=[USER_TOKEN]
     env::set_var(BENCHER_API_TOKEN, TEST_BENCHER_API_TOKEN);
 
-    // cargo run -- project ls --host http://localhost:61016
+    // cargo run -- project ls --host http://localhost:61016 --org muriel-bagge
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args(["project", "ls", HOST_ARG, LOCALHOST]);
+    cmd.args([
+        "project",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        "--org",
+        "muriel-bagge",
+    ]);
     cmd.assert().success();
 
-    // cargo run -- project create --host http://localhost:61016 "The Computer"
+    // cargo run -- project create --host http://localhost:61016 --org muriel-bagge "The Computer"
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "project",
@@ -92,9 +99,17 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
-    // cargo run -- project view --host http://localhost:61016 the-computer
+    // cargo run -- project view --host http://localhost:61016 --org muriel-bagge the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args(["project", "view", HOST_ARG, LOCALHOST, PROJECT_SLUG]);
+    cmd.args([
+        "project",
+        "view",
+        HOST_ARG,
+        LOCALHOST,
+        "--org",
+        "muriel-bagge",
+        PROJECT_SLUG,
+    ]);
     cmd.assert().success();
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -104,6 +119,8 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         LOCALHOST,
         TOKEN_ARG,
         TEST_BENCHER_API_TOKEN,
+        "--org",
+        "muriel-bagge",
         PROJECT_SLUG,
     ]);
     cmd.assert().success();
@@ -116,6 +133,8 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         TEST_BENCHER_API_TOKEN,
         HOST_ARG,
         LOCALHOST,
+        "--org",
+        "muriel-bagge",
     ]);
     cmd.assert().success();
 
