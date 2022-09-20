@@ -17,6 +17,10 @@ pub enum CliProject {
 
 #[derive(Parser, Debug)]
 pub struct CliProjectList {
+    /// Organization slug or UUID
+    #[clap(long)]
+    pub org: ResourceId,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }
@@ -52,6 +56,10 @@ pub struct CliProjectCreate {
 
 #[derive(Parser, Debug)]
 pub struct CliProjectView {
+    /// Organization slug or UUID
+    #[clap(long)]
+    pub org: Option<ResourceId>,
+
     /// Project slug or UUID
     pub project: ResourceId,
 

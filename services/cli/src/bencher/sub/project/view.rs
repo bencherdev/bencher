@@ -11,6 +11,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct View {
+    pub org: Option<ResourceId>,
     pub project: ResourceId,
     pub backend: Backend,
 }
@@ -19,8 +20,13 @@ impl TryFrom<CliProjectView> for View {
     type Error = CliError;
 
     fn try_from(view: CliProjectView) -> Result<Self, Self::Error> {
-        let CliProjectView { project, backend } = view;
+        let CliProjectView {
+            org,
+            project,
+            backend,
+        } = view;
         Ok(Self {
+            org,
             project,
             backend: backend.try_into()?,
         })
@@ -30,9 +36,12 @@ impl TryFrom<CliProjectView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
-        self.backend
-            .get(&format!("/v0/projects/{}", self.project))
-            .await?;
+        let path = if let Some(org) = &self.org {
+            format!("/v0/organizations/{}/projects/{}", org, self.project)
+        } else {
+            format!("/v0/projects/{}", self.project)
+        };
+        self.backend.get(&path).await?;
         Ok(())
     }
 }
