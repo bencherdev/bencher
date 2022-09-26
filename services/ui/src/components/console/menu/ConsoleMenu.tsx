@@ -39,6 +39,9 @@ const ConsoleMenu = (props) => {
               <Link href={getProjectPath("thresholds")}>Thresholds</Link>
             </li>
             <li>
+              <Link href={getProjectPath("alerts")}>Alerts</Link>
+            </li>
+            <li>
               <Link href={getProjectPath("connections")}>Connections</Link>
             </li>
             <li>

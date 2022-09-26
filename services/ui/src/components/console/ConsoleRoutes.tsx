@@ -99,6 +99,14 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.VIEW])}
       />
       <Route
+        path="/projects/:project_slug/alerts"
+        element={consolePage(config?.[Resource.ALERTS]?.[Operation.LIST])}
+      />
+      <Route
+        path="/projects/:project_slug/alerts/:alert_uuid"
+        element={consolePage(config?.[Resource.ALERTS]?.[Operation.VIEW])}
+      />
+      <Route
         path="/projects/:project_slug/connections"
         element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.LIST])}
       />
