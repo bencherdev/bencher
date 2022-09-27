@@ -10,7 +10,6 @@ swagger = ["dep:literally"]
 [dependencies]
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../lib/bencher_rbac", features = ["json"] }
-# Work off of repo until OPTIONS is released
 dropshot = "0.8"
 schemars = { version = "0.8", features = ["uuid1"] }
 tokio = "1.21"
@@ -37,6 +36,7 @@ tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
 thiserror = "1.0"
 derive_more = "0.99"
 oso = "0.26"
+mail-send = "0.2.3"
 
 [[bin]]
 name = "api"
