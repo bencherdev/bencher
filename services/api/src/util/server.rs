@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use tracing::{info, trace};
 
 use super::{context::Email, registrar::Registrar, ApiContext, Context};
-use crate::{endpoints::Api, ApiError};
+use crate::{endpoints::Api, util::context::Messenger, ApiError};
 
 const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
 const BENCHER_SMTP_HOSTNAME: &str = "BENCHER_SMTP_HOSTNAME";
@@ -33,8 +33,8 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     let secret_key = get_secret();
     trace!("Parsing role based access control (RBAC) rules");
     let rbac = init_rbac().map_err(ApiError::Polar)?.into();
-    trace!("Configuring email settings");
-    let email = get_email();
+    trace!("Configuring messenger settings");
+    let messenger = get_messenger();
     trace!("Getting database connection");
     let mut db_conn = get_db_conn()?;
     trace!("Running database migrations");
@@ -42,8 +42,8 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     let private = Mutex::new(ApiContext {
         secret_key,
         rbac,
+        messenger,
         db_conn,
-        email,
     });
 
     trace!("Getting server configuration");
@@ -71,34 +71,32 @@ fn get_secret() -> String {
     })
 }
 
-fn get_email() -> Option<Email> {
-    fn failed_to_find(key: &str, error: std::env::VarError) {
+fn get_messenger() -> Messenger {
+    fn failed_to_find(key: &str, error: std::env::VarError) -> Messenger {
         info!("Failed to find \"{key}\": {error}");
-        info!("Defaulting to standard out in lieu of email");
+        info!("Defaulting messenger to standard out");
+        Messenger::StdOut
     }
 
     let hostname = match std::env::var(BENCHER_SMTP_HOSTNAME) {
         Ok(hostname) => hostname,
         Err(e) => {
-            failed_to_find(BENCHER_SMTP_HOSTNAME, e);
-            return None;
+            return failed_to_find(BENCHER_SMTP_HOSTNAME, e);
         },
     };
     let username = match std::env::var(BENCHER_SMTP_USERNAME) {
         Ok(username) => username,
         Err(e) => {
-            failed_to_find(BENCHER_SMTP_USERNAME, e);
-            return None;
+            return failed_to_find(BENCHER_SMTP_USERNAME, e);
         },
     };
     let secret = match std::env::var(BENCHER_SMTP_SECRET) {
         Ok(secret) => secret,
         Err(e) => {
-            failed_to_find(BENCHER_SMTP_SECRET, e);
-            return None;
+            return failed_to_find(BENCHER_SMTP_SECRET, e);
         },
     };
-    Some(Email {
+    Messenger::Email(Email {
         hostname,
         username,
         secret,
