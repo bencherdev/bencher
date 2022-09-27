@@ -2,6 +2,12 @@ use mail_send::{mail_builder::MessageBuilder, Transport};
 
 use crate::ApiError;
 
+pub struct Email {
+    pub hostname: String,
+    pub username: String,
+    pub secret: String,
+}
+
 pub async fn send_email() -> Result<(), ApiError> {
     // Build a simple multipart message
     let message = MessageBuilder::new()

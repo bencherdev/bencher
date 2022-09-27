@@ -1,6 +1,5 @@
 pub mod context;
 pub mod cors;
-pub mod email;
 pub mod error;
 pub mod headers;
 pub mod registrar;

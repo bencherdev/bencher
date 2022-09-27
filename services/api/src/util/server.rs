@@ -5,10 +5,13 @@ use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel
 use tokio::sync::Mutex;
 use tracing::{info, trace};
 
-use super::{registrar::Registrar, ApiContext, Context};
+use super::{context::Email, registrar::Registrar, ApiContext, Context};
 use crate::{endpoints::Api, ApiError};
 
 const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
+const BENCHER_SMTP_HOSTNAME: &str = "BENCHER_SMTP_HOSTNAME";
+const BENCHER_SMTP_USERNAME: &str = "BENCHER_SMTP_USERNAME";
+const BENCHER_SMTP_SECRET: &str = "BENCHER_SMTP_SECRET";
 const BENCHER_DB: &str = "BENCHER_DB";
 const DATABASE_URL: &str = "DATABASE_URL";
 const BENCHER_IP_ADDRESS: &str = "BENCHER_IP_ADDRESS";
@@ -30,6 +33,8 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     let secret_key = get_secret();
     trace!("Parsing role based access control (RBAC) rules");
     let rbac = init_rbac().map_err(ApiError::Polar)?.into();
+    trace!("Configuring email settings");
+    let email = get_email();
     trace!("Getting database connection");
     let mut db_conn = get_db_conn()?;
     trace!("Running database migrations");
@@ -38,6 +43,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
         secret_key,
         rbac,
         db_conn,
+        email,
     });
 
     trace!("Getting server configuration");
@@ -62,6 +68,40 @@ fn get_secret() -> String {
         let secret_key = uuid::Uuid::new_v4().to_string();
         info!("Generated temporary secret key: {secret_key}");
         secret_key
+    })
+}
+
+fn get_email() -> Option<Email> {
+    fn failed_to_find(key: &str, error: std::env::VarError) {
+        info!("Failed to find \"{key}\": {error}");
+        info!("Defaulting to standard out in lieu of email");
+    }
+
+    let hostname = match std::env::var(BENCHER_SMTP_HOSTNAME) {
+        Ok(hostname) => hostname,
+        Err(e) => {
+            failed_to_find(BENCHER_SMTP_HOSTNAME, e);
+            return None;
+        },
+    };
+    let username = match std::env::var(BENCHER_SMTP_USERNAME) {
+        Ok(username) => username,
+        Err(e) => {
+            failed_to_find(BENCHER_SMTP_USERNAME, e);
+            return None;
+        },
+    };
+    let secret = match std::env::var(BENCHER_SMTP_SECRET) {
+        Ok(secret) => secret,
+        Err(e) => {
+            failed_to_find(BENCHER_SMTP_SECRET, e);
+            return None;
+        },
+    };
+    Some(Email {
+        hostname,
+        username,
+        secret,
     })
 }
 
