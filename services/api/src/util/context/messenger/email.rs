@@ -13,15 +13,17 @@ pub struct Email {
 }
 
 impl Email {
-    pub async fn send(&self, message: Message) -> Result<(), ApiError> {
+    pub async fn send(&self, message: Message) {
         let mut message_builder = MessageBuilder::new();
 
-        message_builder = if let Some(name) = &self.from_name {
-            message_builder.from((name.as_str(), self.from_email.as_str()))
+        message_builder = if let Some(name) = self.from_name.clone() {
+            message_builder.from((name, self.from_email.clone()))
         } else {
-            message_builder.from(self.from_email.as_str())
+            message_builder.from(self.from_email.clone())
         };
 
+        let from_email = self.from_email.clone();
+        let to_email = message.to_email.clone();
         message_builder = if let Some(name) = message.to_name {
             message_builder.to((name, message.to_email))
         } else {
@@ -42,13 +44,29 @@ impl Email {
 
         // Connect to an SMTP relay server over TLS and
         // authenticate using the provided credentials.
-        Transport::new(&self.hostname)
-            .credentials(&self.username, &self.secret)
-            .connect_tls()
-            .await
-            .map_err(ApiError::MailSend)?
-            .send(message_builder)
-            .await
-            .map_err(ApiError::MailSend)
+        let transport = Transport::new(self.hostname.clone())
+            .credentials(self.username.clone(), self.secret.clone());
+
+        tokio::spawn(async move {
+            async fn send<'x>(
+                transport: Transport<'x>,
+                message_builder: MessageBuilder<'x>,
+            ) -> Result<(), ApiError> {
+                transport
+                    .connect_tls()
+                    .await
+                    .map_err(ApiError::MailSend)?
+                    .send(message_builder)
+                    .await
+                    .map_err(ApiError::MailSend)
+            }
+
+            match send(transport, message_builder).await {
+                Ok(_) => tracing::trace!("Email sent email from {from_email} to {to_email}"),
+                Err(e) => {
+                    tracing::error!("Failed to send email from {from_email} to {to_email}: {e}")
+                },
+            }
+        });
     }
 }
