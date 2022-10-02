@@ -33,33 +33,47 @@ impl From<String> for JsonWebToken {
 
 impl JsonWebToken {
     fn new(
-        key: &str,
+        key: impl AsRef<str>,
         audience: Audience,
         email: String,
         ttl: usize,
         org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         let claims = JsonClaims::new(audience, email, ttl, org);
-        encode(&*HEADER, &claims, &EncodingKey::from_secret(key.as_bytes())).map(Into::into)
+        encode(
+            &*HEADER,
+            &claims,
+            &EncodingKey::from_secret(key.as_ref().as_bytes()),
+        )
+        .map(Into::into)
     }
 
-    pub fn new_auth(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
+    pub fn new_auth(
+        key: impl AsRef<str>,
+        email: String,
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL, None)
     }
 
-    pub fn new_client(key: &str, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
+    pub fn new_client(
+        key: impl AsRef<str>,
+        email: String,
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Client, email, CLIENT_TOKEN_TTL, None)
     }
 
     pub fn new_api_key(
-        key: &str,
+        key: impl AsRef<str>,
         email: String,
         ttl: usize,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::ApiKey, email, ttl, None)
     }
 
-    pub fn new_invite(key: &str, invite: JsonInvite) -> Result<Self, jsonwebtoken::errors::Error> {
+    pub fn new_invite(
+        key: impl AsRef<str>,
+        invite: JsonInvite,
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
         let org_claims = OrgClaims {
             uuid: invite.organization,
             role: invite.role,
@@ -75,7 +89,7 @@ impl JsonWebToken {
 
     fn validate(
         &self,
-        key: &str,
+        key: impl AsRef<str>,
         audience: &[Audience],
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         let mut validation = Validation::new(*ALGORITHM);
@@ -84,35 +98,35 @@ impl JsonWebToken {
         validation.set_required_spec_claims(&["aud", "exp", "iss"]);
         decode(
             &self.0,
-            &DecodingKey::from_secret(key.as_bytes()),
+            &DecodingKey::from_secret(key.as_ref().as_bytes()),
             &validation,
         )
     }
 
     pub fn validate_auth(
         &self,
-        key: &str,
+        key: impl AsRef<str>,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         self.validate(key, &[Audience::Auth])
     }
 
     pub fn validate_user(
         &self,
-        key: &str,
+        key: impl AsRef<str>,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         self.validate(key, &[Audience::Client, Audience::ApiKey])
     }
 
     pub fn validate_api_key(
         &self,
-        key: &str,
+        key: impl AsRef<str>,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         self.validate(key, &[Audience::ApiKey])
     }
 
     pub fn validate_invite(
         &self,
-        key: &str,
+        key: impl AsRef<str>,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
         self.validate(key, &[Audience::Invite])
     }

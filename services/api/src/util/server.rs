@@ -5,7 +5,11 @@ use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel
 use tokio::sync::Mutex;
 use tracing::{info, trace};
 
-use super::{context::Email, registrar::Registrar, ApiContext, Context};
+use super::{
+    context::{Email, SecretKey},
+    registrar::Registrar,
+    ApiContext, Context,
+};
 use crate::{endpoints::Api, util::context::Messenger, ApiError};
 
 const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
@@ -30,7 +34,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError> {
     trace!("Setting secret key");
-    let secret_key = get_secret();
+    let secret_key = get_secret_key()?;
     trace!("Parsing role based access control (RBAC) rules");
     let rbac = init_rbac().map_err(ApiError::Polar)?.into();
     trace!("Configuring messenger settings");
@@ -62,13 +66,15 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     )
 }
 
-fn get_secret() -> String {
-    std::env::var(BENCHER_SECRET_KEY).unwrap_or_else(|e| {
-        info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
-        let secret_key = uuid::Uuid::new_v4().to_string();
-        info!("Generated temporary secret key: {secret_key}");
-        secret_key
-    })
+fn get_secret_key() -> Result<SecretKey, ApiError> {
+    std::env::var(BENCHER_SECRET_KEY)
+        .unwrap_or_else(|e| {
+            info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
+            let secret_key = uuid::Uuid::new_v4().to_string();
+            info!("Generated temporary secret key: {secret_key}");
+            secret_key
+        })
+        .try_into()
 }
 
 fn get_messenger() -> Messenger {

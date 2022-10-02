@@ -1,6 +1,7 @@
 use crate::{
     model::{organization::QueryOrganization, user::auth::INVALID_JWT},
     schema::organization_role as organization_role_table,
+    util::context::SecretKey,
     ApiError,
 };
 use bencher_json::jwt::JsonWebToken;
@@ -24,7 +25,7 @@ impl InsertOrganizationRole {
     pub fn from_jwt(
         conn: &mut SqliteConnection,
         invite: &JsonWebToken,
-        secret_key: &str,
+        secret_key: &SecretKey,
         user_id: i32,
     ) -> Result<Self, ApiError> {
         // Validate the invite JWT
