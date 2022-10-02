@@ -16,6 +16,8 @@ const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
 const BENCHER_SMTP_HOSTNAME: &str = "BENCHER_SMTP_HOSTNAME";
 const BENCHER_SMTP_USERNAME: &str = "BENCHER_SMTP_USERNAME";
 const BENCHER_SMTP_SECRET: &str = "BENCHER_SMTP_SECRET";
+const BENCHER_SMTP_FROM_NAME: &str = "BENCHER_SMTP_FROM_NAME";
+const BENCHER_SMTP_FROM_EMAIL: &str = "BENCHER_SMTP_FROM_EMAIL";
 const BENCHER_DB: &str = "BENCHER_DB";
 const DATABASE_URL: &str = "DATABASE_URL";
 const BENCHER_IP_ADDRESS: &str = "BENCHER_IP_ADDRESS";
@@ -102,10 +104,27 @@ fn get_messenger() -> Messenger {
             return failed_to_find(BENCHER_SMTP_SECRET, e);
         },
     };
+    let from_name = match std::env::var(BENCHER_SMTP_FROM_NAME) {
+        Ok(name) => Some(name),
+        Err(e) => {
+            info!("Failed to find \"{BENCHER_SMTP_FROM_NAME}\": {e}");
+            info!("Emails will not include a from name");
+            None
+        },
+    };
+    let from_email = match std::env::var(BENCHER_SMTP_FROM_EMAIL) {
+        Ok(email) => email,
+        Err(e) => {
+            return failed_to_find(BENCHER_SMTP_FROM_EMAIL, e);
+        },
+    };
+
     Messenger::Email(Email {
         hostname,
         username,
         secret,
+        from_name,
+        from_email,
     })
 }
 
