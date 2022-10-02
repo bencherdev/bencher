@@ -17,6 +17,7 @@ use crate::model::organization::InsertOrganization;
 use crate::model::organization::QueryOrganization;
 use crate::model::user::organization::InsertOrganizationRole;
 use crate::model::user::QueryUser;
+use crate::util::context::Message;
 use crate::util::cors::CorsResponse;
 use crate::ApiError;
 use crate::{
@@ -106,8 +107,14 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, insert_user.email.clone())
         .map_err(api_error!())?;
 
-    // TODO log this as trace if SMTP is configured
-    info!("Confirm \"{}\" with: {token}", insert_user.email);
+    let text_body = format!("Confirm \"{}\" with: {token}", insert_user.email);
+    let message = Message {
+        to_name: Some(insert_user.name),
+        to_email: insert_user.email,
+        subject: Some("Confirm Bencher Signup".into()),
+        html_body: Some("TODO".into()),
+        text_body: Some(text_body),
+    };
 
     Ok(JsonEmpty::default())
 }
