@@ -60,7 +60,7 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
 
     let token_data = json_token
         .token
-        .validate_auth(&api_context.secret_key)
+        .validate_auth(&api_context.secret_key.decoding)
         .map_err(api_error!())?;
 
     let user = schema::user::table
@@ -70,7 +70,7 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
         .into_json()?;
 
     let token = JsonWebToken::new_client(
-        &api_context.secret_key,
+        &api_context.secret_key.encoding,
         token_data.claims.email().to_string(),
     )
     .map_err(api_error!())?;

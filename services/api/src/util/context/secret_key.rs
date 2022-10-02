@@ -1,23 +1,15 @@
-use crate::ApiError;
+use bencher_json::jwt::{DecodingKey, EncodingKey};
 
-pub struct SecretKey(String);
-
-impl ToString for SecretKey {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
+pub struct SecretKey {
+    pub encoding: EncodingKey,
+    pub decoding: DecodingKey,
 }
 
-impl AsRef<str> for SecretKey {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TryFrom<String> for SecretKey {
-    type Error = ApiError;
-
-    fn try_from(secret_key: String) -> Result<Self, Self::Error> {
-        Ok(Self(secret_key))
+impl From<String> for SecretKey {
+    fn from(secret_key: String) -> Self {
+        Self {
+            encoding: EncodingKey::from_secret(secret_key.as_str().as_bytes()),
+            decoding: DecodingKey::from_secret(secret_key.as_str().as_bytes()),
+        }
     }
 }

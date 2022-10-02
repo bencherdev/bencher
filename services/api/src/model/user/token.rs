@@ -111,12 +111,15 @@ impl InsertToken {
             });
         }
 
-        let jwt =
-            JsonWebToken::new_api_key(&api_context.secret_key, query_user.email, ttl as usize)
-                .map_err(api_error!())?;
+        let jwt = JsonWebToken::new_api_key(
+            &api_context.secret_key.encoding,
+            query_user.email,
+            ttl as usize,
+        )
+        .map_err(api_error!())?;
 
         let token_data = jwt
-            .validate_api_key(&api_context.secret_key)
+            .validate_api_key(&api_context.secret_key.decoding)
             .map_err(api_error!())?;
 
         Ok(Self {

@@ -92,7 +92,7 @@ impl AuthUser {
 
         let api_context = &mut *rqctx.context().lock().await;
         let token_data = jwt
-            .validate_user(&api_context.secret_key)
+            .validate_user(&api_context.secret_key.decoding)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let conn = &mut api_context.db_conn;

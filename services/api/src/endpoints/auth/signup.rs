@@ -103,7 +103,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         .execute(conn)
         .map_err(api_error!())?;
 
-    let token = JsonWebToken::new_auth(&api_context.secret_key, insert_user.email.clone())
+    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, insert_user.email.clone())
         .map_err(api_error!())?;
 
     // TODO log this as trace if SMTP is configured

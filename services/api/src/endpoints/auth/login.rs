@@ -77,8 +77,8 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .map_err(api_error!())?;
     }
 
-    let token =
-        JsonWebToken::new_auth(&api_context.secret_key, query_user.email).map_err(api_error!())?;
+    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, query_user.email)
+        .map_err(api_error!())?;
 
     // TODO log this as trace if SMTP is configured
     info!("Confirm \"{}\" with: {token}", json_login.email);

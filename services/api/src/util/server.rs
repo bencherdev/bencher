@@ -34,7 +34,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError> {
     trace!("Setting secret key");
-    let secret_key = get_secret_key()?;
+    let secret_key = get_secret_key();
     trace!("Parsing role based access control (RBAC) rules");
     let rbac = init_rbac().map_err(ApiError::Polar)?.into();
     trace!("Configuring messenger settings");
@@ -66,7 +66,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     )
 }
 
-fn get_secret_key() -> Result<SecretKey, ApiError> {
+fn get_secret_key() -> SecretKey {
     std::env::var(BENCHER_SECRET_KEY)
         .unwrap_or_else(|e| {
             info!("Failed to find \"{BENCHER_SECRET_KEY}\": {e}");
@@ -74,7 +74,7 @@ fn get_secret_key() -> Result<SecretKey, ApiError> {
             info!("Generated temporary secret key: {secret_key}");
             secret_key
         })
-        .try_into()
+        .into()
 }
 
 fn get_messenger() -> Messenger {

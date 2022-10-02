@@ -69,8 +69,8 @@ async fn post_inner(
     )?;
 
     let email = validate_email(&json_invite.email)?;
-    let token =
-        JsonWebToken::new_invite(&api_context.secret_key, json_invite).map_err(api_error!())?;
+    let token = JsonWebToken::new_invite(&api_context.secret_key.encoding, json_invite)
+        .map_err(api_error!())?;
 
     // TODO log this as trace if SMTP is configured
     info!("Accept invite for \"{email}\" with: {token}");

@@ -30,7 +30,7 @@ impl InsertOrganizationRole {
     ) -> Result<Self, ApiError> {
         // Validate the invite JWT
         let token_data = invite
-            .validate_invite(secret_key)
+            .validate_invite(&secret_key.decoding)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         // Make sure that there is an `org` field in the claims
