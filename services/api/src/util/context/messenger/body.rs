@@ -1,6 +1,4 @@
-use std::fmt;
-
-pub struct HtmlBody {
+pub struct Body {
     title: String,
     preheader: String,
     greeting: String,
@@ -13,9 +11,40 @@ pub struct HtmlBody {
     settings_url: String,
 }
 
-impl fmt::Display for HtmlBody {
+impl Body {
+    pub fn text(&self) -> String {
+        let Self {
+            title: _,
+            preheader: _,
+            greeting,
+            pre_body,
+            button_text,
+            button_url,
+            post_body,
+            closing,
+            signature,
+            settings_url,
+        } = self;
+
+        format!(
+            "
+        {greeting}
+        {pre_body}
+        {button_text} ({button_url})
+        {post_body}
+
+        {closing}
+        {signature}
+
+
+
+        Bencher - Track Your Benchmarks
+        Manage email settings ({settings_url})
+        "
+        )
+    }
     // https://github.com/leemunroe/responsive-html-email-template
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn html(&self) -> String {
         let Self {
             title,
             preheader,
@@ -29,9 +58,7 @@ impl fmt::Display for HtmlBody {
             settings_url,
         } = self;
 
-        write!(
-            f,
-         "<!doctype html>
+        format!("<!doctype html>
     <html>
       <head>
         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>
@@ -400,6 +427,7 @@ impl fmt::Display for HtmlBody {
                               </tbody>
                             </table>
                             <p>{post_body}</p>
+                            <br/>
                             <p>{closing}</p>
                             <p>{signature}</p>
                           </td>
