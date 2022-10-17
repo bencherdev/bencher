@@ -115,6 +115,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         html_body: Some("TODO".into()),
         text_body: Some(text_body),
     };
+    api_context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())
 }
