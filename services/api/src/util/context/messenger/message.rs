@@ -22,7 +22,10 @@ impl fmt::Display for Message {
                 .map(|name| format!("{name} {to_email}>"))
                 .unwrap_or(to_email),
             self.subject.clone().unwrap_or_default(),
-            self.body.map(|body| body.text()).unwrap_or_default(),
+            self.body
+                .as_ref()
+                .map(|body| body.text())
+                .unwrap_or_default(),
         )
     }
 }

@@ -1,16 +1,18 @@
 use super::FmtBody;
 
 pub struct ButtonBody {
-    title: String,
-    preheader: String,
-    greeting: String,
-    pre_body: String,
-    button_text: String,
-    button_url: String,
-    post_body: String,
-    closing: String,
-    signature: String,
-    settings_url: String,
+    pub title: String,
+    pub preheader: String,
+    pub greeting: String,
+    pub pre_body: String,
+    pub pre_code: String,
+    pub button_text: String,
+    pub button_url: String,
+    pub post_body: String,
+    pub post_code: String,
+    pub closing: String,
+    pub signature: String,
+    pub settings_url: String,
 }
 
 impl FmtBody for ButtonBody {
@@ -20,9 +22,11 @@ impl FmtBody for ButtonBody {
             preheader: _,
             greeting,
             pre_body,
+            pre_code,
             button_text,
             button_url,
             post_body,
+            post_code,
             closing,
             signature,
             settings_url,
@@ -31,9 +35,9 @@ impl FmtBody for ButtonBody {
         format!(
             "
         {greeting}
-        {pre_body}
+        {pre_body}{pre_code}
         {button_text} ({button_url})
-        {post_body}
+        {post_body}{post_code}
 
         {closing}
         {signature}
@@ -53,9 +57,11 @@ impl FmtBody for ButtonBody {
             preheader,
             greeting,
             pre_body,
+            pre_code,
             button_text,
             button_url,
             post_body,
+            post_code,
             closing,
             signature,
             settings_url,
@@ -413,7 +419,7 @@ impl FmtBody for ButtonBody {
                         <tr>
                           <td>
                             <p>{greeting}</p>
-                            <p>{pre_body}</p>
+                            <p>{pre_body}<code>{pre_code}</code></p>
                             <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" class=\"btn btn-primary\">
                               <tbody>
                                 <tr>
@@ -421,7 +427,7 @@ impl FmtBody for ButtonBody {
                                     <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">
                                       <tbody>
                                         <tr>
-                                          <td> <a href=\"{button_url}\" target=\"_blank\">{button_text}</a> </td>
+                                          <td><a href=\"{button_url}\" target=\"_blank\">{button_text}</a></td>
                                         </tr>
                                       </tbody>
                                     </table>
@@ -429,7 +435,7 @@ impl FmtBody for ButtonBody {
                                 </tr>
                               </tbody>
                             </table>
-                            <p>{post_body}</p>
+                            <p>{post_body}<code>{post_code}</code></p>
                             <br/>
                             <p>{closing}</p>
                             <p>{signature}</p>
