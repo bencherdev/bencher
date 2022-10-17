@@ -14,9 +14,7 @@ impl fmt::Display for Message {
         let to_email = format!("<{}>", self.to_email);
         write!(
             f,
-            "To: {}
-            Subject: {}
-            Body: {}",
+            "\nTo: {}\nSubject: {}\nBody: {}",
             self.to_name
                 .clone()
                 .map(|name| format!("{name} {to_email}>"))

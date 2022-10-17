@@ -32,22 +32,7 @@ impl FmtBody for ButtonBody {
             settings_url,
         } = self;
 
-        format!(
-            "
-        {greeting}
-        {pre_body}{pre_code}
-        {button_text} ({button_url})
-        {post_body}{post_code}
-
-        {closing}
-        {signature}
-
-
-
-        Bencher - Track Your Benchmarks
-        Manage email settings ({settings_url})
-        "
-        )
+        format!("\n{greeting}\n{pre_body}{pre_code}\n{button_text} ({button_url})\n{post_body}{post_code}\n{closing}\n{signature}\nBencher - Track Your Benchmarks\nManage email settings ({settings_url})")
     }
 
     // https://github.com/leemunroe/responsive-html-email-template

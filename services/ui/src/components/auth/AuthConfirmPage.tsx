@@ -22,12 +22,12 @@ const AuthConfirmPage = (props: {
 
   if (
     searchParams[TOKEN_PARAM] &&
-    !validator.isJWT(searchParams[TOKEN_PARAM])
+    !validator.isJWT(searchParams[TOKEN_PARAM].trim())
   ) {
     setSearchParams({ [TOKEN_PARAM]: null });
   }
 
-  const token = createMemo(() => searchParams[TOKEN_PARAM]);
+  const token = createMemo(() => searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null);
 
   const [submitted, setSubmitted] = createSignal();
 

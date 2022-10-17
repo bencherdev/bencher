@@ -21,12 +21,12 @@ const AuthFormPage = (props: {
 
   if (
     searchParams[INVITE_PARAM] &&
-    !validator.isJWT(searchParams[INVITE_PARAM])
+    !validator.isJWT(searchParams[INVITE_PARAM].trim())
   ) {
     setSearchParams({ [INVITE_PARAM]: null });
   }
 
-  const invite = createMemo(() => searchParams[INVITE_PARAM]);
+  const invite = createMemo(() => searchParams[INVITE_PARAM] ? searchParams[INVITE_PARAM].trim() : null);
 
   return (
     <section class="section">
