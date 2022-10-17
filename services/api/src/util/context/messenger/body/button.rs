@@ -1,4 +1,6 @@
-pub struct Body {
+use super::FmtBody;
+
+pub struct ButtonBody {
     title: String,
     preheader: String,
     greeting: String,
@@ -11,8 +13,8 @@ pub struct Body {
     settings_url: String,
 }
 
-impl Body {
-    pub fn text(&self) -> String {
+impl FmtBody for ButtonBody {
+    fn text(&self) -> String {
         let Self {
             title: _,
             preheader: _,
@@ -43,8 +45,9 @@ impl Body {
         "
         )
     }
+
     // https://github.com/leemunroe/responsive-html-email-template
-    pub fn html(&self) -> String {
+    fn html(&self) -> String {
         let Self {
             title,
             preheader,

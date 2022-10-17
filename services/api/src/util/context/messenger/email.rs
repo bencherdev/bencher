@@ -2,6 +2,7 @@ use mail_send::{mail_builder::MessageBuilder, Transport};
 
 use crate::ApiError;
 
+use super::body::FmtBody;
 use super::Message;
 
 pub struct Email {
@@ -35,8 +36,9 @@ impl Email {
         }
 
         if let Some(body) = message.body {
-            message_builder = message_builder.text_body(body.text());
-            message_builder = message_builder.html_body(body.html());
+            message_builder = message_builder
+                .text_body(body.text())
+                .html_body(body.html());
         }
 
         // Connect to an SMTP relay server over TLS and

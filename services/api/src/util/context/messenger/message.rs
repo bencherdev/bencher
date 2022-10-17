@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::body::Body;
+use super::body::{Body, FmtBody};
 
 pub struct Message {
     pub to_name: Option<String>,

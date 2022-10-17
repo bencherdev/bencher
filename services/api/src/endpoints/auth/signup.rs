@@ -112,7 +112,8 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         to_name: Some(insert_user.name),
         to_email: insert_user.email,
         subject: Some("Confirm Bencher Signup".into()),
-        body: todo!(),
+        html_body: Some("TODO".into()),
+        text_body: Some(text_body),
     };
     api_context.messenger.send(message).await;
 
