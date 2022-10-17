@@ -34,12 +34,9 @@ impl Email {
             message_builder = message_builder.subject(subject);
         }
 
-        if let Some(body) = message.html_body {
-            message_builder = message_builder.html_body(body);
-        }
-
-        if let Some(body) = message.text_body {
-            message_builder = message_builder.text_body(body);
+        if let Some(body) = message.body {
+            message_builder = message_builder.text_body(body.text());
+            message_builder = message_builder.html_body(body.html());
         }
 
         // Connect to an SMTP relay server over TLS and
