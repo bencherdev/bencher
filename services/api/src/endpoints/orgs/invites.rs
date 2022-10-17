@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonInvite};
 use bencher_rbac::organization::Permission;
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tracing::info;
 
@@ -15,7 +16,9 @@ use crate::{
         organization::QueryOrganization,
         user::{auth::AuthUser, validate_email},
     },
+    schema,
     util::{
+        context::{Body, ButtonBody, Message},
         cors::{get_cors, CorsResponse},
         Context,
     },
@@ -69,8 +72,56 @@ async fn post_inner(
     )?;
 
     let email = validate_email(&json_invite.email)?;
+    let (user_name, user_email) = schema::user::table
+        .filter(schema::user::id.eq(auth_user.id))
+        .select((schema::user::name, schema::user::email))
+        .first::<(String, String)>(&mut api_context.db_conn)
+        .map_err(api_error!())?;
+    let org_name = schema::organization::table
+        .filter(schema::organization::uuid.eq(json_invite.organization.to_string()))
+        .select(schema::organization::name)
+        .first::<String>(&mut api_context.db_conn)
+        .map_err(api_error!())?;
     let token = JsonWebToken::new_invite(&api_context.secret_key.encoding, json_invite)
         .map_err(api_error!())?;
+
+    let token_string = token.to_string();
+    let body = Body::Button(ButtonBody {
+        title: format!("Invitation to join {org_name}"),
+        preheader: "Click the provided link to join.".into(),
+        greeting: "Ahoy!".into(),
+        pre_body: format!(
+            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name}.",
+        ),
+        pre_code: "".into(),
+        button_text: format!("Join {org_name}"),
+        button_url: api_context
+            .url
+            .clone()
+            .join("/todo/invite")
+            .map(|mut url| {
+                url.query_pairs_mut().append_pair("token", &token_string);
+                url.into()
+            })
+            .unwrap_or_default(),
+        post_body: "Code: ".into(),
+        post_code: token_string,
+        closing: "See you soon,".into(),
+        signature: "The Bencher Team".into(),
+        settings_url: api_context
+            .url
+            .clone()
+            .join("/console/settings/email")
+            .map(Into::into)
+            .unwrap_or_default(),
+    });
+    let message = Message {
+        to_name: None,
+        to_email: email.to_string(),
+        subject: Some(format!("Invitation to join {org_name}")),
+        body: Some(body),
+    };
+    api_context.messenger.send(message).await;
 
     // TODO log this as trace if SMTP is configured
     info!("Accept invite for \"{email}\" with: {token}");

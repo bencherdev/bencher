@@ -4,7 +4,6 @@ use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonLogin};
 
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use tracing::info;
 
 use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
@@ -12,6 +11,9 @@ use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
 use crate::error::api_error;
 
+use crate::util::context::Body;
+use crate::util::context::ButtonBody;
+use crate::util::context::Message;
 use crate::util::cors::CorsResponse;
 use crate::ApiError;
 use crate::{
@@ -77,11 +79,44 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .map_err(api_error!())?;
     }
 
-    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, query_user.email)
+    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, query_user.email.clone())
         .map_err(api_error!())?;
 
-    // TODO log this as trace if SMTP is configured
-    info!("Confirm \"{}\" with: {token}", json_login.email);
+    let token_string = token.to_string();
+    let body = Body::Button(ButtonBody {
+        title: "Confirm Bencher Login".into(),
+        preheader: "Click the provided link to login.".into(),
+        greeting: format!("Ahoy {},", query_user.name),
+        pre_body: format!("Please, click the button below or use the provided code to login."),
+        pre_code: "".into(),
+        button_text: "Confirm Login".into(),
+        button_url: api_context
+            .url
+            .clone()
+            .join("/auth/confirm")
+            .map(|mut url| {
+                url.query_pairs_mut().append_pair("token", &token_string);
+                url.into()
+            })
+            .unwrap_or_default(),
+        post_body: "Code: ".into(),
+        post_code: token_string,
+        closing: "See you soon,".into(),
+        signature: "The Bencher Team".into(),
+        settings_url: api_context
+            .url
+            .clone()
+            .join("/console/settings/email")
+            .map(Into::into)
+            .unwrap_or_default(),
+    });
+    let message = Message {
+        to_name: Some(query_user.name),
+        to_email: query_user.email,
+        subject: Some("Confirm Bencher Login".into()),
+        body: Some(body),
+    };
+    api_context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())
 }

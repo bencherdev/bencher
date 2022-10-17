@@ -6,7 +6,6 @@ use diesel::dsl::count;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use tracing::info;
 
 use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
@@ -111,7 +110,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let body = Body::Button(ButtonBody {
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
-        greeting: format!("Hey {},", insert_user.name),
+        greeting: format!("Ahoy {},", insert_user.name),
         pre_body: format!("Please, click the button below or use the provided code to signup."),
         pre_code: "".into(),
         button_text: "Confirm Email".into(),
