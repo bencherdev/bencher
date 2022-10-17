@@ -107,6 +107,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, insert_user.email.clone())
         .map_err(api_error!())?;
 
+    let token_string = token.to_string();
     let body = Body::Button(ButtonBody {
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
@@ -114,12 +115,25 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         pre_body: format!("Please, click the button below or use the provided code to signup."),
         pre_code: "".into(),
         button_text: "Confirm Email".into(),
-        button_url: format!("/auth/signup?token={token}"),
+        button_url: api_context
+            .url
+            .clone()
+            .join("/auth/confirm")
+            .map(|mut url| {
+                url.query_pairs_mut().append_pair("token", &token_string);
+                url.into()
+            })
+            .unwrap_or_default(),
         post_body: "Code: ".into(),
-        post_code: token.to_string(),
+        post_code: token_string,
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
-        settings_url: format!("/settings/email"),
+        settings_url: api_context
+            .url
+            .clone()
+            .join("/console/settings/email")
+            .map(Into::into)
+            .unwrap_or_default(),
     });
     let message = Message {
         to_name: Some(insert_user.name),

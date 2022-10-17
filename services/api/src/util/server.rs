@@ -4,6 +4,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpServer};
 use tokio::sync::Mutex;
 use tracing::{info, trace};
+use url::Url;
 
 use super::{
     context::{Email, SecretKey},
@@ -13,6 +14,7 @@ use super::{
 use crate::{endpoints::Api, util::context::Messenger, ApiError};
 
 const BENCHER_SECRET_KEY: &str = "BENCHER_SECRET_KEY";
+const BENCHER_URL: &str = "BENCHER_URL";
 const BENCHER_SMTP_HOSTNAME: &str = "BENCHER_SMTP_HOSTNAME";
 const BENCHER_SMTP_USERNAME: &str = "BENCHER_SMTP_USERNAME";
 const BENCHER_SMTP_SECRET: &str = "BENCHER_SMTP_SECRET";
@@ -23,6 +25,11 @@ const DATABASE_URL: &str = "DATABASE_URL";
 const BENCHER_IP_ADDRESS: &str = "BENCHER_IP_ADDRESS";
 const BENCHER_PORT: &str = "BENCHER_PORT";
 const BENCHER_MAX_BODY_SIZE: &str = "BENCHER_MAX_BODY_SIZE";
+
+#[cfg(debug_assertions)]
+const DEFAULT_URL: &str = "http://localhost:3000";
+#[cfg(not(debug_assertions))]
+const DEFAULT_URL: &str = "https://bencher.dev";
 
 const DEFAULT_DB: &str = "bencher.db";
 const DEFAULT_IP_ADDRESS: &str = "0.0.0.0";
@@ -39,6 +46,8 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     let secret_key = get_secret_key();
     trace!("Parsing role based access control (RBAC) rules");
     let rbac = init_rbac().map_err(ApiError::Polar)?.into();
+    trace!("Parsing service URL");
+    let url = get_url()?;
     trace!("Configuring messenger settings");
     let messenger = get_messenger();
     trace!("Getting database connection");
@@ -48,6 +57,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     let private = Mutex::new(ApiContext {
         secret_key,
         rbac,
+        url,
         messenger,
         db_conn,
     });
@@ -77,6 +87,24 @@ fn get_secret_key() -> SecretKey {
             secret_key
         })
         .into()
+}
+
+fn get_url() -> Result<Url, ApiError> {
+    match std::env::var(BENCHER_URL) {
+        Ok(bencher_url) => match Url::parse(&bencher_url) {
+            Ok(url) => return Ok(url),
+            Err(e) => {
+                info!("Failed to parse \"{BENCHER_URL}\" as URL: {e}")
+            },
+        },
+        Err(e) => {
+            info!("Failed to find \"{BENCHER_URL}\": {e}")
+        },
+    }
+
+    let default_url = Url::parse(DEFAULT_URL)?;
+    info!("Using default service URL: {default_url}");
+    Ok(default_url)
 }
 
 fn get_messenger() -> Messenger {

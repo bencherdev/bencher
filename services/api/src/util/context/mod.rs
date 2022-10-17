@@ -1,3 +1,5 @@
+use url::Url;
+
 mod messenger;
 mod rbac;
 mod secret_key;
@@ -11,6 +13,7 @@ pub type Context = tokio::sync::Mutex<ApiContext>;
 pub struct ApiContext {
     pub secret_key: SecretKey,
     pub rbac: Rbac,
+    pub url: Url,
     pub messenger: Messenger,
     pub db_conn: diesel::SqliteConnection,
 }

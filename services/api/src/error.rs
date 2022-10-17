@@ -28,6 +28,8 @@ pub enum ApiError {
     Register(String),
     #[error("Shutting down server: {0}")]
     RunServer(String),
+    #[error("Failed to parse default URL: {0}")]
+    Url(#[from] url::ParseError),
 
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]
