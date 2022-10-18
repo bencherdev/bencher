@@ -38,6 +38,8 @@ async fn run() -> Result<(), ApiError> {
         tag_definitions: literally::hmap!{
             "ping" => TagDetails { description: Some("Ping".into()), external_docs: None},
             "auth" => TagDetails { description: Some("User Authentication".into()), external_docs: None},
+            "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
+            "invites" => TagDetails { description: Some("Organization Invitations".into()), external_docs: None},
             "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
             "reports" => TagDetails { description: Some("Reports".into()), external_docs: None},
             "branches" => TagDetails { description: Some("Branches".into()), external_docs: None},
