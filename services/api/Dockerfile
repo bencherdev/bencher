@@ -6,6 +6,7 @@ FROM build-bencher-api as builder
 # https://hub.docker.com/_/debian
 FROM debian:bullseye-slim
 COPY --from=builder /usr/src/target/release/api /api
+RUN mkdir -p /data
 
 RUN apt-get update \
     && apt-get install -y sqlite3

@@ -162,24 +162,25 @@ fn get_db_conn() -> Result<SqliteConnection, ApiError> {
         info!("Defaulting \"{BENCHER_DB}\" to: {DEFAULT_DB}");
         DEFAULT_DB.into()
     });
-    diesel_database_url(&bencher_db);
-    Ok(SqliteConnection::establish(&bencher_db)?)
+    let bencher_database_url = format!("data/{bencher_db}");
+    diesel_database_url(&bencher_database_url);
+    Ok(SqliteConnection::establish(&bencher_database_url)?)
 }
 
 // Set the diesel `DATABASE_URL` key to the same thing as `BENCHER_DB`
-fn diesel_database_url(bencher_db: &str) {
+fn diesel_database_url(bencher_database_url: &str) {
     if let Ok(database_url) = std::env::var(DATABASE_URL) {
-        if database_url == bencher_db {
+        if database_url == bencher_database_url {
             return;
         }
         trace!(
-            "\"{DATABASE_URL}\" ({database_url}) must be the same value as \"{BENCHER_DB}\" ({bencher_db})"
+            "\"{DATABASE_URL}\" ({database_url}) must be the same value as {bencher_database_url}"
         );
     } else {
         trace!("Failed to find \"{DATABASE_URL}\"");
     }
-    trace!("Setting \"{DATABASE_URL}\" to \"{BENCHER_DB}\" ({bencher_db})");
-    std::env::set_var(DATABASE_URL, bencher_db)
+    trace!("Setting \"{DATABASE_URL}\" to {bencher_database_url}");
+    std::env::set_var(DATABASE_URL, bencher_database_url)
 }
 
 fn run_migrations(conn: &mut SqliteConnection) -> Result<(), ApiError> {
