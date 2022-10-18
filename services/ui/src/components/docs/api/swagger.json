@@ -3426,6 +3426,10 @@
           "email": {
             "type": "string"
           },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
           "organization": {
             "type": "string",
             "format": "uuid"
