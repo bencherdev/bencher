@@ -3,5 +3,5 @@ secret-access-key: $BENCHER_SECRET_ACCESS_KEY
 dbs:
   - path: $BENCHER_DB
     replicas:
-      - url: $LITESTREAM_REPLICA_URL
+      - url: $BENCHER_REPLICA_URL
     exec: /api

@@ -2,15 +2,15 @@ version: "3.9"
 services:
   build_bencher_api:
     build:
-      context: ./services
-      dockerfile: ./api/build.Dockerfile
+      context: .
+      dockerfile: ./services/api/build.Dockerfile
     image: build-bencher-api
     container_name: build_bencher_api
 
   bencher_api:
     build:
-      context: ./services
-      dockerfile: ./api/Dockerfile
+      context: ./services/api
+      dockerfile: Dockerfile
     image: bencher-api
     container_name: bencher_api
     ports:
