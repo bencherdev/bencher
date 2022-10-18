@@ -5,7 +5,7 @@ mod error;
 use bencher::Bencher;
 pub use error::CliError;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), String> {
     exec().await.map_err(|e| format!("{e}"))
 }
