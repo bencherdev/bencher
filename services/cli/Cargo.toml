@@ -9,12 +9,16 @@ edition.workspace = true
 seed = []
 
 [dependencies]
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+
 bencher_json = { path = "../lib/bencher_json" }
+
 clap = { version = "4.0", features = ["derive"] }
 git2 = "0.15"
 nom = "7.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 tempfile = "3.3"
 thiserror = "1.0"
 reqwest = { version = "0.11", features = ["json"] }
@@ -22,8 +26,6 @@ url = "2.3"
 tokio = { version = "1.21", features = ["full"] }
 email-address-parser = "1.0"
 async-trait = "0.1"
-chrono = { version = "0.4" }
-uuid = "1.1"
 smart-default = "0.6"
 
 [dev-dependencies]

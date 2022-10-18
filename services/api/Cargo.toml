@@ -11,20 +11,23 @@ swagger = ["dep:literally"]
 [dependencies]
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../lib/bencher_rbac", features = ["json"] }
+
+chrono.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid = { workspace = true, features = ["v4", "serde"] }
+
+
 dropshot = "0.8"
-schemars = { version = "0.8", features = ["uuid1"] }
 tokio = "1.21"
 slog = "2.7"
 email-address-parser = "1.0"
 jsonwebtoken = "8.1"
 slug = "0.1"
-chrono = "0.4"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 diesel = { version = "2.0", features = ["sqlite", "chrono"] }
 diesel_migrations = "2.0"
 dotenvy = "0.15"
-uuid = { version = "1.1", features = ["v4", "serde"] }
 rand = "0.8"
 url = "2.2"
 http = "0.2"

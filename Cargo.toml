@@ -4,3 +4,13 @@ members = ["services/api", "services/cli", "services/lib/*"]
 [workspace.package]
 authors = ["Everett Pompeii <epompeii@protonmail.com>"]
 edition = "2021"
+
+[workspace.dependencies]
+chrono = "0.4"
+lazy_static = "1.4"
+literally = "0.1"
+oso = "0.26"
+schemars = { version = "0.8", features = ["uuid1"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = "1.1"
