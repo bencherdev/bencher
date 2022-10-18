@@ -17,6 +17,8 @@ chrono.workspace = true
 derive_more.workspace = true
 email-address-parser.workspace = true
 jsonwebtoken.workspace = true
+lazy_static.workspace = true
+literally = { workspace = true, optional = true }
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -28,20 +30,18 @@ tokio.workspace = true
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
-dropshot = "0.8"
-slog = "2.7"
+css-inline = "0.8"
 diesel = { version = "2.0", features = ["sqlite", "chrono"] }
 diesel_migrations = "2.0"
 dotenvy = "0.15"
-rand = "0.8"
+dropshot = "0.8"
 http = "0.2"
+mail-send = "0.2.3"
+rand = "0.8"
+slog = "2.7"
 statrs = "0.16"
-literally = { version = "0.1", optional = true }
-lazy_static = "1.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["tracing-log"] }
-mail-send = "0.2.3"
-css-inline = "0.8"
 
 [[bin]]
 name = "api"
