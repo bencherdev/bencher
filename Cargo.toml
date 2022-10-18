@@ -7,10 +7,15 @@ edition = "2021"
 
 [workspace.dependencies]
 chrono = "0.4"
+derive_more = "0.99"
+jsonwebtoken = "8.1"
 lazy_static = "1.4"
 literally = "0.1"
+ordered-float = "3.2"
 oso = "0.26"
 schemars = { version = "0.8", features = ["uuid1"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+slug = "0.1"
+url = "2.2"
 uuid = "1.1"

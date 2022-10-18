@@ -9,16 +9,17 @@ edition.workspace = true
 schema = ["schemars", "ordered-float/schemars"]
 
 [dependencies]
+# Workspace
 chrono = { workspace = true, features = ["serde"] }
+derive_more.workspace = true
+jsonwebtoken.workspace = true
+lazy_static.workspace = true
+ordered-float = { workspace = true, features = ["serde"] }
 schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true
 serde_json.workspace = true
+slug.workspace = true
+url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
-
-derive_more = "0.99.17"
-url = { version = "2.2.2", features = ["serde"] }
-slug = "0.1.4"
-ordered-float = { version = "3.0.0", features = ["serde"] }
+# Crate
 num = "0.4.0"
-jsonwebtoken = "8.1.1"
-lazy_static = "1.4.0"

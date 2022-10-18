@@ -9,12 +9,13 @@ edition.workspace = true
 json = ["dep:bencher_json"]
 
 [dependencies]
+# Local
 bencher_json = { path = "../bencher_json", optional = true }
-
+# Workspace
 oso.workspace = true
 
-
 [dev-dependencies]
+# Workspace
 lazy_static.workspace = true
 literally.workspace = true
 uuid = { workspace = true, features = ["v4"] }
