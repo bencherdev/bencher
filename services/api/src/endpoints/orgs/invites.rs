@@ -62,31 +62,48 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.db_conn;
 
     // Check to see if user has permission to create a project within the organization
     api_context.rbac.is_allowed_organization(
         auth_user,
         Permission::CreateRole,
-        QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
+        QueryOrganization::into_rbac(conn, json_invite.organization)?,
     )?;
 
-    let name = json_invite.name.take();
-    let email = validate_email(&json_invite.email)?;
+    let email = json_invite.email.clone();
+    // If a user already exists for the email then direct them to login.
+    // Otherwise, direct them to signup.
+    let (name, route) = if let Ok(name) = schema::user::table
+        .filter(schema::user::email.eq(&email))
+        .select(schema::user::name)
+        .first(conn)
+    {
+        (Some(name), "/auth/login")
+    } else {
+        validate_email(&email)?;
+        (json_invite.name.take(), "/auth/signup")
+    };
+
+    // Get the requester user name and email for the message
     let (user_name, user_email) = schema::user::table
         .filter(schema::user::id.eq(auth_user.id))
         .select((schema::user::name, schema::user::email))
-        .first::<(String, String)>(&mut api_context.db_conn)
+        .first::<(String, String)>(conn)
         .map_err(api_error!())?;
+
+    // Get the organization name for the message
     let org_name = schema::organization::table
         .filter(schema::organization::uuid.eq(json_invite.organization.to_string()))
         .select(schema::organization::name)
-        .first::<String>(&mut api_context.db_conn)
+        .first::<String>(conn)
         .map_err(api_error!())?;
+
+    // Create an invite token
     let token = JsonWebToken::new_invite(&api_context.secret_key.encoding, json_invite)
         .map_err(api_error!())?;
-    let route = "/auth/signup";
-
     let token_string = token.to_string();
+
     let body = Body::Button(ButtonBody {
         title: format!("Invitation to join {org_name}"),
         preheader: "Click the provided link to join.".into(),
