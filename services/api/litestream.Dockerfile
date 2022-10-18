@@ -1,6 +1,6 @@
 # Build Stage
 # https://hub.docker.com/_/rust
-FROM rust:1.63.0-bullseye as builder
+FROM rust:1.64.0-bullseye as builder
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_json bencher_json

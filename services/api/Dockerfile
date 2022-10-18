@@ -1,6 +1,6 @@
 # Build Stage
 # https://hub.docker.com/_/rust
-FROM rust:1.63.0-bullseye as builder
+FROM rust:1.64.0-bullseye as builder
 
 WORKDIR /usr/src/lib
 COPY lib/bencher_json bencher_json
@@ -14,13 +14,10 @@ COPY api/diesel.toml diesel.toml
 
 RUN cargo build --release
 
-COPY api/.env .env
-
 # Bundle Stage
 # https://hub.docker.com/_/debian
 FROM debian:bullseye-slim
 COPY --from=builder /usr/src/api/target/release/api /api
-COPY --from=builder /usr/src/api/.env /.env
 
 RUN apt-get update \
     && apt-get install -y sqlite3
