@@ -37,6 +37,7 @@ thiserror = "1.0"
 derive_more = "0.99"
 oso = "0.26"
 mail-send = "0.2.3"
+css-inline = "0.8"
 
 [[bin]]
 name = "api"

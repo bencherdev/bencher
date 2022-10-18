@@ -30,6 +30,8 @@ pub enum ApiError {
     RunServer(String),
     #[error("Failed to parse default URL: {0}")]
     Url(#[from] url::ParseError),
+    #[error("Failed to inline CSS: {0}")]
+    CssInline(#[from] css_inline::InlineError),
 
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]

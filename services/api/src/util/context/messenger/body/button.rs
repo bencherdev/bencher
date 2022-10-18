@@ -1,3 +1,5 @@
+use crate::error::api_error;
+
 use super::FmtBody;
 
 pub struct ButtonBody {
@@ -52,7 +54,7 @@ impl FmtBody for ButtonBody {
             settings_url,
         } = self;
 
-        format!("<!doctype html>
+        let html = format!("<!doctype html>
     <html>
       <head>
         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>
@@ -454,6 +456,10 @@ impl FmtBody for ButtonBody {
         </table>
       </body>
     </html>
-    ")
+    ");
+
+        css_inline::inline(&html)
+            .map_err(api_error!())
+            .unwrap_or(html)
     }
 }
