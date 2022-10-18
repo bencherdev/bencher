@@ -17,6 +17,7 @@ const INVITES_PATH: &str = "/v0/invites";
 
 #[derive(Debug, Clone)]
 pub struct Invite {
+    name: Option<String>,
     email: EmailAddress,
     org: Uuid,
     role: JsonInviteRole,
@@ -28,12 +29,14 @@ impl TryFrom<CliInvite> for Invite {
 
     fn try_from(invite: CliInvite) -> Result<Self, Self::Error> {
         let CliInvite {
+            name,
             email,
             org,
             role,
             backend,
         } = invite;
         Ok(Self {
+            name,
             email: EmailAddress::parse(&email, None).ok_or(CliError::Email(email))?,
             org,
             role: role.into(),
@@ -54,12 +57,14 @@ impl From<CliInviteRole> for JsonInviteRole {
 impl From<Invite> for JsonInvite {
     fn from(invite: Invite) -> Self {
         let Invite {
+            name,
             email,
             org,
             role,
             backend: _,
         } = invite;
         Self {
+            name,
             email: email.to_string(),
             organization: org,
             role,

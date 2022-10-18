@@ -58,7 +58,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
-    json_invite: JsonInvite,
+    mut json_invite: JsonInvite,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -70,6 +70,7 @@ async fn post_inner(
         QueryOrganization::into_rbac(&mut api_context.db_conn, json_invite.organization)?,
     )?;
 
+    let name = json_invite.name.take();
     let email = validate_email(&json_invite.email)?;
     let (user_name, user_email) = schema::user::table
         .filter(schema::user::id.eq(auth_user.id))
@@ -83,12 +84,14 @@ async fn post_inner(
         .map_err(api_error!())?;
     let token = JsonWebToken::new_invite(&api_context.secret_key.encoding, json_invite)
         .map_err(api_error!())?;
+    let route = "/auth/signup";
 
     let token_string = token.to_string();
     let body = Body::Button(ButtonBody {
         title: format!("Invitation to join {org_name}"),
         preheader: "Click the provided link to join.".into(),
-        greeting: "Ahoy!".into(),
+        greeting: if let Some(name) = name {
+            format!("Ahoy {name}!") } else { "Ahoy!".into() },
         pre_body: format!(
             "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} on Bencher.",
         ),
@@ -97,7 +100,7 @@ async fn post_inner(
         button_url: api_context
             .url
             .clone()
-            .join("/auth/signup")
+            .join(route)
             .map(|mut url| {
                 url.query_pairs_mut().append_pair("invite", &token_string);
                 url.into()

@@ -5,6 +5,10 @@ use super::CliBackend;
 
 #[derive(Parser, Debug)]
 pub struct CliInvite {
+    /// Name of user for invitation (optional)
+    #[clap(long)]
+    pub name: Option<String>,
+
     /// Email for the invitation
     #[clap(long)]
     pub email: String,

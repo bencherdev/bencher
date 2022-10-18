@@ -111,7 +111,9 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
         greeting: format!("Ahoy {},", insert_user.name),
-        pre_body: format!("Please, click the button below or use the provided code to signup."),
+        pre_body: format!(
+            "Please, click the button below or use the provided code to signup for Bencher."
+        ),
         pre_code: "".into(),
         button_text: "Confirm Email".into(),
         button_url: api_context
