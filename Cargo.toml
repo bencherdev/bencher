@@ -1,3 +1,6 @@
 [workspace]
-
 members = ["services/api", "services/cli", "services/lib/*"]
+
+[workspace.package]
+authors = ["Everett Pompeii <epompeii@protonmail.com>"]
+edition = "2021"
