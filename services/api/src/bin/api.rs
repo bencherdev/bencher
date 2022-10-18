@@ -1,5 +1,5 @@
 use bencher_api::ApiError;
-use tracing::{info, trace};
+use tracing::info;
 
 const API_NAME: &str = "Bencher API";
 
@@ -19,6 +19,7 @@ async fn main() -> Result<(), ApiError> {
 #[cfg(feature = "swagger")]
 async fn run() -> Result<(), ApiError> {
     use std::fs::File;
+    use tracing::trace;
 
     use bencher_api::{endpoints::Api, util::registrar::Registrar};
     use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
@@ -60,7 +61,7 @@ async fn run() -> Result<(), ApiError> {
 
     #[cfg(debug_assertions)]
     {
-        trace!("Importing .env file");
+        tracing::trace!("Importing .env file");
         dotenvy::dotenv()?;
     }
 
