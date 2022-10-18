@@ -4334,10 +4334,12 @@
       "description": "Branches"
     },
     {
-      "name": "invites"
+      "name": "invites",
+      "description": "Organization Invitations"
     },
     {
-      "name": "organizations"
+      "name": "organizations",
+      "description": "Organizations"
     },
     {
       "name": "perf",
