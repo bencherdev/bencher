@@ -54,7 +54,7 @@ impl Email {
                 transport
                     .connect_tls()
                     .await
-                    .map_err(ApiError::MailSend)?
+                    .map_err(ApiError::MailTls)?
                     .send(message_builder)
                     .await
                     .map_err(ApiError::MailSend)

@@ -102,6 +102,8 @@ pub enum ApiError {
     MaxTtl { requested: u64, max: u64 },
     #[error("User ({0}) cannot create a new organization")]
     CreateOrganization(i32),
+    #[error("Failed to create TLS connection for email: {0}")]
+    MailTls(mail_send::Error),
     #[error("Failed to send email: {0}")]
     MailSend(mail_send::Error),
 
