@@ -4,7 +4,6 @@ use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonInvite};
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use tracing::info;
 
 use crate::{
     endpoints::{
@@ -91,16 +90,16 @@ async fn post_inner(
         preheader: "Click the provided link to join.".into(),
         greeting: "Ahoy!".into(),
         pre_body: format!(
-            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name}.",
+            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} on Bencher.",
         ),
         pre_code: "".into(),
         button_text: format!("Join {org_name}"),
         button_url: api_context
             .url
             .clone()
-            .join("/todo/invite")
+            .join("/auth/signup")
             .map(|mut url| {
-                url.query_pairs_mut().append_pair("token", &token_string);
+                url.query_pairs_mut().append_pair("invite", &token_string);
                 url.into()
             })
             .unwrap_or_default(),
@@ -122,9 +121,6 @@ async fn post_inner(
         body: Some(body),
     };
     api_context.messenger.send(message).await;
-
-    // TODO log this as trace if SMTP is configured
-    info!("Accept invite for \"{email}\" with: {token}");
 
     Ok(JsonEmpty::default())
 }
