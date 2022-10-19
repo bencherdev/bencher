@@ -9,7 +9,6 @@ import axios from "axios";
 
 export const organizationSlug = (pathname) => {
   const path = pathname().split("/");
-  console.log(path);
   if (
     path.length < 5 ||
     path[0] ||

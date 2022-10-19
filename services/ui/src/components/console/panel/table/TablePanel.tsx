@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createSignal, createResource } from "solid-js";
+import { createSignal, createResource, createMemo } from "solid-js";
 import Table from "./Table";
 import validator from "validator";
 
@@ -28,6 +28,7 @@ const TablePanel = (props) => {
       let resp = await axios(options(token));
       const data = resp.data;
 
+      console.log(data);
       return data;
     } catch (error) {
       console.error(error);
@@ -40,12 +41,15 @@ const TablePanel = (props) => {
   const [page, setPage] = createSignal(1);
   const [table_data] = createResource(refresh, fetchData);
 
+  const redirect = createMemo(() => props.config.redirect?.(table_data()));
+
   const handleRefresh = () => {
     setRefresh(refresh() + 1);
   };
 
   return (
     <>
+      {redirect() && props.handleRedirect(redirect())}
       <TableHeader
         config={props.config?.header}
         pathname={props.pathname}

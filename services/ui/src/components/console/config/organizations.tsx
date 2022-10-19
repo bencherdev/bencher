@@ -5,6 +5,11 @@ import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 const organizationsConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
+    redirect: (table_data) => {
+      return table_data?.length === 1 ?
+        `/console/organizations/${table_data[0]?.slug}/projects`
+        : null;
+    },
     header: {
       title: "Organizations",
       buttons: [
