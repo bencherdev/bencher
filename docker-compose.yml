@@ -6,9 +6,7 @@ services:
     ports:
       - 61016:61016
     volumes:
-      # This file needs to exist before calling `docker compose`
-      # `touch ./bencher.db`
-      - "./bencher.db:/bencher.db"
+      - "./data:/data"
     environment:
       # This should be set to your own secret key
       # - BENCHER_SECRET_KEY=
