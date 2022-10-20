@@ -1,12 +1,31 @@
 import { Link } from "solid-app-router";
 
 const ConsoleMenu = (props) => {
+  const getOrganizationPath = (section: string) => {
+    return `/console/organizations/${props.organization_slug()}/${section}`;
+  };
+
   const getProjectPath = (section: string) => {
     return `/console/projects/${props.project_slug()}/${section}`;
   };
 
   return (
     <aside class="menu">
+      {typeof props.organization_slug() === "string"
+        && typeof props.project_slug() !== "string"
+        && (
+          <>
+            <p class="menu-label">Organization</p>
+            <ul class="menu-list">
+              <li>
+                <Link href={getOrganizationPath("members")}>Members</Link>
+              </li>
+              <li>
+                <Link href={getOrganizationPath("settings")}>Settings</Link>
+              </li>
+            </ul>
+          </>
+        )}
       {typeof props.project_slug() === "string" && (
         <>
           <div class="menu-label">
