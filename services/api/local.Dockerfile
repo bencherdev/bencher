@@ -1,6 +1,6 @@
 # Build Stage
 # build.Dockerfile
-FROM build-bencher-api as builder
+FROM bencher-api-builder as builder
 
 # Bundle Stage
 # https://hub.docker.com/_/debian

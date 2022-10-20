@@ -3,7 +3,7 @@ name: Release UI
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [master]
 
 env:
   CARGO_TERM_COLOR: always
@@ -29,5 +29,5 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
-          push: true
           tags: ${{ env.TAGS }}
+          push: true

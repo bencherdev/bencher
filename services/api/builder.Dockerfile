@@ -1,6 +1,6 @@
 # Build Stage
 # https://hub.docker.com/_/rust
-FROM rust:1.64.0-bullseye as builder
+FROM rust:1.64.0-bullseye
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml

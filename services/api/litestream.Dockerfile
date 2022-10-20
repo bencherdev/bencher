@@ -1,6 +1,6 @@
 # Build Stage
 # build.Dockerfile
-FROM build-bencher-api as builder
+FROM bencher-api-builder as builder
 
 # Bundle Stage
 # https://hub.docker.com/_/debian
@@ -9,7 +9,7 @@ COPY --from=builder /usr/src/target/release/api /api
 RUN mkdir -p /data
 
 RUN apt-get update \
-    && apt-get install -y wget sudo systemctl sqlite3
+    && apt-get install -y sqlite3 wget sudo systemctl
 
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64.deb
 RUN dpkg -i litestream-v0.3.9-linux-amd64.deb

@@ -1,18 +1,18 @@
 version: "3.9"
 services:
-  build_bencher_api:
+  bencher_api_builder:
     build:
       context: .
-      dockerfile: ./services/api/build.Dockerfile
-    image: build-bencher-api
-    container_name: build_bencher_api
+      dockerfile: ./services/api/builder.Dockerfile
+    image: bencher-api-builder
+    container_name: bencher_api_builder
 
   bencher_api:
     build:
       context: ./services/api
-      dockerfile: deploy.Dockerfile
-    image: bencher-api
-    container_name: bencher_api
+      dockerfile: litestream.Dockerfile
+    image: bencher-api-litestream
+    container_name: bencher_api_litestream
     ports:
       - 61016:61016
     environment:
@@ -25,7 +25,7 @@ services:
       # - BENCHER_SECRET_ACCESS_KEY=
       # - BENCHER_REPLICA_URL=
     depends_on:
-      - build_bencher_api
+      - bencher_api_builder
 
   bencher_ui:
     build:

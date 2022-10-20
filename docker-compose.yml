@@ -1,8 +1,8 @@
 version: "3.9"
 services:
   bencher_api:
-    image: epompeii/bencher-api:latest
-    container_name: bencher_api
+    image: epompeii/bencher-api-local:latest
+    container_name: bencher_api_local
     ports:
       - 61016:61016
     volumes:

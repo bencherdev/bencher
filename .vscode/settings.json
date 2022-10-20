@@ -30,6 +30,7 @@
     "hmap",
     "Insertable",
     "jsonwebtoken",
+    "litestream",
     "nanos",
     "perfs",
     "powi",
