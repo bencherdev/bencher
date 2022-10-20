@@ -1,33 +1,24 @@
+use std::{net::SocketAddr, path::PathBuf};
+
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfig {
-    #[serde(default = "default_url")]
-    pub url: String,
+    pub endpoint: Url,
+    pub secret_key: Option<String>,
     pub server: JsonServer,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
 }
 
-fn default_url() -> String {
-    #[cfg(debug_assertions)]
-    {
-        "http://localhost:3000".into()
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        "https://bencher.dev".into()
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonServer {
-    pub ip_address: String,
-    pub port: u16,
+    pub bind_address: SocketAddr,
     pub request_body_max_bytes: usize,
     pub tls: Option<JsonTls>,
 }
@@ -35,15 +26,14 @@ pub struct JsonServer {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTls {
-    pub cert_file: String,
-    pub key_file: String,
+    pub cert_file: PathBuf,
+    pub key_file: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonDatabase {
-    pub path: String,
-    pub name: String,
+    pub file: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
