@@ -13,7 +13,8 @@ import {
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
-import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
+// todo() -> Figure out how best to do site analytics
+// import { GoogleAnalytics } from "./components/site/GoogleAnalytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
@@ -151,7 +152,7 @@ const App: Component = () => {
 
   return (
     <>
-      <GoogleAnalytics />
+      {/* <GoogleAnalytics /> */}
       <Navbar
         user={user}
         organization_slug={organization_slug}
@@ -211,7 +212,7 @@ const App: Component = () => {
         </Route>
       </Routes>
 
-      <For each={[...Array(9).keys()]}>{(_k, _i) => <br />}</For>
+      <For each={[...Array(12).keys()]}>{(_k, _i) => <br />}</For>
       <SiteFooter />
     </>
   );
