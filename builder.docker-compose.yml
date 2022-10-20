@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  bencher_api_builder:
+    build:
+      context: .
+      dockerfile: ./services/api/builder.Dockerfile
+    image: bencher-api-builder
+    container_name: bencher_api_builder

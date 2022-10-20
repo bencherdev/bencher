@@ -3,9 +3,27 @@
 [Bencher](https://bencher.dev) is a suite of tools designed to help catch performance regressions in CI.
 
 It consists of:
+
 - `bencher` CLI
 - Bencher API Server
 - Bencher Web UI
+
+## Quick Start
+
+Run:
+
+- `docker compose up -d`
+
+Then open your browser to [localhost](http://localhost).
+
+## Local Build with Docker
+
+Run:
+
+- `docker compose -f builder.docker-compose.yml build`
+- `docker compose -f local.docker-compose.yml up --build -d`
+
+Then open your browser to [localhost](http://localhost).
 
 ## License
 
