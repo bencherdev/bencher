@@ -11,9 +11,8 @@ const ConsoleMenu = (props) => {
 
   return (
     <aside class="menu">
-      {typeof props.organization_slug() === "string"
-        && typeof props.project_slug() !== "string"
-        && (
+      {typeof props.organization_slug() === "string" &&
+        typeof props.project_slug() !== "string" && (
           <>
             <p class="menu-label">Organization</p>
             <ul class="menu-list">

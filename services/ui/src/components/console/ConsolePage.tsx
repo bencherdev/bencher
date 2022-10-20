@@ -15,7 +15,7 @@ export const organizationSlug = (pathname) => {
     path[1] !== "console" ||
     path[2] !== "organizations" ||
     !path[3] ||
-    path[4] !== "projects"
+    !path[4]
   ) {
     return null;
   }

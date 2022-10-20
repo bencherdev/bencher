@@ -52,6 +52,18 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.PROJECTS]?.[Operation.VIEW])}
       />
       <Route
+        path="/organizations/:organization_slug/members"
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.ADD])}
+      />
+      <Route
+        path="/organizations/:organization_slug/members/:member_slug"
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.ADD])}
+      />
+      <Route
+        path="/organizations/:organization_slug/settings"
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.ADD])}
+      />
+      <Route
         path="/projects/:project_slug/perf"
         element={consolePage(config?.[Resource.PROJECTS]?.[Operation.PERF])}
       />

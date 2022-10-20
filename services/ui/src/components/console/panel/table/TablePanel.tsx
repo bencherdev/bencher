@@ -28,7 +28,6 @@ const TablePanel = (props) => {
       let resp = await axios(options(token));
       const data = resp.data;
 
-      console.log(data);
       return data;
     } catch (error) {
       console.error(error);
