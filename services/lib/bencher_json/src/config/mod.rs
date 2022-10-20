@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonConfig {
     #[serde(default = "default_url")]
     pub url: String,
+    pub server: JsonServer,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
 }
@@ -20,6 +21,22 @@ fn default_url() -> String {
     {
         "https://bencher.dev".into()
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonServer {
+    pub ip_address: String,
+    pub port: u16,
+    pub request_body_max_bytes: usize,
+    pub tls: Option<JsonTls>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTls {
+    pub cert_file: String,
+    pub key_file: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
