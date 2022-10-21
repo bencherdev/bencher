@@ -1,5 +1,6 @@
 use dropshot::ApiDescription;
 
+pub mod admin;
 pub mod auth;
 mod endpoint;
 pub mod method;

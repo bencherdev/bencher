@@ -106,6 +106,8 @@ pub enum ApiError {
     MailTls(mail_send::Error),
     #[error("Failed to send email: {0}")]
     MailSend(mail_send::Error),
+    #[error("User is not an admin: {0}")]
+    Admin(i32),
 
     // TODO remove once no longer needed
     #[error(transparent)]
