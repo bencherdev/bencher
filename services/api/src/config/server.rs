@@ -20,7 +20,7 @@ use url::Url;
 use crate::{
     endpoints::Api,
     util::{
-        context::{Email, Messenger},
+        context::{Email, Messenger, SecretKey},
         registrar::Registrar,
         ApiContext, Context,
     },
@@ -70,29 +70,9 @@ fn into_private(
     diesel_database_url(&database_path);
     Ok(Mutex::new(ApiContext {
         endpoint,
-        secret_key: secret_key
-            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
-            .into(),
+        secret_key: into_secret_key(secret_key),
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
-        messenger: smtp
-            .map(
-                |JsonSmtp {
-                     hostname,
-                     username,
-                     secret,
-                     from_name,
-                     from_email,
-                 }| {
-                    Messenger::Email(Email {
-                        hostname,
-                        username,
-                        secret,
-                        from_name: Some(from_name),
-                        from_email,
-                    })
-                },
-            )
-            .unwrap_or(Messenger::StdOut),
+        messenger: into_messenger(smtp),
         database: SqliteConnection::establish(&database_path)?,
     }))
 }
@@ -109,6 +89,33 @@ fn diesel_database_url(database_path: &str) {
     }
     trace!("Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path)
+}
+
+fn into_secret_key(secret_key: Option<String>) -> SecretKey {
+    secret_key
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+        .into()
+}
+
+fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
+    smtp.map(
+        |JsonSmtp {
+             hostname,
+             username,
+             secret,
+             from_name,
+             from_email,
+         }| {
+            Messenger::Email(Email {
+                hostname,
+                username,
+                secret,
+                from_name: Some(from_name),
+                from_email,
+            })
+        },
+    )
+    .unwrap_or(Messenger::StdOut)
 }
 
 fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
