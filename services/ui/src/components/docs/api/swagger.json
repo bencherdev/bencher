@@ -5,6 +5,154 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/v0/admin/config": {
+      "get": {
+        "tags": [
+          "admin",
+          "config"
+        ],
+        "operationId": "get_one",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonConfig"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin",
+          "config"
+        ],
+        "operationId": "post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonConfig"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "admin",
+          "config"
+        ],
+        "operationId": "options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/admin/restart": {
       "post": {
         "tags": [
@@ -15,7 +163,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonEmpty"
+                "$ref": "#/components/schemas/JsonRestart"
               }
             }
           },
@@ -79,7 +227,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonEmpty"
+                "$ref": "#/components/schemas/JsonRestart"
               }
             }
           },
@@ -3394,6 +3542,14 @@
           "request_id"
         ]
       },
+      "IfExists": {
+        "type": "string",
+        "enum": [
+          "fail",
+          "truncate",
+          "append"
+        ]
+      },
       "JsonAdapter": {
         "type": "string",
         "enum": [
@@ -3503,6 +3659,42 @@
           "uuid"
         ]
       },
+      "JsonConfig": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/JsonDatabase"
+          },
+          "endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "logging": {
+            "$ref": "#/components/schemas/JsonLogging"
+          },
+          "secret_key": {
+            "nullable": true,
+            "type": "string"
+          },
+          "server": {
+            "$ref": "#/components/schemas/JsonServer"
+          },
+          "smtp": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonSmtp"
+              }
+            ]
+          }
+        },
+        "required": [
+          "database",
+          "endpoint",
+          "logging",
+          "server"
+        ]
+      },
       "JsonConfirm": {
         "type": "object",
         "properties": {
@@ -3516,6 +3708,17 @@
         "required": [
           "token",
           "user"
+        ]
+      },
+      "JsonDatabase": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
         ]
       },
       "JsonEmpty": {
@@ -3575,6 +3778,21 @@
           "duration",
           "lower_variance",
           "upper_variance"
+        ]
+      },
+      "JsonLogging": {
+        "type": "object",
+        "properties": {
+          "log": {
+            "$ref": "#/components/schemas/ServerLog"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "log",
+          "name"
         ]
       },
       "JsonLogin": {
@@ -4191,6 +4409,42 @@
           "min"
         ]
       },
+      "JsonRestart": {
+        "type": "object",
+        "properties": {
+          "delay": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        }
+      },
+      "JsonServer": {
+        "type": "object",
+        "properties": {
+          "bind_address": {
+            "type": "string"
+          },
+          "request_body_max_bytes": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          },
+          "tls": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonTls"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bind_address",
+          "request_body_max_bytes"
+        ]
+      },
       "JsonSide": {
         "type": "string",
         "enum": [
@@ -4223,6 +4477,33 @@
         "required": [
           "email",
           "name"
+        ]
+      },
+      "JsonSmtp": {
+        "type": "object",
+        "properties": {
+          "from_email": {
+            "type": "string"
+          },
+          "from_name": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_email",
+          "from_name",
+          "hostname",
+          "secret",
+          "username"
         ]
       },
       "JsonStatisticKind": {
@@ -4344,6 +4625,21 @@
           "upper_variance"
         ]
       },
+      "JsonTls": {
+        "type": "object",
+        "properties": {
+          "cert_file": {
+            "type": "string"
+          },
+          "key_file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cert_file",
+          "key_file"
+        ]
+      },
       "JsonToken": {
         "type": "object",
         "properties": {
@@ -4377,6 +4673,23 @@
           "token",
           "user",
           "uuid"
+        ]
+      },
+      "JsonUpdateConfig": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/JsonConfig"
+          },
+          "delay": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "config"
         ]
       },
       "JsonUser": {
@@ -4414,8 +4727,71 @@
       "JsonWebToken": {
         "type": "string"
       },
+      "LogLevel": {
+        "type": "string",
+        "enum": [
+          "trace",
+          "debug",
+          "info",
+          "warn",
+          "error",
+          "critical"
+        ]
+      },
       "ResourceId": {
         "type": "string"
+      },
+      "ServerLog": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "StderrTerminal": {
+                "type": "object",
+                "properties": {
+                  "level": {
+                    "$ref": "#/components/schemas/LogLevel"
+                  }
+                },
+                "required": [
+                  "level"
+                ]
+              }
+            },
+            "required": [
+              "StderrTerminal"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "File": {
+                "type": "object",
+                "properties": {
+                  "if_exists": {
+                    "$ref": "#/components/schemas/IfExists"
+                  },
+                  "level": {
+                    "$ref": "#/components/schemas/LogLevel"
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "if_exists",
+                  "level",
+                  "path"
+                ]
+              }
+            },
+            "required": [
+              "File"
+            ],
+            "additionalProperties": false
+          }
+        ]
       }
     }
   },
@@ -4436,6 +4812,9 @@
     {
       "name": "branches",
       "description": "Branches"
+    },
+    {
+      "name": "config"
     },
     {
       "name": "invites",
