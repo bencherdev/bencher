@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
@@ -32,6 +34,10 @@ pub enum ApiError {
     Url(#[from] url::ParseError),
     #[error("Failed to inline CSS: {0}")]
     CssInline(#[from] css_inline::InlineError),
+    #[error("Failed to open config: {}", _0.display())]
+    OpenConfig(PathBuf),
+    #[error("Failed to parse config: {}", _0.display())]
+    ParseConfig(PathBuf),
 
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]

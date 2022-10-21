@@ -26,7 +26,7 @@ ordered-float.workspace = true
 oso.workspace = true
 slug.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["fs"] }
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
