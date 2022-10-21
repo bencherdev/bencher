@@ -61,7 +61,7 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
 ) -> Result<Vec<JsonOrganization>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     let mut sql = schema::organization::table.into_boxed();
 
@@ -104,7 +104,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     if !auth_user.is_admin(&api_context.rbac) {
         return Err(ApiError::CreateOrganization(auth_user.id));

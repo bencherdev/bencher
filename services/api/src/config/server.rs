@@ -72,7 +72,7 @@ impl TryFrom<Config> for HttpServer<Context> {
                     })
                 },
             ),
-            db_conn,
+            database,
         });
 
         Ok(

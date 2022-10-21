@@ -79,7 +79,7 @@ async fn get_ls_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     Ok(schema::branch::table
         .filter(schema::branch::project_id.eq(&query_project.id))
@@ -125,7 +125,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;
-    let insert_branch = InsertBranch::from_json(&mut api_context.db_conn, json_branch)?;
+    let insert_branch = InsertBranch::from_json(&mut api_context.database, json_branch)?;
     // Verify that the user is allowed
     QueryProject::is_allowed_id(
         api_context,
@@ -133,7 +133,7 @@ async fn post_inner(
         auth_user,
         Permission::Create,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
@@ -198,7 +198,7 @@ async fn get_one_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     schema::branch::table
         .filter(

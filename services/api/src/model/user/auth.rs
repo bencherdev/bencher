@@ -95,7 +95,7 @@ impl AuthUser {
             .validate_user(&api_context.secret_key.decoding)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
-        let conn = &mut api_context.db_conn;
+        let conn = &mut api_context.database;
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))

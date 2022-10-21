@@ -111,7 +111,7 @@ async fn post_inner(
                     branch_id,
                     testbed_id,
                 } = if let Ok(same_project) =
-                    SameProject::validate(&mut api_context.db_conn, branch, testbed)
+                    SameProject::validate(&mut api_context.database, branch, testbed)
                 {
                     same_project
                 } else {
@@ -133,7 +133,7 @@ async fn post_inner(
                     let public: bool = schema::project::table
                         .filter(schema::project::id.eq(project_id))
                         .select(schema::project::public)
-                        .first(&mut api_context.db_conn)
+                        .first(&mut api_context.database)
                         .map_err(api_error!())?;
                     if !public {
                         return Err(ApiError::PrivateProject(project_id));
@@ -159,7 +159,7 @@ async fn post_inner(
                     .filter(schema::version::branch_id.eq(branch_id))
                     .filter(schema::report::testbed_id.eq(testbed_id));
 
-                let conn = &mut api_context.db_conn;
+                let conn = &mut api_context.database;
                 let query_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query
                         .inner_join(

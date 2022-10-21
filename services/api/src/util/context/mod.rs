@@ -15,5 +15,5 @@ pub struct ApiContext {
     pub secret_key: SecretKey,
     pub rbac: Rbac,
     pub messenger: Messenger,
-    pub db_conn: diesel::SqliteConnection,
+    pub database: diesel::SqliteConnection,
 }

@@ -85,7 +85,7 @@ async fn get_ls_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     Ok(schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
@@ -146,7 +146,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     // Verify that the branch and testbed are part of the same project
     let SameProject {
@@ -157,7 +157,7 @@ async fn post_inner(
 
     // Verify that the user is allowed
     QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -261,7 +261,7 @@ async fn get_one_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))

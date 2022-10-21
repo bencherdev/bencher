@@ -51,15 +51,15 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     trace!("Configuring messenger settings");
     let messenger = get_messenger();
     trace!("Getting database connection");
-    let mut db_conn = get_db_conn()?;
+    let mut database = get_database()?;
     trace!("Running database migrations");
-    run_migrations(&mut db_conn)?;
+    run_migrations(&mut database)?;
     let private = Mutex::new(ApiContext {
         secret_key,
         rbac,
         endpoint,
         messenger,
-        db_conn,
+        database,
     });
 
     trace!("Getting server configuration");
@@ -156,7 +156,7 @@ fn get_messenger() -> Messenger {
     })
 }
 
-fn get_db_conn() -> Result<SqliteConnection, ApiError> {
+fn get_database() -> Result<SqliteConnection, ApiError> {
     let bencher_db = std::env::var(BENCHER_DB).unwrap_or_else(|e| {
         info!("Failed to find \"{BENCHER_DB}\": {e}");
         info!("Defaulting \"{BENCHER_DB}\" to: {DEFAULT_DB}");

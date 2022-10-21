@@ -62,7 +62,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     // Check to see if user has permission to create a project within the organization
     api_context.rbac.is_allowed_organization(

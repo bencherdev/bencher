@@ -58,7 +58,7 @@ pub async fn post(
 
 async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     let invite = json_signup.invite.take();
     let mut insert_user = InsertUser::from_json(conn, json_signup)?;

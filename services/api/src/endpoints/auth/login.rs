@@ -57,7 +57,7 @@ pub async fn post(
 
 async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))

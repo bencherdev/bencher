@@ -76,7 +76,7 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
 ) -> Result<Vec<JsonToken>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
     same_user!(auth_user, api_context.rbac, query_user.id);
@@ -128,7 +128,7 @@ async fn post_inner(
 ) -> Result<JsonToken, ApiError> {
     let api_context = &mut *context.lock().await;
     let insert_token = InsertToken::from_json(api_context, json_token, auth_user)?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
@@ -188,7 +188,7 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
     same_user!(auth_user, api_context.rbac, query_user.id);

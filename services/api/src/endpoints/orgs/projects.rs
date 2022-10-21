@@ -78,7 +78,7 @@ async fn get_ls_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     Ok(schema::project::table
         .filter(schema::project::organization_id.eq(query_organization.id))
@@ -115,7 +115,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     // Create the project
     let insert_project = InsertProject::from_json(conn, json_project)?;
@@ -199,7 +199,7 @@ async fn get_one_inner(
         Permission::View,
     )?;
 
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
     QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
 }
 
@@ -247,7 +247,7 @@ async fn get_one_project_inner(
     let api_context = &mut *context.lock().await;
 
     let query_project =
-        QueryProject::from_resource_id(&mut api_context.db_conn, &path_params.project)?;
+        QueryProject::from_resource_id(&mut api_context.database, &path_params.project)?;
 
     QueryOrganization::is_allowed_id(
         api_context,
@@ -256,5 +256,5 @@ async fn get_one_project_inner(
         Permission::View,
     )?;
 
-    query_project.into_json(&mut api_context.db_conn)
+    query_project.into_json(&mut api_context.database)
 }

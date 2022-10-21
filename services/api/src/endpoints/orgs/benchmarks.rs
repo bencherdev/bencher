@@ -75,7 +75,7 @@ async fn get_ls_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     Ok(schema::benchmark::table
         .filter(schema::benchmark::project_id.eq(&query_project.id))
@@ -136,7 +136,7 @@ async fn get_one_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.db_conn;
+    let conn = &mut api_context.database;
 
     schema::benchmark::table
         .filter(
