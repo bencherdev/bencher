@@ -4,7 +4,7 @@ use std::{
 };
 
 use bencher_json::{
-    config::{JsonDatabase, JsonServer},
+    config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
     JsonConfig,
 };
 use tracing::info;
@@ -13,6 +13,8 @@ use url::Url;
 use crate::ApiError;
 
 mod server;
+
+pub const API_NAME: &str = "Bencher API";
 
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
@@ -89,6 +91,12 @@ impl Default for Config {
                 file: DEFAULT_DB_PATH.into(),
             },
             smtp: None,
+            logging: JsonLogging {
+                name: API_NAME.into(),
+                log: ServerLog::StderrTerminal {
+                    level: LogLevel::Info,
+                },
+            },
         })
     }
 }

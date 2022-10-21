@@ -13,6 +13,7 @@ pub struct JsonConfig {
     pub server: JsonServer,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
+    pub logging: JsonLogging,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,4 +45,45 @@ pub struct JsonSmtp {
     pub secret: String,
     pub from_name: String,
     pub from_email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonLogging {
+    pub name: String,
+    pub log: ServerLog,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub enum ServerLog {
+    StderrTerminal {
+        level: LogLevel,
+    },
+    File {
+        level: LogLevel,
+        path: String,
+        if_exists: IfExists,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Critical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum IfExists {
+    Fail,
+    Truncate,
+    Append,
 }

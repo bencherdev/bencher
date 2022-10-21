@@ -1,13 +1,14 @@
 use std::convert::TryFrom;
 
 use bencher_json::{
-    config::{JsonServer, JsonSmtp, JsonTls},
+    config::{IfExists, JsonLogging, JsonServer, JsonSmtp, JsonTls, LogLevel, ServerLog},
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
 use diesel::{Connection, SqliteConnection};
 use dropshot::{
-    ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, ConfigTls, HttpServer,
+    ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
+    ConfigTls, HttpServer,
 };
 use tokio::sync::Mutex;
 use tracing::trace;
@@ -36,6 +37,7 @@ impl TryFrom<Config> for HttpServer<Context> {
             server,
             database,
             smtp,
+            logging,
         }) = config;
 
         let JsonServer {
@@ -87,7 +89,40 @@ impl TryFrom<Config> for HttpServer<Context> {
             database: SqliteConnection::establish(&database_path)?,
         });
 
-        let log = get_logger("Bencher")?;
+        let JsonLogging { name, log } = logging;
+        fn map_level(log_level: LogLevel) -> ConfigLoggingLevel {
+            match log_level {
+                LogLevel::Trace => ConfigLoggingLevel::Trace,
+                LogLevel::Debug => ConfigLoggingLevel::Debug,
+                LogLevel::Info => ConfigLoggingLevel::Info,
+                LogLevel::Warn => ConfigLoggingLevel::Warn,
+                LogLevel::Error => ConfigLoggingLevel::Error,
+                LogLevel::Critical => ConfigLoggingLevel::Critical,
+            }
+        }
+        fn map_if_exists(if_exists: IfExists) -> ConfigLoggingIfExists {
+            match if_exists {
+                IfExists::Fail => ConfigLoggingIfExists::Fail,
+                IfExists::Truncate => ConfigLoggingIfExists::Truncate,
+                IfExists::Append => ConfigLoggingIfExists::Append,
+            }
+        }
+        let log = match log {
+            ServerLog::StderrTerminal { level } => ConfigLogging::StderrTerminal {
+                level: map_level(level),
+            },
+            ServerLog::File {
+                level,
+                path,
+                if_exists,
+            } => ConfigLogging::File {
+                level: map_level(level),
+                path,
+                if_exists: map_if_exists(if_exists),
+            },
+        }
+        .to_logger(name)
+        .map_err(ApiError::CreateLogger)?;
 
         let mut api = ApiDescription::new();
         trace!("Registering server APIs");
@@ -113,14 +148,4 @@ fn diesel_database_url(database_path: &str) {
     }
     trace!("Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path)
-}
-
-// TODO set logging level the same as tracing
-fn get_logger(api_name: &str) -> Result<slog::Logger, ApiError> {
-    let config_logging = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
-    };
-    config_logging
-        .to_logger(api_name)
-        .map_err(ApiError::CreateLogger)
 }
