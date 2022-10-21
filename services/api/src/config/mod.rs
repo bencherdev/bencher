@@ -9,7 +9,6 @@ use bencher_json::{
 };
 use tracing::info;
 use url::Url;
-use uuid::Uuid;
 
 use crate::ApiError;
 
@@ -30,6 +29,15 @@ const DEFAULT_DB_PATH: &str = "data/bencher.db";
 lazy_static::lazy_static! {
     static ref DEFAULT_ENDPOINT: Url = DEFAULT_ENDPOINT_STR.parse().expect(&format!("Failed to parse default endpoint: {DEFAULT_ENDPOINT_STR}"));
     static ref DEFAULT_BIND_ADDRESS: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT);
+}
+
+#[cfg(debug_assertions)]
+lazy_static::lazy_static! {
+    static ref DEFAULT_SECRET_KEY: String = "DO_NOT_USE_THIS_IN_PRODUCTION".into();
+}
+#[cfg(not(debug_assertions))]
+lazy_static::lazy_static! {
+    static ref DEFAULT_SECRET_KEY: String = uuid::Uuid::new_v4().to_string();
 }
 
 #[derive(Debug, Clone)]
@@ -60,10 +68,16 @@ impl Config {
         })?))
     }
 
-    pub fn default() -> Self {
+    pub async fn load_or_default() -> Self {
+        Self::load().await.unwrap_or_default()
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
         Self(JsonConfig {
             endpoint: DEFAULT_ENDPOINT.clone(),
-            secret_key: Some(Uuid::new_v4().to_string()),
+            secret_key: Some(DEFAULT_SECRET_KEY.clone()),
             server: JsonServer {
                 bind_address: *DEFAULT_BIND_ADDRESS,
                 request_body_max_bytes: DEFAULT_MAX_BODY_SIZE,
@@ -74,9 +88,5 @@ impl Config {
             },
             smtp: None,
         })
-    }
-
-    pub async fn load_or_default() -> Self {
-        Self::load().await.unwrap_or_else(|_| Self::default())
     }
 }
