@@ -5,6 +5,7 @@ use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, Query
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
@@ -31,6 +32,7 @@ use crate::{
 use super::Resource;
 
 const RESTART_RESOURCE: Resource = Resource::Restart;
+const RESTART_SECS: u64 = 3;
 
 #[endpoint {
     method = OPTIONS,
@@ -71,9 +73,13 @@ async fn post_inner(context: &Context, auth_user: &AuthUser) -> Result<JsonEmpty
         return Err(ApiError::Admin(auth_user.id));
     }
 
+    warn!(
+        "Received admin request from {} to restart. Server will restart in {RESTART_SECS} seconds.",
+        auth_user.id
+    );
     let restart_txt = api_context.restart_tx.clone();
     tokio::spawn(async move {
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(RESTART_SECS)).await;
         let _ = restart_txt.send(()).await;
     });
 
