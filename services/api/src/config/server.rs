@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, path::Path};
+use std::convert::TryFrom;
 
 use bencher_json::{
     config::{JsonServer, JsonSmtp, JsonTls},
@@ -6,13 +6,17 @@ use bencher_json::{
 };
 use bencher_rbac::init_rbac;
 use diesel::{Connection, SqliteConnection};
-use dropshot::{ConfigDropshot, ConfigTls, HttpServer};
+use dropshot::{
+    ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, ConfigTls, HttpServer,
+};
 use tokio::sync::Mutex;
 use tracing::trace;
 
 use crate::{
+    endpoints::Api,
     util::{
         context::{Email, Messenger},
+        registrar::Registrar,
         ApiContext, Context,
     },
     ApiError,
@@ -83,6 +87,12 @@ impl TryFrom<Config> for HttpServer<Context> {
             database: SqliteConnection::establish(&database_path)?,
         });
 
+        let log = get_logger("Bencher")?;
+
+        let mut api = ApiDescription::new();
+        trace!("Registering server APIs");
+        Api::register(&mut api)?;
+
         Ok(
             dropshot::HttpServerStarter::new(&config_dropshot, api, private, &log)
                 .map_err(ApiError::CreateServer)?
@@ -103,4 +113,14 @@ fn diesel_database_url(database_path: &str) {
     }
     trace!("Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path)
+}
+
+// TODO set logging level the same as tracing
+fn get_logger(api_name: &str) -> Result<slog::Logger, ApiError> {
+    let config_logging = ConfigLogging::StderrTerminal {
+        level: ConfigLoggingLevel::Info,
+    };
+    config_logging
+        .to_logger(api_name)
+        .map_err(ApiError::CreateLogger)
 }
