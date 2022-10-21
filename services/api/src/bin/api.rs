@@ -1,8 +1,6 @@
 use bencher_api::ApiError;
 use tracing::info;
 
-const API_NAME: &str = "Bencher API";
-
 #[tokio::main]
 async fn main() -> Result<(), ApiError> {
     // Install global subscriber configured based on RUST_LOG envvar.
@@ -48,7 +46,7 @@ async fn run() -> Result<(), ApiError> {
             "thresholds" => TagDetails { description: Some("Thresholds".into()), external_docs: None},
             "perf" => TagDetails { description: Some("Benchmark Perf".into()), external_docs: None},
     }})
-        .openapi(API_NAME, API_VERSION)
+        .openapi(bencher_api::config::API_NAME, API_VERSION)
         .write(&mut swagger_file)
         .map_err(ApiError::WriteSwaggerFile)?;
 
@@ -57,16 +55,11 @@ async fn run() -> Result<(), ApiError> {
 
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), ApiError> {
-    use bencher_api::util::server::get_server;
+    use bencher_api::config::Config;
+    use dropshot::HttpServer;
 
-    #[cfg(debug_assertions)]
-    {
-        tracing::trace!("Importing .env file");
-        dotenvy::dotenv()?;
-    }
-
-    get_server(API_NAME)
-        .await?
+    let config = Config::load_or_default().await;
+    HttpServer::try_from(config)?
         .await
         .map_err(ApiError::RunServer)
 }

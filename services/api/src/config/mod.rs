@@ -66,14 +66,25 @@ impl Config {
             ApiError::OpenConfig(path.clone())
         })?;
 
-        Ok(Self(serde_json::from_slice(&config_file).map_err(|e| {
+        let json_config = serde_json::from_slice(&config_file).map_err(|e| {
             info!("Failed to parse config file at {}: {e}", path.display());
-            ApiError::ParseConfig(path)
-        })?))
+            ApiError::ParseConfig(path.clone())
+        })?;
+        info!(
+            "Loaded config from {}: {}",
+            path.display(),
+            serde_json::json!(json_config)
+        );
+
+        Ok(Self(json_config))
     }
 
     pub async fn load_or_default() -> Self {
-        Self::load().await.unwrap_or_default()
+        Self::load().await.unwrap_or_else(|_| {
+            let json_config = Self::default();
+            info!("Using default config: {}", serde_json::json!(json_config.0));
+            json_config
+        })
     }
 }
 
