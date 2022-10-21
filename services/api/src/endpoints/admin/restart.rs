@@ -37,7 +37,10 @@ const RESTART_RESOURCE: Resource = Resource::Restart;
     path =  "/v0/admin/restart",
     tags = ["admin"]
 }]
-pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn post_options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _body: TypedBody<JsonEmpty>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -48,6 +51,7 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    _body: TypedBody<JsonEmpty>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(RESTART_RESOURCE, Method::Post);
