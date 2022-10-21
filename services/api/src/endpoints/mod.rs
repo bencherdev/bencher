@@ -34,6 +34,10 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Admin
     api.register(admin::restart::post_options)?;
     api.register(admin::restart::post)?;
+    api.register(admin::config::post_options)?;
+    api.register(admin::config::post)?;
+    api.register(admin::config::one_options)?;
+    api.register(admin::config::get_one)?;
 
     // Auth
     api.register(auth::signup::options)?;

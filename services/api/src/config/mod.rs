@@ -7,7 +7,7 @@ use bencher_json::{
     config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
     JsonConfig,
 };
-use tracing::info;
+use tracing::{error, info};
 use url::Url;
 
 use crate::ApiError;
@@ -16,6 +16,7 @@ pub mod config_tx;
 
 pub const API_NAME: &str = "Bencher API";
 
+pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
@@ -58,17 +59,17 @@ impl Config {
             .into()
     }
 
-    pub async fn load() -> Result<Self, ApiError> {
+    pub async fn load_file() -> Result<Self, ApiError> {
         let path = Self::path();
 
         let config_file = tokio::fs::read(&path).await.map_err(|e| {
             info!("Failed to open config file at {}: {e}", path.display());
-            ApiError::OpenConfig(path.clone())
+            ApiError::OpenConfigFile(path.clone())
         })?;
 
         let json_config = serde_json::from_slice(&config_file).map_err(|e| {
             info!("Failed to parse config file at {}: {e}", path.display());
-            ApiError::ParseConfig(path.clone())
+            ApiError::ParseConfigFile(path.clone())
         })?;
         info!(
             "Loaded config from {}: {}",
@@ -79,11 +80,46 @@ impl Config {
         Ok(Self(json_config))
     }
 
+    pub async fn load_env() -> Result<Self, ApiError> {
+        let config_str = std::env::var(BENCHER_CONFIG).map_err(|e| {
+            info!("Failed to find \"{BENCHER_CONFIG}\": {e}");
+            ApiError::MissingEnvVar(BENCHER_CONFIG.into())
+        })?;
+
+        let json_config = serde_json::from_str(&config_str).map_err(|e| {
+            info!("Failed to parse config string from \"{BENCHER_CONFIG}\": {e}");
+            ApiError::ParseConfigString(config_str.clone())
+        })?;
+        info!(
+            "Loaded config from \"{BENCHER_CONFIG}\": {}",
+            serde_json::json!(json_config)
+        );
+
+        Self::write(config_str.as_bytes()).await?;
+
+        return Ok(Self(json_config));
+    }
+
     pub async fn load_or_default() -> Self {
-        Self::load().await.unwrap_or_else(|_| {
-            let json_config = Self::default();
-            info!("Using default config: {}", serde_json::json!(json_config.0));
-            json_config
+        if let Ok(config) = Self::load_file().await {
+            return config;
+        }
+
+        if let Ok(config) = Self::load_env().await {
+            return config;
+        }
+
+        let json_config = Self::default();
+        info!("Using default config: {}", serde_json::json!(json_config.0));
+        json_config
+    }
+
+    pub async fn write(config: impl AsRef<[u8]>) -> Result<(), ApiError> {
+        let path = Self::path();
+
+        tokio::fs::write(&path, config).await.map_err(|e| {
+            error!("Failed to write config file at {}: {e}", path.display());
+            ApiError::WriteConfigFile(path)
         })
     }
 }

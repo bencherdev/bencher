@@ -34,10 +34,20 @@ pub enum ApiError {
     Url(#[from] url::ParseError),
     #[error("Failed to inline CSS: {0}")]
     CssInline(#[from] css_inline::InlineError),
-    #[error("Failed to open config: {}", _0.display())]
-    OpenConfig(PathBuf),
-    #[error("Failed to parse config: {}", _0.display())]
-    ParseConfig(PathBuf),
+    #[error("Failed to find env var: {0}")]
+    MissingEnvVar(String),
+    #[error("Failed to parse config string: {0}")]
+    ParseConfigString(String),
+    #[error("Failed to open config file: {}", _0.display())]
+    OpenConfigFile(PathBuf),
+    #[error("Failed to parse config file: {}", _0.display())]
+    ParseConfigFile(PathBuf),
+    #[error("Failed to write config file: {}", _0.display())]
+    WriteConfigFile(PathBuf),
+    #[error("Failed to serialize: {0}")]
+    Serialize(serde_json::Error),
+    #[error("Failed to deserialize: {0}")]
+    Deserialize(serde_json::Error),
 
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]

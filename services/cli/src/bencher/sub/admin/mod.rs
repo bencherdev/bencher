@@ -6,11 +6,13 @@ use crate::{
     CliError,
 };
 
+mod config;
 mod restart;
 
 #[derive(Debug)]
 pub enum Admin {
     Restart(restart::Restart),
+    Config(config::Config),
 }
 
 impl TryFrom<CliAdmin> for Admin {
@@ -19,6 +21,7 @@ impl TryFrom<CliAdmin> for Admin {
     fn try_from(admin: CliAdmin) -> Result<Self, Self::Error> {
         Ok(match admin {
             CliAdmin::Restart(restart) => Self::Restart(restart.try_into()?),
+            CliAdmin::Config(config) => Self::Config(config.try_into()?),
         })
     }
 }
@@ -28,6 +31,7 @@ impl SubCmd for Admin {
     async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
             Self::Restart(restart) => restart.exec(wide).await,
+            Self::Config(config) => config.exec(wide).await,
         }
     }
 }
