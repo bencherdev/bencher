@@ -8,6 +8,7 @@ use bencher_json::{
 };
 use bencher_rbac::init_rbac;
 use diesel::{Connection, SqliteConnection};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -30,6 +31,8 @@ use crate::{
 use super::Config;
 
 const DATABASE_URL: &str = "DATABASE_URL";
+
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 impl TryFrom<Config> for HttpServer<Context> {
     type Error = ApiError;
@@ -68,12 +71,14 @@ fn into_private(
 ) -> Result<Mutex<ApiContext>, ApiError> {
     let database_path = database.file.to_string_lossy();
     diesel_database_url(&database_path);
+    let mut database = SqliteConnection::establish(&database_path)?;
+    run_migrations(&mut database)?;
     Ok(Mutex::new(ApiContext {
         endpoint,
         secret_key: into_secret_key(secret_key),
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
-        database: SqliteConnection::establish(&database_path)?,
+        database,
     }))
 }
 
@@ -89,6 +94,13 @@ fn diesel_database_url(database_path: &str) {
     }
     trace!("Setting \"{DATABASE_URL}\" to {database_path}");
     std::env::set_var(DATABASE_URL, database_path)
+}
+
+fn run_migrations(database: &mut SqliteConnection) -> Result<(), ApiError> {
+    database
+        .run_pending_migrations(MIGRATIONS)
+        .map(|_| ())
+        .map_err(ApiError::Migrations)
 }
 
 fn into_secret_key(secret_key: Option<String>) -> SecretKey {
