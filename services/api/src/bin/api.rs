@@ -57,6 +57,7 @@ async fn run() -> Result<(), ApiError> {
 async fn run() -> Result<(), ApiError> {
     use bencher_api::config::{config_tx::ConfigTx, Config};
     use dropshot::HttpServer;
+    use tracing::error;
 
     loop {
         let config = Config::load_or_default().await;
@@ -64,9 +65,15 @@ async fn run() -> Result<(), ApiError> {
         let config_tx = ConfigTx { config, restart_tx };
 
         let handle = tokio::spawn(async move {
-            HttpServer::try_from(config_tx)?
-                .await
-                .map_err(ApiError::RunServer)
+            async fn run_http_server(config_tx: ConfigTx) -> Result<(), ApiError> {
+                HttpServer::try_from(config_tx)?
+                    .await
+                    .map_err(ApiError::RunServer)
+            }
+
+            if let Err(e) = run_http_server(config_tx).await {
+                error!("Server Failure: {e}")
+            }
         });
 
         tokio::select! {
