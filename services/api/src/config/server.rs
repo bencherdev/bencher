@@ -1,12 +1,14 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, path::Path};
 
 use bencher_json::{
     config::{JsonServer, JsonSmtp, JsonTls},
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
+use diesel::{Connection, SqliteConnection};
 use dropshot::{ConfigDropshot, ConfigTls, HttpServer};
 use tokio::sync::Mutex;
+use tracing::trace;
 
 use crate::{
     util::{
@@ -17,6 +19,8 @@ use crate::{
 };
 
 use super::Config;
+
+const DATABASE_URL: &str = "DATABASE_URL";
 
 impl TryFrom<Config> for HttpServer<Context> {
     type Error = ApiError;
@@ -49,30 +53,34 @@ impl TryFrom<Config> for HttpServer<Context> {
             ),
         };
 
+        let database_path = database.file.to_string_lossy();
+        diesel_database_url(&database_path);
         let private = Mutex::new(ApiContext {
             endpoint,
             secret_key: secret_key
                 .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
                 .into(),
             rbac: init_rbac().map_err(ApiError::Polar)?.into(),
-            messenger: smtp.map(
-                |JsonSmtp {
-                     hostname,
-                     username,
-                     secret,
-                     from_name,
-                     from_email,
-                 }| {
-                    Messenger::Email(Email {
-                        hostname,
-                        username,
-                        secret,
-                        from_name: Some(from_name),
-                        from_email,
-                    })
-                },
-            ),
-            database,
+            messenger: smtp
+                .map(
+                    |JsonSmtp {
+                         hostname,
+                         username,
+                         secret,
+                         from_name,
+                         from_email,
+                     }| {
+                        Messenger::Email(Email {
+                            hostname,
+                            username,
+                            secret,
+                            from_name: Some(from_name),
+                            from_email,
+                        })
+                    },
+                )
+                .unwrap_or(Messenger::StdOut),
+            database: SqliteConnection::establish(&database_path)?,
         });
 
         Ok(
@@ -81,4 +89,18 @@ impl TryFrom<Config> for HttpServer<Context> {
                 .start(),
         )
     }
+}
+
+// Set the diesel `DATABASE_URL` env var to the database path
+fn diesel_database_url(database_path: &str) {
+    if let Ok(database_url) = std::env::var(DATABASE_URL) {
+        if database_url == database_path {
+            return;
+        }
+        trace!("\"{DATABASE_URL}\" ({database_url}) must be the same value as {database_path}");
+    } else {
+        trace!("Failed to find \"{DATABASE_URL}\"");
+    }
+    trace!("Setting \"{DATABASE_URL}\" to {database_path}");
+    std::env::set_var(DATABASE_URL, database_path)
 }
