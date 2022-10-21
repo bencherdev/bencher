@@ -11,9 +11,9 @@ pub use secret_key::SecretKey;
 pub type Context = tokio::sync::Mutex<ApiContext>;
 
 pub struct ApiContext {
+    pub endpoint: Url,
     pub secret_key: SecretKey,
     pub rbac: Rbac,
-    pub url: Url,
     pub messenger: Messenger,
     pub db_conn: diesel::SqliteConnection,
 }

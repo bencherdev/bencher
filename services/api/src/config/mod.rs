@@ -12,6 +12,8 @@ use url::Url;
 
 use crate::ApiError;
 
+mod server;
+
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";

@@ -115,7 +115,7 @@ async fn post_inner(
         pre_code: "".into(),
         button_text: format!("Join {org_name}"),
         button_url: api_context
-            .url
+            .endpoint
             .clone()
             .join(route)
             .map(|mut url| {
@@ -128,7 +128,7 @@ async fn post_inner(
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context
-            .url
+            .endpoint
             .clone()
             .join("/console/settings/email")
             .map(Into::into)

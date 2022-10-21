@@ -117,7 +117,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         pre_code: "".into(),
         button_text: "Confirm Email".into(),
         button_url: api_context
-            .url
+            .endpoint
             .clone()
             .join("/auth/confirm")
             .map(|mut url| {
@@ -130,7 +130,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context
-            .url
+            .endpoint
             .clone()
             .join("/console/settings/email")
             .map(Into::into)

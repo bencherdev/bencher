@@ -47,7 +47,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     trace!("Parsing role based access control (RBAC) rules");
     let rbac = init_rbac().map_err(ApiError::Polar)?.into();
     trace!("Parsing service URL");
-    let url = get_url()?;
+    let endpoint = get_url()?;
     trace!("Configuring messenger settings");
     let messenger = get_messenger();
     trace!("Getting database connection");
@@ -57,7 +57,7 @@ pub async fn get_server(api_name: &str) -> Result<HttpServer<Context>, ApiError>
     let private = Mutex::new(ApiContext {
         secret_key,
         rbac,
-        url,
+        endpoint,
         messenger,
         db_conn,
     });
