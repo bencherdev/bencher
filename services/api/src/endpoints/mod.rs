@@ -29,7 +29,7 @@ impl Registrar<Context> for Api {
 
 fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Ping
-    api.register(ping::get)?;
+    // api.register(ping::get)?;
 
     // Admin
     api.register(admin::restart::post_options)?;
