@@ -60,8 +60,8 @@ async fn run() -> Result<(), ApiError> {
 
     loop {
         let config = Config::load_or_default().await;
-        let (kill_tx, kill_rx) = tokio::sync::oneshot::channel();
-        let config_tx = ConfigTx { config, kill_tx };
+        let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
+        let config_tx = ConfigTx { config, restart_tx };
 
         let handle = tokio::spawn(async move {
             HttpServer::try_from(config_tx)?
@@ -70,8 +70,16 @@ async fn run() -> Result<(), ApiError> {
         });
 
         tokio::select! {
-            _ = tokio::signal::ctrl_c() => return Ok(()),
-            _ = kill_rx => handle.abort(),
+            _ = tokio::signal::ctrl_c() => break,
+            restart = restart_rx.recv() => {
+                if restart.is_some() {
+                    handle.abort();
+                } else {
+                    break;
+                }
+            },
         }
     }
+
+    Ok(())
 }
