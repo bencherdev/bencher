@@ -1,3 +1,4 @@
+use tokio::sync::oneshot::Sender;
 use url::Url;
 
 mod messenger;
@@ -16,4 +17,5 @@ pub struct ApiContext {
     pub rbac: Rbac,
     pub messenger: Messenger,
     pub database: diesel::SqliteConnection,
+    pub kill_tx: Sender<()>,
 }

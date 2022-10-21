@@ -14,7 +14,7 @@ use dropshot::{
     ConfigTls, HttpServer,
 };
 use slog::Logger;
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot::Sender, Mutex};
 use tracing::trace;
 use url::Url;
 
@@ -31,13 +31,19 @@ use crate::{
 use super::Config;
 
 const DATABASE_URL: &str = "DATABASE_URL";
-
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
-impl TryFrom<Config> for HttpServer<Context> {
+pub struct ConfigTx {
+    pub config: Config,
+    pub kill_tx: Sender<()>,
+}
+
+impl TryFrom<ConfigTx> for HttpServer<Context> {
     type Error = ApiError;
 
-    fn try_from(config: Config) -> Result<Self, Self::Error> {
+    fn try_from(config_tx: ConfigTx) -> Result<Self, Self::Error> {
+        let ConfigTx { config, kill_tx } = config_tx;
+
         let Config(JsonConfig {
             endpoint,
             secret_key,
@@ -47,7 +53,7 @@ impl TryFrom<Config> for HttpServer<Context> {
             logging,
         }) = config;
 
-        let private = into_private(endpoint, secret_key, smtp, database)?;
+        let private = into_private(endpoint, secret_key, smtp, database, kill_tx)?;
         let config_dropshot = into_config_dropshot(server);
         let log = into_log(logging)?;
 
@@ -68,6 +74,7 @@ fn into_private(
     secret_key: Option<String>,
     smtp: Option<JsonSmtp>,
     database: JsonDatabase,
+    kill_tx: Sender<()>,
 ) -> Result<Mutex<ApiContext>, ApiError> {
     let database_path = database.file.to_string_lossy();
     diesel_database_url(&database_path);
@@ -79,6 +86,7 @@ fn into_private(
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database,
+        kill_tx,
     }))
 }
 

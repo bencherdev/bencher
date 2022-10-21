@@ -32,6 +32,7 @@
     "jsonwebtoken",
     "litestream",
     "nanos",
+    "oneshot",
     "perfs",
     "powi",
     "preheader",

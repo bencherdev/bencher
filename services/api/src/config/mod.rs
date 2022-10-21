@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::ApiError;
 
-mod server;
+pub mod config_tx;
 
 pub const API_NAME: &str = "Bencher API";
 

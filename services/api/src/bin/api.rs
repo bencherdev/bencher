@@ -55,11 +55,14 @@ async fn run() -> Result<(), ApiError> {
 
 #[cfg(not(feature = "swagger"))]
 async fn run() -> Result<(), ApiError> {
-    use bencher_api::config::Config;
+    use bencher_api::config::{config_tx::ConfigTx, Config};
     use dropshot::HttpServer;
 
     let config = Config::load_or_default().await;
-    HttpServer::try_from(config)?
+    let (kill_tx, kill_rx) = tokio::sync::oneshot::channel();
+    let config_tx = ConfigTx { config, kill_tx };
+
+    HttpServer::try_from(config_tx)?
         .await
         .map_err(ApiError::RunServer)
 }
