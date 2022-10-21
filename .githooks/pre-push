@@ -4,5 +4,5 @@
 cd ./services/api
 cargo run --features swagger
 
-# If there was a change/the git tree is diry add the updated file and commit
+# If there was a change/the git tree is dirty add the updated file and commit
 git diff --quiet || (git add ../ui/src/components/docs/api/swagger.json && git commit -m "Update Swagger" && git push)
