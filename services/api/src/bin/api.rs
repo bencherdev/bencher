@@ -58,11 +58,20 @@ async fn run() -> Result<(), ApiError> {
     use bencher_api::config::{config_tx::ConfigTx, Config};
     use dropshot::HttpServer;
 
-    let config = Config::load_or_default().await;
-    let (kill_tx, kill_rx) = tokio::sync::oneshot::channel();
-    let config_tx = ConfigTx { config, kill_tx };
+    loop {
+        let config = Config::load_or_default().await;
+        let (kill_tx, kill_rx) = tokio::sync::oneshot::channel();
+        let config_tx = ConfigTx { config, kill_tx };
 
-    HttpServer::try_from(config_tx)?
-        .await
-        .map_err(ApiError::RunServer)
+        let handle = tokio::spawn(async move {
+            HttpServer::try_from(config_tx)?
+                .await
+                .map_err(ApiError::RunServer)
+        });
+
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => return Ok(()),
+            _ = kill_rx => handle.abort(),
+        }
+    }
 }
