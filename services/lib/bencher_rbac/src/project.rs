@@ -7,9 +7,9 @@ use crate::{
     MANAGE_PERM, VIEW_PERM, VIEW_ROLE_PERM,
 };
 
-pub const VIEWER_ROLE: &str = "viewer";
-pub const DEVELOPER_ROLE: &str = "developer";
-pub const MAINTAINER_ROLE: &str = "maintainer";
+const VIEWER_ROLE: &str = "viewer";
+const DEVELOPER_ROLE: &str = "developer";
+const MAINTAINER_ROLE: &str = "maintainer";
 
 #[derive(Debug, Clone, PolarClass)]
 pub struct Project {

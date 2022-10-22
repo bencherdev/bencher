@@ -51,7 +51,7 @@ impl InsertOrganizationRole {
         Ok(InsertOrganizationRole {
             user_id,
             organization_id: QueryOrganization::get_id(conn, org_claims.uuid)?,
-            role: org_claims.role.to_string(),
+            role: serde_json::to_string(&org_claims.role).map_err(ApiError::Serialize)?,
         })
     }
 }

@@ -2,9 +2,9 @@ use std::fmt;
 
 use oso::{PolarClass, PolarValue, ToPolar};
 
-pub const LOCKED_ROLE: &str = "locked";
-pub const USER_ROLE: &str = "user";
-pub const ADMIN_ROLE: &str = "admin";
+const LOCKED_ROLE: &str = "locked";
+const USER_ROLE: &str = "user";
+const ADMIN_ROLE: &str = "admin";
 
 pub const SESSION_PEM: &str = "session";
 pub const ADMINISTER_PEM: &str = "administer";

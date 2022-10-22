@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{member::JsonOrganizationRole, JsonMember};
+use bencher_json::JsonMember;
 use diesel::Queryable;
 use uuid::Uuid;
 
@@ -29,8 +29,7 @@ impl QueryMember {
             name,
             slug,
             email,
-            role: JsonOrganizationRole::from_str(&role)
-                .map_err(|e| ApiError::OrganizationRole(e))?,
+            role: serde_json::from_str(&role).map_err(ApiError::Deserialize)?,
         })
     }
 }

@@ -42,3 +42,9 @@ pub use user::JsonUser;
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonEmpty {}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAllowed {
+    pub allowed: bool,
+}

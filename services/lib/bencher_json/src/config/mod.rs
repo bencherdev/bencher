@@ -76,7 +76,7 @@ pub enum ServerLog {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -88,7 +88,7 @@ pub enum LogLevel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum IfExists {
     Fail,
     Truncate,
