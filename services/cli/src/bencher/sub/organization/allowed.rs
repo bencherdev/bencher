@@ -56,7 +56,7 @@ impl SubCmd for Allowed {
             .get(&format!(
                 "/v0/organizations/{}/allowed/{}",
                 self.organization,
-                serde_json::to_string(&self.perm)?
+                self.perm.to_string()
             ))
             .await?;
         Ok(())

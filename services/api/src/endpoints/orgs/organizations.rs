@@ -204,7 +204,7 @@ pub struct GetAllowedParams {
 }]
 pub async fn allowed_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetOneParams>,
+    _path_params: Path<GetAllowedParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
