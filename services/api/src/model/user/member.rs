@@ -29,7 +29,7 @@ impl QueryMember {
             name,
             slug,
             email,
-            role: serde_json::from_str(&role).map_err(ApiError::Deserialize)?,
+            role: role.parse().map_err(ApiError::OrganizationRole)?,
         })
     }
 }

@@ -1,14 +1,12 @@
 use std::{fmt, str::FromStr};
 
+use bencher_json::member::{LEADER_ROLE, MEMBER_ROLE};
 use oso::{PolarClass, PolarValue, ToPolar};
 
 use crate::{
     CREATE_PERM, CREATE_ROLE_PERM, DELETE_PERM, DELETE_ROLE_PERM, EDIT_PERM, EDIT_ROLE_PERM,
     MANAGE_PERM, VIEW_PERM, VIEW_ROLE_PERM,
 };
-
-const MEMBER_ROLE: &str = "member";
-const LEADER_ROLE: &str = "leader";
 
 #[derive(Debug, Clone, PolarClass)]
 pub struct Organization {
