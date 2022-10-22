@@ -6,6 +6,7 @@ use crate::{
     CliError,
 };
 
+mod allowed;
 mod create;
 mod list;
 mod view;
@@ -15,6 +16,7 @@ pub enum Organization {
     List(list::List),
     Create(create::Create),
     View(view::View),
+    Allowed(allowed::Allowed),
 }
 
 impl TryFrom<CliOrganization> for Organization {
@@ -25,6 +27,7 @@ impl TryFrom<CliOrganization> for Organization {
             CliOrganization::List(list) => Self::List(list.try_into()?),
             CliOrganization::Create(create) => Self::Create(create.try_into()?),
             CliOrganization::View(view) => Self::View(view.try_into()?),
+            CliOrganization::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
         })
     }
 }
@@ -36,6 +39,7 @@ impl SubCmd for Organization {
             Self::List(list) => list.exec(wide).await,
             Self::Create(create) => create.exec(wide).await,
             Self::View(view) => view.exec(wide).await,
+            Self::Allowed(allowed) => allowed.exec(wide).await,
         }
     }
 }

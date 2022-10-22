@@ -1,5 +1,5 @@
 use bencher_json::ResourceId;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use super::CliBackend;
 
@@ -13,6 +13,8 @@ pub enum CliOrganization {
     Create(CliOrganizationCreate),
     /// View a organization
     View(CliOrganizationView),
+    /// Check organization permission
+    Allowed(CliOrganizationAllowed),
 }
 
 #[derive(Parser, Debug)]
@@ -41,4 +43,31 @@ pub struct CliOrganizationView {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliOrganizationAllowed {
+    /// Organization permission
+    #[clap(long)]
+    pub perm: CliOrganizationPermission,
+
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+/// Organization permission
+#[derive(ValueEnum, Debug, Clone)]
+pub enum CliOrganizationPermission {
+    View,
+    Create,
+    Edit,
+    Delete,
+    Manage,
+    ViewRole,
+    CreateRole,
+    EditRole,
+    DeleteRole,
 }
