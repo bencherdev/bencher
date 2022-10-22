@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{member::JsonOrganizationRole, JsonInvite};
+use crate::member::JsonOrganizationRole;
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
@@ -63,16 +63,18 @@ impl JsonWebToken {
 
     pub fn new_invite(
         key: &EncodingKey,
-        invite: JsonInvite,
+        email: String,
+        org_uuid: Uuid,
+        role: JsonOrganizationRole,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         let org_claims = OrgClaims {
-            uuid: invite.organization,
-            role: invite.role,
+            uuid: org_uuid,
+            role,
         };
         Self::new(
             key,
             Audience::Invite,
-            invite.email,
+            email,
             CLIENT_TOKEN_TTL,
             Some(org_claims),
         )

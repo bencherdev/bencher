@@ -1,9 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{member::JsonOrganizationRole, JsonInvite};
+use bencher_json::{member::JsonOrganizationRole, JsonInvite, ResourceId};
 use email_address_parser::EmailAddress;
-use uuid::Uuid;
 
 use crate::{
     bencher::{backend::Backend, wide::Wide},
@@ -19,7 +18,7 @@ const INVITES_PATH: &str = "/v0/invites";
 pub struct Invite {
     name: Option<String>,
     email: EmailAddress,
-    org: Uuid,
+    org: ResourceId,
     role: JsonOrganizationRole,
     backend: Backend,
 }

@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use bencher_json::{jwt::JsonWebToken, JsonEmpty, JsonInvite};
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use uuid::Uuid;
 
 use crate::{
     endpoints::{
@@ -64,12 +65,13 @@ async fn post_inner(
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database;
 
+    // Get the organization
+    let query_org = QueryOrganization::from_resource_id(conn, &json_invite.organization)?;
+
     // Check to see if user has permission to create a project within the organization
-    api_context.rbac.is_allowed_organization(
-        auth_user,
-        Permission::CreateRole,
-        QueryOrganization::into_rbac(conn, json_invite.organization)?,
-    )?;
+    api_context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)?;
 
     let email = json_invite.email.clone();
     // If a user already exists for the email then direct them to login.
@@ -92,18 +94,17 @@ async fn post_inner(
         .first::<(String, String)>(conn)
         .map_err(api_error!())?;
 
-    // Get the organization name for the message
-    let org_name = schema::organization::table
-        .filter(schema::organization::uuid.eq(json_invite.organization.to_string()))
-        .select(schema::organization::name)
-        .first::<String>(conn)
-        .map_err(api_error!())?;
-
     // Create an invite token
-    let token = JsonWebToken::new_invite(&api_context.secret_key.encoding, json_invite)
-        .map_err(api_error!())?;
+    let token = JsonWebToken::new_invite(
+        &api_context.secret_key.encoding,
+        json_invite.email,
+        Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
+        json_invite.role,
+    )
+    .map_err(api_error!())?;
     let token_string = token.to_string();
 
+    let org_name = &query_org.name;
     let body = Body::Button(ButtonBody {
         title: format!("Invitation to join {org_name}"),
         preheader: "Click the provided link to join.".into(),

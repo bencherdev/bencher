@@ -1,5 +1,5 @@
+use bencher_json::ResourceId;
 use clap::{Parser, ValueEnum};
-use uuid::Uuid;
 
 use super::CliBackend;
 
@@ -15,7 +15,7 @@ pub struct CliInvite {
 
     /// Organization slug or UUID
     #[clap(long)]
-    pub org: Uuid,
+    pub org: ResourceId,
 
     /// Organization role
     #[clap(value_enum, long)]
