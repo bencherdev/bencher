@@ -18,3 +18,18 @@ pub struct JsonOrganization {
     pub name: String,
     pub slug: String,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonOrganizationPermission {
+    View,
+    Create,
+    Edit,
+    Delete,
+    Manage,
+    ViewRole,
+    CreateRole,
+    EditRole,
+    DeleteRole,
+}

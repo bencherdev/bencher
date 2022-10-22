@@ -51,6 +51,8 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(organizations::post)?;
     api.register(organizations::one_options)?;
     api.register(organizations::get_one)?;
+    api.register(organizations::allowed_options)?;
+    api.register(organizations::get_allowed)?;
     // Members
     api.register(members::dir_options)?;
     api.register(members::get_ls)?;

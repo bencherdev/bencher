@@ -4,7 +4,7 @@ use crate::{
     util::context::SecretKey,
     ApiError,
 };
-use bencher_json::jwt::JsonWebToken;
+use bencher_json::{jwt::JsonWebToken, organization::JsonOrganizationPermission};
 use diesel::{Insertable, Queryable, SqliteConnection};
 
 use super::{
@@ -62,4 +62,48 @@ pub struct QueryOrganizationRole {
     pub user_id: i32,
     pub organization_id: i32,
     pub role: String,
+}
+
+pub enum Permission {
+    View,
+    Create,
+    Edit,
+    Delete,
+    Manage,
+    ViewRole,
+    CreateRole,
+    EditRole,
+    DeleteRole,
+}
+
+impl From<JsonOrganizationPermission> for Permission {
+    fn from(permission: JsonOrganizationPermission) -> Self {
+        match permission {
+            JsonOrganizationPermission::View => Self::View,
+            JsonOrganizationPermission::Create => Self::Create,
+            JsonOrganizationPermission::Edit => Self::Edit,
+            JsonOrganizationPermission::Delete => Self::Delete,
+            JsonOrganizationPermission::Manage => Self::Manage,
+            JsonOrganizationPermission::ViewRole => Self::ViewRole,
+            JsonOrganizationPermission::CreateRole => Self::CreateRole,
+            JsonOrganizationPermission::EditRole => Self::EditRole,
+            JsonOrganizationPermission::DeleteRole => Self::DeleteRole,
+        }
+    }
+}
+
+impl From<Permission> for bencher_rbac::organization::Permission {
+    fn from(permission: Permission) -> Self {
+        match permission {
+            Permission::View => Self::View,
+            Permission::Create => Self::Create,
+            Permission::Edit => Self::Edit,
+            Permission::Delete => Self::Delete,
+            Permission::Manage => Self::Manage,
+            Permission::ViewRole => Self::ViewRole,
+            Permission::CreateRole => Self::CreateRole,
+            Permission::EditRole => Self::EditRole,
+            Permission::DeleteRole => Self::DeleteRole,
+        }
+    }
 }
