@@ -10,8 +10,6 @@ use crate::{endpoints::Resource, model::user::auth::AuthUser};
 pub enum ApiError {
     #[error("Failed to set global default logger")]
     SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
-    #[error("Failed to import .env file: {0}")]
-    DotEnv(#[from] dotenvy::Error),
     #[error("Failed to parse role based access control (RBAC) rules: {0}")]
     Polar(oso::OsoError),
     #[error("Failed to create database connection: {0}")]
