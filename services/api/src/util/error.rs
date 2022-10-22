@@ -58,6 +58,7 @@ where
     result.map_or_else(
         |e| {
             tracing::error!("Failed to parse from database: {e}");
+            debug_assert!(false, "Failed to parse from database: {e}");
             None
         },
         Some,
