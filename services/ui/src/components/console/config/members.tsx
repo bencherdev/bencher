@@ -1,17 +1,17 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
+import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
 
 const MembersConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
     header: {
-      title: "Project Members",
+      title: "Organization Members",
       buttons: [
         {
-          kind: Button.ADD,
+          kind: Button.INVITE,
           path: (pathname) => {
-            return addPath(pathname);
+            return invitePath(pathname);
           },
         },
         { kind: Button.REFRESH },
@@ -23,9 +23,9 @@ const MembersConfig = {
       },
       add: {
         path: (pathname) => {
-          return addPath(pathname);
+          return invitePath(pathname);
         },
-        text: "Add a Project",
+        text: "Invite an Organization Member",
       },
       row: {
         key: "name",
@@ -43,18 +43,18 @@ const MembersConfig = {
           {},
         ],
         button: {
-          text: "Select",
-          path: (_pathname, datum) => {
-            return `/console/projects/${datum?.slug}/perf`;
+          text: "View",
+          path: (pathname, datum) => {
+            return viewSlugPath(pathname, datum);
           },
         },
       },
     },
   },
-  [Operation.ADD]: {
-    operation: Operation.ADD,
+  [Operation.INVITE]: {
+    operation: Operation.INVITE,
     header: {
-      title: "Add Project",
+      title: "Invite to Organization",
       path: (pathname) => {
         return parentPath(pathname);
       },
@@ -155,23 +155,6 @@ const MembersConfig = {
         path: (path_params) => {
           return `/console/projects/${path_params?.project_slug}/perf`
         },
-      },
-    },
-  },
-  [Operation.PERF]: {
-    operation: Operation.PERF,
-    header: {
-      title: "Benchmark Perf",
-    },
-    plot: {
-      url: () => {
-        return `${BENCHER_API_URL}/v0/perf`;
-      },
-      tab_url: (path_params, tab: PerfTab) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`;
-      },
-      key_url: (path_params, tab: PerfTab, uuid: string) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}/${uuid}`;
       },
     },
   },

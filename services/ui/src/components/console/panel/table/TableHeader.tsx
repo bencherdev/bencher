@@ -36,6 +36,20 @@ const TableHeader = (props) => {
                     <span>Add</span>
                   </button>
                 </Match>
+                <Match when={button.kind === Button.INVITE}>
+                  <button
+                    class="button is-outlined"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      props.handleRedirect(button.path(props.pathname()));
+                    }}
+                  >
+                    <span class="icon">
+                      <i class="fas fa-envelope" aria-hidden="true" />
+                    </span>
+                    <span>Invite</span>
+                  </button>
+                </Match>
                 <Match when={button.kind === Button.REFRESH}>
                   <button
                     class="button is-outlined"

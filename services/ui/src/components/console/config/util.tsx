@@ -8,6 +8,10 @@ export const addPath = (pathname) => {
   return `${pathname}/add`;
 };
 
+export const invitePath = (pathname) => {
+  return `${pathname}/invite`;
+};
+
 export const viewSlugPath = (pathname, datum) => {
   return `${pathname}/${datum?.slug}`;
 };

@@ -1,6 +1,7 @@
 export enum Operation {
   LIST,
   ADD,
+  INVITE,
   VIEW,
   EDIT,
   DELETE,
@@ -9,6 +10,7 @@ export enum Operation {
 
 export enum Button {
   ADD,
+  INVITE,
   REFRESH,
   BACK,
 }
