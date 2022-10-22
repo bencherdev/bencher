@@ -15,7 +15,13 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{testbed::QueryTestbed, user::QueryUser, version::QueryVersion};
-use crate::{error::api_error, schema, schema::report as report_table, util::http_error, ApiError};
+use crate::{
+    error::api_error,
+    schema,
+    schema::report as report_table,
+    util::{error::database_map, http_error},
+    ApiError,
+};
 
 #[derive(Queryable)]
 pub struct QueryReport {
@@ -79,7 +85,7 @@ impl QueryReport {
             .load::<String>(conn)
             .map_err(api_error!())?
             .iter()
-            .filter_map(|uuid| Uuid::from_str(uuid).ok().map(JsonReportBenchmark))
+            .filter_map(|uuid| database_map(Uuid::from_str(uuid)).map(JsonReportBenchmark))
             .collect())
     }
 
@@ -92,7 +98,7 @@ impl QueryReport {
             .load::<String>(conn)
             .map_err(api_error!())?
             .iter()
-            .filter_map(|uuid| Uuid::from_str(uuid).ok().map(JsonReportAlert))
+            .filter_map(|uuid| database_map(Uuid::from_str(uuid)).map(JsonReportAlert))
             .collect())
     }
 }

@@ -43,16 +43,23 @@ pub(crate) use debug_error;
 macro_rules! into_json {
     ($($field:tt)*) => {
         |query| {
-            query.into_json($($field)*).map_or_else(
-                |e| {
-                    tracing::error!("Failed to parse from database: {e}");
-                    None
-                },
-                Some,
-            )
+            crate::util::error::database_map(query.into_json($($field)*))
         }
     };
     () => {$crate::util::error::into_json!(,)};
 }
 
 pub(crate) use into_json;
+
+pub fn database_map<T, E>(result: Result<T, E>) -> Option<T>
+where
+    E: std::fmt::Display,
+{
+    result.map_or_else(
+        |e| {
+            tracing::error!("Failed to parse from database: {e}");
+            None
+        },
+        Some,
+    )
+}
