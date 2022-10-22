@@ -18,6 +18,7 @@ use crate::{
     schema,
     util::{
         cors::{get_cors, CorsResponse},
+        error::into_json,
         Context,
     },
     ApiError,
@@ -83,7 +84,7 @@ async fn get_ls_inner(
         .load::<QueryBenchmark>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(|query| query.into_json(conn).ok())
+        .filter_map(into_json!(conn))
         .collect())
 }
 

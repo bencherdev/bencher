@@ -13,7 +13,7 @@ use crate::{
         threshold::{statistic::QueryStatistic, PerfKind},
     },
     schema,
-    util::map_http_error,
+    util::{error::into_json, map_http_error},
 };
 
 pub struct MetricsData {
@@ -85,7 +85,7 @@ impl MetricsData {
                 .load::<QueryLatency>(conn)
                 .map_err(map_http_error!("Failed to get perf data."))?
                 .into_iter()
-                .filter_map(|query| query.into_json().ok())
+                .filter_map(into_json!())
                 .map(|d| d.duration as f64)
                 .collect(),
             MetricsKind::Throughput => query
@@ -106,7 +106,7 @@ impl MetricsData {
                 .load::<QueryThroughput>(conn)
                 .map_err(map_http_error!("Failed to get perf data."))?
                 .into_iter()
-                .filter_map(|query| query.into_json().ok())
+                .filter_map(into_json!())
                 .map(|d| d.per_unit_time(&d.events).into())
                 .collect(),
             MetricsKind::MinMaxAvg(mma) => match mma {

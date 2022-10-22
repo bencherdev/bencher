@@ -39,3 +39,20 @@ macro_rules! debug_error {
 }
 
 pub(crate) use debug_error;
+
+macro_rules! into_json {
+    ($($field:tt)*) => {
+        |query| {
+            query.into_json($($field)*).map_or_else(
+                |e| {
+                    tracing::error!("Failed to parse from database: {e}");
+                    None
+                },
+                Some,
+            )
+        }
+    };
+    () => {$crate::util::error::into_json!(,)};
+}
+
+pub(crate) use into_json;
