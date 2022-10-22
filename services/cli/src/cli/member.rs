@@ -4,10 +4,10 @@ use clap::{Parser, Subcommand};
 use super::CliBackend;
 
 #[derive(Subcommand, Debug)]
-pub enum CliOrganization {
+pub enum CliMember {
     /// List organizations
     #[clap(alias = "ls")]
-    List(CliOrganizationList),
+    List(CliMemberList),
     /// Create a organization
     #[clap(alias = "add")]
     Create(CliOrganizationCreate),
@@ -16,28 +16,21 @@ pub enum CliOrganization {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliOrganizationList {
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliOrganizationCreate {
-    /// Organization name
-    pub name: String,
-
-    /// Organization slug
-    #[clap(long)]
-    pub slug: Option<String>,
-
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliOrganizationView {
+pub struct CliMemberList {
     /// Organization slug or UUID
     pub org: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliMemberView {
+    /// Organization slug or UUID
+    pub org: ResourceId,
+
+    /// User slug or UUID
+    pub user: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

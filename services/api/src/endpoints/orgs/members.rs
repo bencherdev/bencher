@@ -101,12 +101,12 @@ async fn get_ls_inner(
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
     pub organization: ResourceId,
-    pub member: ResourceId,
+    pub user: ResourceId,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/organizations/{organization}/members/{member}",
+    path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
 pub async fn one_options(
@@ -118,7 +118,7 @@ pub async fn one_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/organizations/{organization}/members/{member}",
+    path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
 pub async fn get_one(
@@ -148,7 +148,7 @@ async fn get_one_inner(
         Permission::View,
     )?;
     let conn = &mut api_context.database;
-    let query_user = QueryUser::from_resource_id(conn, &path_params.member)?;
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     schema::user::table
         .inner_join(
