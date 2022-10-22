@@ -1,7 +1,6 @@
 use diesel::{
     expression_methods::BoolExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection,
 };
-use dropshot::HttpError;
 
 use crate::{
     diesel::ExpressionMethods,
@@ -62,8 +61,7 @@ impl Threshold {
                     window,
                     left_side,
                     right_side,
-                )|
-                 -> Result<Self, HttpError> {
+                )| {
                     let statistic = QueryStatistic {
                         id: statistic_id,
                         uuid,
@@ -73,13 +71,12 @@ impl Threshold {
                         left_side,
                         right_side,
                     };
-                    Ok(Self {
+                    Self {
                         id: threshold_id,
                         statistic,
-                    })
+                    }
                 },
             )
-            .ok()?
             .ok()
     }
 }
