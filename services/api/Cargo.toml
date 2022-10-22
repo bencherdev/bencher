@@ -11,7 +11,7 @@ swagger = ["dep:literally"]
 [dependencies]
 # Local
 bencher_json = { path = "../lib/bencher_json", features = ["schema"] }
-bencher_rbac = { path = "../lib/bencher_rbac", features = ["json"] }
+bencher_rbac = { path = "../lib/bencher_rbac" }
 # Workspace
 chrono.workspace = true
 derive_more.workspace = true

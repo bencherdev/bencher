@@ -5,7 +5,6 @@ use crate::{
     ApiError,
 };
 use bencher_json::jwt::JsonWebToken;
-use bencher_rbac::organization::Role;
 use diesel::{Insertable, Queryable, SqliteConnection};
 
 use super::{
@@ -52,7 +51,7 @@ impl InsertOrganizationRole {
         Ok(InsertOrganizationRole {
             user_id,
             organization_id: QueryOrganization::get_id(conn, org_claims.uuid)?,
-            role: Role::from(org_claims.role).to_string(),
+            role: org_claims.role.to_string(),
         })
     }
 }

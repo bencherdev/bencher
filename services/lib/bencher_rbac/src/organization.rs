@@ -51,16 +51,6 @@ impl FromStr for Role {
     }
 }
 
-#[cfg(feature = "json")]
-impl From<bencher_json::member::JsonOrganizationRole> for Role {
-    fn from(role: bencher_json::member::JsonOrganizationRole) -> Self {
-        match role {
-            bencher_json::member::JsonOrganizationRole::Member => Self::Member,
-            bencher_json::member::JsonOrganizationRole::Leader => Self::Leader,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum Permission {
     View,

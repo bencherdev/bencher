@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -35,5 +35,18 @@ impl FromStr for JsonOrganizationRole {
             LEADER_ROLE => Ok(Self::Leader),
             _ => Err(s.into()),
         }
+    }
+}
+
+impl fmt::Display for JsonOrganizationRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Member => MEMBER_ROLE,
+                Self::Leader => LEADER_ROLE,
+            }
+        )
     }
 }
