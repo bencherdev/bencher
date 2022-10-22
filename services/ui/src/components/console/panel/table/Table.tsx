@@ -37,12 +37,12 @@ const Table = (props) => {
                   </For>
                 </div>
                 <div class="plan-footer">
-                  <button
-                    class="button is-fullwidth"
-                    onClick={(e) => handleRowButton(e, datum)}
-                  >
-                    View
-                  </button>
+                  <RowButton
+                    handleRedirect={props.handleRedirect}
+                    config={props.config?.row?.button}
+                    pathname={props.pathname}
+                    datum={datum}
+                  />
                 </div>
               </div>
             )}
@@ -63,5 +63,20 @@ const AddButton = (props) => {
     </Link>
   );
 };
+
+const RowButton = (props) => {
+  return (
+    <button
+      class="button is-fullwidth"
+      onClick={(e) => {
+        e.preventDefault();
+        props.handleRedirect(props.config?.path?.(props.pathname(), props.datum));
+      }}
+    >
+      {props.config?.text}
+    </button>
+  );
+};
+
 
 export default Table;

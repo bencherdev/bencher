@@ -1,7 +1,5 @@
-import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
-import branchFieldsConfig from "../../fields/config/org/branchFieldsConfig";
 import { Button, Card, Field, Operation, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
+import { BENCHER_API_URL, parentPath, addPath, viewUuidPath } from "./util";
 
 const reportsConfig = {
   [Operation.LIST]: {
@@ -23,8 +21,11 @@ const reportsConfig = {
       row: {
         key: "start_time",
         items: [{}, {}, {}, {}],
-        path: (pathname, datum) => {
-          return `${pathname}/${datum?.uuid}`;
+        button: {
+          text: "View",
+          path: (pathname, datum) => {
+            return viewUuidPath(pathname, datum);
+          },
         },
       },
     },

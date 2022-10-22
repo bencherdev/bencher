@@ -42,8 +42,11 @@ const projectsConfig = {
           },
           {},
         ],
-        path: (pathname, datum) => {
-          return viewSlugPath(pathname, datum);
+        button: {
+          text: "Select",
+          path: (_pathname, datum) => {
+            return `/console/projects/${datum?.slug}/perf`;
+          },
         },
       },
     },

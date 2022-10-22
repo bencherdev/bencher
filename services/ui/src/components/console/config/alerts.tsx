@@ -29,8 +29,11 @@ const alertsConfig = {
       row: {
         key: "uuid",
         items: [{}, {}, {}, {}],
-        path: (pathname, datum) => {
-          return viewUuidPath(pathname, datum);
+        button: {
+          text: "View",
+          path: (pathname, datum) => {
+            return viewUuidPath(pathname, datum);
+          },
         },
       },
     },

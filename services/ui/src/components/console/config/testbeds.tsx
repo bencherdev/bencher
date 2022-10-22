@@ -39,8 +39,11 @@ const testbedsConfig = {
           {},
           {},
         ],
-        path: (pathname, datum) => {
-          return viewSlugPath(pathname, datum);
+        button: {
+          text: "View",
+          path: (pathname, datum) => {
+            return viewSlugPath(pathname, datum);
+          },
         },
       },
     },

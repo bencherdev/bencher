@@ -31,8 +31,11 @@ const organizationsConfig = {
           {},
           {},
         ],
-        path: (pathname, datum) => {
-          return viewSlugPath(pathname, datum);
+        button: {
+          text: "Select",
+          path: (pathname, datum) => {
+            return viewSlugPath(pathname, datum) + "/projects";
+          },
         },
       },
     },
