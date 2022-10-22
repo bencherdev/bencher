@@ -94,16 +94,16 @@ const MembersConfig = {
           clear: false,
           config: memberFieldsConfig.organization,
         },
-        // {
-        //   kind: Field.SELECT,
-        //   key: "role",
-        //   label: true,
-        //   value: "",
-        //   validate: false,
-        //   nullify: false,
-        //   clear: false,
-        //   config: memberFieldsConfig.role,
-        // },
+        {
+          kind: Field.INPUT,
+          key: "role",
+          label: true,
+          value: "",
+          validate: false,
+          nullify: false,
+          clear: false,
+          config: memberFieldsConfig.role,
+        },
       ],
       path: (pathname) => {
         return parentPath(pathname);
