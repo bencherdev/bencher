@@ -1,14 +1,12 @@
 use std::{fmt, str::FromStr};
 
+use bencher_json::member::{LEADER_ROLE, MEMBER_ROLE};
 use oso::{PolarClass, PolarValue, ToPolar};
 
 use crate::{
     CREATE_PERM, CREATE_ROLE_PERM, DELETE_PERM, DELETE_ROLE_PERM, EDIT_PERM, EDIT_ROLE_PERM,
     MANAGE_PERM, VIEW_PERM, VIEW_ROLE_PERM,
 };
-
-pub const MEMBER_ROLE: &str = "member";
-pub const LEADER_ROLE: &str = "leader";
 
 #[derive(Debug, Clone, PolarClass)]
 pub struct Organization {
@@ -46,19 +44,19 @@ impl FromStr for Role {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            MEMBER_ROLE => Ok(Role::Member),
-            LEADER_ROLE => Ok(Role::Leader),
+            MEMBER_ROLE => Ok(Self::Member),
+            LEADER_ROLE => Ok(Self::Leader),
             _ => Err(s.into()),
         }
     }
 }
 
 #[cfg(feature = "json")]
-impl From<bencher_json::invite::JsonInviteRole> for Role {
-    fn from(role: bencher_json::invite::JsonInviteRole) -> Self {
+impl From<bencher_json::member::JsonOrganizationRole> for Role {
+    fn from(role: bencher_json::member::JsonOrganizationRole) -> Self {
         match role {
-            bencher_json::invite::JsonInviteRole::Member => Self::Member,
-            bencher_json::invite::JsonInviteRole::Leader => Self::Leader,
+            bencher_json::member::JsonOrganizationRole::Member => Self::Member,
+            bencher_json::member::JsonOrganizationRole::Leader => Self::Leader,
         }
     }
 }

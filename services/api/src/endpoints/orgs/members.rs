@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId};
+use bencher_json::{JsonMember, JsonNewTestbed, JsonTestbed, ResourceId};
 use bencher_rbac::organization::Permission;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl,
@@ -56,7 +56,7 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetLsParams>,
-) -> Result<ResponseOk<Vec<JsonTestbed>>, HttpError> {
+) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
 
@@ -71,7 +71,7 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
     path_params: GetLsParams,
-) -> Result<Vec<JsonTestbed>, ApiError> {
+) -> Result<Vec<JsonMember>, ApiError> {
     let api_context = &mut *context.lock().await;
     let query_organization = QueryOrganization::is_allowed_resource_id(
         api_context,

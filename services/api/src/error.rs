@@ -124,6 +124,8 @@ pub enum ApiError {
     MailSend(mail_send::Error),
     #[error("User is not an admin: {0}")]
     Admin(i32),
+    #[error("Failed to parse organization role: {0}")]
+    OrganizationRole(String),
 
     // TODO remove once no longer needed
     #[error(transparent)]

@@ -3,19 +3,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::member::JsonOrganizationRole;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonInvite {
     pub name: Option<String>,
     pub email: String,
     pub organization: Uuid,
-    pub role: JsonInviteRole,
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "snake_case")]
-pub enum JsonInviteRole {
-    Member,
-    Leader,
+    pub role: JsonOrganizationRole,
 }

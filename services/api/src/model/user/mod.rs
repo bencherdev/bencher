@@ -14,6 +14,7 @@ use crate::{
 };
 
 pub mod auth;
+pub mod member;
 pub mod organization;
 pub mod project;
 pub mod token;

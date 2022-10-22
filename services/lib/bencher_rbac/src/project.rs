@@ -51,9 +51,9 @@ impl FromStr for Role {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            VIEWER_ROLE => Ok(Role::Viewer),
-            DEVELOPER_ROLE => Ok(Role::Developer),
-            MAINTAINER_ROLE => Ok(Role::Maintainer),
+            VIEWER_ROLE => Ok(Self::Viewer),
+            DEVELOPER_ROLE => Ok(Self::Developer),
+            MAINTAINER_ROLE => Ok(Self::Maintainer),
             _ => Err(s.into()),
         }
     }

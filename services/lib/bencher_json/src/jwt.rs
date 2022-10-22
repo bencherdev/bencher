@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{invite::JsonInviteRole, JsonInvite};
+use crate::{member::JsonOrganizationRole, JsonInvite};
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
@@ -134,7 +134,7 @@ pub struct JsonClaims {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct OrgClaims {
     pub uuid: Uuid,
-    pub role: JsonInviteRole,
+    pub role: JsonOrganizationRole,
 }
 
 impl JsonClaims {
