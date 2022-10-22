@@ -16,8 +16,8 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::organization::QueryOrganization,
     model::user::auth::AuthUser,
+    model::{organization::QueryOrganization, user::member::QueryMember},
     schema,
     util::{
         cors::{get_cors, CorsResponse},
@@ -81,7 +81,7 @@ async fn get_ls_inner(
     )?;
     let conn = &mut api_context.database;
 
-    schema::user::table
+    Ok(schema::user::table
         .inner_join(
             schema::organization_role::table
                 .on(schema::user::id.eq(schema::organization_role::user_id)),
@@ -94,9 +94,12 @@ async fn get_ls_inner(
             schema::user::email,
             schema::organization_role::role,
         ))
-        .order(schema::user::email);
-
-    todo!()
+        .order(schema::user::email)
+        .load::<QueryMember>(conn)
+        .map_err(api_error!())?
+        .into_iter()
+        .filter_map(|query| query.into_json().ok())
+        .collect())
 }
 
 // #[endpoint {
