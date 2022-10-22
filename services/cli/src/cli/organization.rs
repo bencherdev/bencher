@@ -37,7 +37,7 @@ pub struct CliOrganizationCreate {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationView {
     /// Organization slug or UUID
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -5,36 +5,33 @@ use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::organization::CliOrganizationView,
+    cli::member::CliMemberList,
     CliError,
 };
 
 #[derive(Debug)]
-pub struct View {
-    pub organization: ResourceId,
+pub struct List {
+    pub org: ResourceId,
     pub backend: Backend,
 }
 
-impl TryFrom<CliOrganizationView> for View {
+impl TryFrom<CliMemberList> for List {
     type Error = CliError;
 
-    fn try_from(view: CliOrganizationView) -> Result<Self, Self::Error> {
-        let CliOrganizationView {
-            organization,
-            backend,
-        } = view;
+    fn try_from(list: CliMemberList) -> Result<Self, Self::Error> {
+        let CliMemberList { org, backend } = list;
         Ok(Self {
-            organization,
+            org,
             backend: backend.try_into()?,
         })
     }
 }
 
 #[async_trait]
-impl SubCmd for View {
+impl SubCmd for List {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         self.backend
-            .get(&format!("/v0/organizations/{}", self.organization))
+            .get(&format!("/v0/organizations/{}/members", self.org))
             .await?;
         Ok(())
     }

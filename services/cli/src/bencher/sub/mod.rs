@@ -10,6 +10,7 @@ mod auth;
 mod benchmark;
 mod branch;
 mod invite;
+mod member;
 mod organization;
 mod perf;
 mod project;
@@ -26,6 +27,7 @@ use auth::Auth;
 use benchmark::Benchmark;
 use branch::Branch;
 use invite::Invite;
+use member::Member;
 use organization::Organization;
 use perf::Perf;
 use project::Project;
@@ -41,6 +43,7 @@ pub enum Sub {
     Admin(Admin),
     Auth(Auth),
     Organization(Organization),
+    Member(Member),
     Invite(Invite),
     Project(Project),
     Report(Report),
@@ -62,6 +65,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Admin(admin) => Self::Admin(admin.try_into()?),
             CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
             CliSub::Organization(organization) => Self::Organization(organization.try_into()?),
+            CliSub::Member(member) => Self::Member(member.try_into()?),
             CliSub::Invite(invite) => Self::Invite(invite.try_into()?),
             CliSub::Project(project) => Self::Project(project.try_into()?),
             CliSub::Report(report) => Self::Report(report.try_into()?),
@@ -92,6 +96,7 @@ impl SubCmd for Sub {
             Self::Admin(admin) => admin.exec(wide).await,
             Self::Auth(auth) => auth.exec(wide).await,
             Self::Organization(organization) => organization.exec(wide).await,
+            Self::Member(member) => member.exec(wide).await,
             Self::Invite(invite) => invite.exec(wide).await,
             Self::Project(project) => project.exec(wide).await,
             Self::Report(report) => report.exec(wide).await,
