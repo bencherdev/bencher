@@ -961,6 +961,238 @@
         }
       }
     },
+    "/v0/organizations/{organization}/members": {
+      "get": {
+        "tags": [
+          "organizations",
+          "members"
+        ],
+        "operationId": "get_ls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_JsonMember",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JsonMember"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "members"
+        ],
+        "operationId": "dir_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/organizations/{organization}/members/{user}": {
+      "get": {
+        "tags": [
+          "organizations",
+          "members"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonMember"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "members"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations/{organization}/projects": {
       "get": {
         "tags": [
@@ -3739,20 +3971,13 @@
             "format": "uuid"
           },
           "role": {
-            "$ref": "#/components/schemas/JsonInviteRole"
+            "$ref": "#/components/schemas/JsonOrganizationRole"
           }
         },
         "required": [
           "email",
           "organization",
           "role"
-        ]
-      },
-      "JsonInviteRole": {
-        "type": "string",
-        "enum": [
-          "member",
-          "leader"
         ]
       },
       "JsonLatency": {
@@ -3812,6 +4037,34 @@
         },
         "required": [
           "email"
+        ]
+      },
+      "JsonMember": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/JsonOrganizationRole"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "role",
+          "slug",
+          "uuid"
         ]
       },
       "JsonMetrics": {
@@ -4111,6 +4364,13 @@
           "name",
           "slug",
           "uuid"
+        ]
+      },
+      "JsonOrganizationRole": {
+        "type": "string",
+        "enum": [
+          "member",
+          "leader"
         ]
       },
       "JsonPerf": {
@@ -4819,6 +5079,9 @@
     {
       "name": "invites",
       "description": "Organization Invitations"
+    },
+    {
+      "name": "members"
     },
     {
       "name": "organizations",
