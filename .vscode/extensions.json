@@ -12,5 +12,7 @@
     "esbenp.prettier-vscode",
     "osohq.oso",
     "ms-azuretools.vscode-docker",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-sqlite",
   ]
 }

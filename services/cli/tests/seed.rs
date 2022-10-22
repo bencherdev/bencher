@@ -36,7 +36,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         LOCALHOST,
         "--name",
-        r#""Eustace Bagge""#,
+        "Eustace Bagge",
         "eustace.bagge@nowhere.com",
     ]);
     cmd.assert().success();
@@ -49,7 +49,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         HOST_ARG,
         LOCALHOST,
         "--name",
-        r#""Muriel Bagge""#,
+        "Muriel Bagge",
         "muriel.bagge@nowhere.com",
     ]);
     cmd.assert().success();

@@ -3,11 +3,6 @@ import { For, Switch, Match } from "solid-js";
 import { Row } from "../../config/types";
 
 const Table = (props) => {
-  const handleRowButton = (event, datum) => {
-    event.preventDefault();
-    props.handleRedirect(props.config?.row?.path(props.pathname(), datum));
-  };
-
   return (
     <>
       {props.table_data()?.length === 0 ? (

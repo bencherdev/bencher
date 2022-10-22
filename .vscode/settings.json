@@ -14,7 +14,7 @@
       "previewLimit": 50,
       "driver": "SQLite",
       "name": "bencher",
-      "database": "${workspaceFolder:bencher}/services/api/bencher.db"
+      "database": "${workspaceFolder:bencher}/services/api/data/bencher.db"
     }
   ],
   "sqltools.useNodeRuntime": true,
