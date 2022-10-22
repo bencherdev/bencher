@@ -961,6 +961,129 @@
         }
       }
     },
+    "/v0/organizations/{organization}/allowed/{permission}": {
+      "get": {
+        "tags": [
+          "organizations",
+          "allowed"
+        ],
+        "operationId": "get_allowed",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "permission",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JsonOrganizationPermission"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAllowed"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "allowed"
+        ],
+        "operationId": "allowed_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "permission",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JsonOrganizationPermission"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations/{organization}/members": {
       "get": {
         "tags": [
@@ -3831,6 +3954,17 @@
           "uuid"
         ]
       },
+      "JsonAllowed": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "allowed"
+        ]
+      },
       "JsonAuthToken": {
         "type": "object",
         "properties": {
@@ -3967,8 +4101,7 @@
             "type": "string"
           },
           "organization": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ResourceId"
           },
           "role": {
             "$ref": "#/components/schemas/JsonOrganizationRole"
@@ -5052,6 +5185,20 @@
             "additionalProperties": false
           }
         ]
+      },
+      "JsonOrganizationPermission": {
+        "type": "string",
+        "enum": [
+          "view",
+          "create",
+          "edit",
+          "delete",
+          "manage",
+          "view_role",
+          "create_role",
+          "edit_role",
+          "delete_role"
+        ]
       }
     }
   },
@@ -5061,6 +5208,9 @@
     },
     {
       "name": "alerts"
+    },
+    {
+      "name": "allowed"
     },
     {
       "name": "auth",
