@@ -1,4 +1,4 @@
-import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
+import memberFieldsConfig from "../../fields/config/org/memberFieldsConfig";
 import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
 
@@ -19,7 +19,7 @@ const MembersConfig = {
     },
     table: {
       url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects`;
+        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members`;
       },
       add: {
         path: (pathname) => {
@@ -36,9 +36,8 @@ const MembersConfig = {
           },
           {},
           {
-            kind: Row.BOOL,
-            key: "owner_default",
-            text: "Default",
+            kind: Row.TEXT,
+            key: "email",
           },
           {},
         ],
@@ -60,7 +59,7 @@ const MembersConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/projects`,
+      url: `${BENCHER_API_URL}/v0/invites`,
       fields: [
         {
           kind: Field.INPUT,
@@ -71,41 +70,40 @@ const MembersConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: projectFieldsConfig.name,
-        },
-        {
-          kind: Field.TEXTAREA,
-          key: "description",
-          label: true,
-          value: "",
-          valid: null,
-          validate: false,
-          nullify: true,
-          clear: false,
-          config: projectFieldsConfig.description,
+          config: memberFieldsConfig.name,
         },
         {
           kind: Field.INPUT,
-          key: "url",
+          key: "email",
+          label: true,
+          value: "",
+          valid: null,
+          validate: true,
+          nullify: false,
+          clear: false,
+          config: memberFieldsConfig.email,
+        },
+        {
+          kind: Field.INPUT,
+          key: "organization",
           label: true,
           value: "",
           valid: null,
           validate: false,
           nullify: true,
           clear: false,
-          config: projectFieldsConfig.url,
+          config: memberFieldsConfig.organization,
         },
-        {
-          kind: Field.SWITCH,
-          key: "public",
-          type: "switch",
-          label: true,
-          value: false,
-          validate: false,
-          nullify: false,
-          clear: false,
-          config: projectFieldsConfig.public,
-        },
+        // {
+        //   kind: Field.SELECT,
+        //   key: "role",
+        //   label: true,
+        //   value: "",
+        //   validate: false,
+        //   nullify: false,
+        //   clear: false,
+        //   config: memberFieldsConfig.role,
+        // },
       ],
       path: (pathname) => {
         return parentPath(pathname);
@@ -122,40 +120,31 @@ const MembersConfig = {
     },
     deck: {
       url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects/${path_params?.project_slug}`;
+        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members/${path_params?.member_slug}`;
       },
       cards: [
         {
           kind: Card.FIELD,
-          field: "Project Name",
+          field: "Member Name",
           key: "name",
         },
         {
           kind: Card.FIELD,
-          field: "Project Slug",
+          field: "Member Slug",
           key: "slug",
         },
         {
           kind: Card.FIELD,
-          field: "Project Description",
-          key: "description",
+          field: "Member Email",
+          key: "email",
         },
         {
           kind: Card.FIELD,
-          field: "Project URL",
-          key: "url",
-        },
-        {
-          kind: Card.FIELD,
-          field: "Public Project",
-          key: "public",
+          field: "Role",
+          key: "role",
         },
       ],
-      buttons: {
-        path: (path_params) => {
-          return `/console/projects/${path_params?.project_slug}/perf`
-        },
-      },
+      buttons: false,
     },
   },
 };

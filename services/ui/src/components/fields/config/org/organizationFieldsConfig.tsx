@@ -7,7 +7,7 @@ const projectFieldsConfig = {
   name: {
     label: "Name",
     type: "text",
-    placeholder: "Project Name",
+    placeholder: "Organization Name",
     icon: "fas fa-project-diagram",
     help: "Must be at least four characters or longer.",
     validate: validateName,
@@ -15,7 +15,7 @@ const projectFieldsConfig = {
   slug: {
     label: "Slug",
     type: "text",
-    placeholder: "Project Slug",
+    placeholder: "Organization Slug",
     icon: "fas fa-exclamation-triangle",
     help: "Must be at least four characters or longer.",
     validate: validateSlug,
