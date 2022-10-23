@@ -3,7 +3,7 @@ import { createSignal, createResource } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
-import Card from "./Card";
+import Card from "./DeckCard";
 import { getToken } from "../../../site/util";
 import validator from "validator";
 
@@ -31,7 +31,6 @@ const DeckPanel = (props) => {
       }
 
       let reports = await axios(options(token));
-      console.log(reports);
       return reports.data;
     } catch (error) {
       console.error(error);

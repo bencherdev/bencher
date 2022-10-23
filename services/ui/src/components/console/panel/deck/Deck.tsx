@@ -1,7 +1,6 @@
-import axios from "axios";
 import { For } from "solid-js";
 
-import Card from "./Card";
+import DeckCard from "./DeckCard";
 import DeckButton from "./DeckButton";
 
 const Deck = (props) => {
@@ -19,10 +18,9 @@ const Deck = (props) => {
           <div class="columns">
             <div class="column">
               <div class="card">
-                <Card
-                  kind={card.kind}
-                  field={card.field}
-                  value={props.data?.[card.key]}
+                <DeckCard
+                  card={card}
+                  data={props.data}
                 />
               </div>
             </div>
