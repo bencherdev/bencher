@@ -17,7 +17,7 @@ const initForm = (fields) => {
       newForm[field.key].nullify = field.nullify;
     }
   });
-  console.log(newForm);
+  newForm.submitting = false;
   return newForm;
 };
 
@@ -51,25 +51,30 @@ const Poster = (props) => {
     }
   };
 
-  function sendForm(url, form) {
+  function sendForm(e) {
+    e.preventDefault();
+    handleFormSubmitting(true);
     let data = {};
-    for (let key of Object.keys(form)) {
-      switch (form[key].kind) {
+    for (let key of Object.keys(form())) {
+      switch (form()[key].kind) {
         case Field.SELECT:
-          data[key] = form[key].value.selected;
+          data[key] = form()[key].value.selected;
           break;
         default:
-          console.log(form[key]);
-          if (!form[key].value && form[key].nullify) {
+          if (!form()[key].value && form()[key].nullify) {
             data[key] = null;
           } else {
-            data[key] = form[key].value;
+            data[key] = form()[key].value;
           }
       }
     }
-    console.log(data);
-    postData(url, data);
+    postData(props.config?.url, data);
+    handleFormSubmitting(false);
   }
+
+  const handleFormSubmitting = (submitting) => {
+    setForm({ ...form(), submitting: submitting });
+  };
 
   const handleField = (key, value, valid) => {
     if (key && form()[key]) {
@@ -113,11 +118,8 @@ const Poster = (props) => {
           <br />
           <button
             class="button is-primary is-fullwidth"
-            disabled={!valid()}
-            onClick={(e) => {
-              e.preventDefault();
-              sendForm(props.config?.url, form());
-            }}
+            disabled={!valid() || form()?.submitting}
+            onClick={sendForm}
           >
             Submit
           </button>

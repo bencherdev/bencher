@@ -162,7 +162,7 @@ export const AuthForm = (props: Props) => {
       <button
         class="button is-primary is-fullwidth"
         disabled={!form()?.valid || form()?.submitting}
-        onClick={(e) => handleAuthFormSubmit(e)}
+        onClick={handleAuthFormSubmit}
       >
         Submit
       </button>
