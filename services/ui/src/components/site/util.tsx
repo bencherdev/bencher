@@ -12,12 +12,36 @@ export const isAllowedAdmin = async () => {
   return isAllowed(`${BENCHER_API_URL}/v0/admin/allowed`);
 };
 
-export const isAllowedOrganization = async (organization: string, permission: string) => {
-  return isAllowed(`${BENCHER_API_URL}/v0/organizations/${organization}/allowed/${permission}`);
+export enum OrganizationPermission {
+  VIEW = "view",
+  CREATE = "create",
+  EDIT = "edit",
+  DELETE = "delete",
+  MANAGE = "manage",
+  VIEW_ROLE = "view_role",
+  CREATE_ROLE = "create_role",
+  EDIT_ROLE = "edit_role",
+  DELETE_ROLE = "delete_role",
+}
+
+export const isAllowedOrganization = async (path_params, permission: OrganizationPermission) => {
+  return isAllowed(`${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/allowed/${permission}`);
 };
 
-export const isAllowedProject = async (project: string, permission: string) => {
-  return isAllowed(`${BENCHER_API_URL}/v0/projects/${project}/allowed/${permission}`);
+export enum ProjectPermission {
+  VIEW = "view",
+  CREATE = "create",
+  EDIT = "edit",
+  DELETE = "delete",
+  MANAGE = "manage",
+  VIEW_ROLE = "view_role",
+  CREATE_ROLE = "create_role",
+  EDIT_ROLE = "edit_role",
+  DELETE_ROLE = "delete_role",
+}
+
+export const isAllowedProject = async (path_params, permission: ProjectPermission) => {
+  return isAllowed(`${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/allowed/${permission}`);
 };
 
 export const isAllowed = async (url: string) => {

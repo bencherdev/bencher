@@ -52,6 +52,7 @@ const TablePanel = (props) => {
       <TableHeader
         config={props.config?.header}
         pathname={props.pathname}
+        path_params={props.path_params}
         refresh={refresh}
         handleTitle={props.handleTitle}
         handleRedirect={props.handleRedirect}

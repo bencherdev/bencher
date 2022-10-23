@@ -66,10 +66,10 @@ pub enum Permission {
     Edit,
     Delete,
     Manage,
-    CreateRoleAssignments,
-    ListRoleAssignments,
-    UpdateRoleAssignments,
-    DeleteRoleAssignments,
+    ViewRole,
+    CreateRole,
+    EditRole,
+    DeleteRole,
 }
 
 impl fmt::Display for Permission {
@@ -83,10 +83,10 @@ impl fmt::Display for Permission {
                 Self::Edit => EDIT_PERM,
                 Self::Delete => DELETE_PERM,
                 Self::Manage => MANAGE_PERM,
-                Self::CreateRoleAssignments => CREATE_ROLE_PERM,
-                Self::ListRoleAssignments => VIEW_ROLE_PERM,
-                Self::UpdateRoleAssignments => EDIT_ROLE_PERM,
-                Self::DeleteRoleAssignments => DELETE_ROLE_PERM,
+                Self::ViewRole => VIEW_ROLE_PERM,
+                Self::CreateRole => CREATE_ROLE_PERM,
+                Self::EditRole => EDIT_ROLE_PERM,
+                Self::DeleteRole => DELETE_ROLE_PERM,
             }
         )
     }
