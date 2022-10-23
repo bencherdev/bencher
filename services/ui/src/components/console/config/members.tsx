@@ -1,5 +1,5 @@
 import memberFieldsConfig from "../../fields/config/org/memberFieldsConfig";
-import { isAllowedOrganization } from "../../site/util";
+import { isAllowedOrganization, OrganizationPermission } from "../../site/util";
 import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
 
@@ -14,7 +14,7 @@ const MembersConfig = {
           path: (pathname) => {
             return invitePath(pathname);
           },
-          is_allowed: isAllowedOrganization
+          is_allowed: (path_params) => isAllowedOrganization(path_params, OrganizationPermission.CREATE_ROLE),
         },
         { kind: Button.REFRESH },
       ],
@@ -150,6 +150,7 @@ const MembersConfig = {
           kind: Card.FIELD,
           label: "Role",
           key: "role",
+          is_allowed: (path_params) => isAllowedOrganization(path_params, OrganizationPermission.EDIT_ROLE),
         },
       ],
       buttons: false,

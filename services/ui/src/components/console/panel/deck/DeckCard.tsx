@@ -6,7 +6,11 @@ const DeckCard = (props) => {
   return (
     <Switch
       fallback={
-        <FieldCard card={props.card} value={props.data?.[props.card?.key]} />
+        <FieldCard
+          card={props.card}
+          value={props.data?.[props.card?.key]}
+          path_params={props.path_params}
+        />
       }
     >
       <Match when={props.card?.kind === Card.TABLE}>

@@ -36,7 +36,7 @@ const TableHeader = (props) => {
 };
 
 const TableHeaderButton = (props) => {
-  const [is_allowed] = createResource(props.path_params, (path_params) => props.button.is_allowed?.(path_params, OrganizationPermission.CREATE_ROLE));
+  const [is_allowed] = createResource(props.path_params, (path_params) => props.button.is_allowed?.(path_params));
 
   return (
     <p class="level-item">

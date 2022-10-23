@@ -21,6 +21,7 @@ const Deck = (props) => {
                 <DeckCard
                   card={card}
                   data={props.data}
+                  path_params={props.path_params}
                 />
               </div>
             </div>
