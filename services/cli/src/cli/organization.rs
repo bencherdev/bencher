@@ -60,6 +60,7 @@ pub struct CliOrganizationAllowed {
 
 /// Organization permission
 #[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
 pub enum CliOrganizationPermission {
     View,
     Create,
