@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createSignal, For } from "solid-js";
+import { createResource, createSignal, For, Match, Switch } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import validator from "validator";
 import { getToken } from "../../../site/util";
@@ -99,15 +99,12 @@ const Poster = (props) => {
         <div class="box">
           <For each={props.config?.fields}>
             {(field, i) => (
-              <SiteField
-                key={i}
-                kind={field.kind}
-                fieldKey={field.key}
-                label={field.label}
-                value={form()[field.key]?.value}
-                valid={form()[field.key]?.valid}
-                config={field.config}
+              <PosterField
+                field={field}
+                i={i}
+                form={form}
                 handleField={handleField}
+                path_params={props.path_params}
               />
             )}
           </For>
@@ -125,6 +122,35 @@ const Poster = (props) => {
         </div>
       </div>
     </div>
+  );
+};
+
+
+
+const PosterField = (props) => {
+  const [_field] = createResource(props.path_params, (path_params) => {
+    const path_param = props.field.path_param;
+    if (path_param) {
+      props.handleField(props.field.key, path_params?.[path_param], true);
+      return path_params?.[path_param];
+    }
+  });
+
+  return (
+    <Switch fallback={<SiteField
+      key={props.i}
+      kind={props.field.kind}
+      fieldKey={props.field.key}
+      label={props.field.label}
+      value={props.form()[props.field.key]?.value}
+      valid={props.form()[props.field.key]?.valid}
+      config={props.field.config}
+      handleField={props.handleField}
+    />}>
+      <Match when={props.field.kind === Field.HIDDEN}>
+      </Match>
+    </Switch>
+
   );
 };
 

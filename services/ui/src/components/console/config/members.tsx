@@ -66,13 +66,7 @@ const MembersConfig = {
         {
           kind: Field.HIDDEN,
           key: "organization",
-          label: true,
-          value: "",
-          valid: null,
-          validate: false,
-          nullify: true,
-          clear: false,
-          config: memberFieldsConfig.organization,
+          path_param: "organization_slug",
         },
         {
           kind: Field.INPUT,

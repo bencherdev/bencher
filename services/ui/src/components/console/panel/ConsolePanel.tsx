@@ -21,6 +21,7 @@ const ConsolePanel = (props) => {
         <PosterPanel
           config={props.config}
           pathname={props.pathname}
+          path_params={props.path_params}
           handleTitle={props.handleTitle}
           handleRedirect={props.handleRedirect}
         />
