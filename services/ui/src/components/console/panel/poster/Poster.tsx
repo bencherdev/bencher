@@ -103,7 +103,7 @@ const Poster = (props) => {
   return (
     <div class="columns">
       <div class="column">
-        <div class="box">
+        <form class="box">
           <For each={props.config?.fields}>
             {(field, i) => (
               <PosterField
@@ -123,7 +123,7 @@ const Poster = (props) => {
           >
             Submit
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
