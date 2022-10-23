@@ -36,7 +36,7 @@ const TableHeader = (props) => {
                     <span>Add</span>
                   </button>
                 </Match>
-                <Match when={button.kind === Button.INVITE}>
+                <Match when={button.kind === Button.INVITE && button.is_allowed?.()}>
                   <button
                     class="button is-outlined"
                     onClick={(e) => {

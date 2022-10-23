@@ -1,4 +1,5 @@
 import memberFieldsConfig from "../../fields/config/org/memberFieldsConfig";
+import { isAllowedOrganization } from "../../site/util";
 import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
 
@@ -13,6 +14,7 @@ const MembersConfig = {
           path: (pathname) => {
             return invitePath(pathname);
           },
+          is_allowed: isAllowedOrganization
         },
         { kind: Button.REFRESH },
       ],
