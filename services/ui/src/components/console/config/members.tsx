@@ -97,10 +97,22 @@ const MembersConfig = {
           config: memberFieldsConfig.organization,
         },
         {
-          kind: Field.INPUT,
+          kind: Field.SELECT,
           key: "role",
           label: true,
-          value: "",
+          value: {
+            selected: "member",
+            options: [
+              {
+                value: "member",
+                option: "Member",
+              },
+              {
+                value: "leader",
+                option: "Leader",
+              }
+            ],
+          },
           validate: false,
           nullify: false,
           clear: false,

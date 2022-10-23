@@ -3,13 +3,14 @@ import { createSignal, For } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import validator from "validator";
 import { getToken } from "../../../site/util";
+import { Field } from "../../config/types";
 
 const initForm = (fields) => {
   let newForm = {};
   fields.forEach((field) => {
     if (field.key) {
       newForm[field.key] = {};
-      newForm[field.key].type = field.type;
+      newForm[field.key].kind = field.kind;
       newForm[field.key].value = field.value;
       newForm[field.key].valid = field.valid;
       newForm[field.key].validate = field.validate;
@@ -52,8 +53,8 @@ const Poster = (props) => {
   function sendForm(url, form) {
     let data = {};
     for (let key of Object.keys(form)) {
-      switch (form[key].type) {
-        case "select":
+      switch (form[key].kind) {
+        case Field.SELECT:
           data[key] = form[key].value.selected;
           break;
         default:

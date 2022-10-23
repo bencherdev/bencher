@@ -105,13 +105,14 @@ async fn post_inner(
     let token_string = token.to_string();
 
     let org_name = &query_org.name;
+    let org_role = json_invite.role;
     let body = Body::Button(ButtonBody {
         title: format!("Invitation to join {org_name}"),
         preheader: "Click the provided link to join.".into(),
         greeting: if let Some(name) = name {
             format!("Ahoy {name}!") } else { "Ahoy!".into() },
         pre_body: format!(
-            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} on Bencher.",
+            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
         ),
         pre_code: "".into(),
         button_text: format!("Join {org_name}"),
