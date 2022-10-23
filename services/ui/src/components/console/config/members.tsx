@@ -64,6 +64,17 @@ const MembersConfig = {
       url: `${BENCHER_API_URL}/v0/invites`,
       fields: [
         {
+          kind: Field.HIDDEN,
+          key: "organization",
+          label: true,
+          value: "",
+          valid: null,
+          validate: false,
+          nullify: true,
+          clear: false,
+          config: memberFieldsConfig.organization,
+        },
+        {
           kind: Field.INPUT,
           key: "name",
           label: true,
@@ -84,17 +95,6 @@ const MembersConfig = {
           nullify: false,
           clear: false,
           config: memberFieldsConfig.email,
-        },
-        {
-          kind: Field.INPUT,
-          key: "organization",
-          label: true,
-          value: "",
-          valid: null,
-          validate: false,
-          nullify: true,
-          clear: false,
-          config: memberFieldsConfig.organization,
         },
         {
           kind: Field.SELECT,

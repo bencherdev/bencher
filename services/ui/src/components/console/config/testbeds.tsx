@@ -60,7 +60,7 @@ const testbedsConfig = {
       url: `${BENCHER_API_URL}/v0/testbeds`,
       fields: [
         {
-          kind: Field.FIXED,
+          kind: Field.HIDDEN,
           key: "project",
           label: true,
           value: "",

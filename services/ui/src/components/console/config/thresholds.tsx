@@ -57,7 +57,7 @@ const thresholdsConfig = {
       url: `${BENCHER_API_URL}/v0/thresholds`,
       fields: [
         {
-          kind: Field.FIXED,
+          kind: Field.HIDDEN,
           key: "project",
           label: true,
           value: "",

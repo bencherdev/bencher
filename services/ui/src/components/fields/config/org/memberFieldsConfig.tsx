@@ -30,7 +30,7 @@ const memberFieldsConfig = {
   organization: {
     label: "Organization",
     type: "text",
-    placeholder: "Organization UUID",
+    placeholder: "Organization Slug",
     icon: "fas fa-project-diagram",
   },
   role: {

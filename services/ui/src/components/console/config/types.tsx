@@ -32,7 +32,7 @@ export enum Resource {
 }
 
 export enum Field {
-  FIXED,
+  HIDDEN,
   INPUT,
   TEXTAREA,
   CHECKBOX,
