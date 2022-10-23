@@ -62,13 +62,7 @@ const testbedsConfig = {
         {
           kind: Field.HIDDEN,
           key: "project",
-          label: true,
-          value: "",
-          valid: null,
-          validate: true,
-          nullify: false,
-          clear: false,
-          config: projectFieldsConfig.slug,
+          path_param: "project_slug",
         },
         {
           kind: Field.INPUT,
