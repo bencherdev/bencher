@@ -1,8 +1,10 @@
+use std::fmt;
+
 use dropshot::{HttpCodedResponse, HttpResponseAccepted, HttpResponseHeaders, HttpResponseOk};
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::{util::headers::CorsHeaders, ApiError};
+use crate::{util::headers::CorsHeaders, ApiError, WordStr};
 
 use super::{Method, Resource};
 
@@ -71,6 +73,19 @@ impl From<&Endpoint> for ApiError {
             Method::Put => ApiError::Put(endpoint.resource),
             Method::Delete => ApiError::Delete(endpoint.resource),
         }
+    }
+}
+
+impl fmt::Display for Endpoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let resource = match self.method {
+            Method::GetOne => self.resource.singular(),
+            Method::GetLs => self.resource.plural(),
+            Method::Post => self.resource.singular(),
+            Method::Put => self.resource.singular(),
+            Method::Delete => self.resource.singular(),
+        };
+        write!(f, "{} {}", http::Method::from(self.method), resource)
     }
 }
 

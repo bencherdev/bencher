@@ -85,7 +85,10 @@ impl QueryReport {
             .load::<String>(conn)
             .map_err(api_error!())?
             .iter()
-            .filter_map(|uuid| database_map(Uuid::from_str(uuid)).map(JsonReportBenchmark))
+            .filter_map(|uuid| {
+                database_map("QueryReport::get_benchmarks", Uuid::from_str(uuid))
+                    .map(JsonReportBenchmark)
+            })
             .collect())
     }
 
@@ -98,7 +101,9 @@ impl QueryReport {
             .load::<String>(conn)
             .map_err(api_error!())?
             .iter()
-            .filter_map(|uuid| database_map(Uuid::from_str(uuid)).map(JsonReportAlert))
+            .filter_map(|uuid| {
+                database_map("QueryReport::get_alerts", Uuid::from_str(uuid)).map(JsonReportAlert)
+            })
             .collect())
     }
 }

@@ -54,7 +54,7 @@ pub async fn get_ls(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
 
-    let json = get_ls_inner(rqctx.context(), &auth_user)
+    let json = get_ls_inner(rqctx.context(), &auth_user, endpoint)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -64,6 +64,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
+    endpoint: Endpoint,
 ) -> Result<Vec<JsonOrganization>, ApiError> {
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database;
@@ -80,7 +81,7 @@ async fn get_ls_inner(
         .load::<QueryOrganization>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(into_json!())
+        .filter_map(into_json!(endpoint))
         .collect())
 }
 

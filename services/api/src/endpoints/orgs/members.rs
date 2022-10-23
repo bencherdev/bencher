@@ -57,9 +57,14 @@ pub async fn get_ls(
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
 
-    let json = get_ls_inner(rqctx.context(), &auth_user, path_params.into_inner())
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_ls_inner(
+        rqctx.context(),
+        &auth_user,
+        path_params.into_inner(),
+        endpoint,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_ok!(endpoint, json)
 }
@@ -68,6 +73,7 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
     path_params: GetLsParams,
+    endpoint: Endpoint,
 ) -> Result<Vec<JsonMember>, ApiError> {
     let api_context = &mut *context.lock().await;
     let query_organization = QueryOrganization::is_allowed_resource_id(
@@ -95,7 +101,7 @@ async fn get_ls_inner(
         .load::<QueryMember>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(into_json!())
+        .filter_map(into_json!(endpoint))
         .collect())
 }
 
