@@ -127,27 +127,27 @@ const projectsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Project Name",
+          label: "Project Name",
           key: "name",
         },
         {
           kind: Card.FIELD,
-          field: "Project Slug",
+          label: "Project Slug",
           key: "slug",
         },
         {
           kind: Card.FIELD,
-          field: "Project Description",
+          label: "Project Description",
           key: "description",
         },
         {
           kind: Card.FIELD,
-          field: "Project URL",
+          label: "Project URL",
           key: "url",
         },
         {
           kind: Card.FIELD,
-          field: "Public Project",
+          label: "Public Project",
           key: "public",
         },
       ],

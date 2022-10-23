@@ -55,12 +55,12 @@ const organizationsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Organization Name",
+          label: "Organization Name",
           key: "name",
         },
         {
           kind: Card.FIELD,
-          field: "Organization Slug",
+          label: "Organization Slug",
           key: "slug",
         },
       ],

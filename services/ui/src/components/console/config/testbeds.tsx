@@ -173,52 +173,52 @@ const testbedsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Testbed Name",
+          label: "Testbed Name",
           key: "name",
         },
         {
           kind: Card.FIELD,
-          field: "Testbed Slug",
+          label: "Testbed Slug",
           key: "slug",
         },
         {
           kind: Card.FIELD,
-          field: "Testbed UUID",
+          label: "Testbed UUID",
           key: "uuid",
         },
         {
           kind: Card.FIELD,
-          field: "OS Name",
+          label: "OS Name",
           key: "os_name",
         },
         {
           kind: Card.FIELD,
-          field: "OS Version",
+          label: "OS Version",
           key: "os_version",
         },
         {
           kind: Card.FIELD,
-          field: "Runtime Name",
+          label: "Runtime Name",
           key: "runtime_name",
         },
         {
           kind: Card.FIELD,
-          field: "Runtime Version",
+          label: "Runtime Version",
           key: "runtime_version",
         },
         {
           kind: Card.FIELD,
-          field: "CPU",
+          label: "CPU",
           key: "cpu",
         },
         {
           kind: Card.FIELD,
-          field: "RAM",
+          label: "RAM",
           key: "ram",
         },
         {
           kind: Card.FIELD,
-          field: "Disk",
+          label: "Disk",
           key: "disk",
         },
       ],

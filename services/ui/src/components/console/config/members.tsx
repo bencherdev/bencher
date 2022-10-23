@@ -133,22 +133,22 @@ const MembersConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Member Name",
+          label: "Member Name",
           key: "name",
         },
         {
           kind: Card.FIELD,
-          field: "Member Slug",
+          label: "Member Slug",
           key: "slug",
         },
         {
           kind: Card.FIELD,
-          field: "Member Email",
+          label: "Member Email",
           key: "email",
         },
         {
           kind: Card.FIELD,
-          field: "Role",
+          label: "Role",
           key: "role",
         },
       ],

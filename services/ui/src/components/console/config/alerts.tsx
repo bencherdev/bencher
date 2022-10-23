@@ -53,32 +53,32 @@ const alertsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Perf UUID",
+          label: "Perf UUID",
           key: "perf",
         },
         {
           kind: Card.FIELD,
-          field: "Threshold UUID",
+          label: "Threshold UUID",
           key: "threshold",
         },
         {
           kind: Card.FIELD,
-          field: "Statistic UUID",
+          label: "Statistic UUID",
           key: "statistic",
         },
         {
           kind: Card.FIELD,
-          field: "Side",
+          label: "Side",
           key: "side",
         },
         {
           kind: Card.FIELD,
-          field: "Boundary",
+          label: "Boundary",
           key: "boundary",
         },
         {
           kind: Card.FIELD,
-          field: "Outlier",
+          label: "Outlier",
           key: "outlier",
         },
       ],

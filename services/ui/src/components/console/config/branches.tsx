@@ -96,22 +96,22 @@ const branchesConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Branch Name",
+          label: "Branch Name",
           key: "name",
         },
         {
           kind: Card.FIELD,
-          field: "Branch Slug",
+          label: "Branch Slug",
           key: "slug",
         },
         {
           kind: Card.FIELD,
-          field: "Branch UUID",
+          label: "Branch UUID",
           key: "uuid",
         },
         // {
         //   kind: Card.TABLE,
-        //   field: "Versions",
+        //   label: "Versions",
         //   key: "versions",
         // },
       ],

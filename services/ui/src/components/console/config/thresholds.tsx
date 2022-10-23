@@ -115,12 +115,12 @@ const thresholdsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Branch UUID",
+          label: "Branch UUID",
           key: "branch",
         },
         {
           kind: Card.FIELD,
-          field: "Testbed UUID",
+          label: "Testbed UUID",
           key: "testbed",
         },
       ],

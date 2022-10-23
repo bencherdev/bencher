@@ -45,7 +45,7 @@ const reportsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          field: "Report Date Time",
+          label: "Report Date Time",
           key: "start_time",
         },
       ],
