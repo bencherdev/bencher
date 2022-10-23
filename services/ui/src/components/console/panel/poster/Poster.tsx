@@ -10,6 +10,7 @@ const initForm = (fields) => {
   fields.forEach((field) => {
     if (field.key) {
       newForm[field.key] = {};
+      newForm[field.key].key = field.key;
       newForm[field.key].kind = field.kind;
       newForm[field.key].value = field.value;
       newForm[field.key].valid = field.valid;
@@ -17,6 +18,7 @@ const initForm = (fields) => {
       newForm[field.key].nullify = field.nullify;
     }
   });
+  console.log(newForm);
   return newForm;
 };
 
@@ -34,7 +36,7 @@ const options = (url: string, token: string, data: any) => {
 
 const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
-  const [valid, setValid] = createSignal(false);
+  const [valid, setValid] = createSignal({ is_valid: false });
 
   const postData = async (url, data) => {
     try {
@@ -75,21 +77,25 @@ const Poster = (props) => {
       setForm({
         ...form(),
         [key]: {
+          ...form()[key],
           value: value,
           valid: valid,
         },
       });
-      setValid(getValid());
+      setValid({ is_valid: getValid() });
     }
   };
 
   function getValid() {
     let allValid = true;
     Object.values(form()).forEach((field) => {
+      console.log(`FIELD ${JSON.stringify(field)}`);
       if (field.validate && !field.valid) {
+        console.log(`INVALID FIELD ${JSON.stringify(field)}`);
         allValid = false;
       }
     });
+    console.log(`ALL VALID ${allValid}`);
     return allValid;
   }
 
@@ -111,7 +117,7 @@ const Poster = (props) => {
           <br />
           <button
             class="button is-primary is-fullwidth"
-            disabled={!valid()}
+            disabled={!valid()?.is_valid}
             onClick={(e) => {
               e.preventDefault();
               sendForm(props.config?.url, form());
