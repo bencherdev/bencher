@@ -11,6 +11,7 @@ const initForm = (fields) => {
     if (field.key) {
       newForm[field.key] = {};
       newForm[field.key].kind = field.kind;
+      newForm[field.key].label = field.label;
       newForm[field.key].value = field.value;
       newForm[field.key].valid = field.valid;
       newForm[field.key].validate = field.validate;
@@ -37,14 +38,14 @@ const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
 
-  const postData = async (url, data) => {
+  const postData = async (data) => {
     try {
       const token = getToken();
       if (token && !validator.isJWT(token)) {
         return;
       }
 
-      await axios(options(url, token, data));
+      await axios(options(props.config?.url, token, data));
       props.handleRedirect(props.config?.path(props.pathname()));
     } catch (error) {
       console.error(error);
@@ -56,19 +57,19 @@ const Poster = (props) => {
     handleFormSubmitting(true);
     let data = {};
     for (let key of Object.keys(form())) {
-      switch (form()[key].kind) {
+      switch (form()?.[key]?.kind) {
         case Field.SELECT:
-          data[key] = form()[key].value.selected;
+          data[key] = form()?.[key]?.value?.selected;
           break;
         default:
-          if (!form()[key].value && form()[key].nullify) {
+          if (!form()?.[key]?.value && form()?.[key]?.nullify) {
             data[key] = null;
           } else {
-            data[key] = form()[key].value;
+            data[key] = form()?.[key]?.value;
           }
       }
     }
-    postData(props.config?.url, data);
+    postData(data);
     handleFormSubmitting(false);
   }
 
@@ -77,11 +78,11 @@ const Poster = (props) => {
   };
 
   const handleField = (key, value, valid) => {
-    if (key && form()[key]) {
+    if (key && form()?.[key]) {
       setForm({
         ...form(),
         [key]: {
-          ...form()[key],
+          ...form()?.[key],
           value: value,
           valid: valid,
         },
@@ -143,15 +144,15 @@ const PosterField = (props) => {
   return (
     <Switch fallback={<SiteField
       key={props.i}
-      kind={props.field.kind}
-      fieldKey={props.field.key}
-      label={props.field.label}
-      value={props.form()[props.field.key]?.value}
-      valid={props.form()[props.field.key]?.valid}
-      config={props.field.config}
+      kind={props.field?.kind}
+      label={props.form()?.[props.field?.key]?.label}
+      fieldKey={props.field?.key}
+      value={props.form()?.[props.field?.key]?.value}
+      valid={props.form()?.[props.field?.key]?.valid}
+      config={props.field?.config}
       handleField={props.handleField}
     />}>
-      <Match when={props.field.kind === Field.HIDDEN}>
+      <Match when={props.field?.kind === Field.HIDDEN}>
       </Match>
     </Switch>
 

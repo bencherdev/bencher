@@ -2,7 +2,6 @@ import validateName from "../../validators/validateName";
 
 const branchFieldsConfig = {
   name: {
-    label: "Name",
     type: "text",
     placeholder: "Branch Name",
     icon: "fas fa-code-branch",

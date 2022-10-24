@@ -63,8 +63,8 @@ const thresholdsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Branch",
           key: "branch",
-          label: true,
           value: "",
           valid: null,
           validate: true,
@@ -74,8 +74,8 @@ const thresholdsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Testbed",
           key: "testbed",
-          label: true,
           value: "",
           valid: null,
           validate: true,
@@ -85,8 +85,8 @@ const thresholdsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "TODO",
           key: "kind",
-          label: true,
           value: "",
           valid: null,
           validate: true,

@@ -64,8 +64,8 @@ const projectsConfig = {
       fields: [
         {
           kind: Field.INPUT,
+          label: "Name",
           key: "name",
-          label: true,
           value: "",
           valid: null,
           validate: true,
@@ -75,8 +75,8 @@ const projectsConfig = {
         },
         {
           kind: Field.TEXTAREA,
+          label: "Description",
           key: "description",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -86,8 +86,8 @@ const projectsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "URL",
           key: "url",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -97,9 +97,9 @@ const projectsConfig = {
         },
         {
           kind: Field.SWITCH,
+          label: "Public Perf Page",
           key: "public",
           type: "switch",
-          label: true,
           value: false,
           validate: false,
           nullify: false,

@@ -66,8 +66,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Name",
           key: "name",
-          label: true,
           value: "",
           valid: null,
           validate: true,
@@ -77,8 +77,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "OS Name",
           key: "os_name",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -88,8 +88,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "OS Version",
           key: "os_version",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -99,8 +99,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Runtime Name",
           key: "runtime_name",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -110,8 +110,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Runtime Version",
           key: "runtime_version",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -121,8 +121,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "CPU",
           key: "cpu",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -132,8 +132,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "RAM",
           key: "ram",
-          label: true,
           value: "",
           valid: null,
           validate: false,
@@ -143,8 +143,8 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Disk",
           key: "disk",
-          label: true,
           value: "",
           valid: null,
           validate: false,

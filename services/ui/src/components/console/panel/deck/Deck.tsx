@@ -22,6 +22,7 @@ const Deck = (props) => {
                   card={card}
                   data={props.data}
                   path_params={props.path_params}
+                  url={props.url}
                 />
               </div>
             </div>

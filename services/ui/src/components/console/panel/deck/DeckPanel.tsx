@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createSignal, createResource } from "solid-js";
+import { createSignal, createResource, createMemo } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
@@ -11,10 +11,11 @@ const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 const DeckPanel = (props) => {
   const [refresh, setRefresh] = createSignal(0);
+  const url = createMemo(() => props.config?.deck?.url(props.path_params()));
 
   const options = (token: string) => {
     return {
-      url: props.config?.deck?.url(props.path_params()),
+      url: url(),
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -58,6 +59,7 @@ const DeckPanel = (props) => {
       <Deck
         config={props.config?.deck}
         data={deck_data()}
+        url={url}
         path_params={props.path_params}
         pathname={props.pathname}
         handleRedirect={props.handleRedirect}

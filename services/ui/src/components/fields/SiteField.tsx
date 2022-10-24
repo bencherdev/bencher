@@ -96,8 +96,8 @@ const SiteField = (props) => {
 
   return (
     <div class="field">
-      {props.label && props.config && props.config.label && (
-        <label class="label is-medium">{props.config.label}</label>
+      {props.label && (
+        <label class="label is-medium">{props.label}</label>
       )}
       {getField()}
       {getValidate() && props.valid === false && (

@@ -70,8 +70,8 @@ const MembersConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Name",
           key: "name",
-          label: true,
           value: "",
           valid: null,
           validate: true,
@@ -81,8 +81,8 @@ const MembersConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Email",
           key: "email",
-          label: true,
           value: "",
           valid: null,
           validate: true,
@@ -92,8 +92,8 @@ const MembersConfig = {
         },
         {
           kind: Field.SELECT,
+          label: "Role",
           key: "role",
-          label: true,
           value: {
             selected: "member",
             options: [
@@ -143,6 +143,11 @@ const MembersConfig = {
         },
         {
           kind: Card.FIELD,
+          label: "Member UUID",
+          key: "uuid",
+        },
+        {
+          kind: Card.FIELD,
           label: "Member Email",
           key: "email",
         },
@@ -151,6 +156,27 @@ const MembersConfig = {
           label: "Role",
           key: "role",
           is_allowed: (path_params) => isAllowedOrganization(path_params, OrganizationPermission.EDIT_ROLE),
+          field: {
+            kind: Field.SELECT,
+            key: "role",
+            value: {
+              selected: "member",
+              options: [
+                {
+                  value: "member",
+                  option: "Member",
+                },
+                {
+                  value: "leader",
+                  option: "Leader",
+                }
+              ],
+            },
+            validate: false,
+            nullify: false,
+            clear: false,
+            config: memberFieldsConfig.role,
+          }
         },
       ],
       buttons: false,

@@ -66,8 +66,8 @@ const branchesConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "Name",
           key: "name",
-          label: true,
           value: "",
           valid: null,
           validate: true,
