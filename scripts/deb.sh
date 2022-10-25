@@ -19,7 +19,7 @@ echo \
 Version: $VERSION
 Architecture: $ARCH
 Maintainer: Bencher <info@bencher.dev>
-Description: Track your benchmarks. Catch performance regressions in CI." \
+Description: Continuous Benchmarking" \
 > $DEBIAN_PATH/control
 
 dpkg-deb --build --root-owner-group $DEB_PATH

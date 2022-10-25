@@ -56,12 +56,11 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Members
     api.register(members::dir_options)?;
     api.register(members::get_ls)?;
+    api.register(members::post_options)?;
+    api.register(members::post)?;
     api.register(members::one_options)?;
     api.register(members::get_one)?;
-    api.register(members::put)?;
-    // Invite
-    api.register(invites::options)?;
-    api.register(invites::post)?;
+    api.register(members::patch)?;
     // Projects
     api.register(projects::dir_options)?;
     api.register(projects::get_ls)?;
@@ -72,7 +71,7 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(projects::get_one_project)?;
     // Perf
     api.register(perf::options)?;
-    api.register(perf::post)?;
+    api.register(perf::put)?;
     // Reports
     api.register(reports::dir_options)?;
     api.register(reports::get_ls)?;

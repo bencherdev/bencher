@@ -34,7 +34,7 @@ impl FmtBody for ButtonBody {
             settings_url,
         } = self;
 
-        format!("\n{greeting}\n{pre_body}{pre_code}\n{button_text} ({button_url})\n{post_body}{post_code}\n{closing}\n{signature}\nBencher - Track Your Benchmarks\nManage email settings ({settings_url})")
+        format!("\n{greeting}\n{pre_body}{pre_code}\n{button_text} ({button_url})\n{post_body}{post_code}\n{closing}\n{signature}\nBencher - Continuous Benchmarking\nManage email settings ({settings_url})")
     }
 
     // https://github.com/leemunroe/responsive-html-email-template
@@ -441,7 +441,7 @@ impl FmtBody for ButtonBody {
               <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">
                 <tr>
                   <td class=\"content-block\">
-                    <span class=\"apple-link\">Bencher - Track Your Benchmarks</span>
+                    <span class=\"apple-link\">Bencher - Continuous Benchmarking</span>
                     <br> <a href=\"{settings_url}\">Manage email settings</a>
                   </td>
                 </tr>

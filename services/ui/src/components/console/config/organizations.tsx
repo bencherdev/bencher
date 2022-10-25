@@ -1,5 +1,5 @@
 import organizationFieldsConfig from "../../fields/config/org/organizationFieldsConfig";
-import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
+import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 
 const organizationsConfig = {
@@ -57,11 +57,13 @@ const organizationsConfig = {
           kind: Card.FIELD,
           label: "Organization Name",
           key: "name",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Organization Slug",
           key: "slug",
+          display: Display.RAW,
         },
       ],
       buttons: {

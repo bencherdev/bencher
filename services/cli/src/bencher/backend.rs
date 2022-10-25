@@ -70,12 +70,18 @@ impl Backend {
         self.send(Method::Post(json), path).await
     }
 
-    #[allow(dead_code)]
     pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
         self.send(Method::Put(json), path).await
+    }
+
+    pub async fn patch<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
+    where
+        T: Serialize + ?Sized,
+    {
+        self.send(Method::Patch(json), path).await
     }
 
     async fn send<T>(&self, method: Method<&T>, path: &str) -> Result<serde_json::Value, CliError>
@@ -88,6 +94,7 @@ impl Backend {
             Method::Get => client.get(&url),
             Method::Post(json) => client.post(&url).json(json),
             Method::Put(json) => client.put(&url).json(json),
+            Method::Patch(json) => client.patch(&url).json(json),
         };
         if let Some(token) = &self.token {
             builder = builder.header("Authorization", format!("Bearer {token}"));
@@ -100,7 +107,7 @@ impl Backend {
 
 enum Method<T> {
     Get,
-    #[allow(dead_code)]
     Post(T),
     Put(T),
+    Patch(T),
 }

@@ -5,7 +5,6 @@ pub mod alert;
 pub mod auth;
 pub mod benchmark;
 pub mod branch;
-pub mod invite;
 pub mod member;
 pub mod organization;
 pub mod perf;
@@ -21,7 +20,6 @@ use alert::CliAlert;
 use auth::CliAuth;
 use benchmark::CliBenchmark;
 use branch::CliBranch;
-use invite::CliInvite;
 use member::CliMember;
 use organization::CliOrganization;
 use perf::CliPerf;
@@ -63,8 +61,6 @@ pub enum CliSub {
     /// Manage organization members
     #[clap(subcommand)]
     Member(CliMember),
-    /// Invite user to organization
-    Invite(CliInvite),
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),

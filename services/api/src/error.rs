@@ -4,7 +4,7 @@ use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
 
-use crate::{endpoints::Resource, model::user::auth::AuthUser};
+use crate::{endpoints::Endpoint, model::user::auth::AuthUser};
 
 #[derive(Debug, Error)]
 pub enum ApiError {
@@ -54,17 +54,8 @@ pub enum ApiError {
     #[error("Failed to create swagger file: {0}")]
     WriteSwaggerFile(serde_json::Error),
 
-    #[error("Failed to GET {}", _0.singular())]
-    GetOne(Resource),
-    #[error("Failed to GET {}", _0.plural())]
-    GetLs(Resource),
-    #[error("Failed to POST {}", _0.singular())]
-    Post(Resource),
-    #[error("Failed to PUT {}", _0.singular())]
-    Put(Resource),
-    #[error("Failed to DELETE {}", _0.singular())]
-    Delete(Resource),
-
+    #[error("Failed to {0}")]
+    Endpoint(Endpoint),
     #[error("Failed to parse resource ID")]
     ResourceId,
     #[error("Failed to query database: {0}")]

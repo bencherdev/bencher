@@ -26,7 +26,7 @@ impl Endpoint {
     }
 
     pub fn err(&self, e: ApiError) -> ApiError {
-        let api_error: ApiError = self.into();
+        let api_error = ApiError::Endpoint(*self);
         tracing::info!("{api_error}: {e}");
         api_error
     }
@@ -64,15 +64,9 @@ impl Endpoint {
     }
 }
 
-impl From<&Endpoint> for ApiError {
-    fn from(endpoint: &Endpoint) -> Self {
-        match endpoint.method {
-            Method::GetOne => ApiError::GetOne(endpoint.resource),
-            Method::GetLs => ApiError::GetLs(endpoint.resource),
-            Method::Post => ApiError::Post(endpoint.resource),
-            Method::Put => ApiError::Put(endpoint.resource),
-            Method::Delete => ApiError::Delete(endpoint.resource),
-        }
+impl fmt::Debug for Endpoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <Endpoint as fmt::Display>::fmt(self, f)
     }
 }
 
@@ -83,6 +77,7 @@ impl fmt::Display for Endpoint {
             Method::GetLs => self.resource.plural(),
             Method::Post => self.resource.singular(),
             Method::Put => self.resource.singular(),
+            Method::Patch => self.resource.singular(),
             Method::Delete => self.resource.singular(),
         };
         write!(f, "{} {}", http::Method::from(self.method), resource)

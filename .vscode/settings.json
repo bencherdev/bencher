@@ -37,6 +37,7 @@
     "powi",
     "preheader",
     "Punct",
+    "reqwest",
     "rqctx",
     "schemars",
     "signup",

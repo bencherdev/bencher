@@ -63,6 +63,7 @@ const DeckPanel = (props) => {
         path_params={props.path_params}
         pathname={props.pathname}
         handleRedirect={props.handleRedirect}
+        handleRefresh={handleRefresh}
       />
     </>
   );

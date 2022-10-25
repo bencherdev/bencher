@@ -11,6 +11,7 @@ const DeckCard = (props) => {
           value={props.data?.[props.card?.key]}
           path_params={props.path_params}
           url={props.url}
+          handleRefresh={props.handleRefresh}
         />
       }
     >

@@ -17,7 +17,7 @@ const ConsolePanel = (props) => {
           handleRedirect={props.handleRedirect}
         />
       </Match>
-      <Match when={props.config?.operation === Operation.ADD || props.config?.operation === Operation.INVITE}>
+      <Match when={props.config?.operation === Operation.ADD}>
         <PosterPanel
           config={props.config}
           pathname={props.pathname}

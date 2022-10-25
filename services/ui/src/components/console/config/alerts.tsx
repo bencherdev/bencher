@@ -1,4 +1,4 @@
-import { Button, Card, Operation, } from "./types";
+import { Button, Card, Display, Operation, } from "./types";
 import {
   BENCHER_API_URL,
   parentPath,
@@ -55,31 +55,37 @@ const alertsConfig = {
           kind: Card.FIELD,
           label: "Perf UUID",
           key: "perf",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Threshold UUID",
           key: "threshold",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Statistic UUID",
           key: "statistic",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Side",
           key: "side",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Boundary",
           key: "boundary",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Outlier",
           key: "outlier",
+          display: Display.RAW,
         },
       ],
       buttons: false,

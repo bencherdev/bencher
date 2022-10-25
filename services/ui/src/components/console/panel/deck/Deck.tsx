@@ -23,6 +23,7 @@ const Deck = (props) => {
                   data={props.data}
                   path_params={props.path_params}
                   url={props.url}
+                  handleRefresh={props.handleRefresh}
                 />
               </div>
             </div>

@@ -1,6 +1,6 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import thresholdFieldsConfig from "../../fields/config/org/thresholdFieldsConfig";
-import { Button, Card, Field, Operation, Row } from "./types";
+import { Button, Card, Display, Field, Operation, Row } from "./types";
 import {
   BENCHER_API_URL,
   parentPath,
@@ -117,11 +117,13 @@ const thresholdsConfig = {
           kind: Card.FIELD,
           label: "Branch UUID",
           key: "branch",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Testbed UUID",
           key: "testbed",
+          display: Display.RAW,
         },
       ],
       buttons: false,

@@ -1,7 +1,7 @@
 import { createResource, createSignal, Match, Switch } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import { getToken } from "../../../site/util";
-import { Field } from "../../config/types";
+import { Display, Field } from "../../config/types";
 import validator from "validator";
 import axios from "axios";
 
@@ -30,6 +30,7 @@ const FieldCard = (props) => {
           path_params={props.path_params}
           url={props.url}
           toggleUpdate={toggleUpdate}
+          handleRefresh={props.handleRefresh}
         />
       </Match>
     </Switch>
@@ -46,7 +47,19 @@ const ViewCard = (props) => {
         <div class="card-header-title">{props.card?.label}</div>
       </div>
       <div class="card-content">
-        <div class="content">{props.value}</div>
+        <div class="content"><Switch
+          fallback={props.value}
+        >
+          <Match when={props.card?.display === Display.SELECT}>
+            {props.card?.field?.value?.options.reduce((field, option) => {
+              if (props.value === option.value) {
+                return option.option;
+              } else {
+                return field;
+              }
+            }, props.value)}
+          </Match>
+        </Switch></div>
       </div>
       {is_allowed() &&
         <div class="card-footer">
@@ -86,7 +99,7 @@ const initForm = (field, value) => {
 const options = (url: string, token: string, data: any) => {
   return {
     url: url,
-    method: "POST",
+    method: "PATCH",
     data: data,
     headers: {
       "Content-Type": "application/json",
@@ -106,8 +119,9 @@ const UpdateCard = (props) => {
         return;
       }
 
-      console.log(data);
       await axios(options(props.url(), token, data));
+      props.handleRefresh();
+      props.toggleUpdate();
     } catch (error) {
       console.error(error);
     }

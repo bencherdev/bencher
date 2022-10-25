@@ -1,7 +1,6 @@
 export enum Operation {
   LIST,
   ADD,
-  INVITE,
   VIEW,
   EDIT,
   DELETE,
@@ -43,11 +42,17 @@ export enum Field {
 export enum Row {
   TEXT,
   BOOL,
+  SELECT,
 }
 
 export enum Card {
   FIELD,
   TABLE,
+}
+
+export enum Display {
+  RAW,
+  SELECT,
 }
 
 export enum PerKind {

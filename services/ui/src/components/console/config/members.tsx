@@ -1,7 +1,21 @@
 import memberFieldsConfig from "../../fields/config/org/memberFieldsConfig";
 import { isAllowedOrganization, OrganizationPermission } from "../../site/util";
-import { Button, Card, Field, Operation, PerfTab, Row } from "./types";
+import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
+
+const ROLE_VALUE = {
+  selected: "member",
+  options: [
+    {
+      value: "member",
+      option: "Member",
+    },
+    {
+      value: "leader",
+      option: "Leader",
+    }
+  ],
+};
 
 const MembersConfig = {
   [Operation.LIST]: {
@@ -36,10 +50,14 @@ const MembersConfig = {
             kind: Row.TEXT,
             key: "slug",
           },
-          {},
           {
             kind: Row.TEXT,
             key: "email",
+          },
+          {
+            kind: Row.SELECT,
+            key: "role",
+            value: ROLE_VALUE,
           },
           {},
         ],
@@ -52,8 +70,8 @@ const MembersConfig = {
       },
     },
   },
-  [Operation.INVITE]: {
-    operation: Operation.INVITE,
+  [Operation.ADD]: {
+    operation: Operation.ADD,
     header: {
       title: "Invite to Organization",
       path: (pathname) => {
@@ -61,7 +79,7 @@ const MembersConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/invites`,
+      url: `${BENCHER_API_URL}/v0/members`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -94,19 +112,7 @@ const MembersConfig = {
           kind: Field.SELECT,
           label: "Role",
           key: "role",
-          value: {
-            selected: "member",
-            options: [
-              {
-                value: "member",
-                option: "Member",
-              },
-              {
-                value: "leader",
-                option: "Leader",
-              }
-            ],
-          },
+          value: ROLE_VALUE,
           validate: false,
           nullify: false,
           clear: false,
@@ -135,43 +141,36 @@ const MembersConfig = {
           kind: Card.FIELD,
           label: "Member Name",
           key: "name",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Member Slug",
           key: "slug",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Member UUID",
           key: "uuid",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Member Email",
           key: "email",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Role",
           key: "role",
+          display: Display.SELECT,
           is_allowed: (path_params) => isAllowedOrganization(path_params, OrganizationPermission.EDIT_ROLE),
           field: {
             kind: Field.SELECT,
             key: "role",
-            value: {
-              selected: "member",
-              options: [
-                {
-                  value: "member",
-                  option: "Member",
-                },
-                {
-                  value: "leader",
-                  option: "Leader",
-                }
-              ],
-            },
+            value: ROLE_VALUE,
             validate: false,
             nullify: false,
             clear: false,

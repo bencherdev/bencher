@@ -89,7 +89,7 @@ impl From<Perf> for JsonPerfQuery {
 impl SubCmd for Perf {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
-        self.backend.post(PERF_PATH, &perf).await?;
+        self.backend.put(PERF_PATH, &perf).await?;
         Ok(())
     }
 }

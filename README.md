@@ -1,6 +1,6 @@
 # 🐰 Bencher
 
-[Bencher](https://bencher.dev) is a suite of tools designed to help catch performance regressions in CI.
+[Bencher](https://bencher.dev) is a suite of continuous benchmarking tools designed to help catch performance regressions in CI.
 
 It consists of:
 

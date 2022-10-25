@@ -26,6 +26,15 @@ const Table = (props) => {
                           <Match when={item.kind === Row.BOOL}>
                             {item.text}: {datum[item.key] ? "true" : "false"}
                           </Match>
+                          <Match when={item.kind === Row.SELECT}>
+                            {item.value?.options.reduce((field, option) => {
+                              if (datum[item.key] === option.value) {
+                                return option.option;
+                              } else {
+                                return field;
+                              }
+                            }, datum[item.key])}
+                          </Match>
                         </Switch>
                       </div>
                     )}

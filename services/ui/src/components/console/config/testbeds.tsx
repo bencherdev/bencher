@@ -1,6 +1,6 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import testbedFieldsConfig from "../../fields/config/org/testbedFieldsConfig";
-import { Button, Card, Field, Operation, Row } from "./types";
+import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 
 const testbedsConfig = {
@@ -175,51 +175,61 @@ const testbedsConfig = {
           kind: Card.FIELD,
           label: "Testbed Name",
           key: "name",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Testbed Slug",
           key: "slug",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Testbed UUID",
           key: "uuid",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "OS Name",
           key: "os_name",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "OS Version",
           key: "os_version",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Runtime Name",
           key: "runtime_name",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Runtime Version",
           key: "runtime_version",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "CPU",
           key: "cpu",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "RAM",
           key: "ram",
+          display: Display.RAW,
         },
         {
           kind: Card.FIELD,
           label: "Disk",
           key: "disk",
+          display: Display.RAW,
         },
       ],
       buttons: false,

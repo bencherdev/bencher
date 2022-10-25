@@ -178,7 +178,7 @@ const PerfPanel = (props) => {
   const perf_data_options = (token: string) => {
     return {
       url: props.config?.plot?.url(),
-      method: "POST",
+      method: "PUT",
       data: perf_query(),
       headers: {
         "Content-Type": "application/json",

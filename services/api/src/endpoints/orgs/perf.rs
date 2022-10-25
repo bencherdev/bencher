@@ -35,7 +35,6 @@ use super::Resource;
 
 const PERF_RESOURCE: Resource = Resource::Perf;
 
-// TODO figure out why this doesn't work as a PUT
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/perf",
@@ -46,16 +45,16 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 }
 
 #[endpoint {
-    method = POST,
+    method = PUT,
     path =  "/v0/perf",
     tags = ["perf"]
 }]
-pub async fn post(
+pub async fn put(
     rqctx: Arc<RequestContext<Context>>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PERF_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::new(PERF_RESOURCE, Method::Put);
 
     let json = post_inner(rqctx.context(), body.into_inner(), auth_user.as_ref())
         .await

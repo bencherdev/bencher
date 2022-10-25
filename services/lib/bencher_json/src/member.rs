@@ -12,6 +12,15 @@ pub const LEADER_ROLE: &str = "leader";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewMember {
+    pub name: Option<String>,
+    pub email: String,
+    pub organization: ResourceId,
+    pub role: JsonOrganizationRole,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMember {
     pub uuid: Uuid,
     pub name: String,
@@ -23,7 +32,6 @@ pub struct JsonMember {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateMember {
-    pub user: ResourceId,
     pub role: Option<JsonOrganizationRole>,
 }
 

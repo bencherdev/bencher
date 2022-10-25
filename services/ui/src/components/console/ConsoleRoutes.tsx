@@ -57,7 +57,7 @@ const ConsoleRoutes = (props) => {
       />
       <Route
         path="/organizations/:organization_slug/members/invite"
-        element={consolePage(config?.[Resource.MEMBERS]?.[Operation.INVITE])}
+        element={consolePage(config?.[Resource.MEMBERS]?.[Operation.ADD])}
       />
       <Route
         path="/organizations/:organization_slug/members/:member_slug"

@@ -5,7 +5,6 @@ use crate::WordStr;
 pub mod alerts;
 pub mod benchmarks;
 pub mod branches;
-pub mod invites;
 pub mod members;
 pub mod organizations;
 pub mod perf;
@@ -19,7 +18,6 @@ pub enum Resource {
     Alert,
     Benchmark,
     Branch,
-    Invite,
     Member,
     Organization,
     OrganizationPermission,
@@ -36,7 +34,6 @@ impl WordStr for Resource {
             Self::Alert => "alert",
             Self::Benchmark => "benchmark",
             Self::Branch => "branch",
-            Self::Invite => "invite",
             Self::Member => "member",
             Self::Organization => "organization",
             Self::OrganizationPermission => "organization permission",
@@ -53,7 +50,6 @@ impl WordStr for Resource {
             Self::Alert => "alerts",
             Self::Benchmark => "benchmarks",
             Self::Branch => "branches",
-            Self::Invite => "invites",
             Self::Member => "members",
             Self::Organization => "organizations",
             Self::OrganizationPermission => "organization permissions",

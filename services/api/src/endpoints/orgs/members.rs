@@ -1,11 +1,16 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
-use bencher_json::{member::JsonUpdateMember, JsonMember, ResourceId};
+use bencher_json::{
+    jwt::JsonWebToken,
+    member::{JsonNewMember, JsonUpdateMember},
+    JsonEmpty, JsonMember, ResourceId,
+};
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
     endpoints::{
@@ -13,10 +18,11 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::user::{auth::AuthUser, QueryUser},
+    model::user::{auth::AuthUser, validate_email, QueryUser},
     model::{organization::QueryOrganization, user::member::QueryMember},
     schema,
     util::{
+        context::{Body, ButtonBody, Message},
         cors::{get_cors, CorsResponse},
         error::into_json,
         Context,
@@ -105,6 +111,124 @@ async fn get_ls_inner(
         .collect())
 }
 
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/members",
+    tags = ["members"]
+}]
+pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
+    method = POST,
+    path = "/v0/members",
+    tags = ["members"]
+}]
+pub async fn post(
+    rqctx: Arc<RequestContext<Context>>,
+    body: TypedBody<JsonNewMember>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Post);
+
+    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &Context,
+    mut json_new_member: JsonNewMember,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.database;
+
+    // Get the organization
+    let query_org = QueryOrganization::from_resource_id(conn, &json_new_member.organization)?;
+
+    // Check to see if user has permission to create a project within the organization
+    api_context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)?;
+
+    let email = json_new_member.email.clone();
+    // If a user already exists for the email then direct them to login.
+    // Otherwise, direct them to signup.
+    let (name, route) = if let Ok(name) = schema::user::table
+        .filter(schema::user::email.eq(&email))
+        .select(schema::user::name)
+        .first(conn)
+    {
+        (Some(name), "/auth/login")
+    } else {
+        validate_email(&email)?;
+        (json_new_member.name.take(), "/auth/signup")
+    };
+
+    // Get the requester user name and email for the message
+    let (user_name, user_email) = schema::user::table
+        .filter(schema::user::id.eq(auth_user.id))
+        .select((schema::user::name, schema::user::email))
+        .first::<(String, String)>(conn)
+        .map_err(api_error!())?;
+
+    // Create an invite token
+    let token = JsonWebToken::new_invite(
+        &api_context.secret_key.encoding,
+        json_new_member.email,
+        Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
+        json_new_member.role,
+    )
+    .map_err(api_error!())?;
+    let token_string = token.to_string();
+
+    let org_name = &query_org.name;
+    let org_role = json_new_member.role;
+    let body = Body::Button(ButtonBody {
+        title: format!("Invitation to join {org_name}"),
+        preheader: "Click the provided link to join.".into(),
+        greeting: if let Some(name) = name {
+            format!("Ahoy {name}!") } else { "Ahoy!".into() },
+        pre_body: format!(
+            "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
+        ),
+        pre_code: "".into(),
+        button_text: format!("Join {org_name}"),
+        button_url: api_context
+            .endpoint
+            .clone()
+            .join(route)
+            .map(|mut url| {
+                url.query_pairs_mut().append_pair("invite", &token_string);
+                url.into()
+            })
+            .unwrap_or_default(),
+        post_body: "Code: ".into(),
+        post_code: token_string,
+        closing: "See you soon,".into(),
+        signature: "The Bencher Team".into(),
+        settings_url: api_context
+            .endpoint
+            .clone()
+            .join("/console/settings/email")
+            .map(Into::into)
+            .unwrap_or_default(),
+    });
+    let message = Message {
+        to_name: None,
+        to_email: email.to_string(),
+        subject: Some(format!("Invitation to join {org_name}")),
+        body: Some(body),
+    };
+    api_context.messenger.send(message).await;
+
+    Ok(JsonEmpty::default())
+}
+
 #[derive(Deserialize, JsonSchema)]
 pub struct GetOneParams {
     pub organization: ResourceId,
@@ -161,19 +285,19 @@ async fn get_one_inner(
 }
 
 #[endpoint {
-    method = PUT,
+    method = PATCH,
     path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
-pub async fn put(
+pub async fn patch(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<GetOneParams>,
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Post);
+    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Patch);
 
-    let json = put_inner(
+    let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -185,7 +309,7 @@ pub async fn put(
     response_accepted!(endpoint, json)
 }
 
-async fn put_inner(
+async fn patch_inner(
     context: &Context,
     path_params: GetOneParams,
     json_update: JsonUpdateMember,
@@ -195,7 +319,7 @@ async fn put_inner(
 
     let query_organization =
         QueryOrganization::from_resource_id(&mut api_context.database, &path_params.organization)?;
-    let query_user = QueryUser::from_resource_id(&mut api_context.database, &json_update.user)?;
+    let query_user = QueryUser::from_resource_id(&mut api_context.database, &path_params.user)?;
 
     if let Some(role) = json_update.role {
         // Verify that the user is allowed to update member role
