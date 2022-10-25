@@ -5,6 +5,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::ResourceId;
+
 pub const MEMBER_ROLE: &str = "member";
 pub const LEADER_ROLE: &str = "leader";
 
@@ -16,6 +18,13 @@ pub struct JsonMember {
     pub slug: String,
     pub email: String,
     pub role: JsonOrganizationRole,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateMember {
+    pub user: ResourceId,
+    pub role: Option<JsonOrganizationRole>,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

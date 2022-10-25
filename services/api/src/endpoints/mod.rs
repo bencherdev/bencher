@@ -58,6 +58,7 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(members::get_ls)?;
     api.register(members::one_options)?;
     api.register(members::get_one)?;
+    api.register(members::put)?;
     // Invite
     api.register(invites::options)?;
     api.register(invites::post)?;

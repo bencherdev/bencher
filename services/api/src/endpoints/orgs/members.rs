@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use bencher_json::{JsonMember, ResourceId};
+use bencher_json::{member::JsonUpdateMember, JsonMember, ResourceId};
 use bencher_rbac::organization::Permission;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -157,13 +157,83 @@ async fn get_one_inner(
     let conn = &mut api_context.database;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
+    json_member(conn, query_user.id, query_organization.id)
+}
+
+#[endpoint {
+    method = PUT,
+    path =  "/v0/organizations/{organization}/members/{user}",
+    tags = ["organizations", "members"]
+}]
+pub async fn put(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetOneParams>,
+    body: TypedBody<JsonUpdateMember>,
+) -> Result<ResponseAccepted<JsonMember>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Post);
+
+    let json = put_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn put_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    json_update: JsonUpdateMember,
+    auth_user: &AuthUser,
+) -> Result<JsonMember, ApiError> {
+    let api_context = &mut *context.lock().await;
+
+    let query_user = QueryUser::from_resource_id(&mut api_context.database, &json_update.user)?;
+    let query_organization =
+        QueryOrganization::from_resource_id(&mut api_context.database, &path_params.organization)?;
+
+    if let Some(role) = json_update.role {
+        // Verify that the user is allowed to update member role
+        QueryOrganization::is_allowed_id(
+            api_context,
+            query_organization.id,
+            auth_user,
+            Permission::EditRole,
+        )?;
+        diesel::update(
+            schema::organization_role::table
+                .filter(schema::organization_role::user_id.eq(query_user.id))
+                .filter(schema::organization_role::organization_id.eq(query_organization.id)),
+        )
+        .set(schema::organization_role::role.eq(role.to_string()))
+        .execute(&mut api_context.database)
+        .map_err(api_error!())?;
+    }
+
+    json_member(
+        &mut api_context.database,
+        query_user.id,
+        query_organization.id,
+    )
+}
+
+fn json_member(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+    organization_id: i32,
+) -> Result<JsonMember, ApiError> {
     schema::user::table
         .inner_join(
             schema::organization_role::table
                 .on(schema::user::id.eq(schema::organization_role::user_id)),
         )
-        .filter(schema::organization_role::user_id.eq(query_user.id))
-        .filter(schema::organization_role::organization_id.eq(query_organization.id))
+        .filter(schema::organization_role::user_id.eq(user_id))
+        .filter(schema::organization_role::organization_id.eq(organization_id))
         .select((
             schema::user::uuid,
             schema::user::name,
