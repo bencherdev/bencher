@@ -193,9 +193,9 @@ async fn put_inner(
 ) -> Result<JsonMember, ApiError> {
     let api_context = &mut *context.lock().await;
 
-    let query_user = QueryUser::from_resource_id(&mut api_context.database, &json_update.user)?;
     let query_organization =
         QueryOrganization::from_resource_id(&mut api_context.database, &path_params.organization)?;
+    let query_user = QueryUser::from_resource_id(&mut api_context.database, &json_update.user)?;
 
     if let Some(role) = json_update.role {
         // Verify that the user is allowed to update member role
