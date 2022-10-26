@@ -15,6 +15,9 @@ pub enum CliMember {
     /// Update an organization member
     #[clap(alias = "edit")]
     Update(CliMemberUpdate),
+    /// Remove an organization member
+    #[clap(alias = "rm")]
+    Remove(CliMemberRemove),
 }
 
 #[derive(Parser, Debug)]
@@ -74,6 +77,19 @@ pub struct CliMemberUpdate {
     /// Member role
     #[clap(value_enum, long)]
     pub role: Option<CliMemberRole>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliMemberRemove {
+    /// Organization slug or UUID
+    #[clap(long)]
+    pub org: ResourceId,
+
+    /// User slug or UUID
+    pub user: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

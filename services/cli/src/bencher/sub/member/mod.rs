@@ -10,6 +10,7 @@ mod invite;
 mod list;
 mod update;
 mod view;
+mod remove;
 
 #[derive(Debug)]
 pub enum Member {
@@ -17,6 +18,7 @@ pub enum Member {
     Invite(invite::Invite),
     View(view::View),
     Update(update::Update),
+    Remove(remove::Remove)
 }
 
 impl TryFrom<CliMember> for Member {
@@ -28,6 +30,7 @@ impl TryFrom<CliMember> for Member {
             CliMember::Invite(invite) => Self::Invite(invite.try_into()?),
             CliMember::View(view) => Self::View(view.try_into()?),
             CliMember::Update(update) => Self::Update(update.try_into()?),
+            CliMember::Remove(remove) => Self::Remove(remove.try_into()?),
         })
     }
 }
@@ -40,6 +43,7 @@ impl SubCmd for Member {
             Self::Invite(invite) => invite.exec(wide).await,
             Self::View(view) => view.exec(wide).await,
             Self::Update(update) => update.exec(wide).await,
+            Self::Remove(remove) => remove.exec(wide).await,
         }
     }
 }

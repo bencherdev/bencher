@@ -84,6 +84,10 @@ impl Backend {
         self.send(Method::Patch(json), path).await
     }
 
+    pub async fn delete(&self, path: &str) -> Result<serde_json::Value, CliError> {
+        self.send::<()>(Method::Delete, path).await
+    }
+
     async fn send<T>(&self, method: Method<&T>, path: &str) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
@@ -95,6 +99,7 @@ impl Backend {
             Method::Post(json) => client.post(&url).json(json),
             Method::Put(json) => client.put(&url).json(json),
             Method::Patch(json) => client.patch(&url).json(json),
+            Method::Delete => client.delete(&url),
         };
         if let Some(token) = &self.token {
             builder = builder.header("Authorization", format!("Bearer {token}"));
@@ -110,4 +115,5 @@ enum Method<T> {
     Post(T),
     Put(T),
     Patch(T),
+    Delete,
 }
