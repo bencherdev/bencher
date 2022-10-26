@@ -1,6 +1,5 @@
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
-pub mod admin;
 pub mod alert;
 pub mod auth;
 pub mod benchmark;
@@ -11,11 +10,11 @@ pub mod perf;
 pub mod project;
 pub mod report;
 pub mod run;
+pub mod server;
 pub mod testbed;
 pub mod threshold;
 pub mod token;
 
-use admin::CliAdmin;
 use alert::CliAlert;
 use auth::CliAuth;
 use benchmark::CliBenchmark;
@@ -26,6 +25,7 @@ use perf::CliPerf;
 use project::CliProject;
 use report::CliReport;
 use run::CliRun;
+use server::CliServer;
 use testbed::CliTestbed;
 use threshold::CliThreshold;
 use token::CliToken;
@@ -48,9 +48,9 @@ pub struct CliWide {}
 
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
-    /// Server admin commands
+    /// Server commands
     #[clap(subcommand)]
-    Admin(CliAdmin),
+    Server(CliServer),
 
     /// Backend authentication
     #[clap(subcommand)]

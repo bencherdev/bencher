@@ -3,16 +3,24 @@ use clap::{Parser, Subcommand};
 use super::CliBackend;
 
 #[derive(Subcommand, Debug)]
-pub enum CliAdmin {
+pub enum CliServer {
+    /// Ping server
+    Ping(CliPing),
     /// Restart server
-    Restart(CliAdminRestart),
+    Restart(CliRestart),
     /// Manager server config
     #[clap(subcommand)]
     Config(CliConfig),
 }
 
 #[derive(Parser, Debug)]
-pub struct CliAdminRestart {
+pub struct CliPing {
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliRestart {
     /// Server restart delay seconds (default: 3)
     #[clap(long)]
     pub delay: Option<u64>,

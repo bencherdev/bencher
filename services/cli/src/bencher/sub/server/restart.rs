@@ -5,11 +5,11 @@ use bencher_json::JsonRestart;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::admin::CliAdminRestart,
+    cli::server::CliRestart,
     CliError,
 };
 
-const RESTART_PATH: &str = "/v0/admin/restart";
+const RESTART_PATH: &str = "/v0/server/restart";
 
 #[derive(Debug, Clone)]
 pub struct Restart {
@@ -17,11 +17,11 @@ pub struct Restart {
     pub backend: Backend,
 }
 
-impl TryFrom<CliAdminRestart> for Restart {
+impl TryFrom<CliRestart> for Restart {
     type Error = CliError;
 
-    fn try_from(create: CliAdminRestart) -> Result<Self, Self::Error> {
-        let CliAdminRestart { delay, backend } = create;
+    fn try_from(create: CliRestart) -> Result<Self, Self::Error> {
+        let CliRestart { delay, backend } = create;
         Ok(Self {
             delay,
             backend: backend.try_into()?,

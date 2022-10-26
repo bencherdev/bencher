@@ -2,12 +2,14 @@ use async_trait::async_trait;
 
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
-    cli::admin::CliConfig,
+    cli::server::CliConfig,
     CliError,
 };
 
 mod update;
 mod view;
+
+const CONFIG_PATH: &str = "/v0/server/config";
 
 #[derive(Debug)]
 pub enum Config {

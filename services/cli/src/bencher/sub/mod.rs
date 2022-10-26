@@ -4,7 +4,6 @@ use async_trait::async_trait;
 
 use crate::{bencher::wide::Wide, cli::CliSub, CliError};
 
-mod admin;
 mod alert;
 mod auth;
 mod benchmark;
@@ -15,12 +14,12 @@ mod perf;
 mod project;
 mod report;
 mod run;
+mod server;
 mod subcmd;
 mod testbed;
 mod threshold;
 mod token;
 
-use admin::Admin;
 use alert::Alert;
 use auth::Auth;
 use benchmark::Benchmark;
@@ -31,6 +30,7 @@ use perf::Perf;
 use project::Project;
 use report::Report;
 use run::Run;
+use server::Server;
 pub use subcmd::SubCmd;
 use testbed::Testbed;
 use threshold::Threshold;
@@ -38,7 +38,7 @@ use token::Token;
 
 #[derive(Debug)]
 pub enum Sub {
-    Admin(Admin),
+    Server(Server),
     Auth(Auth),
     Organization(Organization),
     Member(Member),
@@ -59,7 +59,7 @@ impl TryFrom<CliSub> for Sub {
 
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            CliSub::Admin(admin) => Self::Admin(admin.try_into()?),
+            CliSub::Server(server) => Self::Server(server.try_into()?),
             CliSub::Auth(auth) => Self::Auth(auth.try_into()?),
             CliSub::Organization(organization) => Self::Organization(organization.try_into()?),
             CliSub::Member(member) => Self::Member(member.try_into()?),
@@ -89,7 +89,7 @@ pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, CliError> {
 impl SubCmd for Sub {
     async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
-            Self::Admin(admin) => admin.exec(wide).await,
+            Self::Server(server) => server.exec(wide).await,
             Self::Auth(auth) => auth.exec(wide).await,
             Self::Organization(organization) => organization.exec(wide).await,
             Self::Member(member) => member.exec(wide).await,

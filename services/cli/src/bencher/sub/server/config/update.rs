@@ -5,11 +5,11 @@ use bencher_json::{config::JsonUpdateConfig, JsonConfig};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::admin::CliConfigUpdate,
+    cli::server::CliConfigUpdate,
     CliError,
 };
 
-const CONFIG_PATH: &str = "/v0/admin/config";
+use super::CONFIG_PATH;
 
 #[derive(Debug, Clone)]
 pub struct Update {

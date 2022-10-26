@@ -1,26 +1,25 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonEmpty;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::admin::CliConfigView,
+    cli::server::CliPing,
     CliError,
 };
 
-const CONFIG_PATH: &str = "/v0/admin/config";
+const PING_PATH: &str = "/v0/server/ping";
 
 #[derive(Debug, Clone)]
-pub struct View {
+pub struct Ping {
     pub backend: Backend,
 }
 
-impl TryFrom<CliConfigView> for View {
+impl TryFrom<CliPing> for Ping {
     type Error = CliError;
 
-    fn try_from(view: CliConfigView) -> Result<Self, Self::Error> {
-        let CliConfigView { backend } = view;
+    fn try_from(ping: CliPing) -> Result<Self, Self::Error> {
+        let CliPing { backend } = ping;
         Ok(Self {
             backend: backend.try_into()?,
         })
@@ -28,9 +27,9 @@ impl TryFrom<CliConfigView> for View {
 }
 
 #[async_trait]
-impl SubCmd for View {
+impl SubCmd for Ping {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
-        self.backend.post(CONFIG_PATH, &JsonEmpty {}).await?;
+        self.backend.get(PING_PATH).await?;
         Ok(())
     }
 }

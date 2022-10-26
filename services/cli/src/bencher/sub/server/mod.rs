@@ -2,34 +2,38 @@ use async_trait::async_trait;
 
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
-    cli::admin::CliAdmin,
+    cli::server::CliServer,
     CliError,
 };
 
 mod config;
+mod ping;
 mod restart;
 
 #[derive(Debug)]
-pub enum Admin {
+pub enum Server {
+    Ping(ping::Ping),
     Restart(restart::Restart),
     Config(config::Config),
 }
 
-impl TryFrom<CliAdmin> for Admin {
+impl TryFrom<CliServer> for Server {
     type Error = CliError;
 
-    fn try_from(admin: CliAdmin) -> Result<Self, Self::Error> {
+    fn try_from(admin: CliServer) -> Result<Self, Self::Error> {
         Ok(match admin {
-            CliAdmin::Restart(restart) => Self::Restart(restart.try_into()?),
-            CliAdmin::Config(config) => Self::Config(config.try_into()?),
+            CliServer::Ping(ping) => Self::Ping(ping.try_into()?),
+            CliServer::Restart(restart) => Self::Restart(restart.try_into()?),
+            CliServer::Config(config) => Self::Config(config.try_into()?),
         })
     }
 }
 
 #[async_trait]
-impl SubCmd for Admin {
+impl SubCmd for Server {
     async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
         match self {
+            Self::Ping(ping) => ping.exec(wide).await,
             Self::Restart(restart) => restart.exec(wide).await,
             Self::Config(config) => config.exec(wide).await,
         }
