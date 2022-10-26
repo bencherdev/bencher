@@ -3,10 +3,12 @@ use derive_more::Display;
 use crate::WordStr;
 
 pub mod config;
+pub mod ping;
 pub mod restart;
 
 #[derive(Debug, Display, Clone, Copy)]
 pub enum Resource {
+    Ping,
     Restart,
     Config,
 }
@@ -14,6 +16,7 @@ pub enum Resource {
 impl WordStr for Resource {
     fn singular(&self) -> &str {
         match self {
+            Self::Ping => "ping",
             Self::Restart => "restart",
             Self::Config => "config",
         }
@@ -21,6 +24,7 @@ impl WordStr for Resource {
 
     fn plural(&self) -> &str {
         match self {
+            Self::Ping => "pings",
             Self::Restart => "restarts",
             Self::Config => "configs",
         }

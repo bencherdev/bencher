@@ -4,22 +4,32 @@ use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Request
 
 use crate::{
     endpoints::{endpoint::pub_response_ok, Endpoint, Method, Resource},
-    util::{headers::CorsHeaders, Context},
+    util::{
+        cors::{get_cors, CorsResponse},
+        headers::CorsHeaders,
+        Context,
+    },
 };
 
 const PONG: &str = "PONG";
 
 #[endpoint {
+    method = OPTIONS,
+    path =  "/v0/server/ping",
+    tags = ["server", "ping"]
+}]
+pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
     method = GET,
-    path = "/v0/ping",
-    tags = ["ping"]
+    path = "/v0/server/ping",
+    tags = ["server", "ping"]
 }]
 pub async fn get(
-    rqctx: Arc<RequestContext<Context>>,
+    _rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(Resource::Ping, Method::GetOne);
-
-    let _context = &mut *rqctx.context().lock().await;
-
     pub_response_ok!(endpoint, PONG.into())
 }

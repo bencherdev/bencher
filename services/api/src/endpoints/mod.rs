@@ -1,12 +1,11 @@
 use dropshot::ApiDescription;
 
-pub mod admin;
 pub mod auth;
 mod endpoint;
 pub mod method;
 pub mod orgs;
-pub mod ping;
 pub mod resource;
+pub mod server;
 pub mod users;
 
 pub use endpoint::Endpoint;
@@ -28,15 +27,14 @@ impl Registrar<Context> for Api {
 }
 
 fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
-    // Ping
-    api.register(ping::get)?;
-
-    // Admin
-    api.register(admin::restart::post_options)?;
-    api.register(admin::restart::post)?;
-    api.register(admin::config::options)?;
-    api.register(admin::config::post)?;
-    api.register(admin::config::get_one)?;
+    // Server
+    api.register(server::ping::options)?;
+    api.register(server::ping::get)?;
+    api.register(server::restart::options)?;
+    api.register(server::restart::post)?;
+    api.register(server::config::options)?;
+    api.register(server::config::post)?;
+    api.register(server::config::get_one)?;
 
     // Auth
     api.register(auth::signup::options)?;

@@ -26,10 +26,10 @@ pub const DEFAULT_DELAY: u64 = 3;
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/admin/restart",
-    tags = ["admin"]
+    path =  "/v0/server/restart",
+    tags = ["server"]
 }]
-pub async fn post_options(
+pub async fn options(
     _rqctx: Arc<RequestContext<Context>>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
@@ -38,8 +38,8 @@ pub async fn post_options(
 
 #[endpoint {
     method = POST,
-    path =  "/v0/admin/restart",
-    tags = ["admin"]
+    path =  "/v0/server/restart",
+    tags = ["server"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,

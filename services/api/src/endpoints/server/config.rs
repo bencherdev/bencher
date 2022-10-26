@@ -26,8 +26,8 @@ const CONFIG_RESOURCE: Resource = Resource::Config;
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/admin/config",
-    tags = ["admin", "config"]
+    path =  "/v0/server/config",
+    tags = ["server", "config"]
 }]
 pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -35,8 +35,8 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 
 #[endpoint {
     method = POST,
-    path =  "/v0/admin/config",
-    tags = ["admin", "config"]
+    path =  "/v0/server/config",
+    tags = ["server", "config"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
@@ -84,8 +84,8 @@ async fn post_inner(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/admin/config",
-    tags = ["admin", "config"]
+    path =  "/v0/server/config",
+    tags = ["server", "config"]
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
