@@ -618,17 +618,17 @@
         }
       }
     },
-    "/v0/invites": {
+    "/v0/members": {
       "post": {
         "tags": [
-          "invites"
+          "members"
         ],
         "operationId": "post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonInvite"
+                "$ref": "#/components/schemas/JsonNewMember"
               }
             }
           },
@@ -685,9 +685,9 @@
       },
       "options": {
         "tags": [
-          "invites"
+          "members"
         ],
-        "operationId": "options",
+        "operationId": "post_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -1269,12 +1269,58 @@
           }
         }
       },
-      "put": {
+      "options": {
         "tags": [
           "organizations",
           "members"
         ],
-        "operationId": "put",
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "organizations",
+          "members"
+        ],
+        "operationId": "patch",
         "parameters": [
           {
             "in": "path",
@@ -1342,52 +1388,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonMember"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
-        "operationId": "one_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
-          },
-          {
-            "in": "path",
-            "name": "user",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -1634,11 +1634,11 @@
       }
     },
     "/v0/perf": {
-      "post": {
+      "put": {
         "tags": [
           "perf"
         ],
-        "operationId": "post",
+        "operationId": "put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4175,29 +4175,6 @@
       "JsonEmpty": {
         "type": "object"
       },
-      "JsonInvite": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          },
-          "name": {
-            "nullable": true,
-            "type": "string"
-          },
-          "organization": {
-            "$ref": "#/components/schemas/ResourceId"
-          },
-          "role": {
-            "$ref": "#/components/schemas/JsonOrganizationRole"
-          }
-        },
-        "required": [
-          "email",
-          "organization",
-          "role"
-        ]
-      },
       "JsonLatency": {
         "type": "object",
         "properties": {
@@ -4347,6 +4324,29 @@
         "required": [
           "name",
           "project"
+        ]
+      },
+      "JsonNewMember": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/ResourceId"
+          },
+          "role": {
+            "$ref": "#/components/schemas/JsonOrganizationRole"
+          }
+        },
+        "required": [
+          "email",
+          "organization",
+          "role"
         ]
       },
       "JsonNewOrganization": {
@@ -5180,14 +5180,8 @@
                 "$ref": "#/components/schemas/JsonOrganizationRole"
               }
             ]
-          },
-          "user": {
-            "$ref": "#/components/schemas/ResourceId"
           }
-        },
-        "required": [
-          "user"
-        ]
+        }
       },
       "JsonUser": {
         "type": "object",
