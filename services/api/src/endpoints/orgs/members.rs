@@ -86,7 +86,7 @@ async fn get_ls_inner(
         api_context,
         &path_params.organization,
         auth_user,
-        Permission::View,
+        Permission::ViewRole,
     )?;
     let conn = &mut api_context.database;
 
@@ -276,7 +276,7 @@ async fn get_one_inner(
         api_context,
         &path_params.organization,
         auth_user,
-        Permission::View,
+        Permission::ViewRole,
     )?;
     let conn = &mut api_context.database;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
@@ -344,6 +344,53 @@ async fn patch_inner(
         query_user.id,
         query_organization.id,
     )
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/organizations/{organization}/members/{user}",
+    tags = ["organizations", "members"]
+}]
+pub async fn delete(
+    rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetOneParams>,
+) -> Result<ResponseAccepted<JsonMember>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Patch);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &Context,
+    path_params: GetOneParams,
+    auth_user: &AuthUser,
+) -> Result<JsonMember, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        api_context,
+        &path_params.organization,
+        auth_user,
+        Permission::DeleteRole,
+    )?;
+    let conn = &mut api_context.database;
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+
+    let json_member = json_member(conn, query_user.id, query_organization.id)?;
+
+    diesel::delete(
+        schema::organization_role::table
+            .filter(schema::organization_role::user_id.eq(query_user.id))
+            .filter(schema::organization_role::organization_id.eq(query_organization.id)),
+    )
+    .execute(&mut api_context.database)
+    .map_err(api_error!())?;
+
+    Ok(json_member)
 }
 
 fn json_member(

@@ -56,7 +56,9 @@ const App: Component = () => {
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
 
-  const [organization_slug, setOrganizationSlug] = createSignal<null | String>(null);
+  const [organization_slug, setOrganizationSlug] = createSignal<null | String>(
+    null
+  );
   // The project slug can't be a resource because it isn't 100% tied to the URL
   const [project_slug, setProjectSlug] = createSignal<String>(
     projectSlug(pathname)
@@ -70,7 +72,6 @@ const App: Component = () => {
 
   const handleUser = (user) => {
     window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
-    console.log(user);
     setUser(user);
   };
 
