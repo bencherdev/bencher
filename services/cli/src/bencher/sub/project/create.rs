@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use bencher_json::{JsonNewProject, ResourceId};
 use url::Url;
 
-use super::PROJECTS_PATH;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
     cli::project::CliProjectCreate,
@@ -58,7 +57,7 @@ pub fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
 impl From<Create> for JsonNewProject {
     fn from(create: Create) -> Self {
         let Create {
-            org,
+            org: _,
             name,
             slug,
             description,
@@ -67,7 +66,6 @@ impl From<Create> for JsonNewProject {
             backend: _,
         } = create;
         Self {
-            organization: org,
             name,
             slug,
             description,
@@ -81,7 +79,12 @@ impl From<Create> for JsonNewProject {
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let project: JsonNewProject = self.clone().into();
-        self.backend.post(PROJECTS_PATH, &project).await?;
+        self.backend
+            .post(
+                &format!("/v0/organizations/{}/projects", self.org),
+                &project,
+            )
+            .await?;
         Ok(())
     }
 }

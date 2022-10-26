@@ -32,7 +32,7 @@ use super::Resource;
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub organization: ResourceId,
 }
 
@@ -43,7 +43,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -55,7 +55,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
@@ -74,7 +74,7 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &Context,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
@@ -99,25 +99,32 @@ async fn get_ls_inner(
 
 #[endpoint {
     method = POST,
-    path = "/v0/projects",
-    tags = ["projects"]
+    path =  "/v0/organizations/{organization}/projects",
+    tags = ["organizations", "projects"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_accepted!(endpoint, json)
 }
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     json_project: JsonNewProject,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
@@ -125,7 +132,7 @@ async fn post_inner(
     let conn = &mut api_context.database;
 
     // Create the project
-    let insert_project = InsertProject::from_json(conn, json_project)?;
+    let insert_project = InsertProject::from_json(conn, &path_params.organization, json_project)?;
 
     // Check to see if user has permission to create a project within the organization
     api_context

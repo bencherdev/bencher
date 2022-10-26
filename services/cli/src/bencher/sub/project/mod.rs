@@ -10,8 +10,6 @@ mod create;
 mod list;
 mod view;
 
-pub const PROJECTS_PATH: &str = "/v0/projects";
-
 #[derive(Debug)]
 pub enum Project {
     Create(create::Create),

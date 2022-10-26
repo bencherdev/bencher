@@ -10,9 +10,7 @@ const projectsConfig = {
       buttons: [
         {
           kind: Button.ADD,
-          path: (pathname) => {
-            return addPath(pathname);
-          },
+          path: addPath,
         },
         { kind: Button.REFRESH },
       ],
@@ -22,9 +20,7 @@ const projectsConfig = {
         return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects`;
       },
       add: {
-        path: (pathname) => {
-          return addPath(pathname);
-        },
+        path: addPath,
         text: "Add a Project",
       },
       row: {
@@ -44,9 +40,7 @@ const projectsConfig = {
         ],
         button: {
           text: "Select",
-          path: (_pathname, datum) => {
-            return `/console/projects/${datum?.slug}/perf`;
-          },
+          path: (_pathname, datum) => `/console/projects/${datum?.slug}/perf`,
         },
       },
     },
@@ -60,7 +54,8 @@ const projectsConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/projects`,
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params.organization_slug}/projects`,
       fields: [
         {
           kind: Field.INPUT,
@@ -107,23 +102,18 @@ const projectsConfig = {
           config: projectFieldsConfig.public,
         },
       ],
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
   },
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
       key: "name",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects/${path_params?.project_slug}`;
-      },
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects/${path_params?.project_slug}`,
       cards: [
         {
           kind: Card.FIELD,
@@ -157,9 +147,8 @@ const projectsConfig = {
         },
       ],
       buttons: {
-        path: (path_params) => {
-          return `/console/projects/${path_params?.project_slug}/perf`
-        },
+        path: (path_params) =>
+          `/console/projects/${path_params?.project_slug}/perf`,
       },
     },
   },
@@ -169,15 +158,11 @@ const projectsConfig = {
       title: "Benchmark Perf",
     },
     plot: {
-      url: () => {
-        return `${BENCHER_API_URL}/v0/perf`;
-      },
-      tab_url: (path_params, tab: PerfTab) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`;
-      },
-      key_url: (path_params, tab: PerfTab, uuid: string) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}/${uuid}`;
-      },
+      url: () => `${BENCHER_API_URL}/v0/perf`,
+      tab_url: (path_params, tab: PerfTab) =>
+        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`,
+      key_url: (path_params, tab: PerfTab, uuid: string) =>
+        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}/${uuid}`,
     },
   },
 };

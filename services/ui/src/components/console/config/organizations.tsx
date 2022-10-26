@@ -5,21 +5,16 @@ import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
 const organizationsConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
-    redirect: (table_data) => {
-      return table_data?.length === 1 ?
-        `/console/organizations/${table_data[0]?.slug}/projects`
-        : null;
-    },
+    redirect: (table_data) =>
+      table_data?.length === 1
+        ? `/console/organizations/${table_data[0]?.slug}/projects`
+        : null,
     header: {
       title: "Organizations",
-      buttons: [
-        { kind: Button.REFRESH },
-      ],
+      buttons: [{ kind: Button.REFRESH }],
     },
     table: {
-      url: (_path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations`;
-      },
+      url: (_path_params) => `${BENCHER_API_URL}/v0/organizations`,
       row: {
         key: "name",
         items: [
@@ -33,9 +28,8 @@ const organizationsConfig = {
         ],
         button: {
           text: "Select",
-          path: (pathname, datum) => {
-            return viewSlugPath(pathname, datum) + "/projects";
-          },
+          path: (pathname, datum) =>
+            viewSlugPath(pathname, datum) + "/projects",
         },
       },
     },
@@ -44,14 +38,11 @@ const organizationsConfig = {
     operation: Operation.VIEW,
     header: {
       key: "name",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}`;
-      },
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}`,
       cards: [
         {
           kind: Card.FIELD,
@@ -67,9 +58,8 @@ const organizationsConfig = {
         },
       ],
       buttons: {
-        path: (path_params) => {
-          return `/console/organizations/${path_params?.organization_slug}/projects`
-        },
+        path: (path_params) =>
+          `/console/organizations/${path_params?.organization_slug}/projects`,
       },
     },
   },

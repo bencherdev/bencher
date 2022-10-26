@@ -31,10 +31,10 @@ pub struct InsertProject {
 impl InsertProject {
     pub fn from_json(
         conn: &mut SqliteConnection,
+        organization: &ResourceId,
         project: JsonNewProject,
     ) -> Result<Self, ApiError> {
         let JsonNewProject {
-            organization,
             name,
             slug,
             description,
@@ -44,7 +44,7 @@ impl InsertProject {
         let slug = unwrap_slug!(conn, &name, slug, project, QueryProject);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            organization_id: QueryOrganization::from_resource_id(conn, &organization)?.id,
+            organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
             name,
             slug,
             description,
