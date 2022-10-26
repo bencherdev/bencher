@@ -15,13 +15,11 @@ use crate::{
 
 use super::SubCmd;
 
-const MEMBERS_PATH: &str = "/v0/members";
-
 #[derive(Debug, Clone)]
 pub struct Invite {
+    org: ResourceId,
     name: Option<String>,
     email: EmailAddress,
-    org: ResourceId,
     role: JsonOrganizationRole,
     backend: Backend,
 }
@@ -31,16 +29,16 @@ impl TryFrom<CliMemberInvite> for Invite {
 
     fn try_from(invite: CliMemberInvite) -> Result<Self, Self::Error> {
         let CliMemberInvite {
+            org,
             name,
             email,
-            org,
             role,
             backend,
         } = invite;
         Ok(Self {
+            org,
             name,
             email: EmailAddress::parse(&email, None).ok_or(CliError::Email(email))?,
-            org,
             role: role.into(),
             backend: backend.try_into()?,
         })
@@ -59,16 +57,15 @@ impl From<CliMemberRole> for JsonOrganizationRole {
 impl From<Invite> for JsonNewMember {
     fn from(invite: Invite) -> Self {
         let Invite {
+            org: _,
             name,
             email,
-            org,
             role,
             backend: _,
         } = invite;
         Self {
             name,
             email: email.to_string(),
-            organization: org,
             role,
         }
     }
@@ -78,7 +75,9 @@ impl From<Invite> for JsonNewMember {
 impl SubCmd for Invite {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let invite: JsonNewMember = self.clone().into();
-        self.backend.post(MEMBERS_PATH, &invite).await?;
+        self.backend
+            .post(&format!("/v0/organizations/{}/members", &self.org), &invite)
+            .await?;
         Ok(())
     }
 }

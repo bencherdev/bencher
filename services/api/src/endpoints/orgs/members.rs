@@ -35,7 +35,7 @@ use super::Resource;
 const MEMBER_RESOURCE: Resource = Resource::Member;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub organization: ResourceId,
 }
 
@@ -46,7 +46,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -58,7 +58,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
@@ -78,7 +78,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMember>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -112,35 +112,33 @@ async fn get_ls_inner(
 }
 
 #[endpoint {
-    method = OPTIONS,
-    path =  "/v0/members",
-    tags = ["members"]
-}]
-pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
-#[endpoint {
     method = POST,
-    path = "/v0/members",
-    tags = ["members"]
+    path =  "/v0/organizations/{organization}/members",
+    tags = ["organizations", "members"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_accepted!(endpoint, json)
 }
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
@@ -148,7 +146,7 @@ async fn post_inner(
     let conn = &mut api_context.database;
 
     // Get the organization
-    let query_org = QueryOrganization::from_resource_id(conn, &json_new_member.organization)?;
+    let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
 
     // Check to see if user has permission to create a project within the organization
     api_context

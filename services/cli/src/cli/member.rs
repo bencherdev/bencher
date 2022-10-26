@@ -32,6 +32,10 @@ pub struct CliMemberList {
 
 #[derive(Parser, Debug)]
 pub struct CliMemberInvite {
+    /// Organization slug or UUID
+    #[clap(long)]
+    pub org: ResourceId,
+
     /// Name of user for invitation (optional)
     #[clap(long)]
     pub name: Option<String>,
@@ -39,10 +43,6 @@ pub struct CliMemberInvite {
     /// Email for the invitation
     #[clap(long)]
     pub email: String,
-
-    /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
 
     /// Member role
     #[clap(value_enum, long)]

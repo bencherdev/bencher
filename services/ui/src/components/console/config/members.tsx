@@ -79,7 +79,7 @@ const MembersConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/members`,
+      url: (path_params) => `${BENCHER_API_URL}/v0/organizations/${path_params.organization_slug}/members`,
       fields: [
         {
           kind: Field.HIDDEN,

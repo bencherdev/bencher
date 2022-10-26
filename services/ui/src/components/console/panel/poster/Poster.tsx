@@ -45,8 +45,10 @@ const Poster = (props) => {
         return;
       }
 
-      await axios(options(props.config?.url, token, data));
-      props.handleRedirect(props.config?.path(props.pathname()));
+      await axios(
+        options(props.config?.url?.(props.path_params()), token, data)
+      );
+      props.handleRedirect(props.config?.path?.(props.pathname()));
     } catch (error) {
       console.error(error);
     }
@@ -130,10 +132,8 @@ const Poster = (props) => {
   );
 };
 
-
-
 const PosterField = (props) => {
-  const [_field] = createResource(props.path_params, (path_params) => {
+  const [_hidden_field] = createResource(props.path_params, (path_params) => {
     const path_param = props.field.path_param;
     if (path_param) {
       props.handleField(props.field.key, path_params?.[path_param], true);
@@ -142,20 +142,22 @@ const PosterField = (props) => {
   });
 
   return (
-    <Switch fallback={<SiteField
-      key={props.i}
-      kind={props.field?.kind}
-      label={props.form()?.[props.field?.key]?.label}
-      fieldKey={props.field?.key}
-      value={props.form()?.[props.field?.key]?.value}
-      valid={props.form()?.[props.field?.key]?.valid}
-      config={props.field?.config}
-      handleField={props.handleField}
-    />}>
-      <Match when={props.field?.kind === Field.HIDDEN}>
-      </Match>
+    <Switch
+      fallback={
+        <SiteField
+          key={props.i}
+          kind={props.field?.kind}
+          label={props.form()?.[props.field?.key]?.label}
+          fieldKey={props.field?.key}
+          value={props.form()?.[props.field?.key]?.value}
+          valid={props.form()?.[props.field?.key]?.valid}
+          config={props.field?.config}
+          handleField={props.handleField}
+        />
+      }
+    >
+      <Match when={props.field?.kind === Field.HIDDEN}></Match>
     </Switch>
-
   );
 };
 
