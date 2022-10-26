@@ -5,7 +5,7 @@ tasks:
   - name: Rust Setup
     before: rustup component add rustfmt
     init: cargo check
-    command: cd services/api && cargo run api
+    command: cd services/api && cargo run
   - name: JavaScript Setup
     init: cd services/ui && npm install --include=dev && cd ../..
     command: cd services/ui && npm x vite

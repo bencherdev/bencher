@@ -295,9 +295,10 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     let mut org: Vec<JsonOrganization> = serde_json::from_slice(&org).unwrap();
     let org_uuid = org.pop().unwrap().uuid.to_string();
 
-    // cargo run -- invite --host http://localhost:61016 --email courage@nowhere.com --org <ORG_UUID>
+    // cargo run -- member invite --host http://localhost:61016 --email courage@nowhere.com --org <ORG_UUID>
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
+        "member",
         "invite",
         HOST_ARG,
         LOCALHOST,
