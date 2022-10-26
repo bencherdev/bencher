@@ -16,9 +16,8 @@ const projectsConfig = {
       ],
     },
     table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects`;
-      },
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects`,
       add: {
         path: addPath,
         text: "Add a Project",
@@ -49,9 +48,7 @@ const projectsConfig = {
     operation: Operation.ADD,
     header: {
       title: "Add Project",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     form: {
       url: (path_params) =>

@@ -57,7 +57,7 @@ const branchesConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/branches`,
+      url: (_) => `${BENCHER_API_URL}/v0/branches`,
       fields: [
         {
           kind: Field.HIDDEN,

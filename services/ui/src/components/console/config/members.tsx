@@ -13,7 +13,7 @@ const ROLE_VALUE = {
     {
       value: "leader",
       option: "Leader",
-    }
+    },
   ],
 };
 
@@ -25,22 +25,21 @@ const MembersConfig = {
       buttons: [
         {
           kind: Button.INVITE,
-          path: (pathname) => {
-            return invitePath(pathname);
-          },
-          is_allowed: (path_params) => isAllowedOrganization(path_params, OrganizationPermission.CREATE_ROLE),
+          path: invitePath,
+          is_allowed: (path_params) =>
+            isAllowedOrganization(
+              path_params,
+              OrganizationPermission.CREATE_ROLE
+            ),
         },
         { kind: Button.REFRESH },
       ],
     },
     table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members`;
-      },
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members`,
       add: {
-        path: (pathname) => {
-          return invitePath(pathname);
-        },
+        path: invitePath,
         text: "Invite an Organization Member",
       },
       row: {
@@ -63,9 +62,7 @@ const MembersConfig = {
         ],
         button: {
           text: "View",
-          path: (pathname, datum) => {
-            return viewSlugPath(pathname, datum);
-          },
+          path: (pathname, datum) => viewSlugPath(pathname, datum),
         },
       },
     },
@@ -74,12 +71,11 @@ const MembersConfig = {
     operation: Operation.ADD,
     header: {
       title: "Invite to Organization",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     form: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/organizations/${path_params.organization_slug}/members`,
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params.organization_slug}/members`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -119,23 +115,18 @@ const MembersConfig = {
           config: memberFieldsConfig.role,
         },
       ],
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
   },
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
       key: "name",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members/${path_params?.member_slug}`;
-      },
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members/${path_params?.member_slug}`,
       cards: [
         {
           kind: Card.FIELD,
@@ -166,7 +157,11 @@ const MembersConfig = {
           label: "Role",
           key: "role",
           display: Display.SELECT,
-          is_allowed: (path_params) => isAllowedOrganization(path_params, OrganizationPermission.EDIT_ROLE),
+          is_allowed: (path_params) =>
+            isAllowedOrganization(
+              path_params,
+              OrganizationPermission.EDIT_ROLE
+            ),
           field: {
             kind: Field.SELECT,
             key: "role",
@@ -175,7 +170,7 @@ const MembersConfig = {
             nullify: false,
             clear: false,
             config: memberFieldsConfig.role,
-          }
+          },
         },
       ],
       buttons: false,

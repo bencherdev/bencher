@@ -57,7 +57,7 @@ const testbedsConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/testbeds`,
+      url: (_) => `${BENCHER_API_URL}/v0/testbeds`,
       fields: [
         {
           kind: Field.HIDDEN,

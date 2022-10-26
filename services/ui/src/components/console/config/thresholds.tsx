@@ -1,12 +1,7 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import thresholdFieldsConfig from "../../fields/config/org/thresholdFieldsConfig";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
-import {
-  BENCHER_API_URL,
-  parentPath,
-  addPath,
-  viewUuidPath,
-} from "./util";
+import { BENCHER_API_URL, parentPath, addPath, viewUuidPath } from "./util";
 
 const thresholdsConfig = {
   [Operation.LIST]: {
@@ -54,7 +49,7 @@ const thresholdsConfig = {
       },
     },
     form: {
-      url: `${BENCHER_API_URL}/v0/thresholds`,
+      url: (_) => `${BENCHER_API_URL}/v0/thresholds`,
       fields: [
         {
           kind: Field.HIDDEN,
