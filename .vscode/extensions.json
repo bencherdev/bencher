@@ -1,18 +1,21 @@
 {
   "recommendations": [
-    "eamodio.gitlens",
     "vscodevim.vim",
+    "eamodio.gitlens",
     "rust-lang.rust-analyzer",
+    "serayuzgur.crates",
     "wcrichton.flowistry",
     "tamasfe.even-better-toml",
-    "serayuzgur.crates",
     "yzhang.markdown-all-in-one",
     "redhat.vscode-yaml",
-    "TabNine.tabnine-vscode",
     "esbenp.prettier-vscode",
+    "Syler.sass-indented",
     "osohq.oso",
-    "ms-azuretools.vscode-docker",
+    "TabNine.tabnine-vscode",
+    "streetsidesoftware.code-spell-checker",
+    "shardulm94.trailing-spaces",
     "mtxr.sqltools",
     "mtxr.sqltools-driver-sqlite",
+    "ms-azuretools.vscode-docker",
   ]
 }
