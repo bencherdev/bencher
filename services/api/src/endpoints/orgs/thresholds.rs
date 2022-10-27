@@ -39,7 +39,7 @@ use super::Resource;
 const THRESHOLD_RESOURCE: Resource = Resource::Threshold;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub project: ResourceId,
 }
 
@@ -50,7 +50,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -62,7 +62,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonThreshold>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetLs);
@@ -82,7 +82,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonThreshold>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -115,39 +115,38 @@ async fn get_ls_inner(
 }
 
 #[endpoint {
-    method = OPTIONS,
-    path =  "/v0/thresholds",
-    tags = ["thresholds"]
-}]
-pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
-#[endpoint {
     method = POST,
-    path = "/v0/thresholds",
-    tags = ["thresholds"]
+    path =  "/v0/projects/{project}/thresholds",
+    tags = ["projects", "thresholds"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_accepted!(endpoint, json)
 }
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     json_threshold: JsonNewThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, ApiError> {
     let api_context = &mut *context.lock().await;
+
     // Verify that the branch and testbed are part of the same project
     let SameProject {
         project_id,
@@ -155,9 +154,11 @@ async fn post_inner(
         testbed_id,
     } = SameProject::validate(
         &mut api_context.database,
+        &path_params.project,
         json_threshold.branch,
         json_threshold.testbed,
     )?;
+
     // Verify that the user is allowed
     QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
     let conn = &mut api_context.database;

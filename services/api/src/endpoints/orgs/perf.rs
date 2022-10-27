@@ -2,11 +2,13 @@ use std::{str::FromStr, sync::Arc};
 
 use bencher_json::{
     perf::{JsonPerfData, JsonPerfDatum, JsonPerfDatumKind, JsonPerfKind},
-    JsonPerf, JsonPerfQuery,
+    JsonPerf, JsonPerfQuery, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use schemars::JsonSchema;
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
@@ -16,9 +18,11 @@ use crate::{
     },
     error::api_error,
     model::{
+        branch::QueryBranch,
         perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
         project::QueryProject,
         report::to_date_time,
+        testbed::QueryTestbed,
         user::auth::AuthUser,
     },
     schema,
@@ -35,30 +39,44 @@ use super::Resource;
 
 const PERF_RESOURCE: Resource = Resource::Perf;
 
+#[derive(Deserialize, JsonSchema)]
+pub struct GetDirParams {
+    pub project: ResourceId,
+}
+
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/perf",
-    tags = ["perf"]
+    path =  "/v0/projects/{project}/perf",
+    tags = ["projects", "perf"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GetDirParams>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
 #[endpoint {
-    method = PUT,
-    path =  "/v0/perf",
-    tags = ["perf"]
+    method = POST,
+    path =  "/v0/projects/{project}/perf",
+    tags = ["projects", "perf"]
 }]
-pub async fn put(
+pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PERF_RESOURCE, Method::Put);
 
-    let json = post_inner(rqctx.context(), body.into_inner(), auth_user.as_ref())
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        auth_user.as_ref(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     if auth_user.is_some() {
         response_accepted!(endpoint, json)
@@ -69,9 +87,34 @@ pub async fn put(
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {
+    let api_context = &mut *context.lock().await;
+
+    // If there is an `AuthUser` then validate access
+    // Otherwise, check to see if the project is public
+    let project_id = if let Some(auth_user) = auth_user {
+        // Verify that the user is allowed
+        QueryProject::is_allowed_resource_id(
+            api_context,
+            &path_params.project,
+            auth_user,
+            Permission::View,
+        )?
+        .id
+    } else {
+        let project =
+            QueryProject::from_resource_id(&mut api_context.database, &path_params.project)?;
+        if project.public {
+            project.id
+        } else {
+            return Err(ApiError::PrivateProject(project.id));
+        }
+    };
+
+    let conn = &mut api_context.database;
     let JsonPerfQuery {
         branches,
         testbeds,
@@ -98,46 +141,22 @@ async fn post_inner(
         schema::perf::iteration,
     );
 
-    let api_context = &mut *context.lock().await;
     let mut data = Vec::new();
     for branch in &branches {
+        let branch_id = if let Ok(id) = QueryBranch::get_id(conn, branch) {
+            id
+        } else {
+            continue;
+        };
         for testbed in &testbeds {
+            let testbed_id = if let Ok(id) = QueryTestbed::get_id(conn, testbed) {
+                id
+            } else {
+                continue;
+            };
             for benchmark in &benchmarks {
                 // Verify that the branch and testbed are part of the same project
-                // If not then simply continue, this will allow for inter-project querying
-                let SameProject {
-                    project_id,
-                    branch_id,
-                    testbed_id,
-                } = if let Ok(same_project) =
-                    SameProject::validate(&mut api_context.database, branch, testbed)
-                {
-                    same_project
-                } else {
-                    continue;
-                };
-
-                // If there is an `AuthUser` then validate access
-                // Otherwise, check to see if the project is public
-                if let Some(auth_user) = auth_user {
-                    // Verify that the user is allowed
-                    QueryProject::is_allowed_id(
-                        api_context,
-                        project_id,
-                        auth_user,
-                        Permission::Create,
-                    )?;
-                } else {
-                    // Verify that the project is public
-                    let public: bool = schema::project::table
-                        .filter(schema::project::id.eq(project_id))
-                        .select(schema::project::public)
-                        .first(&mut api_context.database)
-                        .map_err(api_error!())?;
-                    if !public {
-                        return Err(ApiError::PrivateProject(project_id));
-                    }
-                }
+                SameProject::validate_ids(conn, project_id, branch_id, testbed_id)?;
 
                 let query = schema::perf::table
                     .left_join(
@@ -158,7 +177,6 @@ async fn post_inner(
                     .filter(schema::version::branch_id.eq(branch_id))
                     .filter(schema::report::testbed_id.eq(testbed_id));
 
-                let conn = &mut api_context.database;
                 let query_data: Vec<QueryPerfDatum> = match kind {
                     JsonPerfKind::Latency => query
                         .inner_join(

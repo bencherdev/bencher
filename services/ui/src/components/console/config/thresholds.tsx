@@ -11,21 +11,15 @@ const thresholdsConfig = {
       buttons: [
         {
           kind: Button.ADD,
-          path: (pathname) => {
-            return addPath(pathname);
-          },
+          path: addPath,
         },
         { kind: Button.REFRESH },
       ],
     },
     table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds`,
       add: {
-        path: (pathname) => {
-          return addPath(pathname);
-        },
+        path: addPath,
         text: "Add a Threshold",
       },
       row: {
@@ -33,9 +27,7 @@ const thresholdsConfig = {
         items: [{}, {}, {}, {}],
         button: {
           text: "View",
-          path: (pathname, datum) => {
-            return viewUuidPath(pathname, datum);
-          },
+          path: (pathname, datum) => viewUuidPath(pathname, datum),
         },
       },
     },
@@ -44,12 +36,10 @@ const thresholdsConfig = {
     operation: Operation.ADD,
     header: {
       title: "Add Threshold",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     form: {
-      url: (_) => `${BENCHER_API_URL}/v0/thresholds`,
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -90,23 +80,17 @@ const thresholdsConfig = {
           config: thresholdFieldsConfig.name,
         },
       ],
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
   },
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
       key: "uuid",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds/${path_params?.threshold_uuid}`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds/${path_params?.threshold_uuid}`,
       cards: [
         {
           kind: Card.FIELD,

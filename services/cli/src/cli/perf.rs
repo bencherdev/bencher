@@ -1,3 +1,4 @@
+use bencher_json::ResourceId;
 use chrono::{DateTime, Utc};
 use clap::{Parser, ValueEnum};
 use uuid::Uuid;
@@ -6,6 +7,10 @@ use super::CliBackend;
 
 #[derive(Parser, Debug)]
 pub struct CliPerf {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
     /// Branch UUIDs
     #[clap(long)]
     pub branches: Vec<Uuid>,

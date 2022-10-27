@@ -1,5 +1,6 @@
 {
   "workbench.colorTheme": "Default Dark+",
+  "window.zoomLevel": 1,
   "files.eol": "\n",
   "editor.wordWrap": "on",
   "editor.formatOnSave": true,

@@ -39,7 +39,7 @@ use super::Resource;
 const REPORT_RESOURCE: Resource = Resource::Report;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub project: ResourceId,
 }
 
@@ -50,7 +50,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -62,7 +62,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
@@ -82,7 +82,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonReport>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -116,18 +116,9 @@ async fn get_ls_inner(
 }
 
 #[endpoint {
-    method = OPTIONS,
-    path =  "/v0/reports",
-    tags = ["reports"]
-}]
-pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
-#[endpoint {
     method = POST,
-    path = "/v0/reports",
-    tags = ["reports"]
+    path =  "/v0/projects/{project}/reports",
+    tags = ["projects", "reports"]
 }]
 // For simplicity, his query makes the assumption that all posts are perfectly
 // chronological. That is, a report will never be posted for X after Y has
@@ -135,20 +126,27 @@ pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRe
 // bisect more complex logic will be required.
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_accepted!(endpoint, json)
 }
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     json_report: JsonNewReport,
     auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
@@ -160,7 +158,12 @@ async fn post_inner(
         project_id,
         branch_id,
         testbed_id,
-    } = SameProject::validate(conn, json_report.branch, json_report.testbed)?;
+    } = SameProject::validate(
+        conn,
+        &path_params.project,
+        json_report.branch,
+        json_report.testbed,
+    )?;
 
     // Verify that the user is allowed
     QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;

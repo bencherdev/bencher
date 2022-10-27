@@ -33,7 +33,7 @@ use super::Resource;
 const TESTBED_RESOURCE: Resource = Resource::Testbed;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub project: ResourceId,
 }
 
@@ -44,7 +44,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -56,7 +56,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonTestbed>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetLs);
@@ -76,7 +76,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonTestbed>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -99,40 +99,42 @@ async fn get_ls_inner(
 }
 
 #[endpoint {
-    method = OPTIONS,
-    path =  "/v0/testbeds",
-    tags = ["testbeds"]
-}]
-pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
-#[endpoint {
     method = POST,
-    path = "/v0/testbeds",
-    tags = ["testbeds"]
+    path =  "/v0/projects/{project}/testbeds",
+    tags = ["projects", "testbeds"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::Post);
 
-    let json = post_inner(rqctx.context(), body.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_accepted!(endpoint, json)
 }
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     json_testbed: JsonNewTestbed,
     auth_user: &AuthUser,
 ) -> Result<JsonTestbed, ApiError> {
     let api_context = &mut *context.lock().await;
-    let insert_testbed = InsertTestbed::from_json(&mut api_context.database, json_testbed)?;
+    let insert_testbed = InsertTestbed::from_json(
+        &mut api_context.database,
+        &path_params.project,
+        json_testbed,
+    )?;
     // Verify that the user is allowed
     QueryProject::is_allowed_id(
         api_context,

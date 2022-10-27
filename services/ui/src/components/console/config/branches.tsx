@@ -11,21 +11,15 @@ const branchesConfig = {
       buttons: [
         {
           kind: Button.ADD,
-          path: (pathname) => {
-            return addPath(pathname);
-          },
+          path: addPath,
         },
         { kind: Button.REFRESH },
       ],
     },
     table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/branches`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/branches`,
       add: {
-        path: (pathname) => {
-          return addPath(pathname);
-        },
+        path: addPath,
         text: "Add a Branch",
       },
       row: {
@@ -41,9 +35,7 @@ const branchesConfig = {
         ],
         button: {
           text: "View",
-          path: (pathname, datum) => {
-            return viewSlugPath(pathname, datum);
-          },
+          path: (pathname, datum) => viewSlugPath(pathname, datum),
         },
       },
     },
@@ -52,12 +44,10 @@ const branchesConfig = {
     operation: Operation.ADD,
     header: {
       title: "Add Branch",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     form: {
-      url: (_) => `${BENCHER_API_URL}/v0/branches`,
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/branches`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -76,23 +66,17 @@ const branchesConfig = {
           config: branchFieldsConfig.name,
         },
       ],
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath
     },
   },
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
       key: "name",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/branches/${path_params?.branch_slug}`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/branches/${path_params?.branch_slug}`,
       cards: [
         {
           kind: Card.FIELD,

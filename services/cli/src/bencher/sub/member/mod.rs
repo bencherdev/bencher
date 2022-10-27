@@ -8,9 +8,9 @@ use crate::{
 
 mod invite;
 mod list;
+mod remove;
 mod update;
 mod view;
-mod remove;
 
 #[derive(Debug)]
 pub enum Member {
@@ -18,7 +18,7 @@ pub enum Member {
     Invite(invite::Invite),
     View(view::View),
     Update(update::Update),
-    Remove(remove::Remove)
+    Remove(remove::Remove),
 }
 
 impl TryFrom<CliMember> for Member {

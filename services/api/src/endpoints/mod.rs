@@ -33,7 +33,7 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(server::restart::options)?;
     api.register(server::restart::post)?;
     api.register(server::config::options)?;
-    api.register(server::config::post)?;
+    api.register(server::config::put)?;
     api.register(server::config::get_one)?;
 
     // Auth
@@ -68,25 +68,22 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(projects::get_one_project)?;
     // Perf
     api.register(perf::options)?;
-    api.register(perf::put)?;
+    api.register(perf::post)?;
     // Reports
     api.register(reports::dir_options)?;
     api.register(reports::get_ls)?;
-    api.register(reports::post_options)?;
     api.register(reports::post)?;
     api.register(reports::one_options)?;
     api.register(reports::get_one)?;
     // Branches
     api.register(branches::dir_options)?;
     api.register(branches::get_ls)?;
-    api.register(branches::post_options)?;
     api.register(branches::post)?;
     api.register(branches::one_options)?;
     api.register(branches::get_one)?;
     // Testbeds
     api.register(testbeds::dir_options)?;
     api.register(testbeds::get_ls)?;
-    api.register(testbeds::post_options)?;
     api.register(testbeds::post)?;
     api.register(testbeds::one_options)?;
     api.register(testbeds::get_one)?;
@@ -98,7 +95,6 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Thresholds
     api.register(thresholds::dir_options)?;
     api.register(thresholds::get_ls)?;
-    api.register(thresholds::post_options)?;
     api.register(thresholds::post)?;
     api.register(thresholds::one_options)?;
     api.register(thresholds::get_one)?;

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonNewTestbed, JsonTestbed};
+use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -93,10 +93,10 @@ pub struct InsertTestbed {
 impl InsertTestbed {
     pub fn from_json(
         conn: &mut SqliteConnection,
+        project: &ResourceId,
         testbed: JsonNewTestbed,
     ) -> Result<Self, ApiError> {
         let JsonNewTestbed {
-            project,
             name,
             slug,
             os_name,

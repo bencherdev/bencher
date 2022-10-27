@@ -9,8 +9,6 @@ use crate::{
     CliError,
 };
 
-const TESTBEDS_PATH: &str = "/v0/testbeds";
-
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
@@ -62,7 +60,7 @@ impl TryFrom<CliTestbedCreate> for Create {
 impl From<Create> for JsonNewTestbed {
     fn from(create: Create) -> Self {
         let Create {
-            project,
+            project: _,
             name,
             slug,
             os_name,
@@ -75,7 +73,6 @@ impl From<Create> for JsonNewTestbed {
             backend: _,
         } = create;
         Self {
-            project,
             name,
             slug,
             os_name,
@@ -93,7 +90,9 @@ impl From<Create> for JsonNewTestbed {
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let testbed: JsonNewTestbed = self.clone().into();
-        self.backend.post(TESTBEDS_PATH, &testbed).await?;
+        self.backend
+            .post(&format!("/v0/projects/{}/testbeds", self.project), &testbed)
+            .await?;
         Ok(())
     }
 }

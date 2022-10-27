@@ -11,21 +11,15 @@ const testbedsConfig = {
       buttons: [
         {
           kind: Button.ADD,
-          path: (pathname) => {
-            return addPath(pathname);
-          },
+          path: addPath,
         },
         { kind: Button.REFRESH },
       ],
     },
     table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
       add: {
-        path: (pathname) => {
-          return addPath(pathname);
-        },
+        path: addPath,
         text: "Add a Testbed",
       },
       row: {
@@ -41,9 +35,7 @@ const testbedsConfig = {
         ],
         button: {
           text: "View",
-          path: (pathname, datum) => {
-            return viewSlugPath(pathname, datum);
-          },
+          path: (pathname, datum) => viewSlugPath(pathname, datum),
         },
       },
     },
@@ -52,12 +44,10 @@ const testbedsConfig = {
     operation: Operation.ADD,
     header: {
       title: "Add Testbed",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     form: {
-      url: (_) => `${BENCHER_API_URL}/v0/testbeds`,
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -153,23 +143,17 @@ const testbedsConfig = {
           config: testbedFieldsConfig.disk,
         },
       ],
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
   },
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
       key: "name",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`,
       cards: [
         {
           kind: Card.FIELD,

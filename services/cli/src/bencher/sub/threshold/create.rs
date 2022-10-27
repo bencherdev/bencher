@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{perf::JsonPerfKind, JsonNewThreshold};
+use bencher_json::{perf::JsonPerfKind, JsonNewThreshold, ResourceId};
 use uuid::Uuid;
 
 use super::statistic::Statistic;
@@ -11,10 +11,9 @@ use crate::{
     CliError,
 };
 
-const THRESHOLDS_PATH: &str = "/v0/thresholds";
-
 #[derive(Debug, Clone)]
 pub struct Create {
+    pub project: ResourceId,
     pub branch: Uuid,
     pub testbed: Uuid,
     pub kind: JsonPerfKind,
@@ -27,6 +26,7 @@ impl TryFrom<CliThresholdCreate> for Create {
 
     fn try_from(create: CliThresholdCreate) -> Result<Self, Self::Error> {
         let CliThresholdCreate {
+            project,
             branch,
             testbed,
             kind,
@@ -34,6 +34,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             backend,
         } = create;
         Ok(Self {
+            project,
             branch,
             testbed,
             kind: kind.into(),
@@ -46,6 +47,7 @@ impl TryFrom<CliThresholdCreate> for Create {
 impl From<Create> for JsonNewThreshold {
     fn from(create: Create) -> Self {
         let Create {
+            project: _,
             branch,
             testbed,
             kind,
@@ -65,7 +67,12 @@ impl From<Create> for JsonNewThreshold {
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let threshold: JsonNewThreshold = self.clone().into();
-        self.backend.post(THRESHOLDS_PATH, &threshold).await?;
+        self.backend
+            .post(
+                &format!("/v0/projects/{}/thresholds", self.project),
+                &threshold,
+            )
+            .await?;
         Ok(())
     }
 }

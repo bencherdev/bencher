@@ -50,7 +50,7 @@ impl From<Update> for JsonUpdateConfig {
 impl SubCmd for Update {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let update_config: JsonUpdateConfig = self.clone().into();
-        self.backend.post(CONFIG_PATH, &update_config).await?;
+        self.backend.put(CONFIG_PATH, &update_config).await?;
         Ok(())
     }
 }

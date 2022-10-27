@@ -3,12 +3,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ResourceId;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewBranch {
-    pub project: ResourceId,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slug: Option<String>,

@@ -28,6 +28,10 @@ pub struct CliThresholdList {
 
 #[derive(Parser, Debug)]
 pub struct CliThresholdCreate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
     /// Branch UUID
     #[clap(long)]
     pub branch: Uuid,

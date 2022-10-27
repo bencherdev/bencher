@@ -4,6 +4,10 @@ use thiserror::Error;
 pub enum CliError {
     #[error("Failed to find Bencher user API token. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
     TokenNotFound,
+    #[error("Invalid resource ID. Must be a valid slug or UUID: {0}")]
+    ResourceId(String),
+    #[error("Failed to find Bencher project. Set the `--project` flag or the `BENCHER_PROJECT` environment variable.")]
+    ProjectNotFound,
     #[error("Failed to find Bencher project branch. Set the `--branch` flag or the `BENCHER_BRANCH` environment variable.")]
     BranchNotFound,
     #[error("Failed to find Bencher project testbed. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable.")]

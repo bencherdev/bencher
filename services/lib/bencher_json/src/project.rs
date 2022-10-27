@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewProject {

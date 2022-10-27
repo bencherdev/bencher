@@ -9,13 +9,9 @@ const reportsConfig = {
       buttons: [{ kind: Button.REFRESH }],
     },
     table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/reports`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/reports`,
       add: {
-        path: (_pathname) => {
-          return "/docs/how-to/run-a-report";
-        },
+        path: (_pathname) => "/docs/how-to/run-a-report",
         text: "Run a Report",
       },
       row: {
@@ -23,9 +19,7 @@ const reportsConfig = {
         items: [{}, {}, {}, {}],
         button: {
           text: "View",
-          path: (pathname, datum) => {
-            return viewUuidPath(pathname, datum);
-          },
+          path: viewUuidPath,
         },
       },
     },
@@ -34,14 +28,10 @@ const reportsConfig = {
     operation: Operation.VIEW,
     header: {
       key: "name",
-      path: (pathname) => {
-        return parentPath(pathname);
-      },
+      path: parentPath,
     },
     deck: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/reports/${path_params?.report_uuid}`;
-      },
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/reports/${path_params?.report_uuid}`,
       cards: [
         {
           kind: Card.FIELD,

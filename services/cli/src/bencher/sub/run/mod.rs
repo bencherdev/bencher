@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{report::new::JsonBenchmarks, JsonNewReport, JsonReport};
+use bencher_json::{report::new::JsonBenchmarks, JsonNewReport, JsonReport, ResourceId};
 use chrono::Utc;
 use git2::Oid;
 use uuid::Uuid;
@@ -20,12 +20,13 @@ use perf::Perf;
 
 use super::SubCmd;
 
-const REPORTS_PATH: &str = "/v0/reports";
+const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 
 #[derive(Debug)]
 pub struct Run {
+    project: ResourceId,
     locality: Locality,
     perf: Perf,
     branch: Uuid,
@@ -42,6 +43,7 @@ impl TryFrom<CliRun> for Run {
 
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         let CliRun {
+            project,
             locality,
             command,
             branch,
@@ -53,6 +55,7 @@ impl TryFrom<CliRun> for Run {
             err,
         } = run;
         Ok(Self {
+            project: unwrap_project(project)?,
             locality: locality.try_into()?,
             perf: command.try_into()?,
             branch: unwrap_branch(branch)?,
@@ -64,6 +67,16 @@ impl TryFrom<CliRun> for Run {
             err,
         })
     }
+}
+
+fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
+    Ok(if let Some(project) = project {
+        project
+    } else if let Ok(project) = std::env::var(BENCHER_PROJECT) {
+        ResourceId::from_str(&project).map_err(CliError::ResourceId)?
+    } else {
+        return Err(CliError::ProjectNotFound);
+    })
 }
 
 fn unwrap_branch(branch: Option<Uuid>) -> Result<Uuid, CliError> {
@@ -128,7 +141,9 @@ impl SubCmd for Run {
         match &self.locality {
             Locality::Local => println!("{}", serde_json::to_string_pretty(&report)?),
             Locality::Backend(backend) => {
-                let value = backend.post(REPORTS_PATH, &report).await?;
+                let value = backend
+                    .post(&format!("/v0/projects/{}/reports", self.project), &report)
+                    .await?;
                 if self.err {
                     let json_report: JsonReport = serde_json::from_value(value)?;
                     if !json_report.alerts.is_empty() {

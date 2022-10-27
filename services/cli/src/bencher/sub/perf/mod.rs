@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{perf::JsonPerfKind, JsonPerfQuery};
+use bencher_json::{perf::JsonPerfKind, JsonPerfQuery, ResourceId};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -13,10 +13,9 @@ use crate::{
 
 use super::SubCmd;
 
-const PERF_PATH: &str = "/v0/perf";
-
 #[derive(Debug, Clone)]
 pub struct Perf {
+    project: ResourceId,
     branches: Vec<Uuid>,
     testbeds: Vec<Uuid>,
     benchmarks: Vec<Uuid>,
@@ -31,6 +30,7 @@ impl TryFrom<CliPerf> for Perf {
 
     fn try_from(perf: CliPerf) -> Result<Self, Self::Error> {
         let CliPerf {
+            project,
             branches,
             testbeds,
             benchmarks,
@@ -40,6 +40,7 @@ impl TryFrom<CliPerf> for Perf {
             backend,
         } = perf;
         Ok(Self {
+            project,
             branches,
             testbeds,
             benchmarks,
@@ -66,6 +67,7 @@ impl From<CliPerfKind> for JsonPerfKind {
 impl From<Perf> for JsonPerfQuery {
     fn from(perf: Perf) -> Self {
         let Perf {
+            project: _,
             branches,
             testbeds,
             benchmarks,
@@ -89,7 +91,9 @@ impl From<Perf> for JsonPerfQuery {
 impl SubCmd for Perf {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
-        self.backend.put(PERF_PATH, &perf).await?;
+        self.backend
+            .put(&format!("/v0/projects/{}/branches", self.project), &perf)
+            .await?;
         Ok(())
     }
 }

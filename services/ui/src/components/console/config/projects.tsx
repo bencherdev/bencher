@@ -155,7 +155,7 @@ const projectsConfig = {
       title: "Benchmark Perf",
     },
     plot: {
-      url: () => `${BENCHER_API_URL}/v0/perf`,
+      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/perf`,
       tab_url: (path_params, tab: PerfTab) =>
         `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`,
       key_url: (path_params, tab: PerfTab, uuid: string) =>

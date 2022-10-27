@@ -1,3 +1,4 @@
+use bencher_json::ResourceId;
 use clap::{Args, Parser, ValueEnum};
 use uuid::Uuid;
 
@@ -5,8 +6,9 @@ use super::CliLocality;
 
 #[derive(Parser, Debug)]
 pub struct CliRun {
-    #[clap(flatten)]
-    pub locality: CliLocality,
+    /// Project slug or UUID (or set BENCHER_PROJECT)
+    #[clap(long)]
+    pub project: Option<ResourceId>,
 
     /// Branch UUID (or set BENCHER_BRANCH)
     #[clap(long)]
@@ -38,6 +40,9 @@ pub struct CliRun {
 
     #[clap(flatten)]
     pub command: CliRunCommand,
+
+    #[clap(flatten)]
+    pub locality: CliLocality,
 }
 
 #[derive(Args, Debug)]

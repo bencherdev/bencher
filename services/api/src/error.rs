@@ -92,10 +92,15 @@ pub enum ApiError {
         permission: bencher_rbac::project::Permission,
         project: Project,
     },
-    #[error("The branch ({branch_id}) project ID ({branch_project_id}) and testbed ({testbed_id}) project ID ({testbed_project_id}) do not match.")]
-    BranchTestbedProject {
+    #[error("The branch ({branch_id}) project ID ({branch_project_id}) do not match the project ID ({project_id}).")]
+    BranchProject {
+        project_id: i32,
         branch_id: i32,
         branch_project_id: i32,
+    },
+    #[error("The testbed ({testbed_id}) project ID ({testbed_project_id}) do not match the project ID ({project_id}).")]
+    TestbedProject {
+        project_id: i32,
         testbed_id: i32,
         testbed_project_id: i32,
     },
