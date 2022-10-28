@@ -26,7 +26,7 @@ vscode:
 # Commands to start on workspace startup
 tasks:
   - name: Extensions Setup
-    init: npm install sqlite3@4.2.0
+    init: cd ~/.local/share/vscode-sqltools && npm install sqlite3
   - name: Rust Setup
     before: cargo check
     init: rustup toolchain install nightly && rustup component add rustfmt
