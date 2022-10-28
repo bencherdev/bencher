@@ -1,4 +1,4 @@
-use bencher_json::jwt::{DecodingKey, EncodingKey};
+use bencher_json::system::jwt::{DecodingKey, EncodingKey};
 
 pub struct SecretKey {
     pub encoding: EncodingKey,

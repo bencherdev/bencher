@@ -4,37 +4,20 @@ use async_trait::async_trait;
 
 use crate::{bencher::wide::Wide, cli::CliSub, CliError};
 
-mod alert;
-mod auth;
-mod benchmark;
-mod branch;
-mod member;
 mod organization;
-mod perf;
 mod project;
-mod report;
-mod run;
-mod server;
-mod subcmd;
-mod testbed;
-mod threshold;
-mod token;
+mod sub_cmd;
+mod system;
+mod user;
 
-use alert::Alert;
-use auth::Auth;
-use benchmark::Benchmark;
-use branch::Branch;
-use member::Member;
-use organization::Organization;
-use perf::Perf;
-use project::Project;
-use report::Report;
-use run::Run;
-use server::Server;
-pub use subcmd::SubCmd;
-use testbed::Testbed;
-use threshold::Threshold;
-use token::Token;
+use organization::{member::Member, organization::Organization};
+use project::{
+    alert::Alert, benchmark::Benchmark, branch::Branch, perf::Perf, project::Project,
+    report::Report, run::Run, testbed::Testbed, threshold::Threshold,
+};
+pub use sub_cmd::SubCmd;
+use system::{auth::Auth, server::Server};
+use user::token::Token;
 
 #[derive(Debug)]
 pub enum Sub {

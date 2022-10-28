@@ -25,8 +25,8 @@ vscode:
 
 # Commands to start on workspace startup
 tasks:
-  - name: Extensions Setup
-    command: ./scripts/extensions.sh
+  - name: General Setup
+    command: ./scripts/setup.sh
   - name: Rust Setup
     before: cargo check
     init: rustup toolchain install nightly && rustup component add rustfmt

@@ -2,40 +2,37 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub mod alert;
-pub mod auth;
-pub mod benchmark;
-pub mod branch;
-pub mod config;
-pub mod jwt;
-pub mod member;
 pub mod organization;
-pub mod perf;
 pub mod project;
-pub mod report;
 pub mod resource_id;
-pub mod restart;
-pub mod testbed;
-pub mod threshold;
-pub mod token;
+pub mod system;
 pub mod user;
 
-pub use alert::JsonAlert;
-pub use auth::{JsonAuthToken, JsonLogin, JsonSignup};
-pub use benchmark::JsonBenchmark;
-pub use branch::{JsonBranch, JsonNewBranch};
-pub use config::JsonConfig;
-pub use member::JsonMember;
-pub use organization::{JsonNewOrganization, JsonOrganization};
-pub use perf::{JsonPerf, JsonPerfQuery};
-pub use project::{JsonNewProject, JsonProject};
-pub use report::{JsonNewReport, JsonReport};
+pub use organization::{
+    member::JsonMember,
+    organization::{JsonNewOrganization, JsonOrganization},
+};
+pub use project::{
+    alert::JsonAlert,
+    benchmark::JsonBenchmark,
+    branch::{JsonBranch, JsonNewBranch},
+    perf::{JsonPerf, JsonPerfQuery},
+    project::{JsonNewProject, JsonProject},
+    report::{JsonNewReport, JsonReport},
+    testbed::{JsonNewTestbed, JsonTestbed},
+    threshold::{JsonNewThreshold, JsonThreshold},
+};
 pub use resource_id::ResourceId;
-pub use restart::JsonRestart;
-pub use testbed::{JsonNewTestbed, JsonTestbed};
-pub use threshold::{JsonNewThreshold, JsonThreshold};
-pub use token::{JsonNewToken, JsonToken};
-pub use user::JsonUser;
+pub use system::{
+    auth::{JsonAuthToken, JsonLogin, JsonSignup},
+    config::JsonConfig,
+    jwt::JsonWebToken,
+    restart::JsonRestart,
+};
+pub use user::{
+    token::{JsonNewToken, JsonToken},
+    user::JsonUser,
+};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

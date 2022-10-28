@@ -1,34 +1,18 @@
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
-pub mod alert;
-pub mod auth;
-pub mod benchmark;
-pub mod branch;
-pub mod member;
 pub mod organization;
-pub mod perf;
 pub mod project;
-pub mod report;
-pub mod run;
-pub mod server;
-pub mod testbed;
-pub mod threshold;
-pub mod token;
+pub mod system;
+pub mod user;
 
-use alert::CliAlert;
-use auth::CliAuth;
-use benchmark::CliBenchmark;
-use branch::CliBranch;
-use member::CliMember;
-use organization::CliOrganization;
-use perf::CliPerf;
-use project::CliProject;
-use report::CliReport;
-use run::CliRun;
-use server::CliServer;
-use testbed::CliTestbed;
-use threshold::CliThreshold;
-use token::CliToken;
+use organization::{member::CliMember, organization::CliOrganization};
+use project::{
+    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, perf::CliPerf,
+    project::CliProject, report::CliReport, run::CliRun, testbed::CliTestbed,
+    threshold::CliThreshold,
+};
+use system::{auth::CliAuth, server::CliServer};
+use user::token::CliToken;
 
 /// Time Series Benchmarking
 #[derive(Parser, Debug)]

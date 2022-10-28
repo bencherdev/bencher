@@ -3,7 +3,7 @@ use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
 };
 
-use bencher_json::jwt::JsonWebToken;
+use bencher_json::system::jwt::JsonWebToken;
 use diesel::{JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};

@@ -4,7 +4,7 @@ use std::{
 };
 
 use bencher_json::{
-    config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
+    system::config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
     JsonConfig,
 };
 use tracing::{error, info};

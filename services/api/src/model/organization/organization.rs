@@ -1,0 +1,150 @@
+use std::str::FromStr;
+use std::string::ToString;
+
+use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
+use bencher_rbac::Organization;
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use uuid::Uuid;
+
+use crate::{
+    error::api_error,
+    model::user::{auth::AuthUser, InsertUser},
+    schema::{self, organization as organization_table},
+    util::{resource_id::fn_resource_id, slug::unwrap_slug, ApiContext},
+    ApiError,
+};
+
+#[derive(Insertable)]
+#[diesel(table_name = organization_table)]
+pub struct InsertOrganization {
+    pub uuid: String,
+    pub name: String,
+    pub slug: String,
+}
+
+impl InsertOrganization {
+    pub fn from_json(conn: &mut SqliteConnection, organization: JsonNewOrganization) -> Self {
+        let JsonNewOrganization { name, slug } = organization;
+        let slug = unwrap_slug!(conn, &name, slug, organization, QueryOrganization);
+        Self {
+            uuid: Uuid::new_v4().to_string(),
+            name,
+            slug,
+        }
+    }
+
+    pub fn from_user(insert_user: &InsertUser) -> Self {
+        Self {
+            uuid: Uuid::new_v4().to_string(),
+            name: insert_user.name.clone(),
+            slug: insert_user.slug.clone(),
+        }
+    }
+}
+
+fn_resource_id!(organization);
+
+#[derive(Debug, Clone, Queryable)]
+pub struct QueryOrganization {
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub slug: String,
+}
+
+impl QueryOrganization {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(uuid.to_string()))
+            .select(schema::organization::id)
+            .first(conn)
+            .map_err(api_error!())
+    }
+
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+        let uuid: String = schema::organization::table
+            .filter(schema::organization::id.eq(id))
+            .select(schema::organization::uuid)
+            .first(conn)
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn from_resource_id(
+        conn: &mut SqliteConnection,
+        organization: &ResourceId,
+    ) -> Result<Self, ApiError> {
+        schema::organization::table
+            .filter(resource_id(organization)?)
+            .first::<QueryOrganization>(conn)
+            .map_err(api_error!())
+    }
+
+    pub fn is_allowed_resource_id(
+        api_context: &mut ApiContext,
+        organization: &ResourceId,
+        auth_user: &AuthUser,
+        permission: bencher_rbac::organization::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_organization =
+            QueryOrganization::from_resource_id(&mut api_context.database, organization)?;
+
+        api_context
+            .rbac
+            .is_allowed_organization(auth_user, permission, &query_organization)?;
+
+        Ok(query_organization)
+    }
+
+    pub fn is_allowed_id(
+        api_context: &mut ApiContext,
+        organization_id: i32,
+        auth_user: &AuthUser,
+        permission: bencher_rbac::organization::Permission,
+    ) -> Result<Self, ApiError> {
+        let query_organization = schema::organization::table
+            .filter(schema::organization::id.eq(organization_id))
+            .first(&mut api_context.database)
+            .map_err(api_error!())?;
+
+        api_context
+            .rbac
+            .is_allowed_organization(auth_user, permission, &query_organization)?;
+
+        Ok(query_organization)
+    }
+
+    pub fn into_json(self) -> Result<JsonOrganization, ApiError> {
+        let Self {
+            id: _,
+            uuid,
+            name,
+            slug,
+        } = self;
+        Ok(JsonOrganization {
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            name,
+            slug,
+        })
+    }
+
+    pub fn into_rbac(
+        conn: &mut SqliteConnection,
+        uuid: impl ToString,
+    ) -> Result<Organization, ApiError> {
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(uuid.to_string()))
+            .select(schema::organization::id)
+            .first::<i32>(conn)
+            .map(|id| Organization { id: id.to_string() })
+            .map_err(api_error!())
+    }
+}
+
+impl From<&QueryOrganization> for Organization {
+    fn from(organization: &QueryOrganization) -> Self {
+        Organization {
+            id: organization.id.to_string(),
+        }
+    }
+}

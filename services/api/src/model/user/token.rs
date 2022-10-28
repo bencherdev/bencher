@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{jwt::JsonWebToken, JsonNewToken, JsonToken, ResourceId};
+use bencher_json::{system::jwt::JsonWebToken, JsonNewToken, JsonToken, ResourceId};
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;

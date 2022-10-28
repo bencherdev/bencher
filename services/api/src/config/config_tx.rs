@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use bencher_json::{
-    config::{
+    system::config::{
         IfExists, JsonDatabase, JsonLogging, JsonServer, JsonSmtp, JsonTls, LogLevel, ServerLog,
     },
     JsonConfig,

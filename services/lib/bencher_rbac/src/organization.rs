@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use bencher_json::member::{LEADER_ROLE, MEMBER_ROLE};
+use bencher_json::organization::member::{LEADER_ROLE, MEMBER_ROLE};
 use oso::{PolarClass, PolarValue, ToPolar};
 
 use crate::{
