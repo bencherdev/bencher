@@ -25,12 +25,15 @@ vscode:
 
 # Commands to start on workspace startup
 tasks:
+  - name: Extensions Setup
+    init: npm install sqlite3@4.2.0
   - name: Rust Setup
-    before: rustup component add rustfmt && cargo check
+    before: cargo check
+    init: rustup toolchain install nightly && rustup component add rustfmt
     command: cd services/api && cargo run
   - name: JavaScript Setup
-    before: cd services/ui && npm install --include=dev && cd ../..
-    command: cd services/ui && npm x vite
+    before: cd services/ui && npm install --include=dev
+    command: npm x vite
 
 # Ports to expose on workspace startup
 ports:
