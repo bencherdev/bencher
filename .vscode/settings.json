@@ -4,6 +4,23 @@
   "files.eol": "\n",
   "editor.wordWrap": "on",
   "editor.formatOnSave": true,
+  "remote.SSH.defaultForwardedPorts": [
+    {
+        "name": "Bencher API",
+        "localPort": 61016,
+        "remotePort": 61016
+    },
+    {
+      "name": "Bencher UI",
+      "localPort": 3000,
+      "remotePort": 3000
+    },
+    {
+      "name": "Vite HMR",
+      "localPort": 3001,
+      "remotePort": 3001
+    },
+  ],
   "rust-analyzer.cargo.allFeatures": false,
   "rust-analyzer.cargo.features": [],
   "rust-analyzer.imports.granularity.group": "crate",

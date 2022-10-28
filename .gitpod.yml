@@ -36,13 +36,13 @@ tasks:
     command: npm x vite
 
 # Ports to expose on workspace startup
-ports:
-  - name: Bencher API
-    port: 61016
-    onOpen: open-browser
-  - name: Bencher UI
-    port: 3000
-    onOpen: open-browser
-  - name: Vite HMR
-    port: 3001
-    onOpen: open-browser
+# ports:
+#   - name: Bencher API
+#     port: 61016
+#     onOpen: open-browser
+#   - name: Bencher UI
+#     port: 3000
+#     onOpen: open-browser
+#   - name: Vite HMR
+#     port: 3001
+#     onOpen: open-browser
