@@ -29,7 +29,7 @@ use super::Resource;
 const ALERT_RESOURCE: Resource = Resource::Alert;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub project: ResourceId,
 }
 
@@ -40,7 +40,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -52,7 +52,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
@@ -72,7 +72,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonAlert>, ApiError> {
     let api_context = &mut *context.lock().await;

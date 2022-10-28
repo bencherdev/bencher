@@ -20,5 +20,3 @@ ports:
     onOpen: open-browser
   - name: Vite HMR
     port: 3001
-
-

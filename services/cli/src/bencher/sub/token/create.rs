@@ -9,8 +9,6 @@ use crate::{
     CliError,
 };
 
-const BRANCHES_PATH: &str = "/v0/tokens";
-
 #[derive(Debug, Clone)]
 pub struct Create {
     pub user: ResourceId,
@@ -41,12 +39,12 @@ impl TryFrom<CliTokenCreate> for Create {
 impl From<Create> for JsonNewToken {
     fn from(create: Create) -> Self {
         let Create {
-            user,
+            user: _,
             ttl,
             name,
             backend: _,
         } = create;
-        Self { user, ttl, name }
+        Self { ttl, name }
     }
 }
 
@@ -54,7 +52,9 @@ impl From<Create> for JsonNewToken {
 impl SubCmd for Create {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
         let token: JsonNewToken = self.clone().into();
-        self.backend.post(BRANCHES_PATH, &token).await?;
+        self.backend
+            .post(&format!("/v0/users/{}/tokens", self.user), &token)
+            .await?;
         Ok(())
     }
 }

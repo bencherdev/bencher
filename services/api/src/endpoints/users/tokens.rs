@@ -34,7 +34,7 @@ use super::Resource;
 const TOKEN_RESOURCE: Resource = Resource::Token;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetLsParams {
+pub struct GetDirParams {
     pub user: ResourceId,
 }
 
@@ -45,7 +45,7 @@ pub struct GetLsParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetLsParams>,
+    _path_params: Path<GetDirParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -57,7 +57,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetLsParams>,
+    path_params: Path<GetDirParams>,
 ) -> Result<ResponseOk<Vec<JsonToken>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
@@ -73,7 +73,7 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &Context,
-    path_params: GetLsParams,
+    path_params: GetDirParams,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonToken>, ApiError> {
@@ -94,21 +94,13 @@ async fn get_ls_inner(
 }
 
 #[endpoint {
-    method = OPTIONS,
-    path =  "/v0/tokens",
-    tags = ["tokens"]
-}]
-pub async fn post_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
-#[endpoint {
     method = POST,
-    path = "/v0/tokens",
-    tags = ["tokens"]
+    path =  "/v0/users/{user}/tokens",
+    tags = ["users", "tokens"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
+    path_params: Path<GetDirParams>,
     body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -116,7 +108,7 @@ pub async fn post(
 
     let context = rqctx.context();
     let json_token = body.into_inner();
-    let json = post_inner(context, json_token, &auth_user)
+    let json = post_inner(context, path_params.into_inner(), json_token, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -125,11 +117,13 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
+    path_params: GetDirParams,
     json_token: JsonNewToken,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
     let api_context = &mut *context.lock().await;
-    let insert_token = InsertToken::from_json(api_context, json_token, auth_user)?;
+    let insert_token =
+        InsertToken::from_json(api_context, &path_params.user, json_token, auth_user)?;
     let conn = &mut api_context.database;
 
     diesel::insert_into(schema::token::table)

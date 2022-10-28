@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{jwt::JsonWebToken, JsonNewToken, JsonToken};
+use bencher_json::{jwt::JsonWebToken, JsonNewToken, JsonToken, ResourceId};
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
@@ -93,10 +93,11 @@ pub struct InsertToken {
 impl InsertToken {
     pub fn from_json(
         api_context: &mut ApiContext,
+        user: &ResourceId,
         token: JsonNewToken,
         auth_user: &AuthUser,
     ) -> Result<Self, ApiError> {
-        let JsonNewToken { user, name, ttl } = token;
+        let JsonNewToken { name, ttl } = token;
 
         let query_user = QueryUser::from_resource_id(&mut api_context.database, &user)?;
         same_user!(auth_user, api_context.rbac, query_user.id);
