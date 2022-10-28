@@ -1,7 +1,7 @@
 // Place your key bindings in this file to override the defaults
 [
     {
-        "key": "cmd+;",
+        "key": "capslock capslock",
         "command": "gitpod.openInStable"
     }
 ]
