@@ -3,7 +3,7 @@
 use std::{env, process::Command};
 
 use assert_cmd::prelude::*;
-use bencher_json::{JsonBranch, JsonOrganization, JsonTestbed};
+use bencher_json::{JsonBranch, JsonOrganization, JsonProject, JsonTestbed};
 
 const BENCHER_CMD: &str = "bencher";
 
@@ -19,6 +19,7 @@ const TESTBED_ARG: &str = "--testbed";
 const TESTBED_SLUG: &str = "base";
 
 const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
+const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 
@@ -124,6 +125,12 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_SLUG,
     ]);
     cmd.assert().success();
+
+    // export BENCHER_PROJECT=[PROJECT_UUID]
+    let project = cmd.output().unwrap().stdout;
+    let project: JsonProject = serde_json::from_slice(&project).unwrap();
+    let project = project.uuid.to_string();
+    env::set_var(BENCHER_PROJECT, project.clone());
 
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -275,6 +282,8 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "create",
         HOST_ARG,
         LOCALHOST,
+        PROJECT_ARG,
+        &project,
         BRANCH_ARG,
         &branch,
         TESTBED_ARG,
