@@ -3609,97 +3609,6 @@
         }
       }
     },
-    "/v0/tokens": {
-      "post": {
-        "tags": [
-          "tokens"
-        ],
-        "operationId": "post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonNewToken"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonToken"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "tokens"
-        ],
-        "operationId": "post_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/users/{user}/tokens": {
       "get": {
         "tags": [
@@ -3759,6 +3668,82 @@
                   "items": {
                     "$ref": "#/components/schemas/JsonToken"
                   }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "operationId": "post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonToken"
                 }
               }
             }
@@ -4523,15 +4508,11 @@
             "type": "integer",
             "format": "uint64",
             "minimum": 0
-          },
-          "user": {
-            "$ref": "#/components/schemas/ResourceId"
           }
         },
         "required": [
           "name",
-          "ttl",
-          "user"
+          "ttl"
         ]
       },
       "JsonOrganization": {
@@ -5199,9 +5180,6 @@
           "critical"
         ]
       },
-      "ResourceId": {
-        "type": "string"
-      },
       "ServerLog": {
         "oneOf": [
           {
@@ -5253,6 +5231,9 @@
             "additionalProperties": false
           }
         ]
+      },
+      "ResourceId": {
+        "type": "string"
       },
       "JsonOrganizationPermission": {
         "type": "string",
