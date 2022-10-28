@@ -1,13 +1,35 @@
 # https://www.gitpod.io/docs/references/gitpod-yml
 
+# .vscode/extension.json
+vscode:
+  extensions:
+    [
+      "vscodevim.vim",
+      "eamodio.gitlens",
+      "rust-lang.rust-analyzer",
+      "serayuzgur.crates",
+      "wcrichton.flowistry",
+      "tamasfe.even-better-toml",
+      "yzhang.markdown-all-in-one",
+      "redhat.vscode-yaml",
+      "esbenp.prettier-vscode",
+      "Syler.sass-indented",
+      "osohq.oso",
+      "TabNine.tabnine-vscode",
+      "streetsidesoftware.code-spell-checker",
+      "shardulm94.trailing-spaces",
+      "mtxr.sqltools",
+      "mtxr.sqltools-driver-sqlite",
+      "ms-azuretools.vscode-docker",
+    ]
+
 # Commands to start on workspace startup
 tasks:
   - name: Rust Setup
-    before: rustup component add rustfmt
-    init: cargo check
+    before: rustup component add rustfmt && cargo check
     command: cd services/api && cargo run
   - name: JavaScript Setup
-    init: cd services/ui && npm install --include=dev && cd ../..
+    before: cd services/ui && npm install --include=dev && cd ../..
     command: cd services/ui && npm x vite
 
 # Ports to expose on workspace startup
