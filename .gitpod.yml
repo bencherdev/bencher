@@ -39,10 +39,10 @@ tasks:
 ports:
   - name: Bencher API
     port: 61016
-    onOpen: ignore
+    onOpen: open-browser
   - name: Bencher UI
     port: 3000
-    onOpen: ignore
+    onOpen: open-browser
   - name: Vite HMR
     port: 3001
-    onOpen: ignore
+    onOpen: open-browser
