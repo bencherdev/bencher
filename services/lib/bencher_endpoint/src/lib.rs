@@ -12,6 +12,19 @@ pub trait ToEndpoint {
     }
 }
 
+impl<T> ToEndpoint for Option<T>
+where
+    T: ToEndpoint,
+{
+    fn to_endpoint(&self) -> String {
+        if let Some(t) = self {
+            Self::resource("/", t)
+        } else {
+            String::default()
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct PathParam<Resource>(String, Option<Resource>);
 
@@ -24,16 +37,12 @@ where
     }
 }
 
-impl<T> ToEndpoint for Option<T>
-where
-    T: ToEndpoint,
-{
+#[derive(Clone, Copy)]
+pub struct Resource;
+
+impl ToEndpoint for Resource {
     fn to_endpoint(&self) -> String {
-        if let Some(t) = self {
-            Self::resource("/", t)
-        } else {
-            String::default()
-        }
+        String::default()
     }
 }
 
@@ -64,9 +73,7 @@ pub enum Zero {
 impl ToEndpoint for Zero {
     fn to_endpoint(&self) -> String {
         match self {
-            Self::Organizations(resource) => {
-                format!("organizations{}", resource.to_endpoint())
-            },
+            Self::Organizations(resource) => Self::resource("organizations", resource),
         }
     }
 }
@@ -75,49 +82,17 @@ pub type Organizations = PathParam<Organization>;
 
 #[derive(Clone)]
 pub enum Organization {
-    Members(Option<Members>),
+    Members(Option<PathParam<Resource>>),
     Allowed(Option<JsonOrganizationPermission>),
-    Projects(Option<Projects>),
+    Projects(Option<PathParam<Resource>>),
 }
 
 impl ToEndpoint for Organization {
     fn to_endpoint(&self) -> String {
         match self {
-            Self::Members(resource) => {
-                format!("members{}", resource.to_endpoint())
-            },
-            Self::Allowed(resource) => {
-                format!("allowed{}", resource.to_endpoint())
-            },
-            Self::Projects(resource) => {
-                format!("projects{}", resource.to_endpoint())
-            },
-        }
-    }
-}
-
-pub type Members = PathParam<Member>;
-
-#[derive(Clone)]
-pub enum Member {}
-
-impl ToEndpoint for Member {
-    fn to_endpoint(&self) -> String {
-        match self {
-            _ => String::default(),
-        }
-    }
-}
-
-pub type Projects = PathParam<Project>;
-
-#[derive(Clone)]
-pub enum Project {}
-
-impl ToEndpoint for Project {
-    fn to_endpoint(&self) -> String {
-        match self {
-            _ => String::default(),
+            Self::Members(resource) => Self::resource("members", resource),
+            Self::Allowed(resource) => Self::resource("allowed", resource),
+            Self::Projects(resource) => Self::resource("projects", resource),
         }
     }
 }
@@ -136,5 +111,47 @@ mod test {
     #[test]
     fn test_endpoint() {
         assert_eq!("/v0", Endpoint::Zero(None).to_string());
+        assert_eq!(
+            "/v0/organizations",
+            Endpoint::Zero(Some(Zero::Organizations(None))).to_string()
+        );
+        assert_eq!(
+            "/v0/organizations/muriel-bagge",
+            Endpoint::Zero(Some(Zero::Organizations(Some(PathParam(
+                "muriel-bagge".into(),
+                None
+            )))))
+            .to_string()
+        );
+        assert_eq!(
+            "/v0/organizations/muriel-bagge/projects",
+            Endpoint::Zero(Some(Zero::Organizations(Some(PathParam(
+                "muriel-bagge".into(),
+                Some(Organization::Projects(None))
+            )))))
+            .to_string()
+        );
+        assert_eq!(
+            "/v0/organizations/muriel-bagge/projects/the-computer",
+            Endpoint::Zero(Some(Zero::Organizations(Some(PathParam(
+                "muriel-bagge".into(),
+                Some(Organization::Projects(Some(PathParam(
+                    "the-computer".into(),
+                    None
+                ))))
+            )))))
+            .to_string()
+        );
+        assert_eq!(
+            "/v0/organizations/muriel-bagge/projects/the-computer/",
+            Endpoint::Zero(Some(Zero::Organizations(Some(PathParam(
+                "muriel-bagge".into(),
+                Some(Organization::Projects(Some(PathParam(
+                    "the-computer".into(),
+                    Some(Resource)
+                ))))
+            )))))
+            .to_string()
+        );
     }
 }
