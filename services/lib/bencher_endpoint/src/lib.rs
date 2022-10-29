@@ -1,13 +1,13 @@
-use bencher_json::organization::organization::JsonOrganizationPermission;
-
 mod path_param;
 mod resource;
 mod to_endpoint;
+pub mod zero;
 
 pub use path_param::PathParam;
 pub use resource::Resource;
 pub(crate) use to_endpoint::impl_display;
 pub use to_endpoint::ToEndpoint;
+pub use zero::Zero;
 
 #[derive(Clone)]
 pub enum Endpoint {
@@ -24,51 +24,10 @@ impl ToEndpoint for Endpoint {
     }
 }
 
-#[derive(Clone)]
-pub enum Zero {
-    Organizations(Option<Organizations>),
-}
-
-impl_display!(Zero);
-
-impl ToEndpoint for Zero {
-    fn to_endpoint(&self) -> String {
-        match self {
-            Self::Organizations(resource) => Self::resource("organizations", resource),
-        }
-    }
-}
-
-pub type Organizations = PathParam<Organization>;
-
-#[derive(Clone)]
-pub enum Organization {
-    Members(Option<PathParam<Resource>>),
-    Allowed(Option<JsonOrganizationPermission>),
-    Projects(Option<PathParam<Resource>>),
-}
-
-impl_display!(Organization);
-
-impl ToEndpoint for Organization {
-    fn to_endpoint(&self) -> String {
-        match self {
-            Self::Members(resource) => Self::resource("members", resource),
-            Self::Allowed(resource) => Self::resource("allowed", resource),
-            Self::Projects(resource) => Self::resource("projects", resource),
-        }
-    }
-}
-
-impl ToEndpoint for JsonOrganizationPermission {
-    fn to_endpoint(&self) -> String {
-        self.to_string()
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::{zero::Organization, Endpoint, PathParam, Resource, Zero};
+
     use pretty_assertions::assert_eq;
 
     #[test]
