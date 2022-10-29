@@ -1,5 +1,4 @@
 use bencher_json::organization::organization::JsonOrganizationPermission;
-use std::fmt;
 
 mod path_param;
 mod resource;
@@ -7,6 +6,7 @@ mod to_endpoint;
 
 pub use path_param::PathParam;
 pub use resource::Resource;
+pub(crate) use to_endpoint::impl_display;
 pub use to_endpoint::ToEndpoint;
 
 #[derive(Clone)]
@@ -14,16 +14,12 @@ pub enum Endpoint {
     Zero(Option<Zero>),
 }
 
-impl fmt::Display for Endpoint {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "/{}", self.to_endpoint())
-    }
-}
+impl_display!(Endpoint);
 
 impl ToEndpoint for Endpoint {
     fn to_endpoint(&self) -> String {
         match self {
-            Self::Zero(resource) => Self::resource("v0", resource),
+            Self::Zero(resource) => Self::resource("/v0", resource),
         }
     }
 }
@@ -32,6 +28,8 @@ impl ToEndpoint for Endpoint {
 pub enum Zero {
     Organizations(Option<Organizations>),
 }
+
+impl_display!(Zero);
 
 impl ToEndpoint for Zero {
     fn to_endpoint(&self) -> String {
@@ -49,6 +47,8 @@ pub enum Organization {
     Allowed(Option<JsonOrganizationPermission>),
     Projects(Option<PathParam<Resource>>),
 }
+
+impl_display!(Organization);
 
 impl ToEndpoint for Organization {
     fn to_endpoint(&self) -> String {
