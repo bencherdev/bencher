@@ -1359,7 +1359,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "get_one_project",
+        "operationId": "get_one",
         "parameters": [
           {
             "in": "path",
@@ -1424,7 +1424,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "one_project_options",
+        "operationId": "one_options",
         "parameters": [
           {
             "in": "path",
