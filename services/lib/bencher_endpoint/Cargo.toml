@@ -11,3 +11,7 @@ edition.workspace = true
 bencher_json = { path = "../bencher_json" }
 # Workspace
 derive_more.workspace = true
+
+[dev-dependencies]
+# Workspace
+pretty_assertions.workspace = true

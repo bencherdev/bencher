@@ -44,15 +44,15 @@ pub enum Endpoint {
 
 impl fmt::Display for Endpoint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "/{}",
-            match self {
-                Self::Zero(resource) => {
-                    format!("v0{}", resource.to_endpoint())
-                },
-            }
-        )
+        write!(f, "/{}", self.to_endpoint())
+    }
+}
+
+impl ToEndpoint for Endpoint {
+    fn to_endpoint(&self) -> String {
+        match self {
+            Self::Zero(resource) => Self::resource("v0", resource),
+        }
     }
 }
 
@@ -125,5 +125,16 @@ impl ToEndpoint for Project {
 impl ToEndpoint for JsonOrganizationPermission {
     fn to_endpoint(&self) -> String {
         self.to_string()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_endpoint() {
+        assert_eq!("/v0", Endpoint::Zero(None).to_string());
     }
 }

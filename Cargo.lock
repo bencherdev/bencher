@@ -198,6 +198,7 @@ version = "0.1.0"
 dependencies = [
  "bencher_json",
  "derive_more",
+ "pretty_assertions",
 ]
 
 [[package]]
