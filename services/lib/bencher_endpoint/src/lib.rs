@@ -1,3 +1,5 @@
+use bencher_json::organization::organization::JsonOrganizationPermission;
+
 pub struct Endpoint(pub Option<Version>);
 
 pub struct PathParam<Param, Path>(Param, Option<Path>);
@@ -16,6 +18,8 @@ pub struct Organization;
 
 pub enum OrganizationResource {
     Members(Option<Members>),
+    Allowed(Option<JsonOrganizationPermission>),
+    Projects(Option<Projects>),
 }
 
 pub type Members = PathParam<Member, MemberResource>;
@@ -23,3 +27,9 @@ pub type Members = PathParam<Member, MemberResource>;
 pub struct Member;
 
 pub enum MemberResource {}
+
+pub type Projects = PathParam<Project, ProjectResource>;
+
+pub struct Project;
+
+pub enum ProjectResource {}

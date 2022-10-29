@@ -195,6 +195,9 @@ dependencies = [
 [[package]]
 name = "bencher_endpoint"
 version = "0.1.0"
+dependencies = [
+ "bencher_json",
+]
 
 [[package]]
 name = "bencher_json"
