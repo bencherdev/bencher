@@ -3,6 +3,13 @@ use std::fmt;
 
 pub trait ToEndpoint {
     fn to_endpoint(&self) -> String;
+
+    fn resource<Resource>(resource_str: impl AsRef<str>, resource: &Resource) -> String
+    where
+        Resource: ToEndpoint,
+    {
+        format!("{}{}", resource_str.as_ref(), resource.to_endpoint())
+    }
 }
 
 #[derive(Clone)]
@@ -13,7 +20,7 @@ where
     Resource: ToEndpoint,
 {
     fn to_endpoint(&self) -> String {
-        format!("{}{}", self.0, self.1.to_endpoint())
+        Self::resource(&self.0, &self.1)
     }
 }
 
@@ -23,7 +30,7 @@ where
 {
     fn to_endpoint(&self) -> String {
         if let Some(t) = self {
-            format!("/{}", t.to_endpoint())
+            Self::resource("/", t)
         } else {
             String::default()
         }
