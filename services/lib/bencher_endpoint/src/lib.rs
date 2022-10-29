@@ -1,46 +1,122 @@
 use bencher_json::organization::organization::JsonOrganizationPermission;
 use std::fmt;
 
-#[derive(Clone, Copy)]
-pub struct Endpoint(pub Option<Version>);
+pub trait ToEndpoint {
+    fn to_endpoint(&self) -> String;
+}
 
-#[derive(Clone, Copy)]
-pub struct PathParam<Param, Resource>(Param, Option<Resource>);
+#[derive(Clone)]
+pub struct PathParam<Resource>(String, Option<Resource>);
 
-#[derive(Clone, Copy)]
-pub enum Version {
+impl<Resource> ToEndpoint for PathParam<Resource>
+where
+    Resource: ToEndpoint,
+{
+    fn to_endpoint(&self) -> String {
+        format!("{}{}", self.0, self.1.to_endpoint())
+    }
+}
+
+impl<T> ToEndpoint for Option<T>
+where
+    T: ToEndpoint,
+{
+    fn to_endpoint(&self) -> String {
+        if let Some(t) = self {
+            format!("/{}", t.to_endpoint())
+        } else {
+            String::default()
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum Endpoint {
     Zero(Option<Zero>),
 }
 
-#[derive(Clone, Copy)]
+impl fmt::Display for Endpoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "/{}",
+            match self {
+                Self::Zero(resource) => {
+                    format!("v0{}", resource.to_endpoint())
+                },
+            }
+        )
+    }
+}
+
+#[derive(Clone)]
 pub enum Zero {
     Organizations(Option<Organizations>),
 }
 
-pub type Organizations = PathParam<Organization, OrganizationResource>;
+impl ToEndpoint for Zero {
+    fn to_endpoint(&self) -> String {
+        match self {
+            Self::Organizations(resource) => {
+                format!("organizations{}", resource.to_endpoint())
+            },
+        }
+    }
+}
 
-#[derive(Clone, Copy)]
-pub struct Organization;
+pub type Organizations = PathParam<Organization>;
 
-#[derive(Clone, Copy)]
-pub enum OrganizationResource {
+#[derive(Clone)]
+pub enum Organization {
     Members(Option<Members>),
     Allowed(Option<JsonOrganizationPermission>),
     Projects(Option<Projects>),
 }
 
-pub type Members = PathParam<Member, MemberResource>;
+impl ToEndpoint for Organization {
+    fn to_endpoint(&self) -> String {
+        match self {
+            Self::Members(resource) => {
+                format!("members{}", resource.to_endpoint())
+            },
+            Self::Allowed(resource) => {
+                format!("allowed{}", resource.to_endpoint())
+            },
+            Self::Projects(resource) => {
+                format!("projects{}", resource.to_endpoint())
+            },
+        }
+    }
+}
 
-#[derive(Clone, Copy)]
-pub struct Member;
+pub type Members = PathParam<Member>;
 
-#[derive(Clone, Copy)]
-pub enum MemberResource {}
+#[derive(Clone)]
+pub enum Member {}
 
-pub type Projects = PathParam<Project, ProjectResource>;
+impl ToEndpoint for Member {
+    fn to_endpoint(&self) -> String {
+        match self {
+            _ => String::default(),
+        }
+    }
+}
 
-#[derive(Clone, Copy)]
-pub struct Project;
+pub type Projects = PathParam<Project>;
 
-#[derive(Clone, Copy)]
-pub enum ProjectResource {}
+#[derive(Clone)]
+pub enum Project {}
+
+impl ToEndpoint for Project {
+    fn to_endpoint(&self) -> String {
+        match self {
+            _ => String::default(),
+        }
+    }
+}
+
+impl ToEndpoint for JsonOrganizationPermission {
+    fn to_endpoint(&self) -> String {
+        self.to_string()
+    }
+}
