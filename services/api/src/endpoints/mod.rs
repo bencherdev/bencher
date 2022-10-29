@@ -51,22 +51,23 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Organization Permission
     api.register(organization::organizations::allowed_options)?;
     api.register(organization::organizations::get_allowed)?;
-    // Members
+    // Organization Members
     api.register(organization::members::dir_options)?;
     api.register(organization::members::get_ls)?;
     api.register(organization::members::post)?;
     api.register(organization::members::one_options)?;
     api.register(organization::members::get_one)?;
     api.register(organization::members::patch)?;
+    // Organization Projects
+    api.register(organization::projects::dir_options)?;
+    api.register(organization::projects::get_ls)?;
+    api.register(organization::projects::post)?;
+    api.register(organization::projects::one_options)?;
+    api.register(organization::projects::get_one)?;
 
     // Projects
-    api.register(project::projects::dir_options)?;
-    api.register(project::projects::get_ls)?;
-    api.register(project::projects::post)?;
     api.register(project::projects::one_options)?;
     api.register(project::projects::get_one)?;
-    api.register(project::projects::one_project_options)?;
-    api.register(project::projects::get_one_project)?;
     // Perf
     api.register(project::perf::options)?;
     api.register(project::perf::post)?;

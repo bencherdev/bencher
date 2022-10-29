@@ -4,12 +4,14 @@ use crate::WordStr;
 
 pub mod members;
 pub mod organizations;
+pub mod projects;
 
 #[derive(Debug, Display, Clone, Copy)]
 pub enum Resource {
     Member,
     Organization,
     OrganizationPermission,
+    Project,
 }
 
 impl WordStr for Resource {
@@ -18,6 +20,7 @@ impl WordStr for Resource {
             Self::Member => "member",
             Self::Organization => "organization",
             Self::OrganizationPermission => "organization permission",
+            Self::Project => "project",
         }
     }
 
@@ -26,6 +29,7 @@ impl WordStr for Resource {
             Self::Member => "members",
             Self::Organization => "organizations",
             Self::OrganizationPermission => "organization permissions",
+            Self::Project => "projects",
         }
     }
 }
