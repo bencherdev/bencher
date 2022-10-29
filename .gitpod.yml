@@ -27,11 +27,10 @@ vscode:
 tasks:
   - name: General Setup
     command: ./scripts/setup.sh
-  - name: Rust Setup
-    before: cargo check
-    init: rustup toolchain install nightly && rustup component add rustfmt
-    command: cd services/api && cargo run
-  - name: JavaScript Setup
+  - name: API Setup
+    before: cd services/api && cargo test --no-run
+    command: cargo run
+  - name: UI Setup
     before: cd services/ui && npm install --include=dev
     command: npm x vite
 

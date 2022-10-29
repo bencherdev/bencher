@@ -1,5 +1,6 @@
 {
   "workbench.colorTheme": "Default Dark+",
+  "workbench.panel.defaultLocation": "right",
   "window.zoomLevel": 1,
   "files.eol": "\n",
   "editor.wordWrap": "on",

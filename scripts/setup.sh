@@ -2,6 +2,9 @@
 
 ./scripts/githooks.sh
 
+rustup toolchain install nightly
+rustup component add rustfmt
+
 sudo apt-get update -q
 sudo apt-get install -yq netcat
 
