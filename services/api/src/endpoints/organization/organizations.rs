@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    organization::organization::JsonOrganizationPermission, JsonAllowed, JsonNewOrganization,
-    JsonOrganization, ResourceId,
-};
+use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
 use bencher_rbac::organization::{Permission, Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -35,7 +32,6 @@ use crate::{
 use super::Resource;
 
 const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
-const PERMISSION_RESOURCE: Resource = Resource::OrganizationPermission;
 
 #[endpoint {
     method = OPTIONS,
@@ -194,60 +190,4 @@ async fn get_one_inner(
         Permission::View,
     )?
     .into_json()
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct GetAllowedParams {
-    pub organization: ResourceId,
-    pub permission: JsonOrganizationPermission,
-}
-
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/organizations/{organization}/allowed/{permission}",
-    tags = ["organizations", "allowed"]
-}]
-pub async fn allowed_options(
-    _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetAllowedParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
-#[endpoint {
-    method = GET,
-    path = "/v0/organizations/{organization}/allowed/{permission}",
-    tags = ["organizations", "allowed"]
-}]
-pub async fn get_allowed(
-    rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetAllowedParams>,
-) -> Result<ResponseOk<JsonAllowed>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PERMISSION_RESOURCE, Method::GetOne);
-
-    let json = get_allowed_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
-
-    response_ok!(endpoint, json)
-}
-
-async fn get_allowed_inner(
-    context: &Context,
-    path_params: GetAllowedParams,
-    auth_user: &AuthUser,
-) -> Result<JsonAllowed, ApiError> {
-    let api_context = &mut *context.lock().await;
-
-    Ok(JsonAllowed {
-        allowed: QueryOrganization::is_allowed_resource_id(
-            api_context,
-            &path_params.organization,
-            auth_user,
-            crate::model::organization::organization_role::Permission::from(path_params.permission)
-                .into(),
-        )
-        .is_ok(),
-    })
 }

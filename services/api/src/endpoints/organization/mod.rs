@@ -2,6 +2,7 @@ use derive_more::Display;
 
 use crate::WordStr;
 
+pub mod allowed;
 pub mod members;
 pub mod organizations;
 pub mod projects;
