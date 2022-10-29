@@ -1,50 +1,13 @@
 use bencher_json::organization::organization::JsonOrganizationPermission;
 use std::fmt;
 
-pub trait ToEndpoint {
-    fn to_endpoint(&self) -> String;
+mod path_param;
+mod resource;
+mod to_endpoint;
 
-    fn resource<Resource>(resource_str: impl AsRef<str>, resource: &Resource) -> String
-    where
-        Resource: ToEndpoint,
-    {
-        format!("{}{}", resource_str.as_ref(), resource.to_endpoint())
-    }
-}
-
-impl<T> ToEndpoint for Option<T>
-where
-    T: ToEndpoint,
-{
-    fn to_endpoint(&self) -> String {
-        if let Some(t) = self {
-            Self::resource("/", t)
-        } else {
-            String::default()
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct PathParam<Resource>(String, Option<Resource>);
-
-impl<Resource> ToEndpoint for PathParam<Resource>
-where
-    Resource: ToEndpoint,
-{
-    fn to_endpoint(&self) -> String {
-        Self::resource(&self.0, &self.1)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Resource;
-
-impl ToEndpoint for Resource {
-    fn to_endpoint(&self) -> String {
-        String::default()
-    }
-}
+pub use path_param::PathParam;
+pub use resource::Resource;
+pub use to_endpoint::ToEndpoint;
 
 #[derive(Clone)]
 pub enum Endpoint {
