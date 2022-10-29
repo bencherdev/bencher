@@ -536,7 +536,7 @@
           "organizations",
           "allowed"
         ],
-        "operationId": "get_allowed",
+        "operationId": "get",
         "parameters": [
           {
             "in": "path",
@@ -611,7 +611,7 @@
           "organizations",
           "allowed"
         ],
-        "operationId": "allowed_options",
+        "operationId": "options",
         "parameters": [
           {
             "in": "path",
