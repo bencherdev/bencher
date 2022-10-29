@@ -26,7 +26,7 @@ impl ToEndpoint for Endpoint {
 
 #[cfg(test)]
 mod test {
-    use crate::{zero::Organization, Endpoint, PathParam, Resource, Zero};
+    use crate::{zero::organizations::Organization, Endpoint, PathParam, Resource, Zero};
 
     use pretty_assertions::assert_eq;
 
