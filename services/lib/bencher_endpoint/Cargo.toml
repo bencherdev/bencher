@@ -9,3 +9,5 @@ edition.workspace = true
 [dependencies]
 # Local
 bencher_json = { path = "../bencher_json" }
+# Workspace
+derive_more.workspace = true

@@ -197,6 +197,7 @@ name = "bencher_endpoint"
 version = "0.1.0"
 dependencies = [
  "bencher_json",
+ "derive_more",
 ]
 
 [[package]]

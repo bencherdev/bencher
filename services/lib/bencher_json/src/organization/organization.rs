@@ -20,7 +20,7 @@ pub struct JsonOrganization {
     pub slug: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Display)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonOrganizationPermission {
