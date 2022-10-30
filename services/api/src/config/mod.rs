@@ -147,3 +147,9 @@ impl Default for Config {
         })
     }
 }
+
+impl From<Config> for JsonConfig {
+    fn from(config: Config) -> Self {
+        config.0
+    }
+}
