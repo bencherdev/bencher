@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.6"
+    "version": "0.2.7"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -5185,7 +5185,7 @@
           {
             "type": "object",
             "properties": {
-              "StderrTerminal": {
+              "stderr_terminal": {
                 "type": "object",
                 "properties": {
                   "level": {
@@ -5198,14 +5198,14 @@
               }
             },
             "required": [
-              "StderrTerminal"
+              "stderr_terminal"
             ],
             "additionalProperties": false
           },
           {
             "type": "object",
             "properties": {
-              "File": {
+              "file": {
                 "type": "object",
                 "properties": {
                   "if_exists": {
@@ -5226,7 +5226,7 @@
               }
             },
             "required": [
-              "File"
+              "file"
             ],
             "additionalProperties": false
           }
