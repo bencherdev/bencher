@@ -28,6 +28,7 @@ jobs:
           path: target/release/${{ env.BIN_NAME }}
 
   build_cli_deb:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Package CLI (.deb)
     needs: cli_build_linux
     runs-on: ubuntu-latest
