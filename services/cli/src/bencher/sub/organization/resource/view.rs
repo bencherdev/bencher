@@ -5,7 +5,7 @@ use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::organization::organization::CliOrganizationView,
+    cli::organization::CliOrganizationView,
     CliError,
 };
 

@@ -5,7 +5,7 @@ use bencher_json::JsonNewOrganization;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::organization::organization::CliOrganizationCreate,
+    cli::organization::CliOrganizationCreate,
     CliError,
 };
 

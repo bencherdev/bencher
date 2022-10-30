@@ -6,7 +6,7 @@ use url::Url;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::project::project::CliProjectCreate,
+    cli::project::CliProjectCreate,
     CliError,
 };
 

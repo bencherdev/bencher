@@ -1,4 +1,4 @@
-use bencher_json::organization::organization::JsonOrganizationPermission;
+use bencher_json::organization::JsonOrganizationPermission;
 
 use crate::{to_endpoint::impl_display, PathParam, Resource, ToEndpoint};
 

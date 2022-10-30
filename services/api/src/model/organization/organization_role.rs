@@ -7,9 +7,7 @@ use crate::{
     util::context::SecretKey,
     ApiError,
 };
-use bencher_json::{
-    organization::organization::JsonOrganizationPermission, system::jwt::JsonWebToken,
-};
+use bencher_json::{organization::JsonOrganizationPermission, system::jwt::JsonWebToken};
 use diesel::{Insertable, Queryable, SqliteConnection};
 
 use super::organization::QueryOrganization;

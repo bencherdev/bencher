@@ -8,19 +8,16 @@ pub mod resource_id;
 pub mod system;
 pub mod user;
 
-pub use organization::{
-    member::JsonMember,
-    organization::{JsonNewOrganization, JsonOrganization},
-};
+pub use organization::{member::JsonMember, JsonNewOrganization, JsonOrganization};
 pub use project::{
     alert::JsonAlert,
     benchmark::JsonBenchmark,
     branch::{JsonBranch, JsonNewBranch},
     perf::{JsonPerf, JsonPerfQuery},
-    project::{JsonNewProject, JsonProject},
     report::{JsonNewReport, JsonReport},
     testbed::{JsonNewTestbed, JsonTestbed},
     threshold::{JsonNewThreshold, JsonThreshold},
+    JsonNewProject, JsonProject,
 };
 pub use resource_id::ResourceId;
 pub use system::{
@@ -31,7 +28,7 @@ pub use system::{
 };
 pub use user::{
     token::{JsonNewToken, JsonToken},
-    user::JsonUser,
+    JsonUser,
 };
 
 #[derive(Debug, Default, Serialize, Deserialize)]

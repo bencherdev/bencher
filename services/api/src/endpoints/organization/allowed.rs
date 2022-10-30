@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    organization::organization::JsonOrganizationPermission, JsonAllowed, ResourceId,
-};
+use bencher_json::{organization::JsonOrganizationPermission, JsonAllowed, ResourceId};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;

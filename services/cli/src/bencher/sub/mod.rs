@@ -10,10 +10,10 @@ mod sub_cmd;
 mod system;
 mod user;
 
-use organization::{member::Member, organization::Organization};
+use organization::{member::Member, resource::Organization};
 use project::{
-    alert::Alert, benchmark::Benchmark, branch::Branch, perf::Perf, project::Project,
-    report::Report, run::Run, testbed::Testbed, threshold::Threshold,
+    alert::Alert, benchmark::Benchmark, branch::Branch, perf::Perf, report::Report,
+    resource::Project, run::Run, testbed::Testbed, threshold::Threshold,
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};

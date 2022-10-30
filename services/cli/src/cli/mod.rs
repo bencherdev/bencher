@@ -5,11 +5,10 @@ pub mod project;
 pub mod system;
 pub mod user;
 
-use organization::{member::CliMember, organization::CliOrganization};
+use organization::{member::CliMember, CliOrganization};
 use project::{
-    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, perf::CliPerf,
-    project::CliProject, report::CliReport, run::CliRun, testbed::CliTestbed,
-    threshold::CliThreshold,
+    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, perf::CliPerf, report::CliReport,
+    run::CliRun, testbed::CliTestbed, threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::token::CliToken;

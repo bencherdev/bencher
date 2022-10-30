@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     bencher::{sub::SubCmd, wide::Wide},
-    cli::project::project::CliProject,
+    cli::project::CliProject,
     CliError,
 };
 

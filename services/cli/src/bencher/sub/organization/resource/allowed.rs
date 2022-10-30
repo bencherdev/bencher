@@ -1,11 +1,11 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{organization::organization::JsonOrganizationPermission, ResourceId};
+use bencher_json::{organization::JsonOrganizationPermission, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::organization::organization::{CliOrganizationAllowed, CliOrganizationPermission},
+    cli::organization::{CliOrganizationAllowed, CliOrganizationPermission},
     CliError,
 };
 
