@@ -10,18 +10,19 @@ It consists of:
 
 ## Quick Start
 
-Run:
+Pull and run Docker images:
 
-- `./scripts/docker_run.sh`
+```
+docker compose up -d
+```
 
-Then open your browser to [localhost](http://localhost).
+OR
 
-## Local Build with Docker
+Build and run Docker images:
 
-Run:
-
-- `docker compose -f builder.docker-compose.yml build`
-- `docker compose -f local.docker-compose.yml up --build -d`
+```
+./scripts/docker_run.sh
+```
 
 Then open your browser to [localhost](http://localhost).
 
