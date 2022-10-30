@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  fmt:
+  cargo_fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +20,7 @@ jobs:
       - name: Run fmt
         run: cargo fmt -- --check
 
-  clippy:
+  cargo_clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,7 +29,7 @@ jobs:
       - name: Run clippy
         run: cargo clippy --no-deps -- -Dwarnings
 
-  udeps:
+  cargo_udeps:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

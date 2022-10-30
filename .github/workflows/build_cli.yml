@@ -12,7 +12,7 @@ env:
   DEB_DIR: deb
 
 jobs:
-  cli_build_linux:
+  build_cli_bin:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Build CLI (Linux)
     runs-on: ubuntu-latest
@@ -27,7 +27,7 @@ jobs:
           name: ${{ env.BIN_NAME }}
           path: target/release/${{ env.BIN_NAME }}
 
-  cli_package_deb:
+  build_cli_deb:
     name: Package CLI (.deb)
     needs: cli_build_linux
     runs-on: ubuntu-latest
