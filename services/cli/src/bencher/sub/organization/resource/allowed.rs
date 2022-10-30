@@ -55,8 +55,7 @@ impl SubCmd for Allowed {
         self.backend
             .get(&format!(
                 "/v0/organizations/{}/allowed/{}",
-                self.organization,
-                self.perm.to_string()
+                self.organization, self.perm
             ))
             .await?;
         Ok(())

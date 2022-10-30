@@ -13,7 +13,7 @@ use super::CONFIG_PATH;
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub config: JsonConfig,
+    pub config: Box<JsonConfig>,
     pub delay: Option<u64>,
     pub backend: Backend,
 }
@@ -42,7 +42,10 @@ impl From<Update> for JsonUpdateConfig {
             delay,
             backend: _,
         } = update;
-        Self { config, delay }
+        Self {
+            config: *config,
+            delay,
+        }
     }
 }
 
