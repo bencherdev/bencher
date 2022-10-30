@@ -1,4 +1,4 @@
-name: Pretty
+name: Pretty Rust
 
 on:
   workflow_dispatch:

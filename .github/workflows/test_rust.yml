@@ -1,0 +1,20 @@
+name: Test Rust
+
+on:
+  workflow_run:
+    workflows: [Pretty Rust]
+    types: [completed]
+
+env:
+  CARGO_TERM_COLOR: always
+  CLI_NAME: bencher
+
+jobs:
+  cargo_test:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Cargo Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: cargo test
+        run: RUST_BACKTRACE=1 cargo test -- --nocapture
