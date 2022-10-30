@@ -17,7 +17,7 @@ jobs:
     name: Build CLI (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: cargo build CLI
         working-directory: ./services/cli
         run: cargo build --release
@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: export DEB_FILE
         run: echo "DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb" >> $GITHUB_ENV
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Download CLI Artifact
         uses: actions/download-artifact@v3
         with:

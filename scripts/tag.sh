@@ -1,5 +1,5 @@
 #!/bin/bash
 
-TAG=$1
+TAG=$(./scripts/version.sh)
 git tag $TAG
 git push origin $TAG
