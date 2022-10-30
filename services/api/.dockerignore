@@ -2,3 +2,4 @@
 data/**/*
 data/**/*
 !data/**/.gitignore
+bencher.json
