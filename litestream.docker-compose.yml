@@ -9,16 +9,10 @@ services:
     ports:
       - 61016:61016
     environment:
-      # This should be set to your own secret key
-      # - BENCHER_SECRET_KEY=
+      # Set configuration string or filepath
+      # - BENCHER_CONFIG=
+      # - BENCHER_CONFIG_PATH=
       - BENCHER_DB=bencher.db
-      # This should be your replication credentials and endpoint
-      # https://litestream.io/guides/#replica-guides
-      # - BENCHER_ACCESS_KEY_ID=
-      # - BENCHER_SECRET_ACCESS_KEY=
-      # - BENCHER_REPLICA_URL=
-    depends_on:
-      - bencher_api_builder
 
   bencher_ui:
     build:

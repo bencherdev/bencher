@@ -10,10 +10,10 @@ services:
       - 61016:61016
     volumes:
       - "./services/api/data:/data"
-    environment:
-      # This should be set to your own secret key
-      # - BENCHER_SECRET_KEY=
-      - BENCHER_DB=bencher.db
+    # environment:
+      # Set configuration string or filepath
+      # - BENCHER_CONFIG=
+      # - BENCHER_CONFIG_PATH=
 
   bencher_ui:
     build:
