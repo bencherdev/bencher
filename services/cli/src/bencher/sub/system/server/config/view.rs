@@ -30,7 +30,7 @@ impl TryFrom<CliConfigView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
-        self.backend.post(CONFIG_PATH, &JsonEmpty {}).await?;
+        self.backend.get(CONFIG_PATH).await?;
         Ok(())
     }
 }
