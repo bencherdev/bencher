@@ -1,16 +1,16 @@
-app = "bencher-ui"
+app = "bencher-api"
 kill_timeout = 6
 
 [build]
-image = "epompeii/bencher-ui:latest"
+image = "epompeii/bencher-api:latest"
 
 [[services]]
 protocol = "tcp"
-internal_port = 3000
+internal_port = 61016
 
 # [services.concurrency]
-# hard_limit = 25
-# soft_limit = 20
+# hard_limit = 100
+# soft_limit = 50
 # type = "connections"
 
 [[services.ports]]
@@ -27,16 +27,3 @@ port = 80
 # interval = "15s"
 # restart_limit = 0
 # timeout = "2s"
-
-[[services]]
-protocol = "tcp"
-internal_port = 3001
-
-# [services.concurrency]
-# hard_limit = 25
-# soft_limit = 20
-# type = "connections"
-
-[[services.ports]]
-handlers = ["http"]
-port = 3001

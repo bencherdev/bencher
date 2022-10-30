@@ -1,0 +1,4 @@
+# flyctl launch added from data/.gitignore
+data/**/*
+data/**/*
+!data/**/.gitignore
