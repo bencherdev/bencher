@@ -9,9 +9,10 @@ cd -
 SWAGGER=./services/ui/src/components/docs/api/swagger.json
 git diff --quiet $SWAGGER || git add $SWAGGER
 
-TAG="$(./scripts/version.sh)"
+TAG="$(./scripts/v.sh)"
 COMMIT="Release $TAG"
 echo $COMMIT
 git commit -m "$COMMIT"
 git tag $TAG
 git push origin $TAG
+git push
