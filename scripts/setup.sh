@@ -5,6 +5,7 @@
 rustup toolchain install nightly
 rustup component add rustfmt
 rustup component add clippy
+cargo install cargo-udeps --locked
 
 sudo apt-get update -q
 sudo apt-get install -yq netcat-openbsd
