@@ -20,8 +20,8 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        project::QueryProject,
         threshold::{InsertThreshold, QueryThreshold},
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,

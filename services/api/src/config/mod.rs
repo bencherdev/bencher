@@ -32,7 +32,7 @@ const DEFAULT_MAX_BODY_SIZE: usize = 1 << 20;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 
 lazy_static::lazy_static! {
-    static ref DEFAULT_ENDPOINT: Url = DEFAULT_ENDPOINT_STR.parse().expect(&format!("Failed to parse default endpoint: {DEFAULT_ENDPOINT_STR}"));
+    static ref DEFAULT_ENDPOINT: Url = DEFAULT_ENDPOINT_STR.parse().unwrap_or_else(|e| panic!("Failed to parse default endpoint \"{DEFAULT_ENDPOINT_STR}\": {e}"));
     static ref DEFAULT_BIND_ADDRESS: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT);
 }
 
@@ -97,7 +97,7 @@ impl Config {
 
         Self::write(config_str.as_bytes()).await?;
 
-        return Ok(Self(json_config));
+        Ok(Self(json_config))
     }
 
     pub async fn load_or_default() -> Self {

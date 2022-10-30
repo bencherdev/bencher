@@ -14,10 +14,10 @@ use crate::{
     },
     error::api_error,
     model::{
-        organization::organization::QueryOrganization,
+        organization::QueryOrganization,
         project::{
-            project::{InsertProject, QueryProject},
             project_role::InsertProjectRole,
+            {InsertProject, QueryProject},
         },
         user::auth::AuthUser,
     },

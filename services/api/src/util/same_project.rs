@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
 
 use crate::{
     error::api_error,
-    model::project::{branch::QueryBranch, project::QueryProject, testbed::QueryTestbed},
+    model::project::{branch::QueryBranch, testbed::QueryTestbed, QueryProject},
     schema, ApiError,
 };
 

@@ -7,7 +7,7 @@ use diesel::{
 };
 use uuid::Uuid;
 
-use super::project::QueryProject;
+use super::QueryProject;
 use crate::{error::api_error, schema, schema::benchmark as benchmark_table, ApiError};
 
 #[derive(Queryable)]

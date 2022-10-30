@@ -10,7 +10,7 @@ use crate::{
 use bencher_json::{organization::JsonOrganizationPermission, system::jwt::JsonWebToken};
 use diesel::{Insertable, Queryable, SqliteConnection};
 
-use super::organization::QueryOrganization;
+use super::QueryOrganization;
 
 #[derive(Insertable)]
 #[diesel(table_name = organization_role_table)]

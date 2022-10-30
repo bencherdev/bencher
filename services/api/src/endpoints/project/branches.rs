@@ -15,7 +15,7 @@ use crate::{
     error::api_error,
     model::project::{
         branch::{InsertBranch, QueryBranch},
-        project::QueryProject,
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,

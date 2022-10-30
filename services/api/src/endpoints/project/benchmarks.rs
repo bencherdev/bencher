@@ -15,7 +15,7 @@ use crate::{
     },
     error::api_error,
     model::{
-        project::{benchmark::QueryBenchmark, project::QueryProject},
+        project::{benchmark::QueryBenchmark, QueryProject},
         user::auth::AuthUser,
     },
     schema,

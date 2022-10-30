@@ -18,7 +18,7 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::organization::{member::QueryMember, organization::QueryOrganization},
+    model::organization::{member::QueryMember, QueryOrganization},
     model::user::{auth::AuthUser, validate_email, QueryUser},
     schema,
     util::{

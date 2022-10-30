@@ -15,8 +15,7 @@ use crate::{
     error::api_error,
     model::{
         organization::{
-            organization::{InsertOrganization, QueryOrganization},
-            organization_role::InsertOrganizationRole,
+            organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
         },
         user::auth::AuthUser,
     },

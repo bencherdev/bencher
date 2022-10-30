@@ -14,8 +14,8 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        project::QueryProject,
         testbed::{InsertTestbed, QueryTestbed},
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,

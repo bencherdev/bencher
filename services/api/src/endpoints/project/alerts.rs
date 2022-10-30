@@ -14,7 +14,7 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::project::{project::QueryProject, threshold::alert::QueryAlert},
+    model::project::{threshold::alert::QueryAlert, QueryProject},
     model::user::auth::AuthUser,
     schema,
     util::{

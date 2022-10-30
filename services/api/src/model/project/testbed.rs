@@ -4,7 +4,7 @@ use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
-use super::project::QueryProject;
+use super::QueryProject;
 use crate::{
     error::api_error, schema, schema::testbed as testbed_table, util::slug::unwrap_slug, ApiError,
 };
@@ -110,7 +110,7 @@ impl InsertTestbed {
         let slug = unwrap_slug!(conn, &name, slug, testbed, QueryTestbed);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            project_id: QueryProject::from_resource_id(conn, &project)?.id,
+            project_id: QueryProject::from_resource_id(conn, project)?.id,
             name,
             slug,
             os_name,

@@ -13,8 +13,7 @@ use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
 use crate::error::api_error;
 use crate::model::organization::{
-    organization::{InsertOrganization, QueryOrganization},
-    organization_role::InsertOrganizationRole,
+    organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
 use crate::model::user::QueryUser;
 use crate::util::context::{Body, ButtonBody, Message};
@@ -112,9 +111,8 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
         greeting: format!("Ahoy {},", insert_user.name),
-        pre_body: format!(
-            "Please, click the button below or use the provided code to signup for Bencher."
-        ),
+        pre_body: "Please, click the button below or use the provided code to signup for Bencher."
+            .into(),
         pre_code: "".into(),
         button_text: "Confirm Email".into(),
         button_url: api_context

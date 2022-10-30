@@ -99,7 +99,7 @@ impl InsertToken {
     ) -> Result<Self, ApiError> {
         let JsonNewToken { name, ttl } = token;
 
-        let query_user = QueryUser::from_resource_id(&mut api_context.database, &user)?;
+        let query_user = QueryUser::from_resource_id(&mut api_context.database, user)?;
         same_user!(auth_user, api_context.rbac, query_user.id);
 
         // Only in production, set a max TTL of approximately one year

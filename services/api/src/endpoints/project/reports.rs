@@ -18,9 +18,9 @@ use crate::{
     error::api_error,
     model::project::{
         metrics::Metrics,
-        project::QueryProject,
         report::{InsertReport, QueryReport},
         version::InsertVersion,
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,

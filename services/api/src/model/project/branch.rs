@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use super::project::QueryProject;
+use super::QueryProject;
 use crate::{
     error::api_error, schema, schema::branch as branch_table, util::slug::unwrap_slug, ApiError,
 };

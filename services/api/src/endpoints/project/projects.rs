@@ -11,10 +11,7 @@ use crate::{
         endpoint::{response_ok, ResponseOk},
         Endpoint, Method,
     },
-    model::{
-        organization::organization::QueryOrganization, project::project::QueryProject,
-        user::auth::AuthUser,
-    },
+    model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
     util::{
         cors::{get_cors, CorsResponse},
         Context,

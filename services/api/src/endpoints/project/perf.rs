@@ -20,9 +20,9 @@ use crate::{
     model::project::{
         branch::QueryBranch,
         perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
-        project::QueryProject,
         report::to_date_time,
         testbed::QueryTestbed,
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
