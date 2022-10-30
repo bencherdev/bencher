@@ -1,2 +1,11 @@
 app = "bencher-ui"
 kill_timeout = 6
+
+[[services]]
+protocol = "tcp"
+internal_port = 3000
+
+[[services.ports]]
+handlers = ["http"]
+port = 80
+# force_https = true
