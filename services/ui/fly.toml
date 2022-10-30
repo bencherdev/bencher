@@ -1,0 +1,2 @@
+app = "bencher-ui"
+kill_timeout = 6
