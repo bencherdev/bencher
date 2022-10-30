@@ -12,7 +12,7 @@ It consists of:
 
 Run:
 
-- `docker compose up -d`
+- `./scripts/docker_run.sh`
 
 Then open your browser to [localhost](http://localhost).
 
