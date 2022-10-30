@@ -4,6 +4,10 @@ kill_timeout = 6
 [build]
 image = "epompeii/bencher-api-local:latest"
 
+[mounts]
+source = "bencher_data"
+destination = "/data"
+
 [[services]]
 protocol = "tcp"
 internal_port = 61016
