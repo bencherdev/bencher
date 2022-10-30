@@ -1,6 +1,7 @@
 name: Build CLI
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: [Test Rust]
     types: [completed]
@@ -10,6 +11,7 @@ env:
   BIN_NAME: bencher
   BIN_ARCH: amd64
   DEB_DIR: deb
+
 
 jobs:
   build_cli_bin:
@@ -30,7 +32,7 @@ jobs:
   build_cli_deb:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Package CLI (.deb)
-    needs: cli_build_linux
+    needs: build_cli_bin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -47,3 +49,27 @@ jobs:
         with:
           name: ${{ env.DEB_FILE }}
           path: ${{ env.DEB_DIR }}/${{ env.DEB_FILE }}
+
+  release_cli_deb:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} && startsWith(github.ref, 'refs/tags/')
+    name: Release CLI
+    needs: build_cli_deb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: export DEB_FILE
+        run: echo "DEB_FILE=${BIN_NAME}_$(./scripts/version.sh)_${BIN_ARCH}.deb" >> $GITHUB_ENV
+      - name: Download CLI bin artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.BIN_NAME }}
+      - name: Download CLI .deb Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.DEB_FILE }}
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.BIN_NAME }}
+            ${{ env.DEB_FILE }}
