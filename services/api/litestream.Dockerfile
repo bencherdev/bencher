@@ -1,5 +1,5 @@
 # Build Stage
-# build.Dockerfile
+# builder.Dockerfile
 FROM bencher-api-builder as builder
 
 # Bundle Stage

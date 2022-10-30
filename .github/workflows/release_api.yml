@@ -34,7 +34,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./services/api/build.Dockerfile
+          file: ./services/api/builder.Dockerfile
           tags: ${{ env.BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build and Push Local to Docker Hub
