@@ -15,23 +15,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: |
-          rustup component add rustfmt
-          cargo fmt -- --check
+      - name: Add fmt
+        run: rustup component add rustfmt
+      - name: Run fmt
+        run: cargo fmt -- --check
 
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: |
-          rustup component add clippy
-          cargo clippy --no-deps -- -Dwarnings
+      - name: Add clippy
+        run: rustup component add clippy
+      - name: Run clippy
+        run: cargo clippy --no-deps -- -Dwarnings
 
   udeps:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: |
-          rustup toolchain install nightly
-          cargo install cargo-udeps --locked
-          cargo +nightly udeps
+      - name: Install nightly toolchain
+        run: rustup toolchain install nightly
+      - name: Install udeps
+        run: cargo install cargo-udeps --locked
+      - name: Run udeps
+        run: cargo +nightly udeps
