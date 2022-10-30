@@ -5,7 +5,35 @@ kill_timeout = 6
 protocol = "tcp"
 internal_port = 3000
 
+[services.concurrency]
+hard_limit = 25
+soft_limit = 20
+type = "connections"
+
 [[services.ports]]
 handlers = ["http"]
 port = 80
 # force_https = true
+
+# [[services.ports]]
+# handlers = ["tls", "http"]
+# port = 443
+
+# [[services.tcp_checks]]
+# grace_period = "1s"
+# interval = "15s"
+# restart_limit = 0
+# timeout = "2s"
+
+[[services]]
+protocol = "tcp"
+internal_port = 3001
+
+[services.concurrency]
+hard_limit = 25
+soft_limit = 20
+type = "connections"
+
+[[services.ports]]
+handlers = ["http"]
+port = 3001
