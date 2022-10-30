@@ -136,7 +136,7 @@ checksum = "ea2b2456fd614d856680dcd9fcc660a51a820fa09daef2e49772b56a193c8474"
 
 [[package]]
 name = "bencher_api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bencher_json",
  "bencher_rbac",
@@ -171,7 +171,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "assert_cmd",
  "async-trait",
@@ -185,7 +185,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "tempfile",
  "thiserror",
  "tokio",
  "url",
@@ -194,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_endpoint"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bencher_json",
  "derive_more",
@@ -203,7 +202,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_json"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "derive_more",
@@ -221,7 +220,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rbac"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bencher_json",
  "lazy_static",
