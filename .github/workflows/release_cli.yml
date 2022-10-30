@@ -8,7 +8,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BIN_NAME: bencher
-  BIN_VERSION: 0.1.0
   BIN_ARCH: amd64
   DEB_DIR: deb
 
@@ -17,7 +16,7 @@ jobs:
     name: Build CLI (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - name: cargo build CLI
         working-directory: ./services/cli
         run: cargo build --release
@@ -32,15 +31,15 @@ jobs:
     needs: cli_build_linux
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: export DEB_FILE
-        run: echo "DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb" >> $GITHUB_ENV
-      - uses: actions/checkout@v3
+        run: echo "DEB_FILE=${BIN_NAME}_$(./scripts/version.sh)_${BIN_ARCH}.deb" >> $GITHUB_ENV
       - name: Download CLI Artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.BIN_NAME }}
       - name: Build .deb package
-        run: ./scripts/deb.sh $BIN_NAME $BIN_VERSION $BIN_ARCH $DEB_DIR
+        run: ./scripts/deb.sh $BIN_NAME $(./scripts/version.sh) $BIN_ARCH $DEB_DIR
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -53,8 +52,13 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      - uses: actions/checkout@v2
       - name: export DEB_FILE
-        run: echo "DEB_FILE=${BIN_NAME}_${BIN_VERSION}_${BIN_ARCH}.deb" >> $GITHUB_ENV
+        run: echo "DEB_FILE=${BIN_NAME}_$(./scripts/version.sh)_${BIN_ARCH}.deb" >> $GITHUB_ENV
+      - name: Download CLI bin artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.BIN_NAME }}
       - name: Download CLI .deb Artifact
         uses: actions/download-artifact@v3
         with:
@@ -63,4 +67,5 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            ${{ env.BIN_NAME }}
             ${{ env.DEB_FILE }}
