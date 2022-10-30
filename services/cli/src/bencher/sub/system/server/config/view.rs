@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonEmpty;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
