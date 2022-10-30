@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cat $1 | sed -E 's/"/\\"/g;'
+printf '%q' $(cat $1)
