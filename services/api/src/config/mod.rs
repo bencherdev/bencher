@@ -101,11 +101,11 @@ impl Config {
     }
 
     pub async fn load_or_default() -> Self {
-        if let Ok(config) = Self::load_file().await {
+        if let Ok(config) = Self::load_env().await {
             return config;
         }
 
-        if let Ok(config) = Self::load_env().await {
+        if let Ok(config) = Self::load_file().await {
             return config;
         }
 
