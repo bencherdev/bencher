@@ -6,7 +6,7 @@ rustup toolchain install nightly
 rustup component add rustfmt
 
 sudo apt-get update -q
-sudo apt-get install -yq netcat
+sudo apt-get install -yq netcat-openbsd
 
 echo "Waiting for vscode-sqltools"
 until [ -d ~/.local/share/vscode-sqltools ]
@@ -26,3 +26,11 @@ done
 cd ./tests/cli/rust_bench
 ./test.sh
 cd -
+
+curl -L https://fly.io/install.sh | sh
+
+echo "export FLYCTL_INSTALL=\"/home/gitpod/.fly\"" >> $HOME/.bash_profile
+echo "export PATH=\"/home/gitpod/.fly/bin:$PATH\"" >> $HOME/.bash_profile
+source ~/.bash_profile
+
+flyctl auth login
