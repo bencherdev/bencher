@@ -16,17 +16,15 @@ jobs:
     name: Build API (Linux)
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Export LOCAL_TAGS
         run: |
           export LOCAL_DOCKER_HUB_URL=${{ secrets.DOCKER_HUB_USERNAME }}/${LOCAL_DOCKER_IMAGE}
-          echo "LOCAL_TAGS=${LOCAL_DOCKER_HUB_URL}:latest" >> $GITHUB_ENV
-          (${{ startsWith(github.ref, 'refs/tags/') }} && (echo "LOCAL_TAGS=${{ env.LOCAL_TAGS }},${LOCAL_DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV)) || true
+          echo "LOCAL_TAGS=${LOCAL_DOCKER_HUB_URL}:latest,${LOCAL_DOCKER_HUB_URL}:$(./scripts/version.sh)" >> $GITHUB_ENV
       - name: Export LITESTREAM_TAGS
         run: |
           export LITESTREAM_DOCKER_HUB_URL=${{ secrets.DOCKER_HUB_USERNAME }}/${LITESTREAM_DOCKER_IMAGE}
-          echo "LITESTREAM_TAGS=${LITESTREAM_DOCKER_HUB_URL}:latest" >> $GITHUB_ENV
-          (${{ startsWith(github.ref, 'refs/tags/') }} && (echo "LITESTREAM_TAGS=${{ env.LITESTREAM_TAGS }},${LITESTREAM_DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV)) || true
-      - uses: actions/checkout@v3
+          echo "LITESTREAM_TAGS=${LITESTREAM_DOCKER_HUB_URL}:latest,${LITESTREAM_DOCKER_HUB_URL}:$(./scripts/version.sh)" >> $GITHUB_ENV
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
