@@ -2,8 +2,6 @@ name: Release CLI
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ master ]
   release:
     types: [published]
 
