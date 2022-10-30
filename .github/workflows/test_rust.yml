@@ -1,6 +1,7 @@
 name: Test Rust
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: [Pretty Rust]
     types: [completed]

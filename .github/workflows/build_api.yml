@@ -1,0 +1,42 @@
+name: Build API
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Test Rust]
+    types: [completed]
+
+env:
+  CARGO_TERM_COLOR: always
+  BUILDER_DOCKER_IMAGE: bencher-api-builder
+  LOCAL_DOCKER_IMAGE: bencher-api-local
+  LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
+
+jobs:
+  api_build_linux:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} && !startsWith(github.ref, 'refs/tags/')
+    name: Build API (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Builder Stage
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./services/api/builder.Dockerfile
+          tags: ${{ env.BUILDER_DOCKER_IMAGE }}
+          push: false
+      - name: Build Local
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/api
+          file: ./services/api/local.Dockerfile
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${LOCAL_DOCKER_IMAGE}:latest
+          push: false
+      - name: Build Litestream
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/api
+          file: ./services/api/litestream.Dockerfile
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${LITESTREAM_DOCKER_IMAGE}:latest
+          push: false

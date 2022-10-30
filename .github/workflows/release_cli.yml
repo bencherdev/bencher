@@ -3,7 +3,7 @@ name: Release CLI
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [Build Rust]
+    workflows: [Test Rust]
     types: [completed]
 
 env:
