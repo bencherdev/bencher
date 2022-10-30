@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
+  release:
+    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
