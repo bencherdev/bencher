@@ -4,6 +4,9 @@ kill_timeout = 6
 [build]
 image = "epompeii/bencher-ui:latest"
 
+[env]
+VITE_BENCHER_API_URL = "https://api.bencher.dev"
+
 [[services]]
 protocol = "tcp"
 internal_port = 3000

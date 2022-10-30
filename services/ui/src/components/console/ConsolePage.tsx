@@ -1,5 +1,10 @@
 import { useParams } from "solid-app-router";
-import { createEffect, createMemo, createResource, createSignal } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+} from "solid-js";
 import { getToken } from "../site/util";
 import { BENCHER_API_URL } from "./config/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
@@ -19,7 +24,6 @@ export const organizationSlug = (pathname) => {
   ) {
     return null;
   }
-  console.log(path[3]);
   return path[3];
 };
 
@@ -34,7 +38,6 @@ export const projectSlug = (pathname) => {
   ) {
     return null;
   }
-  console.log(path[3]);
   return path[3];
 };
 
@@ -65,7 +68,6 @@ const fetchProject = async (project_slug: string) => {
 };
 
 const ConsolePage = (props) => {
-
   const [count, setCount] = createSignal(0);
 
   const params = useParams();
