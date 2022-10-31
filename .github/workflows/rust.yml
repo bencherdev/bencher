@@ -10,9 +10,14 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # API
   BUILDER_DOCKER_IMAGE: bencher-api-builder
   LOCAL_DOCKER_IMAGE: bencher-api-local
   LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
+  # CLI
+  BIN_NAME: bencher
+  BIN_ARCH: amd64
+  DEB_DIR: deb
 
 jobs:
   # Pretty
@@ -60,6 +65,18 @@ jobs:
       - uses: actions/checkout@v3
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
+
+  # Audit
+  cargo_audit:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    needs: cargo_test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   # API
   build_api_docker:
@@ -132,6 +149,7 @@ jobs:
           file: ./services/api/litestream.Dockerfile
           tags: ${{ env.LITESTREAM_TAGS }}
           push: true
+
   # CLI
   build_cli_bin:
     name: Build CLI (Linux)
