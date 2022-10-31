@@ -14,5 +14,4 @@ COMMIT="Release $TAG"
 echo $COMMIT
 git commit -m "$COMMIT"
 git tag $TAG
-git push origin $TAG
-git push
+git push --follow-tags
