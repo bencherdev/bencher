@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.9"
+    "version": "0.2.10"
   },
   "paths": {
     "/v0/auth/confirm": {
