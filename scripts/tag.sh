@@ -5,6 +5,8 @@ cd ./services/api
 cargo run --features swagger
 cd -
 
+git add Cargo.toml
+git add Cargo.lock
 # If there was a change/the git tree is dirty add the updated file and commit
 SWAGGER=./services/ui/src/components/docs/api/swagger.json
 git diff --quiet $SWAGGER || git add $SWAGGER

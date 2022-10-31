@@ -1,4 +1,4 @@
-name: Pretty Rust
+name: Rust
 
 on:
   workflow_dispatch:
@@ -10,9 +10,14 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  BUILDER_DOCKER_IMAGE: bencher-api-builder
+  LOCAL_DOCKER_IMAGE: bencher-api-local
+  LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
 
 jobs:
+  # Pretty
   cargo_fmt:
+    name: Cargo Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -22,6 +27,7 @@ jobs:
         run: cargo fmt -- --check
 
   cargo_clippy:
+    name: Cargo Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -31,6 +37,7 @@ jobs:
         run: cargo clippy --no-deps -- -Dwarnings
 
   cargo_udeps:
+    name: Cargo Unused Deps
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -40,3 +47,147 @@ jobs:
         run: cargo install cargo-udeps --locked
       - name: Run udeps
         run: cargo +nightly udeps
+
+  # Test
+  cargo_test:
+    name: Cargo Test
+    runs-on: ubuntu-latest
+    needs:
+      - cargo_fmt
+      - cargo_clippy
+      - cargo_udeps
+    steps:
+      - uses: actions/checkout@v3
+      - name: cargo test
+        run: RUST_BACKTRACE=1 cargo test -- --nocapture
+
+  # API
+  build_api_docker:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    name: Build API (Linux)
+    runs-on: ubuntu-latest
+    needs: cargo_test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Builder Stage
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./services/api/builder.Dockerfile
+          tags: ${{ env.BUILDER_DOCKER_IMAGE }}
+          push: false
+      - name: Build Local
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/api
+          file: ./services/api/local.Dockerfile
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.LOCAL_DOCKER_IMAGE }}:latest
+          push: false
+      - name: Build Litestream
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/api
+          file: ./services/api/litestream.Dockerfile
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.LITESTREAM_DOCKER_IMAGE }}:latest
+          push: false
+
+  release_api_docker:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    name: Build and Release API (Linux)
+    runs-on: ubuntu-latest
+    needs: cargo_test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Export LOCAL_TAGS
+        run: |
+          export LOCAL_DOCKER_HUB_URL=${{ secrets.DOCKER_HUB_USERNAME }}/${LOCAL_DOCKER_IMAGE}
+          echo "LOCAL_TAGS=${LOCAL_DOCKER_HUB_URL}:latest,${LOCAL_DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Export LITESTREAM_TAGS
+        run: |
+          export LITESTREAM_DOCKER_HUB_URL=${{ secrets.DOCKER_HUB_USERNAME }}/${LITESTREAM_DOCKER_IMAGE}
+          echo "LITESTREAM_TAGS=${LITESTREAM_DOCKER_HUB_URL}:latest,${LITESTREAM_DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build Builder Stage
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./services/api/builder.Dockerfile
+          tags: ${{ env.BUILDER_DOCKER_IMAGE }}
+          push: false
+      - name: Build and Push Local to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/api
+          file: ./services/api/local.Dockerfile
+          tags: ${{ env.LOCAL_TAGS }}
+          push: true
+      - name: Build and Push Litestream to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/api
+          file: ./services/api/litestream.Dockerfile
+          tags: ${{ env.LITESTREAM_TAGS }}
+          push: true
+  # CLI
+  build_cli_bin:
+    name: Build CLI (Linux)
+    runs-on: ubuntu-latest
+    needs: cargo_test
+    steps:
+      - uses: actions/checkout@v3
+      - name: cargo build CLI
+        working-directory: ./services/cli
+        run: cargo build --release
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.BIN_NAME }}
+          path: target/release/${{ env.BIN_NAME }}
+
+  build_cli_deb:
+    name: Package CLI (.deb)
+    runs-on: ubuntu-latest
+    needs: build_cli_bin
+    steps:
+      - uses: actions/checkout@v3
+      - name: export DEB_FILE
+        run: echo "DEB_FILE=${BIN_NAME}_$(./scripts/version.sh)_${BIN_ARCH}.deb" >> $GITHUB_ENV
+      - name: Download CLI Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.BIN_NAME }}
+      - name: Build .deb package
+        run: ./scripts/deb.sh $BIN_NAME $(./scripts/version.sh) $BIN_ARCH $DEB_DIR
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.DEB_FILE }}
+          path: ${{ env.DEB_DIR }}/${{ env.DEB_FILE }}
+
+  release_cli_deb:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    name: Release CLI
+    runs-on: ubuntu-latest
+    needs: build_cli_deb
+    steps:
+      - uses: actions/checkout@v3
+      - name: export DEB_FILE
+        run: echo "DEB_FILE=${BIN_NAME}_$(./scripts/version.sh)_${BIN_ARCH}.deb" >> $GITHUB_ENV
+      - name: Download CLI bin artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.BIN_NAME }}
+      - name: Download CLI .deb Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.DEB_FILE }}
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.BIN_NAME }}
+            ${{ env.DEB_FILE }}
