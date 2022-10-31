@@ -68,6 +68,8 @@ export const Navbar = (props) => {
 
         <div class="navbar-end">
           <div class="navbar-item">
+            <div class="navbar-item">BETA</div>
+            <div class="navbar-item" />
             <div class="buttons">
               {props.user()?.token === null ? (
                 <>
