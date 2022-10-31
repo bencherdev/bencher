@@ -14,6 +14,7 @@ env:
   BUILDER_DOCKER_IMAGE: bencher-api-builder
   LOCAL_DOCKER_IMAGE: bencher-api-local
   LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
   # CLI
   BIN_NAME: bencher
   BIN_ARCH: amd64
