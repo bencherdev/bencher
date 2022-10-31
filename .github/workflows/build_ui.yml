@@ -22,7 +22,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${DOCKER_IMAGE}:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
           push: false
 
   release_ui_docker:
