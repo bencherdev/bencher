@@ -2,16 +2,32 @@ name: Release UI
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    branches: [ master, devel ]
+  pull_request:
+    branches: [ master, devel ]
 
 env:
   CARGO_TERM_COLOR: always
   DOCKER_IMAGE: bencher-ui
 
 jobs:
-  api_build_linux:
+  build_ui_docker:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     name: Build UI (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and Push to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/ui
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${DOCKER_IMAGE}:latest
+          push: false
+
+  release_ui_docker:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    name: Build and Release UI (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
