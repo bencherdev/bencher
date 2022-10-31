@@ -2,6 +2,10 @@
 
 ./scripts/githooks.sh
 
+curl -L https://fly.io/install.sh | sh
+echo "export FLYCTL_INSTALL=\"/home/gitpod/.fly\"" >> $HOME/.bash_profile
+echo "export PATH=\"/home/gitpod/.fly/bin:$PATH\"" >> $HOME/.bash_profile
+
 rustup toolchain install nightly
 rustup component add rustfmt
 rustup component add clippy
@@ -29,10 +33,5 @@ cd ./tests/cli/rust_bench
 ./test.sh
 cd -
 
-curl -L https://fly.io/install.sh | sh
-
-echo "export FLYCTL_INSTALL=\"/home/gitpod/.fly\"" >> $HOME/.bash_profile
-echo "export PATH=\"/home/gitpod/.fly/bin:$PATH\"" >> $HOME/.bash_profile
 source ~/.bash_profile
-
 flyctl auth login
