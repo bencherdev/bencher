@@ -8,7 +8,7 @@ pub enum CliError {
     ResourceId(String),
     #[error("Failed to find Bencher project. Set the `--project` flag or the `BENCHER_PROJECT` environment variable.")]
     ProjectNotFound,
-    #[error("Failed to find Bencher project branch. Set the `--branch` flag or the `BENCHER_BRANCH` environment variable.")]
+    #[error("Failed to find Bencher project branch. Set the `--branch` flag, `--if-branch` flag, or the `BENCHER_BRANCH` environment variable.")]
     BranchNotFound,
     #[error("Failed to find Bencher project testbed. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable.")]
     TestbedNotFound,
@@ -18,6 +18,10 @@ pub enum CliError {
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
     NoPerf,
+    #[error(
+        "{2} branches were found with name \"{1}\" in project \"{0}\"! Exactly one was expected."
+    )]
+    BranchName(String, String, usize),
     #[error("Alerts detected.")]
     Alerts,
 

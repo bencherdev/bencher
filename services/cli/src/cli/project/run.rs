@@ -14,6 +14,10 @@ pub struct CliRun {
     #[clap(long)]
     pub branch: Option<Uuid>,
 
+    /// Run if branch name exists
+    #[clap(long, conflicts_with = "branch")]
+    pub if_branch: Option<String>,
+
     /// Software commit hash
     #[clap(long)]
     pub hash: Option<String>,

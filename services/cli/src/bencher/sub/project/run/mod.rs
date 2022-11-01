@@ -1,7 +1,9 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{project::report::new::JsonBenchmarks, JsonNewReport, JsonReport, ResourceId};
+use bencher_json::{
+    project::report::new::JsonBenchmarks, JsonBranch, JsonNewReport, JsonReport, ResourceId,
+};
 use chrono::Utc;
 use git2::Oid;
 use uuid::Uuid;
@@ -30,13 +32,19 @@ pub struct Run {
     project: ResourceId,
     locality: Locality,
     perf: Perf,
-    branch: Uuid,
+    branch: Branch,
     hash: Option<Oid>,
     testbed: Uuid,
     adapter: Adapter,
     iter: usize,
     fold: Option<Fold>,
     err: bool,
+}
+
+#[derive(Debug, Clone)]
+enum Branch {
+    Uuid(Uuid),
+    Name(String),
 }
 
 impl TryFrom<CliRun> for Run {
@@ -48,6 +56,7 @@ impl TryFrom<CliRun> for Run {
             locality,
             command,
             branch,
+            if_branch,
             hash,
             testbed,
             adapter,
@@ -59,7 +68,7 @@ impl TryFrom<CliRun> for Run {
             project: unwrap_project(project)?,
             locality: locality.try_into()?,
             perf: command.try_into()?,
-            branch: unwrap_branch(branch)?,
+            branch: map_branch(branch, if_branch)?,
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
             adapter: unwrap_adapter(adapter),
@@ -80,14 +89,16 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
     })
 }
 
-fn unwrap_branch(branch: Option<Uuid>) -> Result<Uuid, CliError> {
-    Ok(if let Some(branch) = branch {
-        branch
+fn map_branch(branch: Option<Uuid>, if_branch: Option<String>) -> Result<Branch, CliError> {
+    if let Some(branch) = branch {
+        Ok(Branch::Uuid(branch))
     } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
-        Uuid::from_str(&branch)?
+        Ok(Branch::Uuid(Uuid::from_str(&branch)?))
+    } else if let Some(name) = if_branch {
+        Ok(Branch::Name(name))
     } else {
-        return Err(CliError::BranchNotFound);
-    })
+        Err(CliError::BranchNotFound)
+    }
 }
 
 fn map_hash(hash: Option<String>) -> Result<Option<Oid>, CliError> {
@@ -115,6 +126,17 @@ fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+        let branch = match &self.branch {
+            Branch::Uuid(uuid) => *uuid,
+            Branch::Name(name) => {
+                if let Some(uuid) = if_branch(&self.project, name, &self.locality).await? {
+                    uuid
+                } else {
+                    return Ok(());
+                }
+            },
+        };
+
         let start_time = Utc::now();
 
         let mut benchmarks = Vec::with_capacity(self.iter);
@@ -130,7 +152,7 @@ impl SubCmd for Run {
         }
 
         let report = JsonNewReport {
-            branch: self.branch,
+            branch,
             hash: self.hash.map(|hash| hash.to_string()),
             testbed: self.testbed,
             adapter: self.adapter.into(),
@@ -155,6 +177,33 @@ impl SubCmd for Run {
         }
 
         Ok(())
+    }
+}
+
+async fn if_branch(
+    project: &ResourceId,
+    name: &str,
+    locality: &Locality,
+) -> Result<Option<Uuid>, CliError> {
+    if let Locality::Backend(backend) = &locality {
+        let value = backend
+            .get(&format!("/v0/projects/{project}/branches?name={name}"))
+            .await?;
+        let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
+        let branch_count = json_branches.len();
+        if branch_count == 1 {
+            if let Some(branch) = json_branches.pop() {
+                return Ok(Some(branch.uuid));
+            }
+        }
+        Err(CliError::BranchName(
+            project.to_string(),
+            name.into(),
+            branch_count,
+        ))
+    } else {
+        println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
+        Ok(None)
     }
 }
 
