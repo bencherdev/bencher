@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.14"
+    "version": "0.2.15"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -1941,6 +1941,15 @@
               "$ref": "#/components/schemas/ResourceId"
             },
             "style": "simple"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            },
+            "style": "form"
           }
         ],
         "responses": {
@@ -2087,6 +2096,15 @@
               "$ref": "#/components/schemas/ResourceId"
             },
             "style": "simple"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            },
+            "style": "form"
           }
         ],
         "responses": {
@@ -3609,6 +3627,89 @@
         }
       }
     },
+    "/v0/server/version": {
+      "get": {
+        "tags": [
+          "server",
+          "version"
+        ],
+        "operationId": "get",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonVersion"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "server",
+          "version"
+        ],
+        "operationId": "options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/users/{user}/tokens": {
       "get": {
         "tags": [
@@ -4538,7 +4639,6 @@
       "JsonOrganizationRole": {
         "type": "string",
         "enum": [
-          "member",
           "leader"
         ]
       },
@@ -5166,6 +5266,17 @@
           "uuid"
         ]
       },
+      "JsonVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
       "JsonWebToken": {
         "type": "string"
       },
@@ -5315,6 +5426,9 @@
     },
     {
       "name": "users"
+    },
+    {
+      "name": "version"
     }
   ]
 }
