@@ -36,7 +36,8 @@ pub struct JsonUpdateMember {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonOrganizationRole {
-    Member,
+    // TODO Team Management
+    // Member,
     Leader,
 }
 
@@ -45,7 +46,8 @@ impl FromStr for JsonOrganizationRole {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            MEMBER_ROLE => Ok(Self::Member),
+            // TODO Team Management
+            // MEMBER_ROLE => Ok(Self::Member),
             LEADER_ROLE => Ok(Self::Leader),
             _ => Err(s.into()),
         }
@@ -58,7 +60,8 @@ impl fmt::Display for JsonOrganizationRole {
             f,
             "{}",
             match self {
-                Self::Member => MEMBER_ROLE,
+                // TODO Team Management
+                // Self::Member => MEMBER_ROLE,
                 Self::Leader => LEADER_ROLE,
             }
         )

@@ -48,7 +48,8 @@ impl TryFrom<CliMemberInvite> for Invite {
 impl From<CliMemberRole> for JsonOrganizationRole {
     fn from(role: CliMemberRole) -> Self {
         match role {
-            CliMemberRole::Member => Self::Member,
+            // TODO Team Management
+            // CliMemberRole::Member => Self::Member,
             CliMemberRole::Leader => Self::Leader,
         }
     }

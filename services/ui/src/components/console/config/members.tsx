@@ -4,12 +4,13 @@ import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
 import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
 
 const ROLE_VALUE = {
-  selected: "member",
+  selected: "leader",
   options: [
-    {
-      value: "member",
-      option: "Member",
-    },
+    // TODO Team Management
+    // {
+    //   value: "member",
+    //   option: "Member",
+    // },
     {
       value: "leader",
       option: "Leader",

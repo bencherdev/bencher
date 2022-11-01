@@ -98,6 +98,7 @@ pub struct CliMemberRemove {
 /// Role within the organization
 #[derive(ValueEnum, Debug, Clone)]
 pub enum CliMemberRole {
-    Member,
+    // TODO Team Management
+    // Member,
     Leader,
 }

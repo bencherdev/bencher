@@ -316,7 +316,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "--org",
         &org_uuid,
         "--role",
-        "member",
+        "leader",
     ]);
     cmd.assert().success();
 
