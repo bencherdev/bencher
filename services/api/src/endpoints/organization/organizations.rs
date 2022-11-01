@@ -140,7 +140,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetOneParams {
+pub struct OnePath {
     pub organization: ResourceId,
 }
 
@@ -151,7 +151,7 @@ pub struct GetOneParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetOneParams>,
+    _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -163,7 +163,7 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
@@ -177,7 +177,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
     let api_context = &mut *context.lock().await;

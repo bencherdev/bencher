@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -33,7 +33,7 @@ use super::Resource;
 const BRANCH_RESOURCE: Resource = Resource::Branch;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetDirParams {
+pub struct DirPath {
     pub project: ResourceId,
 }
 
@@ -44,7 +44,7 @@ pub struct GetDirParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetDirParams>,
+    _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -56,7 +56,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetDirParams>,
+    path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
@@ -76,7 +76,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetDirParams,
+    path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -105,7 +105,7 @@ async fn get_ls_inner(
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetDirParams>,
+    path_params: Path<DirPath>,
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -125,7 +125,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
-    path_params: GetDirParams,
+    path_params: DirPath,
     json_branch: JsonNewBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
@@ -154,7 +154,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetOneParams {
+pub struct OnePath {
     pub project: ResourceId,
     pub branch: ResourceId,
 }
@@ -166,7 +166,7 @@ pub struct GetOneParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetOneParams>,
+    _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -178,7 +178,7 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetOne);
@@ -194,7 +194,7 @@ fn_resource_id!(branch);
 
 async fn get_one_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;

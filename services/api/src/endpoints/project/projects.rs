@@ -24,7 +24,7 @@ use super::Resource;
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetOneParams {
+pub struct OnePath {
     pub project: ResourceId,
 }
 
@@ -35,7 +35,7 @@ pub struct GetOneParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetOneParams>,
+    _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -47,7 +47,7 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
@@ -61,7 +61,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;

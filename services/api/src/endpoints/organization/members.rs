@@ -35,7 +35,7 @@ use super::Resource;
 const MEMBER_RESOURCE: Resource = Resource::Member;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetDirParams {
+pub struct DirPath {
     pub organization: ResourceId,
 }
 
@@ -46,7 +46,7 @@ pub struct GetDirParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetDirParams>,
+    _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -58,7 +58,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetDirParams>,
+    path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
@@ -78,7 +78,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetDirParams,
+    path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMember>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -118,7 +118,7 @@ async fn get_ls_inner(
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetDirParams>,
+    path_params: Path<DirPath>,
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -138,7 +138,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
-    path_params: GetDirParams,
+    path_params: DirPath,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
@@ -228,7 +228,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetOneParams {
+pub struct OnePath {
     pub organization: ResourceId,
     pub user: ResourceId,
 }
@@ -240,7 +240,7 @@ pub struct GetOneParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetOneParams>,
+    _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -252,7 +252,7 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetOne);
@@ -266,7 +266,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -289,7 +289,7 @@ async fn get_one_inner(
 }]
 pub async fn patch(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -309,7 +309,7 @@ pub async fn patch(
 
 async fn patch_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     json_update: JsonUpdateMember,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
@@ -351,7 +351,7 @@ async fn patch_inner(
 }]
 pub async fn delete(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Patch);
@@ -365,7 +365,7 @@ pub async fn delete(
 
 async fn delete_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
     let api_context = &mut *context.lock().await;

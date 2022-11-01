@@ -40,7 +40,7 @@ use super::Resource;
 const PERF_RESOURCE: Resource = Resource::Perf;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetDirParams {
+pub struct DirPath {
     pub project: ResourceId,
 }
 
@@ -51,7 +51,7 @@ pub struct GetDirParams {
 }]
 pub async fn options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetDirParams>,
+    _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -63,7 +63,7 @@ pub async fn options(
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetDirParams>,
+    path_params: Path<DirPath>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -87,7 +87,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &Context,
-    path_params: GetDirParams,
+    path_params: DirPath,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {

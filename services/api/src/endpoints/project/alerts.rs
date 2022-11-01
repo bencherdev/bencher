@@ -30,7 +30,7 @@ use super::Resource;
 const ALERT_RESOURCE: Resource = Resource::Alert;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetDirParams {
+pub struct DirPath {
     pub project: ResourceId,
 }
 
@@ -41,7 +41,7 @@ pub struct GetDirParams {
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetDirParams>,
+    _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -53,7 +53,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetDirParams>,
+    path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
@@ -73,7 +73,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
-    path_params: GetDirParams,
+    path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonAlert>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -111,7 +111,7 @@ async fn get_ls_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetOneParams {
+pub struct OnePath {
     pub project: ResourceId,
     pub alert: Uuid,
 }
@@ -123,7 +123,7 @@ pub struct GetOneParams {
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
-    _path_params: Path<GetOneParams>,
+    _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -135,7 +135,7 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
-    path_params: Path<GetOneParams>,
+    path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetOne);
@@ -149,7 +149,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    path_params: GetOneParams,
+    path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonAlert, ApiError> {
     let api_context = &mut *context.lock().await;
