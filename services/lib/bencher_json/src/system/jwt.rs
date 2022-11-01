@@ -11,9 +11,9 @@ use crate::organization::member::JsonOrganizationRole;
 
 const BENCHER_DEV: &str = "bencher.dev";
 // 15 minutes * 60 seconds / minute
-const AUTH_TOKEN_TTL: usize = 15 * 60;
+const AUTH_TOKEN_TTL: u64 = 15 * 60;
 // 21 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
-const CLIENT_TOKEN_TTL: usize = 21 * 24 * 60 * 60;
+const CLIENT_TOKEN_TTL: u64 = 21 * 24 * 60 * 60;
 
 lazy_static::lazy_static! {
     static ref HEADER: Header = Header::default();
@@ -35,7 +35,7 @@ impl JsonWebToken {
         key: &EncodingKey,
         audience: Audience,
         email: String,
-        ttl: usize,
+        ttl: u64,
         org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         let claims = JsonClaims::new(audience, email, ttl, org);
@@ -56,7 +56,7 @@ impl JsonWebToken {
     pub fn new_api_key(
         key: &EncodingKey,
         email: String,
-        ttl: usize,
+        ttl: u64,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::ApiKey, email, ttl, None)
     }
@@ -125,8 +125,8 @@ impl JsonWebToken {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonClaims {
     pub aud: String,            // Audience
-    pub exp: usize,             // Expiration time (as UTC timestamp)
-    pub iat: usize,             // Issued at (as UTC timestamp)
+    pub exp: u64,               // Expiration time (as UTC timestamp)
+    pub iat: u64,               // Issued at (as UTC timestamp)
     pub iss: String,            // Issuer
     pub sub: String,            // Subject (whom token refers to)
     pub org: Option<OrgClaims>, // Organization (for invitation)
@@ -140,8 +140,8 @@ pub struct OrgClaims {
 }
 
 impl JsonClaims {
-    fn new(audience: Audience, email: String, ttl: usize, org: Option<OrgClaims>) -> Self {
-        let now = Utc::now().timestamp() as usize;
+    fn new(audience: Audience, email: String, ttl: u64, org: Option<OrgClaims>) -> Self {
+        let now = Utc::now().timestamp() as u64;
         Self {
             aud: audience.into(),
             exp: now + ttl,

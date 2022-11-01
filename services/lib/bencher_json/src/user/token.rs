@@ -8,7 +8,7 @@ use uuid::Uuid;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {
     pub name: String,
-    pub ttl: u64,
+    pub ttl: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
