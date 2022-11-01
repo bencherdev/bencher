@@ -25,6 +25,7 @@ use crate::bencher::SubCmd;
 
 const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
+const BENCHER_BRANCH_NAME: &str = "BENCHER_BRANCH_NAME";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 
 #[derive(Debug)]
@@ -95,6 +96,8 @@ fn map_branch(branch: Option<Uuid>, if_branch: Option<String>) -> Result<Branch,
     } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
         Ok(Branch::Uuid(Uuid::from_str(&branch)?))
     } else if let Some(name) = if_branch {
+        Ok(Branch::Name(name))
+    } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
         Ok(Branch::Name(name))
     } else {
         Err(CliError::BranchNotFound)

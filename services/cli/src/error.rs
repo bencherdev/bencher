@@ -8,7 +8,7 @@ pub enum CliError {
     ResourceId(String),
     #[error("Failed to find Bencher project. Set the `--project` flag or the `BENCHER_PROJECT` environment variable.")]
     ProjectNotFound,
-    #[error("Failed to find Bencher project branch. Set the `--branch` flag, `--if-branch` flag, or the `BENCHER_BRANCH` environment variable.")]
+    #[error("Failed to find Bencher project branch. Set the `--branch` flag or the `BENCHER_BRANCH`, `--if-branch`, or `BENCHER_BRANCH_NAME` environment variable.")]
     BranchNotFound,
     #[error("Failed to find Bencher project testbed. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable.")]
     TestbedNotFound,
