@@ -37,6 +37,11 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct DirQuery {
+    pub name: Option<String>,
+}
+
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches",
@@ -45,6 +50,7 @@ pub struct DirPath {
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
     _path_params: Path<DirPath>,
+    _query_params: Query<DirQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -57,6 +63,7 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<DirPath>,
+    query_params: Query<DirQuery>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
@@ -65,6 +72,7 @@ pub async fn get_ls(
         rqctx.context(),
         &auth_user,
         path_params.into_inner(),
+        query_params.into_inner(),
         endpoint,
     )
     .await
@@ -77,6 +85,7 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: &AuthUser,
     path_params: DirPath,
+    query_params: DirQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -88,8 +97,15 @@ async fn get_ls_inner(
     )?;
     let conn = &mut api_context.database;
 
-    Ok(schema::branch::table
+    let mut query = schema::branch::table
         .filter(schema::branch::project_id.eq(&query_project.id))
+        .into_boxed();
+
+    if let Some(name) = query_params.name {
+        query = query.filter(schema::branch::name.eq(name));
+    }
+
+    Ok(query
         .order(schema::branch::name)
         .load::<QueryBranch>(conn)
         .map_err(api_error!())?
