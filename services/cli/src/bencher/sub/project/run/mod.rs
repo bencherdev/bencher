@@ -194,20 +194,21 @@ async fn if_branch(
             .await?;
         let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
         let branch_count = json_branches.len();
-        if branch_count == 1 {
-            if let Some(branch) = json_branches.pop() {
-                return Ok(Some(branch.uuid));
-            }
+        if let Some(branch) = json_branches.pop() {
+            return if branch_count == 1 {
+                Ok(Some(branch.uuid))
+            } else {
+                Err(CliError::BranchName(
+                    project.to_string(),
+                    name.into(),
+                    branch_count,
+                ))
+            };
         }
-        Err(CliError::BranchName(
-            project.to_string(),
-            name.into(),
-            branch_count,
-        ))
-    } else {
-        println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
-        Ok(None)
     }
+
+    println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
+    Ok(None)
 }
 
 #[derive(Debug)]
