@@ -4,31 +4,31 @@ use async_trait::async_trait;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd, wide::Wide},
-    cli::system::server::CliPing,
+    cli::system::server::CliVersion,
     CliError,
 };
 
-const PING_PATH: &str = "/v0/server/ping";
+const VERSION_PATH: &str = "/v0/server/version";
 
 #[derive(Debug, Clone)]
-pub struct Ping {
+pub struct Version {
     pub backend: Backend,
 }
 
-impl TryFrom<CliPing> for Ping {
+impl TryFrom<CliVersion> for Version {
     type Error = CliError;
 
-    fn try_from(ping: CliPing) -> Result<Self, Self::Error> {
-        let CliPing { host } = ping;
+    fn try_from(version: CliVersion) -> Result<Self, Self::Error> {
+        let CliVersion { host } = version;
         let backend = Backend::new(None, host)?;
         Ok(Self { backend })
     }
 }
 
 #[async_trait]
-impl SubCmd for Ping {
+impl SubCmd for Version {
     async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
-        self.backend.get(PING_PATH).await?;
+        self.backend.get(VERSION_PATH).await?;
         Ok(())
     }
 }

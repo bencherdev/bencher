@@ -6,6 +6,8 @@ use crate::cli::CliBackend;
 pub enum CliServer {
     /// Ping server
     Ping(CliPing),
+    /// Server version
+    Version(CliVersion),
     /// Restart server
     Restart(CliRestart),
     /// Manager server config
@@ -15,8 +17,16 @@ pub enum CliServer {
 
 #[derive(Parser, Debug)]
 pub struct CliPing {
-    #[clap(flatten)]
-    pub backend: CliBackend,
+    /// Backend host URL (default https://api.bencher.dev)
+    #[clap(long)]
+    pub host: Option<String>,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliVersion {
+    /// Backend host URL (default https://api.bencher.dev)
+    #[clap(long)]
+    pub host: Option<String>,
 }
 
 #[derive(Parser, Debug)]

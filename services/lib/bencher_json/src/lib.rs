@@ -25,6 +25,7 @@ pub use system::{
     config::JsonConfig,
     jwt::JsonWebToken,
     restart::JsonRestart,
+    version::JsonVersion,
 };
 pub use user::{
     token::{JsonNewToken, JsonToken},
