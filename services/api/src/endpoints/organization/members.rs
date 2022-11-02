@@ -197,7 +197,6 @@ async fn post_inner(
         pre_body: format!(
             "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
         ),
-        pre_code: "".into(),
         button_text: format!("Join {org_name}"),
         button_url: api_context
             .endpoint
@@ -208,8 +207,9 @@ async fn post_inner(
                 url.into()
             })
             .unwrap_or_default(),
-        post_body: "Code: ".into(),
-        post_code: token_string,
+        clipboard_text: "Invite Code".into(),
+        clipboard_target: token_string,
+        post_body: "".into(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context

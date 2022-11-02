@@ -91,7 +91,6 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
         greeting: format!("Ahoy {},", query_user.name),
         pre_body: "Please, click the button below or use the provided code to login to Bencher."
             .into(),
-        pre_code: "".into(),
         button_text: "Confirm Login".into(),
         button_url: api_context
             .endpoint
@@ -102,8 +101,9 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
                 url.into()
             })
             .unwrap_or_default(),
-        post_body: "Code: ".into(),
-        post_code: token_string,
+        clipboard_text: "Confirmation Code".into(),
+        clipboard_target: token_string,
+        post_body: "".into(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context

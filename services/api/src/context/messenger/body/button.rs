@@ -7,11 +7,11 @@ pub struct ButtonBody {
     pub preheader: String,
     pub greeting: String,
     pub pre_body: String,
-    pub pre_code: String,
     pub button_text: String,
     pub button_url: String,
+    pub clipboard_text: String,
+    pub clipboard_target: String,
     pub post_body: String,
-    pub post_code: String,
     pub closing: String,
     pub signature: String,
     pub settings_url: String,
@@ -24,17 +24,17 @@ impl FmtBody for ButtonBody {
             preheader: _,
             greeting,
             pre_body,
-            pre_code,
             button_text,
             button_url,
+            clipboard_text,
+            clipboard_target,
             post_body,
-            post_code,
             closing,
             signature,
             settings_url,
         } = self;
 
-        format!("\n{greeting}\n{pre_body}{pre_code}\n{button_text} ({button_url})\n{post_body}{post_code}\n{closing}\n{signature}\nBencher - Continuous Benchmarking\nManage email settings ({settings_url})")
+        format!("\n{greeting}\n{pre_body}\n{button_text}: {button_url}\n{clipboard_text}: {clipboard_target}\n{post_body}\n{closing}\n{signature}\nBencher - Continuous Benchmarking\nManage email settings ({settings_url})")
     }
 
     // https://github.com/leemunroe/responsive-html-email-template
@@ -44,11 +44,11 @@ impl FmtBody for ButtonBody {
             preheader,
             greeting,
             pre_body,
-            pre_code,
             button_text,
             button_url,
+            clipboard_text,
+            clipboard_target,
             post_body,
-            post_code,
             closing,
             signature,
             settings_url,
@@ -406,7 +406,7 @@ impl FmtBody for ButtonBody {
                     <tr>
                       <td>
                         <p>{greeting}</p>
-                        <p>{pre_body}<code>{pre_code}</code></p>
+                        <p>{pre_body}</p>
                         <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" class=\"btn btn-primary\">
                           <tbody>
                             <tr>
@@ -422,7 +422,11 @@ impl FmtBody for ButtonBody {
                             </tr>
                           </tbody>
                         </table>
-                        <p>{post_body}<code>{post_code}</code></p>
+                        <input id=\"clipboard-target\" value=\"{clipboard_target}\" disabled>
+                        <button class=\"btn\" data-clipboard-target=\"#clipboard-target\">
+                            <img src=\"assets/clippy.svg\" alt=\"{clipboard_text}\">
+                        </button>
+                        <p>{post_body}</p>
                         <br/>
                         <p>{closing}</p>
                         <p>{signature}</p>
@@ -455,6 +459,7 @@ impl FmtBody for ButtonBody {
       </tr>
     </table>
   </body>
+  <script src=\"https://cdn.jsdelivr.net/npm/clipboard@2.0.10/dist/clipboard.min.js\"></script>
 </html>");
 
         css_inline::inline(&html)
