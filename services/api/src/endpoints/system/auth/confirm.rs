@@ -23,7 +23,7 @@ use crate::{
     ApiError,
 };
 
-use super::Resource;
+use super::{Resource, CLIENT_TOKEN_TTL};
 
 const CONFIRM_RESOURCE: Resource = Resource::Confirm;
 
@@ -72,6 +72,7 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
     let token = JsonWebToken::new_client(
         &api_context.secret_key.encoding,
         token_data.claims.email().to_string(),
+        CLIENT_TOKEN_TTL,
     )
     .map_err(api_error!())?;
 

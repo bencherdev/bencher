@@ -19,10 +19,6 @@ macro_rules! same_user {
 
 pub(crate) use same_user;
 
-// ~365 days / years * 24 hours / day * 60 minutes / hour * 60 seconds / minute
-#[cfg(not(debug_assert))]
-const MAX_TTL: u64 = 365 * 24 * 60 * 60;
-
 #[derive(Queryable)]
 pub struct QueryToken {
     pub id: i32,
@@ -102,15 +98,20 @@ impl InsertToken {
         let query_user = QueryUser::from_resource_id(&mut api_context.database, user)?;
         same_user!(auth_user, api_context.rbac, query_user.id);
 
-        // Only in production, set a max TTL of approximately one year
-        // Disabled in development to enable long lived testing tokens
-        #[cfg(not(debug_assert))]
-        if ttl > MAX_TTL {
-            return Err(ApiError::MaxTtl {
-                requested: ttl,
-                max: MAX_TTL,
-            });
-        }
+        // TODO Custom max TTL
+        let max_ttl = u32::MAX;
+        let ttl = if let Some(ttl) = ttl {
+            if ttl > max_ttl {
+                return Err(ApiError::MaxTtl {
+                    requested: ttl,
+                    max: max_ttl,
+                });
+            } else {
+                ttl
+            }
+        } else {
+            max_ttl
+        };
 
         let jwt =
             JsonWebToken::new_api_key(&api_context.secret_key.encoding, query_user.email, ttl)

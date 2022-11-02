@@ -25,6 +25,7 @@ use crate::{
 };
 
 use super::Resource;
+use super::AUTH_TOKEN_TTL;
 
 const LOGIN_RESOURCE: Resource = Resource::Login;
 
@@ -79,8 +80,12 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .map_err(api_error!())?;
     }
 
-    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, query_user.email.clone())
-        .map_err(api_error!())?;
+    let token = JsonWebToken::new_auth(
+        &api_context.secret_key.encoding,
+        query_user.email.clone(),
+        AUTH_TOKEN_TTL,
+    )
+    .map_err(api_error!())?;
 
     let token_string = token.to_string();
     let body = Body::Button(ButtonBody {

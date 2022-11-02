@@ -34,6 +34,9 @@ use super::Resource;
 
 const MEMBER_RESOURCE: Resource = Resource::Member;
 
+// TODO Custom max TTL
+pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
+
 #[derive(Deserialize, JsonSchema)]
 pub struct DirPath {
     pub organization: ResourceId,
@@ -178,6 +181,7 @@ async fn post_inner(
     let token = JsonWebToken::new_invite(
         &api_context.secret_key.encoding,
         json_new_member.email,
+        INVITE_TOKEN_TTL,
         Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
         json_new_member.role,
     )

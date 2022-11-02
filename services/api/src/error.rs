@@ -109,7 +109,7 @@ pub enum ApiError {
     #[error("Invalid email: {0}")]
     Email(String),
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
-    MaxTtl { requested: u64, max: u64 },
+    MaxTtl { requested: u32, max: u32 },
     #[error("User ({0}) cannot create a new organization")]
     CreateOrganization(i32),
     #[error("Failed to create TLS connection for email: {0}")]

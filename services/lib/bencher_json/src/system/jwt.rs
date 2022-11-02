@@ -10,10 +10,6 @@ use uuid::Uuid;
 use crate::organization::member::JsonOrganizationRole;
 
 const BENCHER_DEV: &str = "bencher.dev";
-// 15 minutes * 60 seconds / minute
-const AUTH_TOKEN_TTL: u64 = 15 * 60;
-// 21 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
-const CLIENT_TOKEN_TTL: u64 = 21 * 24 * 60 * 60;
 
 lazy_static::lazy_static! {
     static ref HEADER: Header = Header::default();
@@ -35,28 +31,33 @@ impl JsonWebToken {
         key: &EncodingKey,
         audience: Audience,
         email: String,
-        ttl: u64,
+        ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         let claims = JsonClaims::new(audience, email, ttl, org);
         encode(&*HEADER, &claims, key).map(Into::into)
     }
 
-    pub fn new_auth(key: &EncodingKey, email: String) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Auth, email, AUTH_TOKEN_TTL, None)
+    pub fn new_auth(
+        key: &EncodingKey,
+        email: String,
+        ttl: u32,
+    ) -> Result<Self, jsonwebtoken::errors::Error> {
+        Self::new(key, Audience::Auth, email, ttl, None)
     }
 
     pub fn new_client(
         key: &EncodingKey,
         email: String,
+        ttl: u32,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
-        Self::new(key, Audience::Client, email, CLIENT_TOKEN_TTL, None)
+        Self::new(key, Audience::Client, email, ttl, None)
     }
 
     pub fn new_api_key(
         key: &EncodingKey,
         email: String,
-        ttl: u64,
+        ttl: u32,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::ApiKey, email, ttl, None)
     }
@@ -64,6 +65,7 @@ impl JsonWebToken {
     pub fn new_invite(
         key: &EncodingKey,
         email: String,
+        ttl: u32,
         org_uuid: Uuid,
         role: JsonOrganizationRole,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
@@ -71,13 +73,7 @@ impl JsonWebToken {
             uuid: org_uuid,
             role,
         };
-        Self::new(
-            key,
-            Audience::Invite,
-            email,
-            CLIENT_TOKEN_TTL,
-            Some(org_claims),
-        )
+        Self::new(key, Audience::Invite, email, ttl, Some(org_claims))
     }
 
     fn validate(
@@ -140,11 +136,11 @@ pub struct OrgClaims {
 }
 
 impl JsonClaims {
-    fn new(audience: Audience, email: String, ttl: u64, org: Option<OrgClaims>) -> Self {
+    fn new(audience: Audience, email: String, ttl: u32, org: Option<OrgClaims>) -> Self {
         let now = Utc::now().timestamp() as u64;
         Self {
             aud: audience.into(),
-            exp: now + ttl,
+            exp: now + ttl as u64,
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: email,

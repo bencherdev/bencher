@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::Resource;
+use super::AUTH_TOKEN_TTL;
 
 const SIGNUP_RESOURCE: Resource = Resource::Signup;
 
@@ -103,8 +104,12 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         .execute(conn)
         .map_err(api_error!())?;
 
-    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, insert_user.email.clone())
-        .map_err(api_error!())?;
+    let token = JsonWebToken::new_auth(
+        &api_context.secret_key.encoding,
+        insert_user.email.clone(),
+        AUTH_TOKEN_TTL,
+    )
+    .map_err(api_error!())?;
 
     let token_string = token.to_string();
     let body = Body::Button(ButtonBody {

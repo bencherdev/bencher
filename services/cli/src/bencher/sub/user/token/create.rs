@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub user: ResourceId,
-    pub ttl: u64,
+    pub ttl: Option<u32>,
     pub name: String,
     pub backend: Backend,
 }
