@@ -12,7 +12,11 @@ services:
       # Set configuration string or filepath
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
-      - BENCHER_DB=bencher.db
+      # Set litestream configuration
+      - BENCHER_DB=/data/bencher.db
+      # - BENCHER_REPLICA_URL=
+      # - BENCHER_ACCESS_KEY_ID=
+      # - BENCHER_SECRET_ACCESS_KEY=
 
   bencher_ui:
     build:
