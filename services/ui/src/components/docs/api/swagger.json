@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.15"
+    "version": "0.2.16"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -4606,14 +4606,14 @@
             "type": "string"
           },
           "ttl": {
+            "nullable": true,
             "type": "integer",
-            "format": "uint64",
+            "format": "uint32",
             "minimum": 0
           }
         },
         "required": [
-          "name",
-          "ttl"
+          "name"
         ]
       },
       "JsonOrganization": {
