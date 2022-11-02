@@ -125,6 +125,7 @@ impl FmtBody for ButtonBody {
                   <br/>
                   <p>{closing}</p>
                   <p>{signature}</p>
+                  <br/>
                 </div>
               </div>
               <footer class=\"card-footer\">
