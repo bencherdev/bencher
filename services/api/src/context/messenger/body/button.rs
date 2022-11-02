@@ -103,15 +103,19 @@ impl FmtBody for ButtonBody {
                       <div class=\"columns is-centered\">
                         <div class=\"column is-half\">
                           <div class=\"content has-text-centered\">
-                            <div class=\"buttons has-addons\">
-                                <button class=\"button\" id=\"clipboard-target\" alt=\"{clipboard_text}\" style=\"overflow-wrap:break-word;\">{clipboard_target}</button>
-                                <button class=\"button\" onclick=\"copy_to_clipboard(\'clipboard-target\')\">
-                                    <span class=\"icon\">
-                                        📄
-                                    </span>
-                                    <span>Copy</span>
-                                </button>
-                            </div>
+                            <p>
+                              <small>
+                                <code id=\"clipboard-target\" style=\"overflow-wrap:break-word;\">
+                                    {clipboard_target}
+                                </code>
+                              </small>
+                            </p>
+                            <button class=\"button is-small\" onclick=\"copy_to_clipboard('clipboard-target')\" alt=\"{clipboard_text}\">
+                                <span class=\"icon\">
+                                    📄
+                                </span>
+                                <span>Copy</span>
+                            </button>
                           </div>
                         </div>
                       </div>
