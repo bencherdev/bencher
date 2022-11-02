@@ -1,10 +1,10 @@
 use crate::{
+    context::SecretKey,
     model::user::{
         auth::{auth_header_error, map_auth_header_error, INVALID_JWT},
         QueryUser,
     },
     schema::organization_role as organization_role_table,
-    util::context::SecretKey,
     ApiError,
 };
 use bencher_json::{organization::JsonOrganizationPermission, system::jwt::JsonWebToken};

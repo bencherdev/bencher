@@ -11,17 +11,14 @@ use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
 use crate::error::api_error;
 
-use crate::util::context::Body;
-use crate::util::context::ButtonBody;
-use crate::util::context::Message;
-use crate::util::cors::CorsResponse;
 use crate::ApiError;
 use crate::{
+    context::{Body, ButtonBody, Context, Message},
     diesel::ExpressionMethods,
     model::organization::organization_role::InsertOrganizationRole,
     model::user::QueryUser,
     schema,
-    util::{cors::get_cors, Context},
+    util::cors::{get_cors, CorsResponse},
 };
 
 use super::Resource;

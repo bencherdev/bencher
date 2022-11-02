@@ -6,15 +6,13 @@ use tokio::sync::mpsc::Sender;
 use tracing::warn;
 
 use crate::{
+    context::Context,
     endpoints::{
         endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
     },
     model::user::auth::AuthUser,
-    util::{
-        cors::{get_cors, CorsResponse},
-        Context,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 

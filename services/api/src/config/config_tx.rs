@@ -19,12 +19,9 @@ use tracing::trace;
 use url::Url;
 
 use crate::{
+    context::{ApiContext, Context, Email, Messenger, SecretKey},
     endpoints::Api,
-    util::{
-        context::{Email, Messenger, SecretKey},
-        registrar::Registrar,
-        ApiContext, Context,
-    },
+    util::registrar::Registrar,
     ApiError,
 };
 

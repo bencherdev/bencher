@@ -8,11 +8,12 @@ use url::Url;
 use uuid::Uuid;
 
 use crate::{
+    context::ApiContext,
     diesel::ExpressionMethods,
     error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
-    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug, ApiContext},
+    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug},
     ApiError,
 };
 

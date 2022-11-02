@@ -5,15 +5,13 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
     config::Config,
+    context::Context,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     model::user::auth::AuthUser,
-    util::{
-        cors::{get_cors, CorsResponse},
-        Context,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 

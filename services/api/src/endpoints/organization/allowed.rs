@@ -6,15 +6,13 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    context::Context,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
         Endpoint, Method,
     },
     model::{organization::QueryOrganization, user::auth::AuthUser},
-    util::{
-        cors::{get_cors, CorsResponse},
-        Context,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 

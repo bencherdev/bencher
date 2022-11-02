@@ -3,11 +3,11 @@ use std::sync::Arc;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
+    context::Context,
     endpoints::{endpoint::pub_response_ok, Endpoint, Method},
     util::{
         cors::{get_cors, CorsResponse},
         headers::CorsHeaders,
-        Context,
     },
 };
 

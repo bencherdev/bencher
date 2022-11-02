@@ -9,9 +9,10 @@ use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
 
 use crate::{
+    context::{Context, Rbac},
     diesel::ExpressionMethods,
     schema,
-    util::{context::Rbac, error::debug_error, Context},
+    util::error::debug_error,
     ApiError,
 };
 

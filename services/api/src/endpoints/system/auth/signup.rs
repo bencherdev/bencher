@@ -16,13 +16,12 @@ use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
 use crate::model::user::QueryUser;
-use crate::util::context::{Body, ButtonBody, Message};
-use crate::util::cors::CorsResponse;
 use crate::ApiError;
 use crate::{
+    context::{Body, ButtonBody, Context, Message},
     model::user::InsertUser,
     schema,
-    util::{cors::get_cors, Context},
+    util::cors::{get_cors, CorsResponse},
 };
 
 use super::Resource;

@@ -14,6 +14,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    context::Context,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -29,7 +30,6 @@ use crate::{
         cors::{get_cors, CorsResponse},
         error::into_json,
         same_project::SameProject,
-        Context,
     },
     ApiError,
 };

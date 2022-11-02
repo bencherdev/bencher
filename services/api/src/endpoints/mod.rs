@@ -12,10 +12,7 @@ pub use endpoint::Endpoint;
 pub use method::Method;
 pub use resource::Resource;
 
-use crate::{
-    util::{registrar::Registrar, Context},
-    ApiError,
-};
+use crate::{context::Context, util::registrar::Registrar, ApiError};
 
 pub struct Api;
 

@@ -8,6 +8,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
+    context::Context,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -23,7 +24,6 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         error::into_json,
-        Context,
     },
     ApiError,
 };

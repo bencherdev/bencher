@@ -8,6 +8,7 @@ use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
+    context::Context,
     diesel::ExpressionMethods,
     endpoints::{
         endpoint::{pub_response_accepted, ResponseAccepted},
@@ -16,10 +17,7 @@ use crate::{
     error::api_error,
     model::user::QueryUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        Context,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 

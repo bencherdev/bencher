@@ -7,10 +7,11 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use uuid::Uuid;
 
 use crate::{
+    context::ApiContext,
     error::api_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
-    util::{resource_id::fn_resource_id, slug::unwrap_slug, ApiContext},
+    util::{resource_id::fn_resource_id, slug::unwrap_slug},
     ApiError,
 };
 

@@ -5,7 +5,9 @@ use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
-use crate::{error::api_error, schema, schema::token as token_table, util::ApiContext, ApiError};
+use crate::{
+    context::ApiContext, error::api_error, schema, schema::token as token_table, ApiError,
+};
 
 use super::{auth::AuthUser, QueryUser};
 

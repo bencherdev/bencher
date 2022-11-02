@@ -13,6 +13,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    context::{Body, ButtonBody, Context, Message},
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -22,10 +23,8 @@ use crate::{
     model::user::{auth::AuthUser, validate_email, QueryUser},
     schema,
     util::{
-        context::{Body, ButtonBody, Message},
         cors::{get_cors, CorsResponse},
         error::into_json,
-        Context,
     },
     ApiError,
 };
