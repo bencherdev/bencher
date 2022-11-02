@@ -1,7 +1,0 @@
-access-key-id: $BENCHER_ACCESS_KEY_ID
-secret-access-key: $BENCHER_SECRET_ACCESS_KEY
-dbs:
-  - path: $BENCHER_DB
-    replicas:
-      - url: $BENCHER_REPLICA_URL
-    exec: /api

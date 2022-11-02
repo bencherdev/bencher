@@ -2,12 +2,12 @@
 set -e
 
 # Restore the database if it does not already exist.
-if [ -f /bencher.db ]; then
+if [ -f "$LITESTREAM_DB_PATH"  ]; then
 	echo "Database already exists, skipping restore."
 else
 	echo "No database found, restoring from replica if it exists."
-	litestream restore -v -if-replica-exists -o "$BENCHER_DB" "$BENCHER_REPLICA_URL"
+	litestream restore -v -if-replica-exists -o "$LITESTREAM_DB_PATH" "$LITESTREAM_REPLICA_URL"
 fi
 
 # Run litestream with your app as the subprocess.
-exec litestream replicate
+exec litestream replicate -exec "/api" "$LITESTREAM_DB_PATH" "$LITESTREAM_REPLICA_URL"

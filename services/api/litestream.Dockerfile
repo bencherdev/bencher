@@ -13,7 +13,6 @@ RUN apt-get update \
 
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64.deb
 RUN dpkg -i litestream-v0.3.9-linux-amd64.deb
-COPY litestream.yml /etc/litestream.yml
 
 COPY entrypoint.sh /entrypoint.sh
 ENV PORT 61016

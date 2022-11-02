@@ -13,10 +13,10 @@ services:
       # - BENCHER_CONFIG=
       # - BENCHER_CONFIG_PATH=
       # Set litestream configuration
-      - BENCHER_DB=/data/bencher.db
-      # - BENCHER_REPLICA_URL=
-      # - BENCHER_ACCESS_KEY_ID=
-      # - BENCHER_SECRET_ACCESS_KEY=
+      - LITESTREAM_DB_PATH=/data/bencher.db
+      # - LITESTREAM_REPLICA_URL=
+      # - AWS_ACCESS_KEY_ID=
+      # - AWS_SECRET_ACCESS_KEY=
 
   bencher_ui:
     build:
