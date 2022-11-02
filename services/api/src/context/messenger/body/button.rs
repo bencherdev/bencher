@@ -100,31 +100,23 @@ impl FmtBody for ButtonBody {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </section>
-
-                  <nav class=\"level is-mobile\">
-                    <div class=\"level-left\">
-                      <div class=\"level-item\">
-                        <form>
-                        <div class=\"field has-addons\">
-                          <p class=\"control\">
-                            <input class=\"input\" type=\"text\" value=\"{clipboard_target}\" readonly>
-                          </p>
-                          <p class=\"control\">
-                            <button class=\"button\">
-                              <span class=\"icon\">
-                                📄
-                              </span>
-                              <span>Copy</span>
-                            </button>
-                          </p>
+                      <div class=\"columns is-centered\">
+                        <div class=\"column is-half\">
+                          <div class=\"content has-text-centered\">
+                            <div class=\"buttons has-addons\">
+                                <button class=\"button\" id=\"clipboard-target\" alt=\"{clipboard_text}\" style=\"overflow-wrap:break-word;\">{clipboard_target}</button>
+                                <button class=\"button\" onclick=\"copy_to_clipboard(\'clipboard-target\')\">
+                                    <span class=\"icon\">
+                                        📄
+                                    </span>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                          </div>
                         </div>
-                        </form>
                       </div>
                     </div>
-                  </nav>
-
+                  </section>
                   <p>{post_body}</p>
                   <br/>
                   <p>{closing}</p>
@@ -133,16 +125,21 @@ impl FmtBody for ButtonBody {
               </div>
               <footer class=\"card-footer\">
                 <div class=\"card-footer-item\">
-                  <p>Bencher - Continuous Benchmarking</p>
-                  <br/>
-                  <br/>
-                  <a href=\"{settings_url}\">Manage email settings</a>
+                  <div class=\"content has-text-centered\">
+                    <p>Bencher - Continuous Benchmarking</p>
+                    <a href=\"{settings_url}\">Manage email settings</a>
+                  </div>
                 </div>
               </footer>
             </div>
           </div>
         </div>
   </body>
+  <script>
+    function copy_to_clipboard(id) {{
+        navigator.clipboard.writeText(document.getElementById(id)?.innerHTML);
+    }}
+  </script>
 </html>
 "
         );
