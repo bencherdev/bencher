@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
+use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, Path, RequestContext};
+use schemars::JsonSchema;
+use serde::Deserialize;
 
 use crate::{
     context::Context,
@@ -32,6 +34,25 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
 }]
 pub async fn get(
     _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
+    let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);
+    pub_response_ok!(endpoint, PONG.into())
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct GlobPath {
+    pub glob: Vec<String>,
+}
+
+#[endpoint {
+    method = GET,
+    path = "/v0/server/ping/{glob:.*}",
+    tags = ["server", "ping"],
+    unpublished = true,
+}]
+pub async fn glob(
+    _rqctx: Arc<RequestContext<Context>>,
+    _path_params: Path<GlobPath>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);
     pub_response_ok!(endpoint, PONG.into())
