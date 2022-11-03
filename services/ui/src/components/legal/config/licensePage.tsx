@@ -8,7 +8,7 @@ const licensingPage = {
         Licensed under either of{" "}
         <a href="https://opensource.org/licenses/Apache-2.0">
           Apache License, Version 2.0
-        </a>
+        </a>{" "}
         or <a href="https://opensource.org/licenses/MIT">MIT license</a> at your
         discretion. Unless you explicitly state otherwise, any contribution
         intentionally submitted for inclusion in Bencher by you, as defined in

@@ -1,5 +1,3 @@
-import { Link } from "solid-app-router";
-
 const termsPage = {
   title: "Terms of Use - Bencher",
   heading: "Bencher Terms of Use",
@@ -13,10 +11,9 @@ const termsPage = {
       </p>
       <p>
         By accessing this website or using the Services, you are agreeing to the
-        Terms, <Link href="/legal/privacy">Bencher's Privacy Policy</Link>, and{" "}
-        <Link href="/legal/license">Bencher's License Agreement</Link>. If you
-        have any questions, please{" "}
-        <Link href="mailto:info@bencher.dev">contact us</Link>.
+        Terms, <a href="/legal/privacy">Bencher's Privacy Policy</a>, and{" "}
+        <a href="/legal/license">Bencher's License Agreement</a>. If you have
+        any questions, please <a href="mailto:info@bencher.dev">contact us</a>.
       </p>
       <h3>Using the Services</h3>
       <p>
@@ -30,10 +27,9 @@ const termsPage = {
       <p>
         Using the Services does not give you ownership of any intellectual
         property rights in the Services or the content you access except what is
-        granted by{" "}
-        <Link href="/legal/license">Bencher's License Agreement</Link>. These
-        Terms do not grant you the right to use any branding or logos used in
-        the Services. Do not remove, obscure, or alter any legal notices
+        granted by <a href="/legal/license">Bencher's License Agreement</a>.
+        These Terms do not grant you the right to use any branding or logos used
+        in the Services. Do not remove, obscure, or alter any legal notices
         displayed in or along with the Services.
       </p>
       <p>
@@ -54,16 +50,16 @@ const termsPage = {
       </p>
       <h3>Third Party Sites</h3>
       <p>
-        The Services may contain links to other sites on the Internet, all of
-        which have their own privacy and data collection practices. Links to
-        sites are provided only for your convenience and you access such sites
-        at your own risk. Links do not imply that we sponsor, endorse, are
-        affiliated with or associated with, or have been legally authorized to
-        use any trademark, trade name, service mark, design, logo, symbol or
-        other copyrighted material displayed on or accessible through such
-        sites. Furthermore, you understand that we cannot be held responsible
-        for the quality or accuracy of any legal information or legal services
-        provided to by another site you find via Bencher.
+        The Services may contain as to other sites on the Internet, all of which
+        have their own privacy and data collection practices. as to sites are
+        provided only for your convenience and you access such sites at your own
+        risk. as do not imply that we sponsor, endorse, are affiliated with or
+        associated with, or have been legally authorized to use any trademark,
+        trade name, service mark, design, logo, symbol or other copyrighted
+        material displayed on or accessible through such sites. Furthermore, you
+        understand that we cannot be held responsible for the quality or
+        accuracy of any legal information or legal services provided to by
+        another site you find via Bencher.
       </p>
       <h3>Copyright</h3>
       <p>
@@ -75,7 +71,7 @@ const termsPage = {
         If you believe that any material on the Services infringes upon any
         copyright which you own or control, you may file a DMCA Notice of
         Alleged Infringement by{" "}
-        <Link href="mailto:info@bencher.dev">contacting us</Link>.
+        <a href="mailto:info@bencher.dev">contacting us</a>.
       </p>
       <h3>DISCLAIMER</h3>
       <p>
@@ -85,7 +81,7 @@ const termsPage = {
       <p>
         ALL OF THE CONTENT, COMMUNICATIONS, INFORMATION AND FUNCTIONALITY
         CONTAINED IN AND/OR PROVIDED VIA THE SITE, INCLUDING, WITHOUT
-        LIMITATION, TEXT, GRAPHICS, AND LINKS, ARE PROVIDED “AS IS” AND WITHOUT
+        LIMITATION, TEXT, GRAPHICS, AND aS, ARE PROVIDED “AS IS” AND WITHOUT
         WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED. TO THE FULLEST
         EXTENT PERMISSIBLE PURSUANT TO APPLICABLE LAW, WE DISCLAIM ALL
         WARRANTIES, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, IMPLIED
@@ -185,7 +181,7 @@ const termsPage = {
         unlimited right to sublicense such rights, in perpetuity throughout the
         universe, without any further notice or payment to or permission from
         you. You also agree to all terms within the{" "}
-        <Link href="/legal/license">Bencher License Agreement</Link>.
+        <a href="/legal/license">Bencher License Agreement</a>.
       </p>
       <p>
         We may, but are not obligated to, monitor or review Communications. We
@@ -269,25 +265,24 @@ const termsPage = {
       <p>
         We hope we never have a dispute, but if we do, you and we agree to try
         for 60 days to resolve it informally. You may send us the details of
-        your concern by{" "}
-        <Link href="mailto:info@bencher.dev">contacting us</Link>. However, if
-        Bencher is not able to informally resolve your complaint, you and
-        Bencher agree to individual binding arbitration under JAMS Alternative
-        Dispute resolution (“JAMS”) and the Federal Arbitration Act (“FAA”), and
-        not to sue in court in front of a judge or jury. The arbitration will be
-        conducted under the JAMS Commercial Arbitration Rules and the
-        Supplementary Procedures for Consumer Related Disputes and the
-        arbitrator’s decision will be final except for a limited right of review
-        under the FAA. The following applies to any arbitration proceedings
-        between you and Bencher:
+        your concern by <a href="mailto:info@bencher.dev">contacting us</a>.
+        However, if Bencher is not able to informally resolve your complaint,
+        you and Bencher agree to individual binding arbitration under JAMS
+        Alternative Dispute resolution (“JAMS”) and the Federal Arbitration Act
+        (“FAA”), and not to sue in court in front of a judge or jury. The
+        arbitration will be conducted under the JAMS Commercial Arbitration
+        Rules and the Supplementary Procedures for Consumer Related Disputes and
+        the arbitrator’s decision will be final except for a limited right of
+        review under the FAA. The following applies to any arbitration
+        proceedings between you and Bencher:
       </p>
       <p>
         Before moving an unresolved informal dispute into arbitration, you must
         first send us a Notice of Dispute describing the nature and basis of the
         claim or dispute and the specific relief sought. This notice may be sent
         via email or U.S. mail to:{" "}
-        <Link href="mailto:info@bencher.dev">our email</Link> or Pompeii LLC,
-        15114 Kamputa Drive, Centreville, VA, 20120.
+        <a href="mailto:info@bencher.dev">our email</a> or Pompeii LLC, 15114
+        Kamputa Drive, Centreville, VA, 20120.
       </p>
       <p>
         Any arbitration must be commenced by filing a demand for arbitration
@@ -348,7 +343,7 @@ const termsPage = {
         these Terms. To opt out you must send us a clear statement that you want
         to opt out of arbitration, along with your name, residence or business
         address, and the email address associated with your account by{" "}
-        <Link href="mailto:info@bencher.dev">contacting us</Link>.
+        <a href="mailto:info@bencher.dev">contacting us</a>.
       </p>
       <h5>No Class Actions</h5>
       <p>

@@ -25,6 +25,7 @@ const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
+const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 
 const initUser = () => {
   return {
@@ -210,6 +211,11 @@ const App: Component = () => {
         {/* Docs Routes */}
         <Route path="/docs">
           <DocsRoutes />
+        </Route>
+
+        {/* Auth Routes */}
+        <Route path="/legal">
+          <LegalRoutes handleTitle={handleTitle} />
         </Route>
       </Routes>
 

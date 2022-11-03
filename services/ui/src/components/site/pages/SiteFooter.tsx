@@ -15,7 +15,12 @@ const SiteFooter = () => {
               </div>
               <div class="level-item has-text-centered">
                 <p>
-                  <Link href="/legal/privacy-policy">Privacy Policy</Link>
+                  <Link href="/legal/privacy">Privacy Policy</Link>
+                </p>
+              </div>
+              <div class="level-item has-text-centered">
+                <p>
+                  <Link href="/legal/license">License Agreement</Link>
                 </p>
               </div>
             </div>

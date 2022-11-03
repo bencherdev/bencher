@@ -1,5 +1,3 @@
-import { Link } from "solid-app-router";
-
 const privacyPage = {
   title: "Privacy Policy - Bencher",
   heading: "Bencher Privacy Policy",
@@ -16,7 +14,7 @@ const privacyPage = {
       </p>
       <p>
         If you have any questions, please{" "}
-        <Link href="mailto:info@bencher.dev">contact us</Link>.
+        <a href="mailto:info@bencher.dev">contact us</a>.
       </p>
       <h3>Information Collection</h3>
       <h5>Usage and Log Information</h5>
@@ -124,20 +122,19 @@ const privacyPage = {
         the extent you provide us with your mobile telephone number, you consent
         to the transmission of text messages to such number, and waive any
         rights you may have under the Telephone Consumer Protection Act. You
-        may, however, <Link href="mailto:info@bencher.dev">contact us</Link> and
+        may, however, <a href="mailto:info@bencher.dev">contact us</a> and
         opt-out of receiving such texts.
       </p>
       <h3>Managing Communications Preferences</h3>
       <p>
         You may select whether or not you wish to continue to receive
         newsletters or other communications by{" "}
-        <Link href="mailto:info@bencher.dev">contacting us</Link>. In addition,
-        you may "opt-out" of receiving any category of subscription, marketing,
-        or promotional email from Bencher by following the unsubscribe
-        instructions or using the unsubscribe links within the emails we send.
-        Please note, however, that as long as you maintain an account, you may
-        not "opt-out" of receiving service or account-related emails from
-        Bencher.
+        <a href="mailto:info@bencher.dev">contacting us</a>. In addition, you
+        may "opt-out" of receiving any category of subscription, marketing, or
+        promotional email from Bencher by following the unsubscribe instructions
+        or using the unsubscribe as within the emails we send. Please note,
+        however, that as long as you maintain an account, you may not "opt-out"
+        of receiving service or account-related emails from Bencher.
       </p>
       <h3>Requests for Information</h3>
       <p>
@@ -167,7 +164,7 @@ const privacyPage = {
       </p>
       <h3>Third Party Websites</h3>
       <p>
-        The Services may contain links to other websites or make available
+        The Services may contain as to other websites or make available
         third-party services, including ad platforms and technologies. We are
         not responsible for the privacy practices of such third parties. We
         encourage you to be aware and to read the privacy policies of any
@@ -208,7 +205,7 @@ const privacyPage = {
         If you have any questions or comments about this Policy or the practices
         relating to our Services, or you wish to verify, correct or delete any
         Personal Information we have collected,{" "}
-        <Link href="mailto:info@bencher.dev">contact us</Link>.
+        <a href="mailto:info@bencher.dev">contact us</a>.
       </p>
     </div>
   ),
