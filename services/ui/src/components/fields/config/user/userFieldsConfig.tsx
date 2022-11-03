@@ -30,8 +30,16 @@ const userFieldsConfig = {
       <small>
         {" "}
         I agree to the{" "}
-        <a href="/legal/terms" target="_blank">
-          terms and conditions
+        <a href="/legal/terms-of-use" target="_blank">
+          terms of use
+        </a>
+        ,{" "}
+        <a href="/legal/privacy" target="_blank">
+          privacy policy
+        </a>
+        , and{" "}
+        <a href="/legal/license" target="_blank">
+          license agreement
         </a>
         .
       </small>
