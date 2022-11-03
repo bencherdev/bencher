@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/node/
-FROM node:18.1.0-bullseye
+FROM node:lts-bullseye
 
 # Set working directory
 WORKDIR /usr/src/ui
