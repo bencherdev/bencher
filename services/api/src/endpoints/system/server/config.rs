@@ -4,7 +4,7 @@ use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
-    config::Config,
+    config::{Config, BENCHER_CONFIG},
     context::Context,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
@@ -96,6 +96,7 @@ async fn put_inner(
 
     // todo() -> add validation here
     let config_str = serde_json::to_string(&config).map_err(ApiError::Serialize)?;
+    std::env::set_var(BENCHER_CONFIG, &config_str);
     Config::write(config_str.as_bytes()).await?;
     let json_config = serde_json::from_str(&config_str).map_err(ApiError::Deserialize)?;
 
