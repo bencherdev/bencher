@@ -3,5 +3,9 @@
     {
         "key": "capslock capslock",
         "command": "gitpod.openInStable"
+    },
+    {
+        "key": "capslock capslock",
+        "command": "workbench.action.positionPanelRight"
     }
 ]

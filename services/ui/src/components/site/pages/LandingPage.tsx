@@ -34,6 +34,9 @@ const LandingPage = (props) => {
         </div>
       </div>
 
+      <br />
+      <br />
+      <br />
       <hr />
 
       <section class="section">
