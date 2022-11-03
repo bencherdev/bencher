@@ -2,6 +2,7 @@ import axios from "axios";
 import validator from "validator";
 
 export const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+export const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
 
 export const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -24,8 +25,13 @@ export enum OrganizationPermission {
   DELETE_ROLE = "delete_role",
 }
 
-export const isAllowedOrganization = async (path_params, permission: OrganizationPermission) => {
-  return isAllowed(`${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/allowed/${permission}`);
+export const isAllowedOrganization = async (
+  path_params,
+  permission: OrganizationPermission
+) => {
+  return isAllowed(
+    `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/allowed/${permission}`
+  );
 };
 
 export enum ProjectPermission {
@@ -40,8 +46,13 @@ export enum ProjectPermission {
   DELETE_ROLE = "delete_role",
 }
 
-export const isAllowedProject = async (path_params, permission: ProjectPermission) => {
-  return isAllowed(`${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/allowed/${permission}`);
+export const isAllowedProject = async (
+  path_params,
+  permission: ProjectPermission
+) => {
+  return isAllowed(
+    `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/allowed/${permission}`
+  );
 };
 
 export const isAllowed = async (url: string) => {

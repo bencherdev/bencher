@@ -116,6 +116,71 @@ const LandingPage = (props) => {
           </div>
         </div>
       </section>
+
+      <hr />
+
+      {/* <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column">
+              <h2 class="title">Hosting</h2>
+            </div>
+          </div>
+          <br />
+          <br />
+          <div class="columns is-centered">
+            <div class="column">
+              <div class="columns">
+                <div class="column">
+                  <div class="content has-text-centered">
+                    <h2 class="subtitle">Self-Hosted</h2>
+                    <br />
+                    <br />
+                    <br />
+                    <span class="icon has-text-primary">
+                      <i class="fas fa-server fa-10x" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <div class="content">
+                    <p>
+                      Run Bencher on-prem or in your own cloud. Bencher can be
+                      deployed on a standalone server, in a Docker container, or
+                      as part of a Kubernetes cluster.
+                    </p>
+                    <br />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="is-divider-vertical" data-content="OR" />
+
+            <div class="column">
+              <div class="columns">
+                <div class="column">
+                  <div class="content has-text-centered">
+                    <h2 class="subtitle">Bencher SaaS</h2>
+                    <br />
+                    <br />
+                    <br />
+                    <span class="icon has-text-primary is-disabled">
+                      <i class="fas fa-cloud fa-10x" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <div class="content">
+                    <p>
+                      It's {new Date().getFullYear()}, who wants to manage yet
+                      another service‽ Let us take care of that for you. All of
+                      the same great features with none of the hassle.
+                    </p>
+                    <br />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section> */}
     </section>
   );
 };

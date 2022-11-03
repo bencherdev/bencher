@@ -1,8 +1,7 @@
 import { Link } from "solid-app-router";
 import { Accessor } from "solid-js";
+import { BENCHER_GITHUB_URL } from "../util";
 import ProjectSelect from "./ProjectSelect";
-
-const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
 
 export interface Props {
   user: Function;
