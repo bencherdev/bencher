@@ -73,6 +73,7 @@ jobs:
     name: Cargo Audit
     runs-on: ubuntu-latest
     needs: cargo_test
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/audit-check@v1
