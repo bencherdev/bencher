@@ -209,9 +209,9 @@ const App: Component = () => {
         </Route>
 
         {/* Docs Routes */}
-        <Route path="/docs">
+        {/* <Route path="/docs">
           <DocsRoutes />
-        </Route>
+        </Route> */}
 
         {/* Auth Routes */}
         <Route path="/legal">
