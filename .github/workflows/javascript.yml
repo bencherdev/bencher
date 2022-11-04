@@ -9,7 +9,6 @@ on:
     branches: [ master, devel ]
 
 env:
-  GIT_BRANCH: ${{ github.ref_name }}
   CARGO_TERM_COLOR: always
   DOCKER_IMAGE: bencher-ui
 
@@ -20,12 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: export SHOULD_PUSH
+        run: export SHOULD_PUSH=$(${{ github.ref_name }} == "master") >> $GITHUB_ENV
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:nightly
-          push: ${{ ${GIT_BRANCH} == "master" }}
+          push: ${{ env.SHOULD_PUSH }}
 
   latest_ui_docker:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
