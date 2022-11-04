@@ -9,6 +9,7 @@ on:
     branches: [ master, devel ]
 
 env:
+  GIT_BRANCH: ${{ github.ref_name }}
   CARGO_TERM_COLOR: always
   DOCKER_IMAGE: bencher-ui
 
@@ -24,7 +25,7 @@ jobs:
         with:
           context: ./services/ui
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:nightly
-          push: ${{ ${{ github.ref_name }} == "master" }}
+          push: ${{ $GIT_BRANCH == "master" }}
 
   latest_ui_docker:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
