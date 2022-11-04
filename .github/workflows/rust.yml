@@ -1,4 +1,4 @@
-name: Rust ${GITHUB_REF##*/}
+name: Rust
 
 on:
   workflow_dispatch:

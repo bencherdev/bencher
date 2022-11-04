@@ -1,4 +1,4 @@
-name: Javascript ${GITHUB_REF##*/}
+name: Javascript
 
 on:
   workflow_dispatch:
