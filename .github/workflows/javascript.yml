@@ -1,4 +1,4 @@
-name: Release UI
+name: Javascript ${GITHUB_REF##*/}
 
 on:
   workflow_dispatch:
@@ -11,7 +11,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   DOCKER_IMAGE: bencher-ui
-  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
 jobs:
   build_ui_docker:
@@ -49,14 +48,17 @@ jobs:
           tags: ${{ env.TAGS }}
           push: true
 
-  deploy_ui_fly:
-      name: Deploy UI
+  build_ui_netlify:
+      if: ${{ startsWith(github.ref, 'refs/tags/') }} || ${GITHUB_REF##*/} != "master"
+      name: Deploy UI to Netlify
       runs-on: ubuntu-latest
-      needs: release_ui_docker
       steps:
         - uses: actions/checkout@v3
-        - uses: superfly/flyctl-actions/setup-flyctl@master
-        - name: Deploy UI to Fly.io
-          run: |
-            cd ./services/ui
-            flyctl deploy --remote-only
+        - name: Netlify Build
+          uses: netlify/actions/build@master
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+            NETLIFY_BASE: services/ui/
+            NETLIFY_CMD: vite build
+            NETLIFY_DIR: services/ui/dist/
