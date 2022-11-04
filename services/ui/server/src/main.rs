@@ -30,14 +30,11 @@ async fn main() {
 
 // basic handler that responds with a static string
 // `Html` will get a `text/html` content-type
-async fn html() -> Html<String> {
-    Html("<p>Hello, World!</p>".into())
-}
-
-// basic handler that responds with a static string
-// `Html` will get a `text/html` content-type
 async fn html_glob(Path(_path): Path<String>) -> Html<String> {
-    Html("<p>Hello, World!</p>".into())
+    let config_file = tokio::fs::read("./dist/index.html").await.unwrap();
+    let config_str = std::str::from_utf8(&config_file).unwrap();
+
+    Html(config_str.into())
 }
 
 async fn create_user(

@@ -9,7 +9,7 @@ edition = "2021"
 # Workspace
 serde.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }
 # Crate
 axum = "0.5.17"
 tracing = "0.1"

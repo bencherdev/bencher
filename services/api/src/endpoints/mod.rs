@@ -26,7 +26,6 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Server
     api.register(system::server::ping::options)?;
     api.register(system::server::ping::get)?;
-    api.register(system::server::ping::glob)?;
     api.register(system::server::version::options)?;
     api.register(system::server::version::get)?;
     api.register(system::server::restart::options)?;
