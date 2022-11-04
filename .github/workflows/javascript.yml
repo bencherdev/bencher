@@ -47,18 +47,3 @@ jobs:
           context: ./services/ui
           tags: ${{ env.TAGS }}
           push: true
-
-  build_ui_netlify:
-      if: ${{ startsWith(github.ref, 'refs/tags/') }} || ${GITHUB_REF##*/} != "master"
-      name: Deploy UI to Netlify
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v3
-        - name: Netlify Build
-          uses: netlify/actions/build@master
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-            NETLIFY_BASE: services/ui/
-            NETLIFY_CMD: vite build
-            NETLIFY_DIR: services/ui/dist/
