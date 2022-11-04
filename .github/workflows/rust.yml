@@ -101,14 +101,14 @@ jobs:
           context: ./services/api
           file: ./services/api/local.Dockerfile
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.LOCAL_DOCKER_IMAGE }}:nightly
-          push: ${GITHUB_REF##*/} == "master"
+          push: ${{ ${GITHUB_REF##*/} == "master" }}
       - name: Build Litestream
         uses: docker/build-push-action@v3
         with:
           context: ./services/api
           file: ./services/api/litestream.Dockerfile
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.LITESTREAM_DOCKER_IMAGE }}:nightly
-          push: ${GITHUB_REF##*/} == "master"
+          push: ${{ ${GITHUB_REF##*/} == "master" }}
 
   latest_api_docker:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
