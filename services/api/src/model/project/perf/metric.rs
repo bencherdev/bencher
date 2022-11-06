@@ -9,9 +9,9 @@ use crate::{schema, schema::latency as latency_table, util::map_http_error};
 pub struct QueryMetric {
     pub id: i32,
     pub uuid: String,
-    pub lower_variance: i64,
-    pub upper_variance: i64,
-    pub duration: i64,
+    pub value: i64,
+    pub lower_bound: Option<i64>,
+    pub upper_bound: Option<i64>,
 }
 
 impl QueryMetric {
@@ -19,13 +19,13 @@ impl QueryMetric {
         let Self {
             id: _,
             uuid: _,
-            lower_variance,
-            upper_variance,
+            lower_bound,
+            upper_bound,
             duration,
         } = self;
         Ok(JsonMetric {
-            lower_variance: lower_variance as u64,
-            upper_variance: upper_variance as u64,
+            lower_bound: lower_bound as u64,
+            upper_bound: upper_bound as u64,
             duration: duration as u64,
         })
     }
@@ -35,22 +35,22 @@ impl QueryMetric {
 #[diesel(table_name = latency_table)]
 pub struct InsertLatency {
     pub uuid: String,
-    pub lower_variance: i64,
-    pub upper_variance: i64,
+    pub lower_bound: i64,
+    pub upper_bound: i64,
     pub duration: i64,
 }
 
 impl From<JsonMetric> for InsertLatency {
     fn from(latency: JsonMetric) -> Self {
         let JsonMetric {
-            lower_variance,
-            upper_variance,
+            lower_bound,
+            upper_bound,
             duration,
         } = latency;
         Self {
             uuid: Uuid::new_v4().to_string(),
-            lower_variance: lower_variance as i64,
-            upper_variance: upper_variance as i64,
+            lower_bound: lower_bound as i64,
+            upper_bound: upper_bound as i64,
             duration: duration as i64,
         }
     }
