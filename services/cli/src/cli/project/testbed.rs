@@ -58,6 +58,10 @@ pub struct CliTestbedCreate {
     #[clap(long)]
     pub cpu: Option<String>,
 
+    /// Testbed GPU
+    #[clap(long)]
+    pub gpu: Option<String>,
+
     /// Testbed RAM
     #[clap(long)]
     pub ram: Option<String>,

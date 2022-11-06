@@ -21,6 +21,7 @@ pub struct QueryTestbed {
     pub runtime_name: Option<String>,
     pub runtime_version: Option<String>,
     pub cpu: Option<String>,
+    pub gpu: Option<String>,
     pub ram: Option<String>,
     pub disk: Option<String>,
 }
@@ -55,6 +56,7 @@ impl QueryTestbed {
             runtime_name,
             runtime_version,
             cpu,
+            gpu,
             ram,
             disk,
         } = self;
@@ -68,6 +70,7 @@ impl QueryTestbed {
             runtime_name,
             runtime_version,
             cpu,
+            gpu,
             ram,
             disk,
         })
@@ -86,6 +89,7 @@ pub struct InsertTestbed {
     pub runtime_name: Option<String>,
     pub runtime_version: Option<String>,
     pub cpu: Option<String>,
+    pub gpu: Option<String>,
     pub ram: Option<String>,
     pub disk: Option<String>,
 }
@@ -104,6 +108,7 @@ impl InsertTestbed {
             runtime_name,
             runtime_version,
             cpu,
+            gpu,
             ram,
             disk,
         } = testbed;
@@ -118,6 +123,7 @@ impl InsertTestbed {
             runtime_name,
             runtime_version,
             cpu,
+            gpu,
             ram,
             disk,
         })

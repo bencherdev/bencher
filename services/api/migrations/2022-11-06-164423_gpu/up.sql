@@ -1,2 +1,49 @@
-ALTER TABLE testbed
-ADD COLUMN gpu text;
+PRAGMA foreign_keys = off;
+CREATE TABLE IF NOT EXISTS up_testbed (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    os_name TEXT,
+    os_version TEXT,
+    runtime_name TEXT,
+    runtime_version TEXT,
+    cpu TEXT,
+    gpu TEXT,
+    ram TEXT,
+    disk TEXT,
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    UNIQUE(project_id, slug)
+);
+INSERT INTO up_testbed(
+        id,
+        uuid,
+        project_id,
+        name,
+        slug,
+        os_name,
+        os_version,
+        runtime_name,
+        runtime_version,
+        cpu,
+        ram,
+        disk
+    )
+SELECT id,
+    uuid,
+    project_id,
+    name,
+    slug,
+    os_name,
+    os_version,
+    runtime_name,
+    runtime_version,
+    cpu,
+    ram,
+    disk
+FROM testbed;
+DROP TABLE testbed;
+ALTER TABLE up_testbed
+    RENAME TO testbed;
+PRAGMA foreign_keys = on;

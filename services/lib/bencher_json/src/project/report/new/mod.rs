@@ -22,7 +22,6 @@ pub use metrics::JsonMetrics;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
     pub branch: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub hash: Option<String>,
     pub testbed: Uuid,
     pub adapter: JsonAdapter,
