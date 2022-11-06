@@ -41,7 +41,7 @@ impl MetricsData {
         statistic: &QueryStatistic,
         kind: PerfKind,
     ) -> Result<Self, HttpError> {
-        let sample_size = unwrap_sample_size(statistic.sample_size);
+        let sample_size = unwrap_max_sample_size(statistic.max_sample_size);
         let window = unwrap_window(statistic.window);
 
         let order_by = (
@@ -174,8 +174,8 @@ impl MetricsData {
     }
 }
 
-fn unwrap_sample_size(sample_size: Option<i64>) -> i64 {
-    sample_size.unwrap_or(i64::MAX)
+fn unwrap_max_sample_size(max_sample_size: Option<i64>) -> i64 {
+    max_sample_size.unwrap_or(i64::MAX)
 }
 
 fn unwrap_window(window: Option<i64>) -> i64 {

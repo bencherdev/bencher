@@ -70,11 +70,21 @@ impl Detector {
         // Update cached metrics data
         if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
             let data = &mut metrics_data.data;
+
             // Add the new metrics datum
             data.push_front(datum);
-            // If there is a set sample size, then check to see if adding the new datum
+
+            // If there is a set min sample size, then check to see if it is met.
+            // Otherwise, simply return.
+            // if let Some(sample_size) = self.threshold.statistic.min_sample_size {
+            //     if data.len() < sample_size as usize {
+            //         return Ok(());
+            //     }
+            // }
+
+            // If there is a set max sample size, then check to see if adding the new datum
             // caused us to exceed it. If so, then pop off the oldest datum.
-            if let Some(sample_size) = self.threshold.statistic.sample_size {
+            if let Some(sample_size) = self.threshold.statistic.max_sample_size {
                 if data.len() > sample_size as usize {
                     data.pop_back();
                     debug_assert!(data.len() == sample_size as usize)
