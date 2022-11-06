@@ -11,6 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   DOCKER_IMAGE: bencher-ui
+  BRANCH_NAME: ${{ github.ref_name }}
 
 jobs:
   nightly_ui_docker:
@@ -20,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: export SHOULD_PUSH
-        run: export SHOULD_PUSH=$(${{ github.ref_name }} == "master" && true || false) >> $GITHUB_ENV
+        run: echo "SHOULD_PUSH=$([[ ${BRANCH_NAME} == 'master' ]] && true || false)" >> $GITHUB_ENV
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v3
         with:
