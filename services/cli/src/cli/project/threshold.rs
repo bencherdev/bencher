@@ -2,7 +2,6 @@ use bencher_json::ResourceId;
 use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use super::perf::CliPerfKind;
 use crate::cli::CliBackend;
 
 #[derive(Subcommand, Debug)]
@@ -41,9 +40,9 @@ pub struct CliThresholdCreate {
     #[clap(long)]
     pub testbed: Uuid,
 
-    /// Benchmark kind
+    /// Benchmark kind slug or UUID
     #[clap(value_enum, long)]
-    pub kind: CliPerfKind,
+    pub kind: ResourceId,
 
     #[clap(flatten)]
     pub statistic: CliStatisticCreate,

@@ -1,6 +1,6 @@
 use bencher_json::ResourceId;
 use chrono::{DateTime, Utc};
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use uuid::Uuid;
 
 use crate::cli::CliBackend;
@@ -23,9 +23,9 @@ pub struct CliPerf {
     #[clap(long)]
     pub benchmarks: Vec<Uuid>,
 
-    /// Benchmark kind
+    /// Benchmark kind slug or UUID
     #[clap(value_enum, long)]
-    pub kind: CliPerfKind,
+    pub kind: ResourceId,
 
     /// Start time
     pub start_time: Option<DateTime<Utc>>,
@@ -35,14 +35,4 @@ pub struct CliPerf {
 
     #[clap(flatten)]
     pub backend: CliBackend,
-}
-
-/// Supported kinds of benchmarks
-#[derive(ValueEnum, Debug, Clone)]
-pub enum CliPerfKind {
-    Latency,
-    Throughput,
-    Compute,
-    Memory,
-    Storage,
 }
