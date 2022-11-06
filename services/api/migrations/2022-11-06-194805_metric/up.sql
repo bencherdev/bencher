@@ -15,6 +15,7 @@ CREATE TABLE perf (
 );
 CREATE TABLE metric (
     id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
     perf_id INTEGER NOT NULL,
     metric_kind_id INTEGER NOT NULL,
     value DOUBLE NOT NULL,

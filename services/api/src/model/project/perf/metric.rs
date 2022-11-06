@@ -3,15 +3,15 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnect
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::latency as latency_table, util::map_http_error};
+use crate::{schema, schema::metric as metric_table, util::map_http_error};
 
 #[derive(Queryable, Debug)]
 pub struct QueryMetric {
     pub id: i32,
     pub uuid: String,
-    pub value: i64,
-    pub lower_bound: Option<i64>,
-    pub upper_bound: Option<i64>,
+    pub value: f64,
+    pub lower_bound: Option<f64>,
+    pub upper_bound: Option<f64>,
 }
 
 impl QueryMetric {
@@ -19,59 +19,59 @@ impl QueryMetric {
         let Self {
             id: _,
             uuid: _,
+            value,
             lower_bound,
             upper_bound,
-            duration,
         } = self;
         Ok(JsonMetric {
-            lower_bound: lower_bound as u64,
-            upper_bound: upper_bound as u64,
-            duration: duration as u64,
+            value: value.into(),
+            lower_bound: lower_bound.map(Into::into),
+            upper_bound: upper_bound.map(Into::into),
         })
     }
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = latency_table)]
-pub struct InsertLatency {
+#[diesel(table_name = metric_table)]
+pub struct InsertMetric {
     pub uuid: String,
-    pub lower_bound: i64,
-    pub upper_bound: i64,
-    pub duration: i64,
+    pub value: f64,
+    pub lower_bound: Option<f64>,
+    pub upper_bound: Option<f64>,
 }
 
-impl From<JsonMetric> for InsertLatency {
+impl From<JsonMetric> for InsertMetric {
     fn from(latency: JsonMetric) -> Self {
         let JsonMetric {
+            value,
             lower_bound,
             upper_bound,
-            duration,
         } = latency;
         Self {
             uuid: Uuid::new_v4().to_string(),
-            lower_bound: lower_bound as i64,
-            upper_bound: upper_bound as i64,
-            duration: duration as i64,
+            value: value.into(),
+            lower_bound: lower_bound.map(Into::into),
+            upper_bound: upper_bound.map(Into::into),
         }
     }
 }
 
-impl InsertLatency {
+impl InsertMetric {
     pub fn map_json(
         conn: &mut SqliteConnection,
-        latency: Option<JsonMetric>,
+        metric: Option<JsonMetric>,
     ) -> Result<Option<i32>, HttpError> {
-        Ok(if let Some(json_latency) = latency {
-            let insert_latency: InsertLatency = json_latency.into();
-            diesel::insert_into(schema::latency::table)
-                .values(&insert_latency)
+        Ok(if let Some(json_metric) = metric {
+            let insert_metric: InsertMetric = json_metric.into();
+            diesel::insert_into(schema::metric::table)
+                .values(&insert_metric)
                 .execute(conn)
-                .map_err(map_http_error!("Failed to create benchmark data."))?;
+                .map_err(map_http_error!("Failed to create benchmark metric data."))?;
 
             Some(
-                schema::latency::table
-                    .filter(schema::latency::uuid.eq(&insert_latency.uuid))
-                    .select(schema::latency::id)
+                schema::metric::table
+                    .filter(schema::metric::uuid.eq(&insert_metric.uuid))
+                    .select(schema::metric::id)
                     .first::<i32>(conn)
                     .map_err(map_http_error!("Failed to create benchmark data."))?,
             )

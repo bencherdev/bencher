@@ -35,6 +35,7 @@ diesel::table! {
 diesel::table! {
     metric (id) {
         id -> Integer,
+        uuid -> Text,
         perf_id -> Integer,
         metric_kind_id -> Integer,
         value -> Double,
