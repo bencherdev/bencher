@@ -13,11 +13,13 @@ use super::{
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetrics {
     #[serde(flatten)]
-    pub inner: BTreeMap<String, JsonMetric>,
+    pub inner: BTreeMap<MetricKind, JsonMetric>,
 }
 
-impl From<BTreeMap<String, JsonMetric>> for JsonMetrics {
-    fn from(inner: BTreeMap<String, JsonMetric>) -> Self {
+pub type MetricKind = String;
+
+impl From<BTreeMap<MetricKind, JsonMetric>> for JsonMetrics {
+    fn from(inner: BTreeMap<MetricKind, JsonMetric>) -> Self {
         Self { inner }
     }
 }
@@ -45,22 +47,6 @@ impl JsonMetrics {
         }
         metric_map.into()
     }
-}
-
-fn ord_map<T>(self_perf: Option<T>, other_perf: Option<T>, ord_kind: OrdKind) -> Option<T>
-where
-    T: Ord,
-{
-    self_perf.map(|sp| {
-        if let Some(op) = other_perf {
-            match ord_kind {
-                OrdKind::Min => sp.min(op),
-                OrdKind::Max => sp.max(op),
-            }
-        } else {
-            sp
-        }
-    })
 }
 
 impl std::ops::Div<usize> for JsonMetrics {
