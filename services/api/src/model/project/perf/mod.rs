@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod latency;
+pub mod metric;
 pub mod resource;
 pub mod throughput;
 
@@ -27,11 +28,6 @@ pub struct QueryPerf {
     pub report_id: i32,
     pub iteration: i32,
     pub benchmark_id: i32,
-    pub latency_id: Option<i32>,
-    pub throughput_id: Option<i32>,
-    pub compute_id: Option<i32>,
-    pub memory_id: Option<i32>,
-    pub storage_id: Option<i32>,
 }
 
 impl QueryPerf {
@@ -60,11 +56,6 @@ pub struct InsertPerf {
     pub report_id: i32,
     pub iteration: i32,
     pub benchmark_id: i32,
-    pub latency_id: Option<i32>,
-    pub throughput_id: Option<i32>,
-    pub compute_id: Option<i32>,
-    pub memory_id: Option<i32>,
-    pub storage_id: Option<i32>,
 }
 
 impl InsertPerf {
@@ -80,11 +71,6 @@ impl InsertPerf {
             report_id,
             iteration,
             benchmark_id,
-            latency_id: InsertLatency::map_json(conn, metrics.latency)?,
-            throughput_id: InsertThroughput::map_json(conn, metrics.throughput)?,
-            compute_id: InsertResource::map_json(conn, metrics.compute)?,
-            memory_id: InsertResource::map_json(conn, metrics.memory)?,
-            storage_id: InsertResource::map_json(conn, metrics.storage)?,
         })
     }
 }

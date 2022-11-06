@@ -10,6 +10,7 @@ pub mod benchmarks;
 pub mod latency;
 pub mod mean;
 pub mod median;
+pub mod metric;
 pub mod metrics;
 pub mod metrics_map;
 pub mod resource;

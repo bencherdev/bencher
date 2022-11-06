@@ -33,12 +33,13 @@ diesel::table! {
 }
 
 diesel::table! {
-    latency (id) {
+    metric (id) {
         id -> Integer,
-        uuid -> Text,
-        lower_variance -> BigInt,
-        upper_variance -> BigInt,
-        duration -> BigInt,
+        perf_id -> Integer,
+        metric_kind_id -> Integer,
+        lower_bound -> Double,
+        upper_bound -> Double,
+        value -> Double,
     }
 }
 
@@ -78,11 +79,6 @@ diesel::table! {
         report_id -> Integer,
         iteration -> Integer,
         benchmark_id -> Integer,
-        latency_id -> Nullable<Integer>,
-        throughput_id -> Nullable<Integer>,
-        compute_id -> Nullable<Integer>,
-        memory_id -> Nullable<Integer>,
-        storage_id -> Nullable<Integer>,
     }
 }
 
@@ -118,16 +114,6 @@ diesel::table! {
         adapter -> Integer,
         start_time -> BigInt,
         end_time -> BigInt,
-    }
-}
-
-diesel::table! {
-    resource (id) {
-        id -> Integer,
-        uuid -> Text,
-        min -> Double,
-        max -> Double,
-        avg -> Double,
     }
 }
 
@@ -174,17 +160,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    throughput (id) {
-        id -> Integer,
-        uuid -> Text,
-        lower_variance -> Double,
-        upper_variance -> Double,
-        events -> Double,
-        unit_time -> BigInt,
-    }
-}
-
-diesel::table! {
     token (id) {
         id -> Integer,
         uuid -> Text,
@@ -223,13 +198,13 @@ diesel::joinable!(alert -> statistic (statistic_id));
 diesel::joinable!(alert -> threshold (threshold_id));
 diesel::joinable!(benchmark -> project (project_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(metric -> metric_kind (metric_kind_id));
+diesel::joinable!(metric -> perf (perf_id));
 diesel::joinable!(metric_kind -> project (project_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
 diesel::joinable!(perf -> benchmark (benchmark_id));
-diesel::joinable!(perf -> latency (latency_id));
 diesel::joinable!(perf -> report (report_id));
-diesel::joinable!(perf -> throughput (throughput_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
@@ -247,7 +222,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     alert,
     benchmark,
     branch,
-    latency,
+    metric,
     metric_kind,
     organization,
     organization_role,
@@ -255,11 +230,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     project,
     project_role,
     report,
-    resource,
     statistic,
     testbed,
     threshold,
-    throughput,
     token,
     user,
     version,

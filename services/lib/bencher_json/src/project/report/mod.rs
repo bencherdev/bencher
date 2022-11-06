@@ -7,7 +7,7 @@ pub mod new;
 
 pub use data::JsonReport;
 pub use new::{
-    latency::JsonLatency, metrics_map::JsonMetricsMap, resource::JsonResource,
+    latency::JsonLatency, metric::JsonMetric, metrics_map::JsonMetricsMap, resource::JsonResource,
     throughput::JsonThroughput, JsonNewReport,
 };
 
