@@ -26,8 +26,8 @@ pub struct CliRun {
     #[clap(long)]
     pub testbed: Option<Uuid>,
 
-    /// Benchmark output adapter
-    #[clap(value_enum, long)]
+    /// Benchmarking tool output adapter
+    #[clap(value_enum, long, alias = "tool")]
     pub adapter: Option<CliRunAdapter>,
 
     /// Number of run iterations (default is 1)
