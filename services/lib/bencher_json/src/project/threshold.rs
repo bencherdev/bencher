@@ -4,14 +4,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::perf::JsonPerfKind;
+use crate::ResourceId;
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: JsonPerfKind,
+    pub kind: ResourceId,
     pub statistic: JsonNewStatistic,
 }
 
@@ -32,7 +32,7 @@ pub struct JsonThreshold {
     pub uuid: Uuid,
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: JsonPerfKind,
+    pub kind: Uuid,
     pub statistic: Uuid,
 }
 

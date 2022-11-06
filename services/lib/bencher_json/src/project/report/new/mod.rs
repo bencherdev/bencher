@@ -7,14 +7,14 @@ use uuid::Uuid;
 use super::JsonAdapter;
 
 pub mod benchmarks;
-pub mod latency;
+// pub mod latency;
 pub mod mean;
 pub mod median;
 pub mod metric;
 pub mod metrics;
 pub mod metrics_map;
-pub mod resource;
-pub mod throughput;
+// pub mod resource;
+// pub mod throughput;
 
 pub use benchmarks::{JsonBenchmarks, JsonBenchmarksMap};
 pub use metrics::JsonMetrics;

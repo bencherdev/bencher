@@ -6,10 +6,7 @@ pub mod data;
 pub mod new;
 
 pub use data::JsonReport;
-pub use new::{
-    latency::JsonLatency, metric::JsonMetric, metrics_map::JsonMetricsMap, resource::JsonResource,
-    throughput::JsonThroughput, JsonNewReport,
-};
+pub use new::{metric::JsonMetric, metrics_map::JsonMetricsMap, JsonNewReport};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
