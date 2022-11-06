@@ -4,6 +4,7 @@ use super::{
     benchmarks::{JsonBenchmarks, JsonBenchmarksMap},
     latency::JsonLatency,
     median::Median,
+    metric::JsonMetric,
     metrics::JsonMetrics,
     resource::JsonResource,
     throughput::JsonThroughput,
@@ -27,28 +28,23 @@ impl From<JsonBenchmarks> for JsonMetricsMap {
 impl JsonMetricsMap {
     fn append(&mut self, benchmarks_map: JsonBenchmarksMap) {
         for (benchmark_name, metrics) in benchmarks_map.inner.into_iter() {
-            let JsonMetrics {
-                latency,
-                throughput,
-                compute,
-                memory,
-                storage,
-            } = metrics;
-            if let Some(metricss) = self.inner.get_mut(&benchmark_name) {
-                metricss.latency.push(latency);
-                metricss.throughput.push(throughput);
-                metricss.compute.push(compute);
-                metricss.memory.push(memory);
-                metricss.storage.push(storage);
+            if let Some(metrics_list) = self.inner.get_mut(&benchmark_name) {
+                for (metric_kind, metric) in metrics.inner {
+                    if let Some(list) = metrics_list.inner.get_mut(&metric_kind) {
+                        list.push(metric);
+                    } else {
+                        metrics_list.inner.insert(metric_kind, vec![metric]);
+                    }
+                }
             } else {
+                let mut metrics_list = BTreeMap::new();
+                for (metric_kind, metric) in metrics.inner {
+                    metrics_list.insert(metric_kind, vec![metric]);
+                }
                 self.inner.insert(
                     benchmark_name,
                     JsonMetricsList {
-                        latency: vec![latency],
-                        throughput: vec![throughput],
-                        compute: vec![compute],
-                        memory: vec![memory],
-                        storage: vec![storage],
+                        inner: metrics_list,
                     },
                 );
             }
@@ -58,28 +54,17 @@ impl JsonMetricsMap {
 
 #[derive(Debug, Clone)]
 pub struct JsonMetricsList {
-    pub latency: Vec<Option<JsonLatency>>,
-    pub throughput: Vec<Option<JsonThroughput>>,
-    pub compute: Vec<Option<JsonResource>>,
-    pub memory: Vec<Option<JsonResource>>,
-    pub storage: Vec<Option<JsonResource>>,
+    pub inner: BTreeMap<String, Vec<JsonMetric>>,
 }
 
 impl JsonMetricsList {
     pub(crate) fn median(self) -> JsonMetrics {
-        let Self {
-            latency,
-            throughput,
-            compute,
-            memory,
-            storage,
-        } = self;
-        JsonMetrics {
-            latency: JsonLatency::median(latency),
-            throughput: JsonThroughput::median(throughput),
-            compute: JsonResource::median(compute),
-            memory: JsonResource::median(memory),
-            storage: JsonResource::median(storage),
+        let mut metric_map = BTreeMap::new();
+        for (metric_kind, metric) in self.inner.into_iter() {
+            if let Some(median) = JsonMetric::median(metric) {
+                metric_map.insert(metric_kind, median);
+            }
         }
+        metric_map.into()
     }
 }

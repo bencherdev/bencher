@@ -1,5 +1,5 @@
 pub trait Median {
-    fn median(mut array: Vec<Option<Self>>) -> Option<Self>
+    fn median(mut array: Vec<Self>) -> Option<Self>
     where
         Self:
             Copy + Clone + Ord + std::ops::Add<Output = Self> + std::ops::Div<usize, Output = Self>,
@@ -14,9 +14,9 @@ pub trait Median {
         if (size % 2) == 0 {
             let left = size / 2 - 1;
             let right = size / 2;
-            Some((array[left]? + array[right]?) / 2)
+            Some((array[left] + array[right]) / 2)
         } else {
-            array[(size / 2)]
+            Some(array[(size / 2)])
         }
     }
 }
