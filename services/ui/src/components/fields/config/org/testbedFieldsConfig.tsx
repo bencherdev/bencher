@@ -43,6 +43,13 @@ const testbedFieldsConfig = {
     help: "Must be at least four characters or longer.",
     validate: validateName,
   },
+  gpu: {
+    type: "text",
+    placeholder: "NVIDIA GeForce 650 Ti",
+    icon: "fas fa-fan",
+    help: "Must be at least four characters or longer.",
+    validate: validateName,
+  },
   ram: {
     type: "text",
     placeholder: "8GB",

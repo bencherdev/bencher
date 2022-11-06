@@ -17,7 +17,8 @@ const testbedsConfig = {
       ],
     },
     table: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
       add: {
         path: addPath,
         text: "Add a Testbed",
@@ -47,7 +48,8 @@ const testbedsConfig = {
       path: parentPath,
     },
     form: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -122,6 +124,17 @@ const testbedsConfig = {
         },
         {
           kind: Field.INPUT,
+          label: "GPU",
+          key: "gpu",
+          value: "",
+          valid: null,
+          validate: false,
+          nullify: false,
+          clear: false,
+          config: testbedFieldsConfig.gpu,
+        },
+        {
+          kind: Field.INPUT,
           label: "RAM",
           key: "ram",
           value: "",
@@ -153,7 +166,8 @@ const testbedsConfig = {
       path: parentPath,
     },
     deck: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`,
+      url: (path_params) =>
+        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`,
       cards: [
         {
           kind: Card.FIELD,
