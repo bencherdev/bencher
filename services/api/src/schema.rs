@@ -146,6 +146,7 @@ diesel::table! {
         cpu -> Nullable<Text>,
         ram -> Nullable<Text>,
         disk -> Nullable<Text>,
+        gpu -> Nullable<Text>,
     }
 }
 
