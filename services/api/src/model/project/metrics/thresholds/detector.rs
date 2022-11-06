@@ -76,11 +76,11 @@ impl Detector {
 
             // If there is a set min sample size, then check to see if it is met.
             // Otherwise, simply return.
-            // if let Some(sample_size) = self.threshold.statistic.min_sample_size {
-            //     if data.len() < sample_size as usize {
-            //         return Ok(());
-            //     }
-            // }
+            if let Some(sample_size) = self.threshold.statistic.min_sample_size {
+                if data.len() < sample_size as usize {
+                    return Ok(());
+                }
+            }
 
             // If there is a set max sample size, then check to see if adding the new datum
             // caused us to exceed it. If so, then pop off the oldest datum.

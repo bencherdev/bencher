@@ -16,6 +16,7 @@ pub struct QueryStatistic {
     pub id: i32,
     pub uuid: String,
     pub test: i32,
+    pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
     pub window: Option<i64>,
     pub left_side: Option<f32>,
@@ -45,6 +46,7 @@ impl QueryStatistic {
             id: _,
             uuid,
             test,
+            min_sample_size,
             max_sample_size,
             window,
             left_side,
@@ -53,6 +55,7 @@ impl QueryStatistic {
         Ok(JsonStatistic {
             uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get statistic."))?,
             test: StatisticKind::try_from(test)?.into(),
+            min_sample_size: min_sample_size.map(|ss| ss as u32),
             max_sample_size: max_sample_size.map(|ss| ss as u32),
             window: window.map(|w| w as u32),
             left_side: left_side.map(Into::into),
@@ -102,6 +105,7 @@ impl From<StatisticKind> for JsonStatisticKind {
 pub struct InsertStatistic {
     pub uuid: String,
     pub test: i32,
+    pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
     pub window: Option<i64>,
     pub left_side: Option<f32>,
@@ -112,6 +116,7 @@ impl InsertStatistic {
     pub fn from_json(json_statistic: JsonNewStatistic) -> Result<Self, HttpError> {
         let JsonNewStatistic {
             test,
+            min_sample_size,
             max_sample_size,
             window,
             left_side,
@@ -120,6 +125,7 @@ impl InsertStatistic {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             test: StatisticKind::from(test) as i32,
+            min_sample_size: min_sample_size.map(|ss| ss as i64),
             max_sample_size: max_sample_size.map(|ss| ss as i64),
             window: window.map(|w| w as i64),
             left_side: left_side.map(Into::into),

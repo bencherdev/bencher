@@ -19,6 +19,7 @@ pub struct JsonNewThreshold {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewStatistic {
     pub test: JsonStatisticKind,
+    pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
     pub left_side: Option<OrderedFloat<f32>>,
@@ -40,6 +41,7 @@ pub struct JsonThreshold {
 pub struct JsonStatistic {
     pub uuid: Uuid,
     pub test: JsonStatisticKind,
+    pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
     pub left_side: Option<OrderedFloat<f32>>,

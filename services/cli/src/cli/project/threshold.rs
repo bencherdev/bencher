@@ -58,6 +58,10 @@ pub struct CliStatisticCreate {
     #[clap(value_enum, long)]
     pub test: CliStatisticKind,
 
+    /// Min sample size
+    #[clap(long)]
+    pub min_sample_size: Option<u32>,
+
     /// Max sample size
     #[clap(long)]
     pub max_sample_size: Option<u32>,
