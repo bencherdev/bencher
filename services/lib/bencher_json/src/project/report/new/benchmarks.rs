@@ -14,8 +14,8 @@ pub struct JsonBenchmarks {
 }
 
 impl From<Vec<JsonBenchmarksMap>> for JsonBenchmarks {
-    fn from(benchmarks: Vec<JsonBenchmarksMap>) -> Self {
-        Self { inner: benchmarks }
+    fn from(inner: Vec<JsonBenchmarksMap>) -> Self {
+        Self { inner }
     }
 }
 
@@ -70,12 +70,12 @@ pub struct JsonBenchmarksMap {
 }
 
 impl From<BTreeMap<String, JsonMetrics>> for JsonBenchmarksMap {
-    fn from(map: BTreeMap<String, JsonMetrics>) -> Self {
-        Self { inner: map }
+    fn from(inner: BTreeMap<String, JsonMetrics>) -> Self {
+        Self { inner }
     }
 }
 
-enum CombinedKind {
+pub(crate) enum CombinedKind {
     Ord(OrdKind),
     Add,
 }
@@ -86,10 +86,7 @@ impl JsonBenchmarksMap {
         for (benchmark_name, metrics) in self.inner.into_iter() {
             let other_metrics = other.inner.remove(&benchmark_name);
             let combined_metrics = if let Some(other_metrics) = other_metrics {
-                match kind {
-                    CombinedKind::Ord(ord_kind) => metrics.ord(other_metrics, ord_kind),
-                    CombinedKind::Add => metrics + other_metrics,
-                }
+                metrics.combined(other_metrics, kind)
             } else {
                 metrics
             };

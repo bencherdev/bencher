@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use bencher_json::project::report::new::JsonMetrics;
 use diesel::{Insertable, Queryable, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
@@ -12,14 +11,7 @@ use crate::{
     util::map_http_error,
 };
 
-pub mod latency;
 pub mod metric;
-pub mod resource;
-pub mod throughput;
-
-pub use latency::InsertLatency;
-pub use resource::InsertResource;
-pub use throughput::InsertThroughput;
 
 #[derive(Queryable)]
 pub struct QueryPerf {
@@ -64,7 +56,6 @@ impl InsertPerf {
         report_id: i32,
         iteration: i32,
         benchmark_id: i32,
-        metrics: JsonMetrics,
     ) -> Result<Self, HttpError> {
         Ok(InsertPerf {
             uuid: Uuid::new_v4().to_string(),

@@ -1,3 +1,4 @@
+use bencher_json::project::report::new::JsonMetrics;
 use bencher_json::project::report::JsonMetric;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
