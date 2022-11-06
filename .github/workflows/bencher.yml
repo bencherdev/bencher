@@ -1,4 +1,4 @@
-name: Rust
+name: Bencher
 
 on:
   workflow_dispatch:
