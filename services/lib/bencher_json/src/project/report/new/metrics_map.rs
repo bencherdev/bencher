@@ -2,12 +2,9 @@ use std::collections::BTreeMap;
 
 use super::{
     benchmarks::{JsonBenchmarks, JsonBenchmarksMap},
-    latency::JsonLatency,
     median::Median,
     metric::JsonMetric,
     metrics::JsonMetrics,
-    resource::JsonResource,
-    throughput::JsonThroughput,
 };
 
 #[derive(Debug, Clone, Default)]

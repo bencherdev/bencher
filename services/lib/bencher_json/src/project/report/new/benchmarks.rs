@@ -75,6 +75,7 @@ impl From<BTreeMap<String, JsonMetrics>> for JsonBenchmarksMap {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum CombinedKind {
     Ord(OrdKind),
     Add,
@@ -122,11 +123,12 @@ impl std::iter::Sum for JsonBenchmarksMap {
 impl std::ops::Div<usize> for JsonBenchmarksMap {
     type Output = Self;
 
-    fn div(mut self, rhs: usize) -> Self::Output {
-        for (_, metrics) in self.inner.iter_mut() {
-            *metrics = *metrics / rhs;
-        }
-        self
+    fn div(self, rhs: usize) -> Self::Output {
+        self.inner
+            .into_iter()
+            .map(|(name, metrics)| (name, metrics / rhs))
+            .collect::<BTreeMap<String, JsonMetrics>>()
+            .into()
     }
 }
 
