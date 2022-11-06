@@ -16,11 +16,11 @@ env:
 jobs:
   build_ui_docker:
     if: ${{ !startsWith(github.ref, 'refs/tags/') }} && ${BRANCH_NAME} != "master"
-    name: Build UI and Release Nightly (Linux)
+    name: Build UI (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build and Push to Docker Hub
+      - name: Build with Docker
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
@@ -28,7 +28,7 @@ jobs:
           push: false
 
   nightly_ui_docker:
-    if: false
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }} && ${BRANCH_NAME} == "master"
     name: Build UI and Release Nightly (Linux)
     runs-on: ubuntu-latest
     steps:
