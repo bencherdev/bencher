@@ -11,11 +11,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
   DOCKER_IMAGE: bencher-ui
-  BRANCH_NAME: ${{ github.ref_name }}
 
 jobs:
   build_ui_docker:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }} && ${BRANCH_NAME} != "master"
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }} && ${{ github.ref_name }} != "master"
     name: Build UI (Linux)
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +27,7 @@ jobs:
           push: false
 
   nightly_ui_docker:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }} && ${BRANCH_NAME} == "master"
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }} && ${{ github.ref_name }} == "master"
     name: Build UI and Release Nightly (Linux)
     runs-on: ubuntu-latest
     steps:
