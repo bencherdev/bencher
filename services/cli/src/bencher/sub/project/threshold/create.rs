@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{project::perf::JsonPerfKind, JsonNewThreshold, ResourceId};
+use bencher_json::{JsonNewThreshold, ResourceId};
 use uuid::Uuid;
 
 use super::statistic::Statistic;
@@ -16,7 +16,7 @@ pub struct Create {
     pub project: ResourceId,
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: JsonPerfKind,
+    pub kind: ResourceId,
     pub statistic: Statistic,
     pub backend: Backend,
 }
@@ -37,7 +37,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             project,
             branch,
             testbed,
-            kind: kind.into(),
+            kind,
             statistic: statistic.try_into()?,
             backend: backend.try_into()?,
         })

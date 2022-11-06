@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, str::FromStr, time::Duration};
 
 use bencher_json::project::report::{
-    new::{JsonBenchmarksMap, JsonMetrics},
-    JsonLatency,
+    new::{metrics::LATENCY_SLUG, JsonBenchmarksMap, JsonMetrics},
+    JsonMetric,
 };
 use nom::{
     branch::alt,
@@ -23,7 +23,7 @@ pub fn parse(output: &Output) -> Result<JsonBenchmarksMap, CliError> {
 
 enum Test {
     Ignored,
-    Bench(JsonLatency),
+    Bench(JsonMetric),
 }
 
 fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarksMap> {
@@ -57,11 +57,9 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarksMap> {
             let mut benchmarks = BTreeMap::new();
             for bench in benches {
                 if let Some((benchmark, latency)) = to_latency(bench) {
-                    let perf = JsonMetrics {
-                        latency: Some(latency),
-                        ..Default::default()
-                    };
-                    benchmarks.insert(benchmark, perf);
+                    let mut inner = BTreeMap::new();
+                    inner.insert(LATENCY_SLUG.into(), latency);
+                    benchmarks.insert(benchmark, JsonMetrics { inner });
                 }
             }
             benchmarks.into()
@@ -71,11 +69,11 @@ fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarksMap> {
 
 fn to_latency(
     bench: (&str, &str, &str, &str, &str, &str, Test, &str),
-) -> Option<(String, JsonLatency)> {
+) -> Option<(String, JsonMetric)> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
-        Test::Bench(latency) => Some((key.into(), latency)),
+        Test::Bench(metric) => Some((key.into(), metric)),
     }
 }
 
@@ -115,12 +113,12 @@ fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
         )),
         |(_, _, duration, _, units, _, _, _, _, variance, _)| {
             let units = Units::from(units);
-            let duration = to_duration(to_u64(duration), &units);
-            let variance = to_duration(to_u64(variance), &units);
-            JsonLatency {
-                duration: duration.as_nanos() as u64,
-                lower_variance: variance.as_nanos() as u64,
-                upper_variance: variance.as_nanos() as u64,
+            let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
+            let variance = (to_duration(to_u64(variance), &units).as_nanos() as f64).into();
+            JsonMetric {
+                value,
+                lower_bound: variance,
+                upper_bound: variance,
             }
         },
     )(input)
