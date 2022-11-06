@@ -1,5 +1,5 @@
 PRAGMA foreign_keys = off;
-CREATE TABLE IF NOT EXISTS up_testbed (
+CREATE TABLE up_testbed (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,

@@ -1,5 +1,5 @@
 PRAGMA foreign_keys = off;
-CREATE TABLE IF NOT EXISTS down_statistic (
+CREATE TABLE down_statistic (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     -- test kind: Z or T

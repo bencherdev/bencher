@@ -1,5 +1,5 @@
 PRAGMA foreign_keys = off;
-CREATE TABLE IF NOT EXISTS up_statistic (
+CREATE TABLE up_statistic (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     -- test kind: Z or T

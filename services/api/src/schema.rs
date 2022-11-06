@@ -43,6 +43,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    metric_kind (id) {
+        id -> Integer,
+        uuid -> Text,
+        project_id -> Integer,
+        name -> Text,
+        slug -> Text,
+        unit -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     organization (id) {
         id -> Integer,
         uuid -> Text,
@@ -212,6 +223,7 @@ diesel::joinable!(alert -> statistic (statistic_id));
 diesel::joinable!(alert -> threshold (threshold_id));
 diesel::joinable!(benchmark -> project (project_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(metric_kind -> project (project_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
 diesel::joinable!(perf -> benchmark (benchmark_id));
@@ -236,6 +248,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     benchmark,
     branch,
     latency,
+    metric_kind,
     organization,
     organization_role,
     perf,
