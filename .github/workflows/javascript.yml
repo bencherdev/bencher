@@ -14,20 +14,31 @@ env:
   BRANCH_NAME: ${{ github.ref_name }}
 
 jobs:
-  nightly_ui_docker:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  build_ui_docker:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && [[ ${BRANCH_NAME} != "master" ]] }}
     name: Build UI and Release Nightly (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: export SHOULD_PUSH
-        run: echo "SHOULD_PUSH=$([[ ${BRANCH_NAME} == 'master' ]] && true || false)" >> $GITHUB_ENV
+      - name: Build and Push to Docker Hub
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/ui
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_IMAGE }}
+          push: false
+
+  nightly_ui_docker:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && [[ ${BRANCH_NAME} == "master" ]] }}
+    name: Build UI and Release Nightly (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:nightly
-          push: ${{ env.SHOULD_PUSH }}
+          push: true
 
   latest_ui_docker:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
