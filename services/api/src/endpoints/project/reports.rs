@@ -203,7 +203,7 @@ async fn post_inner(
         .first::<QueryReport>(conn)
         .map_err(map_http_error!("Failed to create report."))?;
 
-    // Metrics is used to add benchmarks, perf metrics, and alerts.
+    // Metrics is used to add benchmarks, metric kinds, metrics, and alerts.
     let mut metrics = Metrics::new(
         conn,
         project_id,
@@ -213,9 +213,9 @@ async fn post_inner(
         json_report.benchmarks.clone(),
     )?;
 
-    for (index, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
+    for (iteration, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_metrics) in benchmark.inner {
-            metrics.benchmark(conn, index as i32, &benchmark_name, json_metrics)?;
+            metrics.benchmark(conn, iteration, benchmark_name, json_metrics)?;
         }
     }
 

@@ -55,13 +55,13 @@ impl InsertPerf {
     pub fn from_json(
         conn: &mut SqliteConnection,
         report_id: i32,
-        iteration: i32,
+        iteration: usize,
         benchmark_id: i32,
     ) -> Result<Self, HttpError> {
         Ok(InsertPerf {
             uuid: Uuid::new_v4().to_string(),
             report_id,
-            iteration,
+            iteration: iteration as i32,
             benchmark_id,
         })
     }

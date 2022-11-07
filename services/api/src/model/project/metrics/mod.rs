@@ -15,7 +15,6 @@ use self::detectors::Detectors;
 use super::perf::metric::InsertMetric;
 
 pub struct Metrics {
-    pub project_id: i32,
     pub report_id: i32,
     pub detectors: Detectors,
 }
@@ -30,7 +29,6 @@ impl Metrics {
         benchmarks: JsonBenchmarks,
     ) -> Result<Self, HttpError> {
         Ok(Self {
-            project_id,
             report_id,
             detectors: Detectors::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
         })
@@ -39,18 +37,17 @@ impl Metrics {
     pub fn benchmark(
         &mut self,
         conn: &mut SqliteConnection,
-        project_id: i32,
-        iteration: i32,
-        benchmark_name: &str,
+        iteration: usize,
+        benchmark_name: String,
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         // All benchmarks should already exist
         let benchmark_id = self
             .detectors
             .benchmark_cache
-            .get(benchmark_name)
+            .get(&benchmark_name)
             .cloned()
-            .ok_or(ApiError::BenchmarkCache(benchmark_name.into()))?;
+            .ok_or(ApiError::BenchmarkCache(benchmark_name))?;
 
         let insert_perf = InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id)?;
 

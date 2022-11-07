@@ -19,11 +19,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        branch::QueryBranch,
-        perf::{latency::QueryLatency, resource::QueryResource, throughput::QueryThroughput},
-        report::to_date_time,
-        testbed::QueryTestbed,
-        QueryProject,
+        branch::QueryBranch, report::to_date_time, testbed::QueryTestbed, QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
