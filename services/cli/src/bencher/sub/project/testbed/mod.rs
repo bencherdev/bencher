@@ -13,7 +13,7 @@ mod view;
 #[derive(Debug)]
 pub enum Testbed {
     List(list::List),
-    Create(create::Create),
+    Create(Box<create::Create>),
     View(view::View),
 }
 
@@ -23,7 +23,7 @@ impl TryFrom<CliTestbed> for Testbed {
     fn try_from(testbed: CliTestbed) -> Result<Self, Self::Error> {
         Ok(match testbed {
             CliTestbed::List(list) => Self::List(list.try_into()?),
-            CliTestbed::Create(create) => Self::Create(create.try_into()?),
+            CliTestbed::Create(create) => Self::Create(Box::new((*create).try_into()?)),
             CliTestbed::View(view) => Self::View(view.try_into()?),
         })
     }

@@ -91,11 +91,7 @@ where
             Some(left_bound + right_value)
         }
     } else {
-        if let Some(right_bound) = right_bound {
-            Some(left_value + right_bound)
-        } else {
-            None
-        }
+        right_bound.map(|rb| left_value + rb)
     }
 }
 

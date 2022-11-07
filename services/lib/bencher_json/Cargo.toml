@@ -22,4 +22,3 @@ slug.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
-num = "0.4.0"

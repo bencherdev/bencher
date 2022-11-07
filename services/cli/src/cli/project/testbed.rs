@@ -10,7 +10,7 @@ pub enum CliTestbed {
     List(CliTestbedList),
     /// Create a testbed
     #[clap(alias = "add")]
-    Create(CliTestbedCreate),
+    Create(Box<CliTestbedCreate>),
     /// View a testbed
     View(CliTestbedView),
 }
