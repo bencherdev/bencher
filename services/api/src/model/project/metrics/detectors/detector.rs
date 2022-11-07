@@ -47,7 +47,7 @@ impl Detector {
     }
 
     pub fn test(
-        &mut self,
+        &self,
         conn: &mut SqliteConnection,
         perf_id: i32,
         benchmark_id: i32,

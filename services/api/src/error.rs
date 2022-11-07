@@ -32,6 +32,8 @@ pub enum ApiError {
     Url(#[from] url::ParseError),
     #[error("Failed to inline CSS: {0}")]
     CssInline(#[from] css_inline::InlineError),
+    #[error("Failed to run stats: {0}")]
+    Statrs(#[from] statrs::StatsError),
     #[error("Failed to find env var: {0}")]
     MissingEnvVar(String),
     #[error("Failed to parse config string: {0}")]

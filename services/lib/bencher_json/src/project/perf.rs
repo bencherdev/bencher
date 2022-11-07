@@ -14,7 +14,7 @@ pub struct JsonPerfQuery {
     pub branches: Vec<Uuid>,
     pub testbeds: Vec<Uuid>,
     pub benchmarks: Vec<Uuid>,
-    pub kind: ResourceId,
+    pub metric_kind: ResourceId,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
 }
@@ -22,7 +22,7 @@ pub struct JsonPerfQuery {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
-    pub kind: Uuid,
+    pub metric_kind: Uuid,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
     pub benchmarks: Vec<JsonPerfData>,

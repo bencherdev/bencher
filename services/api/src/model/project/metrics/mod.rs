@@ -1,5 +1,5 @@
 use bencher_json::project::report::new::{JsonBenchmarks, JsonMetrics};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 
 use crate::{
@@ -49,33 +49,26 @@ impl Metrics {
             .cloned()
             .ok_or(ApiError::BenchmarkCache(benchmark_name))?;
 
-        let insert_perf = InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id)?;
-
+        let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
         diesel::insert_into(schema::perf::table)
             .values(&insert_perf)
             .execute(conn)
             .map_err(api_error!())?;
-
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
-        for (metric_kind_key, metric) in &json_metrics.inner {
+        for (metric_kind_key, metric) in json_metrics.inner {
             // All metric kinds should already exist
             let metric_kind_id = self
                 .detectors
                 .metric_kind_cache
-                .get(metric_kind_key)
+                .get(&metric_kind_key)
                 .cloned()
-                .ok_or(ApiError::MetricKindCache(metric_kind_key.into()))?;
+                .ok_or(ApiError::MetricKindCache(metric_kind_key))?;
 
-            let insert_metric = InsertMetric::from_json(perf_id, metric_kind_id, *metric);
+            let insert_metric = InsertMetric::from_json(perf_id, metric_kind_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn)
-                .map_err(api_error!())?;
-            let metric_id = schema::metric::table
-                .filter(schema::metric::uuid.eq(&insert_metric.uuid))
-                .select(schema::metric::id)
-                .first::<i32>(conn)
                 .map_err(api_error!())?;
 
             self.detectors

@@ -68,7 +68,7 @@ impl Detectors {
         perf_id: i32,
         benchmark_id: i32,
         metric_kind_id: i32,
-        metric: &JsonMetric,
+        metric: JsonMetric,
     ) -> Result<(), ApiError> {
         if let Some(detector) = self.detectors.get(&metric_kind_id) {
             detector.test(conn, perf_id, benchmark_id, metric.value.into())

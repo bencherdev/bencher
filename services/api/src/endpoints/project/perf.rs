@@ -1,11 +1,14 @@
 use std::{str::FromStr, sync::Arc};
 
 use bencher_json::{
-    project::perf::{JsonPerfData, JsonPerfDatum, JsonPerfDatumKind, JsonPerfKind},
+    project::{
+        perf::{JsonPerfData, JsonPerfDatum},
+        report::JsonMetric,
+    },
     JsonPerf, JsonPerfQuery, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -19,7 +22,8 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        branch::QueryBranch, report::to_date_time, testbed::QueryTestbed, QueryProject,
+        branch::QueryBranch, perf::metric_kind::QueryMetricKind, report::to_date_time,
+        testbed::QueryTestbed, QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
@@ -115,27 +119,14 @@ async fn post_inner(
         branches,
         testbeds,
         benchmarks,
-        kind,
+        metric_kind,
         start_time,
         end_time,
     } = json_perf_query;
 
-    // In order to make the type system happy, always query a start and end time.
-    // If either is missing then just default to the extremes: zero and max.
-    let start_time_nanos = start_time
-        .as_ref()
-        .map(|t| t.timestamp_nanos())
-        .unwrap_or_default();
-    let end_time_nanos = end_time
-        .as_ref()
-        .map(|t| t.timestamp_nanos())
-        .unwrap_or(i64::MAX);
-
-    let order_by = (
-        schema::version::number,
-        schema::report::start_time,
-        schema::perf::iteration,
-    );
+    let metric_kind = QueryMetricKind::from_resource_id(conn, &metric_kind)?;
+    let start_time_nanos = start_time.as_ref().map(|t| t.timestamp_nanos());
+    let end_time_nanos = end_time.as_ref().map(|t| t.timestamp_nanos());
 
     let mut data = Vec::new();
     for branch in &branches {
@@ -154,7 +145,7 @@ async fn post_inner(
                 // Verify that the branch and testbed are part of the same project
                 SameProject::validate_ids(conn, project_id, branch_id, testbed_id)?;
 
-                let query = schema::perf::table
+                let mut query = schema::perf::table
                     .left_join(
                         schema::benchmark::table
                             .on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -164,357 +155,84 @@ async fn post_inner(
                     .inner_join(
                         schema::report::table.on(schema::perf::report_id.eq(schema::report::id)),
                     )
-                    .filter(schema::report::start_time.ge(start_time_nanos))
-                    .filter(schema::report::end_time.le(end_time_nanos))
+                    .into_boxed();
+
+                if let Some(start_time) = start_time_nanos {
+                    query = query.filter(schema::report::start_time.ge(start_time));
+                }
+                if let Some(end_time) = end_time_nanos {
+                    query = query.filter(schema::report::end_time.le(end_time));
+                }
+
+                let query_data = query
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
                     )
                     .filter(schema::version::branch_id.eq(branch_id))
-                    .filter(schema::report::testbed_id.eq(testbed_id));
-
-                let query_data: Vec<QueryPerfDatum> = match kind {
-                    JsonPerfKind::Latency => query
-                        .inner_join(
-                            schema::latency::table
-                                .on(schema::perf::latency_id.eq(schema::latency::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::perf::iteration,
-                            schema::report::start_time,
-                            schema::report::end_time,
-                            schema::version::number,
-                            schema::version::hash,
-                            schema::latency::id,
-                            schema::latency::uuid,
-                            schema::latency::lower_variance,
-                            schema::latency::upper_variance,
-                            schema::latency::duration,
-                        ))
-                        .order(&order_by)
-                        .load::<(
-                            String,
-                            i32,
-                            i64,
-                            i64,
-                            i32,
-                            Option<String>,
-                            i32,
-                            String,
-                            i64,
-                            i64,
-                            i64,
-                        )>(conn)
-                        .map_err(api_error!())?
-                        .into_iter()
-                        .map(
-                            |(
+                    .filter(schema::report::testbed_id.eq(testbed_id))
+                    .inner_join(
+                        schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)),
+                    )
+                    .filter(schema::metric::metric_kind_id.eq(metric_kind.id))
+                    .order((
+                        schema::version::number,
+                        schema::report::start_time,
+                        schema::perf::iteration,
+                    ))
+                    .select((
+                        schema::perf::uuid,
+                        schema::perf::iteration,
+                        schema::report::start_time,
+                        schema::report::end_time,
+                        schema::version::number,
+                        schema::version::hash,
+                        schema::metric::value,
+                        schema::metric::lower_bound,
+                        schema::metric::upper_bound,
+                    ))
+                    .load::<(
+                        String,
+                        i32,
+                        i64,
+                        i64,
+                        i32,
+                        Option<String>,
+                        f64,
+                        Option<f64>,
+                        Option<f64>,
+                    )>(conn)
+                    .map_err(api_error!())?
+                    .into_iter()
+                    .map(
+                        |(
+                            uuid,
+                            iteration,
+                            start_time,
+                            end_time,
+                            version_number,
+                            version_hash,
+                            value,
+                            lower_bound,
+                            upper_bound,
+                        )| {
+                            let metrics = JsonMetric {
+                                value: value.into(),
+                                lower_bound: lower_bound.map(Into::into),
+                                upper_bound: upper_bound.map(Into::into),
+                            };
+                            QueryPerfDatum {
                                 uuid,
                                 iteration,
                                 start_time,
                                 end_time,
                                 version_number,
                                 version_hash,
-                                latency_id,
-                                latency_uuid,
-                                lower_variance,
-                                upper_variance,
-                                duration,
-                            )| {
-                                let metrics = QueryPerfMetrics::Latency(QueryLatency {
-                                    id: latency_id,
-                                    uuid: latency_uuid,
-                                    lower_variance,
-                                    upper_variance,
-                                    duration,
-                                });
-                                QueryPerfDatum {
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    metrics,
-                                }
-                            },
-                        )
-                        .collect(),
-                    JsonPerfKind::Throughput => {
-                        query
-                            .inner_join(schema::throughput::table.on(
-                                schema::perf::throughput_id.eq(schema::throughput::id.nullable()),
-                            ))
-                            .select((
-                                schema::perf::uuid,
-                                schema::perf::iteration,
-                                schema::report::start_time,
-                                schema::report::end_time,
-                                schema::version::number,
-                                schema::version::hash,
-                                schema::throughput::id,
-                                schema::throughput::uuid,
-                                schema::throughput::lower_variance,
-                                schema::throughput::upper_variance,
-                                schema::throughput::events,
-                                schema::throughput::unit_time,
-                            ))
-                            .order(&order_by)
-                            .load::<(
-                                String,
-                                i32,
-                                i64,
-                                i64,
-                                i32,
-                                Option<String>,
-                                i32,
-                                String,
-                                f64,
-                                f64,
-                                f64,
-                                i64,
-                            )>(conn)
-                            .map_err(api_error!())?
-                            .into_iter()
-                            .map(
-                                |(
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    throughput_id,
-                                    throughput_uuid,
-                                    lower_variance,
-                                    upper_variance,
-                                    events,
-                                    unit_time,
-                                )| {
-                                    let metrics = QueryPerfMetrics::Throughput(QueryThroughput {
-                                        id: throughput_id,
-                                        uuid: throughput_uuid,
-                                        lower_variance,
-                                        upper_variance,
-                                        events,
-                                        unit_time,
-                                    });
-                                    QueryPerfDatum {
-                                        uuid,
-                                        iteration,
-                                        start_time,
-                                        end_time,
-                                        version_number,
-                                        version_hash,
-                                        metrics,
-                                    }
-                                },
-                            )
-                            .collect()
-                    },
-                    JsonPerfKind::Compute => query
-                        .inner_join(
-                            schema::resource::table
-                                .on(schema::perf::compute_id.eq(schema::resource::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::perf::iteration,
-                            schema::report::start_time,
-                            schema::report::end_time,
-                            schema::version::number,
-                            schema::version::hash,
-                            schema::resource::id,
-                            schema::resource::uuid,
-                            schema::resource::min,
-                            schema::resource::max,
-                            schema::resource::avg,
-                        ))
-                        .order(&order_by)
-                        .load::<(
-                            String,
-                            i32,
-                            i64,
-                            i64,
-                            i32,
-                            Option<String>,
-                            i32,
-                            String,
-                            f64,
-                            f64,
-                            f64,
-                        )>(conn)
-                        .map_err(api_error!())?
-                        .into_iter()
-                        .map(
-                            |(
-                                uuid,
-                                iteration,
-                                start_time,
-                                end_time,
-                                version_number,
-                                version_hash,
-                                mma_id,
-                                mma_uuid,
-                                min,
-                                max,
-                                avg,
-                            )| {
-                                let metrics = QueryPerfMetrics::Compute(QueryResource {
-                                    id: mma_id,
-                                    uuid: mma_uuid,
-                                    min,
-                                    max,
-                                    avg,
-                                });
-                                QueryPerfDatum {
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    metrics,
-                                }
-                            },
-                        )
-                        .collect(),
-                    JsonPerfKind::Memory => query
-                        .inner_join(
-                            schema::resource::table
-                                .on(schema::perf::memory_id.eq(schema::resource::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::perf::iteration,
-                            schema::report::start_time,
-                            schema::report::end_time,
-                            schema::version::number,
-                            schema::version::hash,
-                            schema::resource::id,
-                            schema::resource::uuid,
-                            schema::resource::min,
-                            schema::resource::max,
-                            schema::resource::avg,
-                        ))
-                        .order(&order_by)
-                        .load::<(
-                            String,
-                            i32,
-                            i64,
-                            i64,
-                            i32,
-                            Option<String>,
-                            i32,
-                            String,
-                            f64,
-                            f64,
-                            f64,
-                        )>(conn)
-                        .map_err(api_error!())?
-                        .into_iter()
-                        .map(
-                            |(
-                                uuid,
-                                iteration,
-                                start_time,
-                                end_time,
-                                version_number,
-                                version_hash,
-                                mma_id,
-                                mma_uuid,
-                                min,
-                                max,
-                                avg,
-                            )| {
-                                let metrics = QueryPerfMetrics::Memory(QueryResource {
-                                    id: mma_id,
-                                    uuid: mma_uuid,
-                                    min,
-                                    max,
-                                    avg,
-                                });
-                                QueryPerfDatum {
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    metrics,
-                                }
-                            },
-                        )
-                        .collect(),
-                    JsonPerfKind::Storage => query
-                        .inner_join(
-                            schema::resource::table
-                                .on(schema::perf::storage_id.eq(schema::resource::id.nullable())),
-                        )
-                        .select((
-                            schema::perf::uuid,
-                            schema::perf::iteration,
-                            schema::report::start_time,
-                            schema::report::end_time,
-                            schema::version::number,
-                            schema::version::hash,
-                            schema::resource::id,
-                            schema::resource::uuid,
-                            schema::resource::min,
-                            schema::resource::max,
-                            schema::resource::avg,
-                        ))
-                        .order(&order_by)
-                        .load::<(
-                            String,
-                            i32,
-                            i64,
-                            i64,
-                            i32,
-                            Option<String>,
-                            i32,
-                            String,
-                            f64,
-                            f64,
-                            f64,
-                        )>(conn)
-                        .map_err(api_error!())?
-                        .into_iter()
-                        .map(
-                            |(
-                                uuid,
-                                iteration,
-                                start_time,
-                                end_time,
-                                version_number,
-                                version_hash,
-                                mma_id,
-                                mma_uuid,
-                                min,
-                                max,
-                                avg,
-                            )| {
-                                let metrics = QueryPerfMetrics::Storage(QueryResource {
-                                    id: mma_id,
-                                    uuid: mma_uuid,
-                                    min,
-                                    max,
-                                    avg,
-                                });
-                                QueryPerfDatum {
-                                    uuid,
-                                    iteration,
-                                    start_time,
-                                    end_time,
-                                    version_number,
-                                    version_hash,
-                                    metrics,
-                                }
-                            },
-                        )
-                        .collect(),
-                };
+                                metrics,
+                            }
+                        },
+                    )
+                    .collect();
 
                 let json_perf_data = into_json(*branch, *testbed, *benchmark, query_data)?;
 
@@ -524,7 +242,7 @@ async fn post_inner(
     }
 
     Ok(JsonPerf {
-        kind,
+        metric_kind: Uuid::from_str(&metric_kind.uuid).map_err(api_error!())?,
         start_time,
         end_time,
         benchmarks: data,
@@ -557,7 +275,7 @@ pub struct QueryPerfDatum {
     pub end_time: i64,
     pub version_number: i32,
     pub version_hash: Option<String>,
-    pub metrics: QueryPerfMetrics,
+    pub metrics: JsonMetric,
 }
 
 impl QueryPerfDatum {
@@ -579,34 +297,7 @@ impl QueryPerfDatum {
             end_time: to_date_time(end_time)?,
             version_number: version_number as u32,
             version_hash,
-            metrics: QueryPerfMetrics::into_json(metrics)?,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub enum QueryPerfMetrics {
-    Latency(QueryLatency),
-    Throughput(QueryThroughput),
-    Compute(QueryResource),
-    Memory(QueryResource),
-    Storage(QueryResource),
-}
-
-impl QueryPerfMetrics {
-    fn into_json(self) -> Result<JsonPerfDatumKind, HttpError> {
-        Ok(match self {
-            Self::Latency(latency) => JsonPerfDatumKind::Latency(QueryLatency::into_json(latency)?),
-            Self::Throughput(throughput) => {
-                JsonPerfDatumKind::Throughput(QueryThroughput::into_json(throughput)?)
-            },
-            Self::Compute(resource) => {
-                JsonPerfDatumKind::Compute(QueryResource::into_json(resource))
-            },
-            Self::Memory(resource) => JsonPerfDatumKind::Memory(QueryResource::into_json(resource)),
-            Self::Storage(resource) => {
-                JsonPerfDatumKind::Storage(QueryResource::into_json(resource))
-            },
+            metrics,
         })
     }
 }

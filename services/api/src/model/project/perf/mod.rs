@@ -52,17 +52,12 @@ pub struct InsertPerf {
 }
 
 impl InsertPerf {
-    pub fn from_json(
-        conn: &mut SqliteConnection,
-        report_id: i32,
-        iteration: usize,
-        benchmark_id: i32,
-    ) -> Result<Self, HttpError> {
-        Ok(InsertPerf {
+    pub fn from_json(report_id: i32, iteration: usize, benchmark_id: i32) -> Self {
+        InsertPerf {
             uuid: Uuid::new_v4().to_string(),
             report_id,
             iteration: iteration as i32,
             benchmark_id,
-        })
+        }
     }
 }

@@ -120,11 +120,8 @@ impl InsertMetricKind {
         project: &ResourceId,
         metric_kind: JsonNewMetricKind,
     ) -> Result<Self, HttpError> {
-        Ok(Self::from_json_inner(
-            conn,
-            QueryProject::from_resource_id(conn, project)?.id,
-            metric_kind,
-        ))
+        let project_id = QueryProject::from_resource_id(conn, project)?.id;
+        Ok(Self::from_json_inner(conn, project_id, metric_kind))
     }
 
     pub fn latency(conn: &mut SqliteConnection, project_id: i32) -> Self {
