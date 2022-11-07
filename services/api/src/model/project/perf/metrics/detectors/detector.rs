@@ -46,7 +46,7 @@ impl Detector {
         }))
     }
 
-    pub fn test(
+    pub fn detect(
         &self,
         conn: &mut SqliteConnection,
         perf_id: i32,

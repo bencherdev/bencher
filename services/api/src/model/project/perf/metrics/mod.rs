@@ -34,7 +34,7 @@ impl Metrics {
         })
     }
 
-    pub fn benchmark(
+    pub fn insert(
         &mut self,
         conn: &mut SqliteConnection,
         iteration: usize,
@@ -72,7 +72,7 @@ impl Metrics {
                 .map_err(api_error!())?;
 
             self.detectors
-                .test(conn, perf_id, benchmark_id, metric_kind_id, metric)?;
+                .detect(conn, perf_id, benchmark_id, metric_kind_id, metric)?;
         }
 
         Ok(())

@@ -18,7 +18,7 @@ pub mod threshold;
 pub struct Detectors {
     pub detectors: HashMap<MetricKindId, Detector>,
     pub benchmark_cache: HashMap<String, i32>,
-    pub metric_kind_cache: HashMap<String, i32>,
+    pub metric_kind_cache: HashMap<String, MetricKindId>,
 }
 
 pub type MetricKindId = i32;
@@ -62,7 +62,7 @@ impl Detectors {
         })
     }
 
-    pub fn test(
+    pub fn detect(
         &self,
         conn: &mut SqliteConnection,
         perf_id: i32,
@@ -71,7 +71,7 @@ impl Detectors {
         metric: JsonMetric,
     ) -> Result<(), ApiError> {
         if let Some(detector) = self.detectors.get(&metric_kind_id) {
-            detector.test(conn, perf_id, benchmark_id, metric.value.into())
+            detector.detect(conn, perf_id, benchmark_id, metric.value.into())
         } else {
             Ok(())
         }

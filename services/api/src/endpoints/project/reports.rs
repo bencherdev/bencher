@@ -215,7 +215,7 @@ async fn post_inner(
 
     for (iteration, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
         for (benchmark_name, json_metrics) in benchmark.inner {
-            metrics.benchmark(conn, iteration, benchmark_name, json_metrics)?;
+            metrics.insert(conn, iteration, benchmark_name, json_metrics)?;
         }
     }
 
