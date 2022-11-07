@@ -17,6 +17,7 @@ use crate::{
     model::{
         organization::QueryOrganization,
         project::{
+            perf::metric_kind::InsertMetricKind,
             project_role::InsertProjectRole,
             {InsertProject, QueryProject},
         },
@@ -159,6 +160,13 @@ async fn post_inner(
     };
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    // Add a latency metric kind to the project
+    let insert_metric_kind = InsertMetricKind::latency(conn, query_project.id);
+    diesel::insert_into(schema::metric_kind::table)
+        .values(&insert_metric_kind)
         .execute(conn)
         .map_err(api_error!())?;
 

@@ -9,8 +9,6 @@ use super::{
     metric::JsonMetric,
 };
 
-pub const LATENCY_SLUG: &str = "latency";
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetrics {
