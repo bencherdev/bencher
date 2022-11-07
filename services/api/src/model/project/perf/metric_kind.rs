@@ -1,91 +1,81 @@
-use bencher_json::project::report::new::JsonMetrics;
-use bencher_json::project::report::JsonMetric;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
+use std::str::FromStr;
+
+use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::metric as metric_table, util::map_http_error};
+use crate::{
+    error::api_error, schema, schema::branch as branch_table, util::slug::unwrap_slug, ApiError,
+};
 
-#[derive(Queryable, Debug)]
-pub struct QueryMetric {
+#[derive(Queryable)]
+pub struct QueryMetricKind {
     pub id: i32,
     pub uuid: String,
-    pub perf_id: i32,
-    pub metric_kind_id: i32,
-    pub value: f64,
-    pub lower_bound: Option<f64>,
-    pub upper_bound: Option<f64>,
+    pub project_id: i32,
+    pub name: String,
+    pub slug: String,
+    pub unit: Option<String>,
 }
 
-impl QueryMetric {
-    pub fn into_json(self) -> Result<JsonMetric, HttpError> {
+impl QueryMetricKind {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
+        schema::branch::table
+            .filter(schema::branch::uuid.eq(uuid.to_string()))
+            .select(schema::branch::id)
+            .first(conn)
+            .map_err(api_error!())
+    }
+
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+        let uuid: String = schema::branch::table
+            .filter(schema::branch::id.eq(id))
+            .select(schema::branch::uuid)
+            .first(conn)
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, ApiError> {
         let Self {
             id: _,
-            uuid: _,
-            perf_id: _,
-            metric_kind_id: _,
-            value,
-            lower_bound,
-            upper_bound,
+            uuid,
+            project_id,
+            name,
+            slug,
         } = self;
-        Ok(JsonMetric {
-            value: value.into(),
-            lower_bound: lower_bound.map(Into::into),
-            upper_bound: upper_bound.map(Into::into),
+        Ok(JsonBranch {
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            project: QueryProject::get_uuid(conn, project_id)?,
+            name,
+            slug,
         })
     }
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = metric_table)]
-pub struct InsertMetric {
+#[diesel(table_name = branch_table)]
+pub struct InsertMetricKind {
     pub uuid: String,
-    pub perf_id: i32,
-    pub metric_kind_id: i32,
-    pub value: f64,
-    pub lower_bound: Option<f64>,
-    pub upper_bound: Option<f64>,
+    pub project_id: i32,
+    pub name: String,
+    pub slug: String,
 }
 
-impl InsertMetric {
-    fn from_json(perf_id: i32, metric_kind_id: i32, metric: JsonMetric) -> Self {
-        let JsonMetric {
-            value,
-            lower_bound,
-            upper_bound,
-        } = metric;
-        Self {
-            perf_id,
-            metric_kind_id,
-            uuid: Uuid::new_v4().to_string(),
-            value: value.into(),
-            lower_bound: lower_bound.map(Into::into),
-            upper_bound: upper_bound.map(Into::into),
-        }
-    }
-
-    pub fn map_json(
+impl InsertMetricKind {
+    pub fn from_json(
         conn: &mut SqliteConnection,
-        perf_id: i32,
-        metric_kind_id: i32,
-        metric: Option<JsonMetric>,
-    ) -> Result<Option<i32>, HttpError> {
-        Ok(if let Some(json_metric) = metric {
-            let insert_metric: InsertMetric = Self::from_json(perf_id, metric_kind_id, metric);
-            diesel::insert_into(schema::metric::table)
-                .values(&insert_metric)
-                .execute(conn)
-                .map_err(map_http_error!("Failed to create benchmark metric data."))?;
-
-            Some(
-                schema::metric::table
-                    .filter(schema::metric::uuid.eq(&insert_metric.uuid))
-                    .select(schema::metric::id)
-                    .first::<i32>(conn)
-                    .map_err(map_http_error!("Failed to create benchmark data."))?,
-            )
-        } else {
-            None
+        project: &ResourceId,
+        branch: JsonNewBranch,
+    ) -> Result<Self, HttpError> {
+        let JsonNewBranch { name, slug } = branch;
+        let slug = unwrap_slug!(conn, &name, slug, branch, QueryMetricKind);
+        Ok(Self {
+            uuid: Uuid::new_v4().to_string(),
+            project_id: QueryProject::from_resource_id(conn, project)?.id,
+            name,
+            slug,
         })
     }
 }

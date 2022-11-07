@@ -8,7 +8,7 @@ use uuid::Uuid;
 pub struct JsonNewMetricKind {
     pub name: String,
     pub slug: Option<String>,
-    pub unit: Option<String>,
+    pub units: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -18,5 +18,5 @@ pub struct JsonMetricKind {
     pub project: Uuid,
     pub name: String,
     pub slug: String,
-    pub unit: Option<String>,
+    pub units: Option<String>,
 }

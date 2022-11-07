@@ -51,7 +51,7 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
-        unit -> Nullable<Text>,
+        units -> Nullable<Text>,
     }
 }
 
