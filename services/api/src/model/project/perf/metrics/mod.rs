@@ -12,7 +12,7 @@ pub mod detectors;
 
 use self::detectors::Detectors;
 
-use super::perf::metric::InsertMetric;
+use super::metric::InsertMetric;
 
 pub struct Metrics {
     pub report_id: i32,

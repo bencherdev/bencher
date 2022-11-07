@@ -19,7 +19,6 @@ use crate::{
 
 pub mod benchmark;
 pub mod branch;
-pub mod metrics;
 pub mod perf;
 pub mod project_role;
 pub mod report;

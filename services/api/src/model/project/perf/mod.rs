@@ -13,6 +13,7 @@ use crate::{
 
 pub mod metric;
 pub mod metric_kind;
+pub mod metrics;
 
 #[derive(Queryable)]
 pub struct QueryPerf {
