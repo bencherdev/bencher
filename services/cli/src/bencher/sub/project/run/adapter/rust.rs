@@ -1,7 +1,8 @@
 use std::{collections::BTreeMap, str::FromStr, time::Duration};
 
 use bencher_json::project::report::{
-    new::{metrics::LATENCY_SLUG, JsonBenchmarksMap, JsonMetrics},
+    metric_kind::LATENCY_SLUG,
+    new::{JsonBenchmarksMap, JsonMetrics},
     JsonMetric,
 };
 use nom::{

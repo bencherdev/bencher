@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bencher_json::project::report::{
     new::{JsonBenchmarks, JsonMetrics},
     JsonMetricsMap,
@@ -7,18 +9,17 @@ use dropshot::HttpError;
 
 use self::detector::Detector;
 pub use self::threshold::Threshold;
-use crate::model::project::{benchmark::QueryBenchmark, threshold::PerfKind};
+use crate::model::project::{benchmark::QueryBenchmark, perf::metric_kind::QueryMetricKind};
 
 pub mod detector;
 pub mod threshold;
 
 pub struct Thresholds {
-    pub latency: Option<Detector>,
-    pub throughput: Option<Detector>,
-    pub compute: Option<Detector>,
-    pub memory: Option<Detector>,
-    pub storage: Option<Detector>,
+    pub detectors: HashMap<String, Detector>,
+    pub benchmarks: HashMap<String, i32>,
 }
+
+pub type MetricKindId = i32;
 
 impl Thresholds {
     pub fn new(
@@ -31,29 +32,26 @@ impl Thresholds {
         let metrics_map = JsonMetricsMap::from(benchmarks);
 
         // Create all benchmarks if they don't already exist
-        let benchmark_names: Vec<String> = metrics_map.inner.keys().cloned().collect();
-        let mut benchmark_ids = Vec::with_capacity(benchmark_names.len());
-        for name in &benchmark_names {
-            benchmark_ids.push(QueryBenchmark::get_or_create(conn, project_id, name)?);
+        let mut detectors = HashMap::with_capacity(metrics_map.inner.len());
+        let mut benchmarks = HashMap::with_capacity(metrics_map.inner.len());
+        for (benchmark_name, metrics_list) in metrics_map.inner {
+            let benchmark_id = QueryBenchmark::get_or_create(conn, project_id, &benchmark_name)?;
+            benchmarks.insert(benchmark_name, benchmark_id);
+            // Create all metric kinds if they don't already exist
+            // And create a detector for the branch/testbed/metric kind grouping
+            for metric_kind_key in metrics_list.inner.into_keys() {
+                let metric_kind_id =
+                    QueryMetricKind::get_or_create(conn, project_id, &metric_kind_key)?;
+                if let Some(detector) = Detector::new(conn, branch_id, testbed_id, metric_kind_id)?
+                {
+                    detectors.insert(metric_kind_key, detector);
+                }
+            }
         }
-        let benchmarks: Vec<(String, i32)> = benchmark_names
-            .into_iter()
-            .zip(benchmark_ids.into_iter())
-            .collect();
 
         Ok(Self {
-            latency: Detector::new(
-                conn,
-                branch_id,
-                testbed_id,
-                &benchmarks,
-                &metrics_map,
-                PerfKind::Latency,
-            )?,
-            throughput: None,
-            compute: None,
-            memory: None,
-            storage: None,
+            detectors,
+            benchmarks,
         })
     }
 

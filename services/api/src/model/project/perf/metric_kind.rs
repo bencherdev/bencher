@@ -74,6 +74,34 @@ impl QueryMetricKind {
             units,
         })
     }
+
+    pub fn get_or_create(
+        conn: &mut SqliteConnection,
+        project_id: i32,
+        metric_kind: &str,
+    ) -> Result<i32, ApiError> {
+        if let Ok(resource_id) = metric_kind.parse() {
+            if let Ok(metric_kind) = QueryMetricKind::from_resource_id(conn, &resource_id) {
+                return Ok(metric_kind.id);
+            }
+        }
+
+        let insert_metric_kind = InsertMetricKind::from_json_inner(
+            conn,
+            project_id,
+            JsonNewMetricKind {
+                name: metric_kind.into(),
+                slug: None,
+                units: None,
+            },
+        );
+        diesel::insert_into(schema::metric_kind::table)
+            .values(&insert_metric_kind)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        QueryMetricKind::get_id(conn, insert_metric_kind.uuid)
+    }
 }
 
 #[derive(Insertable)]

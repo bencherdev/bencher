@@ -1,9 +1,9 @@
 use bencher_json::project::report::JsonMetric;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::Insertable;
 use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::metric as metric_table, util::map_http_error};
+use crate::schema::metric as metric_table;
 
 #[derive(Queryable, Debug)]
 pub struct QueryMetric {
@@ -62,29 +62,4 @@ impl InsertMetric {
             upper_bound: upper_bound.map(Into::into),
         }
     }
-
-    // pub fn map_json(
-    //     conn: &mut SqliteConnection,
-    //     perf_id: i32,
-    //     metric_kind_id: i32,
-    //     metric: Option<JsonMetric>,
-    // ) -> Result<Option<i32>, HttpError> {
-    //     Ok(if let Some(metric) = metric {
-    //         let insert_metric: InsertMetric = Self::from_json(perf_id, metric_kind_id, metric);
-    //         diesel::insert_into(schema::metric::table)
-    //             .values(&insert_metric)
-    //             .execute(conn)
-    //             .map_err(map_http_error!("Failed to create benchmark metric data."))?;
-
-    //         Some(
-    //             schema::metric::table
-    //                 .filter(schema::metric::uuid.eq(&insert_metric.uuid))
-    //                 .select(schema::metric::id)
-    //                 .first::<i32>(conn)
-    //                 .map_err(map_http_error!("Failed to create benchmark data."))?,
-    //         )
-    //     } else {
-    //         None
-    //     })
-    // }
 }

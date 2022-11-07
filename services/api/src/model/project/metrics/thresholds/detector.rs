@@ -1,28 +1,27 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 
-use bencher_json::project::report::JsonMetricsMap;
 use diesel::{RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;
 
 use super::threshold::Threshold;
 use crate::{
+    error::api_error,
     model::project::{
         metrics::data::MetricsData,
         threshold::{
             alert::{InsertAlert, Side},
             statistic::StatisticKind,
-            PerfKind,
         },
     },
-    schema,
-    util::map_http_error,
+    schema, ApiError,
 };
 
 pub struct Detector {
+    branch_id: i32,
+    testbed_id: i32,
+    metric_kind_id: i32,
     pub threshold: Threshold,
-    pub data: HashMap<String, MetricsData>,
 }
 
 impl Detector {
@@ -30,105 +29,76 @@ impl Detector {
         conn: &mut SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        benchmarks: &[(String, i32)],
-        _metrics_map: &JsonMetricsMap,
-        kind: PerfKind,
-    ) -> Result<Option<Self>, HttpError> {
-        // Check to see if there is a latency threshold for this branch/testbed pair
-        let threshold = if let Some(threshold) = Threshold::new(conn, branch_id, testbed_id, kind) {
-            threshold
-        } else {
-            return Ok(None);
-        };
+        metric_kind_id: i32,
+    ) -> Result<Option<Self>, ApiError> {
+        // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
+        // If not, then there will be no detector.
+        let threshold =
+            if let Some(threshold) = Threshold::new(conn, branch_id, testbed_id, metric_kind_id) {
+                threshold
+            } else {
+                return Ok(None);
+            };
 
-        // Query and cache the historical population/sample data for each benchmark
-        let mut data = HashMap::with_capacity(benchmarks.len());
-        for (benchmark_name, benchmark_id) in benchmarks {
-            let metrics_data = MetricsData::new(
-                conn,
-                branch_id,
-                testbed_id,
-                *benchmark_id,
-                &threshold.statistic,
-                kind,
-            )?;
-            data.insert(benchmark_name.clone(), metrics_data);
-        }
-
-        // TODO use metrics_map in a two sample t-test
-
-        Ok(Some(Self { threshold, data }))
+        Ok(Some(Self {
+            branch_id,
+            testbed_id,
+            metric_kind_id,
+            threshold,
+        }))
     }
 
     pub fn test(
         &mut self,
         conn: &mut SqliteConnection,
         perf_id: i32,
-        benchmark_name: &str,
+        benchmark_id: i32,
         datum: f64,
-    ) -> Result<(), HttpError> {
-        // Update cached metrics data
-        if let Some(metrics_data) = self.data.get_mut(benchmark_name) {
-            let data = &mut metrics_data.data;
+    ) -> Result<(), ApiError> {
+        // Query the historical population/sample data for the benchmark
+        let metrics_data = MetricsData::new(
+            conn,
+            self.branch_id,
+            self.testbed_id,
+            self.metric_kind_id,
+            benchmark_id,
+            &self.threshold.statistic,
+        )?;
 
-            // Add the new metrics datum
-            data.push_front(datum);
+        let data = &metrics_data.data;
+        if let Some(mean) = mean(data) {
+            if let Some(std_dev) = std_deviation(mean, data) {
+                let (abs_datum, side, boundary) = match datum < mean {
+                    true => {
+                        if let Some(left_side) = self.threshold.statistic.left_side {
+                            (mean * 2.0 - datum, Side::Left, left_side)
+                        } else {
+                            return Ok(());
+                        }
+                    },
+                    false => {
+                        if let Some(right_side) = self.threshold.statistic.right_side {
+                            (datum, Side::Right, right_side)
+                        } else {
+                            return Ok(());
+                        }
+                    },
+                };
 
-            // If there is a set min sample size, then check to see if it is met.
-            // Otherwise, simply return.
-            if let Some(sample_size) = self.threshold.statistic.min_sample_size {
-                if data.len() < sample_size as usize {
-                    return Ok(());
-                }
-            }
+                let percentile = match self.threshold.statistic.test.try_into()? {
+                    StatisticKind::Z => {
+                        let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
+                        normal.cdf(abs_datum)
+                    },
+                    StatisticKind::T => {
+                        let students_t = StudentsT::new(mean, std_dev, (data.len() - 1) as f64)
+                            .map_err(api_error!())?;
+                        students_t.cdf(abs_datum)
+                    },
+                };
 
-            // If there is a set max sample size, then check to see if adding the new datum
-            // caused us to exceed it. If so, then pop off the oldest datum.
-            if let Some(sample_size) = self.threshold.statistic.max_sample_size {
-                if data.len() > sample_size as usize {
-                    data.pop_back();
-                    debug_assert!(data.len() == sample_size as usize)
-                }
-            }
-        }
-
-        if let Some(metrics_data) = self.data.get(benchmark_name) {
-            let data = &metrics_data.data;
-            if let Some(mean) = mean(data) {
-                if let Some(std_dev) = std_deviation(mean, data) {
-                    let (abs_datum, side, boundary) = match datum < mean {
-                        true => {
-                            if let Some(left_side) = self.threshold.statistic.left_side {
-                                (mean * 2.0 - datum, Side::Left, left_side)
-                            } else {
-                                return Ok(());
-                            }
-                        },
-                        false => {
-                            if let Some(right_side) = self.threshold.statistic.right_side {
-                                (datum, Side::Right, right_side)
-                            } else {
-                                return Ok(());
-                            }
-                        },
-                    };
-
-                    let percentile = match self.threshold.statistic.test.try_into()? {
-                        StatisticKind::Z => {
-                            let normal = Normal::new(mean, std_dev)
-                                .map_err(map_http_error!("Failed to run metrics detector."))?;
-                            normal.cdf(abs_datum)
-                        },
-                        StatisticKind::T => {
-                            let students_t = StudentsT::new(mean, std_dev, (data.len() - 1) as f64)
-                                .map_err(map_http_error!("Failed to run metrics detector."))?;
-                            students_t.cdf(abs_datum)
-                        },
-                    };
-
-                    if percentile > boundary as f64 {
-                        self.alert(conn, perf_id, side, boundary, percentile)?;
-                    }
+                if percentile > boundary as f64 {
+                    self.alert(conn, perf_id, side, boundary, percentile)?;
                 }
             }
         }
@@ -143,7 +113,7 @@ impl Detector {
         side: Side,
         boundary: f32,
         outlier: f64,
-    ) -> Result<(), HttpError> {
+    ) -> Result<(), ApiError> {
         let insert_alert = InsertAlert {
             uuid: Uuid::new_v4().to_string(),
             perf_id,
@@ -157,7 +127,7 @@ impl Detector {
         diesel::insert_into(schema::alert::table)
             .values(&insert_alert)
             .execute(conn)
-            .map_err(map_http_error!("Failed to run metrics detector."))?;
+            .map_err(api_error!())?;
 
         Ok(())
     }

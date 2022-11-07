@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use super::{
     benchmarks::{JsonBenchmarks, JsonBenchmarksMap},
@@ -9,7 +9,7 @@ use super::{
 
 #[derive(Debug, Clone, Default)]
 pub struct JsonMetricsMap {
-    pub inner: BTreeMap<String, JsonMetricsList>,
+    pub inner: HashMap<String, JsonMetricsList>,
 }
 
 impl From<JsonBenchmarks> for JsonMetricsMap {
@@ -34,7 +34,7 @@ impl JsonMetricsMap {
                     }
                 }
             } else {
-                let mut metrics_list = BTreeMap::new();
+                let mut metrics_list = HashMap::new();
                 for (metric_kind, metric) in metrics.inner {
                     metrics_list.insert(metric_kind, vec![metric]);
                 }
@@ -51,7 +51,7 @@ impl JsonMetricsMap {
 
 #[derive(Debug, Clone)]
 pub struct JsonMetricsList {
-    pub inner: BTreeMap<String, Vec<JsonMetric>>,
+    pub inner: HashMap<String, Vec<JsonMetric>>,
 }
 
 impl JsonMetricsList {

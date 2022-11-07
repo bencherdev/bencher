@@ -83,11 +83,7 @@ impl QueryBenchmark {
             .execute(conn)
             .map_err(api_error!())?;
 
-        schema::benchmark::table
-            .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
-            .select(schema::benchmark::id)
-            .first::<i32>(conn)
-            .map_err(api_error!())
+        QueryBenchmark::get_id(conn, insert_benchmark.uuid)
     }
 }
 

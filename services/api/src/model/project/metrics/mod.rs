@@ -1,11 +1,8 @@
-use bencher_json::{
-    project::report::{
-        metric_kind::JsonNewMetricKind,
-        new::{JsonBenchmarks, JsonMetrics},
-    },
-    ResourceId,
+use bencher_json::project::report::{
+    metric_kind::JsonNewMetricKind,
+    new::{JsonBenchmarks, JsonMetrics},
 };
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 
 use crate::{
@@ -14,9 +11,7 @@ use crate::{
         benchmark::QueryBenchmark,
         perf::{InsertPerf, QueryPerf},
     },
-    schema,
-    util::map_http_error,
-    ApiError,
+    schema, ApiError,
 };
 
 pub mod data;

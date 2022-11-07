@@ -3,9 +3,7 @@ use diesel::{
 };
 
 use crate::{
-    diesel::ExpressionMethods,
-    model::project::threshold::{statistic::QueryStatistic, PerfKind},
-    schema,
+    diesel::ExpressionMethods, model::project::threshold::statistic::QueryStatistic, schema,
 };
 
 pub struct Threshold {
@@ -18,7 +16,7 @@ impl Threshold {
         conn: &mut SqliteConnection,
         branch_id: i32,
         testbed_id: i32,
-        kind: PerfKind,
+        metric_kind_id: i32,
     ) -> Option<Self> {
         schema::statistic::table
             .inner_join(
@@ -29,7 +27,7 @@ impl Threshold {
                 schema::threshold::branch_id
                     .eq(branch_id)
                     .and(schema::threshold::testbed_id.eq(testbed_id))
-                    .and(schema::threshold::kind.eq(kind as i32)),
+                    .and(schema::threshold::metric_kind_id.eq(metric_kind_id)),
             )
             .select((
                 schema::threshold::id,
