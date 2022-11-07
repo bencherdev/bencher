@@ -3,6 +3,7 @@ DROP TABLE perf;
 DROP TABLE resource;
 DROP TABLE throughput;
 DROP TABLE latency;
+DROP TABLE threshold;
 CREATE TABLE perf (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -24,5 +25,18 @@ CREATE TABLE metric (
     FOREIGN KEY (perf_id) REFERENCES perf (id),
     FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id),
     UNIQUE(perf_id, metric_kind_id)
+);
+CREATE TABLE threshold (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    branch_id INTEGER NOT NULL,
+    testbed_id INTEGER NOT NULL,
+    metric_kind_id INTEGER NOT NULL,
+    statistic_id INTEGER NOT NULL,
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
+    FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
+    UNIQUE(branch_id, testbed_id, kind_id)
 );
 PRAGMA foreign_keys = on;

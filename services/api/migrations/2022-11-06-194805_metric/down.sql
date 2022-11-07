@@ -1,4 +1,5 @@
 PRAGMA foreign_keys = off;
+DROP TABLE threshold;
 DROP TABLE metric;
 DROP TABLE perf;
 CREATE TABLE latency (

@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::project::{
-    perf::JsonPerfKind,
-    threshold::{JsonNewThreshold, JsonThreshold},
-};
+use bencher_json::project::threshold::{JsonNewThreshold, JsonThreshold};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 use uuid::Uuid;
