@@ -37,6 +37,6 @@ CREATE TABLE threshold (
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id),
     FOREIGN KEY (statistic_id) REFERENCES statistic (id),
-    UNIQUE(branch_id, testbed_id, kind_id)
+    UNIQUE(branch_id, testbed_id, metric_kind_id)
 );
 PRAGMA foreign_keys = on;
