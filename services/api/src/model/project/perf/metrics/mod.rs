@@ -5,7 +5,7 @@ use dropshot::HttpError;
 use crate::{
     error::api_error,
     model::project::perf::{InsertPerf, QueryPerf},
-    schema, ApiError,
+    schema,
 };
 
 pub mod detectors;
@@ -42,12 +42,8 @@ impl Metrics {
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         // All benchmarks should already exist
-        let benchmark_id = self
-            .detectors
-            .benchmark_cache
-            .get(&benchmark_name)
-            .cloned()
-            .ok_or(ApiError::BenchmarkCache(benchmark_name))?;
+        // Get the benchmark ID from the detectors cache
+        let benchmark_id = self.detectors.benchmark_id(benchmark_name)?;
 
         let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
         diesel::insert_into(schema::perf::table)
@@ -58,12 +54,8 @@ impl Metrics {
 
         for (metric_kind_key, metric) in json_metrics.inner {
             // All metric kinds should already exist
-            let metric_kind_id = self
-                .detectors
-                .metric_kind_cache
-                .get(&metric_kind_key)
-                .cloned()
-                .ok_or(ApiError::MetricKindCache(metric_kind_key))?;
+            // Get the metric kind ID from the detectors cache
+            let metric_kind_id = self.detectors.metric_kind_id(metric_kind_key)?;
 
             let insert_metric = InsertMetric::from_json(perf_id, metric_kind_id, metric);
             diesel::insert_into(schema::metric::table)

@@ -17,10 +17,11 @@ pub mod threshold;
 
 pub struct Detectors {
     pub detectors: HashMap<MetricKindId, Detector>,
-    pub benchmark_cache: HashMap<String, i32>,
+    pub benchmark_cache: HashMap<String, BenchmarkId>,
     pub metric_kind_cache: HashMap<String, MetricKindId>,
 }
 
+pub type BenchmarkId = i32;
 pub type MetricKindId = i32;
 
 impl Detectors {
@@ -60,6 +61,20 @@ impl Detectors {
             benchmark_cache,
             metric_kind_cache,
         })
+    }
+
+    pub fn benchmark_id(&self, benchmark_name: String) -> Result<i32, ApiError> {
+        self.benchmark_cache
+            .get(&benchmark_name)
+            .cloned()
+            .ok_or(ApiError::BenchmarkCache(benchmark_name))
+    }
+
+    pub fn metric_kind_id(&self, metric_kind_key: String) -> Result<i32, ApiError> {
+        self.metric_kind_cache
+            .get(&metric_kind_key)
+            .cloned()
+            .ok_or(ApiError::MetricKindCache(metric_kind_key))
     }
 
     pub fn detect(
