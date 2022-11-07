@@ -11,18 +11,19 @@ use crate::{
     ApiError,
 };
 
+pub mod data;
 pub mod detector;
 pub mod threshold;
 
-pub struct Thresholds {
-    pub detectors: HashMap<i32, Detector>,
+pub struct Detectors {
+    pub detectors: HashMap<MetricKindId, Detector>,
     pub benchmark_cache: HashMap<String, i32>,
     pub metric_kind_cache: HashMap<String, i32>,
 }
 
 pub type MetricKindId = i32;
 
-impl Thresholds {
+impl Detectors {
     pub fn new(
         conn: &mut SqliteConnection,
         project_id: i32,
@@ -41,7 +42,7 @@ impl Thresholds {
             benchmark_cache.insert(benchmark_name, benchmark_id);
 
             // Create all metric kinds if they don't already exist
-            // And create a detector for the branch/testbed/metric kind grouping
+            // And create a detector for the branch/testbed/metric kind grouping if a threshold exists
             for metric_kind_key in metrics_list.inner.into_keys() {
                 let metric_kind_id =
                     QueryMetricKind::get_or_create(conn, project_id, &metric_kind_key)?;

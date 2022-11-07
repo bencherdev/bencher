@@ -103,7 +103,7 @@ async fn get_ls_inner(
             schema::threshold::uuid,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
-            schema::threshold::kind,
+            schema::threshold::metric_kind_id,
             schema::threshold::statistic_id,
         ))
         .order(schema::threshold::id)
@@ -239,7 +239,7 @@ async fn get_one_inner(
             schema::threshold::uuid,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
-            schema::threshold::kind,
+            schema::threshold::metric_kind_id,
             schema::threshold::statistic_id,
         ))
         .first::<QueryThreshold>(conn)

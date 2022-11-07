@@ -4,18 +4,16 @@ use diesel::{RunQueryDsl, SqliteConnection};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;
 
-use super::threshold::Threshold;
 use crate::{
     error::api_error,
-    model::project::{
-        metrics::data::MetricsData,
-        threshold::{
-            alert::{InsertAlert, Side},
-            statistic::StatisticKind,
-        },
+    model::project::threshold::{
+        alert::{InsertAlert, Side},
+        statistic::StatisticKind,
     },
     schema, ApiError,
 };
+
+use super::{data::MetricsData, Threshold};
 
 pub struct Detector {
     branch_id: i32,

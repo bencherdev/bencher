@@ -8,17 +8,16 @@ use crate::{
     schema, ApiError,
 };
 
-pub mod data;
-pub mod thresholds;
+pub mod detectors;
 
-use self::thresholds::Thresholds;
+use self::detectors::Detectors;
 
 use super::perf::metric::InsertMetric;
 
 pub struct Metrics {
     pub project_id: i32,
     pub report_id: i32,
-    pub thresholds: Thresholds,
+    pub detectors: Detectors,
 }
 
 impl Metrics {
@@ -33,7 +32,7 @@ impl Metrics {
         Ok(Self {
             project_id,
             report_id,
-            thresholds: Thresholds::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
+            detectors: Detectors::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
         })
     }
 
@@ -47,7 +46,7 @@ impl Metrics {
     ) -> Result<(), HttpError> {
         // All benchmarks should already exist
         let benchmark_id = self
-            .thresholds
+            .detectors
             .benchmark_cache
             .get(benchmark_name)
             .cloned()
@@ -65,7 +64,7 @@ impl Metrics {
         for (metric_kind_key, metric) in &json_metrics.inner {
             // All metric kinds should already exist
             let metric_kind_id = self
-                .thresholds
+                .detectors
                 .metric_kind_cache
                 .get(metric_kind_key)
                 .cloned()
@@ -82,7 +81,7 @@ impl Metrics {
                 .first::<i32>(conn)
                 .map_err(api_error!())?;
 
-            self.thresholds
+            self.detectors
                 .test(conn, perf_id, benchmark_id, metric_kind_id, metric)?;
         }
 
