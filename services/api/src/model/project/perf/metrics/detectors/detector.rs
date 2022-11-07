@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use diesel::{RunQueryDsl, SqliteConnection};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;
@@ -140,11 +138,11 @@ fn z_score(mean: f64, std_dev: f64, datum: f64) -> Option<f64> {
     }
 }
 
-fn std_deviation(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
+fn std_deviation(mean: f64, data: &[f64]) -> Option<f64> {
     variance(mean, data).map(|variance| variance.sqrt())
 }
 
-fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
+fn variance(mean: f64, data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         return None;
     }
@@ -156,7 +154,7 @@ fn variance(mean: f64, data: &VecDeque<f64>) -> Option<f64> {
     )
 }
 
-fn mean(data: &VecDeque<f64>) -> Option<f64> {
+fn mean(data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         return None;
     }

@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
@@ -7,7 +5,7 @@ use dropshot::HttpError;
 use crate::{error::api_error, model::project::threshold::statistic::QueryStatistic, schema};
 
 pub struct MetricsData {
-    pub data: VecDeque<f64>,
+    pub data: Vec<f64>,
 }
 
 impl MetricsData {
