@@ -96,7 +96,7 @@ impl From<&str> for Units {
     }
 }
 
-fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
+fn parse_bench(input: &str) -> IResult<&str, JsonMetric> {
     map(
         tuple((
             tag("bench:"),
@@ -114,7 +114,7 @@ fn parse_bench(input: &str) -> IResult<&str, JsonLatency> {
         |(_, _, duration, _, units, _, _, _, _, variance, _)| {
             let units = Units::from(units);
             let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
-            let variance = (to_duration(to_u64(variance), &units).as_nanos() as f64).into();
+            let variance = Some((to_duration(to_u64(variance), &units).as_nanos() as f64).into());
             JsonMetric {
                 value,
                 lower_bound: variance,
