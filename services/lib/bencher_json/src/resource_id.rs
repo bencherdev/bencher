@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::{borrow::Borrow, fmt, str::FromStr};
 
 use derive_more::Display;
 #[cfg(feature = "schema")]
@@ -9,7 +9,7 @@ use serde::{
 };
 use uuid::Uuid;
 
-#[derive(Debug, Display, Clone, Serialize)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ResourceId(pub String);
 
@@ -31,6 +31,12 @@ impl FromStr for ResourceId {
             return Ok(ResourceId(slug));
         }
         Err("Failed to to convert to string".into())
+    }
+}
+
+impl Borrow<str> for ResourceId {
+    fn borrow(&self) -> &str {
+        &self.0
     }
 }
 

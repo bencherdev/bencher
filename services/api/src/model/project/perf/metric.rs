@@ -69,7 +69,7 @@ impl InsertMetric {
         metric_kind_id: i32,
         metric: Option<JsonMetric>,
     ) -> Result<Option<i32>, HttpError> {
-        Ok(if let Some(json_metric) = metric {
+        Ok(if let Some(metric) = metric {
             let insert_metric: InsertMetric = Self::from_json(perf_id, metric_kind_id, metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)

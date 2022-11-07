@@ -92,11 +92,23 @@ impl InsertMetricKind {
         project: &ResourceId,
         metric_kind: JsonNewMetricKind,
     ) -> Result<Self, HttpError> {
+        Self::from_json_inner(
+            conn,
+            QueryProject::from_resource_id(conn, project)?.id,
+            metric_kind,
+        )
+    }
+
+    pub fn from_json_inner(
+        conn: &mut SqliteConnection,
+        project_id: i32,
+        metric_kind: JsonNewMetricKind,
+    ) -> Result<Self, HttpError> {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
         let slug = unwrap_slug!(conn, &name, slug, metric_kind, QueryMetricKind);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            project_id: QueryProject::from_resource_id(conn, project)?.id,
+            project_id,
             name,
             slug,
             units,
