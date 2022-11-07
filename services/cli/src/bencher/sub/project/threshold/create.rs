@@ -16,7 +16,7 @@ pub struct Create {
     pub project: ResourceId,
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: ResourceId,
+    pub metric_kind: ResourceId,
     pub statistic: Statistic,
     pub backend: Backend,
 }
@@ -37,7 +37,7 @@ impl TryFrom<CliThresholdCreate> for Create {
             project,
             branch,
             testbed,
-            kind,
+            metric_kind: kind,
             statistic: statistic.try_into()?,
             backend: backend.try_into()?,
         })
@@ -50,14 +50,14 @@ impl From<Create> for JsonNewThreshold {
             project: _,
             branch,
             testbed,
-            kind,
+            metric_kind,
             statistic,
             backend: _,
         } = create;
         Self {
             branch,
             testbed,
-            kind,
+            metric_kind,
             statistic: statistic.into(),
         }
     }

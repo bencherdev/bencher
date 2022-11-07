@@ -9,9 +9,15 @@ use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
-    error::api_error, model::project::QueryProject, schema,
-    schema::metric_kind as metric_kind_table, util::slug::unwrap_slug, ApiError,
+    error::api_error,
+    model::project::QueryProject,
+    schema,
+    schema::metric_kind as metric_kind_table,
+    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    ApiError,
 };
+
+fn_resource_id!(metric_kind);
 
 #[derive(Queryable)]
 pub struct QueryMetricKind {
@@ -39,6 +45,16 @@ impl QueryMetricKind {
             .first(conn)
             .map_err(api_error!())?;
         Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn from_resource_id(
+        conn: &mut SqliteConnection,
+        metric_kind: &ResourceId,
+    ) -> Result<Self, ApiError> {
+        schema::metric_kind::table
+            .filter(resource_id(metric_kind)?)
+            .first::<QueryMetricKind>(conn)
+            .map_err(api_error!())
     }
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonMetricKind, ApiError> {

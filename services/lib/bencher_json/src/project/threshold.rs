@@ -11,7 +11,7 @@ use crate::ResourceId;
 pub struct JsonNewThreshold {
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: ResourceId,
+    pub metric_kind: ResourceId,
     pub statistic: JsonNewStatistic,
 }
 
@@ -32,7 +32,7 @@ pub struct JsonThreshold {
     pub uuid: Uuid,
     pub branch: Uuid,
     pub testbed: Uuid,
-    pub kind: Uuid,
+    pub metric_kind: Uuid,
     pub statistic: Uuid,
 }
 

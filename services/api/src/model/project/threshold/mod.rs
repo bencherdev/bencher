@@ -2,14 +2,11 @@ use std::str::FromStr;
 
 use bencher_json::project::threshold::{JsonNewThreshold, JsonThreshold};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
-use super::{branch::QueryBranch, testbed::QueryTestbed};
-use crate::{
-    error::api_error, schema, schema::threshold as threshold_table, util::http_error, ApiError,
-};
+use super::{branch::QueryBranch, perf::metric_kind::QueryMetricKind, testbed::QueryTestbed};
+use crate::{error::api_error, schema, schema::threshold as threshold_table, ApiError};
 
 pub mod alert;
 pub mod statistic;
@@ -20,7 +17,7 @@ pub struct QueryThreshold {
     pub uuid: String,
     pub branch_id: i32,
     pub testbed_id: i32,
-    pub kind: i32,
+    pub metric_kind_id: i32,
     pub statistic_id: i32,
 }
 
@@ -48,64 +45,16 @@ impl QueryThreshold {
             uuid,
             branch_id,
             testbed_id,
-            kind,
+            metric_kind_id,
             statistic_id,
         } = self;
         Ok(JsonThreshold {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             branch: QueryBranch::get_uuid(conn, branch_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
-            kind: PerfKind::try_from(kind)?.into(),
+            metric_kind: QueryMetricKind::get_uuid(conn, metric_kind_id)?,
             statistic: QueryStatistic::get_uuid(conn, statistic_id)?,
         })
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum PerfKind {
-    Throughput = 0,
-    Latency = 1,
-    Compute = 2,
-    Memory = 3,
-    Storage = 4,
-}
-
-impl TryFrom<i32> for PerfKind {
-    type Error = HttpError;
-
-    fn try_from(kind: i32) -> Result<Self, Self::Error> {
-        match kind {
-            0 => Ok(Self::Throughput),
-            1 => Ok(Self::Latency),
-            2 => Ok(Self::Compute),
-            3 => Ok(Self::Memory),
-            4 => Ok(Self::Storage),
-            _ => Err(http_error!("Failed to get threshold.")),
-        }
-    }
-}
-
-impl From<JsonPerfKind> for PerfKind {
-    fn from(kind: JsonPerfKind) -> Self {
-        match kind {
-            JsonPerfKind::Throughput => Self::Throughput,
-            JsonPerfKind::Latency => Self::Latency,
-            JsonPerfKind::Compute => Self::Compute,
-            JsonPerfKind::Memory => Self::Memory,
-            JsonPerfKind::Storage => Self::Storage,
-        }
-    }
-}
-
-impl From<PerfKind> for JsonPerfKind {
-    fn from(kind: PerfKind) -> Self {
-        match kind {
-            PerfKind::Throughput => Self::Throughput,
-            PerfKind::Latency => Self::Latency,
-            PerfKind::Compute => Self::Compute,
-            PerfKind::Memory => Self::Memory,
-            PerfKind::Storage => Self::Storage,
-        }
     }
 }
 
@@ -115,7 +64,7 @@ pub struct InsertThreshold {
     pub uuid: String,
     pub branch_id: i32,
     pub testbed_id: i32,
-    pub kind: i32,
+    pub metric_kind_id: i32,
     pub statistic_id: i32,
 }
 
@@ -136,7 +85,8 @@ impl InsertThreshold {
             uuid: Uuid::new_v4().to_string(),
             branch_id,
             testbed_id,
-            kind: PerfKind::from(json_threshold.kind) as i32,
+            metric_kind_id: QueryMetricKind::from_resource_id(conn, &json_threshold.metric_kind)?
+                .id,
             statistic_id: QueryStatistic::get_id(conn, &insert_statistic.uuid)?,
         })
     }
