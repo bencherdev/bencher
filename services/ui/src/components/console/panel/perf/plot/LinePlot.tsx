@@ -2,23 +2,7 @@ import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { PerKind } from "../../../config/types";
 
-const getMetrics = (kind, metrics) => {
-  switch (kind) {
-    case PerKind.LATENCY:
-      return metrics?.duration;
-    case PerKind.THROUGHPUT:
-      return metrics?.events / metrics?.unit_time;
-    case PerKind.COMPUTE:
-      return metrics?.avg;
-    case PerKind.MEMORY:
-      return metrics?.avg;
-    case PerKind.STORAGE:
-      return metrics?.avg;
-    default:
-      return 0;
-  }
-};
-
+// TODO query the backend based off of metric kind
 const getLabel = (kind) => {
   switch (kind) {
     case PerKind.LATENCY:
@@ -57,7 +41,7 @@ const LinePlot = (props) => {
       data.forEach((datum) => {
         const x_value = new Date(datum.start_time);
         x_value.setSeconds(x_value.getSeconds() + datum.iteration);
-        const y_value = getMetrics(json_perf.kind, datum.metrics);
+        const y_value = datum.metrics?.value;
         const xy = [x_value, y_value];
         line_data.push(xy);
       });

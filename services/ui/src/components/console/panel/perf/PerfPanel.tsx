@@ -164,7 +164,7 @@ const PerfPanel = (props) => {
       branches: branches(),
       testbeds: testbeds(),
       benchmarks: benchmarks(),
-      kind: kind(),
+      metric_kind: kind(),
       start_time: start_time(),
       end_time: end_time(),
     };
