@@ -120,6 +120,10 @@ pub enum ApiError {
     Admin(i32),
     #[error("Failed to parse organization role: {0}")]
     OrganizationRole(String),
+    #[error("Failed to find benchmark name in cache: {0}")]
+    BenchmarkCache(String),
+    #[error("Failed to find metric kind key in cache: {0}")]
+    MetricKindCache(String),
 
     // TODO remove once no longer needed
     #[error(transparent)]

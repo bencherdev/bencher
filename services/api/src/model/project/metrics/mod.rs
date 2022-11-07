@@ -1,16 +1,10 @@
-use bencher_json::project::report::{
-    metric_kind::JsonNewMetricKind,
-    new::{JsonBenchmarks, JsonMetrics},
-};
+use bencher_json::project::report::new::{JsonBenchmarks, JsonMetrics};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
 
 use crate::{
     error::api_error,
-    model::project::{
-        benchmark::QueryBenchmark,
-        perf::{InsertPerf, QueryPerf},
-    },
+    model::project::perf::{InsertPerf, QueryPerf},
     schema, ApiError,
 };
 
@@ -19,10 +13,7 @@ pub mod thresholds;
 
 use self::thresholds::Thresholds;
 
-use super::perf::{
-    metric::InsertMetric,
-    metric_kind::{InsertMetricKind, QueryMetricKind},
-};
+use super::perf::metric::InsertMetric;
 
 pub struct Metrics {
     pub project_id: i32,
@@ -55,7 +46,12 @@ impl Metrics {
         json_metrics: JsonMetrics,
     ) -> Result<(), HttpError> {
         // All benchmarks should already exist
-        let benchmark_id = QueryBenchmark::get_id_from_name(conn, self.project_id, benchmark_name)?;
+        let benchmark_id = self
+            .thresholds
+            .benchmark_cache
+            .get(benchmark_name)
+            .cloned()
+            .ok_or(ApiError::BenchmarkCache(benchmark_name.into()))?;
 
         let insert_perf = InsertPerf::from_json(conn, self.report_id, iteration, benchmark_id)?;
 
@@ -66,8 +62,15 @@ impl Metrics {
 
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
-        for (metric_kind, metric) in &json_metrics.inner {
-            let metric_kind_id = metric_kind_id(conn, project_id, metric_kind)?;
+        for (metric_kind_key, metric) in &json_metrics.inner {
+            // All metric kinds should already exist
+            let metric_kind_id = self
+                .thresholds
+                .metric_kind_cache
+                .get(metric_kind_key)
+                .cloned()
+                .ok_or(ApiError::MetricKindCache(metric_kind_key.into()))?;
+
             let insert_metric = InsertMetric::from_json(perf_id, metric_kind_id, *metric);
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
@@ -78,39 +81,11 @@ impl Metrics {
                 .select(schema::metric::id)
                 .first::<i32>(conn)
                 .map_err(api_error!())?;
+
+            self.thresholds
+                .test(conn, perf_id, benchmark_id, metric_kind_id, metric)?;
         }
 
-        self.thresholds
-            .test(conn, perf_id, benchmark_name, json_metrics)
+        Ok(())
     }
-}
-
-// If the metric kind does not already exist, then create one on the fly
-fn metric_kind_id(
-    conn: &mut SqliteConnection,
-    project_id: i32,
-    metric_kind: &str,
-) -> Result<i32, ApiError> {
-    if let Ok(resource_id) = metric_kind.parse() {
-        if let Ok(metric_kind) = QueryMetricKind::from_resource_id(conn, &resource_id) {
-            return Ok(metric_kind.id);
-        }
-    }
-
-    let insert_metric_kind = InsertMetricKind::from_json_inner(
-        conn,
-        project_id,
-        JsonNewMetricKind {
-            name: metric_kind.into(),
-            slug: None,
-            units: None,
-        },
-    );
-
-    diesel::insert_into(schema::metric_kind::table)
-        .values(&insert_metric_kind)
-        .execute(conn)
-        .map_err(api_error!())?;
-
-    QueryMetricKind::get_id(conn, insert_metric_kind.uuid)
 }
