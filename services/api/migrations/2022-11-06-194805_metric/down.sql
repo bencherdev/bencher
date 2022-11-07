@@ -46,4 +46,16 @@ CREATE TABLE perf (
     FOREIGN KEY (storage_id) REFERENCES resource (id),
     UNIQUE(report_id, iteration, benchmark_id)
 );
+CREATE TABLE threshold (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    branch_id INTEGER NOT NULL,
+    testbed_id INTEGER NOT NULL,
+    kind INTEGER NOT NULL,
+    statistic_id INTEGER NOT NULL,
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
+    UNIQUE(branch_id, testbed_id, kind)
+);
 PRAGMA foreign_keys = on;
