@@ -6,9 +6,11 @@ use url::Url;
 use crate::{cli::CliBackend, CliError};
 
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
-pub const BENCHER_URL: &str = "BENCHER_URL";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
-pub const DEFAULT_URL: &str = "https://api.bencher.dev";
+#[cfg(debug_assertions)]
+pub const DEFAULT_HOST: &str = "http://localhost:61016";
+#[cfg(not(debug_assertions))]
+pub const DEFAULT_HOST: &str = "https://api.bencher.dev";
 
 #[derive(Debug, Clone)]
 pub struct Backend {
@@ -41,12 +43,10 @@ fn map_token(token: Option<String>) -> Result<Option<String>, CliError> {
 fn unwrap_host(host: Option<String>) -> Result<Url, url::ParseError> {
     let url = if let Some(url) = host {
         url
-    } else if let Ok(url) = std::env::var(BENCHER_URL) {
-        url
     } else if let Ok(url) = std::env::var(BENCHER_HOST) {
         url
     } else {
-        DEFAULT_URL.into()
+        DEFAULT_HOST.into()
     };
     Url::parse(&url)
 }
