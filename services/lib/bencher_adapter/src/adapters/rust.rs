@@ -158,10 +158,23 @@ mod test {
     use super::AdapterRustBench;
     use crate::Adapter;
 
-    const RUST_FILE_PATH: &str = "./tool_output/rust";
+    macro_rules! convert_file {
+        ($adapter:ident, $dir_path:expr, $file_name:expr, $count:expr) => {
+            paste::paste! {
+                #[test]
+                fn [<test_ $adapter:snake _ $count>](){
+                    convert_file_name::<$adapter>($dir_path, $file_name);
+                }
+            }
+        };
+    }
+
+    pub(crate) use convert_file;
+
+    const RUST_DIR_PATH: &str = "./tool_output/rust";
 
     fn convert_rust_bench(file_name: &str) {
-        convert_file_name::<AdapterRustBench>(RUST_FILE_PATH, file_name);
+        convert_file_name::<AdapterRustBench>(RUST_DIR_PATH, file_name);
     }
 
     fn convert_file_name<A>(dir_path: &str, file_name: &str)
@@ -196,4 +209,6 @@ mod test {
     fn test_adapter_rust_two() {
         convert_rust_bench("cargo_bench_2.txt");
     }
+
+    convert_file!(AdapterRustBench, RUST_DIR_PATH, "cargo_bench_0.txt", 0);
 }

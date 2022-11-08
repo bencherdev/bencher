@@ -15,3 +15,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 # Crate
 nom = "7.1"
+
+[dev-dependencies]
+paste = "1.0.9"
