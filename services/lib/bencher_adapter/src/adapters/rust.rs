@@ -154,6 +154,7 @@ fn to_duration(time: u64, units: &Units) -> Duration {
 #[cfg(test)]
 mod test {
     use bencher_json::project::report::new::JsonBenchmarksMap;
+    use pretty_assertions::assert_eq;
 
     use super::AdapterRustBench;
     use crate::Adapter;

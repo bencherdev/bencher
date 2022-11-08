@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use super::{
     benchmarks::{JsonBenchmarks, JsonBenchmarksMap},
@@ -56,7 +56,7 @@ pub struct JsonMetricsList {
 
 impl JsonMetricsList {
     pub(crate) fn median(self) -> JsonMetrics {
-        let mut metric_map = BTreeMap::new();
+        let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner.into_iter() {
             if let Some(median) = JsonMetric::median(metric) {
                 metric_map.insert(metric_kind, median);

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -36,7 +36,7 @@ impl JsonBenchmarks {
 
     fn ord(self, ord_kind: OrdKind) -> Self {
         let map = self.inner.into_iter().fold(
-            BTreeMap::new().into(),
+            HashMap::new().into(),
             |ord_map: JsonBenchmarksMap, next_map| {
                 ord_map.combined(next_map, CombinedKind::Ord(ord_kind))
             },
@@ -56,7 +56,7 @@ impl JsonBenchmarks {
             .inner
             .into_iter()
             .map(|(benchmark_name, json_metrics_map)| (benchmark_name, json_metrics_map.median()))
-            .collect::<BTreeMap<String, JsonMetrics>>()
+            .collect::<HashMap<String, JsonMetrics>>()
             .into()]
         .into()
     }
@@ -66,11 +66,11 @@ impl JsonBenchmarks {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarksMap {
     #[serde(flatten)]
-    pub inner: BTreeMap<String, JsonMetrics>,
+    pub inner: HashMap<String, JsonMetrics>,
 }
 
-impl From<BTreeMap<String, JsonMetrics>> for JsonBenchmarksMap {
-    fn from(inner: BTreeMap<String, JsonMetrics>) -> Self {
+impl From<HashMap<String, JsonMetrics>> for JsonBenchmarksMap {
+    fn from(inner: HashMap<String, JsonMetrics>) -> Self {
         Self { inner }
     }
 }
@@ -83,7 +83,7 @@ pub(crate) enum CombinedKind {
 
 impl JsonBenchmarksMap {
     fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
-        let mut benchmarks_map = BTreeMap::new();
+        let mut benchmarks_map = HashMap::new();
         for (benchmark_name, metrics) in self.inner.into_iter() {
             let other_metrics = other.inner.remove(&benchmark_name);
             let combined_metrics = if let Some(other_metrics) = other_metrics {
@@ -114,7 +114,7 @@ impl std::iter::Sum for JsonBenchmarksMap {
         I: Iterator<Item = Self>,
     {
         iter.into_iter().fold(
-            BTreeMap::new().into(),
+            HashMap::new().into(),
             |acc_map: JsonBenchmarksMap, next_map| acc_map + next_map,
         )
     }
@@ -127,7 +127,7 @@ impl std::ops::Div<usize> for JsonBenchmarksMap {
         self.inner
             .into_iter()
             .map(|(name, metrics)| (name, metrics / rhs))
-            .collect::<BTreeMap<String, JsonMetrics>>()
+            .collect::<HashMap<String, JsonMetrics>>()
             .into()
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -13,20 +13,20 @@ use super::{
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetrics {
     #[serde(flatten)]
-    pub inner: BTreeMap<MetricKind, JsonMetric>,
+    pub inner: HashMap<MetricKind, JsonMetric>,
 }
 
 pub type MetricKind = String;
 
-impl From<BTreeMap<MetricKind, JsonMetric>> for JsonMetrics {
-    fn from(inner: BTreeMap<MetricKind, JsonMetric>) -> Self {
+impl From<HashMap<MetricKind, JsonMetric>> for JsonMetrics {
+    fn from(inner: HashMap<MetricKind, JsonMetric>) -> Self {
         Self { inner }
     }
 }
 
 impl JsonMetrics {
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
-        let mut metric_map = BTreeMap::new();
+        let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner.into_iter() {
             let other_metric = other.inner.remove(&metric_kind);
             let combined_metric = if let Some(other_metric) = other_metric {
@@ -53,7 +53,7 @@ impl std::ops::Div<usize> for JsonMetrics {
     type Output = Self;
 
     fn div(self, rhs: usize) -> Self::Output {
-        let mut metric_map = BTreeMap::new();
+        let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner.into_iter() {
             metric_map.insert(metric_kind, metric / rhs);
         }
