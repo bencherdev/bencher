@@ -68,6 +68,14 @@ impl Detector {
             &self.threshold.statistic,
         )?;
 
+        // If there is a set min sample size, then check to see if it is met.
+        // Otherwise, simply return.
+        if let Some(min_sample_size) = self.threshold.statistic.min_sample_size {
+            if metrics_data.data.len() < min_sample_size as usize {
+                return Ok(());
+            }
+        }
+
         let data = &metrics_data.data;
         let datum = metric.value.into();
         if let Some(mean) = mean(data) {
