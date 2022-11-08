@@ -1,4 +1,5 @@
 PRAGMA foreign_keys = off;
+DROP TABLE alert;
 DROP TABLE threshold;
 DROP TABLE metric;
 DROP TABLE perf;
@@ -57,5 +58,18 @@ CREATE TABLE threshold (
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
     FOREIGN KEY (statistic_id) REFERENCES statistic (id),
     UNIQUE(branch_id, testbed_id, kind)
+);
+CREATE TABLE alert (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    perf_id INTEGER NOT NULL,
+    threshold_id INTEGER NOT NULL,
+    statistic_id INTEGER NOT NULL,
+    side BOOLEAN NOT NULL,
+    boundary REAL NOT NULL,
+    outlier REAL NOT NULL,
+    FOREIGN KEY (perf_id) REFERENCES perf (id),
+    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id)
 );
 PRAGMA foreign_keys = on;
