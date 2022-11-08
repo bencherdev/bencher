@@ -2,9 +2,6 @@ use bencher_json::project::report::{new::JsonBenchmarksMap, JsonAdapter};
 
 use crate::{bencher::sub::project::run::Output, cli::project::run::CliRunAdapter, CliError};
 
-pub mod json;
-pub mod rust;
-
 #[derive(Clone, Copy, Debug, Default)]
 pub enum Adapter {
     #[default]
@@ -36,11 +33,11 @@ impl From<Adapter> for JsonAdapter {
 impl Adapter {
     pub fn convert(&self, output: &Output) -> Result<JsonBenchmarksMap, CliError> {
         match &self {
-            Self::Json => json::parse(output),
+            Self::Json => todo!(),
             Self::RustTest => {
                 todo!("cargo test -- -Z unstable-options --format json --report-time")
             },
-            Self::RustBench => rust::parse(output),
+            Self::RustBench => todo!(),
         }
     }
 }
