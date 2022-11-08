@@ -12,13 +12,17 @@ use crate::{
     schema, ApiError,
 };
 
-use super::{data::MetricsData, Threshold};
+pub mod data;
+pub mod threshold;
+
+use data::MetricsData;
+use threshold::MetricsThreshold;
 
 pub struct Detector {
     branch_id: i32,
     testbed_id: i32,
     metric_kind_id: i32,
-    pub threshold: Threshold,
+    pub threshold: MetricsThreshold,
 }
 
 impl Detector {
@@ -29,13 +33,14 @@ impl Detector {
         metric_kind_id: i32,
     ) -> Result<Option<Self>, ApiError> {
         // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
-        // If not, then there will be no detector.
-        let threshold =
-            if let Some(threshold) = Threshold::new(conn, branch_id, testbed_id, metric_kind_id) {
-                threshold
-            } else {
-                return Ok(None);
-            };
+        // If not, then there will be nothing to detect.
+        let threshold = if let Some(threshold) =
+            MetricsThreshold::new(conn, branch_id, testbed_id, metric_kind_id)
+        {
+            threshold
+        } else {
+            return Ok(None);
+        };
 
         Ok(Some(Self {
             branch_id,

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bencher_json::project::report::new::{JsonBenchmarks, JsonMetrics};
 use diesel::{RunQueryDsl, SqliteConnection};
 use dropshot::HttpError;
@@ -11,9 +13,9 @@ use crate::{
     schema,
 };
 
-pub mod detectors;
+pub mod detector;
 
-use self::detectors::{detector::Detector, Detectors};
+use self::detector::Detector;
 
 use super::{metric::InsertMetric, metric_kind::QueryMetricKind};
 
@@ -22,7 +24,7 @@ pub struct Metrics {
     pub branch_id: i32,
     pub testbed_id: i32,
     pub report_id: i32,
-    pub detectors: Detectors,
+    pub detectors: HashMap<i32, Detector>,
 }
 
 impl Metrics {
@@ -32,14 +34,13 @@ impl Metrics {
         branch_id: i32,
         testbed_id: i32,
         report_id: i32,
-        benchmarks: JsonBenchmarks,
     ) -> Result<Self, HttpError> {
         Ok(Self {
             project_id,
             branch_id,
             testbed_id,
             report_id,
-            detectors: Detectors::new(conn, project_id, branch_id, testbed_id, benchmarks)?,
+            detectors: HashMap::new(),
         })
     }
 

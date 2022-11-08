@@ -6,12 +6,12 @@ use crate::{
     diesel::ExpressionMethods, model::project::threshold::statistic::QueryStatistic, schema,
 };
 
-pub struct Threshold {
+pub struct MetricsThreshold {
     pub id: i32,
     pub statistic: QueryStatistic,
 }
 
-impl Threshold {
+impl MetricsThreshold {
     pub fn new(
         conn: &mut SqliteConnection,
         branch_id: i32,
