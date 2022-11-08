@@ -21,7 +21,7 @@ pub struct AdapterRustBench;
 
 impl Adapter for AdapterRustBench {
     fn convert(input: &str) -> Result<JsonBenchmarksMap, AdapterError> {
-        parse_stdout(input)
+        parse_rust_bench(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
     }
@@ -32,7 +32,7 @@ enum Test {
     Bench(JsonMetric),
 }
 
-fn parse_stdout(input: &str) -> IResult<&str, JsonBenchmarksMap> {
+fn parse_rust_bench(input: &str) -> IResult<&str, JsonBenchmarksMap> {
     map(
         tuple((
             line_ending,
@@ -153,26 +153,47 @@ fn to_duration(time: u64, units: &Units) -> Duration {
 
 #[cfg(test)]
 mod test {
-    use super::parse_stdout;
+    use std::path::Path;
+
+    use super::AdapterRustBench;
+    use crate::Adapter;
+
+    const RUST_FILE_PATH: &str = "./tool_output/rust";
+
+    fn convert_rust_bench(file_name: &str) {
+        convert_file_name::<AdapterRustBench>(RUST_FILE_PATH, file_name);
+    }
+
+    fn convert_file_name<A>(dir_path: &str, file_name: &str)
+    where
+        A: Adapter,
+    {
+        let dir_path = Path::new(dir_path);
+        let file_path = dir_path.join(file_name);
+        convert_file_path::<A>(file_path.to_string_lossy().as_ref());
+    }
+
+    fn convert_file_path<A>(file_path: &str)
+    where
+        A: Adapter,
+    {
+        let contents = std::fs::read_to_string(file_path)
+            .expect(&format!("Failed to read test file: {file_path}"));
+        A::convert(&contents).expect(&format!("Failed to convert contents: {contents}"));
+    }
 
     #[test]
     fn test_adapter_rust_zero() {
-        let input = "\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n";
-        let adapted = parse_stdout(input).unwrap();
-        println!("{:?}", adapted);
+        convert_rust_bench("cargo_bench_0.txt");
     }
 
     #[test]
     fn test_adapter_rust_one() {
-        let input = "\nrunning 1 test\ntest tests::benchmark ... bench:       3,161 ns/iter (+/- 975)\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 1 measured; 0 filtered out; finished in 0.11s\n\n";
-        let adapted = parse_stdout(input).unwrap();
-        println!("{:?}", adapted);
+        convert_rust_bench("cargo_bench_1.txt");
     }
 
     #[test]
     fn test_adapter_rust_two() {
-        let input = "\nrunning 2 tests\ntest tests::ignored ... ignored\ntest tests::benchmark ... bench:       3,161 ns/iter (+/- 975)\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 1 measured; 0 filtered out; finished in 0.11s\n\n";
-        let adapted = parse_stdout(input).unwrap();
-        println!("{:?}", adapted);
+        convert_rust_bench("cargo_bench_2.txt");
     }
 }
