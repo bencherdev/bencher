@@ -18,10 +18,11 @@ pub mod threshold;
 use data::MetricsData;
 use threshold::MetricsThreshold;
 
+#[derive(Debug, Clone)]
 pub struct Detector {
-    branch_id: i32,
-    testbed_id: i32,
-    metric_kind_id: i32,
+    pub branch_id: i32,
+    pub testbed_id: i32,
+    pub metric_kind_id: i32,
     pub threshold: MetricsThreshold,
 }
 

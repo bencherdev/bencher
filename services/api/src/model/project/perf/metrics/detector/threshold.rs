@@ -6,6 +6,7 @@ use crate::{
     diesel::ExpressionMethods, model::project::threshold::statistic::QueryStatistic, schema,
 };
 
+#[derive(Debug, Clone)]
 pub struct MetricsThreshold {
     pub id: i32,
     pub statistic: QueryStatistic,

@@ -11,7 +11,7 @@ use crate::{
     util::{http_error, map_http_error},
 };
 
-#[derive(Queryable)]
+#[derive(Queryable, Debug, Clone)]
 pub struct QueryStatistic {
     pub id: i32,
     pub uuid: String,
