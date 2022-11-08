@@ -197,27 +197,27 @@ mod test {
 
     #[test]
     fn test_adapter_rust_zero() {
-        let benchmarks_map = convert_rust_bench("0");
+        let benchmarks_map = convert_rust_bench("zero");
         assert_eq!(benchmarks_map.inner.len(), 0);
     }
 
     #[test]
     fn test_adapter_rust_one() {
-        let benchmarks_map = convert_rust_bench("1");
+        let benchmarks_map = convert_rust_bench("one");
         assert_eq!(benchmarks_map.inner.len(), 1);
         validate_metrics(&benchmarks_map, "tests::benchmark");
     }
 
     #[test]
-    fn test_adapter_rust_two() {
-        let benchmarks_map = convert_rust_bench("2");
+    fn test_adapter_rust_ignore() {
+        let benchmarks_map = convert_rust_bench("ignore");
         assert_eq!(benchmarks_map.inner.len(), 1);
         validate_metrics(&benchmarks_map, "tests::benchmark");
     }
 
     #[test]
-    fn test_adapter_rust_three() {
-        let benchmarks_map = convert_rust_bench("3");
+    fn test_adapter_rust_many() {
+        let benchmarks_map = convert_rust_bench("many");
         assert_eq!(benchmarks_map.inner.len(), 3);
         validate_metrics(&benchmarks_map, "tests::benchmark");
         validate_metrics(&benchmarks_map, "tests::other_benchmark");
@@ -225,8 +225,8 @@ mod test {
     }
 
     #[test]
-    fn test_adapter_rust_four() {
-        let benchmarks_map = convert_rust_bench("4");
+    fn test_adapter_rust_multi_target() {
+        let benchmarks_map = convert_rust_bench("multi_target");
         assert_eq!(benchmarks_map.inner.len(), 2);
         validate_metrics(&benchmarks_map, "tests::benchmark");
         validate_metrics(&benchmarks_map, "tests::other_benchmark");
