@@ -128,6 +128,17 @@ checksum = "b645a089122eccb6111b4f81cbc1a49f5900ac4666bb93ac027feaecf15607bf"
 [[package]]
 name = "bencher_adapter"
 version = "0.1.0"
+dependencies = [
+ "bencher_json",
+ "chrono",
+ "email-address-parser",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "url",
+ "uuid",
+]
 
 [[package]]
 name = "bencher_api"
