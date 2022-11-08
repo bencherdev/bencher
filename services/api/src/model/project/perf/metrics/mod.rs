@@ -124,15 +124,11 @@ impl Metrics {
         Ok(
             if let Some(detector) = self.detector_cache.get(&metric_kind_id) {
                 detector.clone()
-            } else if let Some(detector) =
-                Detector::new(conn, self.branch_id, self.testbed_id, metric_kind_id)?
-            {
-                self.detector_cache
-                    .insert(metric_kind_id, Some(detector.clone()));
-                Some(detector)
             } else {
-                self.detector_cache.insert(metric_kind_id, None);
-                None
+                let detector =
+                    Detector::new(conn, self.branch_id, self.testbed_id, metric_kind_id)?;
+                self.detector_cache.insert(metric_kind_id, detector.clone());
+                detector
             },
         )
     }
