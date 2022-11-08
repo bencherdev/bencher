@@ -75,7 +75,7 @@ async fn get_ls_inner(
     }
 
     Ok(sql
-        .order(schema::organization::name)
+        .order((schema::organization::name, schema::organization::slug))
         .load::<QueryOrganization>(conn)
         .map_err(api_error!())?
         .into_iter()

@@ -92,7 +92,7 @@ async fn get_ls_inner(
 
     Ok(schema::project::table
         .filter(schema::project::organization_id.eq(query_organization.id))
-        .order(schema::project::name)
+        .order((schema::project::name, schema::project::slug))
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
         .into_iter()

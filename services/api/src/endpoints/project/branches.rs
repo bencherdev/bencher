@@ -106,7 +106,7 @@ async fn get_ls_inner(
     }
 
     Ok(query
-        .order(schema::branch::name)
+        .order((schema::branch::name, schema::branch::slug))
         .load::<QueryBranch>(conn)
         .map_err(api_error!())?
         .into_iter()

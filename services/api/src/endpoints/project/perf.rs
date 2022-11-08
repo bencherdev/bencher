@@ -7,7 +7,6 @@ use bencher_json::{
     },
     JsonPerf, JsonPerfQuery, ResourceId,
 };
-use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -91,13 +90,8 @@ async fn post_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {
     let api_context = &mut *context.lock().await;
-    let project_id = QueryProject::is_allowed_public(
-        api_context,
-        &path_params.project,
-        auth_user,
-        Permission::View,
-    )?
-    .id;
+    let project_id =
+        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
     let conn = &mut api_context.database;
 
     let JsonPerfQuery {

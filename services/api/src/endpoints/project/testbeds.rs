@@ -90,7 +90,7 @@ async fn get_ls_inner(
 
     Ok(schema::testbed::table
         .filter(schema::testbed::project_id.eq(query_project.id))
-        .order(schema::testbed::name)
+        .order((schema::testbed::name, schema::testbed::slug))
         .load::<QueryTestbed>(conn)
         .map_err(api_error!())?
         .into_iter()

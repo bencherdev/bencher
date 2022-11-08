@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use bencher_json::ResourceId;
+use bencher_json::{
+    project::report::{metric_kind::JsonNewMetricKind, JsonMetricKind},
+    ResourceId,
+};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -15,7 +18,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        perf::metric_kind::{InsertMetricKind, QueryMetricKind},
+        metric_kind::{InsertMetricKind, QueryMetricKind},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -63,7 +66,7 @@ pub async fn get_ls(
 
     let json = get_ls_inner(
         rqctx.context(),
-        &auth_user,
+        auth_user.as_ref(),
         path_params.into_inner(),
         endpoint,
     )
@@ -80,17 +83,13 @@ async fn get_ls_inner(
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMetricKind>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed_public(
-        api_context,
-        &path_params.project,
-        auth_user,
-        Permission::View,
-    )?;
+    let query_project =
+        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
     let conn = &mut api_context.database;
 
     Ok(schema::metric_kind::table
         .filter(schema::metric_kind::project_id.eq(query_project.id))
-        .order(schema::metric_kind::name)
+        .order((schema::metric_kind::name, schema::metric_kind::slug))
         .load::<QueryMetricKind>(conn)
         .map_err(api_error!())?
         .into_iter()
@@ -176,7 +175,7 @@ pub async fn one_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/metric-kinds/{testbed}",
+    path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
     tags = ["projects", "metric kinds"]
 }]
 pub async fn get_one(
@@ -186,14 +185,18 @@ pub async fn get_one(
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        auth_user.as_ref(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_ok!(endpoint, json)
 }
 
-fn_resource_id!(testbed);
+fn_resource_id!(metric_kind);
 
 async fn get_one_inner(
     context: &Context,
@@ -201,19 +204,15 @@ async fn get_one_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonMetricKind, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed_public(
-        api_context,
-        &path_params.project,
-        auth_user,
-        Permission::View,
-    )?;
+    let query_project =
+        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
     let conn = &mut api_context.database;
 
-    schema::testbed::table
+    schema::metric_kind::table
         .filter(
-            schema::testbed::project_id
+            schema::metric_kind::project_id
                 .eq(query_project.id)
-                .and(resource_id(&path_params.testbed)?),
+                .and(resource_id(&path_params.metric_kind)?),
         )
         .first::<QueryMetricKind>(conn)
         .map_err(api_error!())?

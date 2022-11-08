@@ -105,7 +105,10 @@ async fn get_ls_inner(
             schema::report::start_time,
             schema::report::end_time,
         ))
-        .order(schema::report::start_time.desc())
+        .order((
+            schema::report::start_time.desc(),
+            schema::report::end_time.desc(),
+        ))
         .load::<QueryReport>(conn)
         .map_err(api_error!())?
         .into_iter()

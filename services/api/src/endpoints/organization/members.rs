@@ -105,7 +105,7 @@ async fn get_ls_inner(
             schema::user::email,
             schema::organization_role::role,
         ))
-        .order(schema::user::email)
+        .order((schema::user::name, schema::user::slug))
         .load::<QueryMember>(conn)
         .map_err(api_error!())?
         .into_iter()

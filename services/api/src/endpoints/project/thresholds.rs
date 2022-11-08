@@ -97,7 +97,6 @@ async fn get_ls_inner(
     Ok(schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
         .filter(schema::testbed::project_id.eq(query_project.id))
-        .order(schema::threshold::id)
         .select((
             schema::threshold::id,
             schema::threshold::uuid,
