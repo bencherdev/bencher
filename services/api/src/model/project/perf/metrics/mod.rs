@@ -19,6 +19,7 @@ use self::detector::Detector;
 
 use super::{metric::InsertMetric, metric_kind::QueryMetricKind};
 
+/// Metrics is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct Metrics {
     pub project_id: i32,
     pub branch_id: i32,
@@ -70,11 +71,22 @@ impl Metrics {
                 .execute(conn)
                 .map_err(api_error!())?;
 
-            if let Some(detector) =
+            let detector = if let Some(detector) = self.detectors.get(&metric_kind_id) {
+                detector
+            } else if let Some(detector) =
                 Detector::new(conn, self.branch_id, self.testbed_id, metric_kind_id)?
             {
-                detector.detect(conn, perf_id, benchmark_id, metric)?;
-            }
+                self.detectors.insert(metric_kind_id, detector);
+                if let Some(detector) = self.detectors.get(&metric_kind_id) {
+                    detector
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            };
+
+            detector.detect(conn, perf_id, benchmark_id, metric)?;
         }
 
         Ok(())
