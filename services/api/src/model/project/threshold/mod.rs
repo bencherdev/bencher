@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnect
 use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
-use super::{branch::QueryBranch, perf::metric_kind::QueryMetricKind, testbed::QueryTestbed};
+use super::{branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed};
 use crate::{error::api_error, schema, schema::threshold as threshold_table, ApiError};
 
 pub mod alert;

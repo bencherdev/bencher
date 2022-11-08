@@ -8,6 +8,8 @@ use crate::{
     error::api_error,
     model::project::{
         benchmark::QueryBenchmark,
+        metric::InsertMetric,
+        metric_kind::QueryMetricKind,
         perf::{InsertPerf, QueryPerf},
     },
     schema, ApiError,
@@ -15,9 +17,7 @@ use crate::{
 
 pub mod detector;
 
-use self::detector::Detector;
-
-use super::{metric::InsertMetric, metric_kind::QueryMetricKind};
+use detector::Detector;
 
 /// Metrics is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct Metrics {

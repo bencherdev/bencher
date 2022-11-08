@@ -17,9 +17,8 @@ use crate::{
     model::{
         organization::QueryOrganization,
         project::{
-            perf::metric_kind::InsertMetricKind,
-            project_role::InsertProjectRole,
-            {InsertProject, QueryProject},
+            metric_kind::InsertMetricKind, project_role::InsertProjectRole, InsertProject,
+            QueryProject,
         },
         user::auth::AuthUser,
     },

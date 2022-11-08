@@ -18,8 +18,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        perf::metrics::Metrics,
-        report::{InsertReport, QueryReport},
+        report::{metrics::Metrics, InsertReport, QueryReport},
         version::InsertVersion,
         QueryProject,
     },

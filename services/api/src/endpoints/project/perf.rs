@@ -22,7 +22,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        branch::QueryBranch, perf::metric_kind::QueryMetricKind, report::to_date_time,
+        branch::QueryBranch, metric_kind::QueryMetricKind, report::to_date_time,
         testbed::QueryTestbed, QueryProject,
     },
     model::user::auth::AuthUser,

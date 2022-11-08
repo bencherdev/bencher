@@ -24,6 +24,8 @@ use crate::{
     ApiError,
 };
 
+pub mod metrics;
+
 #[derive(Queryable)]
 pub struct QueryReport {
     pub id: i32,

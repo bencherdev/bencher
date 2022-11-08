@@ -11,10 +11,6 @@ use crate::{
     util::map_http_error,
 };
 
-pub mod metric;
-pub mod metric_kind;
-pub mod metrics;
-
 #[derive(Queryable)]
 pub struct QueryPerf {
     pub id: i32,
