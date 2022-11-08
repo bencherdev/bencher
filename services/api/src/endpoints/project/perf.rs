@@ -127,7 +127,7 @@ async fn post_inner(
     let start_time_nanos = start_time.as_ref().map(|t| t.timestamp_nanos());
     let end_time_nanos = end_time.as_ref().map(|t| t.timestamp_nanos());
 
-    let mut data = Vec::new();
+    let mut perf_data = Vec::new();
     for branch in &branches {
         let branch_id = if let Ok(id) = QueryBranch::get_id(conn, branch) {
             id
@@ -203,7 +203,7 @@ async fn post_inner(
                     )>(conn)
                     .map_err(api_error!())?
                     .into_iter()
-                    .map(
+                    .filter_map(
                         |(
                             uuid,
                             iteration,
@@ -220,22 +220,25 @@ async fn post_inner(
                                 lower_bound: lower_bound.map(Into::into),
                                 upper_bound: upper_bound.map(Into::into),
                             };
-                            QueryPerfDatum {
-                                uuid,
-                                iteration,
-                                start_time,
-                                end_time,
-                                version_number,
+                            Some(JsonPerfDatum {
+                                uuid: Uuid::from_str(&uuid).map_err(api_error!()).ok()?,
+                                iteration: iteration as u32,
+                                start_time: to_date_time(start_time).ok()?,
+                                end_time: to_date_time(end_time).ok()?,
+                                version_number: version_number as u32,
                                 version_hash,
                                 metrics,
-                            }
+                            })
                         },
                     )
                     .collect();
 
-                let json_perf_data = into_json(*branch, *testbed, *benchmark, query_data)?;
-
-                data.push(json_perf_data);
+                perf_data.push(JsonPerfData {
+                    branch: *branch,
+                    testbed: *testbed,
+                    benchmark: *benchmark,
+                    data: query_data,
+                });
             }
         }
     }
@@ -244,58 +247,6 @@ async fn post_inner(
         metric_kind: Uuid::from_str(&metric_kind.uuid).map_err(api_error!())?,
         start_time,
         end_time,
-        benchmarks: data,
+        benchmarks: perf_data,
     })
-}
-
-fn into_json(
-    branch: Uuid,
-    testbed: Uuid,
-    benchmark: Uuid,
-    query_data: Vec<QueryPerfDatum>,
-) -> Result<JsonPerfData, HttpError> {
-    let mut data = Vec::new();
-    for query_datum in query_data {
-        data.push(QueryPerfDatum::into_json(query_datum)?)
-    }
-    Ok(JsonPerfData {
-        branch,
-        testbed,
-        benchmark,
-        data,
-    })
-}
-
-#[derive(Debug)]
-pub struct QueryPerfDatum {
-    pub uuid: String,
-    pub iteration: i32,
-    pub start_time: i64,
-    pub end_time: i64,
-    pub version_number: i32,
-    pub version_hash: Option<String>,
-    pub metrics: JsonMetric,
-}
-
-impl QueryPerfDatum {
-    fn into_json(self) -> Result<JsonPerfDatum, HttpError> {
-        let Self {
-            uuid,
-            iteration,
-            start_time,
-            end_time,
-            version_number,
-            version_hash,
-            metrics,
-        } = self;
-        Ok(JsonPerfDatum {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            iteration: iteration as u32,
-            start_time: to_date_time(start_time)?,
-            end_time: to_date_time(end_time)?,
-            version_number: version_number as u32,
-            version_hash,
-            metrics,
-        })
-    }
 }

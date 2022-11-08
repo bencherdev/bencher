@@ -126,10 +126,6 @@ pub enum ApiError {
     Adapter(i32),
     #[error("Failed to load statistic kind: {0}")]
     StatisticKind(i32),
-
-    // TODO remove once no longer needed
-    #[error(transparent)]
-    Http(#[from] HttpError),
 }
 
 impl From<ApiError> for HttpError {
