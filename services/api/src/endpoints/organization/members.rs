@@ -413,7 +413,6 @@ fn json_member(
             schema::user::email,
             schema::organization_role::role,
         ))
-        .order(schema::user::email)
         .first::<QueryMember>(conn)
         .map_err(api_error!())?
         .into_json()
