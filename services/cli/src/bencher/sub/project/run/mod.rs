@@ -5,6 +5,7 @@ use bencher_json::{
     project::report::new::JsonBenchmarks, JsonBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
+use clap::ValueEnum;
 use git2::Oid;
 use uuid::Uuid;
 
@@ -27,6 +28,8 @@ const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
 const BENCHER_BRANCH_NAME: &str = "BENCHER_BRANCH_NAME";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
+const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";
+const BENCHER_CMD: &str = "BENCHER_CMD";
 
 #[derive(Debug)]
 pub struct Run {
@@ -123,7 +126,15 @@ fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, CliError> {
 }
 
 fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
-    adapter.map(Into::into).unwrap_or_default()
+    if let Some(adapter) = adapter {
+        adapter.into()
+    } else if let Ok(adapter) = std::env::var(BENCHER_ADAPTER) {
+        CliRunAdapter::from_str(&adapter, true)
+            .map(Into::into)
+            .unwrap_or_default()
+    } else {
+        Adapter::default()
+    }
 }
 
 #[async_trait]

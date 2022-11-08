@@ -12,6 +12,8 @@ use command::Command;
 use input::Input;
 pub use output::Output;
 
+use super::BENCHER_CMD;
+
 #[derive(Debug)]
 pub enum Perf {
     Input(Input),
@@ -22,15 +24,20 @@ impl TryFrom<CliRunCommand> for Perf {
     type Error = CliError;
 
     fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
-        Ok(if let Some(cmd) = command.cmd {
-            Self::Command(Command::try_from((command.shell, cmd))?)
+        if let Some(cmd) = command.cmd {
+            Ok(Self::Command(Command::try_from((command.shell, cmd))?))
         } else {
             let input = Input::new()?;
             if input.is_empty() {
-                return Err(CliError::NoPerf);
+                if let Ok(cmd) = std::env::var(BENCHER_CMD) {
+                    Ok(Self::Command(Command::try_from((command.shell, cmd))?))
+                } else {
+                    Err(CliError::NoPerf)
+                }
+            } else {
+                Ok(Self::Input(input))
             }
-            Self::Input(input)
-        })
+        }
     }
 }
 
