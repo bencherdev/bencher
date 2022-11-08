@@ -17,4 +17,5 @@ thiserror.workspace = true
 nom = "7.1"
 
 [dev-dependencies]
-paste = "1.0.9"
+# Workspace
+pretty_assertions.workspace = true

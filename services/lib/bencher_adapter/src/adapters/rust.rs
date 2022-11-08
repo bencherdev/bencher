@@ -153,62 +153,37 @@ fn to_duration(time: u64, units: &Units) -> Duration {
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
+    use bencher_json::project::report::new::JsonBenchmarksMap;
 
     use super::AdapterRustBench;
     use crate::Adapter;
 
-    macro_rules! convert_file {
-        ($adapter:ident, $dir_path:expr, $file_name:expr, $count:expr) => {
-            paste::paste! {
-                #[test]
-                fn [<test_ $adapter:snake _ $count>](){
-                    convert_file_name::<$adapter>($dir_path, $file_name);
-                }
-            }
-        };
+    fn convert_rust_bench(suffix: &str) -> JsonBenchmarksMap {
+        let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);
+        convert_file_path::<AdapterRustBench>(&file_path)
     }
 
-    pub(crate) use convert_file;
-
-    const RUST_DIR_PATH: &str = "./tool_output/rust";
-
-    fn convert_rust_bench(file_name: &str) {
-        convert_file_name::<AdapterRustBench>(RUST_DIR_PATH, file_name);
-    }
-
-    fn convert_file_name<A>(dir_path: &str, file_name: &str)
-    where
-        A: Adapter,
-    {
-        let dir_path = Path::new(dir_path);
-        let file_path = dir_path.join(file_name);
-        convert_file_path::<A>(file_path.to_string_lossy().as_ref());
-    }
-
-    fn convert_file_path<A>(file_path: &str)
+    fn convert_file_path<A>(file_path: &str) -> JsonBenchmarksMap
     where
         A: Adapter,
     {
         let contents = std::fs::read_to_string(file_path)
             .expect(&format!("Failed to read test file: {file_path}"));
-        A::convert(&contents).expect(&format!("Failed to convert contents: {contents}"));
+        A::convert(&contents).expect(&format!("Failed to convert contents: {contents}"))
     }
 
     #[test]
     fn test_adapter_rust_zero() {
-        convert_rust_bench("cargo_bench_0.txt");
+        convert_rust_bench("0");
     }
 
     #[test]
     fn test_adapter_rust_one() {
-        convert_rust_bench("cargo_bench_1.txt");
+        convert_rust_bench("1");
     }
 
     #[test]
     fn test_adapter_rust_two() {
-        convert_rust_bench("cargo_bench_2.txt");
+        convert_rust_bench("2");
     }
-
-    convert_file!(AdapterRustBench, RUST_DIR_PATH, "cargo_bench_0.txt", 0);
 }
