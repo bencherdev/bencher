@@ -1,0 +1,13 @@
+
+running 1 test
+test tests::benchmark ... bench:       3,161 ns/iter (+/- 975)
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 1 measured; 0 filtered out; finished in 0.11s
+
+        Running benches/name.rs (/oath/to/target/release/deps/name-hash)
+
+running 1 test
+test tests::other_benchmark ... bench:       3,161 ns/iter (+/- 975)
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 1 measured; 0 filtered out; finished in 0.11s
+

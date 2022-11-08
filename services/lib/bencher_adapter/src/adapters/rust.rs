@@ -223,4 +223,12 @@ mod test {
         validate_metrics(&benchmarks_map, "tests::other_benchmark");
         validate_metrics(&benchmarks_map, "tests::last_benchmark");
     }
+
+    #[test]
+    fn test_adapter_rust_four() {
+        let benchmarks_map = convert_rust_bench("4");
+        assert_eq!(benchmarks_map.inner.len(), 2);
+        validate_metrics(&benchmarks_map, "tests::benchmark");
+        validate_metrics(&benchmarks_map, "tests::other_benchmark");
+    }
 }
