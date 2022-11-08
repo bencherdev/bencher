@@ -153,6 +153,29 @@ impl QueryProject {
 
         Ok(query_project)
     }
+
+    pub fn is_allowed_public(
+        api_context: &mut ApiContext,
+        project: &ResourceId,
+        auth_user: Option<&AuthUser>,
+        permission: bencher_rbac::project::Permission,
+    ) -> Result<Self, ApiError> {
+        // If there is an `AuthUser` then validate access
+        // Otherwise, check to see if the project is public
+        if let Some(auth_user) = auth_user {
+            // Verify that the user is allowed
+            QueryProject::is_allowed_resource_id(api_context, project, auth_user, permission)
+        } else {
+            // Get the project
+            let project = QueryProject::from_resource_id(&mut api_context.database, project)?;
+            // See if the project is public or not
+            if project.public {
+                Ok(project)
+            } else {
+                Err(ApiError::PrivateProject(project.id))
+            }
+        }
+    }
 }
 
 fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {

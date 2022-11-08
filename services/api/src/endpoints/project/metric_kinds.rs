@@ -58,7 +58,7 @@ pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonMetricKind>>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetLs);
 
     let json = get_ls_inner(
@@ -75,12 +75,12 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &Context,
-    auth_user: &AuthUser,
+    auth_user: Option<&AuthUser>,
     path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMetricKind>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed_resource_id(
+    let query_project = QueryProject::is_allowed_public(
         api_context,
         &path_params.project,
         auth_user,
@@ -183,7 +183,7 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonMetricKind>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetOne);
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
@@ -198,10 +198,10 @@ fn_resource_id!(testbed);
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,
-    auth_user: &AuthUser,
+    auth_user: Option<&AuthUser>,
 ) -> Result<JsonMetricKind, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed_resource_id(
+    let query_project = QueryProject::is_allowed_public(
         api_context,
         &path_params.project,
         auth_user,

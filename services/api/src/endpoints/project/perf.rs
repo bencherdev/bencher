@@ -91,29 +91,15 @@ async fn post_inner(
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {
     let api_context = &mut *context.lock().await;
-
-    // If there is an `AuthUser` then validate access
-    // Otherwise, check to see if the project is public
-    let project_id = if let Some(auth_user) = auth_user {
-        // Verify that the user is allowed
-        QueryProject::is_allowed_resource_id(
-            api_context,
-            &path_params.project,
-            auth_user,
-            Permission::View,
-        )?
-        .id
-    } else {
-        let project =
-            QueryProject::from_resource_id(&mut api_context.database, &path_params.project)?;
-        if project.public {
-            project.id
-        } else {
-            return Err(ApiError::PrivateProject(project.id));
-        }
-    };
-
+    let project_id = QueryProject::is_allowed_public(
+        api_context,
+        &path_params.project,
+        auth_user,
+        Permission::View,
+    )?
+    .id;
     let conn = &mut api_context.database;
+
     let JsonPerfQuery {
         branches,
         testbeds,
