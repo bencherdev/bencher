@@ -93,6 +93,12 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(project::benchmarks::get_ls)?;
     api.register(project::benchmarks::one_options)?;
     api.register(project::benchmarks::get_one)?;
+    // Metric Kinds
+    api.register(project::metric_kinds::dir_options)?;
+    api.register(project::metric_kinds::get_ls)?;
+    api.register(project::metric_kinds::post)?;
+    api.register(project::metric_kinds::one_options)?;
+    api.register(project::metric_kinds::get_one)?;
     // Thresholds
     api.register(project::thresholds::dir_options)?;
     api.register(project::thresholds::get_ls)?;
