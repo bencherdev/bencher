@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, str::FromStr, time::Duration};
+use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use bencher_json::project::report::{
     metric_kind::LATENCY_SLUG,
@@ -60,10 +60,10 @@ fn parse_rust_bench(input: &str) -> IResult<&str, JsonBenchmarksMap> {
             line_ending,
         )),
         |(_, _, _, _, _, _, _, benches, _)| {
-            let mut benchmarks = BTreeMap::new();
+            let mut benchmarks = HashMap::new();
             for bench in benches {
                 if let Some((benchmark, latency)) = to_latency(bench) {
-                    let mut inner = BTreeMap::new();
+                    let mut inner = HashMap::new();
                     inner.insert(LATENCY_SLUG.into(), latency);
                     benchmarks.insert(benchmark, JsonMetrics { inner });
                 }
@@ -153,7 +153,11 @@ fn to_duration(time: u64, units: &Units) -> Duration {
 
 #[cfg(test)]
 mod test {
-    use bencher_json::project::report::new::JsonBenchmarksMap;
+    use bencher_json::project::report::{
+        metric_kind::LATENCY_SLUG,
+        new::{JsonBenchmarksMap, JsonMetrics},
+    };
+    use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use super::AdapterRustBench;
@@ -173,18 +177,50 @@ mod test {
         A::convert(&contents).expect(&format!("Failed to convert contents: {contents}"))
     }
 
+    fn validate_metrics(benchmarks_map: &JsonBenchmarksMap, key: &str) {
+        let metrics = benchmarks_map.inner.get(key).unwrap();
+        validate_metrics_inner(metrics, 3_161.0, 975.0, 975.0);
+    }
+
+    fn validate_metrics_inner(
+        metrics: &JsonMetrics,
+        value: f64,
+        lower_bound: f64,
+        upper_bound: f64,
+    ) {
+        assert_eq!(metrics.inner.len(), 1);
+        let metric = metrics.inner.get(LATENCY_SLUG).unwrap();
+        assert_eq!(metric.value, OrderedFloat::from(value));
+        assert_eq!(metric.lower_bound, Some(OrderedFloat::from(lower_bound)));
+        assert_eq!(metric.upper_bound, Some(OrderedFloat::from(upper_bound)));
+    }
+
     #[test]
     fn test_adapter_rust_zero() {
-        convert_rust_bench("0");
+        let benchmarks_map = convert_rust_bench("0");
+        assert_eq!(benchmarks_map.inner.len(), 0);
     }
 
     #[test]
     fn test_adapter_rust_one() {
-        convert_rust_bench("1");
+        let benchmarks_map = convert_rust_bench("1");
+        assert_eq!(benchmarks_map.inner.len(), 1);
+        validate_metrics(&benchmarks_map, "tests::benchmark");
     }
 
     #[test]
     fn test_adapter_rust_two() {
-        convert_rust_bench("2");
+        let benchmarks_map = convert_rust_bench("2");
+        assert_eq!(benchmarks_map.inner.len(), 1);
+        validate_metrics(&benchmarks_map, "tests::benchmark");
+    }
+
+    #[test]
+    fn test_adapter_rust_three() {
+        let benchmarks_map = convert_rust_bench("3");
+        assert_eq!(benchmarks_map.inner.len(), 3);
+        validate_metrics(&benchmarks_map, "tests::benchmark");
+        validate_metrics(&benchmarks_map, "tests::other_benchmark");
+        validate_metrics(&benchmarks_map, "tests::last_benchmark");
     }
 }

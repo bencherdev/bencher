@@ -131,6 +131,7 @@ version = "0.2.20"
 dependencies = [
  "bencher_json",
  "nom",
+ "ordered-float",
  "pretty_assertions",
  "serde",
  "serde_json",
