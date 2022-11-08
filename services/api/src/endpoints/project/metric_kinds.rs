@@ -30,7 +30,7 @@ use crate::{
 
 use super::Resource;
 
-const TESTBED_RESOURCE: Resource = Resource::Testbed;
+const METRIC_KIND_RESOURCE: Resource = Resource::MetricKind;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct DirPath {
@@ -39,8 +39,8 @@ pub struct DirPath {
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/testbeds",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/metric-kinds",
+    tags = ["projects", "metric kinds"]
 }]
 pub async fn dir_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -51,15 +51,15 @@ pub async fn dir_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/testbeds",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/metric-kinds",
+    tags = ["projects", "metric kinds"]
 }]
 pub async fn get_ls(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonTestbed>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetLs);
+    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetLs);
 
     let json = get_ls_inner(
         rqctx.context(),
@@ -100,8 +100,8 @@ async fn get_ls_inner(
 
 #[endpoint {
     method = POST,
-    path =  "/v0/projects/{project}/testbeds",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/metric-kinds",
+    tags = ["projects", "metric kinds"]
 }]
 pub async fn post(
     rqctx: Arc<RequestContext<Context>>,
@@ -109,7 +109,7 @@ pub async fn post(
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::Post);
+    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::Post);
 
     let json = post_inner(
         rqctx.context(),
@@ -164,8 +164,8 @@ pub struct OnePath {
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/testbeds/{testbed}",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/metric-kinds/{testbed}",
+    tags = ["projects", "metric kinds"]
 }]
 pub async fn one_options(
     _rqctx: Arc<RequestContext<Context>>,
@@ -176,15 +176,15 @@ pub async fn one_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/testbeds/{testbed}",
-    tags = ["projects", "testbeds"]
+    path =  "/v0/projects/{project}/metric-kinds/{testbed}",
+    tags = ["projects", "metric kinds"]
 }]
 pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetOne);
 
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
