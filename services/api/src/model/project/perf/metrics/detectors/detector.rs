@@ -1,3 +1,4 @@
+use bencher_json::project::report::JsonMetric;
 use diesel::{RunQueryDsl, SqliteConnection};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;
@@ -49,7 +50,7 @@ impl Detector {
         conn: &mut SqliteConnection,
         perf_id: i32,
         benchmark_id: i32,
-        datum: f64,
+        metric: JsonMetric,
     ) -> Result<(), ApiError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = MetricsData::new(
@@ -62,6 +63,7 @@ impl Detector {
         )?;
 
         let data = &metrics_data.data;
+        let datum = metric.value.into();
         if let Some(mean) = mean(data) {
             if let Some(std_dev) = std_deviation(mean, data) {
                 let (abs_datum, side, boundary) = match datum < mean {

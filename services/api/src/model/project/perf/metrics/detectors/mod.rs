@@ -63,20 +63,6 @@ impl Detectors {
         })
     }
 
-    pub fn benchmark_id(&self, benchmark_name: String) -> Result<i32, ApiError> {
-        self.benchmark_cache
-            .get(&benchmark_name)
-            .cloned()
-            .ok_or(ApiError::BenchmarkCache(benchmark_name))
-    }
-
-    pub fn metric_kind_id(&self, metric_kind_key: String) -> Result<i32, ApiError> {
-        self.metric_kind_cache
-            .get(&metric_kind_key)
-            .cloned()
-            .ok_or(ApiError::MetricKindCache(metric_kind_key))
-    }
-
     pub fn detect(
         &self,
         conn: &mut SqliteConnection,
