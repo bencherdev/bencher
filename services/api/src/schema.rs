@@ -1,4 +1,6 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     alert (id) {
         id -> Integer,
         uuid -> Text,
@@ -11,7 +13,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     benchmark (id) {
         id -> Integer,
         uuid -> Text,
@@ -20,7 +22,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     branch (id) {
         id -> Integer,
         uuid -> Text,
@@ -30,17 +32,30 @@ table! {
     }
 }
 
-table! {
-    latency (id) {
+diesel::table! {
+    metric (id) {
         id -> Integer,
         uuid -> Text,
-        lower_variance -> BigInt,
-        upper_variance -> BigInt,
-        duration -> BigInt,
+        perf_id -> Integer,
+        metric_kind_id -> Integer,
+        value -> Double,
+        lower_bound -> Nullable<Double>,
+        upper_bound -> Nullable<Double>,
     }
 }
 
-table! {
+diesel::table! {
+    metric_kind (id) {
+        id -> Integer,
+        uuid -> Text,
+        project_id -> Integer,
+        name -> Text,
+        slug -> Text,
+        units -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     organization (id) {
         id -> Integer,
         uuid -> Text,
@@ -49,7 +64,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     organization_role (id) {
         id -> Integer,
         user_id -> Integer,
@@ -58,22 +73,17 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     perf (id) {
         id -> Integer,
         uuid -> Text,
         report_id -> Integer,
         iteration -> Integer,
         benchmark_id -> Integer,
-        latency_id -> Nullable<Integer>,
-        throughput_id -> Nullable<Integer>,
-        compute_id -> Nullable<Integer>,
-        memory_id -> Nullable<Integer>,
-        storage_id -> Nullable<Integer>,
     }
 }
 
-table! {
+diesel::table! {
     project (id) {
         id -> Integer,
         uuid -> Text,
@@ -86,7 +96,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     project_role (id) {
         id -> Integer,
         user_id -> Integer,
@@ -95,7 +105,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     report (id) {
         id -> Integer,
         uuid -> Text,
@@ -108,29 +118,20 @@ table! {
     }
 }
 
-table! {
-    resource (id) {
-        id -> Integer,
-        uuid -> Text,
-        min -> Double,
-        max -> Double,
-        avg -> Double,
-    }
-}
-
-table! {
+diesel::table! {
     statistic (id) {
         id -> Integer,
         uuid -> Text,
         test -> Integer,
-        sample_size -> Nullable<BigInt>,
+        min_sample_size -> Nullable<BigInt>,
+        max_sample_size -> Nullable<BigInt>,
         window -> Nullable<BigInt>,
         left_side -> Nullable<Float>,
         right_side -> Nullable<Float>,
     }
 }
 
-table! {
+diesel::table! {
     testbed (id) {
         id -> Integer,
         uuid -> Text,
@@ -142,34 +143,24 @@ table! {
         runtime_name -> Nullable<Text>,
         runtime_version -> Nullable<Text>,
         cpu -> Nullable<Text>,
+        gpu -> Nullable<Text>,
         ram -> Nullable<Text>,
         disk -> Nullable<Text>,
     }
 }
 
-table! {
+diesel::table! {
     threshold (id) {
         id -> Integer,
         uuid -> Text,
         branch_id -> Integer,
         testbed_id -> Integer,
-        kind -> Integer,
+        metric_kind_id -> Integer,
         statistic_id -> Integer,
     }
 }
 
-table! {
-    throughput (id) {
-        id -> Integer,
-        uuid -> Text,
-        lower_variance -> Double,
-        upper_variance -> Double,
-        events -> Double,
-        unit_time -> BigInt,
-    }
-}
-
-table! {
+diesel::table! {
     token (id) {
         id -> Integer,
         uuid -> Text,
@@ -181,7 +172,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     user (id) {
         id -> Integer,
         uuid -> Text,
@@ -193,7 +184,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     version (id) {
         id -> Integer,
         uuid -> Text,
@@ -203,46 +194,47 @@ table! {
     }
 }
 
-joinable!(alert -> perf (perf_id));
-joinable!(alert -> statistic (statistic_id));
-joinable!(alert -> threshold (threshold_id));
-joinable!(benchmark -> project (project_id));
-joinable!(branch -> project (project_id));
-joinable!(organization_role -> organization (organization_id));
-joinable!(organization_role -> user (user_id));
-joinable!(perf -> benchmark (benchmark_id));
-joinable!(perf -> latency (latency_id));
-joinable!(perf -> report (report_id));
-joinable!(perf -> throughput (throughput_id));
-joinable!(project -> organization (organization_id));
-joinable!(project_role -> project (project_id));
-joinable!(project_role -> user (user_id));
-joinable!(report -> testbed (testbed_id));
-joinable!(report -> user (user_id));
-joinable!(report -> version (version_id));
-joinable!(testbed -> project (project_id));
-joinable!(threshold -> branch (branch_id));
-joinable!(threshold -> statistic (statistic_id));
-joinable!(threshold -> testbed (testbed_id));
-joinable!(token -> user (user_id));
-joinable!(version -> branch (branch_id));
+diesel::joinable!(alert -> perf (perf_id));
+diesel::joinable!(alert -> statistic (statistic_id));
+diesel::joinable!(alert -> threshold (threshold_id));
+diesel::joinable!(benchmark -> project (project_id));
+diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(metric -> metric_kind (metric_kind_id));
+diesel::joinable!(metric -> perf (perf_id));
+diesel::joinable!(metric_kind -> project (project_id));
+diesel::joinable!(organization_role -> organization (organization_id));
+diesel::joinable!(organization_role -> user (user_id));
+diesel::joinable!(perf -> benchmark (benchmark_id));
+diesel::joinable!(perf -> report (report_id));
+diesel::joinable!(project -> organization (organization_id));
+diesel::joinable!(project_role -> project (project_id));
+diesel::joinable!(project_role -> user (user_id));
+diesel::joinable!(report -> testbed (testbed_id));
+diesel::joinable!(report -> user (user_id));
+diesel::joinable!(report -> version (version_id));
+diesel::joinable!(testbed -> project (project_id));
+diesel::joinable!(threshold -> branch (branch_id));
+diesel::joinable!(threshold -> metric_kind (metric_kind_id));
+diesel::joinable!(threshold -> statistic (statistic_id));
+diesel::joinable!(threshold -> testbed (testbed_id));
+diesel::joinable!(token -> user (user_id));
+diesel::joinable!(version -> branch (branch_id));
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     alert,
     benchmark,
     branch,
-    latency,
+    metric,
+    metric_kind,
     organization,
     organization_role,
     perf,
     project,
     project_role,
     report,
-    resource,
     statistic,
     testbed,
     threshold,
-    throughput,
     token,
     user,
     version,
