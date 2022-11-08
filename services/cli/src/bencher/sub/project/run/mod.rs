@@ -16,11 +16,11 @@ use crate::{
 };
 
 mod adapter;
-mod perf;
+mod runner;
 
 use adapter::Adapter;
-pub use perf::Output;
-use perf::Perf;
+pub use runner::Output;
+use runner::Runner;
 
 use crate::bencher::SubCmd;
 
@@ -35,7 +35,7 @@ const BENCHER_CMD: &str = "BENCHER_CMD";
 pub struct Run {
     project: ResourceId,
     locality: Locality,
-    perf: Perf,
+    runner: Runner,
     branch: Branch,
     hash: Option<Oid>,
     testbed: Uuid,
@@ -71,7 +71,7 @@ impl TryFrom<CliRun> for Run {
         Ok(Self {
             project: unwrap_project(project)?,
             locality: locality.try_into()?,
-            perf: command.try_into()?,
+            runner: command.try_into()?,
             branch: map_branch(branch, if_branch)?,
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
@@ -155,9 +155,9 @@ impl SubCmd for Run {
 
         let mut benchmarks = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
-            let output = self.perf.run()?;
-            let benchmark_perf = self.adapter.convert(&output)?;
-            benchmarks.push(benchmark_perf);
+            let output = self.runner.run()?;
+            let benchmarks_map = self.adapter.convert(&output)?;
+            benchmarks.push(benchmarks_map);
         }
         let mut benchmarks = benchmarks.into();
 

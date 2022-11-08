@@ -15,12 +15,12 @@ pub use output::Output;
 use super::BENCHER_CMD;
 
 #[derive(Debug)]
-pub enum Perf {
+pub enum Runner {
     Input(Input),
     Command(Command),
 }
 
-impl TryFrom<CliRunCommand> for Perf {
+impl TryFrom<CliRunCommand> for Runner {
     type Error = CliError;
 
     fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
@@ -41,7 +41,7 @@ impl TryFrom<CliRunCommand> for Perf {
     }
 }
 
-impl Perf {
+impl Runner {
     pub fn run(&self) -> Result<Output, CliError> {
         let result = match self {
             Self::Input(input) => input.to_string(),
