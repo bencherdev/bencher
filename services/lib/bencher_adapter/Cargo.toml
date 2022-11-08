@@ -10,10 +10,9 @@ edition = "2021"
 bencher_json = { path = "../bencher_json" }
 # Workspace
 chrono.workspace = true
-email-address-parser.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["macros", "rt"] }
-url.workspace = true
 uuid.workspace = true
+# Crate
+nom = "7.1"

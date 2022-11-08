@@ -131,12 +131,10 @@ version = "0.1.0"
 dependencies = [
  "bencher_json",
  "chrono",
- "email-address-parser",
+ "nom",
  "serde",
  "serde_json",
  "thiserror",
- "tokio",
- "url",
  "uuid",
 ]
 
@@ -186,7 +184,6 @@ dependencies = [
  "clap",
  "email-address-parser",
  "git2",
- "nom",
  "pretty_assertions",
  "reqwest",
  "serde",

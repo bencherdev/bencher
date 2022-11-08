@@ -15,11 +15,16 @@ use nom::{
     IResult,
 };
 
-use crate::{bencher::sub::project::run::Output, CliError};
+use crate::{AdapterError, Convert};
 
-pub fn parse(output: &Output) -> Result<JsonBenchmarksMap, CliError> {
-    let (_, report) = parse_stdout(output.as_str()).unwrap();
-    Ok(report)
+pub struct AdapterRustBench;
+
+impl Convert for AdapterRustBench {
+    fn convert(input: &str) -> Result<JsonBenchmarksMap, AdapterError> {
+        parse_stdout(input)
+            .map(|(_, benchmarks)| benchmarks)
+            .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
+    }
 }
 
 enum Test {

@@ -1,7 +1,7 @@
 use bencher_json::project::report::JsonAdapter;
 
-// pub mod json;
-// pub mod rust;
+pub mod json;
+pub mod rust;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub enum Adapter {

@@ -9,7 +9,7 @@ use super::{mean::Mean, metrics::JsonMetrics, metrics_map::JsonMetricsMap};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarks {
-    #[serde(rename = "benchmarks")]
+    #[serde(flatten)]
     pub inner: Vec<JsonBenchmarksMap>,
 }
 

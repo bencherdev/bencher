@@ -25,6 +25,5 @@ pub struct JsonNewReport {
     pub adapter: JsonAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    #[serde(flatten)]
     pub benchmarks: JsonBenchmarks,
 }
