@@ -6,6 +6,7 @@ sudo apt-get update -q
 sudo apt-get install -yq netcat-openbsd sqlite3
 
 rustup toolchain install nightly
+rustup comonent add rust-src
 rustup component add rustfmt
 rustup component add clippy
 cargo install cargo-udeps --locked
