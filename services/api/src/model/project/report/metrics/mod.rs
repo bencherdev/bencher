@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use bencher_json::project::report::new::JsonMetrics;
 use diesel::{RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 
 use crate::{
     error::api_error,
@@ -36,7 +35,7 @@ impl Metrics {
         branch_id: i32,
         testbed_id: i32,
         report_id: i32,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         Ok(Self {
             project_id,
             branch_id,
@@ -54,7 +53,7 @@ impl Metrics {
         iteration: usize,
         benchmark_name: String,
         json_metrics: JsonMetrics,
-    ) -> Result<(), HttpError> {
+    ) -> Result<(), ApiError> {
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
 
         let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);

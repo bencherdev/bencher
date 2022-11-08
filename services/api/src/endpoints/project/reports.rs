@@ -27,7 +27,6 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         error::into_json,
-        map_http_error,
         same_project::SameProject,
     },
     ApiError,
@@ -195,12 +194,12 @@ async fn post_inner(
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
         .execute(conn)
-        .map_err(map_http_error!("Failed to create report."))?;
+        .map_err(api_error!())?;
 
     let query_report = schema::report::table
         .filter(schema::report::uuid.eq(&insert_report.uuid))
         .first::<QueryReport>(conn)
-        .map_err(map_http_error!("Failed to create report."))?;
+        .map_err(api_error!())?;
 
     let mut metrics = Metrics::new(project_id, branch_id, testbed_id, query_report.id)?;
 

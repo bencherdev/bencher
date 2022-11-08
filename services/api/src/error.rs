@@ -122,6 +122,10 @@ pub enum ApiError {
     Admin(i32),
     #[error("Failed to parse organization role: {0}")]
     OrganizationRole(String),
+    #[error("Failed to load adapter: {0}")]
+    Adapter(i32),
+    #[error("Failed to load statistic kind: {0}")]
+    StatisticKind(i32),
 
     // TODO remove once no longer needed
     #[error(transparent)]

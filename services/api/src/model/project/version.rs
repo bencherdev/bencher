@@ -4,10 +4,9 @@ use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
 };
-use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{schema, schema::version as version_table, util::map_http_error};
+use crate::{error::api_error, schema, schema::version as version_table, ApiError};
 
 #[derive(Queryable)]
 pub struct QueryVersion {
@@ -19,13 +18,13 @@ pub struct QueryVersion {
 }
 
 impl QueryVersion {
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::version::table
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get version."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get version."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 }
 
@@ -43,7 +42,7 @@ impl InsertVersion {
         conn: &mut SqliteConnection,
         branch_id: i32,
         hash: Option<String>,
-    ) -> Result<i32, HttpError> {
+    ) -> Result<i32, ApiError> {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
         let number = if let Ok(number) = schema::version::table
@@ -67,7 +66,7 @@ impl InsertVersion {
         diesel::insert_into(schema::version::table)
             .values(&insert_version)
             .execute(conn)
-            .map_err(map_http_error!("Failed to create version."))?;
+            .map_err(api_error!())?;
 
         schema::version::table
             .filter(
@@ -77,6 +76,6 @@ impl InsertVersion {
             )
             .select(schema::version::id)
             .first::<i32>(conn)
-            .map_err(map_http_error!("Failed to create version."))
+            .map_err(api_error!())
     }
 }

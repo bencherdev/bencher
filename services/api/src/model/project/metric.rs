@@ -1,6 +1,5 @@
 use bencher_json::project::report::JsonMetric;
 use diesel::Insertable;
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::schema::metric as metric_table;
@@ -17,7 +16,7 @@ pub struct QueryMetric {
 }
 
 impl QueryMetric {
-    pub fn into_json(self) -> Result<JsonMetric, HttpError> {
+    pub fn into_json(self) -> JsonMetric {
         let Self {
             id: _,
             uuid: _,
@@ -27,11 +26,11 @@ impl QueryMetric {
             lower_bound,
             upper_bound,
         } = self;
-        Ok(JsonMetric {
+        JsonMetric {
             value: value.into(),
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
-        })
+        }
     }
 }
 

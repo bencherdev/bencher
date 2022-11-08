@@ -5,7 +5,6 @@ use bencher_json::{
     ResourceId,
 };
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
@@ -119,7 +118,7 @@ impl InsertMetricKind {
         conn: &mut SqliteConnection,
         project: &ResourceId,
         metric_kind: JsonNewMetricKind,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         let project_id = QueryProject::from_resource_id(conn, project)?.id;
         Ok(Self::from_json_inner(conn, project_id, metric_kind))
     }

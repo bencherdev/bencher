@@ -2,14 +2,9 @@ use std::str::FromStr;
 
 use bencher_json::project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
-use crate::{
-    schema,
-    schema::statistic as statistic_table,
-    util::{http_error, map_http_error},
-};
+use crate::{error::api_error, schema, schema::statistic as statistic_table, ApiError};
 
 #[derive(Queryable, Debug, Clone)]
 pub struct QueryStatistic {
@@ -24,24 +19,24 @@ pub struct QueryStatistic {
 }
 
 impl QueryStatistic {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::statistic::table
             .filter(schema::statistic::uuid.eq(uuid.to_string()))
             .select(schema::statistic::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get statistic."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::statistic::table
             .filter(schema::statistic::id.eq(id))
             .select(schema::statistic::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get statistic."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get statistic."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self) -> Result<JsonStatistic, HttpError> {
+    pub fn into_json(self) -> Result<JsonStatistic, ApiError> {
         let Self {
             id: _,
             uuid,
@@ -53,7 +48,7 @@ impl QueryStatistic {
             right_side,
         } = self;
         Ok(JsonStatistic {
-            uuid: Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get statistic."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             test: StatisticKind::try_from(test)?.into(),
             min_sample_size: min_sample_size.map(|ss| ss as u32),
             max_sample_size: max_sample_size.map(|ss| ss as u32),
@@ -71,13 +66,13 @@ pub enum StatisticKind {
 }
 
 impl TryFrom<i32> for StatisticKind {
-    type Error = HttpError;
+    type Error = ApiError;
 
     fn try_from(kind: i32) -> Result<Self, Self::Error> {
         match kind {
             0 => Ok(Self::Z),
             1 => Ok(Self::T),
-            _ => Err(http_error!("Failed to get statistic.")),
+            _ => Err(ApiError::StatisticKind(kind)),
         }
     }
 }
@@ -113,7 +108,7 @@ pub struct InsertStatistic {
 }
 
 impl InsertStatistic {
-    pub fn from_json(json_statistic: JsonNewStatistic) -> Result<Self, HttpError> {
+    pub fn from_json(json_statistic: JsonNewStatistic) -> Result<Self, ApiError> {
         let JsonNewStatistic {
             test,
             min_sample_size,

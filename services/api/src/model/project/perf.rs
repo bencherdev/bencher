@@ -1,14 +1,14 @@
 use std::str::FromStr;
 
 use diesel::{Insertable, Queryable, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use crate::{
     diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
+    error::api_error,
     schema,
     schema::perf as perf_table,
-    util::map_http_error,
+    ApiError,
 };
 
 #[derive(Queryable)]
@@ -21,21 +21,21 @@ pub struct QueryPerf {
 }
 
 impl QueryPerf {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, HttpError> {
+    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
         schema::perf::table
             .filter(schema::perf::uuid.eq(uuid.to_string()))
             .select(schema::perf::id)
             .first(conn)
-            .map_err(map_http_error!("Failed to get perf."))
+            .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, HttpError> {
+    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::perf::table
             .filter(schema::perf::id.eq(id))
             .select(schema::perf::uuid)
             .first(conn)
-            .map_err(map_http_error!("Failed to get perf."))?;
-        Uuid::from_str(&uuid).map_err(map_http_error!("Failed to get perf."))
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
     }
 }
 

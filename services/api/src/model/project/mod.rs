@@ -3,7 +3,6 @@ use std::{str::FromStr, string::ToString};
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{Organization, Project};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use url::Url;
 use uuid::Uuid;
 
@@ -13,7 +12,7 @@ use crate::{
     error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
-    util::{map_http_error, resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{resource_id::fn_resource_id, slug::unwrap_slug},
     ApiError,
 };
 
@@ -156,9 +155,9 @@ impl QueryProject {
     }
 }
 
-fn ok_url(url: Option<&str>) -> Result<Option<Url>, HttpError> {
+fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {
     Ok(if let Some(url) = url {
-        Some(Url::parse(url).map_err(map_http_error!("Failed to get project."))?)
+        Some(Url::parse(url).map_err(api_error!())?)
     } else {
         None
     })

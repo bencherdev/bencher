@@ -29,7 +29,6 @@ use crate::{
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        map_http_error,
         same_project::SameProject,
     },
     ApiError,
@@ -290,8 +289,7 @@ impl QueryPerfDatum {
             metrics,
         } = self;
         Ok(JsonPerfDatum {
-            uuid: Uuid::from_str(&uuid)
-                .map_err(map_http_error!("Failed to get benchmark data."))?,
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             iteration: iteration as u32,
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,

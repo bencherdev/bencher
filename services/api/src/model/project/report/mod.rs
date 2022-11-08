@@ -11,17 +11,12 @@ use chrono::{DateTime, TimeZone, Utc};
 use diesel::{
     ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection,
 };
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::{testbed::QueryTestbed, version::QueryVersion};
 use crate::{
-    error::api_error,
-    model::user::QueryUser,
-    schema,
-    schema::report as report_table,
-    util::{error::database_map, http_error},
-    ApiError,
+    error::api_error, model::user::QueryUser, schema, schema::report as report_table,
+    util::error::database_map, ApiError,
 };
 
 pub mod metrics;
@@ -132,14 +127,14 @@ pub enum Adapter {
 }
 
 impl TryFrom<i32> for Adapter {
-    type Error = HttpError;
+    type Error = ApiError;
 
     fn try_from(adapter: i32) -> Result<Self, Self::Error> {
         match adapter as isize {
             JSON => Ok(Self::Json),
             RUST_TEST => Ok(Self::RustTest),
             RUST_BENCH => Ok(Self::RustBench),
-            _ => Err(http_error!("Failed to get report.")),
+            _ => Err(ApiError::Adapter(adapter)),
         }
     }
 }

@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 use uuid::Uuid;
 
 use super::QueryProject;
@@ -68,7 +67,7 @@ impl InsertBranch {
         conn: &mut SqliteConnection,
         project: &ResourceId,
         branch: JsonNewBranch,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         let JsonNewBranch { name, slug } = branch;
         let slug = unwrap_slug!(conn, &name, slug, branch, QueryBranch);
         Ok(Self {

@@ -1,8 +1,9 @@
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
-use dropshot::HttpError;
 
-use crate::{error::api_error, model::project::threshold::statistic::QueryStatistic, schema};
+use crate::{
+    error::api_error, model::project::threshold::statistic::QueryStatistic, schema, ApiError,
+};
 
 pub struct MetricsData {
     pub data: Vec<f64>,
@@ -16,7 +17,7 @@ impl MetricsData {
         metric_kind_id: i32,
         benchmark_id: i32,
         statistic: &QueryStatistic,
-    ) -> Result<Self, HttpError> {
+    ) -> Result<Self, ApiError> {
         let mut query = schema::perf::table
             .left_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
