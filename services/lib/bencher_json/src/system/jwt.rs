@@ -35,7 +35,7 @@ impl JsonWebToken {
         org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         let claims = JsonClaims::new(audience, email, ttl, org);
-        encode(&*HEADER, &claims, key).map(Into::into)
+        encode(&HEADER, &claims, key).map(Into::into)
     }
 
     pub fn new_auth(
