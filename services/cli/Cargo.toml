@@ -10,6 +10,7 @@ seed = []
 
 [dependencies]
 # Local
+bencher_adapter = { path = "../lib/bencher_adapter" }
 bencher_json = { path = "../lib/bencher_json" }
 # Workspace
 chrono.workspace = true

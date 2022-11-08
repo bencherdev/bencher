@@ -1,7 +1,11 @@
+use bencher_json::project::report::new::JsonBenchmarksMap;
+
 pub mod adapters;
-pub mod convert;
 pub mod error;
 
-pub use adapters::*;
-pub use convert::Convert;
+pub use adapters::{json::AdapterJson, rust::AdapterRustBench};
 pub use error::AdapterError;
+
+pub trait Adapter {
+    fn convert(input: &str) -> Result<JsonBenchmarksMap, AdapterError>;
+}

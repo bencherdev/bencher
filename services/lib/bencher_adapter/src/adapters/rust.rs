@@ -15,11 +15,11 @@ use nom::{
     IResult,
 };
 
-use crate::{AdapterError, Convert};
+use crate::{Adapter, AdapterError};
 
 pub struct AdapterRustBench;
 
-impl Convert for AdapterRustBench {
+impl Adapter for AdapterRustBench {
     fn convert(input: &str) -> Result<JsonBenchmarksMap, AdapterError> {
         parse_stdout(input)
             .map(|(_, benchmarks)| benchmarks)

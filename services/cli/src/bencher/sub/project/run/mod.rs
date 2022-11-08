@@ -18,7 +18,7 @@ use crate::{
 mod adapter;
 mod runner;
 
-use adapter::Adapter;
+use adapter::RunAdapter;
 pub use runner::Output;
 use runner::Runner;
 
@@ -39,7 +39,7 @@ pub struct Run {
     branch: Branch,
     hash: Option<Oid>,
     testbed: Uuid,
-    adapter: Adapter,
+    adapter: RunAdapter,
     iter: usize,
     fold: Option<Fold>,
     err: bool,
@@ -125,7 +125,7 @@ fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, CliError> {
     })
 }
 
-fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
+fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> RunAdapter {
     if let Some(adapter) = adapter {
         adapter.into()
     } else if let Ok(adapter) = std::env::var(BENCHER_ADAPTER) {
@@ -133,7 +133,7 @@ fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> Adapter {
             .map(Into::into)
             .unwrap_or_default()
     } else {
-        Adapter::default()
+        RunAdapter::default()
     }
 }
 

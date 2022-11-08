@@ -1,16 +1,17 @@
+use bencher_adapter::Adapter;
 use bencher_json::project::report::{new::JsonBenchmarksMap, JsonAdapter};
 
 use crate::{bencher::sub::project::run::Output, cli::project::run::CliRunAdapter, CliError};
 
 #[derive(Clone, Copy, Debug, Default)]
-pub enum Adapter {
+pub enum RunAdapter {
     #[default]
     Json,
     RustTest,
     RustBench,
 }
 
-impl From<CliRunAdapter> for Adapter {
+impl From<CliRunAdapter> for RunAdapter {
     fn from(adapter: CliRunAdapter) -> Self {
         match adapter {
             CliRunAdapter::Json => Self::Json,
@@ -20,24 +21,26 @@ impl From<CliRunAdapter> for Adapter {
     }
 }
 
-impl From<Adapter> for JsonAdapter {
-    fn from(adapter: Adapter) -> Self {
+impl From<RunAdapter> for JsonAdapter {
+    fn from(adapter: RunAdapter) -> Self {
         match adapter {
-            Adapter::Json => Self::Json,
-            Adapter::RustTest => Self::RustTest,
-            Adapter::RustBench => Self::RustBench,
+            RunAdapter::Json => Self::Json,
+            RunAdapter::RustTest => Self::RustTest,
+            RunAdapter::RustBench => Self::RustBench,
         }
     }
 }
 
-impl Adapter {
+impl RunAdapter {
     pub fn convert(&self, output: &Output) -> Result<JsonBenchmarksMap, CliError> {
+        let output_str = output.as_str();
         match &self {
-            Self::Json => todo!(),
+            Self::Json => bencher_adapter::AdapterJson::convert(output_str),
             Self::RustTest => {
                 todo!("cargo test -- -Z unstable-options --format json --report-time")
             },
-            Self::RustBench => todo!(),
+            Self::RustBench => bencher_adapter::AdapterRustBench::convert(output_str),
         }
+        .map_err(Into::into)
     }
 }

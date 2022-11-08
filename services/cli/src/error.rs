@@ -39,6 +39,8 @@ pub enum CliError {
     FromUtf8(#[from] std::string::FromUtf8Error),
     #[error("Failed to run benchmark command: {0}")]
     Io(#[from] std::io::Error),
+    #[error("Failed run adapter: {0}")]
+    Adapter(#[from] bencher_adapter::AdapterError),
     #[error("Failed to parse email: {0}")]
     Email(String),
 }
