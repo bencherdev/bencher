@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.20"
+    "version": "0.2.21"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -2251,6 +2251,314 @@
         }
       }
     },
+    "/v0/projects/{project}/metric-kinds": {
+      "get": {
+        "tags": [
+          "projects",
+          "metric kinds"
+        ],
+        "operationId": "get_ls",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_JsonMetricKind",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JsonMetricKind"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects",
+          "metric kinds"
+        ],
+        "operationId": "post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewMetricKind"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonMetricKind"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects",
+          "metric kinds"
+        ],
+        "operationId": "dir_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/metric-kinds/{metric_kind}": {
+      "get": {
+        "tags": [
+          "projects",
+          "metric kinds"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonMetricKind"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects",
+          "metric kinds"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/perf": {
       "post": {
         "tags": [
@@ -4247,31 +4555,6 @@
       "JsonEmpty": {
         "type": "object"
       },
-      "JsonLatency": {
-        "type": "object",
-        "properties": {
-          "duration": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "lower_variance": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "upper_variance": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "duration",
-          "lower_variance",
-          "upper_variance"
-        ]
-      },
       "JsonLogging": {
         "type": "object",
         "properties": {
@@ -4334,50 +4617,59 @@
           "uuid"
         ]
       },
-      "JsonMetrics": {
+      "JsonMetric": {
         "type": "object",
         "properties": {
-          "compute": {
+          "lower_bound": {
             "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonResource"
-              }
-            ]
+            "type": "number",
+            "format": "double"
           },
-          "latency": {
+          "upper_bound": {
             "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonLatency"
-              }
-            ]
+            "type": "number",
+            "format": "double"
           },
-          "memory": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonResource"
-              }
-            ]
-          },
-          "storage": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonResource"
-              }
-            ]
-          },
-          "throughput": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonThroughput"
-              }
-            ]
+          "value": {
+            "type": "number",
+            "format": "double"
           }
-        }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "JsonMetricKind": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "units": {
+            "nullable": true,
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "name",
+          "project",
+          "slug",
+          "uuid"
+        ]
+      },
+      "JsonMetrics": {
+        "type": "object"
       },
       "JsonNewBranch": {
         "type": "object",
@@ -4411,6 +4703,25 @@
         "required": [
           "email",
           "role"
+        ]
+      },
+      "JsonNewMetricKind": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "nullable": true,
+            "type": "string"
+          },
+          "units": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
         ]
       },
       "JsonNewOrganization": {
@@ -4506,16 +4817,22 @@
             "type": "number",
             "format": "float"
           },
-          "right_side": {
-            "nullable": true,
-            "type": "number",
-            "format": "float"
-          },
-          "sample_size": {
+          "max_sample_size": {
             "nullable": true,
             "type": "integer",
             "format": "uint32",
             "minimum": 0
+          },
+          "min_sample_size": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "right_side": {
+            "nullable": true,
+            "type": "number",
+            "format": "float"
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -4539,6 +4856,10 @@
             "type": "string"
           },
           "disk": {
+            "nullable": true,
+            "type": "string"
+          },
+          "gpu": {
             "nullable": true,
             "type": "string"
           },
@@ -4581,8 +4902,8 @@
             "type": "string",
             "format": "uuid"
           },
-          "kind": {
-            "$ref": "#/components/schemas/JsonPerfKind"
+          "metric_kind": {
+            "$ref": "#/components/schemas/ResourceId"
           },
           "statistic": {
             "$ref": "#/components/schemas/JsonNewStatistic"
@@ -4594,7 +4915,7 @@
         },
         "required": [
           "branch",
-          "kind",
+          "metric_kind",
           "statistic",
           "testbed"
         ]
@@ -4656,8 +4977,9 @@
             "type": "string",
             "format": "date-time"
           },
-          "kind": {
-            "$ref": "#/components/schemas/JsonPerfKind"
+          "metric_kind": {
+            "type": "string",
+            "format": "uuid"
           },
           "start_time": {
             "nullable": true,
@@ -4667,7 +4989,7 @@
         },
         "required": [
           "benchmarks",
-          "kind"
+          "metric_kind"
         ]
       },
       "JsonPerfData": {
@@ -4712,7 +5034,7 @@
             "minimum": 0
           },
           "metrics": {
-            "$ref": "#/components/schemas/JsonPerfDatumKind"
+            "$ref": "#/components/schemas/JsonMetric"
           },
           "start_time": {
             "type": "string",
@@ -4741,35 +5063,6 @@
           "version_number"
         ]
       },
-      "JsonPerfDatumKind": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/JsonLatency"
-          },
-          {
-            "$ref": "#/components/schemas/JsonThroughput"
-          },
-          {
-            "$ref": "#/components/schemas/JsonResource"
-          },
-          {
-            "$ref": "#/components/schemas/JsonResource"
-          },
-          {
-            "$ref": "#/components/schemas/JsonResource"
-          }
-        ]
-      },
-      "JsonPerfKind": {
-        "type": "string",
-        "enum": [
-          "latency",
-          "throughput",
-          "compute",
-          "memory",
-          "storage"
-        ]
-      },
       "JsonPerfQuery": {
         "type": "object",
         "properties": {
@@ -4792,8 +5085,8 @@
             "type": "string",
             "format": "date-time"
           },
-          "kind": {
-            "$ref": "#/components/schemas/JsonPerfKind"
+          "metric_kind": {
+            "$ref": "#/components/schemas/ResourceId"
           },
           "start_time": {
             "nullable": true,
@@ -4811,7 +5104,7 @@
         "required": [
           "benchmarks",
           "branches",
-          "kind",
+          "metric_kind",
           "testbeds"
         ]
       },
@@ -4915,28 +5208,6 @@
       "JsonReportBenchmark": {
         "type": "string",
         "format": "uuid"
-      },
-      "JsonResource": {
-        "type": "object",
-        "properties": {
-          "avg": {
-            "type": "number",
-            "format": "double"
-          },
-          "max": {
-            "type": "number",
-            "format": "double"
-          },
-          "min": {
-            "type": "number",
-            "format": "double"
-          }
-        },
-        "required": [
-          "avg",
-          "max",
-          "min"
-        ]
       },
       "JsonRestart": {
         "type": "object",
@@ -5053,6 +5324,10 @@
             "nullable": true,
             "type": "string"
           },
+          "gpu": {
+            "nullable": true,
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -5102,8 +5377,9 @@
             "type": "string",
             "format": "uuid"
           },
-          "kind": {
-            "$ref": "#/components/schemas/JsonPerfKind"
+          "metric_kind": {
+            "type": "string",
+            "format": "uuid"
           },
           "statistic": {
             "type": "string",
@@ -5120,38 +5396,10 @@
         },
         "required": [
           "branch",
-          "kind",
+          "metric_kind",
           "statistic",
           "testbed",
           "uuid"
-        ]
-      },
-      "JsonThroughput": {
-        "type": "object",
-        "properties": {
-          "events": {
-            "type": "number",
-            "format": "double"
-          },
-          "lower_variance": {
-            "type": "number",
-            "format": "double"
-          },
-          "unit_time": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "upper_variance": {
-            "type": "number",
-            "format": "double"
-          }
-        },
-        "required": [
-          "events",
-          "lower_variance",
-          "unit_time",
-          "upper_variance"
         ]
       },
       "JsonTls": {
@@ -5291,6 +5539,9 @@
           "critical"
         ]
       },
+      "ResourceId": {
+        "type": "string"
+      },
       "ServerLog": {
         "oneOf": [
           {
@@ -5343,9 +5594,6 @@
           }
         ]
       },
-      "ResourceId": {
-        "type": "string"
-      },
       "JsonOrganizationPermission": {
         "type": "string",
         "enum": [
@@ -5389,6 +5637,9 @@
     },
     {
       "name": "members"
+    },
+    {
+      "name": "metric kinds"
     },
     {
       "name": "organizations",
