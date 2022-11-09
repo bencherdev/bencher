@@ -8,9 +8,9 @@ use bencher_json::project::report::{
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
-    character::complete::{digit1, line_ending, space1},
+    character::complete::{anychar, digit1, line_ending, space1},
     combinator::{map, success},
-    multi::{many0, many1},
+    multi::{fold_many1, many0, many1, many_till},
     sequence::tuple,
     IResult,
 };
@@ -33,16 +33,39 @@ enum Test {
 }
 
 fn parse_rust_bench(input: &str) -> IResult<&str, JsonBenchmarksMap> {
+    fold_many1(parse_running, HashMap::new, |benchmarks, new_benchmarks| {
+        benchmarks.into_iter().chain(new_benchmarks).collect()
+    })(input)
+    .map(|(remainder, benchmarks)| (remainder, benchmarks.into()))
+}
+
+fn parse_running(input: &str) -> IResult<&str, HashMap<String, JsonMetrics>> {
     map(
         tuple((
-            line_ending,
+            alt((
+                // A non-initial multi-target run
+                map(
+                    tuple((
+                        many0(line_ending),
+                        space1,
+                        tag("Running"),
+                        many_till(anychar, line_ending),
+                        many0(line_ending),
+                    )),
+                    |_| (),
+                ),
+                // The start of a run
+                map(many0(line_ending), |_| ()),
+            )),
             // running X test(s)
-            tag("running"),
-            space1,
-            digit1,
-            space1,
-            alt((tag("tests"), tag("test"))),
-            line_ending,
+            tuple((
+                tag("running"),
+                space1,
+                digit1,
+                space1,
+                alt((tag("tests"), tag("test"))),
+                line_ending,
+            )),
             // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
             many0(tuple((
                 tag("test"),
@@ -57,9 +80,14 @@ fn parse_rust_bench(input: &str) -> IResult<&str, JsonBenchmarksMap> {
                 )),
                 line_ending,
             ))),
-            line_ending,
+            tuple((
+                many0(line_ending),
+                tag("test result"),
+                many_till(anychar, line_ending),
+                many0(line_ending),
+            )),
         )),
-        |(_, _, _, _, _, _, _, benches, _)| {
+        |(_, _, benches, _)| {
             let mut benchmarks = HashMap::new();
             for bench in benches {
                 if let Some((benchmark, latency)) = to_latency(bench) {
@@ -68,7 +96,7 @@ fn parse_rust_bench(input: &str) -> IResult<&str, JsonBenchmarksMap> {
                     benchmarks.insert(benchmark, JsonMetrics { inner });
                 }
             }
-            benchmarks.into()
+            benchmarks
         },
     )(input)
 }

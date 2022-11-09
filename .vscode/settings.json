@@ -21,6 +21,7 @@
   ],
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
+    "anychar",
     "bagge",
     "chrono",
     "clippy",
