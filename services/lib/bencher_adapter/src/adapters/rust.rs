@@ -29,6 +29,7 @@ impl Adapter for AdapterRustBench {
 
 enum Test {
     Ignored,
+    Failed,
     Bench(JsonMetric),
 }
 
@@ -76,6 +77,7 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, JsonMetrics>> {
                 space1,
                 alt((
                     map(tag("ignored"), |_| Test::Ignored),
+                    map(tag("FAILED"), |_| Test::Failed),
                     map(parse_bench, Test::Bench),
                 )),
                 line_ending,
@@ -107,6 +109,8 @@ fn to_latency(
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => None,
+        // TODO add an error on failure feature
+        Test::Failed => None,
         Test::Bench(metric) => Some((key.into(), metric)),
     }
 }
