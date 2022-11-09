@@ -3,7 +3,7 @@ use bencher_json::project::report::new::JsonBenchmarksMap;
 pub mod adapters;
 pub mod error;
 
-pub use adapters::{json::AdapterJson, rust::AdapterRustBench};
+pub use adapters::{json::AdapterJson, rust::AdapterRust};
 pub use error::AdapterError;
 
 pub trait Adapter {

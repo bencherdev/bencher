@@ -154,10 +154,12 @@ impl SubCmd for Run {
         let start_time = Utc::now();
 
         let mut benchmarks = Vec::with_capacity(self.iter);
+        let mut outputs = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
             let output = self.runner.run()?;
             let benchmarks_map = self.adapter.convert(&output)?;
             benchmarks.push(benchmarks_map);
+            outputs.push(output);
         }
         let mut benchmarks = benchmarks.into();
 
@@ -175,8 +177,16 @@ impl SubCmd for Run {
             benchmarks,
         };
 
+        // TODO disable when quiet
+        for output in outputs {
+            println!("{}", output.as_str());
+        }
+
+        // TODO disable when quiet
+        println!("{}", serde_json::to_string_pretty(&report)?);
+
         match &self.locality {
-            Locality::Local => println!("{}", serde_json::to_string_pretty(&report)?),
+            Locality::Local => {},
             Locality::Backend(backend) => {
                 let value = backend
                     .post(&format!("/v0/projects/{}/reports", self.project), &report)

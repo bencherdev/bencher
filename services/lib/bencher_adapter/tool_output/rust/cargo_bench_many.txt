@@ -5,6 +5,9 @@ test tests::benchmark ... bench:             3,161 ns/iter (+/- 975)
 test tests::other_benchmark ... bench:       3,161 ns/iter (+/- 975)
 test tests::other_ignored ... ignored
 test tests::last_benchmark ... bench:        3,161 ns/iter (+/- 975)
+test tests::one_digit ... bench:                 1 μs/iter (+/- 1)
+test tests::two_digit ... bench:                22 ms/iter (+/- 22)
+test tests::three_digit ... bench:             333 s/iter (+/- 333)
 
 test result: ok. 0 passed; 0 failed; 2 ignored; 3 measured; 0 filtered out; finished in 0.11s
 

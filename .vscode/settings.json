@@ -37,6 +37,7 @@
     "Insertable",
     "jsonwebtoken",
     "litestream",
+    "Milli",
     "nanos",
     "oneshot",
     "perfs",

@@ -23,4 +23,4 @@ export BENCHER_TESTBED=$TESTBED_UUID
 
 cd ../../tests/cli/rust_bench
 
-../../../target/debug/bencher run --adapter rust_bench --iter 3 "cargo +nightly bench"
+../../../target/debug/bencher run --adapter rust --iter 3 "cargo +nightly bench"

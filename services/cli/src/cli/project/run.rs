@@ -75,10 +75,8 @@ pub struct CliRunShell {
 pub enum CliRunAdapter {
     /// JSON (default)
     Json,
-    /// Rust `cargo test` 🦀
-    RustTest,
-    /// Rust `cargo bench` 🦀
-    RustBench,
+    /// Rust 🦀
+    Rust,
 }
 
 /// Supported Fold Operations

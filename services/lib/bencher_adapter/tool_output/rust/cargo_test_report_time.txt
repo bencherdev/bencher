@@ -1,0 +1,14 @@
+
+running 4 tests
+test tests::ignored ... ignored
+test tests::unit_test ... ok <0.000s>
+test tests::other_test ... ok <0.001s>
+test tests::last_test ... ok <0.002s>
+
+test result: ok. 3 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests bencher_adapter
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
