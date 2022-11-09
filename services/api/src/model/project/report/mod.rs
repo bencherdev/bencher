@@ -116,10 +116,12 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
     .ok_or(ApiError::Timestamp(timestamp))
 }
 
-const JSON_INT: isize = 0;
+const MAGIC_INT: isize = 0;
+const JSON_INT: isize = 50;
 const RUST_INT: isize = 150;
 
 pub enum Adapter {
+    Magic = MAGIC_INT,
     Json = JSON_INT,
     Rust = RUST_INT,
 }
@@ -129,6 +131,7 @@ impl TryFrom<i32> for Adapter {
 
     fn try_from(adapter: i32) -> Result<Self, Self::Error> {
         match adapter as isize {
+            MAGIC_INT => Ok(Self::Magic),
             JSON_INT => Ok(Self::Json),
             RUST_INT => Ok(Self::Rust),
             _ => Err(ApiError::Adapter(adapter)),
@@ -139,6 +142,7 @@ impl TryFrom<i32> for Adapter {
 impl From<&JsonAdapter> for Adapter {
     fn from(adapter: &JsonAdapter) -> Self {
         match adapter {
+            JsonAdapter::Magic => Self::Magic,
             JsonAdapter::Json => Self::Json,
             JsonAdapter::Rust => Self::Rust,
         }
@@ -148,6 +152,7 @@ impl From<&JsonAdapter> for Adapter {
 impl From<Adapter> for JsonAdapter {
     fn from(adapter: Adapter) -> Self {
         match adapter {
+            Adapter::Magic => Self::Magic,
             Adapter::Json => Self::Json,
             Adapter::Rust => Self::Rust,
         }

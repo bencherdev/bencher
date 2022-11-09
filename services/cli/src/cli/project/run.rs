@@ -73,7 +73,9 @@ pub struct CliRunShell {
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
 pub enum CliRunAdapter {
-    /// JSON (default)
+    /// Magic 🪄 (default)
+    Magic,
+    /// JSON {...}
     Json,
     /// Rust 🦀
     Rust,

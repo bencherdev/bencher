@@ -21,7 +21,7 @@ pub struct AdapterRust;
 
 impl Adapter for AdapterRust {
     fn convert(input: &str) -> Result<JsonBenchmarksMap, AdapterError> {
-        parse_rust_bench(input)
+        parse_rust(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
     }
@@ -34,7 +34,7 @@ enum Test {
     Ok(JsonMetric),
 }
 
-fn parse_rust_bench(input: &str) -> IResult<&str, JsonBenchmarksMap> {
+pub fn parse_rust(input: &str) -> IResult<&str, JsonBenchmarksMap> {
     fold_many1(parse_running, HashMap::new, |benchmarks, new_benchmarks| {
         benchmarks.into_iter().chain(new_benchmarks).collect()
     })(input)
@@ -236,16 +236,12 @@ fn to_f64(input: Vec<&str>) -> f64 {
 }
 
 #[cfg(test)]
-mod test {
-    use bencher_json::project::report::{
-        metric_kind::LATENCY_SLUG,
-        new::{JsonBenchmarksMap, JsonMetrics},
-    };
-    use ordered_float::OrderedFloat;
+pub(crate) mod test_rust {
+    use bencher_json::project::report::new::JsonBenchmarksMap;
     use pretty_assertions::assert_eq;
 
     use super::AdapterRust;
-    use crate::Adapter;
+    use crate::adapters::test_util::{convert_file_path, validate_metrics};
 
     fn convert_rust_bench(suffix: &str) -> JsonBenchmarksMap {
         let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);
@@ -257,31 +253,9 @@ mod test {
         convert_file_path::<AdapterRust>(&file_path)
     }
 
-    fn convert_file_path<A>(file_path: &str) -> JsonBenchmarksMap
-    where
-        A: Adapter,
-    {
-        let contents = std::fs::read_to_string(file_path)
-            .expect(&format!("Failed to read test file: {file_path}"));
-        A::convert(&contents).expect(&format!("Failed to convert contents: {contents}"))
-    }
-
-    fn validate_defacto_metrics(benchmarks_map: &JsonBenchmarksMap, key: &str) {
+    fn validate_bench_metrics(benchmarks_map: &JsonBenchmarksMap, key: &str) {
         let metrics = benchmarks_map.inner.get(key).unwrap();
         validate_metrics(metrics, 3_161.0, Some(975.0), Some(975.0));
-    }
-
-    fn validate_metrics(
-        metrics: &JsonMetrics,
-        value: f64,
-        lower_bound: Option<f64>,
-        upper_bound: Option<f64>,
-    ) {
-        assert_eq!(metrics.inner.len(), 1);
-        let metric = metrics.inner.get(LATENCY_SLUG).unwrap();
-        assert_eq!(metric.value, OrderedFloat::from(value));
-        assert_eq!(metric.lower_bound, lower_bound.map(OrderedFloat::from));
-        assert_eq!(metric.upper_bound, upper_bound.map(OrderedFloat::from));
     }
 
     #[test]
@@ -294,23 +268,27 @@ mod test {
     fn test_adapter_rust_one() {
         let benchmarks_map = convert_rust_bench("one");
         assert_eq!(benchmarks_map.inner.len(), 1);
-        validate_defacto_metrics(&benchmarks_map, "tests::benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
     }
 
     #[test]
     fn test_adapter_rust_ignore() {
         let benchmarks_map = convert_rust_bench("ignore");
         assert_eq!(benchmarks_map.inner.len(), 1);
-        validate_defacto_metrics(&benchmarks_map, "tests::benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
     }
 
     #[test]
     fn test_adapter_rust_many() {
         let benchmarks_map = convert_rust_bench("many");
+        validate_adapter_rust_many(benchmarks_map);
+    }
+
+    pub fn validate_adapter_rust_many(benchmarks_map: JsonBenchmarksMap) {
         assert_eq!(benchmarks_map.inner.len(), 6);
-        validate_defacto_metrics(&benchmarks_map, "tests::benchmark");
-        validate_defacto_metrics(&benchmarks_map, "tests::other_benchmark");
-        validate_defacto_metrics(&benchmarks_map, "tests::last_benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::other_benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::last_benchmark");
 
         let number = 1_000.0;
         let metrics = benchmarks_map.inner.get("tests::one_digit").unwrap();
@@ -329,8 +307,8 @@ mod test {
     fn test_adapter_rust_multi_target() {
         let benchmarks_map = convert_rust_bench("multi_target");
         assert_eq!(benchmarks_map.inner.len(), 2);
-        validate_defacto_metrics(&benchmarks_map, "tests::benchmark");
-        validate_defacto_metrics(&benchmarks_map, "tests::other_benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
+        validate_bench_metrics(&benchmarks_map, "tests::other_benchmark");
     }
 
     #[test]
