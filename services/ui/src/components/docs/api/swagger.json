@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.21"
+    "version": "0.2.22"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -4373,9 +4373,9 @@
       "JsonAdapter": {
         "type": "string",
         "enum": [
+          "magic",
           "json",
-          "rust_test",
-          "rust_bench"
+          "rust"
         ]
       },
       "JsonAlert": {
