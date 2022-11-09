@@ -9,13 +9,13 @@ const DocsRoutes = (props) => {
   return (
     <>
       {/* Docs Routes */}
-      <Route path="/" element={<Navigate href="/docs/how-to" />} />
+      {/* <Route path="/" element={<Navigate href="/docs/how-to" />} />
       <Route
         path="/how-to"
         element={<Navigate href="/docs/how-to/quick-start" />}
       />
       <Route path="/how-to/quick-start" element={docsPage(true)} />
-      <Route path="/how-to/run-a-report" element={docsPage(true)} />
+      <Route path="/how-to/run-a-report" element={docsPage(true)} /> */}
       <Route
         path="/reference"
         element={<Navigate href="/docs/reference/api" />}
