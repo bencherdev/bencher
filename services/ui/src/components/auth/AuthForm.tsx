@@ -6,8 +6,8 @@ import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import { Field } from "../console/config/types";
 import { FormKind } from "./config/types";
+import { BENCHER_API_URL } from "../site/util";
 
-const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 export interface Props {
   config: any;
@@ -104,7 +104,7 @@ export const AuthForm = (props: Props) => {
 
   const request_config = (data) => {
     return {
-      url: `${BENCHER_API_URL}/v0/auth/${props.config?.kind}`,
+      url: `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`,
       method: "POST",
       headers: {
         "Content-Type": "application/json",

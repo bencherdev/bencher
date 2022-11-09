@@ -1,7 +1,7 @@
 import memberFieldsConfig from "../../fields/config/org/memberFieldsConfig";
-import { isAllowedOrganization, OrganizationPermission } from "../../site/util";
+import { BENCHER_API_URL, isAllowedOrganization, OrganizationPermission } from "../../site/util";
 import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
-import { BENCHER_API_URL, parentPath, invitePath, viewSlugPath } from "./util";
+import { parentPath, invitePath, viewSlugPath } from "./util";
 
 const ROLE_VALUE = {
   selected: "leader",
@@ -38,7 +38,7 @@ const MembersConfig = {
     },
     table: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members`,
+        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/members`,
       add: {
         path: invitePath,
         text: "Invite an Organization Member",
@@ -76,7 +76,7 @@ const MembersConfig = {
     },
     form: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/organizations/${path_params.organization_slug}/members`,
+        `${BENCHER_API_URL()}/v0/organizations/${path_params.organization_slug}/members`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -127,7 +127,7 @@ const MembersConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/members/${path_params?.member_slug}`,
+        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/members/${path_params?.member_slug}`,
       cards: [
         {
           kind: Card.FIELD,

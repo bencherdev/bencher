@@ -1,7 +1,8 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import testbedFieldsConfig from "../../fields/config/org/testbedFieldsConfig";
+import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
+import { parentPath, addPath, viewSlugPath } from "./util";
 
 const testbedsConfig = {
   [Operation.LIST]: {
@@ -18,7 +19,7 @@ const testbedsConfig = {
     },
     table: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/testbeds`,
       add: {
         path: addPath,
         text: "Add a Testbed",
@@ -49,7 +50,7 @@ const testbedsConfig = {
     },
     form: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds`,
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/testbeds`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -167,7 +168,7 @@ const testbedsConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`,
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/testbeds/${path_params?.testbed_slug}`,
       cards: [
         {
           kind: Card.FIELD,

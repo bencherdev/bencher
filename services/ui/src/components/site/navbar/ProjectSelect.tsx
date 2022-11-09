@@ -1,8 +1,7 @@
 import axios from "axios";
 import { createSignal, createResource, createEffect, For } from "solid-js";
-import { getToken } from "../../site/util";
+import { BENCHER_API_URL, getToken } from "../../site/util";
 import validator from "validator";
-import { BENCHER_API_URL } from "../../console/config/util";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
@@ -10,7 +9,7 @@ const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 const ProjectSelect = (props) => {
   const options = (token: string) => {
     return {
-      url: `${BENCHER_API_URL}/v0/organizations/${props.organization_slug()}/projects`,
+      url: `${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/projects`,
       method: "GET",
       headers: {
         "Content-Type": "application/json",

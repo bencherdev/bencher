@@ -1,4 +1,4 @@
-import { BENCHER_API_URL } from "../../console/config/util";
+import { BENCHER_API_URL } from "../../site/util";
 import { Auth, FormKind } from "./types";
 
 const authConfig = {
@@ -33,7 +33,7 @@ const authConfig = {
     title: "Confirm Token",
     sub: "Please check your email for a one-time token. Either click the link or paste the token here.",
     form: {
-      path: `${BENCHER_API_URL}/v0/auth/confirm`,
+      path: `${BENCHER_API_URL()}/v0/auth/confirm`,
       redirect: "/console",
     },
   },

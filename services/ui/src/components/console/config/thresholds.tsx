@@ -1,7 +1,8 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import thresholdFieldsConfig from "../../fields/config/org/thresholdFieldsConfig";
+import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewUuidPath } from "./util";
+import { parentPath, addPath, viewUuidPath } from "./util";
 
 const thresholdsConfig = {
   [Operation.LIST]: {
@@ -17,7 +18,7 @@ const thresholdsConfig = {
       ],
     },
     table: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds`,
+      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/thresholds`,
       add: {
         path: addPath,
         text: "Add a Threshold",
@@ -39,7 +40,7 @@ const thresholdsConfig = {
       path: parentPath,
     },
     form: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds`,
+      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/thresholds`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -90,7 +91,7 @@ const thresholdsConfig = {
       path: parentPath,
     },
     deck: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/thresholds/${path_params?.threshold_uuid}`,
+      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/thresholds/${path_params?.threshold_uuid}`,
       cards: [
         {
           kind: Card.FIELD,

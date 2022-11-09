@@ -1,6 +1,7 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
+import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
-import { BENCHER_API_URL, parentPath, addPath, viewSlugPath } from "./util";
+import { parentPath, addPath, viewSlugPath } from "./util";
 
 const projectsConfig = {
   [Operation.LIST]: {
@@ -17,7 +18,7 @@ const projectsConfig = {
     },
     table: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects`,
+        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/projects`,
       add: {
         path: addPath,
         text: "Add a Project",
@@ -52,7 +53,7 @@ const projectsConfig = {
     },
     form: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/organizations/${path_params.organization_slug}/projects`,
+        `${BENCHER_API_URL()}/v0/organizations/${path_params.organization_slug}/projects`,
       fields: [
         {
           kind: Field.INPUT,
@@ -110,7 +111,7 @@ const projectsConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/projects/${path_params?.project_slug}`,
+        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/projects/${path_params?.project_slug}`,
       cards: [
         {
           kind: Card.FIELD,
@@ -155,11 +156,11 @@ const projectsConfig = {
       title: "Benchmark Perf",
     },
     plot: {
-      url: (path_params) => `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/perf`,
+      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/perf`,
       tab_url: (path_params, tab: PerfTab) =>
-        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}`,
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/${tab}`,
       key_url: (path_params, tab: PerfTab, uuid: string) =>
-        `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/${tab}/${uuid}`,
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/${tab}/${uuid}`,
     },
   },
 };

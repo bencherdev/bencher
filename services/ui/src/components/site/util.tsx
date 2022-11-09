@@ -1,7 +1,19 @@
 import axios from "axios";
 import validator from "validator";
 
-export const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
+// Either supply `VITE_BENCHER_API_URL` at build time,
+// or default to the current protocol and hostname at port `61016`.
+// If another endpoint is required, then the UI will need to be re-bundled.
+export const BENCHER_API_URL: () => string = () => {
+  const api_url = import.meta.env.VITE_BENCHER_API_URL;
+  if (api_url) {
+    return api_url;
+  } else {
+    const location = window.location;
+    return location.protocol + "//" + location.hostname + ":61016"
+  }
+};
+
 export const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
 
 export const BENCHER_USER_KEY: string = "BENCHER_USER";
@@ -10,7 +22,7 @@ export const getToken = () =>
   JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY))?.token;
 
 export const isAllowedAdmin = async () => {
-  return isAllowed(`${BENCHER_API_URL}/v0/admin/allowed`);
+  return isAllowed(`${BENCHER_API_URL()}/v0/admin/allowed`);
 };
 
 export enum OrganizationPermission {
@@ -30,7 +42,7 @@ export const isAllowedOrganization = async (
   permission: OrganizationPermission
 ) => {
   return isAllowed(
-    `${BENCHER_API_URL}/v0/organizations/${path_params?.organization_slug}/allowed/${permission}`
+    `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/allowed/${permission}`
   );
 };
 
@@ -51,7 +63,7 @@ export const isAllowedProject = async (
   permission: ProjectPermission
 ) => {
   return isAllowed(
-    `${BENCHER_API_URL}/v0/projects/${path_params?.project_slug}/allowed/${permission}`
+    `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/allowed/${permission}`
   );
 };
 

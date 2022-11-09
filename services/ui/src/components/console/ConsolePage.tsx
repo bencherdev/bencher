@@ -5,8 +5,7 @@ import {
   createResource,
   createSignal,
 } from "solid-js";
-import { getToken } from "../site/util";
-import { BENCHER_API_URL } from "./config/util";
+import { BENCHER_API_URL, getToken } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 import validator from "validator";
@@ -43,7 +42,7 @@ export const projectSlug = (pathname) => {
 
 const options = (token: string, project_slug: string) => {
   return {
-    url: `${BENCHER_API_URL}/v0/projects/${project_slug}`,
+    url: `${BENCHER_API_URL()}/v0/projects/${project_slug}`,
     method: "GET",
     headers: {
       "Content-Type": "application/json",

@@ -3,11 +3,8 @@ import { createSignal, createResource, createMemo } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
-import Card from "./DeckCard";
 import { getToken } from "../../../site/util";
 import validator from "validator";
-
-const BENCHER_API_URL: string = import.meta.env.VITE_BENCHER_API_URL;
 
 const DeckPanel = (props) => {
   const [refresh, setRefresh] = createSignal(0);
