@@ -17,10 +17,11 @@ pub struct JsonNewReport {
     pub results: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonAdapter {
+    #[default]
     Magic,
     Json,
     Rust,

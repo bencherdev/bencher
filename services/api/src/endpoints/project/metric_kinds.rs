@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use bencher_json::{
-    project::report::{metric_kind::JsonNewMetricKind, JsonMetricKind},
-    ResourceId,
-};
+use bencher_json::{JsonMetricKind, JsonNewMetricKind, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -13,7 +10,7 @@ use serde::Deserialize;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -73,7 +70,11 @@ pub async fn get_ls(
     .await
     .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 async fn get_ls_inner(
@@ -193,7 +194,11 @@ pub async fn get_one(
     .await
     .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 fn_resource_id!(metric_kind);
