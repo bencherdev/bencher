@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.22"
+    "version": "0.2.23"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -4462,9 +4462,6 @@
           "uuid"
         ]
       },
-      "AdapterResults": {
-        "type": "object"
-      },
       "JsonBranch": {
         "type": "object",
         "properties": {
@@ -4554,6 +4551,15 @@
       },
       "JsonEmpty": {
         "type": "object"
+      },
+      "JsonFold": {
+        "type": "string",
+        "enum": [
+          "min",
+          "max",
+          "mean",
+          "median"
+        ]
       },
       "JsonLogging": {
         "type": "object",
@@ -4668,9 +4674,6 @@
           "uuid"
         ]
       },
-      "AdapterMetrics": {
-        "type": "object"
-      },
       "JsonNewBranch": {
         "type": "object",
         "properties": {
@@ -4771,13 +4774,12 @@
         "type": "object",
         "properties": {
           "adapter": {
-            "$ref": "#/components/schemas/JsonAdapter"
-          },
-          "benchmarks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdapterResults"
-            }
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonAdapter"
+              }
+            ]
           },
           "branch": {
             "type": "string",
@@ -4787,9 +4789,23 @@
             "type": "string",
             "format": "date-time"
           },
+          "fold": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonFold"
+              }
+            ]
+          },
           "hash": {
             "nullable": true,
             "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "start_time": {
             "type": "string",
@@ -4801,10 +4817,9 @@
           }
         },
         "required": [
-          "adapter",
-          "benchmarks",
           "branch",
           "end_time",
+          "results",
           "start_time",
           "testbed"
         ]
@@ -5158,15 +5173,15 @@
               "$ref": "#/components/schemas/JsonReportAlert"
             }
           },
-          "benchmarks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JsonReportBenchmark"
-            }
-          },
           "end_time": {
             "type": "string",
             "format": "date-time"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportResult"
+            }
           },
           "start_time": {
             "type": "string",
@@ -5192,8 +5207,8 @@
         "required": [
           "adapter",
           "alerts",
-          "benchmarks",
           "end_time",
+          "results",
           "start_time",
           "testbed",
           "user",
@@ -5205,7 +5220,7 @@
         "type": "string",
         "format": "uuid"
       },
-      "JsonReportBenchmark": {
+      "JsonReportResult": {
         "type": "string",
         "format": "uuid"
       },
