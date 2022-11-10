@@ -10,9 +10,10 @@ pub struct JsonNewReport {
     pub branch: Uuid,
     pub hash: Option<String>,
     pub testbed: Uuid,
-    pub adapter: Option<JsonAdapter>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub adapter: Option<JsonAdapter>,
+    pub fold: Option<JsonFold>,
     pub results: Vec<String>,
 }
 
@@ -27,14 +28,24 @@ pub enum JsonAdapter {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonFold {
+    Min,
+    Max,
+    Mean,
+    Median,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid: Uuid,
     pub user: Uuid,
     pub version: Uuid,
     pub testbed: Uuid,
-    pub adapter: JsonAdapter,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub adapter: JsonAdapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
 }
