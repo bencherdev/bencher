@@ -7,6 +7,7 @@ use uuid::Uuid;
 pub mod alert;
 pub mod benchmark;
 pub mod branch;
+pub mod metric;
 pub mod perf;
 pub mod report;
 pub mod testbed;

@@ -5,7 +5,11 @@ use ordered_float::OrderedFloat;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{mean::Mean, median::Median};
+mod mean;
+mod median;
+
+use mean::Mean;
+use median::Median;
 
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

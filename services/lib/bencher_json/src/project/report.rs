@@ -4,18 +4,25 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::JsonAdapter;
-
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
     pub branch: Uuid,
     pub hash: Option<String>,
     pub testbed: Uuid,
-    pub adapter: JsonAdapter,
+    pub adapter: Option<JsonAdapter>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub results: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonAdapter {
+    Magic,
+    Json,
+    Rust,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
