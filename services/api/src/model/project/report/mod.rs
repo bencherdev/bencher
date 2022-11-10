@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::report::{
-        data::{JsonReportAlert, JsonReportAlerts, JsonReportBenchmark, JsonReportBenchmarks},
+        data::{JsonReportAlert, JsonReportAlerts, JsonReportResult, JsonReportResults},
         JsonAdapter,
     },
     JsonNewReport, JsonReport,
@@ -44,7 +44,7 @@ impl QueryReport {
     }
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, ApiError> {
-        let benchmarks = self.get_benchmarks(conn)?;
+        let results = self.get_results(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {
             id: _,
@@ -64,15 +64,12 @@ impl QueryReport {
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            benchmarks,
+            results,
             alerts,
         })
     }
 
-    fn get_benchmarks(
-        &self,
-        conn: &mut SqliteConnection,
-    ) -> Result<JsonReportBenchmarks, ApiError> {
+    fn get_results(&self, conn: &mut SqliteConnection) -> Result<JsonReportResults, ApiError> {
         Ok(schema::perf::table
             .inner_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -84,8 +81,7 @@ impl QueryReport {
             .map_err(api_error!())?
             .iter()
             .filter_map(|uuid| {
-                database_map("QueryReport::get_benchmarks", Uuid::from_str(uuid))
-                    .map(JsonReportBenchmark)
+                database_map("QueryReport::get_benchmarks", Uuid::from_str(uuid)).map(Into::into)
             })
             .collect())
     }
@@ -100,7 +96,7 @@ impl QueryReport {
             .map_err(api_error!())?
             .iter()
             .filter_map(|uuid| {
-                database_map("QueryReport::get_alerts", Uuid::from_str(uuid)).map(JsonReportAlert)
+                database_map("QueryReport::get_alerts", Uuid::from_str(uuid)).map(Into::into)
             })
             .collect())
     }
