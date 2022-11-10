@@ -1,11 +1,8 @@
 use std::{str::FromStr, sync::Arc};
 
 use bencher_json::{
-    project::{
-        perf::{JsonPerfData, JsonPerfDatum},
-        report::JsonMetric,
-    },
-    JsonPerf, JsonPerfQuery, ResourceId,
+    project::perf::{JsonPerfData, JsonPerfDatum},
+    JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};

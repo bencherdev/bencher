@@ -206,7 +206,7 @@ async fn post_inner(
 
     let mut metrics = Metrics::new(project_id, branch_id, testbed_id, query_report.id)?;
 
-    for (iteration, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
+    for (iteration, benchmark) in json_report.results.into_iter().enumerate() {
         for (benchmark_name, json_metrics) in benchmark.inner {
             metrics.insert(conn, iteration, benchmark_name, json_metrics)?;
         }
