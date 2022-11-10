@@ -130,14 +130,13 @@ name = "bencher_adapter"
 version = "0.2.21"
 dependencies = [
  "bencher_json",
- "chrono",
+ "literally",
  "nom",
  "ordered-float",
  "pretty_assertions",
  "serde",
  "serde_json",
  "thiserror",
- "uuid",
 ]
 
 [[package]]

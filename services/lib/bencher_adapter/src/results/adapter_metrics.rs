@@ -20,7 +20,7 @@ impl From<MetricsMap> for AdapterMetrics {
 }
 
 impl AdapterMetrics {
-    pub fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
+    pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner.into_iter() {
             let other_metric = other.inner.remove(&metric_kind);
@@ -37,9 +37,7 @@ impl AdapterMetrics {
             };
             metric_map.insert(metric_kind, combined_metric);
         }
-        for (metric_kind, other_metric) in other.inner.into_iter() {
-            metric_map.insert(metric_kind, other_metric);
-        }
+        metric_map.extend(other.inner.into_iter());
         metric_map.into()
     }
 }

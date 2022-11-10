@@ -4,14 +4,14 @@ pub mod rust;
 
 #[cfg(test)]
 pub(crate) mod test_util {
-    use bencher_json::project::report::{
-        metric_kind::LATENCY_SLUG,
-        new::{AdapterMetrics, AdapterResults},
-    };
+    use bencher_json::project::metric_kind::LATENCY_SLUG;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
-    use crate::Adapter;
+    use crate::{
+        results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
+        Adapter,
+    };
 
     pub fn convert_file_path<A>(file_path: &str) -> AdapterResults
     where

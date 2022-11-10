@@ -1,7 +1,6 @@
-use bencher_json::project::report::new::AdapterResults;
 use nom::branch::alt;
 
-use crate::{Adapter, AdapterError};
+use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError};
 
 use super::{json::parse_json, rust::parse_rust};
 
@@ -17,7 +16,6 @@ impl Adapter for AdapterMagic {
 
 #[cfg(test)]
 mod test {
-
     use super::AdapterMagic;
     use crate::adapters::{json::test_json, rust::test_rust, test_util::convert_file_path};
 

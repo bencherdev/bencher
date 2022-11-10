@@ -20,8 +20,8 @@ impl From<ResultsMap> for AdapterResults {
 }
 
 impl AdapterResults {
-    pub fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
-        let mut benchmarks_map = HashMap::new();
+    pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
+        let mut results_map = HashMap::new();
         for (benchmark_name, metrics) in self.inner.into_iter() {
             let other_metrics = other.inner.remove(&benchmark_name);
             let combined_metrics = if let Some(other_metrics) = other_metrics {
@@ -29,12 +29,10 @@ impl AdapterResults {
             } else {
                 metrics
             };
-            benchmarks_map.insert(benchmark_name, combined_metrics);
+            results_map.insert(benchmark_name, combined_metrics);
         }
-        for (benchmark_name, other_metrics) in other.inner.into_iter() {
-            benchmarks_map.insert(benchmark_name, other_metrics);
-        }
-        benchmarks_map.into()
+        results_map.extend(other.inner.into_iter());
+        results_map.into()
     }
 }
 
@@ -53,7 +51,7 @@ impl std::iter::Sum for AdapterResults {
     {
         iter.into_iter().fold(
             HashMap::new().into(),
-            |acc_map: AdapterResults, next_map| acc_map + next_map,
+            |results: AdapterResults, other_results| results + other_results,
         )
     }
 }
@@ -64,7 +62,7 @@ impl std::ops::Div<usize> for AdapterResults {
     fn div(self, rhs: usize) -> Self::Output {
         self.inner
             .into_iter()
-            .map(|(name, metrics)| (name, metrics / rhs))
+            .map(|(benchmark_name, metrics)| (benchmark_name, metrics / rhs))
             .collect::<ResultsMap>()
             .into()
     }

@@ -15,12 +15,12 @@ pub type MetricKind = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterResultsArray {
-    pub inner: Vec<AdapterResults>,
+    pub results: Vec<AdapterResults>,
 }
 
 impl From<Vec<AdapterResults>> for AdapterResultsArray {
-    fn from(inner: Vec<AdapterResults>) -> Self {
-        Self { inner }
+    fn from(results: Vec<AdapterResults>) -> Self {
+        Self { results }
     }
 }
 
@@ -34,17 +34,17 @@ impl AdapterResultsArray {
     }
 
     fn ord(self, ord_kind: OrdKind) -> Self {
-        let map = self.inner.into_iter().fold(
+        let map = self.results.into_iter().fold(
             HashMap::new().into(),
-            |ord_map: AdapterResults, next_map| {
-                ord_map.combined(next_map, CombinedKind::Ord(ord_kind))
+            |results: AdapterResults, other_results| {
+                results.combined(other_results, CombinedKind::Ord(ord_kind))
             },
         );
         vec![map].into()
     }
 
     pub fn mean(self) -> Self {
-        AdapterResults::mean(self.inner)
+        AdapterResults::mean(self.results)
             .map(|mean| vec![mean])
             .unwrap_or_default()
             .into()
@@ -54,7 +54,7 @@ impl AdapterResultsArray {
         vec![ResultsReducer::from(self)
             .inner
             .into_iter()
-            .map(|(benchmark_name, json_metrics_map)| (benchmark_name, json_metrics_map.median()))
+            .map(|(benchmark_name, results)| (benchmark_name, results.median()))
             .collect::<ResultsMap>()
             .into()]
         .into()

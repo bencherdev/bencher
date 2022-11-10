@@ -1,10 +1,7 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use bencher_json::project::report::{
-    metric_kind::LATENCY_SLUG,
-    new::{AdapterMetrics, AdapterResults},
-    JsonMetric,
-};
+use bencher_json::{project::metric_kind::LATENCY_SLUG, JsonMetric};
+use literally::hmap;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
@@ -15,7 +12,10 @@ use nom::{
     IResult,
 };
 
-use crate::{Adapter, AdapterError};
+use crate::{
+    results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
+    Adapter, AdapterError,
+};
 
 pub struct AdapterRust;
 
@@ -91,16 +91,21 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> 
                 many0(line_ending),
             )),
         )),
-        |(_, _, benches, _)| {
-            let mut benchmarks = HashMap::new();
-            for bench in benches {
-                if let Some((benchmark, latency)) = to_latency(bench) {
-                    let mut inner = HashMap::new();
-                    inner.insert(LATENCY_SLUG.into(), latency);
-                    benchmarks.insert(benchmark, AdapterMetrics { inner });
+        |(_, _, benchmarks, _)| {
+            let mut results = HashMap::new();
+            for benchmark in benchmarks {
+                if let Some((benchmark_name, metric)) = to_latency(benchmark) {
+                    results.insert(
+                        benchmark_name,
+                        AdapterMetrics {
+                            inner: hmap! {
+                                LATENCY_SLUG => metric
+                            },
+                        },
+                    );
                 }
             }
-            benchmarks
+            results
         },
     )(input)
 }
@@ -237,11 +242,13 @@ fn to_f64(input: Vec<&str>) -> f64 {
 
 #[cfg(test)]
 pub(crate) mod test_rust {
-    use bencher_json::project::report::new::AdapterResults;
     use pretty_assertions::assert_eq;
 
     use super::AdapterRust;
-    use crate::adapters::test_util::{convert_file_path, validate_metrics};
+    use crate::{
+        adapters::test_util::{convert_file_path, validate_metrics},
+        results::adapter_results::AdapterResults,
+    };
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);

@@ -13,35 +13,35 @@ pub struct ResultsReducer {
 }
 
 impl From<AdapterResultsArray> for ResultsReducer {
-    fn from(benchmarks: AdapterResultsArray) -> Self {
+    fn from(results_array: AdapterResultsArray) -> Self {
         let mut perf_list_map = Self::default();
-        for benchmarks_map in benchmarks.inner.into_iter() {
-            perf_list_map.reduce(benchmarks_map);
+        for results in results_array.results.into_iter() {
+            perf_list_map.reduce(results);
         }
         perf_list_map
     }
 }
 
 impl ResultsReducer {
-    fn reduce(&mut self, benchmarks_map: AdapterResults) {
-        for (benchmark_name, metrics) in benchmarks_map.inner.into_iter() {
-            if let Some(metrics_list) = self.inner.get_mut(&benchmark_name) {
+    fn reduce(&mut self, results: AdapterResults) {
+        for (benchmark_name, metrics) in results.inner.into_iter() {
+            if let Some(metric_kind_map) = self.inner.get_mut(&benchmark_name) {
                 for (metric_kind, metric) in metrics.inner {
-                    if let Some(list) = metrics_list.inner.get_mut(&metric_kind) {
+                    if let Some(list) = metric_kind_map.inner.get_mut(&metric_kind) {
                         list.push(metric);
                     } else {
-                        metrics_list.inner.insert(metric_kind, vec![metric]);
+                        metric_kind_map.inner.insert(metric_kind, vec![metric]);
                     }
                 }
             } else {
-                let mut metrics_list = HashMap::new();
+                let mut metric_kind_map = HashMap::new();
                 for (metric_kind, metric) in metrics.inner {
-                    metrics_list.insert(metric_kind, vec![metric]);
+                    metric_kind_map.insert(metric_kind, vec![metric]);
                 }
                 self.inner.insert(
                     benchmark_name,
                     MetricKindMap {
-                        inner: metrics_list,
+                        inner: metric_kind_map,
                     },
                 );
             }

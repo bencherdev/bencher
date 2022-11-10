@@ -1,4 +1,3 @@
-use bencher_json::project::report::new::AdapterResults;
 use nom::{
     character::complete::anychar,
     combinator::{eof, map_res},
@@ -6,7 +5,7 @@ use nom::{
     IResult,
 };
 
-use crate::{Adapter, AdapterError};
+use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError};
 
 pub struct AdapterJson;
 
@@ -26,11 +25,13 @@ pub fn parse_json(input: &str) -> IResult<&str, AdapterResults> {
 
 #[cfg(test)]
 pub(crate) mod test_json {
-    use bencher_json::project::report::new::AdapterResults;
     use pretty_assertions::assert_eq;
 
     use super::AdapterJson;
-    use crate::adapters::test_util::{convert_file_path, validate_metrics};
+    use crate::{
+        adapters::test_util::{convert_file_path, validate_metrics},
+        results::adapter_results::AdapterResults,
+    };
 
     fn convert_json(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/json/report_{}.json", suffix);
