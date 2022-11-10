@@ -1,29 +1,29 @@
 use std::collections::HashMap;
 
+use bencher_json::{project::metric::Median, JsonMetric};
+
 use super::{
-    benchmarks::{JsonBenchmarks, JsonBenchmarksMap},
-    median::Median,
-    metric::JsonMetric,
-    metrics::JsonMetrics,
+    adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,
+    BenchmarkName, MetricKind,
 };
 
 #[derive(Debug, Clone, Default)]
-pub struct JsonMetricsMap {
-    pub inner: HashMap<String, JsonMetricsList>,
+pub struct ResultsReducer {
+    pub inner: HashMap<BenchmarkName, MetricKindMap>,
 }
 
-impl From<JsonBenchmarks> for JsonMetricsMap {
-    fn from(benchmarks: JsonBenchmarks) -> Self {
+impl From<AdapterResultsArray> for ResultsReducer {
+    fn from(benchmarks: AdapterResultsArray) -> Self {
         let mut perf_list_map = Self::default();
         for benchmarks_map in benchmarks.inner.into_iter() {
-            perf_list_map.append(benchmarks_map);
+            perf_list_map.reduce(benchmarks_map);
         }
         perf_list_map
     }
 }
 
-impl JsonMetricsMap {
-    fn append(&mut self, benchmarks_map: JsonBenchmarksMap) {
+impl ResultsReducer {
+    fn reduce(&mut self, benchmarks_map: AdapterResults) {
         for (benchmark_name, metrics) in benchmarks_map.inner.into_iter() {
             if let Some(metrics_list) = self.inner.get_mut(&benchmark_name) {
                 for (metric_kind, metric) in metrics.inner {
@@ -40,7 +40,7 @@ impl JsonMetricsMap {
                 }
                 self.inner.insert(
                     benchmark_name,
-                    JsonMetricsList {
+                    MetricKindMap {
                         inner: metrics_list,
                     },
                 );
@@ -50,12 +50,12 @@ impl JsonMetricsMap {
 }
 
 #[derive(Debug, Clone)]
-pub struct JsonMetricsList {
-    pub inner: HashMap<String, Vec<JsonMetric>>,
+pub struct MetricKindMap {
+    pub inner: HashMap<MetricKind, Vec<JsonMetric>>,
 }
 
-impl JsonMetricsList {
-    pub(crate) fn median(self) -> JsonMetrics {
+impl MetricKindMap {
+    pub(crate) fn median(self) -> AdapterMetrics {
         let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner.into_iter() {
             if let Some(median) = JsonMetric::median(metric) {

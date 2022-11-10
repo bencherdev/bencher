@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::project::report::new::JsonMetrics;
+use bencher_json::project::report::new::AdapterMetrics;
 use diesel::{RunQueryDsl, SqliteConnection};
 
 use crate::{
@@ -52,7 +52,7 @@ impl Metrics {
         conn: &mut SqliteConnection,
         iteration: usize,
         benchmark_name: String,
-        json_metrics: JsonMetrics,
+        json_metrics: AdapterMetrics,
     ) -> Result<(), ApiError> {
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
 

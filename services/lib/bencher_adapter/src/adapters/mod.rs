@@ -6,14 +6,14 @@ pub mod rust;
 pub(crate) mod test_util {
     use bencher_json::project::report::{
         metric_kind::LATENCY_SLUG,
-        new::{JsonBenchmarksMap, JsonMetrics},
+        new::{AdapterMetrics, AdapterResults},
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
     use crate::Adapter;
 
-    pub fn convert_file_path<A>(file_path: &str) -> JsonBenchmarksMap
+    pub fn convert_file_path<A>(file_path: &str) -> AdapterResults
     where
         A: Adapter,
     {
@@ -23,7 +23,7 @@ pub(crate) mod test_util {
     }
 
     pub fn validate_metrics(
-        metrics: &JsonMetrics,
+        metrics: &AdapterMetrics,
         value: f64,
         lower_bound: Option<f64>,
         upper_bound: Option<f64>,

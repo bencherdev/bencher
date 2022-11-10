@@ -2,7 +2,7 @@ use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
 use bencher_json::{
-    project::report::new::JsonBenchmarks, JsonBranch, JsonNewReport, JsonReport, ResourceId,
+    project::report::new::AdapterResultsArray, JsonBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
 use clap::ValueEnum;
@@ -252,7 +252,7 @@ impl From<CliRunFold> for Fold {
 }
 
 impl Fold {
-    fn fold(&self, benchmarks: JsonBenchmarks) -> JsonBenchmarks {
+    fn fold(&self, benchmarks: AdapterResultsArray) -> AdapterResultsArray {
         if benchmarks.inner.is_empty() {
             return benchmarks;
         }

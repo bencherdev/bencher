@@ -1,5 +1,5 @@
 use bencher_adapter::Adapter;
-use bencher_json::project::report::{new::JsonBenchmarksMap, JsonAdapter};
+use bencher_json::project::report::{new::AdapterResults, JsonAdapter};
 
 use crate::{bencher::sub::project::run::Output, cli::project::run::CliRunAdapter, CliError};
 
@@ -32,7 +32,7 @@ impl From<RunAdapter> for JsonAdapter {
 }
 
 impl RunAdapter {
-    pub fn convert(&self, output: &Output) -> Result<JsonBenchmarksMap, CliError> {
+    pub fn convert(&self, output: &Output) -> Result<AdapterResults, CliError> {
         let output_str = output.as_str();
         match &self {
             Self::Magic => bencher_adapter::AdapterMagic::convert(output_str),

@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 mod mean;
 mod median;
 
-use mean::Mean;
-use median::Median;
+pub use mean::Mean;
+pub use median::Median;
 
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

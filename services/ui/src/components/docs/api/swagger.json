@@ -4462,7 +4462,7 @@
           "uuid"
         ]
       },
-      "JsonBenchmarksMap": {
+      "AdapterResults": {
         "type": "object"
       },
       "JsonBranch": {
@@ -4668,7 +4668,7 @@
           "uuid"
         ]
       },
-      "JsonMetrics": {
+      "AdapterMetrics": {
         "type": "object"
       },
       "JsonNewBranch": {
@@ -4776,7 +4776,7 @@
           "benchmarks": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonBenchmarksMap"
+              "$ref": "#/components/schemas/AdapterResults"
             }
           },
           "branch": {

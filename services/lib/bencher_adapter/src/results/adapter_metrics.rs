@@ -1,31 +1,26 @@
 use std::collections::HashMap;
 
-#[cfg(feature = "schema")]
-use schemars::JsonSchema;
+use bencher_json::JsonMetric;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    benchmarks::{CombinedKind, OrdKind},
-    metric::JsonMetric,
-};
+use super::{CombinedKind, MetricKind, OrdKind};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonMetrics {
+pub struct AdapterMetrics {
     #[serde(flatten)]
-    pub inner: HashMap<MetricKind, JsonMetric>,
+    pub inner: MetricsMap,
 }
 
-pub type MetricKind = String;
+pub type MetricsMap = HashMap<MetricKind, JsonMetric>;
 
-impl From<HashMap<MetricKind, JsonMetric>> for JsonMetrics {
-    fn from(inner: HashMap<MetricKind, JsonMetric>) -> Self {
+impl From<MetricsMap> for AdapterMetrics {
+    fn from(inner: MetricsMap) -> Self {
         Self { inner }
     }
 }
 
-impl JsonMetrics {
-    pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
+impl AdapterMetrics {
+    pub fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut metric_map = HashMap::new();
         for (metric_kind, metric) in self.inner.into_iter() {
             let other_metric = other.inner.remove(&metric_kind);
@@ -49,7 +44,7 @@ impl JsonMetrics {
     }
 }
 
-impl std::ops::Div<usize> for JsonMetrics {
+impl std::ops::Div<usize> for AdapterMetrics {
     type Output = Self;
 
     fn div(self, rhs: usize) -> Self::Output {
