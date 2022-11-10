@@ -14,11 +14,11 @@ pub struct ResultsReducer {
 
 impl From<AdapterResultsArray> for ResultsReducer {
     fn from(results_array: AdapterResultsArray) -> Self {
-        let mut perf_list_map = Self::default();
+        let mut results_reducer = Self::default();
         for results in results_array.inner.into_iter() {
-            perf_list_map.reduce(results);
+            results_reducer.reduce(results);
         }
-        perf_list_map
+        results_reducer
     }
 }
 
