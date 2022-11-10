@@ -34,6 +34,8 @@ pub enum ApiError {
     CssInline(#[from] css_inline::InlineError),
     #[error("Failed to run stats: {0}")]
     Statrs(#[from] statrs::StatsError),
+    #[error("Failed to run adapter: {0}")]
+    Adapter(#[from] bencher_adapter::AdapterError),
     #[error("Failed to find env var: {0}")]
     MissingEnvVar(String),
     #[error("Failed to parse config string: {0}")]
@@ -122,8 +124,8 @@ pub enum ApiError {
     Admin(i32),
     #[error("Failed to parse organization role: {0}")]
     OrganizationRole(String),
-    #[error("Failed to load adapter: {0}")]
-    Adapter(i32),
+    #[error("Failed to recognize adapter integer: {0}")]
+    AdapterInt(i32),
     #[error("Failed to load statistic kind: {0}")]
     StatisticKind(i32),
 }

@@ -9,6 +9,7 @@ WORKDIR /usr/src/services
 RUN cargo init cli
 
 WORKDIR /usr/src/services/lib
+COPY services/lib/bencher_adapter bencher_adapter
 COPY services/lib/bencher_json bencher_json
 COPY services/lib/bencher_rbac bencher_rbac
 

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bencher_adapter::AdapterResultsArray;
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -18,7 +19,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        report::{metrics::Metrics, InsertReport, QueryReport},
+        report::{metrics::ReportMetrics, InsertReport, QueryReport},
         version::InsertVersion,
         QueryProject,
     },
@@ -204,13 +205,29 @@ async fn post_inner(
         .first::<QueryReport>(conn)
         .map_err(api_error!())?;
 
-    let mut metrics = Metrics::new(project_id, branch_id, testbed_id, query_report.id)?;
+    let results_array = AdapterResultsArray::try_from(
+        json_report
+            .results
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<&str>>()
+            .as_ref(),
+    )?;
+    let mut report_metrics =
+        ReportMetrics::new(project_id, branch_id, testbed_id, query_report.id)?;
 
-    for (iteration, benchmark) in json_report.results.into_iter().enumerate() {
-        for (benchmark_name, json_metrics) in benchmark.inner {
-            metrics.insert(conn, iteration, benchmark_name, json_metrics)?;
+    if let Some(fold) = json_report.fold {
+        let results = results_array.fold(fold);
+        for (benchmark_name, metrics) in results.inner {
+            report_metrics.insert(conn, 0, benchmark_name, metrics)?;
         }
-    }
+    } else {
+        for (iteration, benchmark) in results_array.inner.into_iter().enumerate() {
+            for (benchmark_name, json_metrics) in benchmark.inner {
+                report_metrics.insert(conn, iteration, benchmark_name, json_metrics)?;
+            }
+        }
+    };
 
     query_report.into_json(conn)
 }

@@ -18,8 +18,8 @@ pub mod detector;
 
 use detector::Detector;
 
-/// Metrics is used to add benchmarks, perf, metric kinds, metrics, and alerts.
-pub struct Metrics {
+/// ReportMetrics is used to add benchmarks, perf, metric kinds, metrics, and alerts.
+pub struct ReportMetrics {
     pub project_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -29,7 +29,7 @@ pub struct Metrics {
     pub detector_cache: HashMap<i32, Option<Detector>>,
 }
 
-impl Metrics {
+impl ReportMetrics {
     pub fn new(
         project_id: i32,
         branch_id: i32,
