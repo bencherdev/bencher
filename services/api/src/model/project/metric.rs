@@ -1,4 +1,4 @@
-use bencher_json::project::report::JsonMetric;
+use bencher_json::JsonMetric;
 use diesel::Insertable;
 use uuid::Uuid;
 

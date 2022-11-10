@@ -18,7 +18,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        report::{metrics::Metrics, InsertReport, QueryReport},
+        report::{results::ReportResults, InsertReport, QueryReport},
         version::InsertVersion,
         QueryProject,
     },
@@ -204,13 +204,14 @@ async fn post_inner(
         .first::<QueryReport>(conn)
         .map_err(api_error!())?;
 
-    let mut metrics = Metrics::new(project_id, branch_id, testbed_id, query_report.id)?;
-
-    for (iteration, benchmark) in json_report.benchmarks.inner.into_iter().enumerate() {
-        for (benchmark_name, json_metrics) in benchmark.inner {
-            metrics.insert(conn, iteration, benchmark_name, json_metrics)?;
-        }
-    }
+    // Process and record the report results
+    let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
+    report_results.process(
+        conn,
+        json_report.adapter,
+        json_report.fold,
+        &json_report.results,
+    )?;
 
     query_report.into_json(conn)
 }

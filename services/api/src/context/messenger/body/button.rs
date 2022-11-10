@@ -104,6 +104,9 @@ impl FmtBody for ButtonBody {
                         <div class=\"column is-half\">
                           <div class=\"content has-text-centered\">
                             <p>
+                              <a href=\"{button_url}\" target=\"_blank\">Click Here to {button_text}</a>
+                            </p>
+                            <p>
                               <small>
                                 <code id=\"clipboard-target\" style=\"overflow-wrap:break-word;\">
                                     {clipboard_target}

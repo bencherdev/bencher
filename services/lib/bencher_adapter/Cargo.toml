@@ -10,6 +10,7 @@ edition.workspace = true
 # Local
 bencher_json = { path = "../bencher_json" }
 # Workspace
+literally.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

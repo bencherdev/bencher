@@ -1,10 +1,7 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use bencher_json::project::report::{
-    metric_kind::LATENCY_SLUG,
-    new::{JsonBenchmarksMap, JsonMetrics},
-    JsonMetric,
-};
+use bencher_json::{project::metric_kind::LATENCY_SLUG, JsonMetric};
+use literally::hmap;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
@@ -15,12 +12,15 @@ use nom::{
     IResult,
 };
 
-use crate::{Adapter, AdapterError};
+use crate::{
+    results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
+    Adapter, AdapterError,
+};
 
 pub struct AdapterRust;
 
 impl Adapter for AdapterRust {
-    fn convert(input: &str) -> Result<JsonBenchmarksMap, AdapterError> {
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         parse_rust(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
@@ -34,14 +34,14 @@ enum Test {
     Ok(JsonMetric),
 }
 
-pub fn parse_rust(input: &str) -> IResult<&str, JsonBenchmarksMap> {
+pub fn parse_rust(input: &str) -> IResult<&str, AdapterResults> {
     fold_many1(parse_running, HashMap::new, |benchmarks, new_benchmarks| {
         benchmarks.into_iter().chain(new_benchmarks).collect()
     })(input)
     .map(|(remainder, benchmarks)| (remainder, benchmarks.into()))
 }
 
-fn parse_running(input: &str) -> IResult<&str, HashMap<String, JsonMetrics>> {
+fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> {
     map(
         tuple((
             alt((
@@ -91,16 +91,21 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, JsonMetrics>> {
                 many0(line_ending),
             )),
         )),
-        |(_, _, benches, _)| {
-            let mut benchmarks = HashMap::new();
-            for bench in benches {
-                if let Some((benchmark, latency)) = to_latency(bench) {
-                    let mut inner = HashMap::new();
-                    inner.insert(LATENCY_SLUG.into(), latency);
-                    benchmarks.insert(benchmark, JsonMetrics { inner });
+        |(_, _, benchmarks, _)| {
+            let mut results = HashMap::new();
+            for benchmark in benchmarks {
+                if let Some((benchmark_name, metric)) = to_latency(benchmark) {
+                    results.insert(
+                        benchmark_name,
+                        AdapterMetrics {
+                            inner: hmap! {
+                                LATENCY_SLUG => metric
+                            },
+                        },
+                    );
                 }
             }
-            benchmarks
+            results
         },
     )(input)
 }
@@ -237,23 +242,25 @@ fn to_f64(input: Vec<&str>) -> f64 {
 
 #[cfg(test)]
 pub(crate) mod test_rust {
-    use bencher_json::project::report::new::JsonBenchmarksMap;
     use pretty_assertions::assert_eq;
 
     use super::AdapterRust;
-    use crate::adapters::test_util::{convert_file_path, validate_metrics};
+    use crate::{
+        adapters::test_util::{convert_file_path, validate_metrics},
+        results::adapter_results::AdapterResults,
+    };
 
-    fn convert_rust_bench(suffix: &str) -> JsonBenchmarksMap {
+    fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);
         convert_file_path::<AdapterRust>(&file_path)
     }
 
-    fn convert_rust_test(suffix: &str) -> JsonBenchmarksMap {
+    fn convert_rust_test(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/cargo_test_{}.txt", suffix);
         convert_file_path::<AdapterRust>(&file_path)
     }
 
-    fn validate_bench_metrics(benchmarks_map: &JsonBenchmarksMap, key: &str) {
+    fn validate_bench_metrics(benchmarks_map: &AdapterResults, key: &str) {
         let metrics = benchmarks_map.inner.get(key).unwrap();
         validate_metrics(metrics, 3_161.0, Some(975.0), Some(975.0));
     }
@@ -284,7 +291,7 @@ pub(crate) mod test_rust {
         validate_adapter_rust_many(benchmarks_map);
     }
 
-    pub fn validate_adapter_rust_many(benchmarks_map: JsonBenchmarksMap) {
+    pub fn validate_adapter_rust_many(benchmarks_map: AdapterResults) {
         assert_eq!(benchmarks_map.inner.len(), 6);
         validate_bench_metrics(&benchmarks_map, "tests::benchmark");
         validate_bench_metrics(&benchmarks_map, "tests::other_benchmark");

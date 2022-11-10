@@ -130,6 +130,7 @@ name = "bencher_adapter"
 version = "0.2.22"
 dependencies = [
  "bencher_json",
+ "literally",
  "nom",
  "ordered-float",
  "pretty_assertions",
@@ -142,6 +143,7 @@ dependencies = [
 name = "bencher_api"
 version = "0.2.22"
 dependencies = [
+ "bencher_adapter",
  "bencher_json",
  "bencher_rbac",
  "chrono",

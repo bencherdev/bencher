@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use bencher_json::project::report::new::JsonMetrics;
+use bencher_adapter::{
+    results::adapter_metrics::AdapterMetrics, AdapterResults, AdapterResultsArray,
+};
+use bencher_json::project::report::{JsonAdapter, JsonFold};
 use diesel::{RunQueryDsl, SqliteConnection};
 
 use crate::{
@@ -18,8 +21,8 @@ pub mod detector;
 
 use detector::Detector;
 
-/// Metrics is used to add benchmarks, perf, metric kinds, metrics, and alerts.
-pub struct Metrics {
+/// ReportResults is used to add benchmarks, perf, metric kinds, metrics, and alerts.
+pub struct ReportResults {
     pub project_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -29,14 +32,9 @@ pub struct Metrics {
     pub detector_cache: HashMap<i32, Option<Detector>>,
 }
 
-impl Metrics {
-    pub fn new(
-        project_id: i32,
-        branch_id: i32,
-        testbed_id: i32,
-        report_id: i32,
-    ) -> Result<Self, ApiError> {
-        Ok(Self {
+impl ReportResults {
+    pub fn new(project_id: i32, branch_id: i32, testbed_id: i32, report_id: i32) -> Self {
+        Self {
             project_id,
             branch_id,
             testbed_id,
@@ -44,15 +42,55 @@ impl Metrics {
             benchmark_cache: HashMap::new(),
             metric_kind_cache: HashMap::new(),
             detector_cache: HashMap::new(),
-        })
+        }
     }
 
-    pub fn insert(
+    pub fn process(
+        &mut self,
+        conn: &mut SqliteConnection,
+        adapter: Option<JsonAdapter>,
+        fold: Option<JsonFold>,
+        results_array: &[String],
+    ) -> Result<(), ApiError> {
+        let results_array = AdapterResultsArray::try_from((
+            adapter,
+            results_array
+                .iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>()
+                .as_ref(),
+        ))?;
+
+        if let Some(fold) = fold {
+            let results = results_array.fold(fold);
+            self.results(conn, 0, results)?;
+        } else {
+            for (iteration, results) in results_array.inner.into_iter().enumerate() {
+                self.results(conn, iteration, results)?;
+            }
+        };
+
+        Ok(())
+    }
+
+    fn results(
+        &mut self,
+        conn: &mut SqliteConnection,
+        iteration: usize,
+        results: AdapterResults,
+    ) -> Result<(), ApiError> {
+        for (benchmark_name, metrics) in results.inner {
+            self.metrics(conn, iteration, benchmark_name, metrics)?;
+        }
+        Ok(())
+    }
+
+    fn metrics(
         &mut self,
         conn: &mut SqliteConnection,
         iteration: usize,
         benchmark_name: String,
-        json_metrics: JsonMetrics,
+        metrics: AdapterMetrics,
     ) -> Result<(), ApiError> {
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
 
@@ -63,7 +101,7 @@ impl Metrics {
             .map_err(api_error!())?;
         let perf_id = QueryPerf::get_id(conn, &insert_perf.uuid)?;
 
-        for (metric_kind_key, metric) in json_metrics.inner {
+        for (metric_kind_key, metric) in metrics.inner {
             let metric_kind_id = self.metric_kind_id(conn, metric_kind_key)?;
 
             let insert_metric = InsertMetric::from_json(perf_id, metric_kind_id, metric);
@@ -73,6 +111,7 @@ impl Metrics {
                 .map_err(api_error!())?;
 
             if let Some(detector) = self.detector(conn, metric_kind_id)? {
+                // TODO pull query to here from detector
                 detector.detect(conn, perf_id, benchmark_id, metric)?;
             }
         }

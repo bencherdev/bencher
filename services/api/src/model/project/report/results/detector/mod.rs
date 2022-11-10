@@ -1,4 +1,4 @@
-use bencher_json::project::report::JsonMetric;
+use bencher_json::JsonMetric;
 use diesel::{RunQueryDsl, SqliteConnection};
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;

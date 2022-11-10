@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::ResourceId;
 
-use super::report::JsonMetric;
+use super::metric::JsonMetric;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

@@ -13,6 +13,8 @@ pub use project::{
     alert::JsonAlert,
     benchmark::JsonBenchmark,
     branch::{JsonBranch, JsonNewBranch},
+    metric::JsonMetric,
+    metric_kind::{JsonMetricKind, JsonNewMetricKind},
     perf::{JsonPerf, JsonPerfQuery},
     report::{JsonNewReport, JsonReport},
     testbed::{JsonNewTestbed, JsonTestbed},
