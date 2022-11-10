@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{adapter_metrics::AdapterMetrics, BenchmarkName, CombinedKind};
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {
     #[serde(flatten)]
     pub inner: ResultsMap,

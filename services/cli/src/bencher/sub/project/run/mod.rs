@@ -1,9 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{
-    project::report::new::AdapterResultsArray, JsonBranch, JsonNewReport, JsonReport, ResourceId,
-};
+use bencher_json::{JsonBranch, JsonNewReport, JsonReport, ResourceId};
 use chrono::Utc;
 use clap::ValueEnum;
 use git2::Oid;
@@ -11,14 +9,16 @@ use uuid::Uuid;
 
 use crate::{
     bencher::{locality::Locality, wide::Wide},
-    cli::project::run::{CliRun, CliRunAdapter, CliRunFold},
+    cli::project::run::{CliRun, CliRunAdapter},
     CliError,
 };
 
 mod adapter;
+mod fold;
 mod runner;
 
 use adapter::RunAdapter;
+use fold::Fold;
 pub use runner::Output;
 use runner::Runner;
 
@@ -39,7 +39,7 @@ pub struct Run {
     branch: Branch,
     hash: Option<Oid>,
     testbed: Uuid,
-    adapter: RunAdapter,
+    adapter: Option<RunAdapter>,
     iter: usize,
     fold: Option<Fold>,
     err: bool,
@@ -75,7 +75,7 @@ impl TryFrom<CliRun> for Run {
             branch: map_branch(branch, if_branch)?,
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
-            adapter: unwrap_adapter(adapter),
+            adapter: map_adapter(adapter),
             iter: iter.unwrap_or(1),
             fold: fold.map(Into::into),
             err,
@@ -125,15 +125,17 @@ fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, CliError> {
     })
 }
 
-fn unwrap_adapter(adapter: Option<CliRunAdapter>) -> RunAdapter {
+fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
     if let Some(adapter) = adapter {
-        adapter.into()
-    } else if let Ok(adapter) = std::env::var(BENCHER_ADAPTER) {
-        CliRunAdapter::from_str(&adapter, true)
-            .map(Into::into)
-            .unwrap_or_default()
+        Some(adapter.into())
+    } else if let Ok(adapter_str) = std::env::var(BENCHER_ADAPTER) {
+        if let Ok(adapter) = CliRunAdapter::from_str(&adapter_str, false) {
+            Some(adapter.into())
+        } else {
+            None
+        }
     } else {
-        RunAdapter::default()
+        None
     }
 }
 
@@ -153,34 +155,27 @@ impl SubCmd for Run {
 
         let start_time = Utc::now();
 
-        let mut benchmarks = Vec::with_capacity(self.iter);
-        let mut outputs = Vec::with_capacity(self.iter);
+        let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
             let output = self.runner.run()?;
-            let benchmarks_map = self.adapter.convert(&output)?;
-            benchmarks.push(benchmarks_map);
-            outputs.push(output);
+            results.push(output.result);
         }
-        let mut benchmarks = benchmarks.into();
 
-        if let Some(ref fold) = self.fold {
-            benchmarks = fold.fold(benchmarks)
+        // TODO disable when quiet
+        for result in &results {
+            println!("{result}");
         }
 
         let report = JsonNewReport {
             branch,
             hash: self.hash.map(|hash| hash.to_string()),
             testbed: self.testbed,
-            adapter: self.adapter.into(),
             start_time,
             end_time: Utc::now(),
-            benchmarks,
+            adapter: self.adapter.map(Into::into),
+            fold: self.fold.map(Into::into),
+            results,
         };
-
-        // TODO disable when quiet
-        for output in outputs {
-            println!("{}", output.as_str());
-        }
 
         // TODO disable when quiet
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -230,38 +225,4 @@ async fn if_branch(
 
     println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
     Ok(None)
-}
-
-#[derive(Debug)]
-enum Fold {
-    Min,
-    Max,
-    Mean,
-    Median,
-}
-
-impl From<CliRunFold> for Fold {
-    fn from(fold: CliRunFold) -> Self {
-        match fold {
-            CliRunFold::Min => Self::Min,
-            CliRunFold::Max => Self::Max,
-            CliRunFold::Mean => Self::Mean,
-            CliRunFold::Median => Self::Median,
-        }
-    }
-}
-
-impl Fold {
-    fn fold(&self, benchmarks: AdapterResultsArray) -> AdapterResultsArray {
-        if benchmarks.inner.is_empty() {
-            return benchmarks;
-        }
-
-        match self {
-            Self::Min => benchmarks.min(),
-            Self::Max => benchmarks.max(),
-            Self::Mean => benchmarks.mean(),
-            Self::Median => benchmarks.median(),
-        }
-    }
 }
