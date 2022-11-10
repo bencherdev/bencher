@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use bencher_adapter::{AdapterResults, AdapterResultsArray};
-use bencher_json::project::report::{new::AdapterMetrics, JsonFold};
+use bencher_adapter::{
+    results::adapter_metrics::AdapterMetrics, AdapterResults, AdapterResultsArray,
+};
+use bencher_json::project::report::JsonFold;
 use diesel::{RunQueryDsl, SqliteConnection};
 
 use crate::{
@@ -19,8 +21,8 @@ pub mod detector;
 
 use detector::Detector;
 
-/// ReportMetrics is used to add benchmarks, perf, metric kinds, metrics, and alerts.
-pub struct ReportMetrics {
+/// ReportResults is used to add benchmarks, perf, metric kinds, metrics, and alerts.
+pub struct ReportResults {
     pub project_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -30,7 +32,7 @@ pub struct ReportMetrics {
     pub detector_cache: HashMap<i32, Option<Detector>>,
 }
 
-impl ReportMetrics {
+impl ReportResults {
     pub fn new(project_id: i32, branch_id: i32, testbed_id: i32, report_id: i32) -> Self {
         Self {
             project_id,
@@ -43,7 +45,7 @@ impl ReportMetrics {
         }
     }
 
-    pub fn process_results(
+    pub fn process(
         &mut self,
         conn: &mut SqliteConnection,
         results_array: &[String],

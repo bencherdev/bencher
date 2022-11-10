@@ -18,7 +18,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        report::{metrics::ReportMetrics, InsertReport, QueryReport},
+        report::{results::ReportResults, InsertReport, QueryReport},
         version::InsertVersion,
         QueryProject,
     },
@@ -204,8 +204,9 @@ async fn post_inner(
         .first::<QueryReport>(conn)
         .map_err(api_error!())?;
 
-    let mut report_metrics = ReportMetrics::new(project_id, branch_id, testbed_id, query_report.id);
-    report_metrics.process_results(conn, &json_report.results, json_report.fold)?;
+    // Process and record the report results
+    let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
+    report_results.process(conn, &json_report.results, json_report.fold)?;
 
     query_report.into_json(conn)
 }

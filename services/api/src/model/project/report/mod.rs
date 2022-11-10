@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::report::{
-        data::{JsonReportAlert, JsonReportAlerts, JsonReportResult, JsonReportResults},
-        JsonAdapter,
-    },
+    project::report::{JsonAdapter, JsonReportAlerts, JsonReportResults},
     JsonNewReport, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
@@ -19,7 +16,7 @@ use crate::{
     util::error::database_map, ApiError,
 };
 
-pub mod metrics;
+pub mod results;
 
 #[derive(Queryable)]
 pub struct QueryReport {
@@ -179,7 +176,7 @@ impl InsertReport {
             user_id,
             version_id,
             testbed_id,
-            adapter: Adapter::from(&report.adapter) as i32,
+            adapter: Adapter::from(&report.adapter.unwrap_or_default()) as i32,
             start_time: report.start_time.timestamp_nanos(),
             end_time: report.end_time.timestamp_nanos(),
         }

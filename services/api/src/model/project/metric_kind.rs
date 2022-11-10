@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    project::report::{metric_kind::JsonNewMetricKind, JsonMetricKind},
-    ResourceId,
-};
+use bencher_json::{JsonMetricKind, JsonNewMetricKind, ResourceId};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
