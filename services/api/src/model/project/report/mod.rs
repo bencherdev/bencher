@@ -130,7 +130,7 @@ impl TryFrom<i32> for Adapter {
             MAGIC_INT => Ok(Self::Magic),
             JSON_INT => Ok(Self::Json),
             RUST_INT => Ok(Self::Rust),
-            _ => Err(ApiError::Adapter(adapter)),
+            _ => Err(ApiError::AdapterInt(adapter)),
         }
     }
 }

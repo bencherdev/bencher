@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use bencher_adapter::AdapterResultsArray;
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -205,29 +204,8 @@ async fn post_inner(
         .first::<QueryReport>(conn)
         .map_err(api_error!())?;
 
-    let results_array = AdapterResultsArray::try_from(
-        json_report
-            .results
-            .iter()
-            .map(AsRef::as_ref)
-            .collect::<Vec<&str>>()
-            .as_ref(),
-    )?;
-    let mut report_metrics =
-        ReportMetrics::new(project_id, branch_id, testbed_id, query_report.id)?;
-
-    if let Some(fold) = json_report.fold {
-        let results = results_array.fold(fold);
-        for (benchmark_name, metrics) in results.inner {
-            report_metrics.insert(conn, 0, benchmark_name, metrics)?;
-        }
-    } else {
-        for (iteration, benchmark) in results_array.inner.into_iter().enumerate() {
-            for (benchmark_name, json_metrics) in benchmark.inner {
-                report_metrics.insert(conn, iteration, benchmark_name, json_metrics)?;
-            }
-        }
-    };
+    let mut report_metrics = ReportMetrics::new(project_id, branch_id, testbed_id, query_report.id);
+    report_metrics.process_results(conn, &json_report.results, json_report.fold)?;
 
     query_report.into_json(conn)
 }
