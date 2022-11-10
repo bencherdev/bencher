@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bencher_adapter::{
     results::adapter_metrics::AdapterMetrics, AdapterResults, AdapterResultsArray,
 };
-use bencher_json::project::report::JsonFold;
+use bencher_json::project::report::{JsonAdapter, JsonFold};
 use diesel::{RunQueryDsl, SqliteConnection};
 
 use crate::{
@@ -48,16 +48,18 @@ impl ReportResults {
     pub fn process(
         &mut self,
         conn: &mut SqliteConnection,
-        results_array: &[String],
+        adapter: Option<JsonAdapter>,
         fold: Option<JsonFold>,
+        results_array: &[String],
     ) -> Result<(), ApiError> {
-        let results_array = AdapterResultsArray::try_from(
+        let results_array = AdapterResultsArray::try_from((
+            adapter,
             results_array
                 .iter()
                 .map(AsRef::as_ref)
                 .collect::<Vec<&str>>()
                 .as_ref(),
-        )?;
+        ))?;
 
         if let Some(fold) = fold {
             let results = results_array.fold(fold);

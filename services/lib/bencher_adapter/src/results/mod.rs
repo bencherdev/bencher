@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
-use bencher_json::project::{metric::Mean, report::JsonFold};
-use serde::{Deserialize, Serialize};
+use bencher_json::project::{
+    metric::Mean,
+    report::{JsonAdapter, JsonFold},
+};
+
+use crate::Adapter;
+use crate::AdapterError;
 
 pub mod adapter_metrics;
 pub mod adapter_results;
@@ -10,12 +15,10 @@ pub mod results_reducer;
 use adapter_results::{AdapterResults, ResultsMap};
 use results_reducer::ResultsReducer;
 
-use crate::AdapterError;
-
 pub type BenchmarkName = String;
 pub type MetricKind = String;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct AdapterResultsArray {
     pub inner: ResultsArray,
 }
@@ -28,15 +31,18 @@ impl From<ResultsArray> for AdapterResultsArray {
     }
 }
 
-impl TryFrom<&[&str]> for AdapterResultsArray {
+impl TryFrom<(Option<JsonAdapter>, &[&str])> for AdapterResultsArray {
     type Error = AdapterError;
 
-    fn try_from(results: &[&str]) -> Result<Self, Self::Error> {
-        let mut results_array = Vec::new();
-        for result in results {
-            results_array.push(serde_json::from_str::<AdapterResults>(result)?);
+    fn try_from(
+        (adapter, results_array): (Option<JsonAdapter>, &[&str]),
+    ) -> Result<Self, Self::Error> {
+        let mut parsed_results_array = Vec::new();
+        for results in results_array {
+            let parsed_results = adapter.unwrap_or_default().convert(results)?;
+            parsed_results_array.push(parsed_results);
         }
-        Ok(results_array.into())
+        Ok(parsed_results_array.into())
     }
 }
 

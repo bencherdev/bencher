@@ -20,7 +20,7 @@ use crate::{
 pub struct AdapterRust;
 
 impl Adapter for AdapterRust {
-    fn convert(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         parse_rust(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))

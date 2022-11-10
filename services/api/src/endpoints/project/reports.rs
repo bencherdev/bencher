@@ -206,7 +206,12 @@ async fn post_inner(
 
     // Process and record the report results
     let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
-    report_results.process(conn, &json_report.results, json_report.fold)?;
+    report_results.process(
+        conn,
+        json_report.adapter,
+        json_report.fold,
+        &json_report.results,
+    )?;
 
     query_report.into_json(conn)
 }

@@ -7,7 +7,7 @@ use super::{json::parse_json, rust::parse_rust};
 pub struct AdapterMagic;
 
 impl Adapter for AdapterMagic {
-    fn convert(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         alt((parse_json, parse_rust))(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))

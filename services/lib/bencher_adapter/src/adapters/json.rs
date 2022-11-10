@@ -10,7 +10,7 @@ use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError};
 pub struct AdapterJson;
 
 impl Adapter for AdapterJson {
-    fn convert(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         parse_json(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
