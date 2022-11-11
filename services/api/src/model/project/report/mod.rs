@@ -110,8 +110,8 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
 }
 
 const MAGIC_INT: isize = 0;
-const JSON_INT: isize = 50;
-const RUST_INT: isize = 150;
+const JSON_INT: isize = 10;
+const RUST_INT: isize = 20;
 
 pub enum Adapter {
     Magic = MAGIC_INT,
