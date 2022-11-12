@@ -132,8 +132,8 @@ impl TryFrom<i32> for Adapter {
     }
 }
 
-impl From<&JsonAdapter> for Adapter {
-    fn from(adapter: &JsonAdapter) -> Self {
+impl From<JsonAdapter> for Adapter {
+    fn from(adapter: JsonAdapter) -> Self {
         match adapter {
             JsonAdapter::Magic => Self::Magic,
             JsonAdapter::Json => Self::Json,
@@ -170,13 +170,14 @@ impl InsertReport {
         version_id: i32,
         testbed_id: i32,
         report: &JsonNewReport,
+        adapter: JsonAdapter,
     ) -> Self {
         Self {
             uuid: Uuid::new_v4().to_string(),
             user_id,
             version_id,
             testbed_id,
-            adapter: Adapter::from(&report.adapter.unwrap_or_default()) as i32,
+            adapter: Adapter::from(adapter) as i32,
             start_time: report.start_time.timestamp_nanos(),
             end_time: report.end_time.timestamp_nanos(),
         }

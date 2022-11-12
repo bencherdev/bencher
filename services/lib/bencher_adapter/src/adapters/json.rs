@@ -5,12 +5,12 @@ use nom::{
     IResult,
 };
 
-use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError};
+use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError, Settings};
 
 pub struct AdapterJson;
 
 impl Adapter for AdapterJson {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str, _settings: Settings) -> Result<AdapterResults, AdapterError> {
         parse_json(input)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
@@ -31,16 +31,17 @@ pub(crate) mod test_json {
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
+        Settings,
     };
 
-    fn convert_json(suffix: &str) -> AdapterResults {
+    fn convert_json(suffix: &str, settings: Settings) -> AdapterResults {
         let file_path = format!("./tool_output/json/report_{}.json", suffix);
-        convert_file_path::<AdapterJson>(&file_path)
+        convert_file_path::<AdapterJson>(&file_path, settings)
     }
 
     #[test]
     fn test_adapter_json_latency() {
-        let benchmarks_map = convert_json("latency");
+        let benchmarks_map = convert_json("latency", Settings::default());
         validate_adapter_json_latency(benchmarks_map);
     }
 

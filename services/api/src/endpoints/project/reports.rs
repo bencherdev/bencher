@@ -148,7 +148,7 @@ pub async fn post(
 async fn post_inner(
     context: &Context,
     path_params: DirPath,
-    json_report: JsonNewReport,
+    mut json_report: JsonNewReport,
     auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -191,8 +191,12 @@ async fn post_inner(
         InsertVersion::increment(conn, branch_id, None)?
     };
 
+    let json_settings = json_report.settings.take().unwrap_or_default();
+    let adapter = json_settings.adapter.unwrap_or_default();
+
     // Create a new report and add it to the database
-    let insert_report = InsertReport::from_json(auth_user.id, version_id, testbed_id, &json_report);
+    let insert_report =
+        InsertReport::from_json(auth_user.id, version_id, testbed_id, &json_report, adapter);
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
@@ -208,9 +212,14 @@ async fn post_inner(
     let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
     report_results.process(
         conn,
-        json_report.adapter,
-        json_report.fold,
-        &json_report.results,
+        json_report
+            .results
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<&str>>()
+            .as_ref(),
+        adapter,
+        json_settings,
     )?;
 
     query_report.into_json(conn)

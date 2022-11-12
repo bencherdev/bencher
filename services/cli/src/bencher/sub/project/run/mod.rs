@@ -1,7 +1,9 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonBranch, JsonNewReport, JsonReport, ResourceId};
+use bencher_json::{
+    project::report::JsonReportSettings, JsonBranch, JsonNewReport, JsonReport, ResourceId,
+};
 use chrono::Utc;
 use clap::ValueEnum;
 use git2::Oid;
@@ -42,6 +44,7 @@ pub struct Run {
     adapter: Option<RunAdapter>,
     iter: usize,
     fold: Option<Fold>,
+    allow_failure: bool,
     err: bool,
 }
 
@@ -66,6 +69,7 @@ impl TryFrom<CliRun> for Run {
             adapter,
             iter,
             fold,
+            allow_failure,
             err,
         } = run;
         Ok(Self {
@@ -78,6 +82,7 @@ impl TryFrom<CliRun> for Run {
             adapter: map_adapter(adapter),
             iter: iter.unwrap_or(1),
             fold: fold.map(Into::into),
+            allow_failure,
             err,
         })
     }
@@ -172,9 +177,12 @@ impl SubCmd for Run {
             testbed: self.testbed,
             start_time,
             end_time: Utc::now(),
-            adapter: self.adapter.map(Into::into),
-            fold: self.fold.map(Into::into),
             results,
+            settings: Some(JsonReportSettings {
+                adapter: self.adapter.map(Into::into),
+                fold: self.fold.map(Into::into),
+                allow_failure: Some(self.allow_failure),
+            }),
         };
 
         // TODO disable when quiet

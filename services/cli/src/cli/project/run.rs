@@ -38,6 +38,10 @@ pub struct CliRun {
     #[clap(value_enum, long, requires = "iter")]
     pub fold: Option<CliRunFold>,
 
+    /// Allow test failure
+    #[clap(long)]
+    pub allow_failure: bool,
+
     /// Error on alert
     #[clap(long)]
     pub err: bool,

@@ -10,16 +10,16 @@ pub(crate) mod test_util {
 
     use crate::{
         results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
-        Adapter,
+        Adapter, Settings,
     };
 
-    pub fn convert_file_path<A>(file_path: &str) -> AdapterResults
+    pub fn convert_file_path<A>(file_path: &str, settings: Settings) -> AdapterResults
     where
         A: Adapter,
     {
         let contents = std::fs::read_to_string(file_path)
             .expect(&format!("Failed to read test file: {file_path}"));
-        A::parse(&contents).expect(&format!("Failed to convert contents: {contents}"))
+        A::parse(&contents, settings).expect(&format!("Failed to convert contents: {contents}"))
     }
 
     pub fn validate_metrics(

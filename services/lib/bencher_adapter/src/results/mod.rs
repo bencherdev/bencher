@@ -5,8 +5,8 @@ use bencher_json::project::{
     report::{JsonAdapter, JsonFold},
 };
 
-use crate::Adapter;
 use crate::AdapterError;
+use crate::{Adapter, Settings};
 
 pub mod adapter_metrics;
 pub mod adapter_results;
@@ -31,15 +31,15 @@ impl From<ResultsArray> for AdapterResultsArray {
     }
 }
 
-impl TryFrom<(Option<JsonAdapter>, &[&str])> for AdapterResultsArray {
-    type Error = AdapterError;
-
-    fn try_from(
-        (adapter, results_array): (Option<JsonAdapter>, &[&str]),
-    ) -> Result<Self, Self::Error> {
+impl AdapterResultsArray {
+    pub fn new(
+        results_array: &[&str],
+        adapter: JsonAdapter,
+        settings: Settings,
+    ) -> Result<Self, AdapterError> {
         let mut parsed_results_array = Vec::new();
         for results in results_array {
-            let parsed_results = adapter.unwrap_or_default().convert(results)?;
+            let parsed_results = adapter.convert(results, settings)?;
             parsed_results_array.push(parsed_results);
         }
         Ok(parsed_results_array.into())

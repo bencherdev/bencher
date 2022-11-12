@@ -14,14 +14,14 @@ use nom::{
 
 use crate::{
     results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
-    Adapter, AdapterError,
+    Adapter, AdapterError, Settings,
 };
 
 pub struct AdapterRust;
 
 impl Adapter for AdapterRust {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        parse_rust(input)
+    fn parse(input: &str, settings: Settings) -> Result<AdapterResults, AdapterError> {
+        parse_rust(input, settings)
             .map(|(_, benchmarks)| benchmarks)
             .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
     }
@@ -34,14 +34,19 @@ enum Test {
     Ok(JsonMetric),
 }
 
-pub fn parse_rust(input: &str) -> IResult<&str, AdapterResults> {
-    fold_many1(parse_running, HashMap::new, |benchmarks, new_benchmarks| {
-        benchmarks.into_iter().chain(new_benchmarks).collect()
-    })(input)
+pub fn parse_rust(input: &str, settings: Settings) -> IResult<&str, AdapterResults> {
+    fold_many1(
+        |i| parse_running(i, settings),
+        HashMap::new,
+        |benchmarks, new_benchmarks| benchmarks.into_iter().chain(new_benchmarks).collect(),
+    )(input)
     .map(|(remainder, benchmarks)| (remainder, benchmarks.into()))
 }
 
-fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> {
+fn parse_running(
+    input: &str,
+    settings: Settings,
+) -> IResult<&str, HashMap<String, AdapterMetrics>> {
     map_res(
         tuple((
             alt((
@@ -94,7 +99,7 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> 
         |(_, _, benchmarks, _)| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
-                if let Some((benchmark_name, metric)) = to_latency(benchmark)? {
+                if let Some((benchmark_name, metric)) = to_latency(benchmark, settings)? {
                     results.insert(
                         benchmark_name,
                         AdapterMetrics {
@@ -112,11 +117,18 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> 
 
 fn to_latency(
     bench: (&str, &str, &str, &str, &str, &str, Test, &str),
+    settings: Settings,
 ) -> Result<Option<(String, JsonMetric)>, AdapterError> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
         Test::Ignored => Ok(None),
-        Test::Failed => Err(AdapterError::BenchmarkFailed(key.into())),
+        Test::Failed => {
+            if settings.allow_failure {
+                Ok(None)
+            } else {
+                Err(AdapterError::BenchmarkFailed(key.into()))
+            }
+        },
         Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
     }
 }
@@ -247,16 +259,17 @@ pub(crate) mod test_rust {
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
+        Settings,
     };
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);
-        convert_file_path::<AdapterRust>(&file_path)
+        convert_file_path::<AdapterRust>(&file_path, Settings::default())
     }
 
     fn convert_rust_test(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/cargo_test_{}.txt", suffix);
-        convert_file_path::<AdapterRust>(&file_path)
+        convert_file_path::<AdapterRust>(&file_path, Settings::default())
     }
 
     fn validate_bench_metrics(benchmarks_map: &AdapterResults, key: &str) {
