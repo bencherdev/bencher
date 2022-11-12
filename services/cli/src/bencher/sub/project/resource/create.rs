@@ -5,7 +5,7 @@ use bencher_json::{JsonNewProject, ResourceId};
 use url::Url;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::project::CliProjectCreate,
     CliError,
 };
@@ -77,7 +77,7 @@ impl From<Create> for JsonNewProject {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let project: JsonNewProject = self.clone().into();
         self.backend
             .post(

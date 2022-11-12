@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::CliConfigView,
     CliError,
 };
@@ -28,7 +28,7 @@ impl TryFrom<CliConfigView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend.get(CONFIG_PATH).await?;
         Ok(())
     }

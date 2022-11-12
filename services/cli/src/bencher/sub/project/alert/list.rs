@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::project::alert::CliAlertList,
     CliError,
 };
@@ -29,7 +29,7 @@ impl TryFrom<CliAlertList> for List {
 
 #[async_trait]
 impl SubCmd for List {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend
             .get(&format!("/v0/projects/{}/alerts", self.project))
             .await?;

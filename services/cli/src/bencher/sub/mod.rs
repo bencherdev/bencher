@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 
-use crate::{bencher::wide::Wide, cli::CliSub, CliError};
+use crate::{cli::CliSub, CliError};
 
 mod organization;
 mod project;
@@ -62,22 +62,22 @@ impl TryFrom<CliSub> for Sub {
 
 #[async_trait]
 impl SubCmd for Sub {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::Server(server) => server.exec(wide).await,
-            Self::Auth(auth) => auth.exec(wide).await,
-            Self::Organization(organization) => organization.exec(wide).await,
-            Self::Member(member) => member.exec(wide).await,
-            Self::Project(project) => project.exec(wide).await,
-            Self::Report(report) => report.exec(wide).await,
-            Self::Branch(branch) => branch.exec(wide).await,
-            Self::Testbed(testbed) => testbed.exec(wide).await,
-            Self::Threshold(threshold) => threshold.exec(wide).await,
-            Self::Run(run) => run.exec(wide).await,
-            Self::Benchmark(benchmark) => benchmark.exec(wide).await,
-            Self::Perf(perf) => perf.exec(wide).await,
-            Self::Alert(alert) => alert.exec(wide).await,
-            Self::Token(token) => token.exec(wide).await,
+            Self::Server(server) => server.exec().await,
+            Self::Auth(auth) => auth.exec().await,
+            Self::Organization(organization) => organization.exec().await,
+            Self::Member(member) => member.exec().await,
+            Self::Project(project) => project.exec().await,
+            Self::Report(report) => report.exec().await,
+            Self::Branch(branch) => branch.exec().await,
+            Self::Testbed(testbed) => testbed.exec().await,
+            Self::Threshold(threshold) => threshold.exec().await,
+            Self::Run(run) => run.exec().await,
+            Self::Benchmark(benchmark) => benchmark.exec().await,
+            Self::Perf(perf) => perf.exec().await,
+            Self::Alert(alert) => alert.exec().await,
+            Self::Token(token) => token.exec().await,
         }
     }
 }

@@ -8,7 +8,7 @@ use bencher_json::{
 use email_address_parser::EmailAddress;
 
 use crate::{
-    bencher::{backend::Backend, wide::Wide},
+    bencher::backend::Backend,
     cli::organization::member::{CliMemberInvite, CliMemberRole},
     CliError,
 };
@@ -74,7 +74,7 @@ impl From<Invite> for JsonNewMember {
 
 #[async_trait]
 impl SubCmd for Invite {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let invite: JsonNewMember = self.clone().into();
         self.backend
             .post(&format!("/v0/organizations/{}/members", &self.org), &invite)

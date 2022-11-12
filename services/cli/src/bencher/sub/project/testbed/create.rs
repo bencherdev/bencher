@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{JsonNewTestbed, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::project::testbed::CliTestbedCreate,
     CliError,
 };
@@ -93,7 +93,7 @@ impl From<Create> for JsonNewTestbed {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let testbed: JsonNewTestbed = self.clone().into();
         self.backend
             .post(&format!("/v0/projects/{}/testbeds", self.project), &testbed)

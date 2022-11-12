@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::JsonRestart;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::CliRestart,
     CliError,
 };
@@ -38,7 +38,7 @@ impl From<Restart> for JsonRestart {
 
 #[async_trait]
 impl SubCmd for Restart {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let restart: JsonRestart = self.clone().into();
         self.backend.post(RESTART_PATH, &restart).await?;
         Ok(())

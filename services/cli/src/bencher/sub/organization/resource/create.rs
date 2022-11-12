@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::JsonNewOrganization;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::organization::CliOrganizationCreate,
     CliError,
 };
@@ -48,7 +48,7 @@ impl From<Create> for JsonNewOrganization {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let organization: JsonNewOrganization = self.clone().into();
         self.backend.post(ORGANIZATIONS_PATH, &organization).await?;
         Ok(())

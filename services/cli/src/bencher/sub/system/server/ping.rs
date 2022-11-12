@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::CliPing,
     CliError,
 };
@@ -27,7 +27,7 @@ impl TryFrom<CliPing> for Ping {
 
 #[async_trait]
 impl SubCmd for Ping {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend.get(PING_PATH).await?;
         Ok(())
     }

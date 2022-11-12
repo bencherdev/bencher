@@ -5,7 +5,7 @@ use bencher_json::ResourceId;
 use uuid::Uuid;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::user::token::CliTokenView,
     CliError,
 };
@@ -36,7 +36,7 @@ impl TryFrom<CliTokenView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend
             .get(&format!("/v0/users/{}/tokens/{}", self.user, self.uuid))
             .await?;

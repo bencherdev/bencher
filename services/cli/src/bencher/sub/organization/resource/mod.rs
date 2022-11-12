@@ -1,10 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{
-    bencher::{sub::SubCmd, wide::Wide},
-    cli::organization::CliOrganization,
-    CliError,
-};
+use crate::{bencher::sub::SubCmd, cli::organization::CliOrganization, CliError};
 
 mod allowed;
 mod create;
@@ -34,12 +30,12 @@ impl TryFrom<CliOrganization> for Organization {
 
 #[async_trait]
 impl SubCmd for Organization {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::List(list) => list.exec(wide).await,
-            Self::Create(create) => create.exec(wide).await,
-            Self::View(view) => view.exec(wide).await,
-            Self::Allowed(allowed) => allowed.exec(wide).await,
+            Self::List(list) => list.exec().await,
+            Self::Create(create) => create.exec().await,
+            Self::View(view) => view.exec().await,
+            Self::Allowed(allowed) => allowed.exec().await,
         }
     }
 }

@@ -7,7 +7,7 @@ use bencher_json::{
 };
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::organization::member::CliMemberUpdate,
     CliError,
 };
@@ -47,7 +47,7 @@ impl From<Update> for JsonUpdateMember {
 
 #[async_trait]
 impl SubCmd for Update {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let update: JsonUpdateMember = self.clone().into();
         self.backend
             .patch(

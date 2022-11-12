@@ -17,17 +17,10 @@ use user::token::CliToken;
 #[derive(Parser, Debug)]
 #[clap(name = "bencher", author, version, about, long_about = None)]
 pub struct CliBencher {
-    /// Bencher CLI wide flags
-    #[clap(flatten)]
-    pub wide: CliWide,
-
     /// Bencher subcommands
     #[clap(subcommand)]
     pub sub: CliSub,
 }
-
-#[derive(Args, Debug)]
-pub struct CliWide {}
 
 #[derive(Subcommand, Debug)]
 pub enum CliSub {

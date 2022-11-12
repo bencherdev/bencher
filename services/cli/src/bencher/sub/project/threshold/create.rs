@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use super::statistic::Statistic;
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::project::threshold::CliThresholdCreate,
     CliError,
 };
@@ -65,7 +65,7 @@ impl From<Create> for JsonNewThreshold {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let threshold: JsonNewThreshold = self.clone().into();
         self.backend
             .post(

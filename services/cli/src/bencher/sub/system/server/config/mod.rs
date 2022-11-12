@@ -1,10 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{
-    bencher::{sub::SubCmd, wide::Wide},
-    cli::system::server::CliConfig,
-    CliError,
-};
+use crate::{bencher::sub::SubCmd, cli::system::server::CliConfig, CliError};
 
 mod update;
 mod view;
@@ -30,10 +26,10 @@ impl TryFrom<CliConfig> for Config {
 
 #[async_trait]
 impl SubCmd for Config {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::Update(update) => update.exec(wide).await,
-            Self::View(view) => view.exec(wide).await,
+            Self::Update(update) => update.exec().await,
+            Self::View(view) => view.exec().await,
         }
     }
 }

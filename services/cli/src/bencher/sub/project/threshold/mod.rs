@@ -1,10 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{
-    bencher::{sub::SubCmd, wide::Wide},
-    cli::project::threshold::CliThreshold,
-    CliError,
-};
+use crate::{bencher::sub::SubCmd, cli::project::threshold::CliThreshold, CliError};
 
 mod create;
 mod list;
@@ -32,11 +28,11 @@ impl TryFrom<CliThreshold> for Threshold {
 
 #[async_trait]
 impl SubCmd for Threshold {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::List(list) => list.exec(wide).await,
-            Self::Create(create) => create.exec(wide).await,
-            Self::View(view) => view.exec(wide).await,
+            Self::List(list) => list.exec().await,
+            Self::Create(create) => create.exec().await,
+            Self::View(view) => view.exec().await,
         }
     }
 }

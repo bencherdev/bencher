@@ -1,11 +1,7 @@
 use async_trait::async_trait;
 
 use super::run::Run as Create;
-use crate::{
-    bencher::{sub::SubCmd, wide::Wide},
-    cli::project::report::CliReport,
-    CliError,
-};
+use crate::{bencher::sub::SubCmd, cli::project::report::CliReport, CliError};
 
 mod list;
 mod view;
@@ -31,11 +27,11 @@ impl TryFrom<CliReport> for Report {
 
 #[async_trait]
 impl SubCmd for Report {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::List(list) => list.exec(wide).await,
-            Self::Create(create) => create.exec(wide).await,
-            Self::View(create) => create.exec(wide).await,
+            Self::List(list) => list.exec().await,
+            Self::Create(create) => create.exec().await,
+            Self::View(create) => create.exec().await,
         }
     }
 }

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::CliConfigUpdate,
     CliError,
 };
@@ -51,7 +51,7 @@ impl From<Update> for JsonUpdateConfig {
 
 #[async_trait]
 impl SubCmd for Update {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let update_config: JsonUpdateConfig = self.clone().into();
         self.backend.put(CONFIG_PATH, &update_config).await?;
         Ok(())

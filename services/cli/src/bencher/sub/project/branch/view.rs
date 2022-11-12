@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::project::branch::CliBranchView,
     CliError,
 };
@@ -35,7 +35,7 @@ impl TryFrom<CliBranchView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend
             .get(&format!(
                 "/v0/projects/{}/branches/{}",

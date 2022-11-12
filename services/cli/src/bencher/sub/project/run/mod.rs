@@ -8,7 +8,7 @@ use git2::Oid;
 use uuid::Uuid;
 
 use crate::{
-    bencher::{locality::Locality, wide::Wide},
+    bencher::locality::Locality,
     cli::project::run::{CliRun, CliRunAdapter},
     CliError,
 };
@@ -141,7 +141,7 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 
 #[async_trait]
 impl SubCmd for Run {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let branch = match &self.branch {
             Branch::Uuid(uuid) => *uuid,
             Branch::Name(name) => {

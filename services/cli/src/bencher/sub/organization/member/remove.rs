@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::organization::member::CliMemberRemove,
     CliError,
 };
@@ -31,7 +31,7 @@ impl TryFrom<CliMemberRemove> for Remove {
 
 #[async_trait]
 impl SubCmd for Remove {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend
             .delete(&format!(
                 "/v0/organizations/{}/members/{}",

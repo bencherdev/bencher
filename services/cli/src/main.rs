@@ -2,7 +2,7 @@ mod bencher;
 mod cli;
 mod error;
 
-use bencher::Bencher;
+use bencher::{sub::SubCmd, Bencher};
 pub use error::CliError;
 
 #[tokio::main(flavor = "current_thread")]

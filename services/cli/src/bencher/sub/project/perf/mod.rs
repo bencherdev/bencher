@@ -5,11 +5,7 @@ use bencher_json::{JsonPerfQuery, ResourceId};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::{
-    bencher::{backend::Backend, wide::Wide},
-    cli::project::perf::CliPerf,
-    CliError,
-};
+use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, CliError};
 
 use crate::bencher::SubCmd;
 
@@ -77,7 +73,7 @@ impl From<Perf> for JsonPerfQuery {
 
 #[async_trait]
 impl SubCmd for Perf {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
         self.backend
             .put(&format!("/v0/projects/{}/branches", self.project), &perf)

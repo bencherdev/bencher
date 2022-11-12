@@ -1,10 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{
-    bencher::{sub::SubCmd, wide::Wide},
-    cli::system::server::CliServer,
-    CliError,
-};
+use crate::{bencher::sub::SubCmd, cli::system::server::CliServer, CliError};
 
 mod config;
 mod ping;
@@ -34,12 +30,12 @@ impl TryFrom<CliServer> for Server {
 
 #[async_trait]
 impl SubCmd for Server {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::Ping(ping) => ping.exec(wide).await,
-            Self::Version(version) => version.exec(wide).await,
-            Self::Restart(restart) => restart.exec(wide).await,
-            Self::Config(config) => config.exec(wide).await,
+            Self::Ping(ping) => ping.exec().await,
+            Self::Version(version) => version.exec().await,
+            Self::Restart(restart) => restart.exec().await,
+            Self::Config(config) => config.exec().await,
         }
     }
 }

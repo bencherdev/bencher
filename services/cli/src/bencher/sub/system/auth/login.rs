@@ -5,7 +5,7 @@ use bencher_json::{JsonEmpty, JsonLogin};
 use email_address_parser::EmailAddress;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::auth::CliAuthLogin,
     CliError,
 };
@@ -53,7 +53,7 @@ impl From<Login> for JsonLogin {
 
 #[async_trait]
 impl SubCmd for Login {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let json_login: JsonLogin = self.clone().into();
         let res = self.backend.post(LOGIN_PATH, &json_login).await?;
         let _: JsonEmpty = serde_json::from_value(res)?;

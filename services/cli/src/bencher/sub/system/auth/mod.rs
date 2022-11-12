@@ -1,10 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{
-    bencher::{sub::SubCmd, wide::Wide},
-    cli::system::auth::CliAuth,
-    CliError,
-};
+use crate::{bencher::sub::SubCmd, cli::system::auth::CliAuth, CliError};
 
 mod confirm;
 mod login;
@@ -35,11 +31,11 @@ impl TryFrom<CliAuth> for Auth {
 
 #[async_trait]
 impl SubCmd for Auth {
-    async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         match self {
-            Self::Signup(signup) => signup.exec(wide).await,
-            Self::Login(login) => login.exec(wide).await,
-            Self::Confirm(confirm) => confirm.exec(wide).await,
+            Self::Signup(signup) => signup.exec().await,
+            Self::Login(login) => login.exec().await,
+            Self::Confirm(confirm) => confirm.exec().await,
         }
     }
 }

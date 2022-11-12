@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{organization::JsonOrganizationPermission, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::organization::{CliOrganizationAllowed, CliOrganizationPermission},
     CliError,
 };
@@ -51,7 +51,7 @@ impl From<CliOrganizationPermission> for JsonOrganizationPermission {
 
 #[async_trait]
 impl SubCmd for Allowed {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend
             .get(&format!(
                 "/v0/organizations/{}/allowed/{}",

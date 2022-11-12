@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::ResourceId;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::project::CliProjectView,
     CliError,
 };
@@ -35,7 +35,7 @@ impl TryFrom<CliProjectView> for View {
 
 #[async_trait]
 impl SubCmd for View {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let path = if let Some(org) = &self.org {
             format!("/v0/organizations/{}/projects/{}", org, self.project)
         } else {

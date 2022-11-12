@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::organization::CliOrganizationList,
     CliError,
 };
@@ -28,7 +28,7 @@ impl TryFrom<CliOrganizationList> for List {
 
 #[async_trait]
 impl SubCmd for List {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         self.backend.get(ORGANIZATIONS_PATH).await?;
         Ok(())
     }

@@ -1,15 +1,15 @@
 version: "3.9"
 services:
-  # bencher_api:
-  #   build:
-  #     context: ./services/api
-  #     dockerfile: local.Dockerfile
-  #   image: bencher-api-local
-  #   container_name: bencher_api_local
-  #   ports:
-  #     - 61016:61016
-  #   volumes:
-  #     - "./services/api/data:/data"
+  bencher_api:
+    build:
+      context: ./services/api
+      dockerfile: local.Dockerfile
+    image: bencher-api-local
+    container_name: bencher_api_local
+    ports:
+      - 61016:61016
+    volumes:
+      - "./services/api/data:/data"
     # environment:
       # Set configuration string or filepath
       # - BENCHER_CONFIG=
@@ -26,5 +26,5 @@ services:
     environment:
       # Set this to your actual host
       - VITE_BENCHER_API_URL=http://localhost:61016
-    # depends_on:
-    #   - bencher_api
+    depends_on:
+      - bencher_api

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{JsonNewToken, ResourceId};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd, wide::Wide},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::user::token::CliTokenCreate,
     CliError,
 };
@@ -50,7 +50,7 @@ impl From<Create> for JsonNewToken {
 
 #[async_trait]
 impl SubCmd for Create {
-    async fn exec(&self, _wide: &Wide) -> Result<(), CliError> {
+    async fn exec(&self) -> Result<(), CliError> {
         let token: JsonNewToken = self.clone().into();
         self.backend
             .post(&format!("/v0/users/{}/tokens", self.user), &token)
