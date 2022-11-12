@@ -24,19 +24,19 @@ mod test {
 
     #[test]
     fn test_adapter_magic_json_latency() {
-        let benchmarks_map = convert_file_path::<AdapterMagic>(
+        let results = convert_file_path::<AdapterMagic>(
             "./tool_output/json/report_latency.json",
             Settings::default(),
         );
-        test_json::validate_adapter_json_latency(benchmarks_map);
+        test_json::validate_adapter_json_latency(results);
     }
 
     #[test]
     fn test_adapter_magic_rust_many() {
-        let benchmarks_map = convert_file_path::<AdapterMagic>(
+        let results = convert_file_path::<AdapterMagic>(
             "./tool_output/rust/cargo_bench_many.txt",
             Settings::default(),
         );
-        test_rust::validate_adapter_rust_many(benchmarks_map);
+        test_rust::validate_adapter_rust_many(results);
     }
 }

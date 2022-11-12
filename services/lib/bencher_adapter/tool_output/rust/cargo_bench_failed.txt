@@ -1,0 +1,20 @@
+
+running 4 tests
+test tests::ignored ... ignored
+test tests::benchmark_a ... bench:       3,296 ns/iter (+/- 521)
+test tests::benchmark_b ... FAILED
+test tests::benchmark_c ... bench:       3,215 ns/iter (+/- 356)
+
+failures:
+
+---- tests::benchmark_b stdout ----
+thread 'main' panicked at 'explicit panic', src/tests.rs:28:9
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::benchmark_b
+
+test result: FAILED. 0 passed; 1 failed; 1 ignored; 2 measured; 0 filtered out; finished in 6.00s
+
+error: bench failed, to rerun pass `--bin rust_bench`

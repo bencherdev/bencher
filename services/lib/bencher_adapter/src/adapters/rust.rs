@@ -90,10 +90,23 @@ fn parse_running(
                 line_ending,
             ))),
             tuple((
-                many0(line_ending),
-                tag("test result:"),
+                // This will contain failure information
+                // failures: ...
+                many_till(anychar, tag("test result:")),
                 many_till(anychar, line_ending),
-                many0(line_ending),
+                alt((
+                    // error: test failed ...
+                    map(
+                        tuple((
+                            many0(line_ending),
+                            tag("error:"),
+                            many_till(anychar, line_ending),
+                            many0(line_ending),
+                        )),
+                        |_| (),
+                    ),
+                    map(many0(line_ending), |_| ()),
+                )),
             )),
         )),
         |(_, _, benchmarks, _)| -> Result<_, AdapterError> {
@@ -259,7 +272,7 @@ pub(crate) mod test_rust {
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
-        Settings,
+        Adapter, Settings,
     };
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
@@ -272,76 +285,103 @@ pub(crate) mod test_rust {
         convert_file_path::<AdapterRust>(&file_path, Settings::default())
     }
 
-    fn validate_bench_metrics(benchmarks_map: &AdapterResults, key: &str) {
-        let metrics = benchmarks_map.inner.get(key).unwrap();
+    fn validate_bench_metrics(results: &AdapterResults, key: &str) {
+        let metrics = results.inner.get(key).unwrap();
         validate_metrics(metrics, 3_161.0, Some(975.0), Some(975.0));
     }
 
     #[test]
     fn test_adapter_rust_zero() {
-        let benchmarks_map = convert_rust_bench("zero");
-        assert_eq!(benchmarks_map.inner.len(), 0);
+        let results = convert_rust_bench("zero");
+        assert_eq!(results.inner.len(), 0);
     }
 
     #[test]
     fn test_adapter_rust_one() {
-        let benchmarks_map = convert_rust_bench("one");
-        assert_eq!(benchmarks_map.inner.len(), 1);
-        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
+        let results = convert_rust_bench("one");
+        assert_eq!(results.inner.len(), 1);
+        validate_bench_metrics(&results, "tests::benchmark");
     }
 
     #[test]
     fn test_adapter_rust_ignore() {
-        let benchmarks_map = convert_rust_bench("ignore");
-        assert_eq!(benchmarks_map.inner.len(), 1);
-        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
+        let results = convert_rust_bench("ignore");
+        assert_eq!(results.inner.len(), 1);
+        validate_bench_metrics(&results, "tests::benchmark");
     }
 
     #[test]
     fn test_adapter_rust_many() {
-        let benchmarks_map = convert_rust_bench("many");
-        validate_adapter_rust_many(benchmarks_map);
+        let results = convert_rust_bench("many");
+        validate_adapter_rust_many(results);
     }
 
-    pub fn validate_adapter_rust_many(benchmarks_map: AdapterResults) {
-        assert_eq!(benchmarks_map.inner.len(), 6);
-        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
-        validate_bench_metrics(&benchmarks_map, "tests::other_benchmark");
-        validate_bench_metrics(&benchmarks_map, "tests::last_benchmark");
+    pub fn validate_adapter_rust_many(results: AdapterResults) {
+        assert_eq!(results.inner.len(), 6);
+        validate_bench_metrics(&results, "tests::benchmark");
+        validate_bench_metrics(&results, "tests::other_benchmark");
+        validate_bench_metrics(&results, "tests::last_benchmark");
 
         let number = 1_000.0;
-        let metrics = benchmarks_map.inner.get("tests::one_digit").unwrap();
+        let metrics = results.inner.get("tests::one_digit").unwrap();
         validate_metrics(metrics, number, Some(number), Some(number));
 
         let number = 22_000_000.0;
-        let metrics = benchmarks_map.inner.get("tests::two_digit").unwrap();
+        let metrics = results.inner.get("tests::two_digit").unwrap();
         validate_metrics(metrics, number, Some(number), Some(number));
 
         let number = 333_000_000_000.0;
-        let metrics = benchmarks_map.inner.get("tests::three_digit").unwrap();
+        let metrics = results.inner.get("tests::three_digit").unwrap();
         validate_metrics(metrics, number, Some(number), Some(number));
     }
 
     #[test]
     fn test_adapter_rust_multi_target() {
-        let benchmarks_map = convert_rust_bench("multi_target");
-        assert_eq!(benchmarks_map.inner.len(), 2);
-        validate_bench_metrics(&benchmarks_map, "tests::benchmark");
-        validate_bench_metrics(&benchmarks_map, "tests::other_benchmark");
+        let results = convert_rust_bench("multi_target");
+        assert_eq!(results.inner.len(), 2);
+        validate_bench_metrics(&results, "tests::benchmark");
+        validate_bench_metrics(&results, "tests::other_benchmark");
+    }
+
+    #[test]
+    fn test_adapter_rust_failed() {
+        let contents =
+            std::fs::read_to_string("./tool_output/rust/cargo_bench_failed.txt").unwrap();
+        assert!(AdapterRust::parse(&contents, Settings::default()).is_err());
+    }
+
+    #[test]
+    fn test_adapter_rust_failed_allow_failure() {
+        let contents =
+            std::fs::read_to_string("./tool_output/rust/cargo_bench_failed.txt").unwrap();
+        let results = AdapterRust::parse(
+            &contents,
+            Settings {
+                allow_failure: true,
+            },
+        )
+        .unwrap();
+        assert_eq!(results.inner.len(), 2);
+
+        let metrics = results.inner.get("tests::benchmark_a").unwrap();
+        validate_metrics(metrics, 3_296.0, Some(521.0), Some(521.0));
+
+        let metrics = results.inner.get("tests::benchmark_c").unwrap();
+        validate_metrics(metrics, 3_215.0, Some(356.0), Some(356.0));
     }
 
     #[test]
     fn test_adapter_rust_report_time() {
-        let benchmarks_map = convert_rust_test("report_time");
-        assert_eq!(benchmarks_map.inner.len(), 3);
+        let results = convert_rust_test("report_time");
+        assert_eq!(results.inner.len(), 3);
 
-        let metrics = benchmarks_map.inner.get("tests::unit_test").unwrap();
+        let metrics = results.inner.get("tests::unit_test").unwrap();
         validate_metrics(metrics, 0.0, None, None);
 
-        let metrics = benchmarks_map.inner.get("tests::other_test").unwrap();
+        let metrics = results.inner.get("tests::other_test").unwrap();
         validate_metrics(metrics, 1_000_000.0, None, None);
 
-        let metrics = benchmarks_map.inner.get("tests::last_test").unwrap();
+        let metrics = results.inner.get("tests::last_test").unwrap();
         validate_metrics(metrics, 2_000_000.0, None, None);
     }
 }

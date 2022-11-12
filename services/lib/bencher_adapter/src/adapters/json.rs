@@ -41,20 +41,20 @@ pub(crate) mod test_json {
 
     #[test]
     fn test_adapter_json_latency() {
-        let benchmarks_map = convert_json("latency", Settings::default());
-        validate_adapter_json_latency(benchmarks_map);
+        let results = convert_json("latency", Settings::default());
+        validate_adapter_json_latency(results);
     }
 
-    pub fn validate_adapter_json_latency(benchmarks_map: AdapterResults) {
-        assert_eq!(benchmarks_map.inner.len(), 3);
+    pub fn validate_adapter_json_latency(results: AdapterResults) {
+        assert_eq!(results.inner.len(), 3);
 
-        let metrics = benchmarks_map.inner.get("tests::benchmark_a").unwrap();
+        let metrics = results.inner.get("tests::benchmark_a").unwrap();
         validate_metrics(metrics, 3247.0, Some(1044.0), Some(1044.0));
 
-        let metrics = benchmarks_map.inner.get("tests::benchmark_b").unwrap();
+        let metrics = results.inner.get("tests::benchmark_b").unwrap();
         validate_metrics(metrics, 3443.0, Some(2275.0), Some(2275.0));
 
-        let metrics = benchmarks_map.inner.get("tests::benchmark_c").unwrap();
+        let metrics = results.inner.get("tests::benchmark_c").unwrap();
         validate_metrics(metrics, 3361.0, Some(1093.0), Some(1093.0));
     }
 }
