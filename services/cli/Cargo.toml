@@ -15,6 +15,7 @@ bencher_json = { path = "../lib/bencher_json" }
 # Workspace
 chrono.workspace = true
 email-address-parser.workspace = true
+literally.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -25,6 +26,7 @@ uuid.workspace = true
 async-trait = "0.1"
 clap = { version = "4.0", features = ["derive"] }
 git2 = "0.15"
+rand = "0.8"
 reqwest = { version = "0.11", features = ["json"] }
 
 [dev-dependencies]

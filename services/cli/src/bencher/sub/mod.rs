@@ -4,6 +4,7 @@ use async_trait::async_trait;
 
 use crate::{cli::CliSub, CliError};
 
+mod mock;
 mod organization;
 mod project;
 mod sub_cmd;
@@ -18,6 +19,8 @@ use project::{
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
 use user::token::Token;
+
+use self::mock::Mock;
 
 #[derive(Debug)]
 pub enum Sub {
@@ -35,6 +38,7 @@ pub enum Sub {
     Perf(Perf),
     Alert(Alert),
     Token(Token),
+    Mock(Mock),
 }
 
 impl TryFrom<CliSub> for Sub {
@@ -56,6 +60,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
             CliSub::Alert(alert) => Self::Alert(alert.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
+            CliSub::Mock(mock) => Self::Mock(mock.into()),
         })
     }
 }
@@ -78,6 +83,7 @@ impl SubCmd for Sub {
             Self::Perf(perf) => perf.exec().await,
             Self::Alert(alert) => alert.exec().await,
             Self::Token(token) => token.exec().await,
+            Self::Mock(mock) => mock.exec().await,
         }
     }
 }

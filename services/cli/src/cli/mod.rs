@@ -1,5 +1,6 @@
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
+pub mod mock;
 pub mod organization;
 pub mod project;
 pub mod system;
@@ -12,6 +13,8 @@ use project::{
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::token::CliToken;
+
+use self::mock::CliMock;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -68,6 +71,9 @@ pub enum CliSub {
     /// Server commands
     #[clap(subcommand)]
     Server(CliServer),
+
+    /// Generate mock benchmark data
+    Mock(CliMock),
 }
 
 #[derive(Args, Debug)]
