@@ -1,11 +1,12 @@
 import { Route, Navigate } from "solid-app-router";
-// import DocsPage from "./DocsPage";
+import { Docs } from "./config";
+import DocsPage from "./DocsPage";
 import Message from "./example.mdx";
 
 const DocsRoutes = (props) => {
-  // const docsPage = (page) => {
-  //   return <DocsPage page={page} />;
-  // };
+  const docsPage = (page) => {
+    return <DocsPage page={page} />;
+  };
 
   return (
     <>
@@ -25,7 +26,7 @@ const DocsRoutes = (props) => {
         path="/reference/api"
         element={<Navigate href="/docs/reference/api/v0" />}
       />
-      <Route path="/reference/api/v0" element={<p>TODO</p>} />
+      <Route path="/reference/api/v0" element={docsPage(Docs.API)} />
     </>
   );
 };

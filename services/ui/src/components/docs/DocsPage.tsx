@@ -6,12 +6,12 @@ const DocsPage = (props) => {
     <section class="section">
       <div class="container">
         <div class="columns is-reverse-mobile">
-          <div class="column is-one-fifth">
-            <DocsMenu />
-          </div>
-          <div class="column">
+          {/* <div class="column is-one-fifth">
+            <DocsMenu page={props.page} />
+          </div> */}
+          {/* <div class="column">
             <DocsPanel page={props.page} />
-          </div>
+          </div> */}
         </div>
       </div>
     </section>

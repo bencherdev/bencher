@@ -1,33 +1,19 @@
-import { createEffect, Match, Switch } from "solid-js";
+import { Match, Switch } from "solid-js";
 
-import SwaggerUI from "swagger-ui";
-import swagger from "./api/swagger.json";
-// import Example from "./Example.mdx";
+import SwaggerPanel from "./api/SwaggerPanel";
+import { Docs } from "./config";
 
 const DocsPanel = (props) => {
   return (
     <Switch fallback={<p>Unknown docs path: {props.pathname()} </p>}>
-      <Match when={props.page === false}>
+      <Match when={props.page === Docs.API}>
         <>
           <div id="swagger" />
-          <SwaggerPage />
+          <SwaggerPanel />
         </>
       </Match>
-      <Match when={props.page === true}>{/* <Example /> */}</Match>
     </Switch>
   );
-};
-
-const SwaggerPage = (props) => {
-  createEffect(() => {
-    SwaggerUI({
-      dom_id: "#swagger",
-      spec: swagger,
-      layout: "BaseLayout",
-    });
-  });
-
-  return <></>;
 };
 
 export default DocsPanel;
