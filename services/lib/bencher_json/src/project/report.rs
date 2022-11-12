@@ -12,9 +12,16 @@ pub struct JsonNewReport {
     pub testbed: Uuid,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub results: Vec<String>,
+    pub settings: Option<JsonAdapterSettings>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAdapterSettings {
     pub adapter: Option<JsonAdapter>,
     pub fold: Option<JsonFold>,
-    pub results: Vec<String>,
+    pub allow_failure: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
