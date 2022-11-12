@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
     character::complete::{anychar, digit1, line_ending, space1},
-    combinator::{map, success},
+    combinator::{map, map_res, success},
     multi::{fold_many1, many0, many1, many_till},
     sequence::{delimited, tuple},
     IResult,
@@ -42,7 +42,7 @@ pub fn parse_rust(input: &str) -> IResult<&str, AdapterResults> {
 }
 
 fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> {
-    map(
+    map_res(
         tuple((
             alt((
                 // A non-initial multi-target run
@@ -91,10 +91,10 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> 
                 many0(line_ending),
             )),
         )),
-        |(_, _, benchmarks, _)| {
+        |(_, _, benchmarks, _)| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
-                if let Some((benchmark_name, metric)) = to_latency(benchmark) {
+                if let Some((benchmark_name, metric)) = to_latency(benchmark)? {
                     results.insert(
                         benchmark_name,
                         AdapterMetrics {
@@ -105,20 +105,19 @@ fn parse_running(input: &str) -> IResult<&str, HashMap<String, AdapterMetrics>> 
                     );
                 }
             }
-            results
+            Ok(results)
         },
     )(input)
 }
 
 fn to_latency(
     bench: (&str, &str, &str, &str, &str, &str, Test, &str),
-) -> Option<(String, JsonMetric)> {
+) -> Result<Option<(String, JsonMetric)>, AdapterError> {
     let (_, _, key, _, _, _, test, _) = bench;
     match test {
-        Test::Ignored => None,
-        // TODO add an error on failure feature
-        Test::Failed => None,
-        Test::Ok(metric) | Test::Bench(metric) => Some((key.into(), metric)),
+        Test::Ignored => Ok(None),
+        Test::Failed => Err(AdapterError::BenchmarkFailed(key.into())),
+        Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
     }
 }
 
