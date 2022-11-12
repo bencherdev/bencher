@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
     character::complete::{anychar, digit1, line_ending, space1},
-    combinator::{map, map_res, success},
+    combinator::{map, map_res, peek, success},
     multi::{fold_many1, many0, many1, many_till},
     sequence::{delimited, tuple},
     IResult,
@@ -83,7 +83,14 @@ fn parse_running(
                 space1,
                 alt((
                     map(tag("ignored"), |_| Test::Ignored),
-                    map(tag("FAILED"), |_| Test::Failed),
+                    map(
+                        tuple((
+                            tag("FAILED"),
+                            // Strip trailing report time
+                            many_till(anychar, peek(line_ending)),
+                        )),
+                        |_| Test::Failed,
+                    ),
                     map(parse_bench, Test::Bench),
                     map(parse_ok, Test::Ok),
                 )),
@@ -371,7 +378,7 @@ pub(crate) mod test_rust {
     }
 
     #[test]
-    fn test_adapter_rust_report_time() {
+    fn test_adapter_rust_test_report_time() {
         let results = convert_rust_test("report_time");
         assert_eq!(results.inner.len(), 3);
 
@@ -382,6 +389,34 @@ pub(crate) mod test_rust {
         validate_metrics(metrics, 1_000_000.0, None, None);
 
         let metrics = results.inner.get("tests::last_test").unwrap();
+        validate_metrics(metrics, 2_000_000.0, None, None);
+    }
+
+    #[test]
+    fn test_adapter_rust_test_failed() {
+        let contents = std::fs::read_to_string("./tool_output/rust/cargo_test_failed.txt").unwrap();
+        assert!(AdapterRust::parse(&contents, Settings::default()).is_err());
+    }
+
+    #[test]
+    fn test_adapter_rust_test_failed_allow_failure() {
+        let contents = std::fs::read_to_string("./tool_output/rust/cargo_test_failed.txt").unwrap();
+        let results = AdapterRust::parse(
+            &contents,
+            Settings {
+                allow_failure: true,
+            },
+        )
+        .unwrap();
+        assert_eq!(results.inner.len(), 3);
+
+        let metrics = results.inner.get("tests::ignored").unwrap();
+        validate_metrics(metrics, 0.0, None, None);
+
+        let metrics = results.inner.get("tests::benchmark_a").unwrap();
+        validate_metrics(metrics, 1_000_000.0, None, None);
+
+        let metrics = results.inner.get("tests::benchmark_b").unwrap();
         validate_metrics(metrics, 2_000_000.0, None, None);
     }
 }
