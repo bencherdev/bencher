@@ -9,13 +9,13 @@ pub mod locality;
 pub mod sub;
 pub mod wide;
 
-use sub::{map_sub, Sub, SubCmd};
+use sub::{Sub, SubCmd};
 use wide::Wide;
 
 #[derive(Debug)]
 pub struct Bencher {
     wide: Wide,
-    sub: Option<Sub>,
+    sub: Sub,
 }
 
 impl TryFrom<CliBencher> for Bencher {
@@ -24,7 +24,7 @@ impl TryFrom<CliBencher> for Bencher {
     fn try_from(bencher: CliBencher) -> Result<Self, Self::Error> {
         Ok(Self {
             wide: Wide::from(bencher.wide),
-            sub: map_sub(bencher.sub)?,
+            sub: bencher.sub.try_into()?,
         })
     }
 }
@@ -35,11 +35,7 @@ impl Bencher {
     }
 
     pub async fn exec(&self) -> Result<(), CliError> {
-        if let Some(sub) = &self.sub {
-            sub.exec(&self.wide).await
-        } else {
-            self.ping().await
-        }
+        self.sub.exec(&self.wide).await
     }
 
     // TODO actually implement this ping / check auth endpoint

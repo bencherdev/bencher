@@ -13,7 +13,7 @@ use project::{
 use system::{auth::CliAuth, server::CliServer};
 use user::token::CliToken;
 
-/// Time Series Benchmarking
+/// Bencher CLI
 #[derive(Parser, Debug)]
 #[clap(name = "bencher", author, version, about, long_about = None)]
 pub struct CliBencher {
@@ -23,7 +23,7 @@ pub struct CliBencher {
 
     /// Bencher subcommands
     #[clap(subcommand)]
-    pub sub: Option<CliSub>,
+    pub sub: CliSub,
 }
 
 #[derive(Args, Debug)]
@@ -31,26 +31,24 @@ pub struct CliWide {}
 
 #[derive(Subcommand, Debug)]
 pub enum CliSub {
-    /// Server commands
-    #[clap(subcommand)]
-    Server(CliServer),
-
-    /// Backend authentication
+    /// Server authentication & authorization
     #[clap(subcommand)]
     Auth(CliAuth),
+
     /// Manage organization
     #[clap(subcommand, alias = "org")]
     Organization(CliOrganization),
     /// Manage organization members
     #[clap(subcommand)]
     Member(CliMember),
+
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),
     /// Manage reports
     #[clap(subcommand)]
     Report(CliReport),
-    /// Manage Branches
+    /// Manage branches
     #[clap(subcommand)]
     Branch(CliBranch),
     /// Manage testbeds
@@ -64,15 +62,19 @@ pub enum CliSub {
     /// Manage benchmarks
     #[clap(subcommand)]
     Benchmark(CliBenchmark),
-    /// Query benchmark data
-    Perf(CliPerf),
     /// View alerts
     #[clap(subcommand)]
     Alert(CliAlert),
+    /// Query benchmark data
+    Perf(CliPerf),
 
     /// User API tokens
     #[clap(subcommand)]
     Token(CliToken),
+
+    /// Server commands
+    #[clap(subcommand)]
+    Server(CliServer),
 }
 
 #[derive(Args, Debug)]

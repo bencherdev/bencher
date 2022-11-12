@@ -60,14 +60,6 @@ impl TryFrom<CliSub> for Sub {
     }
 }
 
-pub fn map_sub(sub: Option<CliSub>) -> Result<Option<Sub>, CliError> {
-    if let Some(sub) = sub {
-        Ok(Some(sub.try_into()?))
-    } else {
-        Ok(None)
-    }
-}
-
 #[async_trait]
 impl SubCmd for Sub {
     async fn exec(&self, wide: &Wide) -> Result<(), CliError> {
