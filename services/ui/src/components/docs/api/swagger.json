@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.24"
+    "version": "0.2.25"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -2984,6 +2984,131 @@
         }
       }
     },
+    "/v0/projects/{project}/results/{result}": {
+      "get": {
+        "tags": [
+          "projects",
+          "results"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "result",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonResult"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects",
+          "results"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "result",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/testbeds": {
       "get": {
         "tags": [
@@ -4773,29 +4898,12 @@
       "JsonNewReport": {
         "type": "object",
         "properties": {
-          "adapter": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonAdapter"
-              }
-            ]
-          },
           "branch": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ResourceId"
           },
           "end_time": {
             "type": "string",
             "format": "date-time"
-          },
-          "fold": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonFold"
-              }
-            ]
           },
           "hash": {
             "nullable": true,
@@ -4807,13 +4915,20 @@
               "type": "string"
             }
           },
+          "settings": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportSettings"
+              }
+            ]
+          },
           "start_time": {
             "type": "string",
             "format": "date-time"
           },
           "testbed": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/ResourceId"
           }
         },
         "required": [
@@ -5224,6 +5339,31 @@
         "type": "string",
         "format": "uuid"
       },
+      "JsonReportSettings": {
+        "type": "object",
+        "properties": {
+          "adapter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonAdapter"
+              }
+            ]
+          },
+          "allow_failure": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "fold": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonFold"
+              }
+            ]
+          }
+        }
+      },
       "JsonRestart": {
         "type": "object",
         "properties": {
@@ -5234,6 +5374,41 @@
             "minimum": 0
           }
         }
+      },
+      "JsonResult": {
+        "type": "object",
+        "properties": {
+          "benchmark": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "iteration": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonMetric"
+            }
+          },
+          "report": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "benchmark",
+          "iteration",
+          "metrics",
+          "report",
+          "uuid"
+        ]
       },
       "JsonServer": {
         "type": "object",
@@ -5675,6 +5850,9 @@
     {
       "name": "reports",
       "description": "Reports"
+    },
+    {
+      "name": "results"
     },
     {
       "name": "server"
