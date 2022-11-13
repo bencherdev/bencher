@@ -1,4 +1,5 @@
-use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,8 +14,7 @@ pub struct JsonResult {
     pub report: Uuid,
     pub iteration: u32,
     pub benchmark: Uuid,
-    // pub branch: Uuid,
-    // pub version_number: u32,
-    // pub version_hash: Option<String>,
-    // pub testbed: Uuid,
+    pub metrics: JsonMetrics,
 }
+
+pub type JsonMetrics = HashMap<Uuid, JsonMetric>;

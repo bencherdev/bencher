@@ -1,11 +1,8 @@
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
-use bencher_json::{JsonMetric, JsonNewTestbed, JsonResult, JsonTestbed, ResourceId};
-use bencher_rbac::project::Permission;
-use diesel::{
-    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
-};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use bencher_json::{JsonMetric, JsonMetrics, JsonResult, ResourceId};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -13,21 +10,14 @@ use uuid::Uuid;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
-    model::project::{
-        testbed::{InsertTestbed, QueryTestbed},
-        QueryProject,
-    },
+    model::project::QueryProject,
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::{database_map, into_json},
-        resource_id::fn_resource_id,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -80,13 +70,6 @@ pub async fn get_one(
     }
 }
 
-struct ResultPerf {
-    pub uuid: Uuid,
-    pub report: Uuid,
-    pub iteration: u32,
-    pub benchmark: Uuid,
-}
-
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,
@@ -97,8 +80,7 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
     let conn = &mut api_context.database;
 
-    // .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-    let result_perf = schema::perf::table
+    let perf = schema::perf::table
         .filter(schema::perf::uuid.eq(path_params.result.to_string()))
         .inner_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -114,7 +96,7 @@ async fn get_one_inner(
         .first::<(String, String, i32, String)>(conn)
         .map(
             |(perf_uuid, report_uuid, iteration, benchmark_uuid)| -> Result<_, ApiError> {
-                Ok(ResultPerf {
+                Ok(Perf {
                     uuid: Uuid::from_str(&perf_uuid)?,
                     report: Uuid::from_str(&report_uuid)?,
                     iteration: iteration as u32,
@@ -122,16 +104,14 @@ async fn get_one_inner(
                 })
             },
         )
-        .map_err(api_error!())?
-        .map_err(api_error!());
+        .map_err(api_error!())??;
 
-    schema::perf::table
+    let metrics = schema::perf::table
         .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
         .inner_join(
             schema::metric_kind::table
                 .on(schema::metric::metric_kind_id.eq(schema::metric_kind::id)),
         )
-        // .order(schema::metric::metric_kind_id)
         .select((
             schema::metric_kind::uuid,
             schema::metric::value,
@@ -139,21 +119,44 @@ async fn get_one_inner(
             schema::metric::upper_bound,
         ))
         .load::<(String, f64, Option<f64>, Option<f64>)>(conn)
-        .map_err(api_error!())?
-    .into_iter()
-    .map(
-        |(metric_kind_uuid, value, lower_bound, upper_bound)| -> Result<_, ApiError> {
-            Ok((
-                Uuid::from_str(&metric_kind_uuid)?,
-                JsonMetric {
-                    value: value.into(),
-                    lower_bound: lower_bound.map(Into::into),
-                    upper_bound: upper_bound.map(Into::into),
-                },
-            ))
-        },
-    )
-    .collect();
+        .map_err(api_error!())?;
 
-    todo!()
+    let mut metrics_map = HashMap::new();
+    for (metric_kind_uuid, value, lower_bound, upper_bound) in metrics {
+        metrics_map.insert(
+            Uuid::from_str(&metric_kind_uuid)?,
+            JsonMetric {
+                value: value.into(),
+                lower_bound: lower_bound.map(Into::into),
+                upper_bound: upper_bound.map(Into::into),
+            },
+        );
+    }
+
+    Ok(perf.into_json(metrics_map))
+}
+
+struct Perf {
+    pub uuid: Uuid,
+    pub report: Uuid,
+    pub iteration: u32,
+    pub benchmark: Uuid,
+}
+
+impl Perf {
+    fn into_json(self, metrics: JsonMetrics) -> JsonResult {
+        let Self {
+            uuid,
+            report,
+            iteration,
+            benchmark,
+        } = self;
+        JsonResult {
+            uuid,
+            report,
+            iteration,
+            benchmark,
+            metrics,
+        }
+    }
 }
