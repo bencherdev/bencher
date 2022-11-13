@@ -17,6 +17,7 @@ pub use project::{
     metric_kind::{JsonMetricKind, JsonNewMetricKind},
     perf::{JsonPerf, JsonPerfQuery},
     report::{JsonNewReport, JsonReport},
+    result::JsonResult,
     testbed::{JsonNewTestbed, JsonTestbed},
     threshold::{JsonNewThreshold, JsonThreshold},
     JsonNewProject, JsonProject,
