@@ -4,12 +4,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::ResourceId;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
-    pub branch: Uuid,
+    pub branch: ResourceId,
     pub hash: Option<String>,
-    pub testbed: Uuid,
+    pub testbed: ResourceId,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub results: Vec<String>,

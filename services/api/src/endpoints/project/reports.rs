@@ -162,8 +162,8 @@ async fn post_inner(
     } = SameProject::validate(
         conn,
         &path_params.project,
-        json_report.branch,
-        json_report.testbed,
+        &json_report.branch,
+        &json_report.testbed,
     )?;
 
     // Verify that the user is allowed

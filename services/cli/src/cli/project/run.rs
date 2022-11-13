@@ -1,6 +1,5 @@
 use bencher_json::ResourceId;
 use clap::{Args, Parser, ValueEnum};
-use uuid::Uuid;
 
 use crate::cli::CliLocality;
 
@@ -10,9 +9,9 @@ pub struct CliRun {
     #[clap(long)]
     pub project: Option<ResourceId>,
 
-    /// Branch UUID (or set BENCHER_BRANCH)
+    /// Branch slug or UUID (or set BENCHER_BRANCH)
     #[clap(long)]
-    pub branch: Option<Uuid>,
+    pub branch: Option<ResourceId>,
 
     /// Run if branch name exists (or set BENCHER_BRANCH_NAME)
     #[clap(long, alias = "branch-name", conflicts_with = "branch")]
@@ -22,9 +21,9 @@ pub struct CliRun {
     #[clap(long)]
     pub hash: Option<String>,
 
-    /// Testbed UUID (or set BENCHER_TESTBED)
+    /// Testbed slug or UUID (or set BENCHER_TESTBED)
     #[clap(long)]
-    pub testbed: Option<Uuid>,
+    pub testbed: Option<ResourceId>,
 
     /// Benchmarking tool output adapter
     #[clap(value_enum, long, alias = "tool")]

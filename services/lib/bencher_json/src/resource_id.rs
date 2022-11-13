@@ -34,6 +34,12 @@ impl FromStr for ResourceId {
     }
 }
 
+impl From<Uuid> for ResourceId {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid.to_string())
+    }
+}
+
 impl Borrow<str> for ResourceId {
     fn borrow(&self) -> &str {
         &self.0

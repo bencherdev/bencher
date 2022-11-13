@@ -40,7 +40,7 @@ pub struct Run {
     runner: Runner,
     branch: Branch,
     hash: Option<Oid>,
-    testbed: Uuid,
+    testbed: ResourceId,
     adapter: Option<RunAdapter>,
     iter: usize,
     fold: Option<Fold>,
@@ -50,7 +50,7 @@ pub struct Run {
 
 #[derive(Debug, Clone)]
 enum Branch {
-    Uuid(Uuid),
+    ResourceId(ResourceId),
     Name(String),
 }
 
@@ -98,11 +98,15 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
     })
 }
 
-fn map_branch(branch: Option<Uuid>, if_branch: Option<String>) -> Result<Branch, CliError> {
+fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<Branch, CliError> {
     if let Some(branch) = branch {
-        Ok(Branch::Uuid(branch))
+        Ok(Branch::ResourceId(branch))
     } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
-        Ok(Branch::Uuid(Uuid::from_str(&branch)?))
+        branch
+            .as_str()
+            .parse()
+            .map(Branch::ResourceId)
+            .map_err(CliError::BranchInvalid)
     } else if let Some(name) = if_branch {
         Ok(Branch::Name(name))
     } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
@@ -120,14 +124,14 @@ fn map_hash(hash: Option<String>) -> Result<Option<Oid>, CliError> {
     })
 }
 
-fn unwrap_testbed(testbed: Option<Uuid>) -> Result<Uuid, CliError> {
-    Ok(if let Some(testbed) = testbed {
-        testbed
+fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, CliError> {
+    if let Some(testbed) = testbed {
+        Ok(testbed)
     } else if let Ok(testbed) = std::env::var(BENCHER_TESTBED) {
-        Uuid::from_str(&testbed)?
+        testbed.as_str().parse().map_err(CliError::TestbedInvalid)
     } else {
-        return Err(CliError::TestbedNotFound);
-    })
+        Err(CliError::TestbedNotFound)
+    }
 }
 
 fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
@@ -148,10 +152,10 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
         let branch = match &self.branch {
-            Branch::Uuid(uuid) => *uuid,
+            Branch::ResourceId(resource_id) => resource_id.clone(),
             Branch::Name(name) => {
                 if let Some(uuid) = if_branch(&self.project, name, &self.locality).await? {
-                    uuid
+                    uuid.into()
                 } else {
                     return Ok(());
                 }
@@ -174,7 +178,7 @@ impl SubCmd for Run {
         let report = JsonNewReport {
             branch,
             hash: self.hash.map(|hash| hash.to_string()),
-            testbed: self.testbed,
+            testbed: self.testbed.clone(),
             start_time,
             end_time: Utc::now(),
             results,
