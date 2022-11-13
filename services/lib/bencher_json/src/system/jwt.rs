@@ -26,6 +26,12 @@ impl From<String> for JsonWebToken {
     }
 }
 
+impl AsRef<str> for JsonWebToken {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl JsonWebToken {
     fn new(
         key: &EncodingKey,

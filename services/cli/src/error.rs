@@ -10,12 +10,8 @@ pub enum CliError {
     ProjectNotFound,
     #[error("Branch env var `BENCHER_BRANCH` was set to an invalid value: {0}")]
     BranchInvalid(String),
-    #[error("Failed to find Bencher project branch. Set the `--branch` flag or the `BENCHER_BRANCH`, `--if-branch`, or `BENCHER_BRANCH_NAME` environment variable.")]
-    BranchNotFound,
     #[error("Testbed env var `BENCHER_TESTBED` was set to an invalid value: {0}")]
     TestbedInvalid(String),
-    #[error("Failed to find Bencher project testbed. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable.")]
-    TestbedNotFound,
     #[error("No default shell command path for target family. Try setting a custom shell with the `--shell` flag.")]
     Shell,
     #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` flag.")]
