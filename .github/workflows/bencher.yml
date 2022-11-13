@@ -11,7 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # API
-  BUILDER_DOCKER_IMAGE: bencher-api-builder
+  API_BUILDER_DOCKER_IMAGE: bencher-api-builder
   LOCAL_DOCKER_IMAGE: bencher-api-local
   LITESTREAM_DOCKER_IMAGE: bencher-api-litestream
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -20,6 +20,7 @@ env:
   BIN_ARCH: amd64
   DEB_DIR: deb
   # UI
+  UI_BUILDER_DOCKER_IMAGE: bencher-ui-builder
   UI_DOCKER_IMAGE: bencher-ui
 
 jobs:
@@ -97,7 +98,7 @@ jobs:
         with:
           context: .
           file: ./services/api/builder.Dockerfile
-          tags: ${{ env.BUILDER_DOCKER_IMAGE }}
+          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build Local
         uses: docker/build-push-action@v3
@@ -131,7 +132,7 @@ jobs:
         with:
           context: .
           file: ./services/api/builder.Dockerfile
-          tags: ${{ env.BUILDER_DOCKER_IMAGE }}
+          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build and Push Local to Docker Hub
         uses: docker/build-push-action@v3
@@ -173,7 +174,7 @@ jobs:
         with:
           context: .
           file: ./services/api/builder.Dockerfile
-          tags: ${{ env.BUILDER_DOCKER_IMAGE }}
+          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build and Push Local to Docker Hub
         uses: docker/build-push-action@v3
@@ -273,7 +274,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build with Docker
+      - name: Build Builder Stage
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/ui
+          file: ./services/ui/builder.Dockerfile
+          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
+          push: false
+      - name: Build UI
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
@@ -291,6 +299,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build Builder Stage
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/ui
+          file: ./services/ui/builder.Dockerfile
+          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
+          push: false
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v3
         with:
@@ -313,6 +328,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build Builder Stage
+        uses: docker/build-push-action@v3
+        with:
+          context: ./services/ui
+          file: ./services/ui/builder.Dockerfile
+          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
+          push: false
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v3
         with:
