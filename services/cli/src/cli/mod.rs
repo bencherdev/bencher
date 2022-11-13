@@ -6,15 +6,14 @@ pub mod project;
 pub mod system;
 pub mod user;
 
+use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
     alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, perf::CliPerf, report::CliReport,
-    run::CliRun, testbed::CliTestbed, threshold::CliThreshold, CliProject,
+    result::CliResult, run::CliRun, testbed::CliTestbed, threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::token::CliToken;
-
-use self::mock::CliMock;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -44,6 +43,9 @@ pub enum CliSub {
     /// Manage reports
     #[clap(subcommand)]
     Report(CliReport),
+    /// View results
+    #[clap(subcommand)]
+    Result(CliResult),
     /// Manage branches
     #[clap(subcommand)]
     Branch(CliBranch),
