@@ -321,9 +321,9 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     cmd.assert().success();
 
     // let threshold = cmd.output().unwrap().stdout;
-    // // println!("{}", branch);
-    // // println!("{}", testbed);
-    // // println!("{}", String::from_utf8_lossy(&threshold));
+    // // cli_println!("{}", branch);
+    // // cli_println!("{}", testbed);
+    // // cli_println!("{}", String::from_utf8_lossy(&threshold));
     // let threshold: JsonThreshold = serde_json::from_slice(&threshold).unwrap();
     // let threshold = threshold.uuid.to_string();
 

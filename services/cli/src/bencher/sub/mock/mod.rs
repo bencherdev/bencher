@@ -6,7 +6,7 @@ use bencher_json::{project::metric_kind::LATENCY_SLUG, JsonMetric};
 use literally::hmap;
 use rand::Rng;
 
-use crate::{cli::mock::CliMock, CliError};
+use crate::{cli::mock::CliMock, cli_println, CliError};
 
 use super::SubCmd;
 
@@ -47,7 +47,7 @@ impl SubCmd for Mock {
             );
         }
 
-        println!(
+        cli_println!(
             "{}",
             serde_json::to_string_pretty(&AdapterResults::from(results))?
         );

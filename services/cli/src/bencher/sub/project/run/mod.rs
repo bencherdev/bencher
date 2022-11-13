@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::{
     bencher::locality::Locality,
     cli::project::run::{CliRun, CliRunAdapter},
-    CliError,
+    cli_println, CliError,
 };
 
 mod adapter;
@@ -168,7 +168,7 @@ impl SubCmd for Run {
 
         // TODO disable when quiet
         for result in &results {
-            println!("{result}");
+            cli_println!("{result}");
         }
 
         let report = JsonNewReport {
@@ -186,7 +186,7 @@ impl SubCmd for Run {
         };
 
         // TODO disable when quiet
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        cli_println!("{}", serde_json::to_string_pretty(&report)?);
 
         match &self.locality {
             Locality::Local => {},
@@ -231,6 +231,6 @@ async fn if_branch(
         }
     }
 
-    println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
+    cli_println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
     Ok(None)
 }

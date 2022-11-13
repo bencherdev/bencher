@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use serde::Serialize;
 use url::Url;
 
-use crate::{cli::CliBackend, CliError};
+use crate::{cli::CliBackend, cli_println, CliError};
 
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
@@ -105,7 +105,7 @@ impl Backend {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
         let res: serde_json::Value = builder.send().await?.json().await?;
-        println!("{}", serde_json::to_string_pretty(&res)?);
+        cli_println!("{}", serde_json::to_string_pretty(&res)?);
         Ok(res)
     }
 }
