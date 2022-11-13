@@ -100,6 +100,7 @@ impl FmtBody for ButtonBody {
                           </div>
                         </div>
                       </div>
+                      <br>
                       <div class=\"columns is-centered\">
                         <div class=\"column is-half\">
                           <div class=\"content has-text-centered\">

@@ -20,15 +20,12 @@ pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
-#[cfg(debug_assertions)]
 const DEFAULT_ENDPOINT_STR: &str = "http://localhost:3000";
-#[cfg(not(debug_assertions))]
-const DEFAULT_ENDPOINT_STR: &str = "https://bencher.dev";
 // Dynamic and/or Private Ports (49152-65535)
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
 const DEFAULT_PORT: u16 = 61016;
 // 1 megabyte or 1_048_576 bytes
-const DEFAULT_MAX_BODY_SIZE: usize = 1 << 20;
+const DEFAULT_MAX_BODY_SIZE: usize = 2 << 10;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 
 lazy_static::lazy_static! {
