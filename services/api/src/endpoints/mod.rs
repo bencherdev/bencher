@@ -76,6 +76,9 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(project::reports::post)?;
     api.register(project::reports::one_options)?;
     api.register(project::reports::get_one)?;
+    // Results
+    api.register(project::results::one_options)?;
+    api.register(project::results::get_one)?;
     // Branches
     api.register(project::branches::dir_options)?;
     api.register(project::branches::get_ls)?;
