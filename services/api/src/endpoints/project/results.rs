@@ -1,6 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
-use bencher_json::{JsonNewTestbed, JsonResult, JsonTestbed, ResourceId};
+use bencher_json::{JsonMetric, JsonNewTestbed, JsonResult, JsonTestbed, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
@@ -80,6 +80,13 @@ pub async fn get_one(
     }
 }
 
+struct ResultPerf {
+    pub uuid: Uuid,
+    pub report: Uuid,
+    pub iteration: u32,
+    pub benchmark: Uuid,
+}
+
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,
@@ -90,7 +97,8 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
     let conn = &mut api_context.database;
 
-    schema::perf::table
+    // .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
+    let result_perf = schema::perf::table
         .filter(schema::perf::uuid.eq(path_params.result.to_string()))
         .inner_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -106,7 +114,7 @@ async fn get_one_inner(
         .first::<(String, String, i32, String)>(conn)
         .map(
             |(perf_uuid, report_uuid, iteration, benchmark_uuid)| -> Result<_, ApiError> {
-                Ok(JsonResult {
+                Ok(ResultPerf {
                     uuid: Uuid::from_str(&perf_uuid)?,
                     report: Uuid::from_str(&report_uuid)?,
                     iteration: iteration as u32,
@@ -115,5 +123,37 @@ async fn get_one_inner(
             },
         )
         .map_err(api_error!())?
-        .map_err(api_error!())
+        .map_err(api_error!());
+
+    schema::perf::table
+        .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
+        .inner_join(
+            schema::metric_kind::table
+                .on(schema::metric::metric_kind_id.eq(schema::metric_kind::id)),
+        )
+        // .order(schema::metric::metric_kind_id)
+        .select((
+            schema::metric_kind::uuid,
+            schema::metric::value,
+            schema::metric::lower_bound,
+            schema::metric::upper_bound,
+        ))
+        .load::<(String, f64, Option<f64>, Option<f64>)>(conn)
+        .map_err(api_error!())?
+    .into_iter()
+    .map(
+        |(metric_kind_uuid, value, lower_bound, upper_bound)| -> Result<_, ApiError> {
+            Ok((
+                Uuid::from_str(&metric_kind_uuid)?,
+                JsonMetric {
+                    value: value.into(),
+                    lower_bound: lower_bound.map(Into::into),
+                    upper_bound: upper_bound.map(Into::into),
+                },
+            ))
+        },
+    )
+    .collect();
+
+    todo!()
 }
