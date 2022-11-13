@@ -37,11 +37,7 @@ impl TryFrom<CliConfigUpdate> for Update {
 
 impl From<Update> for JsonUpdateConfig {
     fn from(update: Update) -> Self {
-        let Update {
-            config,
-            delay,
-            backend: _,
-        } = update;
+        let Update { config, delay, .. } = update;
         Self {
             config: *config,
             delay,

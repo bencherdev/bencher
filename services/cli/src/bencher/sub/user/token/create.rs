@@ -39,10 +39,7 @@ impl TryFrom<CliTokenCreate> for Create {
 impl From<Create> for JsonNewToken {
     fn from(create: Create) -> Self {
         let Create {
-            user: _,
-            ttl,
-            name,
-            backend: _,
+            user: _, ttl, name, ..
         } = create;
         Self { ttl, name }
     }

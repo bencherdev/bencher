@@ -47,12 +47,11 @@ impl TryFrom<CliThresholdCreate> for Create {
 impl From<Create> for JsonNewThreshold {
     fn from(create: Create) -> Self {
         let Create {
-            project: _,
             branch,
             testbed,
             metric_kind,
             statistic,
-            backend: _,
+            ..
         } = create;
         Self {
             branch,

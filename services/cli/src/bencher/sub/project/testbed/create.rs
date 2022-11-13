@@ -63,7 +63,6 @@ impl TryFrom<CliTestbedCreate> for Create {
 impl From<Create> for JsonNewTestbed {
     fn from(create: Create) -> Self {
         let Create {
-            project: _,
             name,
             slug,
             os_name,
@@ -74,7 +73,7 @@ impl From<Create> for JsonNewTestbed {
             gpu,
             ram,
             disk,
-            backend: _,
+            ..
         } = create;
         Self {
             name,

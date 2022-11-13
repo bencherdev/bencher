@@ -62,7 +62,7 @@ impl From<Invite> for JsonNewMember {
             name,
             email,
             role,
-            backend: _,
+            ..
         } = invite;
         Self {
             name,

@@ -9,8 +9,9 @@ pub mod user;
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
-    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, perf::CliPerf, report::CliReport,
-    result::CliResult, run::CliRun, testbed::CliTestbed, threshold::CliThreshold, CliProject,
+    alert::CliAlert, benchmark::CliBenchmark, branch::CliBranch, metric_kind::CliMetricKind,
+    perf::CliPerf, report::CliReport, result::CliResult, run::CliRun, testbed::CliTestbed,
+    threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
 use user::token::CliToken;
@@ -55,9 +56,12 @@ pub enum CliSub {
     /// Manage thresholds
     #[clap(subcommand)]
     Threshold(CliThreshold),
+    /// Manage metric kinds
+    #[clap(subcommand)]
+    MetricKind(CliMetricKind),
     /// Run benchmarks
     Run(CliRun),
-    /// Manage benchmarks
+    /// View benchmarks
     #[clap(subcommand)]
     Benchmark(CliBenchmark),
     /// View alerts

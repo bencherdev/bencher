@@ -39,11 +39,7 @@ impl TryFrom<CliAuthLogin> for Login {
 
 impl From<Login> for JsonLogin {
     fn from(login: Login) -> Self {
-        let Login {
-            email,
-            invite,
-            backend: _,
-        } = login;
+        let Login { email, invite, .. } = login;
         Self {
             email: email.to_string(),
             invite: invite.map(Into::into),

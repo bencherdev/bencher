@@ -13,8 +13,9 @@ mod user;
 
 use organization::{member::Member, resource::Organization};
 use project::{
-    alert::Alert, benchmark::Benchmark, branch::Branch, perf::Perf, report::Report,
-    resource::Project, result::Resultant, run::Run, testbed::Testbed, threshold::Threshold,
+    alert::Alert, benchmark::Benchmark, branch::Branch, metric_kind::MetricKind, perf::Perf,
+    report::Report, resource::Project, result::Resultant, run::Run, testbed::Testbed,
+    threshold::Threshold,
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
@@ -34,6 +35,7 @@ pub enum Sub {
     Branch(Branch),
     Testbed(Testbed),
     Threshold(Threshold),
+    MetricKind(MetricKind),
     Run(Run),
     Benchmark(Benchmark),
     Perf(Perf),
@@ -57,6 +59,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Branch(branch) => Self::Branch(branch.try_into()?),
             CliSub::Testbed(testbed) => Self::Testbed(testbed.try_into()?),
             CliSub::Threshold(threshold) => Self::Threshold(threshold.try_into()?),
+            CliSub::MetricKind(metric_kind) => Self::MetricKind(metric_kind.try_into()?),
             CliSub::Run(run) => Self::Run(run.try_into()?),
             CliSub::Benchmark(benchmark) => Self::Benchmark(benchmark.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
@@ -81,6 +84,7 @@ impl SubCmd for Sub {
             Self::Branch(branch) => branch.exec().await,
             Self::Testbed(testbed) => testbed.exec().await,
             Self::Threshold(threshold) => threshold.exec().await,
+            Self::MetricKind(metric_kind) => metric_kind.exec().await,
             Self::Run(run) => run.exec().await,
             Self::Benchmark(benchmark) => benchmark.exec().await,
             Self::Perf(perf) => perf.exec().await,
