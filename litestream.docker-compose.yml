@@ -26,8 +26,5 @@ services:
     container_name: bencher_ui
     ports:
       - 3000:80
-    environment:
-      # Set this to your actual host
-      - VITE_BENCHER_API_URL=http://localhost:61016
     depends_on:
       - bencher_api

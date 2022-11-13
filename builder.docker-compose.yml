@@ -6,3 +6,13 @@ services:
       dockerfile: ./services/api/builder.Dockerfile
     image: bencher-api-builder
     container_name: bencher_api_builder
+
+  bencher-ui-builder:
+    build:
+      context: ./services/ui
+      dockerfile: builder.Dockerfile
+      args:
+        # Set this to your actual host if different
+        - VITE_BENCHER_API_URL=http://localhost:61016
+    image: bencher-ui-builder
+    container_name: bencher_ui_builder
