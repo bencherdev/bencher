@@ -9,7 +9,7 @@ pub struct CliRun {
     #[clap(long)]
     pub project: Option<ResourceId>,
 
-    /// Branch slug or UUID (or set BENCHER_BRANCH)
+    /// Branch slug or UUID (or set BENCHER_BRANCH) (default is "main")
     #[clap(long)]
     pub branch: Option<ResourceId>,
 
@@ -21,7 +21,7 @@ pub struct CliRun {
     #[clap(long)]
     pub hash: Option<String>,
 
-    /// Testbed slug or UUID (or set BENCHER_TESTBED)
+    /// Testbed slug or UUID (or set BENCHER_TESTBED) (default is "localhost")
     #[clap(long)]
     pub testbed: Option<ResourceId>,
 
@@ -29,7 +29,7 @@ pub struct CliRun {
     #[clap(value_enum, long, alias = "tool")]
     pub adapter: Option<CliRunAdapter>,
 
-    /// Number of run iterations (default is 1)
+    /// Number of run iterations (default is `1`)
     #[clap(long)]
     pub iter: Option<usize>,
 

@@ -2,7 +2,8 @@ use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
 use bencher_json::{
-    project::report::JsonReportSettings, JsonBranch, JsonNewReport, JsonReport, ResourceId,
+    project::{branch::BRANCH_MAIN, report::JsonReportSettings, testbed::TESTBED_LOCALHOST},
+    JsonBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
 use clap::ValueEnum;
@@ -112,7 +113,10 @@ fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<B
     } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
         Ok(Branch::Name(name))
     } else {
-        Err(CliError::BranchNotFound)
+        BRANCH_MAIN
+            .parse()
+            .map(Branch::ResourceId)
+            .map_err(CliError::BranchInvalid)
     }
 }
 
@@ -130,7 +134,7 @@ fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, CliError> {
     } else if let Ok(testbed) = std::env::var(BENCHER_TESTBED) {
         testbed.as_str().parse().map_err(CliError::TestbedInvalid)
     } else {
-        Err(CliError::TestbedNotFound)
+        TESTBED_LOCALHOST.parse().map_err(CliError::TestbedInvalid)
     }
 }
 
