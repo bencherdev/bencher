@@ -17,8 +17,8 @@ use crate::{
     model::{
         organization::QueryOrganization,
         project::{
-            metric_kind::InsertMetricKind, project_role::InsertProjectRole, InsertProject,
-            QueryProject,
+            branch::InsertBranch, metric_kind::InsertMetricKind, project_role::InsertProjectRole,
+            testbed::InsertTestbed, InsertProject, QueryProject,
         },
         user::auth::AuthUser,
     },
@@ -162,7 +162,21 @@ async fn post_inner(
         .execute(conn)
         .map_err(api_error!())?;
 
-    // Add a latency metric kind to the project
+    // Add a `main` branch to the project
+    let insert_branch = InsertBranch::main(conn, query_project.id);
+    diesel::insert_into(schema::branch::table)
+        .values(&insert_branch)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    // Add a `localhost` testbed to the project
+    let insert_testbed = InsertTestbed::localhost(conn, query_project.id);
+    diesel::insert_into(schema::testbed::table)
+        .values(&insert_testbed)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    // Add a `latency` metric kind to the project
     let insert_metric_kind = InsertMetricKind::latency(conn, query_project.id);
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)

@@ -100,6 +100,19 @@ impl InsertTestbed {
         project: &ResourceId,
         testbed: JsonNewTestbed,
     ) -> Result<Self, ApiError> {
+        let project_id = QueryProject::from_resource_id(conn, project)?.id;
+        Ok(Self::from_json_inner(conn, project_id, testbed))
+    }
+
+    pub fn localhost(conn: &mut SqliteConnection, project_id: i32) -> Self {
+        Self::from_json_inner(conn, project_id, JsonNewTestbed::localhost())
+    }
+
+    pub fn from_json_inner(
+        conn: &mut SqliteConnection,
+        project_id: i32,
+        testbed: JsonNewTestbed,
+    ) -> Self {
         let JsonNewTestbed {
             name,
             slug,
@@ -113,9 +126,9 @@ impl InsertTestbed {
             disk,
         } = testbed;
         let slug = unwrap_slug!(conn, &name, slug, testbed, QueryTestbed);
-        Ok(Self {
+        Self {
             uuid: Uuid::new_v4().to_string(),
-            project_id: QueryProject::from_resource_id(conn, project)?.id,
+            project_id,
             name,
             slug,
             os_name,
@@ -126,6 +139,6 @@ impl InsertTestbed {
             gpu,
             ram,
             disk,
-        })
+        }
     }
 }

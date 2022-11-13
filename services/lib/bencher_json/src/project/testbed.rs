@@ -3,7 +3,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+const TESTBED_LOCALHOST: &str = "localhost";
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewTestbed {
     pub name: String,
@@ -16,6 +18,16 @@ pub struct JsonNewTestbed {
     pub gpu: Option<String>,
     pub ram: Option<String>,
     pub disk: Option<String>,
+}
+
+impl JsonNewTestbed {
+    pub fn localhost() -> Self {
+        Self {
+            name: TESTBED_LOCALHOST.into(),
+            slug: Some(TESTBED_LOCALHOST.into()),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
