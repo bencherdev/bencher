@@ -173,7 +173,12 @@ const KeyResource = (props) => {
             <i class={props.icon} aria-hidden="true" />
           </span>
         </div>
-        <div class="level-item">{props.name}</div>
+        <div
+          class="level-item"
+          style="white-space:unset;text-align:left;display:inline-block"
+        >
+          {props.name}
+        </div>
       </div>
     </nav>
   );

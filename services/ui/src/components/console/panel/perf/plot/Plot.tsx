@@ -45,7 +45,9 @@ const Plot = (props) => {
             props.key() ? "is-three-quarters" : "is-11"
           }`}
         >
-          <LinePlot perf_data={props.perf_data} perf_active={perf_active} />
+          <nav class="level">
+            <LinePlot perf_data={props.perf_data} perf_active={perf_active} />
+          </nav>
         </div>
       </div>
     </div>
