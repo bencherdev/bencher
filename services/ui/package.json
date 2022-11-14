@@ -29,6 +29,7 @@
   "dependencies": {
     "@analytics/google-analytics": "^0.5.3",
     "@observablehq/plot": "^0.4.3",
+    "@solid-primitives/resize-observer": "^2.0.6",
     "analytics": "^0.8.1",
     "axios": "^0.27.2",
     "bulma-divider": "^0.2.0",

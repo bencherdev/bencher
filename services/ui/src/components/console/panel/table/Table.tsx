@@ -14,7 +14,11 @@ const Table = (props) => {
           <For each={props.table_data()}>
             {(datum, i) => (
               <div class="pricing-plan is-primary">
-                <div class="plan-header">{datum[props.config?.row?.key]}</div>
+                <div class="plan-header">
+                  <p style="overflow-wrap:break-word;">
+                    {datum[props.config?.row?.key]}
+                  </p>
+                </div>
                 <div class="plan-items">
                   <For each={props.config?.row?.items}>
                     {(item, i) => (
@@ -74,13 +78,14 @@ const RowButton = (props) => {
       class="button is-fullwidth"
       onClick={(e) => {
         e.preventDefault();
-        props.handleRedirect(props.config?.path?.(props.pathname(), props.datum));
+        props.handleRedirect(
+          props.config?.path?.(props.pathname(), props.datum)
+        );
       }}
     >
       {props.config?.text}
     </button>
   );
 };
-
 
 export default Table;

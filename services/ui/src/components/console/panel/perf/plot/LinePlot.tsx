@@ -56,10 +56,11 @@ const LinePlot = (props) => {
         label: getLabel(json_perf.kind),
       },
       marks: plot_arrays,
+      width: props.width(),
     });
   };
 
-  return <div>{plotted()}</div>;
+  return <>{plotted()}</>;
 };
 
 export default LinePlot;

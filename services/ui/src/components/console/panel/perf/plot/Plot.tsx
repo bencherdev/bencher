@@ -1,4 +1,5 @@
-import { createResource } from "solid-js";
+import { createElementSize } from "@solid-primitives/resize-observer";
+import { createMemo, createResource } from "solid-js";
 import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
@@ -21,12 +22,27 @@ const Plot = (props) => {
     setPerfActive(active);
   };
 
+  let key_ref: HTMLDivElement | undefined;
+  const key_size = createElementSize(() => key_ref);
+  let plot_ref: HTMLDivElement | undefined;
+  const plot_size = createElementSize(() => plot_ref);
+  const width = createMemo(() =>
+    props.key()
+      ? plot_size.width == key_size.width
+        ? plot_size.width
+        : plot_size.width - key_size.width / 4
+      : plot_size.width
+  );
+
   return (
     <div class="container">
       <div
         class={`columns is-reverse-mobile ${props.key() ? "" : "is-vcentered"}`}
       >
-        <div class="column is-narrow">
+        <div
+          class={`column ${props.key() ? "is-one-quarter" : "is-narrow"}`}
+          ref={(e) => (key_ref = e)}
+        >
           <PlotKey
             config={props.config}
             path_params={props.path_params}
@@ -40,12 +56,16 @@ const Plot = (props) => {
             handlePerfActive={handlePerfActive}
           />
         </div>
-        <div
-          class={`column is-narrow ${
-            props.key() ? "is-three-quarters" : "is-11"
-          }`}
-        >
-          <LinePlot perf_data={props.perf_data} perf_active={perf_active} />
+        <div class="column">
+          <nav class="level">
+            <div class="level-item" ref={(e) => (plot_ref = e)}>
+              <LinePlot
+                perf_data={props.perf_data}
+                perf_active={perf_active}
+                width={width}
+              />
+            </div>
+          </nav>
         </div>
       </div>
     </div>
