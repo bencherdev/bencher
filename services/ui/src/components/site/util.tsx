@@ -10,11 +10,12 @@ export const BENCHER_API_URL: () => string = () => {
     return api_url;
   } else {
     const location = window.location;
-    return location.protocol + "//" + location.hostname + ":61016"
+    return location.protocol + "//" + location.hostname + ":61016";
   }
 };
 
-export const BENCHER_GITHUB_URL: string = "https://github.com/epompeii/bencher";
+export const BENCHER_GITHUB_URL: string =
+  "https://github.com/bencherdev/bencher";
 
 export const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -42,7 +43,9 @@ export const isAllowedOrganization = async (
   permission: OrganizationPermission
 ) => {
   return isAllowed(
-    `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/allowed/${permission}`
+    `${BENCHER_API_URL()}/v0/organizations/${
+      path_params?.organization_slug
+    }/allowed/${permission}`
   );
 };
 
@@ -63,7 +66,9 @@ export const isAllowedProject = async (
   permission: ProjectPermission
 ) => {
   return isAllowed(
-    `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/allowed/${permission}`
+    `${BENCHER_API_URL()}/v0/projects/${
+      path_params?.project_slug
+    }/allowed/${permission}`
   );
 };
 

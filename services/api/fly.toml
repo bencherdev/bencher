@@ -2,7 +2,7 @@ app = "bencher-api"
 kill_timeout = 6
 
 [build]
-image = "epompeii/bencher-api-local:nightly"
+image = "bencherdev/bencher-api-local:nightly"
 
 [mounts]
 source = "bencher_data"

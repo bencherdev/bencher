@@ -18,7 +18,7 @@ import { Navbar } from "./components/site/navbar/Navbar";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
-import { BENCHER_USER_KEY } from "./components/site/util";
+import { BENCHER_GITHUB_URL, BENCHER_USER_KEY } from "./components/site/util";
 import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
@@ -217,6 +217,12 @@ const App: Component = () => {
         <Route path="/legal">
           <LegalRoutes handleTitle={handleTitle} />
         </Route>
+
+        {/* GitHub repo shortcut */}
+        <Route
+          path="/repo"
+          element={<>{(window.location.href = BENCHER_GITHUB_URL)}</>}
+        />
       </Routes>
 
       <For each={[...Array(12).keys()]}>{(_k, _i) => <br />}</For>
