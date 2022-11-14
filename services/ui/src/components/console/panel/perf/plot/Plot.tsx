@@ -42,7 +42,11 @@ const Plot = (props) => {
         </div>
         <div class="column">
           <nav class="level">
-            <LinePlot perf_data={props.perf_data} perf_active={perf_active} />
+            <LinePlot
+              key={props.key}
+              perf_data={props.perf_data}
+              perf_active={perf_active}
+            />
           </nav>
         </div>
       </div>
