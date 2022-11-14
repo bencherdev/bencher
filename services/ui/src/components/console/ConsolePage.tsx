@@ -104,7 +104,7 @@ const ConsolePage = (props) => {
     <section class="section">
       <div class="container">
         <div class="columns is-reverse-mobile">
-          <div class="column is-one-fifth">
+          <div class="column is-narrow">
             <ConsoleMenu
               organization_slug={props.organization_slug}
               project_slug={props.project_slug}

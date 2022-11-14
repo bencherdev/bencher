@@ -166,18 +166,15 @@ const MaximizeKeyButton = (props) => {
 
 const KeyResource = (props) => {
   return (
-    <nav class="level is-mobile">
+    <nav class="level">
       <div class="level-left">
         <div class="level-item">
           <span class="icon">
             <i class={props.icon} aria-hidden="true" />
           </span>
         </div>
-        <div
-          class="level-item"
-          style="white-space:unset;text-align:left;display:inline-block"
-        >
-          {props.name}
+        <div class="level-item">
+          <p style="overflow-wrap:break-word;">{props.name}</p>
         </div>
       </div>
     </nav>

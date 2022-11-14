@@ -26,7 +26,7 @@ const Plot = (props) => {
       <div
         class={`columns is-reverse-mobile ${props.key() ? "" : "is-vcentered"}`}
       >
-        <div class="column is-narrow">
+        <div class={`column ${props.key() ? "is-one-quarter" : "is-narrow"}`}>
           <PlotKey
             config={props.config}
             path_params={props.path_params}
@@ -40,11 +40,7 @@ const Plot = (props) => {
             handlePerfActive={handlePerfActive}
           />
         </div>
-        <div
-          class={`column is-narrow ${
-            props.key() ? "is-three-quarters" : "is-11"
-          }`}
-        >
+        <div class="column">
           <nav class="level">
             <LinePlot perf_data={props.perf_data} perf_active={perf_active} />
           </nav>
