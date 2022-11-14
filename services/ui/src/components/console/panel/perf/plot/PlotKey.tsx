@@ -79,9 +79,9 @@ const ExpandedKey = (props) => {
     <>
       <MinimizeKeyButton handleKey={props.handleKey} />
       <br />
-      <For each={props.perf_data()?.benchmarks}>
+      <For each={props.perf_data()?.results}>
         {(
-          perf: {
+          result: {
             branch: string;
             testbed: string;
             benchmark: string;
@@ -93,15 +93,15 @@ const ExpandedKey = (props) => {
             <div class="content">
               <KeyResource
                 icon="fas fa-code-branch"
-                name={props.branches()?.[perf.branch]?.name}
+                name={props.branches()?.[result.branch]?.name}
               />
               <KeyResource
                 icon="fas fa-server"
-                name={props.testbeds()?.[perf.testbed]?.name}
+                name={props.testbeds()?.[result.testbed]?.name}
               />
               <KeyResource
                 icon="fas fa-tachometer-alt"
-                name={props.benchmarks()?.[perf.benchmark]?.name}
+                name={props.benchmarks()?.[result.benchmark]?.name}
               />
             </div>
             <KeyButton
@@ -123,8 +123,8 @@ const MinimizedKey = (props) => {
     <>
       <MaximizeKeyButton handleKey={props.handleKey} />
       <br />
-      <For each={props.perf_data()?.benchmarks}>
-        {(_perf, index) => (
+      <For each={props.perf_data()?.results}>
+        {(_result, index) => (
           <KeyButton
             index={index}
             perf_active={props.perf_active}
@@ -186,7 +186,7 @@ const KeyButton = (props) => {
 
   return (
     <button
-      // On click toggle visibility of perf
+      // On click toggle visibility of key
       // move button over to being is-outlined
       class="button is-small is-fullwidth"
       style={

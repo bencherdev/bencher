@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use bencher_json::{
-    project::perf::{JsonPerfData, JsonPerfDatum},
+    project::perf::{JsonPerfMetric, JsonPerfMetrics},
     JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -104,7 +104,7 @@ async fn post_inner(
     let start_time_nanos = start_time.as_ref().map(|t| t.timestamp_nanos());
     let end_time_nanos = end_time.as_ref().map(|t| t.timestamp_nanos());
 
-    let mut perf_data = Vec::new();
+    let mut results = Vec::new();
     for branch in &branches {
         let branch_id = if let Ok(id) = QueryBranch::get_id(conn, branch) {
             id
@@ -140,7 +140,7 @@ async fn post_inner(
                     query = query.filter(schema::report::end_time.le(end_time));
                 }
 
-                let query_data = query
+                let metrics = query
                     .inner_join(
                         schema::version::table
                             .on(schema::report::version_id.eq(schema::version::id)),
@@ -192,29 +192,28 @@ async fn post_inner(
                             lower_bound,
                             upper_bound,
                         )| {
-                            let metrics = JsonMetric {
-                                value: value.into(),
-                                lower_bound: lower_bound.map(Into::into),
-                                upper_bound: upper_bound.map(Into::into),
-                            };
-                            Some(JsonPerfDatum {
+                            Some(JsonPerfMetric {
                                 uuid: Uuid::from_str(&uuid).map_err(api_error!()).ok()?,
                                 iteration: iteration as u32,
                                 start_time: to_date_time(start_time).ok()?,
                                 end_time: to_date_time(end_time).ok()?,
                                 version_number: version_number as u32,
                                 version_hash,
-                                metrics,
+                                metric: JsonMetric {
+                                    value: value.into(),
+                                    lower_bound: lower_bound.map(Into::into),
+                                    upper_bound: upper_bound.map(Into::into),
+                                },
                             })
                         },
                     )
                     .collect();
 
-                perf_data.push(JsonPerfData {
+                results.push(JsonPerfMetrics {
                     branch: *branch,
                     testbed: *testbed,
                     benchmark: *benchmark,
-                    data: query_data,
+                    metrics,
                 });
             }
         }
@@ -224,6 +223,6 @@ async fn post_inner(
         metric_kind: Uuid::from_str(&metric_kind.uuid).map_err(api_error!())?,
         start_time,
         end_time,
-        benchmarks: perf_data,
+        results,
     })
 }

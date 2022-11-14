@@ -24,24 +24,24 @@ const LinePlot = (props) => {
     if (
       typeof json_perf !== "object" ||
       json_perf === null ||
-      !Array.isArray(json_perf.benchmarks)
+      !Array.isArray(json_perf.results)
     ) {
       return;
     }
 
     const plot_arrays = [];
     const colors = d3.schemeTableau10;
-    json_perf.benchmarks.forEach((benchmark, index) => {
-      const data = benchmark.data;
-      if (!(Array.isArray(data) && props.perf_active[index])) {
+    json_perf.results.forEach((result, index) => {
+      const perf_metrics = result.metrics;
+      if (!(Array.isArray(perf_metrics) && props.perf_active[index])) {
         return;
       }
 
       const line_data = [];
-      data.forEach((datum) => {
-        const x_value = new Date(datum.start_time);
-        x_value.setSeconds(x_value.getSeconds() + datum.iteration);
-        const y_value = datum.metrics?.value;
+      perf_metrics.forEach((perf_metric) => {
+        const x_value = new Date(perf_metric.start_time);
+        x_value.setSeconds(x_value.getSeconds() + perf_metric.iteration);
+        const y_value = perf_metric.metric?.value;
         const xy = [x_value, y_value];
         line_data.push(xy);
       });

@@ -49,8 +49,8 @@ jobs:
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
-    # TODO remove once compiler error is fixed
-    continue-on-error: true
+    # In case of nightly errors
+    # continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Install nightly toolchain
