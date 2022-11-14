@@ -1,10 +1,5 @@
 import { createElementSize } from "@solid-primitives/resize-observer";
-import {
-  createEffect,
-  createMemo,
-  createResource,
-  createSignal,
-} from "solid-js";
+import { createMemo, createResource } from "solid-js";
 import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
@@ -73,12 +68,6 @@ const Plot = (props) => {
           </nav>
         </div>
       </div>
-      <p>
-        {Math.round(plot_size.width ?? 0)}px x{" "}
-        {Math.round(plot_size.height ?? 0)}px
-        <br />
-        {Math.round(width() ?? 0)}px
-      </p>
     </div>
   );
 };
