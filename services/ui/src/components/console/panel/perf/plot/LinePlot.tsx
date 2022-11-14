@@ -60,7 +60,7 @@ const LinePlot = (props) => {
     });
   };
 
-  return <div class="level-item">{plotted()}</div>;
+  return <>{plotted()}</>;
 };
 
 export default LinePlot;
