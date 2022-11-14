@@ -1,5 +1,10 @@
 import { createElementSize } from "@solid-primitives/resize-observer";
-import { createEffect, createResource, createSignal } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
@@ -25,6 +30,8 @@ const Plot = (props) => {
   let ref: HTMLDivElement | undefined;
   const es = createElementSize(() => ref);
 
+  const width = createMemo(() => (props.key() ? es.width : es.width));
+
   return (
     <div class="container">
       <div
@@ -44,21 +51,23 @@ const Plot = (props) => {
             handlePerfActive={handlePerfActive}
           />
         </div>
-        <div class="column" id="line-plot">
+        <div class="column">
           <nav class="level">
             <div class="level-item" ref={(e) => (ref = e)}>
               <LinePlot
-                key={props.key}
                 perf_data={props.perf_data}
                 perf_active={perf_active}
+                width={es.width}
               />
-              <p>
-                {Math.round(es.width ?? 0)}px x {Math.round(es.height ?? 0)}px
-              </p>
             </div>
           </nav>
         </div>
       </div>
+      <p>
+        {Math.round(es.width ?? 0)}px x {Math.round(es.height ?? 0)}px
+        <br />
+        {Math.round(width() ?? 0)}px
+      </p>
     </div>
   );
 };

@@ -56,7 +56,7 @@ const LinePlot = (props) => {
         label: getLabel(json_perf.kind),
       },
       marks: plot_arrays,
-      width: props.key() ? 600 : 720,
+      width: props.width,
     });
   };
 
