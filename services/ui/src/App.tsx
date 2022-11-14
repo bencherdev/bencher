@@ -26,6 +26,7 @@ const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
+const Repo = lazy(() => import("./components/site/Repo"));
 
 const initUser = () => {
   return {
@@ -219,10 +220,7 @@ const App: Component = () => {
         </Route>
 
         {/* GitHub repo shortcut */}
-        <Route
-          path="/repo"
-          element={<>{(window.location.href = BENCHER_GITHUB_URL)}</>}
-        />
+        <Route path="/repo" element={<Repo />} />
       </Routes>
 
       <For each={[...Array(12).keys()]}>{(_k, _i) => <br />}</For>
