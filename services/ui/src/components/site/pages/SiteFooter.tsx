@@ -30,7 +30,6 @@ const SiteFooter = () => {
           <div class="column">
             <div class="content">
               <p>Bencher - Continuous Benchmarking</p>
-              <p>© {new Date().getFullYear()} Pompeii LLC</p>
             </div>
           </div>
           <div class="column">
@@ -48,6 +47,9 @@ const SiteFooter = () => {
               </div>
             </nav>
           </div>
+        </div>
+        <div class="content">
+          <p>© {new Date().getFullYear()} Pompeii LLC</p>
         </div>
       </div>
     </footer>
