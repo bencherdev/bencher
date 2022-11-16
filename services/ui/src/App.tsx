@@ -110,7 +110,7 @@ const App: Component = () => {
     const bencher_title = `${new_title} - Bencher`;
     if (title() !== bencher_title) {
       setTitle(bencher_title);
-      analytics.page();
+      analytics()?.page();
     }
   };
 
