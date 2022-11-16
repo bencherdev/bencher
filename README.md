@@ -24,7 +24,7 @@ Build and run Docker images:
 ./scripts/docker_run.sh
 ```
 
-Then open your browser to [localhost](http://localhost).
+Then open your browser to [localhost:3000](http://localhost:3000).
 
 ## License
 
