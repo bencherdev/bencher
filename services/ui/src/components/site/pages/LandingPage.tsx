@@ -4,6 +4,7 @@ export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
 
 const LandingPage = (props) => {
   props.handleTitle(BENCHER_TITLE);
+  props.analytics?.page();
 
   return (
     <section class="section is-medium">
