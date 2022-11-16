@@ -1,4 +1,4 @@
-import { Analytics, AnalyticsInstance } from "analytics";
+import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
 
 export const site_analytics = () => {

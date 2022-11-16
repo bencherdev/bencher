@@ -27,7 +27,7 @@
     "vite-plugin-solid": "^2.3.0"
   },
   "dependencies": {
-    "@analytics/google-analytics": "^0.5.3",
+    "@analytics/google-analytics": "^1.0.5",
     "@observablehq/plot": "^0.4.3",
     "@solid-primitives/resize-observer": "^2.0.6",
     "analytics": "^0.8.1",
