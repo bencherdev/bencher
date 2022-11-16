@@ -105,10 +105,12 @@ const App: Component = () => {
     }
   }, 1000);
 
+  const analytics = createMemo(site_analytics);
   const handleTitle = (new_title) => {
     const bencher_title = `${new_title} - Bencher`;
     if (title() !== bencher_title) {
       setTitle(bencher_title);
+      analytics.page();
     }
   };
 
@@ -151,8 +153,6 @@ const App: Component = () => {
       </div>
     );
   };
-
-  const analytics = createMemo(site_analytics);
 
   return (
     <>
