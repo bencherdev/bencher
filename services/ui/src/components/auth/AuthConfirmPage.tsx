@@ -5,6 +5,7 @@ import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
 import validator from "validator";
+import { NotificationKind } from "../site/util";
 
 const TOKEN_PARAM = "token";
 
@@ -27,7 +28,9 @@ const AuthConfirmPage = (props: {
     setSearchParams({ [TOKEN_PARAM]: null });
   }
 
-  const token = createMemo(() => searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null);
+  const token = createMemo(() =>
+    searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null
+  );
 
   const [submitted, setSubmitted] = createSignal();
 
@@ -71,14 +74,14 @@ const AuthConfirmPage = (props: {
     fetchData(json_data)
       .then((resp) => {
         props.handleUser(resp.data);
-        props.handleNotification({ status: "ok", text: "🐰 Ahoy!" });
+        props.handleNotification(NotificationKind.OK, "Ahoy!");
         props.handleRedirect(props.config?.form?.redirect);
       })
       .catch((e) => {
-        props.handleNotification({
-          status: "error",
-          text: `Failed to confirm token: ${e}`,
-        });
+        props.handleNotification(
+          NotificationKind.ERROR,
+          `Failed to confirm token: ${e}`
+        );
       });
     handleFormSubmitting(false);
   };

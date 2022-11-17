@@ -17,7 +17,7 @@ import { site_analytics } from "./components/site/site_analytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
-import { BENCHER_GITHUB_URL, BENCHER_USER_KEY } from "./components/site/util";
+import { BENCHER_USER_KEY, NotificationKind } from "./components/site/util";
 import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
@@ -43,7 +43,7 @@ const initUser = () => {
 
 const initNotification = () => {
   return {
-    status: null,
+    kind: null,
     text: null,
   };
 };
@@ -85,11 +85,8 @@ const App: Component = () => {
     setNotification(initNotification());
   };
 
-  const handleNotification = (notification: {
-    status: string;
-    text: string;
-  }) => {
-    setNotification(notification);
+  const handleNotification = (kind: NotificationKind, text: string) => {
+    setNotification({ kind: kind, text: text });
     setTimeout(() => {
       removeNotification();
     }, 4000);
@@ -126,14 +123,14 @@ const App: Component = () => {
 
   const getNotification = () => {
     let color: string;
-    switch (notification().status) {
-      case "ok":
+    switch (notification().kind) {
+      case NotificationKind.OK:
         color = "is-success";
         break;
-      case "alert":
+      case NotificationKind.ALERT:
         color = "is-primary";
         break;
-      case "error":
+      case NotificationKind.ERROR:
         color = "is-danger";
         break;
       default:
@@ -141,7 +138,7 @@ const App: Component = () => {
     }
     return (
       <div class={`notification ${color}`}>
-        {notification().text}
+        🐰 {notification().text}
         <button
           class="delete"
           onClick={(e) => {
@@ -223,7 +220,7 @@ const App: Component = () => {
         <Route path="/repo" element={<Repo />} />
       </Routes>
 
-      <For each={[...Array(12).keys()]}>{(_k, _i) => <br />}</For>
+      <For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
       <SiteFooter />
     </>
   );

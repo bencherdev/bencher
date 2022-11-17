@@ -6,8 +6,7 @@ import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import { Field } from "../console/config/types";
 import { FormKind } from "./config/types";
-import { BENCHER_API_URL } from "../site/util";
-
+import { BENCHER_API_URL, NotificationKind } from "../site/util";
 
 export interface Props {
   config: any;
@@ -90,10 +89,10 @@ export const AuthForm = (props: Props) => {
         props.handleRedirect(props.config?.redirect);
       })
       .catch((e) => {
-        props.handleNotification({
-          status: "error",
-          text: `Failed to ${props.config?.kind}: ${e}`,
-        });
+        props.handleNotification(
+          NotificationKind.ERROR,
+          `Failed to ${props.config?.kind}: ${e}`
+        );
       });
     handleFormSubmitting(false);
   };

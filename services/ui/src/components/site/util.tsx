@@ -93,3 +93,9 @@ export const isAllowed = async (url: string) => {
     return false;
   }
 };
+
+export enum NotificationKind {
+  OK,
+  ALERT,
+  ERROR,
+}
