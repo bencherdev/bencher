@@ -116,12 +116,11 @@ const App: Component = () => {
 
   const getRedirect = () => {
     const new_pathname = redirect();
-    if (new_pathname === undefined) {
-      return;
-    }
-    if (new_pathname !== pathname()) {
-      setRedirect();
+    if (new_pathname && new_pathname !== pathname()) {
+      setRedirect(new_pathname);
       return <Navigate href={new_pathname} />;
+    } else {
+      return <></>;
     }
   };
 
