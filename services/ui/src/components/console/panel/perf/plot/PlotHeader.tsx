@@ -1,14 +1,7 @@
 import { For } from "solid-js";
-import { PerKind } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
 
-const perf_kinds = [
-  PerKind.LATENCY,
-  PerKind.THROUGHPUT,
-  PerKind.COMPUTE,
-  PerKind.MEMORY,
-  PerKind.STORAGE,
-];
+const metric_kinds = ["latency"];
 
 const PlotHeader = (props) => {
   return (
@@ -16,11 +9,13 @@ const PlotHeader = (props) => {
       <div class="level-left">
         <select
           class="card-header-title level-item"
-          value={props.kind()}
-          onInput={(e) => props.handleKind(e.currentTarget?.value)}
+          value={props.metric_kind()}
+          onInput={(e) => props.handleMetricKind(e.currentTarget?.value)}
         >
-          <For each={perf_kinds}>
-            {(kind) => <option value={kind}>{toCapitalized(kind)}</option>}
+          <For each={metric_kinds}>
+            {(metric_kind) => (
+              <option value={metric_kind}>{toCapitalized(metric_kind)}</option>
+            )}
           </For>
         </select>
       </div>

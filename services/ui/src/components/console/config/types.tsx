@@ -55,21 +55,6 @@ export enum Display {
   SELECT,
 }
 
-export enum PerKind {
-  LATENCY = "latency",
-  THROUGHPUT = "throughput",
-  COMPUTE = "compute",
-  MEMORY = "memory",
-  STORAGE = "storage",
-}
-
-export const isPerfKind = (kind: string) =>
-  kind === PerKind.LATENCY ||
-  kind === PerKind.THROUGHPUT ||
-  kind === PerKind.COMPUTE ||
-  kind === PerKind.MEMORY ||
-  kind === PerKind.STORAGE;
-
 export enum PerfTab {
   BRANCHES = "branches",
   TESTBEDS = "testbeds",
@@ -80,3 +65,6 @@ export const isPerfTab = (tab: string) =>
   tab === PerfTab.BRANCHES ||
   tab === PerfTab.TESTBEDS ||
   tab === PerfTab.BENCHMARKS;
+
+export const isMetricKind = (metric_kind: any) =>
+  typeof metric_kind === "string" && metric_kind.length > 0;

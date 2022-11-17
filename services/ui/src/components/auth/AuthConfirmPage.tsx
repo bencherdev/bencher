@@ -73,14 +73,14 @@ const AuthConfirmPage = (props: {
     };
     fetchData(json_data)
       .then((resp) => {
-        props.handleUser(resp.data);
         props.handleNotification(NotificationKind.OK, "Ahoy!");
+        props.handleUser(resp.data);
         props.handleRedirect(props.config?.form?.redirect);
       })
       .catch((e) => {
         props.handleNotification(
           NotificationKind.ERROR,
-          `Failed to confirm token: ${e}`
+          "Failed to confirm token please try again."
         );
       });
     handleFormSubmitting(false);

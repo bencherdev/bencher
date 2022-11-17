@@ -6,7 +6,7 @@ import {
   createResource,
   createSignal,
 } from "solid-js";
-import { isPerfKind, isPerfTab, PerfTab, PerKind } from "../../config/types";
+import { isMetricKind, isPerfTab, PerfTab } from "../../config/types";
 import { getToken } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
@@ -15,14 +15,14 @@ import validator from "validator";
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
 const BENCHMARKS_PARAM = "benchmarks";
-const KIND_PARAM = "kind";
+const METRIC_KIND_PARAM = "metric_kind";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 
-const DEFAULT_PERF_KIND = PerKind.LATENCY;
+const DEFAULT_METRIC_KIND = "latency";
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
 
@@ -88,8 +88,8 @@ const PerfPanel = (props) => {
   if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
     setSearchParams({ [BENCHMARKS_PARAM]: null });
   }
-  if (!isPerfKind(searchParams[KIND_PARAM])) {
-    setSearchParams({ [KIND_PARAM]: DEFAULT_PERF_KIND });
+  if (!isMetricKind(searchParams[METRIC_KIND_PARAM])) {
+    setSearchParams({ [METRIC_KIND_PARAM]: DEFAULT_METRIC_KIND });
   }
   if (!dateToISO(searchParams[START_TIME_PARAM])) {
     setSearchParams({ [START_TIME_PARAM]: null });
@@ -119,13 +119,13 @@ const PerfPanel = (props) => {
   const benchmarks = createMemo(() =>
     arrayFromString(searchParams[BENCHMARKS_PARAM])
   );
-  const kind = createMemo(() => {
+  const metric_kind = createMemo(() => {
     // This check is required for the initial load
     // before the query params have been sanitized
-    if (isPerfKind(searchParams[KIND_PARAM])) {
-      return searchParams[KIND_PARAM];
+    if (isMetricKind(searchParams[METRIC_KIND_PARAM])) {
+      return searchParams[METRIC_KIND_PARAM];
     } else {
-      return DEFAULT_PERF_KIND;
+      return DEFAULT_METRIC_KIND;
     }
   });
   // start/end_time is used for the query
@@ -164,7 +164,7 @@ const PerfPanel = (props) => {
       branches: branches(),
       testbeds: testbeds(),
       benchmarks: benchmarks(),
-      metric_kind: kind(),
+      metric_kind: metric_kind(),
       start_time: start_time(),
       end_time: end_time(),
     };
@@ -339,10 +339,10 @@ const PerfPanel = (props) => {
     );
   };
 
-  const handleKind = (kind: PerKind) => {
-    if (isPerfKind(kind)) {
+  const handleMetricKind = (metric_kind: string) => {
+    if (isMetricKind(metric_kind)) {
       setSearchParams({
-        [KIND_PARAM]: kind,
+        [METRIC_KIND_PARAM]: metric_kind,
       });
     }
   };
@@ -379,7 +379,7 @@ const PerfPanel = (props) => {
         branches={branches}
         testbeds={testbeds}
         benchmarks={benchmarks}
-        kind={kind}
+        metric_kind={metric_kind}
         start_date={start_date}
         end_date={end_date}
         perf_data={perf_data}
@@ -388,7 +388,7 @@ const PerfPanel = (props) => {
         branches_tab={branches_tab}
         testbeds_tab={testbeds_tab}
         benchmarks_tab={benchmarks_tab}
-        handleKind={handleKind}
+        handleMetricKind={handleMetricKind}
         handleStartTime={handleStartTime}
         handleEndTime={handleEndTime}
         handleTab={handleTab}

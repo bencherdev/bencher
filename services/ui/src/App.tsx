@@ -6,9 +6,9 @@ import {
   lazy,
   Component,
   createMemo,
-  Accessor,
-  Signal,
   For,
+  Switch,
+  Match,
 } from "solid-js";
 import { Routes, Route, Navigate, useLocation } from "solid-app-router";
 
@@ -42,6 +42,7 @@ const initUser = () => {
 };
 
 const initNotification = () => {
+  console.log("INIT");
   return {
     kind: null,
     text: null,
@@ -86,7 +87,10 @@ const App: Component = () => {
   };
 
   const handleNotification = (kind: NotificationKind, text: string) => {
+    console.log({ kind: kind, text: text });
+    console.log(notification());
     setNotification({ kind: kind, text: text });
+    console.log(notification());
     setTimeout(() => {
       removeNotification();
     }, 4000);
@@ -111,17 +115,8 @@ const App: Component = () => {
     }
   };
 
-  const getRedirect = () => {
-    const new_pathname = redirect();
-    if (new_pathname && new_pathname !== pathname()) {
-      setRedirect(new_pathname);
-      return <Navigate href={new_pathname} />;
-    } else {
-      return <></>;
-    }
-  };
-
   const getNotification = () => {
+    console.log("GETTING NOTIFICATION");
     let color: string;
     switch (notification().kind) {
       case NotificationKind.OK:
@@ -150,6 +145,12 @@ const App: Component = () => {
     );
   };
 
+  const getRedirect = () => {
+    const new_pathname = redirect();
+    setRedirect(new_pathname);
+    return new_pathname;
+  };
+
   return (
     <>
       <Navbar
@@ -159,13 +160,24 @@ const App: Component = () => {
         handleRedirect={setRedirect}
         handleProjectSlug={setProjectSlug}
       />
-      {getRedirect()}
 
-      {notification().text !== null && (
-        <section class="section">
-          <div class="container">{getNotification()}</div>
-        </section>
-      )}
+      <div>
+        <Switch fallback={<></>}>
+          <Match when={typeof notification().text === "string"}>
+            <section class="section">
+              <div class="container">{getNotification()}</div>
+            </section>
+          </Match>
+        </Switch>
+      </div>
+
+      <div>
+        <Switch fallback={<></>}>
+          <Match when={redirect() && redirect() != pathname()}>
+            <Navigate href={getRedirect()} />
+          </Match>
+        </Switch>
+      </div>
 
       <Routes>
         <Route

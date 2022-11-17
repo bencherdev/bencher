@@ -9,10 +9,10 @@ const PerfPlot = (props) => {
       <div class="column">
         <nav class="panel">
           <PlotHeader
-            kind={props.kind}
+            metric_kind={props.metric_kind}
             start_date={props.start_date}
             end_date={props.end_date}
-            handleKind={props.handleKind}
+            handleMetricKind={props.handleMetricKind}
             handleStartTime={props.handleStartTime}
             handleEndTime={props.handleEndTime}
           />

@@ -89,9 +89,10 @@ export const AuthForm = (props: Props) => {
         props.handleRedirect(props.config?.redirect);
       })
       .catch((e) => {
+        console.log(e);
         props.handleNotification(
           NotificationKind.ERROR,
-          `Failed to ${props.config?.kind}: ${e}`
+          `Failed to ${props.config?.kind} please try again.`
         );
       });
     handleFormSubmitting(false);
