@@ -17,7 +17,7 @@ import { site_analytics } from "./components/site/site_analytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
-import { BENCHER_USER_KEY, NotificationKind } from "./components/site/util";
+import { BENCHER_USER_KEY } from "./components/site/util";
 import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
@@ -86,15 +86,15 @@ const App: Component = () => {
     setNotification(initNotification());
   };
 
-  const handleNotification = (kind: NotificationKind, text: string) => {
-    console.log({ kind: kind, text: text });
-    console.log(notification());
-    setNotification({ kind: kind, text: text });
-    console.log(notification());
-    setTimeout(() => {
-      removeNotification();
-    }, 4000);
-  };
+  // const handleNotification = (kind: NotificationKind, text: string) => {
+  //   console.log({ kind: kind, text: text });
+  //   console.log(notification());
+  //   setNotification({ kind: kind, text: text });
+  //   console.log(notification());
+  //   setTimeout(() => {
+  //     removeNotification();
+  //   }, 4000);
+  // };
 
   setInterval(() => {
     if (user()?.token === null) {
@@ -115,35 +115,35 @@ const App: Component = () => {
     }
   };
 
-  const getNotification = () => {
-    console.log("GETTING NOTIFICATION");
-    let color: string;
-    switch (notification().kind) {
-      case NotificationKind.OK:
-        color = "is-success";
-        break;
-      case NotificationKind.ALERT:
-        color = "is-primary";
-        break;
-      case NotificationKind.ERROR:
-        color = "is-danger";
-        break;
-      default:
-        color = "";
-    }
-    return (
-      <div class={`notification ${color}`}>
-        🐰 {notification().text}
-        <button
-          class="delete"
-          onClick={(e) => {
-            e.preventDefault();
-            removeNotification();
-          }}
-        />
-      </div>
-    );
-  };
+  // const getNotification = () => {
+  //   console.log("GETTING NOTIFICATION");
+  //   let color: string;
+  //   switch (notification().kind) {
+  //     case NotificationKind.OK:
+  //       color = "is-success";
+  //       break;
+  //     case NotificationKind.ALERT:
+  //       color = "is-primary";
+  //       break;
+  //     case NotificationKind.ERROR:
+  //       color = "is-danger";
+  //       break;
+  //     default:
+  //       color = "";
+  //   }
+  //   return (
+  //     <div class={`notification ${color}`}>
+  //       🐰 {notification().text}
+  //       <button
+  //         class="delete"
+  //         onClick={(e) => {
+  //           e.preventDefault();
+  //           removeNotification();
+  //         }}
+  //       />
+  //     </div>
+  //   );
+  // };
 
   const getRedirect = () => {
     const new_pathname = redirect();
@@ -161,7 +161,7 @@ const App: Component = () => {
         handleProjectSlug={setProjectSlug}
       />
 
-      <div>
+      {/* <div>
         <Switch fallback={<></>}>
           <Match when={typeof notification().text === "string"}>
             <section class="section">
@@ -169,7 +169,7 @@ const App: Component = () => {
             </section>
           </Match>
         </Switch>
-      </div>
+      </div> */}
 
       <div>
         <Switch fallback={<></>}>
@@ -200,7 +200,7 @@ const App: Component = () => {
             user={user}
             handleUser={handleUser}
             removeUser={removeUser}
-            handleNotification={handleNotification}
+            // handleNotification={handleNotification}
           />
         </Route>
 

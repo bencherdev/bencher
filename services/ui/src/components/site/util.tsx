@@ -94,7 +94,24 @@ export const isAllowed = async (url: string) => {
   }
 };
 
-export enum NotificationKind {
+export const NOTIFY_KIND_PARAM = "notify_kind";
+export const NOTIFY_TEXT_PARAM = "notify_text";
+
+export const isNotifyKind = (kind: any) => {
+  switch (parseInt(kind)) {
+    case NotifyKind.OK:
+    case NotifyKind.ALERT:
+    case NotifyKind.ERROR:
+      return true;
+    default:
+      return false;
+  }
+};
+
+export const isNotifyText = (text: any) =>
+  typeof text === "string" && text.length > 0;
+
+export enum NotifyKind {
   OK,
   ALERT,
   ERROR,

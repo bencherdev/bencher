@@ -9,6 +9,7 @@ const INVITE_PARAM = "invite";
 
 const AuthFormPage = (props: {
   config: any;
+  pathname: Function;
   handleTitle: Function;
   handleRedirect: Function;
   user: Function;
@@ -26,7 +27,9 @@ const AuthFormPage = (props: {
     setSearchParams({ [INVITE_PARAM]: null });
   }
 
-  const invite = createMemo(() => searchParams[INVITE_PARAM] ? searchParams[INVITE_PARAM].trim() : null);
+  const invite = createMemo(() =>
+    searchParams[INVITE_PARAM] ? searchParams[INVITE_PARAM].trim() : null
+  );
 
   return (
     <section class="section">
@@ -41,6 +44,7 @@ const AuthFormPage = (props: {
 
             <AuthForm
               config={props.config?.form}
+              pathname={props.pathname}
               handleRedirect={props.handleRedirect}
               user={props.user}
               invite={invite}

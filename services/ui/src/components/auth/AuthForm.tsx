@@ -6,10 +6,16 @@ import SiteField from "../fields/SiteField";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import { Field } from "../console/config/types";
 import { FormKind } from "./config/types";
-import { BENCHER_API_URL, NotificationKind } from "../site/util";
+import {
+  BENCHER_API_URL,
+  NotifyKind,
+  NOTIFY_KIND_PARAM,
+  NOTIFY_TEXT_PARAM,
+} from "../site/util";
 
 export interface Props {
   config: any;
+  pathname: Function;
   handleRedirect: Function;
   user: Function;
   invite: Function;
@@ -86,14 +92,16 @@ export const AuthForm = (props: Props) => {
     }
     fetchData(json_data)
       .then((_resp) => {
-        props.handleRedirect(props.config?.redirect);
+        props.handleRedirect(props.config?.redirect, {
+          [NOTIFY_KIND_PARAM]: NotifyKind.OK,
+          [NOTIFY_TEXT_PARAM]: `Successful ${props.config?.kind} please confirm token.`,
+        });
       })
       .catch((e) => {
-        console.log(e);
-        props.handleNotification(
-          NotificationKind.ERROR,
-          `Failed to ${props.config?.kind} please try again.`
-        );
+        props.handleRedirect(props.pathname, {
+          [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+          [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
+        });
       });
     handleFormSubmitting(false);
   };
