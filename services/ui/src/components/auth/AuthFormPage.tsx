@@ -13,7 +13,6 @@ const AuthFormPage = (props: {
   config: any;
   user: Function;
   handleUser: Function;
-  handleNotification: Function;
 }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,7 +51,6 @@ const AuthFormPage = (props: {
                 user={props.user}
                 invite={invite}
                 handleUser={props.handleUser}
-                handleNotification={props.handleNotification}
               />
 
               <hr />

@@ -20,7 +20,6 @@ export interface Props {
   user: Function;
   invite: Function;
   handleUser: Function;
-  handleNotification: Function;
 }
 
 export const AuthForm = (props: Props) => {

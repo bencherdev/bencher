@@ -1,17 +1,14 @@
 import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
-import { NotifyKind, pageTitle } from "../site/util";
+import { NotifyKind, notifyParams, pageTitle } from "../site/util";
 
-const AuthLogoutPage = (props: {
-  config: any;
-  removeUser: Function;
-  handleNotification: Function;
-}) => {
+const AuthLogoutPage = (props: { config: any; removeUser: Function }) => {
   const navigate = useNavigate();
 
   props.removeUser();
-  props.handleNotification(NotifyKind.ALERT, "Goodbye!");
-  navigate(props.config?.redirect, { replace: true });
+  navigate(notifyParams(props.config?.redirect, NotifyKind.ALERT, "Goodbye!"), {
+    replace: true,
+  });
 
   createEffect(() => {
     pageTitle("Logout");

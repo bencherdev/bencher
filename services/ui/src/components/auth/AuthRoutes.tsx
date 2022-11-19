@@ -21,7 +21,6 @@ const AuthRoutes = (props) => {
             config={config[Auth.SIGNUP]}
             user={props.user}
             handleUser={props.handleUser}
-            handleNotification={props.handleNotification}
           />
         }
       />
@@ -32,7 +31,6 @@ const AuthRoutes = (props) => {
             config={config[Auth.LOGIN]}
             user={props.user}
             handleUser={props.handleUser}
-            handleNotification={props.handleNotification}
           />
         }
       />
@@ -53,7 +51,6 @@ const AuthRoutes = (props) => {
           <AuthLogoutPage
             config={config[Auth.LOGOUT]}
             removeUser={props.removeUser}
-            handleNotification={props.handleNotification}
           />
         }
       />
