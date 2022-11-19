@@ -26,11 +26,11 @@ const DEFAULT_METRIC_KIND = "latency";
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
 
-const addToAray = (array: any[], add: any) => {
+const addToArray = (array: any[], add: any) => {
   array.push(add);
   return array;
 };
-const removeFromAray = (array: any[], remove: any) => {
+const removeFromArray = (array: any[], remove: any) => {
   const index = array.indexOf(remove);
   if (index > -1) {
     array.splice(index, 1);
@@ -41,7 +41,7 @@ const removeFromAray = (array: any[], remove: any) => {
 const arrayFromString = (array_str: undefined | string) => {
   if (typeof array_str === "string") {
     const array = array_str.split(",");
-    return removeFromAray(array, "");
+    return removeFromArray(array, "");
   }
   return [];
 };
@@ -308,10 +308,12 @@ const PerfPanel = (props) => {
     }
     if (checked) {
       setSearchParams({
-        [param]: arrayToString(removeFromAray(param_array, uuid)),
+        [param]: arrayToString(removeFromArray(param_array, uuid)),
       });
     } else {
-      setSearchParams({ [param]: arrayToString(addToAray(param_array, uuid)) });
+      setSearchParams({
+        [param]: arrayToString(addToArray(param_array, uuid)),
+      });
     }
     tab[index].checked = !checked;
     return tab;

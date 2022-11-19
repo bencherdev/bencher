@@ -76,6 +76,10 @@ const ConsolePage = (props) => {
   const [project] = createResource(props.project_slug, fetchProject);
 
   createEffect(() => {
+    if (!(props.user().token && validator.isJWT(props.user().token))) {
+      navigate("/auth/login");
+    }
+
     const organization_uuid = project()?.organization;
     if (organization_uuid) {
       props.handleOrganizationSlug(organization_uuid);
@@ -83,18 +87,10 @@ const ConsolePage = (props) => {
       const slug = organizationSlug(pathname);
       props.handleOrganizationSlug(slug);
     }
-  });
 
-  createEffect(() => {
-    const slug = projectSlug(pathname);
-    props.handleProjectSlug(slug);
+    const project_slug = projectSlug(pathname);
+    props.handleProjectSlug(project_slug);
   });
-
-  setInterval(() => {
-    if (!(props.user().token && validator.isJWT(props.user().token))) {
-      navigate("/auth/login");
-    }
-  }, 3000);
 
   return (
     <section class="section">

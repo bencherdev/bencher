@@ -24,11 +24,8 @@ export interface Props {
 
 export const AuthForm = (props: Props) => {
   const navigate = useNavigate();
-  const [form, setForm] = createSignal(initForm());
 
-  createEffect(() => {
-    handleFormValid();
-  });
+  const [form, setForm] = createSignal(initForm());
 
   const handleField = (key, value, valid) => {
     setForm({
@@ -127,6 +124,10 @@ export const AuthForm = (props: Props) => {
     let resp = await axios(config);
     return resp;
   };
+
+  createEffect(() => {
+    handleFormValid();
+  });
 
   return (
     <form class="box">

@@ -19,58 +19,63 @@ const Notification = (props) => {
   //   setSearchParams({ [NOTIFY_TEXT_PARAM]: null });
   // }
 
-  // const removeNotification = () => {
-  //   setSearchParams({
-  //     [NOTIFY_KIND_PARAM]: null,
-  //     [NOTIFY_TEXT_PARAM]: null,
-  //   });
-  // };
+  const notify_kind = createMemo(() =>
+    parseInt(searchParams[NOTIFY_KIND_PARAM])
+  );
 
-  // const getNotification = () => {
-  //   let color: string;
-  //   switch (parseInt(searchParams[NOTIFY_KIND_PARAM])) {
-  //     case NotifyKind.OK:
-  //       color = "is-success";
-  //       break;
-  //     case NotifyKind.ALERT:
-  //       color = "is-primary";
-  //       break;
-  //     case NotifyKind.ERROR:
-  //       color = "is-danger";
-  //       break;
-  //     default:
-  //       color = "";
-  //   }
-  //   setTimeout(() => {
-  //     removeNotification();
-  //   }, 4000);
-  //   return (
-  //     <div class={`notification ${color}`}>
-  //       🐰 {searchParams[NOTIFY_TEXT_PARAM]}
-  //       <button
-  //         class="delete"
-  //         onClick={(e) => {
-  //           e.preventDefault();
-  //           removeNotification();
-  //         }}
-  //       />
-  //     </div>
-  //   );
-  // };
+  const notify_text = createMemo(() => searchParams[NOTIFY_TEXT_PARAM]);
+
+  const removeNotification = () => {
+    setSearchParams({
+      [NOTIFY_KIND_PARAM]: null,
+      [NOTIFY_TEXT_PARAM]: null,
+    });
+  };
+
+  const getNotification = () => {
+    let color: string;
+    switch (notify_kind()) {
+      case NotifyKind.OK:
+        color = "is-success";
+        break;
+      case NotifyKind.ALERT:
+        color = "is-primary";
+        break;
+      case NotifyKind.ERROR:
+        color = "is-danger";
+        break;
+      default:
+        color = "";
+    }
+    setTimeout(() => {
+      removeNotification();
+    }, 4000);
+    return (
+      <div class={`notification ${color}`}>
+        🐰 {notify_text()}
+        <button
+          class="delete"
+          onClick={(e) => {
+            e.preventDefault();
+            removeNotification();
+          }}
+        />
+      </div>
+    );
+  };
 
   return (
     <div>
-      <Switch fallback={<></>}>
+      <Switch fallback={<p>None</p>}>
         <Match
           when={
-            isNotifyKind(searchParams[NOTIFY_KIND_PARAM]) &&
-            isNotifyText(searchParams[NOTIFY_TEXT_PARAM])
+            // isNotifyKind(searchParams[NOTIFY_KIND_PARAM]) &&
+            isNotifyText(notify_text())
           }
         >
-          <></>
-          {/* <section class="section">
+          <section class="section">
             <div class="container">{getNotification()}</div>
-          </section> */}
+          </section>
         </Match>
       </Switch>
     </div>

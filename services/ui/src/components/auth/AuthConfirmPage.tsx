@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
+import { useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";

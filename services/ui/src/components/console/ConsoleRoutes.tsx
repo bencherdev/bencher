@@ -1,5 +1,5 @@
 import { lazy } from "solid-js";
-import { Route, Navigate } from "solid-app-router";
+import { Navigate, Route } from "solid-app-router";
 import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
@@ -8,7 +8,6 @@ const ConsolePage = lazy(() => import("./ConsolePage"));
 
 const ConsoleRoutes = (props) => {
   const config = consoleConfig;
-
   const consolePage = (config) => {
     return (
       <ConsolePage
