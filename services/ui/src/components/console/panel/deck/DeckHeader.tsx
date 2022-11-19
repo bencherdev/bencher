@@ -1,6 +1,9 @@
+import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
 
 const DeckHeader = (props) => {
+  const navigate = useNavigate();
+
   createEffect(() => {
     const title = props.data?.[props.config?.key];
     if (title) {
@@ -15,7 +18,7 @@ const DeckHeader = (props) => {
           class="button is-outlined"
           onClick={(e) => {
             e.preventDefault();
-            props.handleRedirect(props.config?.path(props.pathname()));
+            navigate(props.config?.path(props.pathname()));
           }}
         >
           <span class="icon">

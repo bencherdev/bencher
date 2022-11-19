@@ -4,6 +4,7 @@ import SiteField from "../../../fields/SiteField";
 import validator from "validator";
 import { getToken } from "../../../site/util";
 import { Field } from "../../config/types";
+import { useNavigate } from "solid-app-router";
 
 const initForm = (fields) => {
   let newForm = {};
@@ -35,6 +36,8 @@ const options = (url: string, token: string, data: any) => {
 };
 
 const Poster = (props) => {
+  const navigate = useNavigate();
+
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
 
@@ -48,7 +51,7 @@ const Poster = (props) => {
       await axios(
         options(props.config?.url?.(props.path_params()), token, data)
       );
-      props.handleRedirect(props.config?.path?.(props.pathname()));
+      navigate(props.config?.path?.(props.pathname()));
     } catch (error) {
       console.error(error);
     }

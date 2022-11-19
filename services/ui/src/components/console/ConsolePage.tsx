@@ -1,4 +1,4 @@
-import { useParams } from "solid-app-router";
+import { useNavigate, useParams } from "solid-app-router";
 import {
   createEffect,
   createMemo,
@@ -67,7 +67,7 @@ const fetchProject = async (project_slug: string) => {
 };
 
 const ConsolePage = (props) => {
-  const [count, setCount] = createSignal(0);
+  const navigate = useNavigate();
 
   const params = useParams();
   const path_params = createMemo(() => params);
@@ -90,15 +90,10 @@ const ConsolePage = (props) => {
   });
 
   setInterval(() => {
-    if (props.user()?.token === null) {
-      setCount(count() + 1);
-      if (count() === 2) {
-        props.handleRedirect("/auth/login");
-      }
-    } else if (count() !== 0) {
-      setCount(0);
+    if (!(props.user().token && validator.isJWT(props.user().token))) {
+      navigate("/auth/login");
     }
-  }, 1000);
+  }, 3000);
 
   return (
     <section class="section">
@@ -108,7 +103,6 @@ const ConsolePage = (props) => {
             <ConsoleMenu
               organization_slug={props.organization_slug}
               project_slug={props.project_slug}
-              handleRedirect={props.handleRedirect}
               handleProjectSlug={props.handleProjectSlug}
             />
           </div>
@@ -120,7 +114,6 @@ const ConsolePage = (props) => {
               path_params={path_params}
               pathname={props.pathname}
               handleTitle={props.handleTitle}
-              handleRedirect={props.handleRedirect}
               handleProjectSlug={props.handleProjectSlug}
             />
           </div>

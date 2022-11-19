@@ -1,4 +1,4 @@
-import { lazy } from "solid-js";
+import { createEffect, lazy } from "solid-js";
 import { Route, Navigate } from "solid-app-router";
 
 const AuthFormPage = lazy(() => import("./AuthFormPage"));
@@ -21,7 +21,6 @@ const AuthRoutes = (props) => {
             config={config[Auth.SIGNUP]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
             user={props.user}
             handleUser={props.handleUser}
             handleNotification={props.handleNotification}
@@ -35,7 +34,6 @@ const AuthRoutes = (props) => {
             config={config[Auth.LOGIN]}
             pathname={props.pathname}
             handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
             user={props.user}
             handleUser={props.handleUser}
             handleNotification={props.handleNotification}
@@ -47,9 +45,7 @@ const AuthRoutes = (props) => {
         element={
           <AuthConfirmPage
             config={config[Auth.CONFIRM]}
-            pathname={props.pathname}
             handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
             user={props.user}
             handleUser={props.handleUser}
             handleNotification={props.handleNotification}
@@ -62,7 +58,6 @@ const AuthRoutes = (props) => {
           <AuthLogoutPage
             config={config[Auth.LOGOUT]}
             handleTitle={props.handleTitle}
-            handleRedirect={props.handleRedirect}
             removeUser={props.removeUser}
             handleNotification={props.handleNotification}
           />

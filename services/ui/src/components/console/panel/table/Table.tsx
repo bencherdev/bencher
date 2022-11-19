@@ -1,4 +1,4 @@
-import { Link } from "solid-app-router";
+import { Link, useNavigate } from "solid-app-router";
 import { For, Switch, Match } from "solid-js";
 import { Row } from "../../config/types";
 
@@ -46,7 +46,6 @@ const Table = (props) => {
                 </div>
                 <div class="plan-footer">
                   <RowButton
-                    handleRedirect={props.handleRedirect}
                     config={props.config?.row?.button}
                     pathname={props.pathname}
                     datum={datum}
@@ -73,14 +72,14 @@ const AddButton = (props) => {
 };
 
 const RowButton = (props) => {
+  const navigate = useNavigate();
+
   return (
     <button
       class="button is-fullwidth"
       onClick={(e) => {
         e.preventDefault();
-        props.handleRedirect(
-          props.config?.path?.(props.pathname(), props.datum)
-        );
+        navigate(props.config?.path?.(props.pathname(), props.datum));
       }}
     >
       {props.config?.text}

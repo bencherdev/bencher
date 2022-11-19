@@ -1,3 +1,4 @@
+import { useNavigate } from "solid-app-router";
 import { createEffect, createResource, For, Match, Switch } from "solid-js";
 import { OrganizationPermission } from "../../../site/util";
 import { Button } from "../../config/types";
@@ -25,7 +26,6 @@ const TableHeader = (props) => {
               pathname={props.pathname}
               path_params={props.path_params}
               handleRefresh={props.handleRefresh}
-              handleRedirect={props.handleRedirect}
               button={button}
             />
           )}
@@ -36,7 +36,11 @@ const TableHeader = (props) => {
 };
 
 const TableHeaderButton = (props) => {
-  const [is_allowed] = createResource(props.path_params, (path_params) => props.button.is_allowed?.(path_params));
+  const navigate = useNavigate();
+
+  const [is_allowed] = createResource(props.path_params, (path_params) =>
+    props.button.is_allowed?.(path_params)
+  );
 
   return (
     <p class="level-item">
@@ -46,7 +50,7 @@ const TableHeaderButton = (props) => {
             class="button is-outlined"
             onClick={(e) => {
               e.preventDefault();
-              props.handleRedirect(props.button.path(props.pathname()));
+              navigate(props.button.path(props.pathname()));
             }}
           >
             <span class="icon">
@@ -60,7 +64,7 @@ const TableHeaderButton = (props) => {
             class="button is-outlined"
             onClick={(e) => {
               e.preventDefault();
-              props.handleRedirect(props.button.path(props.pathname()));
+              navigate(props.button.path(props.pathname()));
             }}
           >
             <span class="icon">

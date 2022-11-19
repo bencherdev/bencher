@@ -1,12 +1,20 @@
 import axios from "axios";
-import { createSignal, createResource, createMemo } from "solid-js";
+import {
+  createSignal,
+  createResource,
+  createMemo,
+  createEffect,
+} from "solid-js";
 import Table from "./Table";
 import validator from "validator";
 
 import TableHeader from "./TableHeader";
 import { getToken } from "../../../site/util";
+import { useNavigate } from "solid-app-router";
 
 const TablePanel = (props) => {
+  const navigate = useNavigate();
+
   const options = (token: string) => {
     return {
       url: props.config?.table?.url(props.path_params()),
@@ -46,23 +54,26 @@ const TablePanel = (props) => {
     setRefresh(refresh() + 1);
   };
 
+  createEffect(() => {
+    if (redirect()) {
+      navigate(redirect());
+    }
+  });
+
   return (
     <>
-      {redirect() && props.handleRedirect(redirect())}
       <TableHeader
         config={props.config?.header}
         pathname={props.pathname}
         path_params={props.path_params}
         refresh={refresh}
         handleTitle={props.handleTitle}
-        handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
       />
       <Table
         config={props.config?.table}
         pathname={props.pathname}
         table_data={table_data}
-        handleRedirect={props.handleRedirect}
       />
     </>
   );

@@ -12,11 +12,11 @@ import {
   NOTIFY_KIND_PARAM,
   NOTIFY_TEXT_PARAM,
 } from "../site/util";
+import { useNavigate } from "solid-app-router";
 
 export interface Props {
   config: any;
   pathname: Function;
-  handleRedirect: Function;
   user: Function;
   invite: Function;
   handleUser: Function;
@@ -24,6 +24,7 @@ export interface Props {
 }
 
 export const AuthForm = (props: Props) => {
+  const navigate = useNavigate();
   const [form, setForm] = createSignal(initForm());
 
   createEffect(() => {
@@ -92,16 +93,18 @@ export const AuthForm = (props: Props) => {
     }
     fetchData(json_data)
       .then((_resp) => {
-        props.handleRedirect(props.config?.redirect, {
-          [NOTIFY_KIND_PARAM]: NotifyKind.OK,
-          [NOTIFY_TEXT_PARAM]: `Successful ${props.config?.kind} please confirm token.`,
-        });
+        // {
+        //   [NOTIFY_KIND_PARAM]: NotifyKind.OK,
+        //   [NOTIFY_TEXT_PARAM]: `Successful ${props.config?.kind} please confirm token.`,
+        // }
+        navigate(props.config?.redirect);
       })
       .catch((e) => {
-        props.handleRedirect(props.pathname, {
-          [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-          [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
-        });
+        // {
+        //   [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+        //   [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
+        // }
+        navigate(props.pathname());
       });
     handleFormSubmitting(false);
   };

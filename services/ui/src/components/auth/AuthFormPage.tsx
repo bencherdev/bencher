@@ -1,5 +1,5 @@
-import { Link, useSearchParams } from "solid-app-router";
-import { createMemo } from "solid-js";
+import { Link, useNavigate, useSearchParams } from "solid-app-router";
+import { createEffect, createMemo } from "solid-js";
 import validator from "validator";
 
 import { AuthForm } from "./AuthForm";
@@ -11,13 +11,12 @@ const AuthFormPage = (props: {
   config: any;
   pathname: Function;
   handleTitle: Function;
-  handleRedirect: Function;
   user: Function;
   handleUser: Function;
   handleNotification: Function;
 }) => {
   props.handleTitle(props.config?.title);
-
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (
@@ -31,21 +30,22 @@ const AuthFormPage = (props: {
     searchParams[INVITE_PARAM] ? searchParams[INVITE_PARAM].trim() : null
   );
 
+  createEffect(() => {
+    if (props.user().token && validator.isJWT(props.user().token)) {
+      navigate("/console");
+    }
+  });
+
   return (
     <section class="section">
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
-            {props.user().token &&
-              validator.isJWT(props.user().token) &&
-              props.handleRedirect("/console")}
-
             <h2 class="title">{props.config?.title}</h2>
 
             <AuthForm
               config={props.config?.form}
               pathname={props.pathname}
-              handleRedirect={props.handleRedirect}
               user={props.user}
               invite={invite}
               handleUser={props.handleUser}

@@ -50,7 +50,6 @@ const DeckPanel = (props) => {
         data={deck_data()}
         pathname={props.pathname}
         handleTitle={props.handleTitle}
-        handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
       />
       <Deck
@@ -59,7 +58,6 @@ const DeckPanel = (props) => {
         url={url}
         path_params={props.path_params}
         pathname={props.pathname}
-        handleRedirect={props.handleRedirect}
         handleRefresh={handleRefresh}
       />
     </>

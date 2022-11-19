@@ -1,6 +1,9 @@
+import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
 
 const PosterHeader = (props) => {
+  const navigate = useNavigate();
+
   createEffect(() => {
     const title = props.config?.title;
     if (title) {
@@ -15,7 +18,7 @@ const PosterHeader = (props) => {
           class="button is-outlined"
           onClick={(e) => {
             e.preventDefault();
-            props.handleRedirect(props.config?.path(props.pathname()));
+            navigate(props.config?.path(props.pathname()));
           }}
         >
           <span class="icon">

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useSearchParams } from "solid-app-router";
+import { useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
@@ -13,13 +13,12 @@ const AuthConfirmPage = (props: {
   user: Function;
   config: any;
   handleTitle: Function;
-  handleRedirect: Function;
   handleUser: Function;
   handleNotification: Function;
 }) => {
   props.handleTitle(props.config?.title);
-
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   if (
     searchParams[TOKEN_PARAM] &&
@@ -31,20 +30,14 @@ const AuthConfirmPage = (props: {
   const token = createMemo(() =>
     searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null
   );
-
   const [submitted, setSubmitted] = createSignal();
-
-  createEffect(() => {
-    const jwt = token();
-    if (jwt && validator.isJWT(jwt) && jwt !== submitted()) {
-      setSubmitted(jwt);
-      handleFormSubmit();
-    }
-  });
-
   const [form, setForm] = createSignal(initForm());
 
   createEffect(() => {
+    if (props.user().token && validator.isJWT(props.user().token)) {
+      navigate("/console");
+    }
+
     const value = form()?.token?.value;
     if (value.length > 0) {
       setSearchParams({ [TOKEN_PARAM]: value });
@@ -53,6 +46,12 @@ const AuthConfirmPage = (props: {
     const valid = form()?.token?.valid;
     if (valid !== form()?.valid) {
       setForm({ ...form(), valid: valid });
+    }
+
+    const jwt = token();
+    if (jwt && validator.isJWT(jwt) && jwt !== submitted()) {
+      setSubmitted(jwt);
+      handleFormSubmit();
     }
   });
 
@@ -75,7 +74,7 @@ const AuthConfirmPage = (props: {
       .then((resp) => {
         props.handleNotification(NotifyKind.OK, "Ahoy!");
         props.handleUser(resp.data);
-        props.handleRedirect(props.config?.form?.redirect);
+        navigate(props.config?.form?.redirect);
       })
       .catch((e) => {
         props.handleNotification(
@@ -112,10 +111,6 @@ const AuthConfirmPage = (props: {
       <div class="container">
         <div class="columns is-centered">
           <div class="column is-two-fifths">
-            {props.user().token &&
-              validator.isJWT(props.user().token) &&
-              props.handleRedirect("/console")}
-
             <h2 class="title">{props.config?.title}</h2>
             <h3 class="subtitle">{props.config?.sub}</h3>
 

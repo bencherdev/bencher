@@ -158,7 +158,6 @@ const App: Component = () => {
         user={user}
         organization_slug={organization_slug}
         project_slug={project_slug}
-        handleRedirect={handleRedirect}
         handleProjectSlug={setProjectSlug}
       />
 
@@ -190,7 +189,6 @@ const App: Component = () => {
               analytics={analytics}
               user={user}
               handleTitle={setTitle}
-              handleRedirect={handleRedirect}
             />
           }
         />
@@ -199,7 +197,6 @@ const App: Component = () => {
         <Route path="/auth">
           <AuthRoutes
             handleTitle={handleTitle}
-            handleRedirect={handleRedirect}
             user={user}
             handleUser={handleUser}
             removeUser={removeUser}
@@ -215,7 +212,6 @@ const App: Component = () => {
             organization_slug={organization_slug}
             project_slug={project_slug}
             handleTitle={handleTitle}
-            handleRedirect={handleRedirect}
             handleOrganizationSlug={setOrganizationSlug}
             handleProjectSlug={setProjectSlug}
           />

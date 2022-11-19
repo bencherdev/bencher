@@ -1,6 +1,8 @@
-import { Link } from "solid-app-router";
+import { Link, useNavigate } from "solid-app-router";
 
 const ConsoleMenu = (props) => {
+  const navigate = useNavigate();
+
   const getOrganizationPath = (section: string) => {
     return `/console/organizations/${props.organization_slug()}/${section}`;
   };
@@ -32,9 +34,7 @@ const ConsoleMenu = (props) => {
               class="button is-outlined is-fullwidth"
               onClick={(e) => {
                 e.preventDefault();
-                props.handleRedirect(
-                  `/console/projects/${props.project_slug()}/perf`
-                );
+                navigate(`/console/projects/${props.project_slug()}/perf`);
               }}
             >
               <span class="icon">

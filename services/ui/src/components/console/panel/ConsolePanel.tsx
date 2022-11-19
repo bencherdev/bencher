@@ -14,7 +14,6 @@ const ConsolePanel = (props) => {
           path_params={props.path_params}
           pathname={props.pathname}
           handleTitle={props.handleTitle}
-          handleRedirect={props.handleRedirect}
         />
       </Match>
       <Match when={props.config?.operation === Operation.ADD}>
@@ -23,7 +22,6 @@ const ConsolePanel = (props) => {
           pathname={props.pathname}
           path_params={props.path_params}
           handleTitle={props.handleTitle}
-          handleRedirect={props.handleRedirect}
         />
       </Match>
       <Match when={props.config?.operation === Operation.VIEW}>
@@ -32,7 +30,6 @@ const ConsolePanel = (props) => {
           path_params={props.path_params}
           pathname={props.pathname}
           handleTitle={props.handleTitle}
-          handleRedirect={props.handleRedirect}
         />
       </Match>
       <Match when={props.config?.operation === Operation.PERF}>

@@ -2,11 +2,13 @@ import axios from "axios";
 import { createSignal, createResource, createEffect, For } from "solid-js";
 import { BENCHER_API_URL, getToken } from "../../site/util";
 import validator from "validator";
+import { useNavigate } from "solid-app-router";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
-
 const ProjectSelect = (props) => {
+  const navigate = useNavigate();
+
   const options = (token: string) => {
     return {
       url: `${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/projects`,
@@ -69,7 +71,7 @@ const ProjectSelect = (props) => {
     } else {
       path = `/console/projects/${selected()}/perf`;
     }
-    props.handleRedirect(path);
+    navigate(path);
   };
 
   const handleInput = (e) => {
@@ -77,7 +79,7 @@ const ProjectSelect = (props) => {
     if (target_slug === BENCHER_ALL_PROJECTS) {
       setSelected(target_slug);
       props.handleProjectSlug(null);
-      props.handleRedirect(`/console/organizations/${props.organization_slug()}/projects`);
+      navigate(`/console/organizations/${props.organization_slug()}/projects`);
       return;
     }
 

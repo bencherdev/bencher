@@ -1,16 +1,21 @@
+import { useNavigate } from "solid-app-router";
+import { createEffect } from "solid-js";
 import validator from "validator";
 
 export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
 
 const LandingPage = (props) => {
   props.handleTitle(BENCHER_TITLE);
+  const navigate = useNavigate();
+
+  createEffect(() => {
+    if (props.user().token && validator.isJWT(props.user().token)) {
+      navigate("/console");
+    }
+  });
 
   return (
     <section class="section is-medium">
-      {props.user().token &&
-        validator.isJWT(props.user().token) &&
-        props.handleRedirect("/console")}
-
       <div class="container">
         <div class="content has-text-centered">
           <h1 class="title">Catch Performance Regressions in CI</h1>
@@ -24,7 +29,7 @@ const LandingPage = (props) => {
                 class="button is-primary is-large is-responsive is-fullwidth"
                 onClick={(e) => {
                   e.preventDefault();
-                  props.handleRedirect("/auth/signup");
+                  navigate("/auth/signup");
                 }}
               >
                 Start Now

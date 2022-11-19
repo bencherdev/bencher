@@ -1,4 +1,8 @@
+import { useNavigate } from "solid-app-router";
+
 const DeckButton = (props) => {
+  const navigate = useNavigate();
+
   return (
     <div class="columns">
       <div class="column">
@@ -9,7 +13,7 @@ const DeckButton = (props) => {
                 class="button is-fullwidth is-primary"
                 onClick={(e) => {
                   e.preventDefault();
-                  props.handleRedirect(props.config.path(props.path_params()));
+                  navigate(props.config.path(props.path_params()));
                 }}
               >
                 Select

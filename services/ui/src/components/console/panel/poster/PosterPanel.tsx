@@ -8,13 +8,11 @@ const PosterPanel = (props) => {
         config={props.config?.header}
         pathname={props.pathname}
         handleTitle={props.handleTitle}
-        handleRedirect={props.handleRedirect}
       />
       <Poster
         config={props.config?.form}
         pathname={props.pathname}
         path_params={props.path_params}
-        handleRedirect={props.handleRedirect}
       />
     </>
   );

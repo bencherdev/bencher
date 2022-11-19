@@ -18,7 +18,6 @@ const ConsoleRoutes = (props) => {
         organization_slug={props.organization_slug}
         project_slug={props.project_slug}
         handleTitle={props.handleTitle}
-        handleRedirect={props.handleRedirect}
         handleOrganizationSlug={props.handleOrganizationSlug}
         handleProjectSlug={props.handleProjectSlug}
       />
@@ -33,11 +32,15 @@ const ConsoleRoutes = (props) => {
       {/* Console Projects Routes */}
       <Route
         path="/organizations"
-        element={consolePage(config?.[Resource.ORGANIZATIONS]?.[Operation.LIST])}
+        element={consolePage(
+          config?.[Resource.ORGANIZATIONS]?.[Operation.LIST]
+        )}
       />
       <Route
         path="/organizations/:organization_slug"
-        element={consolePage(config?.[Resource.ORGANIZATIONS]?.[Operation.VIEW])}
+        element={consolePage(
+          config?.[Resource.ORGANIZATIONS]?.[Operation.VIEW]
+        )}
       />
       <Route
         path="/organizations/:organization_slug/projects"
@@ -65,7 +68,9 @@ const ConsoleRoutes = (props) => {
       />
       <Route
         path="/organizations/:organization_slug/settings"
-        element={consolePage(config?.[Resource.ORGANIZATION_SETTINGS]?.[Operation.VIEW])}
+        element={consolePage(
+          config?.[Resource.ORGANIZATION_SETTINGS]?.[Operation.VIEW]
+        )}
       />
       <Route
         path="/projects/:project_slug/perf"
