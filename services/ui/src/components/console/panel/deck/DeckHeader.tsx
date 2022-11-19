@@ -1,14 +1,12 @@
 import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
+import { pageTitle } from "../../../site/util";
 
 const DeckHeader = (props) => {
   const navigate = useNavigate();
 
   createEffect(() => {
-    const title = props.data?.[props.config?.key];
-    if (title) {
-      props.handleTitle(title);
-    }
+    pageTitle(props.data?.[props.config?.key]);
   });
 
   return (

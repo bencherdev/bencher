@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo } from "solid-js";
 import validator from "validator";
+import { pageTitle } from "../site/util";
 
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
@@ -10,12 +11,10 @@ const INVITE_PARAM = "invite";
 const AuthFormPage = (props: {
   config: any;
   pathname: Function;
-  handleTitle: Function;
   user: Function;
   handleUser: Function;
   handleNotification: Function;
 }) => {
-  props.handleTitle(props.config?.title);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -34,6 +33,8 @@ const AuthFormPage = (props: {
     if (props.user().token && validator.isJWT(props.user().token)) {
       navigate("/console");
     }
+
+    pageTitle(props.config?.title);
   });
 
   return (

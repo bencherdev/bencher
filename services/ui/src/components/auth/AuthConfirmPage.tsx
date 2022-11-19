@@ -1,22 +1,20 @@
 import axios from "axios";
-import { useNavigate, useSearchParams } from "solid-app-router";
+import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
 import validator from "validator";
-import { NotifyKind } from "../site/util";
+import { NotifyKind, pageTitle } from "../site/util";
 
 const TOKEN_PARAM = "token";
 
 const AuthConfirmPage = (props: {
   user: Function;
   config: any;
-  handleTitle: Function;
   handleUser: Function;
   handleNotification: Function;
 }) => {
-  props.handleTitle(props.config?.title);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -88,6 +86,8 @@ const AuthConfirmPage = (props: {
     if (props.user().token && validator.isJWT(props.user().token)) {
       navigate("/console");
     }
+
+    pageTitle(props.config?.title);
 
     const value = form()?.token?.value;
     if (value.length > 0) {

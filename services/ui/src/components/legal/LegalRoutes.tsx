@@ -6,7 +6,7 @@ import licensePage from "./config/licensePage";
 
 const LegalRoutes = (props) => {
   const headerPage = (page) => {
-    return <HeaderPage page={page} handleTitle={props.handleTitle} />;
+    return <HeaderPage page={page} />;
   };
 
   return (

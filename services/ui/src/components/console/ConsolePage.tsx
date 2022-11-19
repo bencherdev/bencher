@@ -113,7 +113,6 @@ const ConsolePage = (props) => {
               config={props.config}
               path_params={path_params}
               pathname={props.pathname}
-              handleTitle={props.handleTitle}
               handleProjectSlug={props.handleProjectSlug}
             />
           </div>

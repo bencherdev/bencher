@@ -368,7 +368,6 @@ const PerfPanel = (props) => {
       <PerfHeader
         config={props.config?.header}
         refresh={refresh}
-        handleTitle={props.handleTitle}
         handleRefresh={handleRefresh}
       />
       <PerfPlot

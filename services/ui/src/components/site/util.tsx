@@ -1,6 +1,8 @@
 import axios from "axios";
 import validator from "validator";
 
+import { site_analytics } from "./site_analytics";
+
 // Either supply `VITE_BENCHER_API_URL` at build time,
 // or default to the current protocol and hostname at port `61016`.
 // If another endpoint is required, then the UI will need to be re-bundled.
@@ -18,6 +20,23 @@ export const BENCHER_GITHUB_URL: string =
   "https://github.com/bencherdev/bencher";
 
 export const BENCHER_USER_KEY: string = "BENCHER_USER";
+
+export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
+
+export const pageTitle = (new_title: string) => {
+  if (new_title && new_title.length > 0) {
+    const page_title = `${new_title} - Bencher`;
+    if (document.title === page_title) {
+      return;
+    } else {
+      document.title = page_title;
+    }
+  } else {
+    document.title = BENCHER_TITLE;
+  }
+
+  site_analytics()?.page();
+};
 
 export const getToken = () =>
   JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY))?.token;

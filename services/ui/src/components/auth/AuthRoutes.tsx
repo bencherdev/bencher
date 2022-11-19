@@ -20,7 +20,6 @@ const AuthRoutes = (props) => {
           <AuthFormPage
             config={config[Auth.SIGNUP]}
             pathname={props.pathname}
-            handleTitle={props.handleTitle}
             user={props.user}
             handleUser={props.handleUser}
             handleNotification={props.handleNotification}
@@ -33,7 +32,6 @@ const AuthRoutes = (props) => {
           <AuthFormPage
             config={config[Auth.LOGIN]}
             pathname={props.pathname}
-            handleTitle={props.handleTitle}
             user={props.user}
             handleUser={props.handleUser}
             handleNotification={props.handleNotification}
@@ -45,7 +43,6 @@ const AuthRoutes = (props) => {
         element={
           <AuthConfirmPage
             config={config[Auth.CONFIRM]}
-            handleTitle={props.handleTitle}
             user={props.user}
             handleUser={props.handleUser}
             handleNotification={props.handleNotification}
@@ -57,7 +54,6 @@ const AuthRoutes = (props) => {
         element={
           <AuthLogoutPage
             config={config[Auth.LOGOUT]}
-            handleTitle={props.handleTitle}
             removeUser={props.removeUser}
             handleNotification={props.handleNotification}
           />

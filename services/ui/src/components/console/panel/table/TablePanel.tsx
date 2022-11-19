@@ -67,7 +67,6 @@ const TablePanel = (props) => {
         pathname={props.pathname}
         path_params={props.path_params}
         refresh={refresh}
-        handleTitle={props.handleTitle}
         handleRefresh={handleRefresh}
       />
       <Table

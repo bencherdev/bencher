@@ -1,17 +1,17 @@
 import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
 import validator from "validator";
-
-export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
+import { BENCHER_TITLE, pageTitle } from "../util";
 
 const LandingPage = (props) => {
-  props.handleTitle(BENCHER_TITLE);
   const navigate = useNavigate();
 
   createEffect(() => {
     if (props.user().token && validator.isJWT(props.user().token)) {
       navigate("/console");
     }
+
+    pageTitle(BENCHER_TITLE);
   });
 
   return (

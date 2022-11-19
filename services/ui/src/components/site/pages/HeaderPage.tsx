@@ -1,5 +1,10 @@
+import { createEffect } from "solid-js";
+import { pageTitle } from "../util";
+
 const HeaderPage = (props) => {
-  props.handleTitle(props.page?.title);
+  createEffect(() => {
+    pageTitle(props.page?.title);
+  });
 
   return (
     <section class="section">

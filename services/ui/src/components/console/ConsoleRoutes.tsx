@@ -17,7 +17,6 @@ const ConsoleRoutes = (props) => {
         pathname={props.pathname}
         organization_slug={props.organization_slug}
         project_slug={props.project_slug}
-        handleTitle={props.handleTitle}
         handleOrganizationSlug={props.handleOrganizationSlug}
         handleProjectSlug={props.handleProjectSlug}
       />

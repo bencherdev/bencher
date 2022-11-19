@@ -19,10 +19,8 @@ import {
 } from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
-import { site_analytics } from "./components/site/site_analytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
-import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
 import { BENCHER_USER_KEY, NotifyKind } from "./components/site/util";
 import validator from "validator";
 
@@ -49,7 +47,6 @@ const initUser = () => {
 };
 
 const App: Component = () => {
-  const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [user, setUser] = createSignal(initUser());
 
   const location = useLocation();
@@ -62,12 +59,6 @@ const App: Component = () => {
   const [project_slug, setProjectSlug] = createSignal<String>(
     projectSlug(pathname)
   );
-
-  createEffect(() => {
-    if (document.title !== title()) {
-      document.title = title();
-    }
-  });
 
   const handleUser = (user) => {
     window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
@@ -98,15 +89,6 @@ const App: Component = () => {
       }
     }
   }, 1000);
-
-  const analytics = createMemo(site_analytics);
-  const handleTitle = (new_title) => {
-    const bencher_title = `${new_title} - Bencher`;
-    if (title() !== bencher_title) {
-      setTitle(bencher_title);
-      analytics()?.page();
-    }
-  };
 
   // const getNotification = () => {
   //   console.log("GETTING NOTIFICATION");
@@ -168,21 +150,11 @@ const App: Component = () => {
       </div> */}
 
       <Routes>
-        <Route
-          path="/"
-          element={
-            <LandingPage
-              analytics={analytics}
-              user={user}
-              handleTitle={setTitle}
-            />
-          }
-        />
+        <Route path="/" element={<LandingPage user={user} />} />
 
         {/* Auth Routes */}
         <Route path="/auth">
           <AuthRoutes
-            handleTitle={handleTitle}
             user={user}
             handleUser={handleUser}
             removeUser={removeUser}
@@ -197,7 +169,6 @@ const App: Component = () => {
             pathname={pathname}
             organization_slug={organization_slug}
             project_slug={project_slug}
-            handleTitle={handleTitle}
             handleOrganizationSlug={setOrganizationSlug}
             handleProjectSlug={setProjectSlug}
           />
@@ -210,7 +181,7 @@ const App: Component = () => {
 
         {/* Auth Routes */}
         <Route path="/legal">
-          <LegalRoutes handleTitle={handleTitle} />
+          <LegalRoutes />
         </Route>
 
         {/* GitHub repo shortcut */}

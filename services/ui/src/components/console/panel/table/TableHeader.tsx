@@ -1,14 +1,11 @@
 import { useNavigate } from "solid-app-router";
 import { createEffect, createResource, For, Match, Switch } from "solid-js";
-import { OrganizationPermission } from "../../../site/util";
+import { OrganizationPermission, pageTitle } from "../../../site/util";
 import { Button } from "../../config/types";
 
 const TableHeader = (props) => {
   createEffect(() => {
-    const title = props.config?.title;
-    if (title) {
-      props.handleTitle(title);
-    }
+    pageTitle(props.config?.title);
   });
 
   return (

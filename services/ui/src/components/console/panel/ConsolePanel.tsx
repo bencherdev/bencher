@@ -13,7 +13,6 @@ const ConsolePanel = (props) => {
           config={props.config}
           path_params={props.path_params}
           pathname={props.pathname}
-          handleTitle={props.handleTitle}
         />
       </Match>
       <Match when={props.config?.operation === Operation.ADD}>
@@ -21,7 +20,6 @@ const ConsolePanel = (props) => {
           config={props.config}
           pathname={props.pathname}
           path_params={props.path_params}
-          handleTitle={props.handleTitle}
         />
       </Match>
       <Match when={props.config?.operation === Operation.VIEW}>
@@ -29,7 +27,6 @@ const ConsolePanel = (props) => {
           config={props.config}
           path_params={props.path_params}
           pathname={props.pathname}
-          handleTitle={props.handleTitle}
         />
       </Match>
       <Match when={props.config?.operation === Operation.PERF}>
@@ -37,7 +34,6 @@ const ConsolePanel = (props) => {
           project_slug={props.project_slug}
           config={props.config}
           path_params={props.path_params}
-          handleTitle={props.handleTitle}
         />
       </Match>
     </Switch>
