@@ -5,7 +5,7 @@ import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
 import validator from "validator";
-import { NotificationKind } from "../site/util";
+import { NotifyKind } from "../site/util";
 
 const TOKEN_PARAM = "token";
 
@@ -73,13 +73,13 @@ const AuthConfirmPage = (props: {
     };
     fetchData(json_data)
       .then((resp) => {
-        props.handleNotification(NotificationKind.OK, "Ahoy!");
+        props.handleNotification(NotifyKind.OK, "Ahoy!");
         props.handleUser(resp.data);
         props.handleRedirect(props.config?.form?.redirect);
       })
       .catch((e) => {
         props.handleNotification(
-          NotificationKind.ERROR,
+          NotifyKind.ERROR,
           "Failed to confirm token please try again."
         );
       });

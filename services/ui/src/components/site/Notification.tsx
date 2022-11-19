@@ -11,52 +11,52 @@ import {
 const Notification = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  if (!isNotifyKind(searchParams[NOTIFY_KIND_PARAM])) {
-    setSearchParams({ [NOTIFY_KIND_PARAM]: null });
-  }
+  // if (!isNotifyKind(searchParams[NOTIFY_KIND_PARAM])) {
+  //   setSearchParams({ [NOTIFY_KIND_PARAM]: null });
+  // }
 
-  if (!isNotifyText(searchParams[NOTIFY_TEXT_PARAM])) {
-    setSearchParams({ [NOTIFY_TEXT_PARAM]: null });
-  }
+  // if (!isNotifyText(searchParams[NOTIFY_TEXT_PARAM])) {
+  //   setSearchParams({ [NOTIFY_TEXT_PARAM]: null });
+  // }
 
-  const removeNotification = () => {
-    setSearchParams({
-      [NOTIFY_KIND_PARAM]: null,
-      [NOTIFY_TEXT_PARAM]: null,
-    });
-  };
+  // const removeNotification = () => {
+  //   setSearchParams({
+  //     [NOTIFY_KIND_PARAM]: null,
+  //     [NOTIFY_TEXT_PARAM]: null,
+  //   });
+  // };
 
-  const getNotification = () => {
-    let color: string;
-    switch (parseInt(searchParams[NOTIFY_KIND_PARAM])) {
-      case NotifyKind.OK:
-        color = "is-success";
-        break;
-      case NotifyKind.ALERT:
-        color = "is-primary";
-        break;
-      case NotifyKind.ERROR:
-        color = "is-danger";
-        break;
-      default:
-        color = "";
-    }
-    setTimeout(() => {
-      removeNotification();
-    }, 4000);
-    return (
-      <div class={`notification ${color}`}>
-        🐰 {searchParams[NOTIFY_TEXT_PARAM]}
-        <button
-          class="delete"
-          onClick={(e) => {
-            e.preventDefault();
-            removeNotification();
-          }}
-        />
-      </div>
-    );
-  };
+  // const getNotification = () => {
+  //   let color: string;
+  //   switch (parseInt(searchParams[NOTIFY_KIND_PARAM])) {
+  //     case NotifyKind.OK:
+  //       color = "is-success";
+  //       break;
+  //     case NotifyKind.ALERT:
+  //       color = "is-primary";
+  //       break;
+  //     case NotifyKind.ERROR:
+  //       color = "is-danger";
+  //       break;
+  //     default:
+  //       color = "";
+  //   }
+  //   setTimeout(() => {
+  //     removeNotification();
+  //   }, 4000);
+  //   return (
+  //     <div class={`notification ${color}`}>
+  //       🐰 {searchParams[NOTIFY_TEXT_PARAM]}
+  //       <button
+  //         class="delete"
+  //         onClick={(e) => {
+  //           e.preventDefault();
+  //           removeNotification();
+  //         }}
+  //       />
+  //     </div>
+  //   );
+  // };
 
   return (
     <div>
@@ -67,9 +67,10 @@ const Notification = (props) => {
             isNotifyText(searchParams[NOTIFY_TEXT_PARAM])
           }
         >
-          <section class="section">
+          <></>
+          {/* <section class="section">
             <div class="container">{getNotification()}</div>
-          </section>
+          </section> */}
         </Match>
       </Switch>
     </div>

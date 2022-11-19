@@ -10,14 +10,20 @@ import {
   Switch,
   Match,
 } from "solid-js";
-import { Routes, Route, Navigate, useLocation } from "solid-app-router";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import { site_analytics } from "./components/site/site_analytics";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_TITLE } from "./components/site/pages/LandingPage";
-import { BENCHER_USER_KEY } from "./components/site/util";
+import { BENCHER_USER_KEY, NotifyKind } from "./components/site/util";
 import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
@@ -26,6 +32,7 @@ const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/Repo"));
+const Notification = lazy(() => import("./components/site/Notification"));
 
 const initUser = () => {
   return {
@@ -41,22 +48,15 @@ const initUser = () => {
   };
 };
 
-const initNotification = () => {
-  console.log("INIT");
-  return {
-    kind: null,
-    text: null,
-  };
-};
-
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
   const [redirect, setRedirect] = createSignal<null | string>();
   const [user, setUser] = createSignal(initUser());
-  const [notification, setNotification] = createSignal(initNotification());
 
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
+
+  const navigate = useNavigate();
 
   const [organization_slug, setOrganizationSlug] = createSignal<null | String>(
     null
@@ -82,19 +82,15 @@ const App: Component = () => {
     setUser(initUser());
   };
 
-  const removeNotification = () => {
-    setNotification(initNotification());
+  const handleNotification = (kind: NotifyKind, text: string) => {
+    console.log({ kind: kind, text: text });
+    // console.log(notification());
+    // setNotification({ kind: kind, text: text });
+    // console.log(notification());
+    // setTimeout(() => {
+    //   removeNotification();
+    // }, 4000);
   };
-
-  // const handleNotification = (kind: NotificationKind, text: string) => {
-  //   console.log({ kind: kind, text: text });
-  //   console.log(notification());
-  //   setNotification({ kind: kind, text: text });
-  //   console.log(notification());
-  //   setTimeout(() => {
-  //     removeNotification();
-  //   }, 4000);
-  // };
 
   setInterval(() => {
     if (user()?.token === null) {
@@ -145,9 +141,14 @@ const App: Component = () => {
   //   );
   // };
 
+  const handleRedirect = (path: string) => {
+    navigate(path);
+    // setRedirect(path);
+  };
+
   const getRedirect = () => {
     const new_pathname = redirect();
-    setRedirect(new_pathname);
+    handleRedirect(new_pathname);
     return new_pathname;
   };
 
@@ -157,9 +158,11 @@ const App: Component = () => {
         user={user}
         organization_slug={organization_slug}
         project_slug={project_slug}
-        handleRedirect={setRedirect}
+        handleRedirect={handleRedirect}
         handleProjectSlug={setProjectSlug}
       />
+
+      <Notification />
 
       {/* <div>
         <Switch fallback={<></>}>
@@ -171,13 +174,13 @@ const App: Component = () => {
         </Switch>
       </div> */}
 
-      <div>
+      {/* <div>
         <Switch fallback={<></>}>
           <Match when={redirect() && redirect() != pathname()}>
             <Navigate href={getRedirect()} />
           </Match>
         </Switch>
-      </div>
+      </div> */}
 
       <Routes>
         <Route
@@ -187,7 +190,7 @@ const App: Component = () => {
               analytics={analytics}
               user={user}
               handleTitle={setTitle}
-              handleRedirect={setRedirect}
+              handleRedirect={handleRedirect}
             />
           }
         />
@@ -196,11 +199,11 @@ const App: Component = () => {
         <Route path="/auth">
           <AuthRoutes
             handleTitle={handleTitle}
-            handleRedirect={setRedirect}
+            handleRedirect={handleRedirect}
             user={user}
             handleUser={handleUser}
             removeUser={removeUser}
-            // handleNotification={handleNotification}
+            handleNotification={handleNotification}
           />
         </Route>
 
@@ -212,7 +215,7 @@ const App: Component = () => {
             organization_slug={organization_slug}
             project_slug={project_slug}
             handleTitle={handleTitle}
-            handleRedirect={setRedirect}
+            handleRedirect={handleRedirect}
             handleOrganizationSlug={setOrganizationSlug}
             handleProjectSlug={setProjectSlug}
           />

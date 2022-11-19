@@ -1,4 +1,4 @@
-import { NotificationKind } from "../site/util";
+import { NotifyKind } from "../site/util";
 
 const AuthLogoutPage = (props: {
   config: any;
@@ -9,7 +9,7 @@ const AuthLogoutPage = (props: {
 }) => {
   props.handleTitle(props.config?.title);
   props.removeUser();
-  props.handleNotification(NotificationKind.ALERT, "Goodbye!");
+  props.handleNotification(NotifyKind.ALERT, "Goodbye!");
   props.handleRedirect(props.config?.redirect);
   return <></>;
 };
