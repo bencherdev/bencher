@@ -7,16 +7,8 @@ import {
   Component,
   createMemo,
   For,
-  Switch,
-  Match,
 } from "solid-js";
-import {
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-  useNavigate,
-} from "solid-app-router";
+import { Routes, Route, useLocation } from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import SiteFooter from "./components/site/pages/SiteFooter";
@@ -65,7 +57,7 @@ const App: Component = () => {
     setUser(user);
   };
 
-  const removeUser = (user) => {
+  const removeUser = () => {
     window.localStorage.clear();
     setUser(initUser());
   };
