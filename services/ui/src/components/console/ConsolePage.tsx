@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "solid-app-router";
+import { useLocation, useNavigate, useParams } from "solid-app-router";
 import {
   createEffect,
   createMemo,
@@ -68,7 +68,8 @@ const fetchProject = async (project_slug: string) => {
 
 const ConsolePage = (props) => {
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
   const params = useParams();
   const path_params = createMemo(() => params);
 
@@ -79,13 +80,13 @@ const ConsolePage = (props) => {
     if (organization_uuid) {
       props.handleOrganizationSlug(organization_uuid);
     } else {
-      const slug = organizationSlug(props.pathname);
+      const slug = organizationSlug(pathname);
       props.handleOrganizationSlug(slug);
     }
   });
 
   createEffect(() => {
-    const slug = projectSlug(props.pathname);
+    const slug = projectSlug(pathname);
     props.handleProjectSlug(slug);
   });
 
@@ -112,7 +113,6 @@ const ConsolePage = (props) => {
               operation={props.operation}
               config={props.config}
               path_params={path_params}
-              pathname={props.pathname}
               handleProjectSlug={props.handleProjectSlug}
             />
           </div>

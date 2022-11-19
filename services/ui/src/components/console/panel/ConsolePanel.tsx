@@ -1,33 +1,25 @@
-import { Match, Switch } from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
 import TablePanel from "./table/TablePanel";
 import DeckPanel from "./deck/DeckPanel";
 import { Operation } from "../config/types";
 import PerfPanel from "./perf/PerfPanel";
 import PosterPanel from "./poster/PosterPanel";
+import { useLocation } from "solid-app-router";
 
 const ConsolePanel = (props) => {
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
+
   return (
-    <Switch fallback={<p>Unknown console path: {props.pathname()} </p>}>
+    <Switch fallback={<p>Unknown console path: {pathname()} </p>}>
       <Match when={props.config?.operation === Operation.LIST}>
-        <TablePanel
-          config={props.config}
-          path_params={props.path_params}
-          pathname={props.pathname}
-        />
+        <TablePanel config={props.config} path_params={props.path_params} />
       </Match>
       <Match when={props.config?.operation === Operation.ADD}>
-        <PosterPanel
-          config={props.config}
-          pathname={props.pathname}
-          path_params={props.path_params}
-        />
+        <PosterPanel config={props.config} path_params={props.path_params} />
       </Match>
       <Match when={props.config?.operation === Operation.VIEW}>
-        <DeckPanel
-          config={props.config}
-          path_params={props.path_params}
-          pathname={props.pathname}
-        />
+        <DeckPanel config={props.config} path_params={props.path_params} />
       </Match>
       <Match when={props.config?.operation === Operation.PERF}>
         <PerfPanel

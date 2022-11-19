@@ -1,5 +1,12 @@
-import { useNavigate } from "solid-app-router";
-import { createEffect, createResource, For, Match, Switch } from "solid-js";
+import { useLocation, useNavigate } from "solid-app-router";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  For,
+  Match,
+  Switch,
+} from "solid-js";
 import { OrganizationPermission, pageTitle } from "../../../site/util";
 import { Button } from "../../config/types";
 
@@ -20,7 +27,6 @@ const TableHeader = (props) => {
         <For each={props.config?.buttons}>
           {(button) => (
             <TableHeaderButton
-              pathname={props.pathname}
               path_params={props.path_params}
               handleRefresh={props.handleRefresh}
               button={button}
@@ -34,6 +40,8 @@ const TableHeader = (props) => {
 
 const TableHeaderButton = (props) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
 
   const [is_allowed] = createResource(props.path_params, (path_params) =>
     props.button.is_allowed?.(path_params)
@@ -47,7 +55,7 @@ const TableHeaderButton = (props) => {
             class="button is-outlined"
             onClick={(e) => {
               e.preventDefault();
-              navigate(props.button.path(props.pathname()));
+              navigate(props.button.path(pathname()));
             }}
           >
             <span class="icon">
@@ -61,7 +69,7 @@ const TableHeaderButton = (props) => {
             class="button is-outlined"
             onClick={(e) => {
               e.preventDefault();
-              navigate(props.button.path(props.pathname()));
+              navigate(props.button.path(pathname()));
             }}
           >
             <span class="icon">

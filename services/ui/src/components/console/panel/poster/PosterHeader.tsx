@@ -1,9 +1,11 @@
-import { useNavigate } from "solid-app-router";
-import { createEffect } from "solid-js";
+import { useLocation, useNavigate } from "solid-app-router";
+import { createEffect, createMemo } from "solid-js";
 import { pageTitle } from "../../../site/util";
 
 const PosterHeader = (props) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
 
   createEffect(() => {
     pageTitle(props.config?.title);
@@ -16,7 +18,7 @@ const PosterHeader = (props) => {
           class="button is-outlined"
           onClick={(e) => {
             e.preventDefault();
-            navigate(props.config?.path(props.pathname()));
+            navigate(props.config?.path(pathname()));
           }}
         >
           <span class="icon">

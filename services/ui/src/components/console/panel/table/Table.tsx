@@ -1,13 +1,16 @@
-import { Link, useNavigate } from "solid-app-router";
-import { For, Switch, Match } from "solid-js";
+import { Link, useLocation, useNavigate } from "solid-app-router";
+import { For, Switch, Match, createMemo } from "solid-js";
 import { Row } from "../../config/types";
 
 const Table = (props) => {
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
+
   return (
     <>
       {props.table_data()?.length === 0 ? (
         <div class="box">
-          <AddButton pathname={props.pathname} add={props.config?.add} />
+          <AddButton pathname={pathname} add={props.config?.add} />
         </div>
       ) : (
         <div class="pricing-table is-horizontal">
@@ -47,7 +50,7 @@ const Table = (props) => {
                 <div class="plan-footer">
                   <RowButton
                     config={props.config?.row?.button}
-                    pathname={props.pathname}
+                    pathname={pathname}
                     datum={datum}
                   />
                 </div>

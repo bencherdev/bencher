@@ -16,7 +16,6 @@ import { useNavigate } from "solid-app-router";
 
 export interface Props {
   config: any;
-  pathname: Function;
   user: Function;
   invite: Function;
   handleUser: Function;
@@ -104,7 +103,6 @@ export const AuthForm = (props: Props) => {
         //   [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
         //   [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
         // }
-        // navigate(props.pathname);
       });
     handleFormSubmitting(false);
   };

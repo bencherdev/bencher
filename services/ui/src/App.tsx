@@ -80,16 +80,6 @@ const App: Component = () => {
     // }, 4000);
   };
 
-  // setInterval(() => {
-  //   if (user()?.token === null) {
-  //     const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
-  //     // TODO properly validate entire user
-  //     if (user?.token && validator.isJWT(user.token)) {
-  //       setUser(user);
-  //     }
-  //   }
-  // }, 1000);
-
   // const getNotification = () => {
   //   console.log("GETTING NOTIFICATION");
   //   let color: string;
@@ -147,14 +137,6 @@ const App: Component = () => {
             <section class="section">
               <div class="container">{getNotification()}</div>
             </section>
-          </Match>
-        </Switch>
-      </div> */}
-
-      {/* <div>
-        <Switch fallback={<></>}>
-          <Match when={redirect() && redirect() != pathname()}>
-            <Navigate href={getRedirect()} />
           </Match>
         </Switch>
       </div> */}

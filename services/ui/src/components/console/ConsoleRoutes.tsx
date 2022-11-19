@@ -14,7 +14,6 @@ const ConsoleRoutes = (props) => {
       <ConsolePage
         user={props.user}
         config={config}
-        pathname={props.pathname}
         organization_slug={props.organization_slug}
         project_slug={props.project_slug}
         handleOrganizationSlug={props.handleOrganizationSlug}

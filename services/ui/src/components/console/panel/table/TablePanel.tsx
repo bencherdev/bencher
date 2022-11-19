@@ -64,16 +64,11 @@ const TablePanel = (props) => {
     <>
       <TableHeader
         config={props.config?.header}
-        pathname={props.pathname}
         path_params={props.path_params}
         refresh={refresh}
         handleRefresh={handleRefresh}
       />
-      <Table
-        config={props.config?.table}
-        pathname={props.pathname}
-        table_data={table_data}
-      />
+      <Table config={props.config?.table} table_data={table_data} />
     </>
   );
 };

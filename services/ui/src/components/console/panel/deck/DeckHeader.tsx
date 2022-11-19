@@ -1,9 +1,11 @@
-import { useNavigate } from "solid-app-router";
-import { createEffect } from "solid-js";
+import { useLocation, useNavigate } from "solid-app-router";
+import { createEffect, createMemo } from "solid-js";
 import { pageTitle } from "../../../site/util";
 
 const DeckHeader = (props) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
 
   createEffect(() => {
     pageTitle(props.data?.[props.config?.key]);
@@ -16,7 +18,7 @@ const DeckHeader = (props) => {
           class="button is-outlined"
           onClick={(e) => {
             e.preventDefault();
-            navigate(props.config?.path(props.pathname()));
+            navigate(props.config?.path(pathname()));
           }}
         >
           <span class="icon">

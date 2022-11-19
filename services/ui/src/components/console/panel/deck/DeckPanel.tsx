@@ -48,7 +48,6 @@ const DeckPanel = (props) => {
       <DeckHeader
         config={props.config?.header}
         data={deck_data()}
-        pathname={props.pathname}
         handleRefresh={handleRefresh}
       />
       <Deck
@@ -56,7 +55,6 @@ const DeckPanel = (props) => {
         data={deck_data()}
         url={url}
         path_params={props.path_params}
-        pathname={props.pathname}
         handleRefresh={handleRefresh}
       />
     </>

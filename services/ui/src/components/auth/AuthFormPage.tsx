@@ -10,7 +10,6 @@ const INVITE_PARAM = "invite";
 
 const AuthFormPage = (props: {
   config: any;
-  pathname: Function;
   user: Function;
   handleUser: Function;
   handleNotification: Function;
@@ -46,7 +45,6 @@ const AuthFormPage = (props: {
 
             <AuthForm
               config={props.config?.form}
-              pathname={props.pathname}
               user={props.user}
               invite={invite}
               handleUser={props.handleUser}
