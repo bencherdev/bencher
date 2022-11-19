@@ -39,7 +39,6 @@
     "slugify": "^1.6.5",
     "solid-app-router": "^0.4.1",
     "solid-js": "^1.5.0",
-    "swagger-ui": "^4.14.0",
     "swagger-ui-dist": "^4.15.5",
     "validator": "^13.7.0"
   }
