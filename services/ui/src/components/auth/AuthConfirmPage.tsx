@@ -1,11 +1,12 @@
 import axios from "axios";
 import { useNavigate, useSearchParams } from "solid-app-router";
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal, lazy } from "solid-js";
 import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
 import validator from "validator";
 import { NotifyKind, pageTitle } from "../site/util";
+import Notification from "../site/Notification";
 
 const TOKEN_PARAM = "token";
 
@@ -107,39 +108,43 @@ const AuthConfirmPage = (props: {
   });
 
   return (
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column is-two-fifths">
-            <h2 class="title">{props.config?.title}</h2>
-            <h3 class="subtitle">{props.config?.sub}</h3>
+    <>
+      <Notification />
 
-            <form class="box">
-              <SiteField
-                kind={Field.INPUT}
-                fieldKey="token"
-                label={true}
-                value={form()?.token?.value}
-                valid={form()?.token?.valid}
-                config={userFieldsConfig.token}
-                handleField={handleField}
-              />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-two-fifths">
+              <h2 class="title">{props.config?.title}</h2>
+              <h3 class="subtitle">{props.config?.sub}</h3>
 
-              <button
-                class="button is-primary is-fullwidth"
-                disabled={!form()?.valid || form()?.submitting}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleFormSubmit();
-                }}
-              >
-                Submit
-              </button>
-            </form>
+              <form class="box">
+                <SiteField
+                  kind={Field.INPUT}
+                  fieldKey="token"
+                  label={true}
+                  value={form()?.token?.value}
+                  valid={form()?.token?.valid}
+                  config={userFieldsConfig.token}
+                  handleField={handleField}
+                />
+
+                <button
+                  class="button is-primary is-fullwidth"
+                  disabled={!form()?.valid || form()?.submitting}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleFormSubmit();
+                  }}
+                >
+                  Submit
+                </button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 

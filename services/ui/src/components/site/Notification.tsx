@@ -66,12 +66,9 @@ const Notification = (props) => {
 
   return (
     <div>
-      <Switch fallback={<p>None</p>}>
+      <Switch fallback={<></>}>
         <Match
-          when={
-            //isNotifyKind(notify_kind()) &&
-            isNotifyText(notify_text())
-          }
+          when={isNotifyKind(notify_kind()) && isNotifyText(notify_text())}
         >
           <section class="section">
             <div class="container">{getNotification()}</div>

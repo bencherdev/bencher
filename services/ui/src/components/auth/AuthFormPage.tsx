@@ -1,12 +1,11 @@
 import { Link, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, lazy } from "solid-js";
 import validator from "validator";
-import { pageTitle } from "../site/util";
 
+import { pageTitle } from "../site/util";
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
-
-const Notification = lazy(() => import("../site/Notification"));
+import Notification from "../site/Notification";
 
 const INVITE_PARAM = "invite";
 

@@ -92,27 +92,15 @@ export const AuthForm = (props: Props) => {
     }
     fetchData(json_data)
       .then((_resp) => {
-        // {
-        //   [NOTIFY_KIND_PARAM]: NotifyKind.OK,
-        //   [NOTIFY_TEXT_PARAM]: `Successful ${props.config?.kind} please confirm token.`,
-        // }
-        navigate(props.config?.redirect);
+        navigate(
+          notifyParams(
+            props.config?.redirect,
+            NotifyKind.OK,
+            `Successful ${props.config?.kind} please confirm token.`
+          )
+        );
       })
-      .catch((e) => {
-        // {
-        //   [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
-        //   [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
-        // }
-        // console.log(location);
-        // console.log(location.search);
-        // let params = new URLSearchParams(location.search);
-        // console.log(params);
-        // params.set(
-        //   NOTIFY_TEXT_PARAM,
-        //   `Failed to ${props.config?.kind} please try again.`
-        // );
-        // let params_str = params.toString();
-        // window.location.search = params_str;
+      .catch((_e) => {
         navigate(
           notifyParams(
             pathname(),
