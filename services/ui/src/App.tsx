@@ -47,8 +47,6 @@ const initUser = () => {
 };
 
 const App: Component = () => {
-  const [user, setUser] = createSignal(initUser());
-
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
 
@@ -59,6 +57,8 @@ const App: Component = () => {
   const [project_slug, setProjectSlug] = createSignal<String>(
     projectSlug(pathname)
   );
+
+  const [user, setUser] = createSignal(initUser());
 
   const handleUser = (user) => {
     window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
@@ -80,15 +80,15 @@ const App: Component = () => {
     // }, 4000);
   };
 
-  setInterval(() => {
-    if (user()?.token === null) {
-      const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
-      // TODO properly validate entire user
-      if (user?.token && validator.isJWT(user.token)) {
-        setUser(user);
-      }
-    }
-  }, 1000);
+  // setInterval(() => {
+  //   if (user()?.token === null) {
+  //     const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
+  //     // TODO properly validate entire user
+  //     if (user?.token && validator.isJWT(user.token)) {
+  //       setUser(user);
+  //     }
+  //   }
+  // }, 1000);
 
   // const getNotification = () => {
   //   console.log("GETTING NOTIFICATION");
@@ -119,6 +119,16 @@ const App: Component = () => {
   //     </div>
   //   );
   // };
+
+  createEffect(() => {
+    if (user()?.token === null) {
+      const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
+      // TODO properly validate entire user
+      if (user?.token && validator.isJWT(user.token)) {
+        setUser(user);
+      }
+    }
+  });
 
   return (
     <>
