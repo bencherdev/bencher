@@ -11,8 +11,8 @@ import Notification from "../site/Notification";
 const TOKEN_PARAM = "token";
 
 const AuthConfirmPage = (props: {
-  user: Function;
   config: any;
+  user: Function;
   handleUser: Function;
 }) => {
   const navigate = useNavigate();

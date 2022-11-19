@@ -17,8 +17,8 @@ import { useLocation, useNavigate } from "solid-app-router";
 
 export interface Props {
   config: any;
-  user: Function;
   invite: Function;
+  user: Function;
   handleUser: Function;
 }
 

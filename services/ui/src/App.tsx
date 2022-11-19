@@ -62,36 +62,6 @@ const App: Component = () => {
     setUser(initUser());
   };
 
-  // const getNotification = () => {
-  //   console.log("GETTING NOTIFICATION");
-  //   let color: string;
-  //   switch (notification().kind) {
-  //     case NotificationKind.OK:
-  //       color = "is-success";
-  //       break;
-  //     case NotificationKind.ALERT:
-  //       color = "is-primary";
-  //       break;
-  //     case NotificationKind.ERROR:
-  //       color = "is-danger";
-  //       break;
-  //     default:
-  //       color = "";
-  //   }
-  //   return (
-  //     <div class={`notification ${color}`}>
-  //       🐰 {notification().text}
-  //       <button
-  //         class="delete"
-  //         onClick={(e) => {
-  //           e.preventDefault();
-  //           removeNotification();
-  //         }}
-  //       />
-  //     </div>
-  //   );
-  // };
-
   createEffect(() => {
     if (user()?.token === null) {
       const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
@@ -110,16 +80,6 @@ const App: Component = () => {
         project_slug={project_slug}
         handleProjectSlug={setProjectSlug}
       />
-
-      {/* <div>
-        <Switch fallback={<></>}>
-          <Match when={typeof notification().text === "string"}>
-            <section class="section">
-              <div class="container">{getNotification()}</div>
-            </section>
-          </Match>
-        </Switch>
-      </div> */}
 
       <Routes>
         <Route path="/" element={<LandingPage user={user} />} />
