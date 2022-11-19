@@ -9,6 +9,7 @@ import { FormKind } from "./config/types";
 import {
   BENCHER_API_URL,
   NotifyKind,
+  notifyParams,
   NOTIFY_KIND_PARAM,
   NOTIFY_TEXT_PARAM,
 } from "../site/util";
@@ -102,17 +103,23 @@ export const AuthForm = (props: Props) => {
         //   [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
         //   [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
         // }
-        console.log(location);
-        console.log(location.search);
-        let params = new URLSearchParams(location.search);
-        console.log(params);
-        params.set(
-          NOTIFY_TEXT_PARAM,
-          `Failed to ${props.config?.kind} please try again.`
-        );
-        let params_str = params.toString();
+        // console.log(location);
+        // console.log(location.search);
+        // let params = new URLSearchParams(location.search);
+        // console.log(params);
+        // params.set(
+        //   NOTIFY_TEXT_PARAM,
+        //   `Failed to ${props.config?.kind} please try again.`
+        // );
+        // let params_str = params.toString();
         // window.location.search = params_str;
-        navigate(pathname() + "?" + params_str);
+        navigate(
+          notifyParams(
+            pathname(),
+            NotifyKind.ERROR,
+            `Failed to ${props.config?.kind} please try again.`
+          )
+        );
       });
     handleFormSubmitting(false);
   };

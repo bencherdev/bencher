@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useLocation } from "solid-app-router";
 import validator from "validator";
 
 import { site_analytics } from "./site_analytics";
@@ -135,3 +136,15 @@ export enum NotifyKind {
   ALERT,
   ERROR,
 }
+
+export const notifyParams = (
+  pathname,
+  notify_kind: NotifyKind,
+  notify_text: string
+) => {
+  let params = new URLSearchParams(window.location.search);
+  params.set(NOTIFY_KIND_PARAM, notify_kind.toString());
+  params.set(NOTIFY_TEXT_PARAM, notify_text);
+  let params_str = params.toString();
+  return `${pathname}?${params_str}`;
+};
