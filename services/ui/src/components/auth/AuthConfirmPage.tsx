@@ -33,28 +33,6 @@ const AuthConfirmPage = (props: {
   const [submitted, setSubmitted] = createSignal();
   const [form, setForm] = createSignal(initForm());
 
-  createEffect(() => {
-    if (props.user().token && validator.isJWT(props.user().token)) {
-      navigate("/console");
-    }
-
-    const value = form()?.token?.value;
-    if (value.length > 0) {
-      setSearchParams({ [TOKEN_PARAM]: value });
-    }
-
-    const valid = form()?.token?.valid;
-    if (valid !== form()?.valid) {
-      setForm({ ...form(), valid: valid });
-    }
-
-    const jwt = token();
-    if (jwt && validator.isJWT(jwt) && jwt !== submitted()) {
-      setSubmitted(jwt);
-      handleFormSubmit();
-    }
-  });
-
   const handleField = (key, value, valid) => {
     setForm({
       ...form(),
@@ -105,6 +83,28 @@ const AuthConfirmPage = (props: {
     let resp = await axios(config);
     return resp;
   };
+
+  createEffect(() => {
+    if (props.user().token && validator.isJWT(props.user().token)) {
+      navigate("/console");
+    }
+
+    const value = form()?.token?.value;
+    if (value.length > 0) {
+      setSearchParams({ [TOKEN_PARAM]: value });
+    }
+
+    const valid = form()?.token?.valid;
+    if (valid !== form()?.valid) {
+      setForm({ ...form(), valid: valid });
+    }
+
+    const jwt = token();
+    if (jwt && validator.isJWT(jwt) && jwt !== submitted()) {
+      setSubmitted(jwt);
+      handleFormSubmit();
+    }
+  });
 
   return (
     <section class="section">

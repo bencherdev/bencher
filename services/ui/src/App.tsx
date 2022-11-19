@@ -50,13 +50,10 @@ const initUser = () => {
 
 const App: Component = () => {
   const [title, setTitle] = createSignal<string>(BENCHER_TITLE);
-  const [redirect, setRedirect] = createSignal<null | string>();
   const [user, setUser] = createSignal(initUser());
 
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
-
-  const navigate = useNavigate();
 
   const [organization_slug, setOrganizationSlug] = createSignal<null | String>(
     null
@@ -140,17 +137,6 @@ const App: Component = () => {
   //     </div>
   //   );
   // };
-
-  const handleRedirect = (path: string) => {
-    navigate(path);
-    // setRedirect(path);
-  };
-
-  const getRedirect = () => {
-    const new_pathname = redirect();
-    handleRedirect(new_pathname);
-    return new_pathname;
-  };
 
   return (
     <>
