@@ -11,13 +11,13 @@ import {
 const Notification = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // if (!isNotifyKind(searchParams[NOTIFY_KIND_PARAM])) {
-  //   setSearchParams({ [NOTIFY_KIND_PARAM]: null });
-  // }
+  if (!isNotifyKind(searchParams[NOTIFY_KIND_PARAM])) {
+    setSearchParams({ [NOTIFY_KIND_PARAM]: null });
+  }
 
-  // if (!isNotifyText(searchParams[NOTIFY_TEXT_PARAM])) {
-  //   setSearchParams({ [NOTIFY_TEXT_PARAM]: null });
-  // }
+  if (!isNotifyText(searchParams[NOTIFY_TEXT_PARAM])) {
+    setSearchParams({ [NOTIFY_TEXT_PARAM]: null });
+  }
 
   const notify_kind = createMemo(() =>
     parseInt(searchParams[NOTIFY_KIND_PARAM])
@@ -69,7 +69,7 @@ const Notification = (props) => {
       <Switch fallback={<p>None</p>}>
         <Match
           when={
-            // isNotifyKind(searchParams[NOTIFY_KIND_PARAM]) &&
+            //isNotifyKind(notify_kind()) &&
             isNotifyText(notify_text())
           }
         >

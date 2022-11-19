@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Accessor } from "solid-js";
+import { createSignal, createEffect, Accessor, createMemo } from "solid-js";
 import axios from "axios";
 import validator from "validator";
 
@@ -12,7 +12,7 @@ import {
   NOTIFY_KIND_PARAM,
   NOTIFY_TEXT_PARAM,
 } from "../site/util";
-import { useNavigate } from "solid-app-router";
+import { useLocation, useNavigate } from "solid-app-router";
 
 export interface Props {
   config: any;
@@ -24,6 +24,8 @@ export interface Props {
 
 export const AuthForm = (props: Props) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
 
   const [form, setForm] = createSignal(initForm());
 
@@ -100,6 +102,17 @@ export const AuthForm = (props: Props) => {
         //   [NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
         //   [NOTIFY_TEXT_PARAM]: `Failed to ${props.config?.kind} please try again.`,
         // }
+        console.log(location);
+        console.log(location.search);
+        let params = new URLSearchParams(location.search);
+        console.log(params);
+        params.set(
+          NOTIFY_TEXT_PARAM,
+          `Failed to ${props.config?.kind} please try again.`
+        );
+        let params_str = params.toString();
+        // window.location.search = params_str;
+        navigate(pathname() + "?" + params_str);
       });
     handleFormSubmitting(false);
   };

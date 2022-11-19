@@ -1,10 +1,12 @@
 import { Link, useNavigate, useSearchParams } from "solid-app-router";
-import { createEffect, createMemo } from "solid-js";
+import { createEffect, createMemo, lazy } from "solid-js";
 import validator from "validator";
 import { pageTitle } from "../site/util";
 
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
+
+const Notification = lazy(() => import("../site/Notification"));
 
 const INVITE_PARAM = "invite";
 
@@ -37,37 +39,41 @@ const AuthFormPage = (props: {
   });
 
   return (
-    <section class="section">
-      <div class="container">
-        <div class="columns is-centered">
-          <div class="column is-two-fifths">
-            <h2 class="title">{props.config?.title}</h2>
+    <>
+      <Notification />
 
-            <AuthForm
-              config={props.config?.form}
-              user={props.user}
-              invite={invite}
-              handleUser={props.handleUser}
-              handleNotification={props.handleNotification}
-            />
+      <section class="section">
+        <div class="container">
+          <div class="columns is-centered">
+            <div class="column is-two-fifths">
+              <h2 class="title">{props.config?.title}</h2>
 
-            <hr />
+              <AuthForm
+                config={props.config?.form}
+                user={props.user}
+                invite={invite}
+                handleUser={props.handleUser}
+                handleNotification={props.handleNotification}
+              />
 
-            <p class="has-text-centered">
-              <small>
-                switch to{" "}
-                {props.config?.auth === Auth.SIGNUP && (
-                  <Link href="/auth/login">log in</Link>
-                )}
-                {props.config?.auth === Auth.LOGIN && (
-                  <Link href="/auth/signup">sign up</Link>
-                )}
-              </small>
-            </p>
+              <hr />
+
+              <p class="has-text-centered">
+                <small>
+                  switch to{" "}
+                  {props.config?.auth === Auth.SIGNUP && (
+                    <Link href="/auth/login">log in</Link>
+                  )}
+                  {props.config?.auth === Auth.LOGIN && (
+                    <Link href="/auth/signup">sign up</Link>
+                  )}
+                </small>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 

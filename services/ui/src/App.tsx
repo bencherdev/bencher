@@ -121,8 +121,6 @@ const App: Component = () => {
         handleProjectSlug={setProjectSlug}
       />
 
-      <Notification />
-
       {/* <div>
         <Switch fallback={<></>}>
           <Match when={typeof notification().text === "string"}>
