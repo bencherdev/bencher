@@ -62,16 +62,6 @@ const App: Component = () => {
     setUser(initUser());
   };
 
-  const handleNotification = (kind: NotifyKind, text: string) => {
-    console.log({ kind: kind, text: text });
-    // console.log(notification());
-    // setNotification({ kind: kind, text: text });
-    // console.log(notification());
-    // setTimeout(() => {
-    //   removeNotification();
-    // }, 4000);
-  };
-
   // const getNotification = () => {
   //   console.log("GETTING NOTIFICATION");
   //   let color: string;
@@ -140,7 +130,6 @@ const App: Component = () => {
             user={user}
             handleUser={handleUser}
             removeUser={removeUser}
-            handleNotification={handleNotification}
           />
         </Route>
 

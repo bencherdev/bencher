@@ -1,11 +1,11 @@
 import axios from "axios";
-import { useNavigate, useSearchParams } from "solid-app-router";
+import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal, lazy } from "solid-js";
 import { Field } from "../console/config/types";
 import userFieldsConfig from "../fields/config/user/userFieldsConfig";
 import SiteField from "../fields/SiteField";
 import validator from "validator";
-import { NotifyKind, pageTitle } from "../site/util";
+import { NotifyKind, notifyParams, pageTitle } from "../site/util";
 import Notification from "../site/Notification";
 
 const TOKEN_PARAM = "token";
@@ -14,10 +14,11 @@ const AuthConfirmPage = (props: {
   user: Function;
   config: any;
   handleUser: Function;
-  handleNotification: Function;
 }) => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = createMemo(() => location.pathname);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   if (
     searchParams[TOKEN_PARAM] &&
@@ -49,14 +50,18 @@ const AuthConfirmPage = (props: {
     };
     fetchData(json_data)
       .then((resp) => {
-        props.handleNotification(NotifyKind.OK, "Ahoy!");
         props.handleUser(resp.data);
-        navigate(props.config?.form?.redirect);
+        navigate(
+          notifyParams(props.config?.form?.redirect, NotifyKind.OK, "Ahoy!")
+        );
       })
       .catch((e) => {
-        props.handleNotification(
-          NotifyKind.ERROR,
-          "Failed to confirm token please try again."
+        navigate(
+          notifyParams(
+            pathname(),
+            NotifyKind.ERROR,
+            "Failed to confirm token please try again."
+          )
         );
       });
     handleFormSubmitting(false);

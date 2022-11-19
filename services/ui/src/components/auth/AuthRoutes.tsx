@@ -41,7 +41,6 @@ const AuthRoutes = (props) => {
             config={config[Auth.CONFIRM]}
             user={props.user}
             handleUser={props.handleUser}
-            handleNotification={props.handleNotification}
           />
         }
       />
