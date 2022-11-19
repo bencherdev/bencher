@@ -11,7 +11,7 @@ const SwaggerPanel = (props) => {
     });
   });
 
-  return <></>;
+  return <div id="swagger" />;
 };
 
 export default SwaggerPanel;

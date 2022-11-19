@@ -54,8 +54,7 @@ const DocsRoutes = (props) => {
                   <DocsMenu page={props.page} />
                 </div>
                 <div class="column">
-                  <div id="swagger" />
-                  {/* <SwaggerPanel /> */}
+                  <SwaggerPanel />
                 </div>
               </div>
             </div>
