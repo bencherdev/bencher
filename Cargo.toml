@@ -1,5 +1,5 @@
 [workspace]
-members = ["services/api", "services/cli", "services/lib/*"]
+members = ["services/api", "services/cli", "lib/*"]
 
 [workspace.package]
 version = "0.2.26"

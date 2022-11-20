@@ -237,6 +237,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_valid"
+version = "0.2.26"
+dependencies = [
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -5,13 +5,14 @@ FROM rust:1.65.0-bullseye
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml
 
+WORKDIR /usr/src/lib
+COPY lib/bencher_adapter bencher_adapter
+COPY lib/bencher_json bencher_json
+COPY lib/bencher_rbac bencher_rbac
+COPY lib/bencher_valid bencher_valid
+
 WORKDIR /usr/src/services
 RUN cargo init cli
-
-WORKDIR /usr/src/services/lib
-COPY services/lib/bencher_adapter bencher_adapter
-COPY services/lib/bencher_json bencher_json
-COPY services/lib/bencher_rbac bencher_rbac
 
 WORKDIR /usr/src/services/api
 COPY services/api/src src
