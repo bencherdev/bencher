@@ -14,7 +14,7 @@ base = "services/ui/"
 publish = "dist/"
 
 # Default build command.
-command = "wasm-pack build ../../lib/bencher_valid --target web --features wasm && vite build"
+# command = "wasm-pack build ../../lib/bencher_valid --target web --features wasm && vite build"
 
 [[plugins]]
 # Installs the Lighthouse Build Plugin for all deploy contexts
