@@ -21,4 +21,3 @@ serde_json.workspace = true
 slug.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
-# Crate

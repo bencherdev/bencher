@@ -2,9 +2,17 @@ import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import mdx from "@mdx-js/rollup";
 import remarkGfm from "remark-gfm";
+import wasmPack from "vite-plugin-wasm-pack";
 
 export default defineConfig({
-  plugins: [mdx({ jsxImportSource: "solid-jsx", remarkPlugins: [remarkGfm] }), solid()],
+  plugins: [
+    mdx({
+      jsxImportSource: "solid-jsx",
+      remarkPlugins: [remarkGfm],
+    }),
+    solid(),
+    // wasmPack("../lib/bencher_json"),
+  ],
   build: {
     target: "esnext",
   },
