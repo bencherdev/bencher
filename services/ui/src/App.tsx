@@ -18,11 +18,11 @@ import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
+const PricingPage = lazy(() => import("./components/site/pages/PricingPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/Repo"));
-const Notification = lazy(() => import("./components/site/Notification"));
 
 const initUser = () => {
   return {
@@ -117,6 +117,9 @@ const App: Component = () => {
 
         {/* GitHub repo shortcut */}
         <Route path="/repo" element={<Repo />} />
+
+        {/* Pricing Routes */}
+        <Route path="/pricing" element={<PricingPage user={user} />} />
       </Routes>
 
       <For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
