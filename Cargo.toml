@@ -2,7 +2,7 @@
 members = ["services/api", "services/cli", "lib/*"]
 
 [workspace.package]
-version = "0.2.26"
+version = "0.2.27"
 authors = ["Everett Pompeii <epompeii@protonmail.com>"]
 edition = "2021"
 

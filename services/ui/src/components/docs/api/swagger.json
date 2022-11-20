@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.26"
+    "version": "0.2.27"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -5096,12 +5096,6 @@
       "JsonPerf": {
         "type": "object",
         "properties": {
-          "benchmarks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JsonPerfData"
-            }
-          },
           "end_time": {
             "nullable": true,
             "type": "string",
@@ -5111,6 +5105,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonPerfMetrics"
+            }
+          },
           "start_time": {
             "nullable": true,
             "type": "string",
@@ -5118,40 +5118,11 @@
           }
         },
         "required": [
-          "benchmarks",
-          "metric_kind"
+          "metric_kind",
+          "results"
         ]
       },
-      "JsonPerfData": {
-        "type": "object",
-        "properties": {
-          "benchmark": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "branch": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/JsonPerfDatum"
-            }
-          },
-          "testbed": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "benchmark",
-          "branch",
-          "data",
-          "testbed"
-        ]
-      },
-      "JsonPerfDatum": {
+      "JsonPerfMetric": {
         "type": "object",
         "properties": {
           "end_time": {
@@ -5163,7 +5134,7 @@
             "format": "uint32",
             "minimum": 0
           },
-          "metrics": {
+          "metric": {
             "$ref": "#/components/schemas/JsonMetric"
           },
           "start_time": {
@@ -5187,10 +5158,39 @@
         "required": [
           "end_time",
           "iteration",
-          "metrics",
+          "metric",
           "start_time",
           "uuid",
           "version_number"
+        ]
+      },
+      "JsonPerfMetrics": {
+        "type": "object",
+        "properties": {
+          "benchmark": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonPerfMetric"
+            }
+          },
+          "testbed": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "benchmark",
+          "branch",
+          "metrics",
+          "testbed"
         ]
       },
       "JsonPerfQuery": {
