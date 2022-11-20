@@ -41,18 +41,15 @@ export const Navbar = (props) => {
 
       <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
+          <a class="navbar-item" href="/pricing">
+            Pricing
+          </a>
           <a class="navbar-item" href="/docs">
             Docs
           </a>
-
-          <a class="navbar-item" href="/docs/reference/api">
-            API
-          </a>
-
           <a class="navbar-item" href={BENCHER_GITHUB_URL} target="_blank">
             GitHub
           </a>
-
           {props.user()?.token && props.organization_slug() && (
             <div class="navbar-item">
               <ProjectSelect

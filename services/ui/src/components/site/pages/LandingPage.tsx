@@ -1,4 +1,4 @@
-import { useNavigate } from "solid-app-router";
+import { Link, useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
 import validator from "validator";
 import { BENCHER_TITLE, pageTitle } from "../util";
@@ -124,7 +124,7 @@ const LandingPage = (props) => {
 
       <hr />
 
-      {/* <section class="section">
+      <section class="section">
         <div class="container">
           <div class="columns is-centered">
             <div class="column">
@@ -154,6 +154,9 @@ const LandingPage = (props) => {
                     </p>
                     <br />
                   </div>
+                  <Link href="/docs/how-to/quick-start">
+                    <button class="button is-fullwidth">Learn More</button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -180,12 +183,15 @@ const LandingPage = (props) => {
                     </p>
                     <br />
                   </div>
+                  <Link href="/docs/how-to/quick-start">
+                    <button class="button is-fullwidth">Learn More</button>
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </section> */}
+      </section>
     </section>
   );
 };
