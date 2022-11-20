@@ -3,7 +3,7 @@ import { createMemo, Match, Switch } from "solid-js";
 
 import SwaggerPanel from "./api/SwaggerPanel";
 import { Docs } from "./config/types";
-import QuickStart from "./example.mdx";
+import DocPanel from "./pages/DocPanel";
 
 const DocsPanel = (props) => {
   const location = useLocation();
@@ -12,7 +12,7 @@ const DocsPanel = (props) => {
   return (
     <Switch fallback={<p>Unknown docs path: {pathname()} </p>}>
       <Match when={props.config?.docs === Docs.QUICK_START}>
-        <QuickStart />
+        <DocPanel page={props.config?.page} />
       </Match>
       <Match when={props.config?.docs === Docs.API_V0}>
         <SwaggerPanel />
