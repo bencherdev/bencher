@@ -280,7 +280,7 @@ jobs:
       - name: Build Builder Stage
         uses: docker/build-push-action@v3
         with:
-          context: ./services/ui
+          context: .
           file: ./services/ui/builder.Dockerfile
           tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
           push: false
@@ -305,7 +305,7 @@ jobs:
       - name: Build Builder Stage
         uses: docker/build-push-action@v3
         with:
-          context: ./services/ui
+          context: .
           file: ./services/ui/builder.Dockerfile
           tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
           push: false
@@ -334,7 +334,7 @@ jobs:
       - name: Build Builder Stage
         uses: docker/build-push-action@v3
         with:
-          context: ./services/ui
+          context: .
           file: ./services/ui/builder.Dockerfile
           tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
           push: false
