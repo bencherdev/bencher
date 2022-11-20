@@ -1,6 +1,5 @@
 import { Link } from "solid-app-router";
-import { Accessor } from "solid-js";
-import { BENCHER_GITHUB_URL } from "../util";
+import { BENCHER_GITHUB_URL, BENCHER_LOGO_URL } from "../util";
 import ProjectSelect from "./ProjectSelect";
 
 export interface Props {
@@ -13,11 +12,7 @@ export const Navbar = (props) => {
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
         <Link class="navbar-item" href="/">
-          <img
-            src="https://s3.amazonaws.com/static.bencher.dev/bencher_navbar.png"
-            width="152"
-            height="28"
-          />
+          <img src={BENCHER_LOGO_URL} width="152" height="28" />
         </Link>
 
         <a
