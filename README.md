@@ -8,7 +8,9 @@ It consists of:
 - Bencher API Server
 - Bencher Web UI
 
-## Quick Start
+The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/how-to/quick-start) tutorial.
+
+## Run Bencher Locally
 
 Pull and run Docker images:
 
