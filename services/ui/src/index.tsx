@@ -4,7 +4,7 @@ import { Router } from "solid-app-router";
 import { MDXProvider } from "solid-jsx";
 
 import App from "./App";
-import mdx from "./md";
+import mdx from "./mdx";
 
 render(
   () => (
