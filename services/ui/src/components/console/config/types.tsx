@@ -23,6 +23,7 @@ export enum Resource {
   REPORTS,
   BRANCHES,
   TESTBEDS,
+  METRIC_KINDS,
   THRESHOLDS,
   ALERTS,
   CONNECTIONS,

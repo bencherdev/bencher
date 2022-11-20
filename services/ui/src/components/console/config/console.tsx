@@ -7,6 +7,7 @@ import reportsConfig from "./reports";
 import thresholdsConfig from "./thresholds";
 import alertsConfig from "./alerts";
 import membersConfig from "./members";
+import metricKindsConfig from "./metric_kinds";
 
 const consoleConfig = {
   [Resource.ORGANIZATIONS]: organizationsConfig,
@@ -15,6 +16,7 @@ const consoleConfig = {
   [Resource.REPORTS]: reportsConfig,
   [Resource.BRANCHES]: branchesConfig,
   [Resource.TESTBEDS]: testbedsConfig,
+  [Resource.METRIC_KINDS]: metricKindsConfig,
   [Resource.THRESHOLDS]: thresholdsConfig,
   [Resource.ALERTS]: alertsConfig,
 };

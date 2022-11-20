@@ -110,6 +110,22 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.LIST])}
       />
       <Route
+        path="/projects/:project_slug/metric-kinds"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.LIST])}
+      />
+      <Route
+        path="/projects/:project_slug/metric-kinds/add"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.ADD])}
+      />
+      <Route
+        path="/projects/:project_slug/metric-kinds/:metric_kind_slug"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.VIEW])}
+      />
+      <Route
+        path="/projects/:project_slug/thresholds"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.LIST])}
+      />
+      <Route
         path="/projects/:project_slug/thresholds/add"
         element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.ADD])}
       />
