@@ -4,6 +4,7 @@ import {
   createMemo,
   createResource,
   createSignal,
+  For,
 } from "solid-js";
 import { BENCHER_API_URL, getToken } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
@@ -111,6 +112,8 @@ const ConsolePage = (props) => {
               path_params={path_params}
               handleProjectSlug={props.handleProjectSlug}
             />
+            <For each={[...Array(3).keys()]}>{(_k, _i) => <br />}</For>
+            <hr />
           </div>
         </div>
       </div>

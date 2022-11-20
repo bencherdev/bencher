@@ -1,5 +1,3 @@
-import { createEffect } from "solid-js";
-
 const DocPanel = (props) => {
   return (
     <div class="content">

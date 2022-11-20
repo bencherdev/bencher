@@ -1,4 +1,4 @@
-import { createEffect } from "solid-js";
+import { createEffect, For } from "solid-js";
 import { pageTitle } from "../site/util";
 import DocsMenu from "./DocsMenu";
 import DocsPanel from "./DocsPanel";
@@ -17,6 +17,8 @@ const DocsPage = (props) => {
           </div>
           <div class="column">
             <DocsPanel config={props.config} />
+            <For each={[...Array(3).keys()]}>{(_k, _i) => <br />}</For>
+            <hr />
           </div>
         </div>
       </div>
