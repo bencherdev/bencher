@@ -12,6 +12,9 @@ rustup component add clippy
 cargo install cargo-udeps --locked
 cargo install diesel_cli --no-default-features --features sqlite --locked
 
+rustup target add wasm32-unknown-unknown
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
 echo "Waiting for API server"
 while ! nc -z localhost 61016; do
   sleep .1
