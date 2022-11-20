@@ -1,6 +1,7 @@
 import { Link } from "solid-app-router";
 import { BENCHER_GITHUB_URL, BENCHER_LOGO_URL } from "../util";
 import ProjectSelect from "./ProjectSelect";
+import swagger from "../../docs/api/swagger.json";
 
 export interface Props {
   user: Function;
@@ -59,7 +60,7 @@ export const Navbar = (props) => {
 
         <div class="navbar-end">
           <div class="navbar-item">
-            <div class="navbar-item">BETA</div>
+            <div class="navbar-item">BETA v{swagger?.info?.version}</div>
             <div class="navbar-item" />
             <div class="buttons">
               {props.user()?.token === null ? (
