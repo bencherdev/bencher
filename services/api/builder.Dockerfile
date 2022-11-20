@@ -1,4 +1,3 @@
-# Build Stage
 # https://hub.docker.com/_/rust
 FROM rust:1.65.0-bullseye
 

@@ -9,8 +9,8 @@ services:
 
   bencher-ui-builder:
     build:
-      context: ./services/ui
-      dockerfile: builder.Dockerfile
+      context: .
+      dockerfile: ./services/ui/builder.Dockerfile
       args:
         # Set this to your actual host if different
         - VITE_BENCHER_API_URL=http://localhost:61016

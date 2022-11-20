@@ -7,7 +7,7 @@
     "wasm": "wasm-pack build ../../lib/bencher_valid --target web --features wasm",
     "dev": "npm run wasm && vite",
     "host": "vite --host",
-    "build": "npm run wasm && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "start": "start-storybook"
   },

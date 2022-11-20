@@ -1,20 +1,35 @@
+# https://hub.docker.com/_/rust
+FROM rust:1.65.0-bullseye as wasm-builder
+
+RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+WORKDIR /usr/src
+COPY Cargo.toml Cargo.toml
+
+WORKDIR /usr/src/services
+RUN cargo init api
+RUN cargo init cli
+
+WORKDIR /usr/src/lib
+COPY lib/bencher_valid bencher_valid
+
+WORKDIR /usr/src/lib/bencher_valid
+RUN wasm-pack build --target web --features wasm
+
 # https://hub.docker.com/_/node/
-FROM node:lts-bullseye-slim as builder
+FROM node:lts-bullseye
+COPY --from=wasm-builder /usr/src/lib/bencher_valid /usr/src/lib/bencher_valid
 
-RUN apt-get update \
-    && apt-get install -y python2 python3 make g++
-
-# Set working directory
-WORKDIR /usr/src/ui
-COPY package-lock.json package-lock.json
-COPY package.json package.json
+WORKDIR /usr/src/services/ui
+COPY services/ui/package-lock.json package-lock.json
+COPY services/ui/package.json package.json
 
 RUN npm install
 
-COPY public public
-COPY src src
-COPY index.html index.html
-COPY tsconfig.json tsconfig.json
-COPY vite.config.ts vite.config.ts
+COPY services/ui/public public
+COPY services/ui/src src
+COPY services/ui/index.html index.html
+COPY services/ui/tsconfig.json tsconfig.json
+COPY services/ui/vite.config.ts vite.config.ts
 
 RUN npm run build
