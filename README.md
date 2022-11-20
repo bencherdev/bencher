@@ -28,6 +28,17 @@ Build and run Docker images:
 
 Then open your browser to [localhost:3000](http://localhost:3000).
 
+## Contributing
+
+The easiest way to contribute is to open the repo in GitPod.
+Everything you need will already be there!
+It is best to connect to the GitPod instance with VS Code Desktop via SSH.
+There is a hotkey set to tapping caps lock twice to prompt the web VS Code to create a VS Code Desktop SSH session.
+For more details see the [GitPod docs here](https://www.gitpod.io/docs/references/ides-and-editors/vscode).
+Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:61016](http://localhost:61016) respectively.
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bencherdev/bencher)
+
 ## License
 
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version 2.0</a>
