@@ -407,7 +407,7 @@ jobs:
           path: ./services/ui/dist
       - uses: netlify/actions/cli@master
         with:
-          args: deploy --dir ./services/ui/dist --alias ${GITHUB_REF#refs/*/}
+          args: deploy --dir ./services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}"
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -425,7 +425,7 @@ jobs:
           path: ./services/ui/dist
       - uses: netlify/actions/cli@master
         with:
-          args: deploy --dir ./services/ui/dist --alias main --prod
+          args: deploy --dir ./services/ui/dist --alias ${GITHUB_REF#refs/*/} --message "${{ github.event.head_commit.message }}" --prod
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
