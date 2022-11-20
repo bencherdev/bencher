@@ -340,7 +340,7 @@ jobs:
   build_bencher_valid_wasm:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-latest
-    needs: cargo_test
+    # needs: cargo_test
     steps:
       - uses: actions/checkout@v3
       - uses: jetli/wasm-pack-action@v0.3.0
