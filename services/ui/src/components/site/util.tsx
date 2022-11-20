@@ -20,6 +20,8 @@ export const BENCHER_API_URL: () => string = () => {
 export const BENCHER_GITHUB_URL: string =
   "https://github.com/bencherdev/bencher";
 
+export const BENCHER_CALENDLY_URL: string = "https://calendly.com/bencher/demo";
+
 export const BENCHER_USER_KEY: string = "BENCHER_USER";
 
 export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
