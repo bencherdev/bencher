@@ -11,7 +11,7 @@ export default defineConfig({
       remarkPlugins: [remarkGfm],
     }),
     solid(),
-    // wasmPack("../lib/bencher_json"),
+    wasmPack("../../lib/bencher_valid"),
   ],
   build: {
     target: "esnext",
