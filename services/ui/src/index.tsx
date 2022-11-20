@@ -4,12 +4,12 @@ import { Router } from "solid-app-router";
 import { MDXProvider } from "solid-jsx";
 
 import App from "./App";
-import md from "./md";
+import mdx from "./md";
 
 render(
   () => (
     <Router>
-      <MDXProvider components={{ ...md }}>
+      <MDXProvider components={{ ...mdx }}>
         <App />
       </MDXProvider>
     </Router>
