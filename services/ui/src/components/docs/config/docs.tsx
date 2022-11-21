@@ -1,5 +1,6 @@
 import { Docs } from "./types";
 import QuickStart from "../pages/QuickStart.mdx";
+import Changelog from "../pages/Changelog.mdx";
 
 const docsConfig = {
   [Docs.QUICK_START]: {
@@ -13,6 +14,14 @@ const docsConfig = {
   [Docs.API_V0]: {
     docs: Docs.API_V0,
     title: "Bencher REST API",
+  },
+  [Docs.CHANGELOG]: {
+    docs: Docs.CHANGELOG,
+    title: "Changelog",
+    page: {
+      heading: "Changelog",
+      content: <Changelog />,
+    },
   },
 };
 

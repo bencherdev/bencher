@@ -1,0 +1,17 @@
+## 21 Nov 2022
+
+- Fixed the UI y-axis scale cutoff issue! Note to self: RTFD
+- Fixed the UI documentation + routing bug! It turns out `SwaggerUIBundle` was the solution.
+- Added Metric Kind list, add, and view to UI
+- In perf queries allowed for both UUIDs and slugs for branches and testbeds
+- Added [bencher.dev](https://bencher.dev) to Google Search Console and Analytics
+- Changed API server default URL to always be [localhost:3000](localhost:3000)
+- Moved Docker UI build stage into its own `builder.Dockerfile`, mirroring the API setup
+- Created a better default for the UI's backend API URL, basically `this-host:61016`
+- Created a [walking skeleton](https://wiki.c2.com/?WalkingSkeleton) of adding Rust + WASM modules to the UI in both dev and CI/CD
+- Fixed UI logout + routing "too many redirects" bug
+- Changed notifications from state based to URL query param based in the UI
+- Refactored how pathname and redirects are handled in the UI to increase encapsulation
+- Added the current version to the UI `BETA` tag
+- Created a repo shortcut at [bencher.dev/repo](https://bencher.dev/repo)
+- Released `v0.2.27`!

@@ -1,17 +1,10 @@
 import { Route, Navigate } from "solid-app-router";
-import SwaggerPanel from "./api/SwaggerPanel";
 import docsConfig from "./config/docs";
 import { Docs } from "./config/types";
-import DocsMenu from "./DocsMenu";
 import DocsPage from "./DocsPage";
-import Message from "./example.mdx";
 
 const DocsRoutes = (props) => {
   const config = docsConfig;
-
-  const docsPage = (page) => {
-    return <DocsPage page={page} />;
-  };
 
   return (
     <>
@@ -37,6 +30,10 @@ const DocsRoutes = (props) => {
       <Route
         path="/reference/api/v0"
         element={<DocsPage config={config[Docs.API_V0]} />}
+      />
+      <Route
+        path="/reference/changelog"
+        element={<DocsPage config={config[Docs.CHANGELOG]} />}
       />
     </>
   );

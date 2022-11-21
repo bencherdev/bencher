@@ -9,6 +9,7 @@ enum Section {
 enum Page {
   QUICK_START = "Quick Start",
   API = "API",
+  CHANGELOG = "Changelog",
 }
 
 const asSlug = (text: string) => {
@@ -35,6 +36,9 @@ const DocsMenu = (props) => {
       <p class="menu-label">{Section.REFERENCE}</p>
       <ul class="menu-list">
         <Link href={getDocsPath(Section.REFERENCE, Page.API)}>{Page.API}</Link>
+        <Link href={getDocsPath(Section.REFERENCE, Page.CHANGELOG)}>
+          {Page.CHANGELOG}
+        </Link>
       </ul>
     </aside>
   );
