@@ -242,6 +242,7 @@ version = "0.2.27"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
+ "email-address-parser",
  "log",
  "wasm-bindgen",
  "wasm-bindgen-test",

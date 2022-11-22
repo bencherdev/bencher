@@ -8,18 +8,16 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["console_error_panic_hook"]
-wasm = ["dep:wasm-bindgen"]
+default = ["wasm", "dep:console_error_panic_hook"]
+wasm = ["dep:wasm-bindgen", "dep:console_log"]
 
 [dependencies]
+# Workspace
+email-address-parser.workspace = true
+# Crate
 wasm-bindgen = { version = "0.2", optional = true }
-
-# The `console_error_panic_hook` crate provides better debugging of panics by
-# logging them with `console.error`. This is great for development, but requires
-# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
-# code size when deploying.
-console_error_panic_hook = { version = "0.1.6", optional = true }
-console_log = { version = "0.2", features = ["color"] }
+console_error_panic_hook = { version = "0.1", optional = true }
+console_log = { version = "0.2", features = ["color"], optional = true }
 log = "0.4"
 
 [dev-dependencies]

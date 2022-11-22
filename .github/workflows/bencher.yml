@@ -346,7 +346,7 @@ jobs:
       - uses: jetli/wasm-pack-action@v0.3.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
-        run:  wasm-pack build --target web --features wasm
+        run:  wasm-pack build --target web --no-default-features --features wasm
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
