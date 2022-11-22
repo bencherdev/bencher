@@ -27,13 +27,14 @@ vscode:
 # Commands to start on workspace startup
 tasks:
   - name: General Setup
+    init: ./scripts/init.sh
     command: ./scripts/setup.sh
   - name: API Setup
     before: cd services/api && cargo test --no-run
     command: cargo run
   - name: UI Setup
     before: cd services/ui && npm install --include=dev
-    command: npm x vite
+    command: npm run dev
 
 # Ports to expose on workspace startup
 ports:
