@@ -1,6 +1,6 @@
 import validateUsername from "../../validators/validateUsername";
 import validator from "validator";
-import { is_valid_email } from "bencher_valid";
+import init, { is_valid_email } from "bencher_valid";
 
 const userFieldsConfig = {
   username: {
@@ -17,7 +17,11 @@ const userFieldsConfig = {
     placeholder: "email@example.com",
     icon: "fas fa-envelope",
     help: "Must be a valid email you have access to",
-    validate: is_valid_email,
+    validate: (email) =>
+      init().then(() => {
+        console.log("init wasm-pack");
+        return is_valid_email(email);
+      }),
   },
   confirmed: {
     label: "Confirmed",
