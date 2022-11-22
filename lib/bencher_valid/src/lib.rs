@@ -19,6 +19,6 @@ pub fn startup() {
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn validate_email(email: &str) -> bool {
+pub fn is_valid_email(email: &str) -> bool {
     EmailAddress::parse(email, None).is_some()
 }

@@ -4,7 +4,7 @@
   "description": "Bencher Web UI",
   "type": "module",
   "scripts": {
-    "wasm": "wasm-pack build ../../lib/bencher_valid --target web --features wasm",
+    "wasm": "wasm-pack build ../../lib/bencher_valid --target web",
     "dev": "npm run wasm && vite",
     "host": "vite --host",
     "build": "vite build",

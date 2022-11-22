@@ -1,5 +1,6 @@
 import validateUsername from "../../validators/validateUsername";
 import validator from "validator";
+import { is_valid_email } from "bencher_valid";
 
 const userFieldsConfig = {
   username: {
@@ -16,7 +17,7 @@ const userFieldsConfig = {
     placeholder: "email@example.com",
     icon: "fas fa-envelope",
     help: "Must be a valid email you have access to",
-    validate: validator.isEmail,
+    validate: is_valid_email,
   },
   confirmed: {
     label: "Confirmed",

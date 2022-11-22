@@ -10,8 +10,8 @@ export default defineConfig({
       jsxImportSource: "solid-jsx",
       remarkPlugins: [remarkGfm],
     }),
-    solid(),
     wasmPack("../../lib/bencher_valid"),
+    solid(),
   ],
   build: {
     target: "esnext",
