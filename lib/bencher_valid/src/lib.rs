@@ -3,17 +3,16 @@ use email_address_parser::EmailAddress;
 use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "wasm")]
-mod utils;
-
-#[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]
 pub fn startup() {
-    utils::set_panic_hook();
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
 
     #[cfg(debug_assertions)]
     let log_level = log::Level::Debug;
     #[cfg(not(debug_assertions))]
     let log_level = log::Level::Info;
+
     console_log::init_with_level(log_level).expect("Error init console log");
     log::debug!("Bencher Validation");
 }
