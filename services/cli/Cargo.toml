@@ -11,9 +11,9 @@ seed = []
 # Local
 bencher_adapter = { path = "../../lib/bencher_adapter" }
 bencher_json = { path = "../../lib/bencher_json" }
+bencher_valid = { path = "../../lib/bencher_valid" }
 # Workspace
 chrono.workspace = true
-email-address-parser.workspace = true
 literally.workspace = true
 serde.workspace = true
 serde_json.workspace = true

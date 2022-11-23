@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonEmpty, JsonSignup};
-use email_address_parser::EmailAddress;
+use bencher_valid::is_valid_email;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -16,7 +16,7 @@ const SIGNUP_PATH: &str = "/v0/auth/signup";
 pub struct Signup {
     pub name: String,
     pub slug: Option<String>,
-    pub email: EmailAddress,
+    pub email: String,
     pub invite: Option<String>,
     pub backend: Backend,
 }
@@ -36,7 +36,9 @@ impl TryFrom<CliAuthSignup> for Signup {
         Ok(Self {
             name,
             slug,
-            email: EmailAddress::parse(&email, None).ok_or(CliError::Email(email))?,
+            email: is_valid_email(&email)
+                .then_some(email.clone())
+                .ok_or(CliError::Email(email))?,
             invite,
             backend,
         })
@@ -55,7 +57,7 @@ impl From<Signup> for JsonSignup {
         Self {
             name,
             slug,
-            email: email.to_string(),
+            email,
             invite: invite.map(Into::into),
         }
     }

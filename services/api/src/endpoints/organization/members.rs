@@ -6,6 +6,7 @@ use bencher_json::{
     JsonEmpty, JsonMember, ResourceId,
 };
 use bencher_rbac::organization::Permission;
+use bencher_valid::is_valid_email;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -20,7 +21,7 @@ use crate::{
     },
     error::api_error,
     model::organization::{member::QueryMember, QueryOrganization},
-    model::user::{auth::AuthUser, validate_email, QueryUser},
+    model::user::{auth::AuthUser, QueryUser},
     schema,
     util::{
         cors::{get_cors, CorsResponse},
@@ -165,7 +166,9 @@ async fn post_inner(
     {
         (Some(name), "/auth/login")
     } else {
-        validate_email(&email)?;
+        is_valid_email(&email)
+            .then_some(())
+            .ok_or(ApiError::Email(email.clone()))?;
         (json_new_member.name.take(), "/auth/signup")
     };
 

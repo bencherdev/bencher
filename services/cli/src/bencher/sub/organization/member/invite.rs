@@ -5,7 +5,7 @@ use bencher_json::{
     organization::member::{JsonNewMember, JsonOrganizationRole},
     ResourceId,
 };
-use email_address_parser::EmailAddress;
+use bencher_valid::is_valid_email;
 
 use crate::{
     bencher::backend::Backend,
@@ -19,7 +19,7 @@ use crate::bencher::SubCmd;
 pub struct Invite {
     org: ResourceId,
     name: Option<String>,
-    email: EmailAddress,
+    email: String,
     role: JsonOrganizationRole,
     backend: Backend,
 }
@@ -38,7 +38,9 @@ impl TryFrom<CliMemberInvite> for Invite {
         Ok(Self {
             org,
             name,
-            email: EmailAddress::parse(&email, None).ok_or(CliError::Email(email))?,
+            email: is_valid_email(&email)
+                .then_some(email.clone())
+                .ok_or(CliError::Email(email))?,
             role: role.into(),
             backend: backend.try_into()?,
         })
@@ -64,11 +66,7 @@ impl From<Invite> for JsonNewMember {
             role,
             ..
         } = invite;
-        Self {
-            name,
-            email: email.to_string(),
-            role,
-        }
+        Self { name, email, role }
     }
 }
 

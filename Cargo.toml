@@ -24,3 +24,7 @@ thiserror = "1.0"
 tokio = "1.21"
 url = "2.3"
 uuid = "1.2"
+
+[profile.release-wasm]
+inherits = "release"
+opt-level = "s"

@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonSignup, JsonUser, ResourceId};
+use bencher_valid::is_valid_email;
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use email_address_parser::EmailAddress;
 use uuid::Uuid;
 
 use crate::{
@@ -35,7 +35,9 @@ impl InsertUser {
             email,
             invite: _,
         } = signup;
-        validate_email(&email)?;
+        is_valid_email(&email)
+            .then_some(())
+            .ok_or(ApiError::Email(email.clone()))?;
         let slug = unwrap_slug!(conn, &name, slug, user, QueryUser);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
@@ -46,10 +48,6 @@ impl InsertUser {
             locked: false,
         })
     }
-}
-
-pub fn validate_email(email: &str) -> Result<EmailAddress, ApiError> {
-    EmailAddress::parse(email, None).ok_or_else(|| ApiError::Email(email.into()))
 }
 
 fn_resource_id!(user);
