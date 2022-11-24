@@ -12,8 +12,8 @@ use crate::organization::member::JsonOrganizationRole;
 
 const BENCHER_DEV: &str = "bencher.dev";
 
-static HEADER: Lazy<Header> = Lazy::new(|| Header::default());
-static ALGORITHM: Lazy<Algorithm> = Lazy::new(|| Algorithm::default());
+static HEADER: Lazy<Header> = Lazy::new(Header::default);
+static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

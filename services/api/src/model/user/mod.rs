@@ -37,7 +37,7 @@ impl InsertUser {
         } = signup;
         is_valid_email(&email)
             .then_some(())
-            .ok_or(ApiError::Email(email.clone()))?;
+            .ok_or_else(|| ApiError::Email(email.clone()))?;
         let slug = unwrap_slug!(conn, &name, slug, user, QueryUser);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),

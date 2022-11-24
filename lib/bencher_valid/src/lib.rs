@@ -31,7 +31,7 @@ pub fn is_valid_user_name(name: &str) -> bool {
         return false;
     };
 
-    return NAME_REGEX.is_match(trim_name);
+    NAME_REGEX.is_match(trim_name)
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]

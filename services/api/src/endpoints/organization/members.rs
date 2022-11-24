@@ -168,7 +168,7 @@ async fn post_inner(
     } else {
         is_valid_email(&email)
             .then_some(())
-            .ok_or(ApiError::Email(email.clone()))?;
+            .ok_or_else(|| ApiError::Email(email.clone()))?;
         (json_new_member.name.take(), "/auth/signup")
     };
 
