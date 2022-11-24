@@ -1,16 +1,11 @@
 import { useLocation, useNavigate, useParams } from "solid-app-router";
-import {
-  createEffect,
-  createMemo,
-  createResource,
-  createSignal,
-  For,
-} from "solid-js";
+import { createEffect, createMemo, createResource, For } from "solid-js";
 import { BENCHER_API_URL, getToken } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 import validator from "validator";
 import axios from "axios";
+import init from "bencher_valid";
 
 export const organizationSlug = (pathname) => {
   const path = pathname().split("/");
@@ -71,6 +66,8 @@ const ConsolePage = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
+  const [_wasm] = createResource(pathname, () => init());
+
   const params = useParams();
   const path_params = createMemo(() => params);
 
