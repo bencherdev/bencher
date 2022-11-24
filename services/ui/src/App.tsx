@@ -10,6 +10,7 @@ import {
   createResource,
 } from "solid-js";
 import { Routes, Route, useLocation } from "solid-app-router";
+import init from "bencher_valid";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import SiteFooter from "./components/site/pages/SiteFooter";
@@ -42,6 +43,7 @@ const initUser = () => {
 const App: Component = () => {
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
+  const [_wasm] = createResource(pathname, () => init());
 
   const [organization_slug, setOrganizationSlug] = createSignal<null | String>(
     null

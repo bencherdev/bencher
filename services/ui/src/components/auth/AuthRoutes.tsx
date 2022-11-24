@@ -1,6 +1,5 @@
-import { createMemo, createResource, lazy } from "solid-js";
-import { Route, Navigate, useLocation } from "solid-app-router";
-import init from "bencher_valid";
+import { lazy } from "solid-js";
+import { Route, Navigate } from "solid-app-router";
 
 const AuthFormPage = lazy(() => import("./AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./AuthLogoutPage"));
@@ -10,10 +9,6 @@ import authConfig from "./config/auth";
 import { Auth } from "./config/types";
 
 const AuthRoutes = (props) => {
-  const location = useLocation();
-  const pathname = createMemo(() => location.pathname);
-  const [_wasm] = createResource(pathname, () => init());
-
   const config = authConfig;
 
   return (
