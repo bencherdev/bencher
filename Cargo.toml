@@ -9,7 +9,6 @@ edition = "2021"
 [workspace.dependencies]
 chrono = "0.4"
 derive_more = "0.99"
-email-address-parser = "1.0"
 jsonwebtoken = "8.1"
 lazy_static = "1.4"
 literally = "0.1"

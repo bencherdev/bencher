@@ -12,13 +12,16 @@ default = ["wasm", "dep:console_error_panic_hook"]
 wasm = ["dep:wasm-bindgen", "dep:console_log"]
 
 [dependencies]
-# Workspace
-email-address-parser.workspace = true
 # Crate
-wasm-bindgen = { version = "0.2", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 console_log = { version = "0.2", features = ["color"], optional = true }
+email-address-parser = "1.0"
 log = "0.4"
+regex = "1.7"
+wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
+# Workspace
+pretty_assertions.workspace = true
+# Crate
 wasm-bindgen-test = "0.3.13"
