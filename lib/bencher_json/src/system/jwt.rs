@@ -2,6 +2,7 @@ use chrono::Utc;
 use derive_more::Display;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 pub use jsonwebtoken::{DecodingKey, EncodingKey};
+use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,10 +12,8 @@ use crate::organization::member::JsonOrganizationRole;
 
 const BENCHER_DEV: &str = "bencher.dev";
 
-lazy_static::lazy_static! {
-    static ref HEADER: Header = Header::default();
-    static ref ALGORITHM: Algorithm = Algorithm::default();
-}
+static HEADER: Lazy<Header> = Lazy::new(|| Header::default());
+static ALGORITHM: Lazy<Algorithm> = Lazy::new(|| Algorithm::default());
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

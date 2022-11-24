@@ -164,9 +164,9 @@ dependencies = [
  "dropshot",
  "http",
  "jsonwebtoken",
- "lazy_static",
  "literally",
  "mail-send",
+ "once_cell",
  "ordered-float",
  "oso",
  "rand 0.8.5",
@@ -224,7 +224,7 @@ dependencies = [
  "chrono",
  "derive_more",
  "jsonwebtoken",
- "lazy_static",
+ "once_cell",
  "ordered-float",
  "schemars",
  "serde",
@@ -239,8 +239,8 @@ name = "bencher_rbac"
 version = "0.2.27"
 dependencies = [
  "bencher_json",
- "lazy_static",
  "literally",
+ "once_cell",
  "oso",
  "uuid",
 ]

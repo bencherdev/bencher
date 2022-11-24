@@ -47,13 +47,12 @@ mod test {
     use crate::project::Permission as ProjPerm;
     use crate::project::Role as ProjRole;
     use crate::server::Permission as SvrPerm;
+    use once_cell::sync::Lazy;
     use uuid::Uuid;
 
     const OSO_ERROR: &str = "Failed to initialize RBAC";
 
-    lazy_static::lazy_static! {
-        static ref OSO: Oso = init_rbac().expect(OSO_ERROR);
-    }
+    static OSO: Lazy<Oso> = Lazy::new(|| init_rbac().expect(OSO_ERROR));
 
     #[test]
     fn test_rbac() {

@@ -12,6 +12,6 @@ oso.workspace = true
 
 [dev-dependencies]
 # Workspace
-lazy_static.workspace = true
 literally.workspace = true
+once_cell.workspace = true
 uuid = { workspace = true, features = ["v4"] }

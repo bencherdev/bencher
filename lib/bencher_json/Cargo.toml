@@ -12,7 +12,7 @@ schema = ["schemars", "ordered-float/schemars"]
 chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true
 jsonwebtoken.workspace = true
-lazy_static.workspace = true
+once_cell.workspace = true
 ordered-float = { workspace = true, features = ["serde"] }
 schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true

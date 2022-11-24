@@ -17,8 +17,8 @@ bencher_valid = { path = "../../lib/bencher_valid" }
 chrono.workspace = true
 derive_more.workspace = true
 jsonwebtoken.workspace = true
-lazy_static.workspace = true
 literally = { workspace = true, optional = true }
+once_cell.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true

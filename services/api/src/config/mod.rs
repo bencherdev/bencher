@@ -7,6 +7,7 @@ use bencher_json::{
     system::config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
     JsonConfig,
 };
+use once_cell::sync::Lazy;
 use tracing::{error, info};
 use url::Url;
 
@@ -28,19 +29,19 @@ const DEFAULT_PORT: u16 = 61016;
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 10;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 
-lazy_static::lazy_static! {
-    static ref DEFAULT_ENDPOINT: Url = DEFAULT_ENDPOINT_STR.parse().unwrap_or_else(|e| panic!("Failed to parse default endpoint \"{DEFAULT_ENDPOINT_STR}\": {e}"));
-    static ref DEFAULT_BIND_ADDRESS: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT);
-}
+static DEFAULT_ENDPOINT: Lazy<Url> = Lazy::new(|| {
+    DEFAULT_ENDPOINT_STR.parse().unwrap_or_else(|e| {
+        panic!("Failed to parse default endpoint \"{DEFAULT_ENDPOINT_STR}\": {e}")
+    })
+});
+
+static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
+    Lazy::new(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT));
 
 #[cfg(debug_assertions)]
-lazy_static::lazy_static! {
-    static ref DEFAULT_SECRET_KEY: String = "DO_NOT_USE_THIS_IN_PRODUCTION".into();
-}
+static DEFAULT_SECRET_KEY: Lazy<String> = Lazy::new(|| "DO_NOT_USE_THIS_IN_PRODUCTION".into());
 #[cfg(not(debug_assertions))]
-lazy_static::lazy_static! {
-    static ref DEFAULT_SECRET_KEY: String = uuid::Uuid::new_v4().to_string();
-}
+static DEFAULT_SECRET_KEY: Lazy<String> = Lazy::new(|| uuid::Uuid::new_v4().to_string());
 
 #[derive(Debug, Clone)]
 pub struct Config(pub JsonConfig);
