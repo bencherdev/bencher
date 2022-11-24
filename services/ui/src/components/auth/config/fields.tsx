@@ -1,15 +1,14 @@
-import validateUsername from "../../validators/validateUsername";
+import { is_valid_email, is_valid_user_name } from "bencher_valid";
 import validator from "validator";
-import { is_valid_email } from "bencher_valid";
 
-const userFieldsConfig = {
+const authFieldsConfig = {
   username: {
     label: "Name",
     type: "text",
     placeholder: "Full Name",
     icon: "fas fa-user",
-    help: "Must be longer than four characters using only: letters, apostrophes, periods, commas, and dashes",
-    validate: validateUsername,
+    help: "Must be at least four characters using only: letters, numbers, spaces, apostrophes, periods, commas, and dashes",
+    validate: is_valid_user_name,
   },
   email: {
     label: "Email",
@@ -18,11 +17,6 @@ const userFieldsConfig = {
     icon: "fas fa-envelope",
     help: "Must be a valid email you have access to",
     validate: is_valid_email,
-  },
-  confirmed: {
-    label: "Confirmed",
-    type: "switch",
-    icon: "far fa-check-circle",
   },
   consent: {
     label: "I Agree",
@@ -46,11 +40,6 @@ const userFieldsConfig = {
       </small>
     ),
   },
-  role: {
-    label: "Role",
-    type: "select",
-    icon: "fas fa-user-tag",
-  },
   token: {
     label: "Token",
     type: "text",
@@ -61,4 +50,4 @@ const userFieldsConfig = {
   },
 };
 
-export default userFieldsConfig;
+export default authFieldsConfig;

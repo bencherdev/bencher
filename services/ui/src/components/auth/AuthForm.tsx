@@ -3,7 +3,7 @@ import axios from "axios";
 import validator from "validator";
 
 import SiteField from "../fields/SiteField";
-import userFieldsConfig from "../fields/config/user/userFieldsConfig";
+import authFieldsConfig from "./config/fields";
 import { Field } from "../console/config/types";
 import { FormKind } from "./config/types";
 import {
@@ -145,7 +145,7 @@ export const AuthForm = (props: Props) => {
           label={true}
           value={form()?.username?.value}
           valid={form()?.username?.valid}
-          config={userFieldsConfig.username}
+          config={authFieldsConfig.username}
           handleField={handleField}
         />
       )}
@@ -156,7 +156,7 @@ export const AuthForm = (props: Props) => {
         label={true}
         value={form()?.email?.value}
         valid={form()?.email?.valid}
-        config={userFieldsConfig.email}
+        config={authFieldsConfig.email}
         handleField={handleField}
       />
 
@@ -171,7 +171,7 @@ export const AuthForm = (props: Props) => {
             label={false}
             value={form()?.consent?.value}
             valid={form()?.consent?.valid}
-            config={userFieldsConfig.consent}
+            config={authFieldsConfig.consent}
             handleField={handleField}
           />
         )}

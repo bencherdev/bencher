@@ -2,7 +2,7 @@ import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal, lazy } from "solid-js";
 import { Field } from "../console/config/types";
-import userFieldsConfig from "../fields/config/user/userFieldsConfig";
+import authFieldsConfig from "./config/fields";
 import SiteField from "../fields/SiteField";
 import validator from "validator";
 import { NotifyKind, notifyParams, pageTitle } from "../site/util";
@@ -130,7 +130,7 @@ const AuthConfirmPage = (props: {
                   label={true}
                   value={form()?.token?.value}
                   valid={form()?.token?.valid}
-                  config={userFieldsConfig.token}
+                  config={authFieldsConfig.token}
                   handleField={handleField}
                 />
 
