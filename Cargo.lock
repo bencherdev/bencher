@@ -249,6 +249,7 @@ dependencies = [
 name = "bencher_valid"
 version = "0.2.27"
 dependencies = [
+ "base64",
  "console_error_panic_hook",
  "console_log",
  "email-address-parser",

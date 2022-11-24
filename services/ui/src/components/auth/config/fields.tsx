@@ -1,5 +1,8 @@
-import { is_valid_email, is_valid_user_name } from "bencher_valid";
-import validator from "validator";
+import {
+  is_valid_email,
+  is_valid_user_name,
+  is_valid_jwt,
+} from "bencher_valid";
 
 const authFieldsConfig = {
   username: {
@@ -46,7 +49,7 @@ const authFieldsConfig = {
     placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
     icon: "fas fa-key",
     help: "Must be a valid JWT (JSON Web Token)",
-    validate: validator.isJWT,
+    validate: is_valid_jwt,
   },
 };
 
