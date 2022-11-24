@@ -25,8 +25,7 @@ pub fn is_valid_user_name(name: &str) -> bool {
         return false;
     };
 
-    // ^[a-zA-Z\d\s\,\.\?\!\@\&\-\+\|\:\']{4,50}$
-    let Ok(regex) = Regex::new(r"^[[[:alnum:]]]{4,50}$") else {
+    let Ok(regex) = Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$") else {
         return false;
     };
     return regex.is_match(trim_name);
@@ -45,7 +44,12 @@ mod test {
     #[test]
     fn test_user_name() {
         assert_eq!(true, is_valid_user_name("Muriel"));
-        // assert_eq!(true, is_valid_user_name("Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel Linda Bagge"));
+        assert_eq!(true, is_valid_user_name("Bagge, Muriel"));
+        assert_eq!(true, is_valid_user_name("Mrs. Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
         // assert_eq!(true, is_valid_user_name("MurielBagge"));
         // assert_eq!(true, is_valid_user_name(" Muriel Bagge"));
         // assert_eq!(true, is_valid_user_name("Muriel  Bagge"));
