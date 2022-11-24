@@ -25,6 +25,8 @@ tokio = "1.21"
 url = "2.3"
 uuid = "1.2"
 
+# TODO use this to generate wasm builds
+# https://github.com/bencherdev/bencher/issues/48
 [profile.release-wasm]
 inherits = "release"
 opt-level = "s"

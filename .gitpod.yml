@@ -34,7 +34,7 @@ tasks:
     command: cargo run
   - name: UI Setup
     before: cd services/ui && npm install --include=dev
-    command: npm run dev
+    command: ../../scripts/start_ui.sh
 
 # Ports to expose on workspace startup
 ports:
