@@ -253,6 +253,7 @@ dependencies = [
  "console_log",
  "email-address-parser",
  "log",
+ "once_cell",
  "pretty_assertions",
  "regex",
  "wasm-bindgen",

@@ -12,6 +12,8 @@ default = ["wasm", "dep:console_error_panic_hook"]
 wasm = ["dep:wasm-bindgen", "dep:console_log"]
 
 [dependencies]
+# Workspace
+once_cell.workspace = true
 # Crate
 console_error_panic_hook = { version = "0.1", optional = true }
 console_log = { version = "0.2", features = ["color"], optional = true }

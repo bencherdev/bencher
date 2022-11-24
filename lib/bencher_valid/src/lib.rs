@@ -1,7 +1,10 @@
 use email_address_parser::EmailAddress;
+use once_cell::sync::Lazy;
 use regex::Regex;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
+
+const REGEX_ERROR: &str = "Failed to compile regex.";
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]
@@ -20,15 +23,15 @@ pub fn startup() {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {
+    static NAME_REGEX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
+
     let trim_name = name.trim();
     if trim_name.len() < 4 || trim_name.len() > 50 {
         return false;
     };
 
-    let Ok(regex) = Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$") else {
-        return false;
-    };
-    return regex.is_match(trim_name);
+    return NAME_REGEX.is_match(trim_name);
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -43,6 +46,7 @@ mod test {
 
     #[test]
     fn test_user_name() {
+        assert_eq!(true, is_valid_user_name("muriel"));
         assert_eq!(true, is_valid_user_name("Muriel"));
         assert_eq!(true, is_valid_user_name("Muriel Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel Linda Bagge"));
@@ -50,11 +54,25 @@ mod test {
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
-        // assert_eq!(true, is_valid_user_name("MurielBagge"));
-        // assert_eq!(true, is_valid_user_name(" Muriel Bagge"));
-        // assert_eq!(true, is_valid_user_name("Muriel  Bagge"));
-        // assert_eq!(true, is_valid_user_name("Muriel Bagge "));
-        // assert_eq!(true, is_valid_user_name(" Muriel Bagge "));
+        assert_eq!(true, is_valid_user_name(" Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel  Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel Bagge "));
+        assert_eq!(true, is_valid_user_name(" Muriel Bagge "));
+        assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
+
+        assert_eq!(false, is_valid_user_name("Muriel!"));
+        assert_eq!(false, is_valid_user_name("Muriel! Bagge"));
+        assert_eq!(true, is_valid_user_name("Dumb"));
+        assert_eq!(false, is_valid_user_name("Dog"));
+        assert_eq!(
+            true,
+            is_valid_user_name("01234567890123456789012345678901234567890123456789")
+        );
+        assert_eq!(
+            false,
+            is_valid_user_name("012345678901234567890123456789012345678901234567890")
+        );
+        assert_eq!(false, is_valid_user_name(""));
     }
 
     #[test]
