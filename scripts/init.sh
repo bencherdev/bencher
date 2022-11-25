@@ -20,3 +20,5 @@ echo "export FLYCTL_INSTALL=\"/home/gitpod/.fly\"" >> $HOME/.bash_profile
 echo "export PATH=\"/home/gitpod/.fly/bin:$PATH\"" >> $HOME/.bash_profile
 
 source ~/.bash_profile
+
+cargo test --no-run

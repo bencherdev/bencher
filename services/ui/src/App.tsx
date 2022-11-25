@@ -8,6 +8,7 @@ import {
   createMemo,
   For,
   createResource,
+  createContext,
 } from "solid-js";
 import { Routes, Route, useLocation } from "solid-app-router";
 import init from "bencher_valid";
@@ -40,10 +41,11 @@ const initUser = () => {
   };
 };
 
+const ValidContext = createContext(init());
+
 const App: Component = () => {
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
-  const [_wasm] = createResource(pathname, () => init());
 
   const [organization_slug, setOrganizationSlug] = createSignal<null | String>(
     null
