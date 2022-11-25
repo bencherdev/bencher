@@ -14,7 +14,7 @@ import { useNavigate } from "solid-app-router";
 const TablePanel = (props) => {
   const navigate = useNavigate();
 
-  const options = (token: string) => {
+  const options = () => {
     return {
       url: props.config?.table?.url(props.path_params()),
       method: "GET",
@@ -28,12 +28,11 @@ const TablePanel = (props) => {
   const fetchData = async (refresh) => {
     console.log("TABLE");
     try {
-      const token = getToken();
       if (!validate_jwt(props.user()?.token)) {
         return [];
       }
 
-      let resp = await axios(options(token));
+      let resp = await axios(options());
       const data = resp.data;
 
       return data;

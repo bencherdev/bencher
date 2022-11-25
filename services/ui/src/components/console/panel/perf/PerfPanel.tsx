@@ -7,10 +7,9 @@ import {
   createSignal,
 } from "solid-js";
 import { isMetricKind, isPerfTab, PerfTab } from "../../config/types";
-import { getToken } from "../../../site/util";
+import { getToken, validate_jwt } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
-import validator from "validator";
 
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
@@ -175,33 +174,32 @@ const PerfPanel = (props) => {
     testbeds().length === 0 ||
     benchmarks().length === 0;
 
-  const perf_data_options = (token: string) => {
+  const perf_data_options = () => {
     return {
       url: props.config?.plot?.url(props.path_params()),
       method: "POST",
       data: perf_query(),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${props.user()?.token}`,
       },
     };
   };
 
   const fetchPerfData = async () => {
+    console.log("PERF");
     try {
-      const token = getToken();
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
-      if (isPlotInit() || !validator.isJWT(token)) {
+      if (isPlotInit() || !validate_jwt(props.user()?.token)) {
         return {};
       }
 
-      let resp = await axios(perf_data_options(token));
+      let resp = await axios(perf_data_options());
       const data = resp.data;
       console.log(data);
       return data;
     } catch (error) {
       console.error(error);
-
       return {};
     }
   };
@@ -217,6 +215,7 @@ const PerfPanel = (props) => {
     return {
       perf_query: perf_query(),
       refresh: refresh(),
+      token: props.user()?.token,
     };
   });
   const [perf_data] = createResource(perf_query_refresh, fetchPerfData);
@@ -235,7 +234,7 @@ const PerfPanel = (props) => {
   const fetchPerfTab = async (perf_tab: PerfTab) => {
     try {
       const token = getToken();
-      if (token && !validator.isJWT(token)) {
+      if (token && !validate_jwt(token)) {
         return [];
       }
 
