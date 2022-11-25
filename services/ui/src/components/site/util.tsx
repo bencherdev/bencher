@@ -1,5 +1,6 @@
 import axios from "axios";
 import validator from "validator";
+import { is_valid_jwt } from "bencher_valid";
 
 import { site_analytics } from "./site_analytics";
 import swagger from "../docs/api/swagger.json";
@@ -44,6 +45,21 @@ export const pageTitle = (new_title: string) => {
   }
 
   site_analytics()?.page();
+};
+
+export const validate_string = (
+  input: string,
+  validator: (input: string) => boolean
+): boolean => {
+  if (typeof input === "string") {
+    return validator(input.trim());
+  } else {
+    return false;
+  }
+};
+
+export const validate_jwt = (token: string): boolean => {
+  return validate_string(token, is_valid_jwt);
 };
 
 export const getToken = () =>
@@ -117,17 +133,6 @@ export const isAllowed = async (url: string) => {
     return resp?.data?.allowed;
   } catch (error) {
     console.error(error);
-    return false;
-  }
-};
-
-export const validate_string = (
-  input: string,
-  validator: (input: string) => boolean
-): boolean => {
-  if (typeof input === "string") {
-    return validator(input.trim());
-  } else {
     return false;
   }
 };

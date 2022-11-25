@@ -1,6 +1,5 @@
 import { createSignal, createEffect, Accessor, createMemo } from "solid-js";
 import axios from "axios";
-import validator from "validator";
 
 import SiteField from "../fields/SiteField";
 import authFieldsConfig from "./config/fields";
@@ -10,8 +9,8 @@ import {
   BENCHER_API_URL,
   NotifyKind,
   notifyParams,
-  NOTIFY_KIND_PARAM,
-  NOTIFY_TEXT_PARAM,
+  validate_jwt,
+  validate_string,
 } from "../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
 
@@ -67,7 +66,7 @@ export const AuthForm = (props: Props) => {
     handleFormSubmitting(true);
     const invite_token = props.invite();
     let invite: string | null;
-    if (invite_token && validator.isJWT(invite_token)) {
+    if (validate_jwt(invite_token)) {
       invite = invite_token;
     } else {
       invite = null;

@@ -30,10 +30,7 @@ pub struct InsertUser {
 impl InsertUser {
     pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, ApiError> {
         let JsonSignup {
-            name,
-            slug,
-            email,
-            invite: _,
+            name, slug, email, ..
         } = signup;
         if !is_valid_user_name(&name) {
             return Err(ApiError::UserName(name));
