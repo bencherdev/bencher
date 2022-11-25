@@ -10,7 +10,6 @@ import {
   NotifyKind,
   notifyParams,
   validate_jwt,
-  validate_string,
 } from "../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
 

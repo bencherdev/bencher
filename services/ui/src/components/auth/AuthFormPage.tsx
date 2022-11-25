@@ -1,8 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, lazy } from "solid-js";
-import validator from "validator";
 
-import { pageTitle } from "../site/util";
+import { pageTitle, validate_jwt } from "../site/util";
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
 import Notification from "../site/Notification";
@@ -17,10 +16,7 @@ const AuthFormPage = (props: {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  if (
-    searchParams[INVITE_PARAM] &&
-    !validator.isJWT(searchParams[INVITE_PARAM].trim())
-  ) {
+  if (searchParams[INVITE_PARAM] && !validate_jwt(searchParams[INVITE_PARAM])) {
     setSearchParams({ [INVITE_PARAM]: null });
   }
 
@@ -29,7 +25,7 @@ const AuthFormPage = (props: {
   );
 
   createEffect(() => {
-    if (props.user().token && validator.isJWT(props.user().token)) {
+    if (validate_jwt(props.user().token)) {
       navigate("/console");
     }
 

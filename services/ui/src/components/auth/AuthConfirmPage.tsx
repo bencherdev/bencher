@@ -1,11 +1,15 @@
 import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
-import { createEffect, createMemo, createSignal, lazy } from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
 import authFieldsConfig from "./config/fields";
 import SiteField from "../fields/SiteField";
-import validator from "validator";
-import { NotifyKind, notifyParams, pageTitle } from "../site/util";
+import {
+  NotifyKind,
+  notifyParams,
+  pageTitle,
+  validate_jwt,
+} from "../site/util";
 import Notification from "../site/Notification";
 
 const TOKEN_PARAM = "token";
@@ -20,10 +24,7 @@ const AuthConfirmPage = (props: {
   const pathname = createMemo(() => location.pathname);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  if (
-    searchParams[TOKEN_PARAM] &&
-    !validator.isJWT(searchParams[TOKEN_PARAM].trim())
-  ) {
+  if (searchParams[TOKEN_PARAM] && !validate_jwt(searchParams[TOKEN_PARAM])) {
     setSearchParams({ [TOKEN_PARAM]: null });
   }
 
@@ -89,7 +90,7 @@ const AuthConfirmPage = (props: {
   };
 
   createEffect(() => {
-    if (props.user().token && validator.isJWT(props.user().token)) {
+    if (validate_jwt(props.user()?.token)) {
       navigate("/console");
     }
 
@@ -106,7 +107,7 @@ const AuthConfirmPage = (props: {
     }
 
     const jwt = token();
-    if (jwt && validator.isJWT(jwt) && jwt !== submitted()) {
+    if (validate_jwt(jwt) && jwt !== submitted()) {
       setSubmitted(jwt);
       handleFormSubmit();
     }
