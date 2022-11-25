@@ -77,10 +77,12 @@ const App: Component = () => {
 
   createEffect(() => {
     if (user()?.token === null) {
-      const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
+      const cookie_user = JSON.parse(
+        window.localStorage.getItem(BENCHER_USER_KEY)
+      );
       // TODO properly validate entire user
-      if (user) {
-        setUser(user);
+      if (cookie_user?.token) {
+        setUser(cookie_user);
       }
     }
   });

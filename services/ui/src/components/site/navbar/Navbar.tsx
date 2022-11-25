@@ -36,9 +36,11 @@ export const Navbar = (props) => {
 
       <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
-          <a class="navbar-item" href="/pricing">
-            Pricing
-          </a>
+          {!props.user()?.token && (
+            <a class="navbar-item" href="/pricing">
+              Pricing
+            </a>
+          )}
           <a class="navbar-item" href="/docs">
             Docs
           </a>

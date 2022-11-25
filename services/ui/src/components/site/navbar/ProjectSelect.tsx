@@ -1,7 +1,6 @@
 import axios from "axios";
 import { createSignal, createResource, createEffect, For } from "solid-js";
-import { BENCHER_API_URL, getToken } from "../../site/util";
-import validator from "validator";
+import { BENCHER_API_URL, getToken, validate_jwt } from "../../site/util";
 import { useNavigate } from "solid-app-router";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
@@ -28,7 +27,7 @@ const ProjectSelect = (props) => {
 
     try {
       const token = getToken();
-      if (token && !validator.isJWT(token)) {
+      if (!validate_jwt(token)) {
         return [all_projects];
       }
 

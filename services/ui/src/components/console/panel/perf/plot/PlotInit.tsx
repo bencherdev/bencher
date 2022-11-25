@@ -1,6 +1,4 @@
-import { For } from "solid-js";
-import { PerfTab, PerKind } from "../../../config/types";
-import { toCapitalized } from "../../../config/util";
+import { PerfTab } from "../../../config/types";
 
 const PlotInit = (props) => {
   return (

@@ -118,7 +118,7 @@ export const isAllowedProject = async (
 export const isAllowed = async (url: string) => {
   try {
     const token = getToken();
-    if (token && !validator.isJWT(token)) {
+    if (!validate_jwt(token)) {
       return false;
     }
     const options = {

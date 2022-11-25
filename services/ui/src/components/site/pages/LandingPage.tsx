@@ -1,13 +1,12 @@
 import { Link, useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
-import validator from "validator";
-import { BENCHER_TITLE, pageTitle } from "../util";
+import { BENCHER_TITLE, pageTitle, validate_jwt } from "../util";
 
 const LandingPage = (props) => {
   const navigate = useNavigate();
 
   createEffect(() => {
-    if (props.user().token && validator.isJWT(props.user().token)) {
+    if (validate_jwt(props.user().token)) {
       navigate("/console");
     }
 

@@ -1,9 +1,8 @@
 import axios from "axios";
-import { createEffect, createResource, createSignal, For } from "solid-js";
+import { createResource, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
-import { getToken } from "../../../../site/util";
-import validator from "validator";
+import { getToken, validate_jwt } from "../../../../site/util";
 
 const PlotKey = (props) => {
   const key_data_options = (token: string, perf_tab: PerfTab, uuid: string) => {
@@ -20,8 +19,10 @@ const PlotKey = (props) => {
   const fetchKeyData = async (perf_tab: PerfTab, uuids: any[]) => {
     const key_data = {};
 
+    // TODO move over to props.user().token
+    // and figure out why it will flip to `null`
     const token = getToken();
-    if (token && !validator.isJWT(token)) {
+    if (!validate_jwt(token)) {
       return key_data;
     }
 

@@ -1,15 +1,14 @@
-import { Link, useNavigate } from "solid-app-router";
+import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
-import { BENCHER_CALENDLY_URL, pageTitle } from "../util";
-import validator from "validator";
+import { BENCHER_CALENDLY_URL, pageTitle, validate_jwt } from "../util";
 
 const PricingPage = (props) => {
   const navigate = useNavigate();
 
   createEffect(() => {
-    // if (props.user().token && validator.isJWT(props.user().token)) {
-    //   navigate("/console/");
-    // }
+    if (validate_jwt(props.user().token)) {
+      navigate("/console/");
+    }
 
     pageTitle("Pricing");
   });
