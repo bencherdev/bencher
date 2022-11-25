@@ -38,12 +38,15 @@ pub fn is_valid_user_name(name: &str) -> bool {
     static NAME_REGEX: Lazy<Regex> =
         Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
 
-    let trim_name = name.trim();
-    if trim_name.len() < 4 || trim_name.len() > 50 {
+    if name != name.trim() {
+        return false;
+    }
+
+    if name.len() < 4 || name.len() > 50 {
         return false;
     };
 
-    NAME_REGEX.is_match(trim_name)
+    NAME_REGEX.is_match(name)
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -74,17 +77,17 @@ mod test {
         assert_eq!(true, is_valid_user_name("muriel"));
         assert_eq!(true, is_valid_user_name("Muriel"));
         assert_eq!(true, is_valid_user_name("Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel    Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel Linda Bagge"));
         assert_eq!(true, is_valid_user_name("Bagge, Muriel"));
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
         assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
-        assert_eq!(true, is_valid_user_name(" Muriel Bagge"));
-        assert_eq!(true, is_valid_user_name("Muriel  Bagge"));
-        assert_eq!(true, is_valid_user_name("Muriel Bagge "));
-        assert_eq!(true, is_valid_user_name(" Muriel Bagge "));
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
 
+        assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
+        assert_eq!(false, is_valid_user_name("Muriel Bagge "));
+        assert_eq!(false, is_valid_user_name(" Muriel Bagge "));
         assert_eq!(false, is_valid_user_name("Muriel!"));
         assert_eq!(false, is_valid_user_name("Muriel! Bagge"));
         assert_eq!(true, is_valid_user_name("Dumb"));

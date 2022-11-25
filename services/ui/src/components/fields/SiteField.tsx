@@ -30,8 +30,8 @@ const SiteField = (props) => {
         props.handleField(
           props.fieldKey,
           event.target.value,
-          props.config.validate
-            ? props.config.validate(event.target.value)
+          props.config?.validate
+            ? props.config.validate(event.target.value?.trim())
             : true
         );
     }
@@ -96,9 +96,7 @@ const SiteField = (props) => {
 
   return (
     <div class="field">
-      {props.label && (
-        <label class="label is-medium">{props.label}</label>
-      )}
+      {props.label && <label class="label is-medium">{props.label}</label>}
       {getField()}
       {getValidate() && props.valid === false && (
         <FieldHelp fieldText={props.config.help} fieldValid={props.valid} />
