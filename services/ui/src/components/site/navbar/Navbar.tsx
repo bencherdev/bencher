@@ -1,5 +1,10 @@
 import { Link } from "solid-app-router";
-import { BENCHER_GITHUB_URL, BENCHER_LOGO_URL, BENCHER_VERSION } from "../util";
+import {
+  BENCHER_GITHUB_URL,
+  BENCHER_LOGO_URL,
+  BENCHER_VERSION,
+  validate_jwt,
+} from "../util";
 import ProjectSelect from "./ProjectSelect";
 
 export interface Props {
@@ -36,7 +41,7 @@ export const Navbar = (props) => {
 
       <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
-          {!props.user()?.token && (
+          {!validate_jwt(props.user()?.token) && (
             <a class="navbar-item" href="/pricing">
               Pricing
             </a>
@@ -47,7 +52,7 @@ export const Navbar = (props) => {
           <a class="navbar-item" href={BENCHER_GITHUB_URL} target="_blank">
             GitHub
           </a>
-          {props.user()?.token && props.organization_slug() && (
+          {validate_jwt(props.user()?.token) && props.organization_slug() && (
             <div class="navbar-item">
               <ProjectSelect
                 organization_slug={props.organization_slug}
