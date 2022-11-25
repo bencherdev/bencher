@@ -52,8 +52,7 @@ jobs:
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
-    # In case of nightly errors
-    # continue-on-error: true
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Install nightly toolchain
@@ -70,7 +69,6 @@ jobs:
     needs:
       - cargo_fmt
       - cargo_clippy
-      - cargo_udeps
     steps:
       - uses: actions/checkout@v3
       - name: cargo test
