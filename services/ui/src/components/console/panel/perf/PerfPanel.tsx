@@ -208,7 +208,6 @@ const PerfPanel = (props) => {
     }
     setFetcherCache(new_fetcher);
 
-    console.log("PERF");
     try {
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
       if (isPlotInit() || !validate_jwt(props.user()?.token)) {

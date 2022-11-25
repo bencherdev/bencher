@@ -43,10 +43,6 @@ const TablePanel = (props) => {
     }
     setFetcherCache(new_fetcher);
 
-    console.log(refresh());
-    console.log(page());
-    console.log(props.user()?.token);
-    console.log(props.path_params());
     try {
       if (!validate_jwt(props.user()?.token)) {
         return EMPTY_ARRAY;
