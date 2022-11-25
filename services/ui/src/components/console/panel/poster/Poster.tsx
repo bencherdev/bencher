@@ -8,8 +8,7 @@ import {
   Switch,
 } from "solid-js";
 import SiteField from "../../../fields/SiteField";
-import validator from "validator";
-import { getToken } from "../../../site/util";
+import { validate_jwt } from "../../../site/util";
 import { Field } from "../../config/types";
 import { useLocation, useNavigate } from "solid-app-router";
 
@@ -30,18 +29,6 @@ const initForm = (fields) => {
   return newForm;
 };
 
-const options = (url: string, token: string, data: any) => {
-  return {
-    url: url,
-    method: "POST",
-    data: data,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
 const Poster = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,24 +37,42 @@ const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
 
+  const options = (data: any) => {
+    return {
+      url: props.config?.url?.(props.path_params()),
+      method: "POST",
+      data: data,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${props.user()?.token}`,
+      },
+    };
+  };
+
   const postData = async (data) => {
     try {
-      const token = getToken();
-      if (token && !validator.isJWT(token)) {
+      if (!validate_jwt(props.user()?.token)) {
         return;
       }
 
-      await axios(
-        options(props.config?.url?.(props.path_params()), token, data)
-      );
+      await axios(options(data));
       navigate(props.config?.path?.(pathname()));
     } catch (error) {
       console.error(error);
+      return;
     }
+  };
+
+  const is_sendable = (): boolean => {
+    return !form()?.submitting && valid();
   };
 
   function sendForm(e) {
     e.preventDefault();
+    if (!is_sendable()) {
+      return;
+    }
+
     handleFormSubmitting(true);
     let data = {};
     for (let key of Object.keys(form())) {
@@ -88,8 +93,8 @@ const Poster = (props) => {
           }
       }
     }
-    postData(data);
-    handleFormSubmitting(false);
+
+    postData(data).then(() => handleFormSubmitting(false));
   }
 
   const handleFormSubmitting = (submitting) => {
@@ -138,7 +143,7 @@ const Poster = (props) => {
           <br />
           <button
             class="button is-primary is-fullwidth"
-            disabled={!valid() || form()?.submitting}
+            disabled={!is_sendable()}
             onClick={sendForm}
           >
             Submit

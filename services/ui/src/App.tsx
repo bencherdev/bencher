@@ -14,7 +14,11 @@ import bencher_valid_init from "bencher_valid";
 import { Navbar } from "./components/site/navbar/Navbar";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
-import { BENCHER_USER_KEY, BENCHER_VERSION } from "./components/site/util";
+import {
+  BENCHER_USER_KEY,
+  BENCHER_VERSION,
+  validate_jwt,
+} from "./components/site/util";
 import validator from "validator";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
@@ -24,6 +28,14 @@ const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/Repo"));
+
+// TODO get rid of the following warning:
+// computations created outside a `createRoot` or `render` will never be disposed
+// It seems like things are only being created once per full reload though,
+// and this is the prescribed methodology from the `vite-plugin-wasm-pack` example:
+// https://github.com/nshen/vite-plugin-wasm-pack/blob/main/example/src/index.ts
+// https://stackoverflow.com/questions/70373659/solidjs-computations-created-outside-a-createroot-or-render-will-never-be
+bencher_valid_init().then(() => console.log(`🐰 Bencher ${BENCHER_VERSION}`));
 
 const initUser = () => {
   return {
@@ -38,14 +50,6 @@ const initUser = () => {
     token: null,
   };
 };
-
-// TODO get rid of the following warning:
-// computations created outside a `createRoot` or `render` will never be disposed
-// It seems like things are only being created once per full reload though,
-// and this is the prescribed methodology from the `vite-plugin-wasm-pack` example:
-// https://github.com/nshen/vite-plugin-wasm-pack/blob/main/example/src/index.ts
-// https://stackoverflow.com/questions/70373659/solidjs-computations-created-outside-a-createroot-or-render-will-never-be
-bencher_valid_init().then(() => console.log(`🐰 Bencher ${BENCHER_VERSION}`));
 
 const App: Component = () => {
   const location = useLocation();
@@ -75,7 +79,7 @@ const App: Component = () => {
     if (user()?.token === null) {
       const user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
       // TODO properly validate entire user
-      if (user?.token && validator.isJWT(user.token)) {
+      if (user) {
         setUser(user);
       }
     }

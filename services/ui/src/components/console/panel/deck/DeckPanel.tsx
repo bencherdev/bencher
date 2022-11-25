@@ -25,7 +25,7 @@ const DeckPanel = (props) => {
     try {
       const token = getToken();
       if (token && !validator.isJWT(token)) {
-        return {};
+        return;
       }
 
       let reports = await axios(options(token));
@@ -33,7 +33,7 @@ const DeckPanel = (props) => {
     } catch (error) {
       console.error(error);
 
-      return {};
+      return;
     }
   };
 
@@ -51,6 +51,7 @@ const DeckPanel = (props) => {
         handleRefresh={handleRefresh}
       />
       <Deck
+        user={props.user}
         config={props.config?.deck}
         data={deck_data()}
         url={url}

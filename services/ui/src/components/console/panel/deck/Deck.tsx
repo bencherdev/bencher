@@ -18,6 +18,7 @@ const Deck = (props) => {
             <div class="column">
               <div class="card">
                 <DeckCard
+                  user={props.user}
                   card={card}
                   data={props.data}
                   path_params={props.path_params}

@@ -5,7 +5,11 @@ const PosterPanel = (props) => {
   return (
     <>
       <PosterHeader config={props.config?.header} />
-      <Poster config={props.config?.form} path_params={props.path_params} />
+      <Poster
+        user={props.user}
+        config={props.config?.form}
+        path_params={props.path_params}
+      />
     </>
   );
 };

@@ -1,8 +1,7 @@
 import { createResource, createSignal, Match, Switch } from "solid-js";
 import SiteField from "../../../fields/SiteField";
-import { getToken } from "../../../site/util";
+import { validate_jwt } from "../../../site/util";
 import { Display, Field } from "../../config/types";
-import validator from "validator";
 import axios from "axios";
 
 const FieldCard = (props) => {
@@ -25,6 +24,7 @@ const FieldCard = (props) => {
     >
       <Match when={update()}>
         <UpdateCard
+          user={props.user}
           card={props.card}
           value={props.value}
           path_params={props.path_params}
@@ -101,47 +101,48 @@ const initForm = (field, value) => {
   };
 };
 
-const options = (url: string, token: string, data: any) => {
-  return {
-    url: url,
-    method: "PATCH",
-    data: data,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
 const UpdateCard = (props) => {
   const [form, setForm] = createSignal(
     initForm(props.card?.field, props.value)
   );
   const [valid, setValid] = createSignal(false);
 
-  const postData = async (data) => {
+  const options = (data: any) => {
+    return {
+      url: props.url(),
+      method: "PATCH",
+      data: data,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${props.user()?.token}`,
+      },
+    };
+  };
+
+  const patchData = async (data) => {
     try {
-      const token = getToken();
-      if (token && !validator.isJWT(token)) {
+      if (!validate_jwt(props.user()?.token)) {
         return;
       }
 
-      await axios(options(props.url(), token, data));
+      await axios(options(data));
       props.handleRefresh();
-      props.toggleUpdate();
     } catch (error) {
       console.error(error);
+      return;
     }
+  };
+
+  const is_sendable = (): boolean => {
+    return !form()?.submitting && valid() && !is_value_unchanged();
   };
 
   function sendForm(e) {
     e.preventDefault();
-    if (is_value_unchanged()) {
-      props.toggleUpdate();
-      return;
-    } else if (!valid() || form()?.submitting) {
+    if (!is_sendable()) {
       return;
     }
+
     handleFormSubmitting(true);
     let data = {};
     for (let key of Object.keys(form())) {
@@ -162,24 +163,18 @@ const UpdateCard = (props) => {
           }
       }
     }
-    postData(data);
-    handleFormSubmitting(false);
+
+    patchData(data).then(() => handleFormSubmitting(false));
   }
 
   const is_value_unchanged = () => {
     switch (props.card?.field?.kind) {
       case Field.SELECT:
-        if (props.value === form()?.[props.card?.field?.key]?.value?.selected) {
-          return true;
-        } else {
-          return false;
-        }
+        return (
+          props.value === form()?.[props.card?.field?.key]?.value?.selected
+        );
       default:
-        if (props.value === form()?.[props.card?.field?.key]?.value) {
-          return true;
-        } else {
-          return false;
-        }
+        return props.value === form()?.[props.card?.field?.key]?.value;
     }
   };
 
@@ -229,7 +224,10 @@ const UpdateCard = (props) => {
         </div>
       </div>
       <div class="card-footer">
-        <a class="card-footer-item" onClick={sendForm}>
+        <a
+          class={`card-footer-item ${is_sendable ? "" : "disabled"}`}
+          onClick={sendForm}
+        >
           Save
         </a>
         <a

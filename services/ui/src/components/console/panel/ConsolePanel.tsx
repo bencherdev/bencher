@@ -13,16 +13,29 @@ const ConsolePanel = (props) => {
   return (
     <Switch fallback={<p>Unknown console path: {pathname()} </p>}>
       <Match when={props.config?.operation === Operation.LIST}>
-        <TablePanel config={props.config} path_params={props.path_params} />
+        <TablePanel
+          user={props.user}
+          config={props.config}
+          path_params={props.path_params}
+        />
       </Match>
       <Match when={props.config?.operation === Operation.ADD}>
-        <PosterPanel config={props.config} path_params={props.path_params} />
+        <PosterPanel
+          user={props.user}
+          config={props.config}
+          path_params={props.path_params}
+        />
       </Match>
       <Match when={props.config?.operation === Operation.VIEW}>
-        <DeckPanel config={props.config} path_params={props.path_params} />
+        <DeckPanel
+          user={props.user}
+          config={props.config}
+          path_params={props.path_params}
+        />
       </Match>
       <Match when={props.config?.operation === Operation.PERF}>
         <PerfPanel
+          user={props.user}
           project_slug={props.project_slug}
           config={props.config}
           path_params={props.path_params}

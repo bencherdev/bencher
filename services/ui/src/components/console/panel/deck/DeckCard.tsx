@@ -7,6 +7,7 @@ const DeckCard = (props) => {
     <Switch
       fallback={
         <FieldCard
+          user={props.user}
           card={props.card}
           value={props.data?.[props.card?.key]}
           path_params={props.path_params}

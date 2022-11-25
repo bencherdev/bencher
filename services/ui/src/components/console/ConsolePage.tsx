@@ -1,9 +1,8 @@
 import { useLocation, useNavigate, useParams } from "solid-app-router";
 import { createEffect, createMemo, createResource, For } from "solid-js";
-import { BENCHER_API_URL, getToken } from "../site/util";
+import { BENCHER_API_URL, getToken, validate_jwt } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
-import validator from "validator";
 import axios from "axios";
 
 export const organizationSlug = (pathname) => {
@@ -46,21 +45,6 @@ const options = (token: string, project_slug: string) => {
   };
 };
 
-const fetchProject = async (project_slug: string) => {
-  try {
-    const token = getToken();
-    if (token && !validator.isJWT(token)) {
-      return null;
-    }
-
-    const resp = await axios(options(token, project_slug));
-    return resp?.data;
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
-};
-
 const ConsolePage = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,10 +53,24 @@ const ConsolePage = (props) => {
   const params = useParams();
   const path_params = createMemo(() => params);
 
+  const fetchProject = async (project_slug: string) => {
+    try {
+      if (!validate_jwt(props.user()?.token)) {
+        return;
+      }
+
+      const resp = await axios(options(props.user()?.token, project_slug));
+      return resp?.data;
+    } catch (error) {
+      console.error(error);
+      return;
+    }
+  };
+
   const [project] = createResource(props.project_slug, fetchProject);
 
   createEffect(() => {
-    if (!(props.user().token && validator.isJWT(props.user().token))) {
+    if (!validate_jwt(props.user()?.token)) {
       navigate("/auth/login");
     }
 
@@ -101,6 +99,7 @@ const ConsolePage = (props) => {
           </div>
           <div class="column">
             <ConsolePanel
+              user={props.user}
               project_slug={props.project_slug}
               operation={props.operation}
               config={props.config}
