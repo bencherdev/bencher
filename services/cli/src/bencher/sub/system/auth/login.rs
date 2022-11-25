@@ -28,11 +28,12 @@ impl TryFrom<CliAuthLogin> for Login {
             invite,
             host,
         } = login;
+        if !is_valid_email(&email) {
+            return Err(CliError::Email(email));
+        }
         let backend = Backend::new(None, host)?;
         Ok(Self {
-            email: is_valid_email(&email)
-                .then_some(email.clone())
-                .ok_or(CliError::Email(email))?,
+            email,
             invite,
             backend,
         })

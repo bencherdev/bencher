@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonEmpty, JsonSignup};
-use bencher_valid::is_valid_email;
+use bencher_valid::{is_valid_email, is_valid_user_name};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -32,13 +32,17 @@ impl TryFrom<CliAuthSignup> for Signup {
             invite,
             host,
         } = signup;
+        if !is_valid_user_name(&name) {
+            return Err(CliError::UserName(name));
+        }
+        if !is_valid_email(&email) {
+            return Err(CliError::Email(email));
+        }
         let backend = Backend::new(None, host)?;
         Ok(Self {
             name,
             slug,
-            email: is_valid_email(&email)
-                .then_some(email.clone())
-                .ok_or(CliError::Email(email))?,
+            email,
             invite,
             backend,
         })

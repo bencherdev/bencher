@@ -110,6 +110,8 @@ pub enum ApiError {
     },
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
+    #[error("Invalid user name: {0}")]
+    UserName(String),
     #[error("Invalid email: {0}")]
     Email(String),
     #[error("Requested TTL ({requested}) is greater than max ({max})")]

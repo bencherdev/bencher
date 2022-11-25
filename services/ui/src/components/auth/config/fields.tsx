@@ -18,7 +18,7 @@ const authFieldsConfig = {
     type: "email",
     placeholder: "email@example.com",
     icon: "fas fa-envelope",
-    help: "Must be a valid email you have access to",
+    help: "Must be a valid email address",
     validate: is_valid_email,
   },
   consent: {

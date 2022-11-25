@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{system::jwt::JsonWebToken, JsonEmpty, JsonLogin};
 
+use bencher_valid::is_valid_email;
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
@@ -56,6 +57,10 @@ pub async fn post(
 async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database;
+
+    if !is_valid_email(&json_login.email) {
+        return Err(ApiError::Email(json_login.email));
+    }
 
     let query_user = schema::user::table
         .filter(schema::user::email.eq(&json_login.email))

@@ -1,6 +1,7 @@
+import { is_valid_email } from "bencher_valid";
+
 import validateName from "../../validators/validateName";
 import validateSlug from "../../validators/validateSlug";
-import validator from "validator";
 
 const memberFieldsConfig = {
   name: {
@@ -21,8 +22,8 @@ const memberFieldsConfig = {
     type: "email",
     placeholder: "email@example.com",
     icon: "fas fa-envelope",
-    help: "Must be a valid email you have access to",
-    validate: validator.isEmail,
+    help: "Must be a valid email address",
+    validate: is_valid_email,
   },
   role: {
     type: "select",

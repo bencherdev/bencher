@@ -41,6 +41,9 @@ pub enum CliError {
     Io(#[from] std::io::Error),
     #[error("Failed run adapter: {0}")]
     Adapter(#[from] bencher_adapter::AdapterError),
-    #[error("Failed to parse email: {0}")]
+
+    #[error("Failed to validate user name: {0}")]
+    UserName(String),
+    #[error("Failed to validate email: {0}")]
     Email(String),
 }
