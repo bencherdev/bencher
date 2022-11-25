@@ -126,7 +126,7 @@ export const validate_string = (
   validator: (input: string) => boolean
 ): boolean => {
   if (typeof input === "string") {
-    return validator(input);
+    return validator(input.trim());
   } else {
     return false;
   }

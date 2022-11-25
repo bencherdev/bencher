@@ -10,7 +10,7 @@ const FieldCard = (props) => {
 
   const toggleUpdate = () => {
     setUpdate(!update());
-  }
+  };
 
   return (
     <Switch
@@ -37,9 +37,10 @@ const FieldCard = (props) => {
   );
 };
 
-
 const ViewCard = (props) => {
-  const [is_allowed] = createResource(props.path_params, (path_params) => props.card?.is_allowed?.(path_params));
+  const [is_allowed] = createResource(props.path_params, (path_params) =>
+    props.card?.is_allowed?.(path_params)
+  );
 
   return (
     <div class="card">
@@ -47,32 +48,36 @@ const ViewCard = (props) => {
         <div class="card-header-title">{props.card?.label}</div>
       </div>
       <div class="card-content">
-        <div class="content"><Switch
-          fallback={props.value}
-        >
-          <Match when={props.card?.display === Display.SELECT}>
-            {props.card?.field?.value?.options.reduce((field, option) => {
-              if (props.value === option.value) {
-                return option.option;
-              } else {
-                return field;
-              }
-            }, props.value)}
-          </Match>
-        </Switch></div>
-      </div>
-      {is_allowed() &&
-        <div class="card-footer">
-          <a class="card-footer-item" onClick={(e) => {
-            e.preventDefault();
-            props.toggleUpdate();
-          }}>Update</a>
+        <div class="content">
+          <Switch fallback={props.value}>
+            <Match when={props.card?.display === Display.SELECT}>
+              {props.card?.field?.value?.options.reduce((field, option) => {
+                if (props.value === option.value) {
+                  return option.option;
+                } else {
+                  return field;
+                }
+              }, props.value)}
+            </Match>
+          </Switch>
         </div>
-      }
-    </div >
+      </div>
+      {is_allowed() && (
+        <div class="card-footer">
+          <a
+            class="card-footer-item"
+            onClick={(e) => {
+              e.preventDefault();
+              props.toggleUpdate();
+            }}
+          >
+            Update
+          </a>
+        </div>
+      )}
+    </div>
   );
 };
-
 
 const initForm = (field, value) => {
   switch (field?.kind) {
@@ -92,9 +97,9 @@ const initForm = (field, value) => {
       validate: field?.validate,
       nullify: field?.nullify,
     },
-    submitting: false
+    submitting: false,
   };
-}
+};
 
 const options = (url: string, token: string, data: any) => {
   return {
@@ -109,7 +114,9 @@ const options = (url: string, token: string, data: any) => {
 };
 
 const UpdateCard = (props) => {
-  const [form, setForm] = createSignal(initForm(props.card?.field, props.value));
+  const [form, setForm] = createSignal(
+    initForm(props.card?.field, props.value)
+  );
   const [valid, setValid] = createSignal(false);
 
   const postData = async (data) => {
@@ -146,7 +153,12 @@ const UpdateCard = (props) => {
           if (!form()?.[key]?.value && form()?.[key]?.nullify) {
             data[key] = null;
           } else {
-            data[key] = form()?.[key]?.value;
+            const value = form()?.[key]?.value;
+            if (typeof value === "string") {
+              data[key] = value.trim();
+            } else {
+              data[key] = value;
+            }
           }
       }
     }
@@ -169,7 +181,7 @@ const UpdateCard = (props) => {
           return false;
         }
     }
-  }
+  };
 
   const handleFormSubmitting = (submitting) => {
     setForm({ ...form(), submitting: submitting });
@@ -205,25 +217,32 @@ const UpdateCard = (props) => {
         <div class="card-header-title">{props.card?.label}</div>
       </div>
       <div class="card-content">
-        <div class="content"><SiteField
-          kind={props.card?.field?.kind}
-          fieldKey={props.card?.field?.key}
-          value={form()?.[props.card?.field?.key]?.value}
-          valid={form()?.[props.card?.field?.key]?.valid}
-          config={props.card?.field?.config}
-          handleField={handleField}
-        /></div>
+        <div class="content">
+          <SiteField
+            kind={props.card?.field?.kind}
+            fieldKey={props.card?.field?.key}
+            value={form()?.[props.card?.field?.key]?.value}
+            valid={form()?.[props.card?.field?.key]?.valid}
+            config={props.card?.field?.config}
+            handleField={handleField}
+          />
+        </div>
       </div>
       <div class="card-footer">
-        <a class="card-footer-item"
-          onClick={sendForm}
-        >Save</a>
-        <a class="card-footer-item" onClick={(e) => {
-          e.preventDefault();
-          props.toggleUpdate();
-        }}>Cancel</a>
+        <a class="card-footer-item" onClick={sendForm}>
+          Save
+        </a>
+        <a
+          class="card-footer-item"
+          onClick={(e) => {
+            e.preventDefault();
+            props.toggleUpdate();
+          }}
+        >
+          Cancel
+        </a>
       </div>
-    </div >
+    </div>
   );
 };
 

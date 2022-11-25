@@ -77,15 +77,15 @@ export const AuthForm = (props: Props) => {
     if (props.config?.kind === FormKind.SIGNUP) {
       const signup_form = form();
       json_data = {
-        name: signup_form.username.value,
+        name: signup_form.username.value?.trim(),
         slug: null,
-        email: signup_form.email.value,
+        email: signup_form.email.value?.trim(),
         invite: invite,
       };
     } else if (props.config?.kind === FormKind.LOGIN) {
       const login_form = form();
       json_data = {
-        email: login_form.email.value,
+        email: login_form.email.value?.trim(),
         invite: invite,
       };
     }

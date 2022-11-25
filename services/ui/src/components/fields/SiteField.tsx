@@ -30,8 +30,8 @@ const SiteField = (props) => {
         props.handleField(
           props.fieldKey,
           event.target.value,
-          props.config?.validate
-            ? props.config.validate(event.target.value?.trim())
+          props.config.validate
+            ? props.config.validate(event.target.value)
             : true
         );
     }

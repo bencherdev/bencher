@@ -79,7 +79,12 @@ const Poster = (props) => {
           if (!form()?.[key]?.value && form()?.[key]?.nullify) {
             data[key] = null;
           } else {
-            data[key] = form()?.[key]?.value;
+            const value = form()?.[key]?.value;
+            if (typeof value === "string") {
+              data[key] = value.trim();
+            } else {
+              data[key] = value;
+            }
           }
       }
     }
