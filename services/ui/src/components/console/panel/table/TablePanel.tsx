@@ -25,11 +25,31 @@ const TablePanel = (props) => {
     };
   };
 
-  const fetchData = async (refresh) => {
-    console.log("TABLE");
+  const [refresh, setRefresh] = createSignal(0);
+  const [page, setPage] = createSignal(1);
+  const fetcher = createMemo(() => {
+    return {
+      refresh: refresh(),
+      page: page(),
+      token: props.user()?.token,
+    };
+  });
+  const [fetcher_cache, setFetcherCache] = createSignal(fetcher());
+
+  const fetchData = async (new_fetcher) => {
+    const EMPTY_ARRAY = [];
+    if (new_fetcher === fetcher_cache()) {
+      return EMPTY_ARRAY;
+    }
+    setFetcherCache(new_fetcher);
+
+    console.log(refresh());
+    console.log(page());
+    console.log(props.user()?.token);
+    console.log(props.path_params());
     try {
       if (!validate_jwt(props.user()?.token)) {
-        return [];
+        return EMPTY_ARRAY;
       }
 
       let resp = await axios(options());
@@ -39,20 +59,11 @@ const TablePanel = (props) => {
     } catch (error) {
       console.error(error);
 
-      return [];
+      return EMPTY_ARRAY;
     }
   };
 
-  const [refresh, setRefresh] = createSignal(0);
-  const [page, setPage] = createSignal(1);
-  const table_data_refresh = createMemo(() => {
-    return {
-      refresh: refresh(),
-      page: page(),
-      token: props.user()?.token,
-    };
-  });
-  const [table_data] = createResource(table_data_refresh, fetchData);
+  const [table_data] = createResource(fetcher, fetchData);
 
   const redirect = createMemo(() => props.config.redirect?.(table_data()));
 
