@@ -186,12 +186,33 @@ const PerfPanel = (props) => {
     };
   };
 
-  const fetchPerfData = async () => {
+  // Refresh pref query
+  const [refresh, setRefresh] = createSignal(0);
+  const handleRefresh = () => {
+    setRefresh(refresh() + 1);
+  };
+
+  const perf_query_fetcher = createMemo(() => {
+    return {
+      perf_query: perf_query(),
+      refresh: refresh(),
+      token: props.user()?.token,
+    };
+  });
+  const [fetcher_cache, setFetcherCache] = createSignal(perf_query_fetcher());
+
+  const fetchPerfData = async (new_fetcher) => {
+    const EMPTY_OBJECT = {};
+    if (new_fetcher === fetcher_cache()) {
+      return EMPTY_OBJECT;
+    }
+    setFetcherCache(new_fetcher);
+
     console.log("PERF");
     try {
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
       if (isPlotInit() || !validate_jwt(props.user()?.token)) {
-        return {};
+        return EMPTY_OBJECT;
       }
 
       let resp = await axios(perf_data_options());
@@ -200,25 +221,11 @@ const PerfPanel = (props) => {
       return data;
     } catch (error) {
       console.error(error);
-      return {};
+      return EMPTY_OBJECT;
     }
   };
 
-  // Refresh pref query
-  const [refresh, setRefresh] = createSignal(0);
-
-  const handleRefresh = () => {
-    setRefresh(refresh() + 1);
-  };
-
-  const perf_query_refresh = createMemo(() => {
-    return {
-      perf_query: perf_query(),
-      refresh: refresh(),
-      token: props.user()?.token,
-    };
-  });
-  const [perf_data] = createResource(perf_query_refresh, fetchPerfData);
+  const [perf_data] = createResource(perf_query_fetcher, fetchPerfData);
 
   const perf_tab_options = (token: string, perf_tab: PerfTab) => {
     return {
