@@ -6,10 +6,9 @@ import {
   createEffect,
 } from "solid-js";
 import Table from "./Table";
-import validator from "validator";
 
 import TableHeader from "./TableHeader";
-import { getToken } from "../../../site/util";
+import { getToken, validate_jwt } from "../../../site/util";
 import { useNavigate } from "solid-app-router";
 
 const TablePanel = (props) => {
@@ -21,15 +20,16 @@ const TablePanel = (props) => {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${props.user()?.token}`,
       },
     };
   };
 
   const fetchData = async (refresh) => {
+    console.log("TABLE");
     try {
       const token = getToken();
-      if (token && !validator.isJWT(token)) {
+      if (!validate_jwt(props.user()?.token)) {
         return [];
       }
 
@@ -46,7 +46,14 @@ const TablePanel = (props) => {
 
   const [refresh, setRefresh] = createSignal(0);
   const [page, setPage] = createSignal(1);
-  const [table_data] = createResource(refresh, fetchData);
+  const table_data_refresh = createMemo(() => {
+    return {
+      refresh: refresh(),
+      page: page(),
+      token: props.user()?.token,
+    };
+  });
+  const [table_data] = createResource(table_data_refresh, fetchData);
 
   const redirect = createMemo(() => props.config.redirect?.(table_data()));
 
