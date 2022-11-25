@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createResource, For } from "solid-js";
+import { createMemo, createResource, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
 import { getToken, validate_jwt } from "../../../../site/util";
@@ -16,20 +16,19 @@ const PlotKey = (props) => {
     };
   };
 
-  const fetchKeyData = async (perf_tab: PerfTab, uuids: any[]) => {
+  const fetchKeyData = async (perf_tab: PerfTab, fetcher) => {
     const key_data = {};
 
-    // TODO move over to props.user().token
-    // and figure out why it will flip to `null`
-    const token = getToken();
-    if (!validate_jwt(token)) {
+    if (!validate_jwt(fetcher.token)) {
       return key_data;
     }
 
     await Promise.all(
-      uuids.map(async (uuid: string) => {
+      fetcher[perf_tab]?.map(async (uuid: string) => {
         try {
-          let resp = await axios(key_data_options(token, perf_tab, uuid));
+          let resp = await axios(
+            key_data_options(fetcher.token, perf_tab, uuid)
+          );
           const data = resp.data;
           key_data[uuid] = data;
         } catch (error) {
@@ -41,14 +40,33 @@ const PlotKey = (props) => {
     return key_data;
   };
 
-  const [branches] = createResource(props.branches, async (uuids) => {
-    return fetchKeyData(PerfTab.BRANCHES, uuids);
+  const branches_fetcher = createMemo(() => {
+    return {
+      branches: props.branches(),
+      token: props.user()?.token,
+    };
   });
-  const [testbeds] = createResource(props.testbeds, async (uuids) => {
-    return fetchKeyData(PerfTab.TESTBEDS, uuids);
+  const testbeds_fetcher = createMemo(() => {
+    return {
+      testbeds: props.testbeds(),
+      token: props.user()?.token,
+    };
   });
-  const [benchmarks] = createResource(props.benchmarks, async (uuids) => {
-    return fetchKeyData(PerfTab.BENCHMARKS, uuids);
+  const benchmarks_fetcher = createMemo(() => {
+    return {
+      benchmarks: props.benchmarks(),
+      token: props.user()?.token,
+    };
+  });
+
+  const [branches] = createResource(branches_fetcher, async (fetcher) => {
+    return fetchKeyData(PerfTab.BRANCHES, fetcher);
+  });
+  const [testbeds] = createResource(testbeds_fetcher, async (fetcher) => {
+    return fetchKeyData(PerfTab.TESTBEDS, fetcher);
+  });
+  const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) => {
+    return fetchKeyData(PerfTab.BENCHMARKS, fetcher);
   });
 
   return (
