@@ -3,45 +3,45 @@ import { createSignal, createResource, createMemo } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
-import { getToken } from "../../../site/util";
+import { getToken, validate_jwt } from "../../../site/util";
 import validator from "validator";
 
 const DeckPanel = (props) => {
-  const [refresh, setRefresh] = createSignal(0);
   const url = createMemo(() => props.config?.deck?.url(props.path_params()));
 
-  const options = (token: string) => {
+  const [refresh, setRefresh] = createSignal(0);
+  const handleRefresh = () => {
+    setRefresh(refresh() + 1);
+  };
+
+  const options = () => {
     return {
       url: url(),
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${props.user()?.token}`,
       },
     };
   };
 
   const fetchData = async () => {
+    const EMPTY_OBJECT = {};
+
     try {
-      const token = getToken();
-      if (token && !validator.isJWT(token)) {
-        return;
+      if (!validate_jwt(props.user()?.token)) {
+        return EMPTY_OBJECT;
       }
 
-      let reports = await axios(options(token));
+      let reports = await axios(options());
       return reports.data;
     } catch (error) {
       console.error(error);
-
-      return;
+      return EMPTY_OBJECT;
     }
   };
 
   const [deck_data] = createResource(refresh, fetchData);
-
-  const handleRefresh = () => {
-    setRefresh(refresh() + 1);
-  };
 
   return (
     <>
