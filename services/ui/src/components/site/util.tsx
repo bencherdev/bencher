@@ -121,6 +121,17 @@ export const isAllowed = async (url: string) => {
   }
 };
 
+export const validate_string = (
+  input: string,
+  validator: (input: string) => boolean
+): boolean => {
+  if (typeof input === "string") {
+    return validator(input);
+  } else {
+    return false;
+  }
+};
+
 export const NOTIFY_KIND_PARAM = "notify_kind";
 export const NOTIFY_TEXT_PARAM = "notify_text";
 

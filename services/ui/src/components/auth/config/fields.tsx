@@ -3,6 +3,7 @@ import {
   is_valid_user_name,
   is_valid_jwt,
 } from "bencher_valid";
+import { validate_string } from "../../site/util";
 
 const authFieldsConfig = {
   username: {
@@ -11,7 +12,7 @@ const authFieldsConfig = {
     placeholder: "Full Name",
     icon: "fas fa-user",
     help: "Must be at least four characters using only: letters, numbers, spaces, apostrophes, periods, commas, and dashes",
-    validate: is_valid_user_name,
+    validate: (input) => validate_string(input, is_valid_user_name),
   },
   email: {
     label: "Email",
@@ -19,7 +20,7 @@ const authFieldsConfig = {
     placeholder: "email@example.com",
     icon: "fas fa-envelope",
     help: "Must be a valid email address",
-    validate: is_valid_email,
+    validate: (input) => validate_string(input, is_valid_email),
   },
   consent: {
     label: "I Agree",
@@ -49,7 +50,7 @@ const authFieldsConfig = {
     placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
     icon: "fas fa-key",
     help: "Must be a valid JWT (JSON Web Token)",
-    validate: is_valid_jwt,
+    validate: (input) => validate_string(input, is_valid_jwt),
   },
 };
 
