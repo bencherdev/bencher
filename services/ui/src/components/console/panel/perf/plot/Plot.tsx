@@ -44,6 +44,7 @@ const Plot = (props) => {
           ref={(e) => (key_ref = e)}
         >
           <PlotKey
+            user={props.user}
             config={props.config}
             path_params={props.path_params}
             branches={props.branches}

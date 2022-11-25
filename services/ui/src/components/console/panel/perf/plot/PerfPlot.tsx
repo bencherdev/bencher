@@ -26,6 +26,7 @@ const PerfPlot = (props) => {
               />
             ) : (
               <Plot
+                user={props.user}
                 config={props.config}
                 path_params={props.path_params}
                 branches={props.branches}
