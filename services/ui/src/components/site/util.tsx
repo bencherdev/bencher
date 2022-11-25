@@ -1,8 +1,8 @@
 import axios from "axios";
-import { useLocation } from "solid-app-router";
 import validator from "validator";
 
 import { site_analytics } from "./site_analytics";
+import swagger from "../docs/api/swagger.json";
 
 // Either supply `VITE_BENCHER_API_URL` at build time,
 // or default to the current protocol and hostname at port `61016`.
@@ -28,6 +28,8 @@ export const BENCHER_LOGO_URL: string =
 export const BENCHER_USER_KEY: string = "BENCHER_USER";
 
 export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
+
+export const BENCHER_VERSION = `v${swagger?.info?.version}`;
 
 export const pageTitle = (new_title: string) => {
   if (new_title && new_title.length > 0) {
