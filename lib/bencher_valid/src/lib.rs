@@ -1,4 +1,4 @@
-use email_address_parser::EmailAddress;
+use email_address::EmailAddress;
 use once_cell::sync::Lazy;
 use regex::Regex;
 #[cfg(feature = "wasm")]
@@ -51,7 +51,7 @@ pub fn is_valid_user_name(name: &str) -> bool {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_email(email: &str) -> bool {
-    EmailAddress::parse(email, None).is_some()
+    EmailAddress::is_valid(email)
 }
 
 // Based on
@@ -115,8 +115,10 @@ mod test {
         assert_eq!(true, is_valid_email("abc@example"));
         assert_eq!(true, is_valid_email("a@example"));
 
+        assert_eq!(false, is_valid_email(" abc@example.com"));
+        assert_eq!(false, is_valid_email("abc @example.com"));
+        assert_eq!(false, is_valid_email("abc@example.com "));
         assert_eq!(false, is_valid_email("example.com"));
-        assert_eq!(false, is_valid_email("abc example.com"));
         assert_eq!(false, is_valid_email("abc.example.com"));
         assert_eq!(false, is_valid_email("abc!example.com"));
     }
@@ -138,6 +140,14 @@ mod test {
         assert_eq!(true, is_valid_jwt(&format!(".{PAYLOAD}.")));
         assert_eq!(true, is_valid_jwt(&format!("..{SIGNATURE}")));
 
+        assert_eq!(
+            false,
+            is_valid_jwt(&format!(" {HEADER}.{PAYLOAD}.{SIGNATURE}"))
+        );
+        assert_eq!(
+            false,
+            is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.{SIGNATURE} "))
+        );
         assert_eq!(false, is_valid_jwt(&format!("{HEADER}.{PAYLOAD}")));
         assert_eq!(false, is_valid_jwt(&format!("{HEADER}.")));
         assert_eq!(false, is_valid_jwt(&format!("{PAYLOAD}.{SIGNATURE}")));
