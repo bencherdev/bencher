@@ -257,6 +257,7 @@ dependencies = [
  "once_cell",
  "pretty_assertions",
  "regex",
+ "serde",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]

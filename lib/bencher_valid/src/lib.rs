@@ -4,6 +4,8 @@ use regex::Regex;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
+mod user_name;
+
 const REGEX_ERROR: &str = "Failed to compile regex.";
 
 /// Takes the result of a rsplit and ensure we only get 2 parts

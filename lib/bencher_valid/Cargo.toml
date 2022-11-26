@@ -14,6 +14,7 @@ wasm = ["dep:wasm-bindgen", "dep:console_log"]
 [dependencies]
 # Workspace
 once_cell.workspace = true
+serde.workspace = true
 # Crate
 base64 = "0.13"
 console_error_panic_hook = { version = "0.1", optional = true }
