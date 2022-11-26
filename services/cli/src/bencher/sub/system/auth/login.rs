@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonEmpty, JsonLogin};
-use bencher_valid::is_valid_email;
+use bencher_valid::{is_valid_email, is_valid_jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -30,6 +30,11 @@ impl TryFrom<CliAuthLogin> for Login {
         } = login;
         if !is_valid_email(&email) {
             return Err(CliError::Email(email));
+        }
+        if let Some(invite) = &invite {
+            if !is_valid_jwt(&invite) {
+                return Err(CliError::Jwt(invite.clone()));
+            }
         }
         let backend = Backend::new(None, host)?;
         Ok(Self {

@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{system::auth::JsonConfirm, JsonAuthToken};
+use bencher_valid::is_valid_jwt;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -22,6 +23,9 @@ impl TryFrom<CliAuthConfirm> for Confirm {
 
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
         let CliAuthConfirm { token, host } = confirm;
+        if !is_valid_jwt(&token) {
+            return Err(CliError::Jwt(token.clone()));
+        }
         let backend = Backend::new(None, host)?;
         Ok(Self { token, backend })
     }

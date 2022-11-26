@@ -46,4 +46,6 @@ pub enum CliError {
     UserName(String),
     #[error("Failed to validate email: {0}")]
     Email(String),
+    #[error("Failed to validate JWT (JSON Web Token): {0}")]
+    Jwt(String),
 }

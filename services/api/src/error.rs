@@ -114,6 +114,7 @@ pub enum ApiError {
     UserName(String),
     #[error("Invalid email: {0}")]
     Email(String),
+
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },
     #[error("User ({0}) cannot create a new organization")]
