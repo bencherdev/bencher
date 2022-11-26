@@ -69,3 +69,40 @@ impl<'de> Visitor<'de> for UserNameVisitor {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::is_valid_user_name;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_is_valid_user_name() {
+        assert_eq!(true, is_valid_user_name("muriel"));
+        assert_eq!(true, is_valid_user_name("Muriel"));
+        assert_eq!(true, is_valid_user_name("Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel    Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel Linda Bagge"));
+        assert_eq!(true, is_valid_user_name("Bagge, Muriel"));
+        assert_eq!(true, is_valid_user_name("Mrs. Muriel Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel Linda-Bagge"));
+        assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
+        assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
+
+        assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
+        assert_eq!(false, is_valid_user_name("Muriel Bagge "));
+        assert_eq!(false, is_valid_user_name(" Muriel Bagge "));
+        assert_eq!(false, is_valid_user_name("Muriel!"));
+        assert_eq!(false, is_valid_user_name("Muriel! Bagge"));
+        assert_eq!(true, is_valid_user_name("Dumb"));
+        assert_eq!(false, is_valid_user_name("Dog"));
+        assert_eq!(
+            true,
+            is_valid_user_name("01234567890123456789012345678901234567890123456789")
+        );
+        assert_eq!(
+            false,
+            is_valid_user_name("012345678901234567890123456789012345678901234567890")
+        );
+        assert_eq!(false, is_valid_user_name(""));
+    }
+}
