@@ -49,29 +49,16 @@ fn parse_running(
 ) -> IResult<&str, HashMap<String, AdapterMetrics>> {
     map_res(
         tuple((
-            alt((
-                // A non-initial multi-target run
-                map(
-                    tuple((
-                        many0(line_ending),
-                        space1,
-                        alt((tag("Doc-tests"), tag("Running"))),
-                        many_till(anychar, line_ending),
-                        many0(line_ending),
-                    )),
-                    |_| (),
-                ),
-                // The start of a run
-                map(many0(line_ending), |_| ()),
-            )),
-            // running X test(s)
             tuple((
-                tag("running"),
-                space1,
-                digit1,
-                space1,
-                alt((tag("tests"), tag("test"))),
-                line_ending,
+                many0(line_ending),
+                alt((
+                    // A non-initial multi-target run
+                    parse_multi_mod,
+                    // The start of a run
+                    map(success(""), |_| ()),
+                )),
+                many0(line_ending),
+                parse_running_x_tests,
             )),
             // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
             many0(tuple((
@@ -116,7 +103,7 @@ fn parse_running(
                 )),
             )),
         )),
-        |(_, _, benchmarks, _)| -> Result<_, AdapterError> {
+        |(_, benchmarks, _)| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
                 if let Some((benchmark_name, metric)) = to_latency(benchmark, settings)? {
@@ -132,6 +119,19 @@ fn parse_running(
             }
             Ok(results)
         },
+    )(input)
+}
+
+// Doc-tests ...
+// Running ...
+fn parse_multi_mod(input: &str) -> IResult<&str, ()> {
+    map(
+        tuple((
+            space1,
+            alt((tag("Running"), tag("Doc-tests"))),
+            many_till(anychar, line_ending),
+        )),
+        |_| (),
     )(input)
 }
 
@@ -291,7 +291,7 @@ pub(crate) mod test_rust {
     use nom::IResult;
     use pretty_assertions::assert_eq;
 
-    use super::{parse_running_x_tests, AdapterRust};
+    use super::{parse_multi_mod, parse_running_x_tests, AdapterRust};
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
@@ -327,6 +327,31 @@ pub(crate) mod test_rust {
     }
 
     #[test]
+    fn test_parse_multi_mod() {
+        for (index, input) in [
+            "        Running benches/name.rs (/oath/to/target/release/deps/name-hash)\n",
+            "     Running unittests (target/release/deps/log4rs_bench-f36c88332bd25d23)\n",
+            "   Doc-tests bencher_adapter\n",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(UNIT_RESULT, parse_multi_mod(input), "#{index}: {input}")
+        }
+
+        for (index, input) in [
+            "",
+            "Running benches/name.rs (/oath/to/target/release/deps/name-hash)\n",
+            "Running benches/name.rs (/oath/to/target/release/deps/name-hash)",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(true, parse_multi_mod(input).is_err(), "#{index}: {input}")
+        }
+    }
+
+    #[test]
     fn test_parse_running_x_tests() {
         for (index, input) in ["running 0 tests\n", "running 1 test\n", "running 2 tests\n"]
             .iter()
@@ -338,6 +363,7 @@ pub(crate) mod test_rust {
                 "#{index}: {input}"
             )
         }
+
         for (index, input) in [
             "",
             "running 0 tests",
