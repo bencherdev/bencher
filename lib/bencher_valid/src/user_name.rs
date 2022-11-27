@@ -1,3 +1,4 @@
+use derive_more::Display;
 use once_cell::sync::Lazy;
 use regex::Regex;
 #[cfg(feature = "schema")]
@@ -13,7 +14,7 @@ use serde::{
 
 use crate::{ValidError, REGEX_ERROR};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Display, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);
 
@@ -22,7 +23,7 @@ impl FromStr for UserName {
 
     fn from_str(user_name: &str) -> Result<Self, Self::Err> {
         if is_valid_user_name(user_name) {
-            Ok(UserName(user_name.into()))
+            Ok(Self(user_name.into()))
         } else {
             Err(ValidError::UserName(user_name.into()))
         }

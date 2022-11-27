@@ -1,3 +1,4 @@
+use bencher_valid::Email;
 use chrono::Utc;
 use derive_more::Display;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
@@ -35,7 +36,7 @@ impl JsonWebToken {
     fn new(
         key: &EncodingKey,
         audience: Audience,
-        email: String,
+        email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
@@ -45,7 +46,7 @@ impl JsonWebToken {
 
     pub fn new_auth(
         key: &EncodingKey,
-        email: String,
+        email: Email,
         ttl: u32,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Auth, email, ttl, None)
@@ -53,7 +54,7 @@ impl JsonWebToken {
 
     pub fn new_client(
         key: &EncodingKey,
-        email: String,
+        email: Email,
         ttl: u32,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::Client, email, ttl, None)
@@ -61,7 +62,7 @@ impl JsonWebToken {
 
     pub fn new_api_key(
         key: &EncodingKey,
-        email: String,
+        email: Email,
         ttl: u32,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         Self::new(key, Audience::ApiKey, email, ttl, None)
@@ -69,7 +70,7 @@ impl JsonWebToken {
 
     pub fn new_invite(
         key: &EncodingKey,
-        email: String,
+        email: Email,
         ttl: u32,
         org_uuid: Uuid,
         role: JsonOrganizationRole,
@@ -141,14 +142,14 @@ pub struct OrgClaims {
 }
 
 impl JsonClaims {
-    fn new(audience: Audience, email: String, ttl: u32, org: Option<OrgClaims>) -> Self {
+    fn new(audience: Audience, email: Email, ttl: u32, org: Option<OrgClaims>) -> Self {
         let now = Utc::now().timestamp() as u64;
         Self {
             aud: audience.into(),
             exp: now + ttl as u64,
             iat: now,
             iss: BENCHER_DEV.into(),
-            sub: email,
+            sub: email.into(),
             org,
         }
     }

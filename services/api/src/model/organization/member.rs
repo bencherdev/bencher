@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::JsonMember;
+use bencher_valid::{Email, UserName};
 use diesel::Queryable;
 use uuid::Uuid;
 
@@ -26,9 +27,9 @@ impl QueryMember {
         } = self;
         Ok(JsonMember {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            name,
+            name: UserName::from_str(&name).map_err(api_error!())?,
             slug,
-            email,
+            email: Email::from_str(&email).map_err(api_error!())?,
             role: role.parse().map_err(ApiError::OrganizationRole)?,
         })
     }

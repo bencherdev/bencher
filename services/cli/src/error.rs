@@ -44,8 +44,6 @@ pub enum CliError {
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_valid::ValidError),
 
-    #[error("Failed to validate email: {0}")]
-    Email(String),
     #[error("Failed to validate JWT (JSON Web Token): {0}")]
     Jwt(String),
 }

@@ -6,7 +6,6 @@ use bencher_json::{
     JsonEmpty, JsonMember, ResourceId,
 };
 use bencher_rbac::organization::Permission;
-use bencher_valid::is_valid_email;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -159,17 +158,14 @@ async fn post_inner(
     let email = json_new_member.email.clone();
     // If a user already exists for the email then direct them to login.
     // Otherwise, direct them to signup.
-    let (name, route) = if let Ok(name) = schema::user::table
-        .filter(schema::user::email.eq(&email))
+    let (name, route): (Option<String>, &str) = if let Ok(name) = schema::user::table
+        .filter(schema::user::email.eq(email.as_ref()))
         .select(schema::user::name)
         .first(conn)
     {
         (Some(name), "/auth/login")
     } else {
-        is_valid_email(&email)
-            .then_some(())
-            .ok_or_else(|| ApiError::Email(email.clone()))?;
-        (json_new_member.name.take(), "/auth/signup")
+        (json_new_member.name.take().map(Into::into), "/auth/signup")
     };
 
     // Get the requester user name and email for the message

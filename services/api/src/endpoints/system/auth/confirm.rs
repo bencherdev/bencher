@@ -69,7 +69,7 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
 
     let token = JsonWebToken::new_client(
         &api_context.secret_key.encoding,
-        token_data.claims.email().to_string(),
+        token_data.claims.email().parse()?,
         CLIENT_TOKEN_TTL,
     )
     .map_err(api_error!())?;

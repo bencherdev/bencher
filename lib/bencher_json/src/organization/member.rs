@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 
+use bencher_valid::{Email, UserName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,8 +12,8 @@ pub const LEADER_ROLE: &str = "leader";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMember {
-    pub name: Option<String>,
-    pub email: String,
+    pub name: Option<UserName>,
+    pub email: Email,
     pub role: JsonOrganizationRole,
 }
 
@@ -20,9 +21,9 @@ pub struct JsonNewMember {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMember {
     pub uuid: Uuid,
-    pub name: String,
+    pub name: UserName,
     pub slug: String,
-    pub email: String,
+    pub email: Email,
     pub role: JsonOrganizationRole,
 }
 

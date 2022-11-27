@@ -6,12 +6,11 @@ mod error;
 mod jwt;
 mod user_name;
 
-pub use email::is_valid_email;
+pub use email::{is_valid_email, Email};
 pub use error::ValidError;
+use error::REGEX_ERROR;
 pub use jwt::is_valid_jwt;
 pub use user_name::{is_valid_user_name, UserName};
-
-const REGEX_ERROR: &str = "Failed to compile regex.";
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]

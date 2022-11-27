@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonSignup, JsonUser, ResourceId};
-use bencher_valid::{is_valid_email, UserName};
+use bencher_valid::{Email, UserName};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -32,15 +32,12 @@ impl InsertUser {
         let JsonSignup {
             name, slug, email, ..
         } = signup;
-        if !is_valid_email(&email) {
-            return Err(ApiError::Email(email));
-        }
         let slug = unwrap_slug!(conn, name.as_ref(), slug, user, QueryUser);
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             name: name.into(),
             slug,
-            email,
+            email: email.into(),
             admin: false,
             locked: false,
         })
@@ -118,7 +115,7 @@ impl QueryUser {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             name: UserName::from_str(&name).map_err(api_error!())?,
             slug,
-            email,
+            email: Email::from_str(&email).map_err(api_error!())?,
             admin,
             locked,
         })

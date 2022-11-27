@@ -1,5 +1,5 @@
 pub mod token;
-use bencher_valid::UserName;
+use bencher_valid::{Email, UserName};
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -12,7 +12,7 @@ pub struct JsonUser {
     pub uuid: Uuid,
     pub name: UserName,
     pub slug: String,
-    pub email: String,
+    pub email: Email,
     pub admin: bool,
     pub locked: bool,
 }

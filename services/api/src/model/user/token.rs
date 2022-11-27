@@ -115,9 +115,12 @@ impl InsertToken {
             max_ttl
         };
 
-        let jwt =
-            JsonWebToken::new_api_key(&api_context.secret_key.encoding, query_user.email, ttl)
-                .map_err(api_error!())?;
+        let jwt = JsonWebToken::new_api_key(
+            &api_context.secret_key.encoding,
+            query_user.email.as_str().parse()?,
+            ttl,
+        )
+        .map_err(api_error!())?;
 
         let token_data = jwt
             .validate_api_key(&api_context.secret_key.decoding)

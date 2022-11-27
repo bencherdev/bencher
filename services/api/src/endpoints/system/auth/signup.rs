@@ -61,6 +61,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let conn = &mut api_context.database;
 
     let invite = json_signup.invite.take();
+    let email = json_signup.email.clone();
     let mut insert_user = InsertUser::from_json(conn, json_signup)?;
 
     let count = schema::user::table
@@ -103,12 +104,8 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         .execute(conn)
         .map_err(api_error!())?;
 
-    let token = JsonWebToken::new_auth(
-        &api_context.secret_key.encoding,
-        insert_user.email.clone(),
-        AUTH_TOKEN_TTL,
-    )
-    .map_err(api_error!())?;
+    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, email, AUTH_TOKEN_TTL)
+        .map_err(api_error!())?;
 
     let token_string = token.to_string();
     let body = Body::Button(ButtonBody {
