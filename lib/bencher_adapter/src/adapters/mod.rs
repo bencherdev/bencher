@@ -1,6 +1,16 @@
+use nom::IResult;
+
 pub mod json;
 pub mod magic;
 pub mod rust;
+
+#[allow(dead_code)]
+fn print_ln(input: &str) -> IResult<&str, ()> {
+    println!("--- START ---");
+    println!("{input}");
+    println!("---  END  ---");
+    Ok((input, ()))
+}
 
 #[cfg(test)]
 pub(crate) mod test_util {

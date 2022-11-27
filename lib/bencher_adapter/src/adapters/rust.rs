@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
     character::complete::{anychar, digit1, line_ending, space1},
-    combinator::{map, map_res, peek, success},
+    combinator::{eof, map, map_res, peek, success},
     multi::{fold_many1, many0, many1, many_m_n, many_till},
     sequence::{delimited, tuple},
     IResult,
@@ -16,6 +16,8 @@ use crate::{
     results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
     Adapter, AdapterError, Settings,
 };
+
+use super::print_ln;
 
 pub struct AdapterRust;
 
@@ -172,7 +174,7 @@ fn parse_test_failures_and_result(input: &str) -> IResult<&str, ()> {
                 many0(line_ending),
                 parse_test_result,
                 many0(line_ending),
-                tuple((tag("error:"), many_till(anychar, line_ending))),
+                tuple((tag("error:"), many_till(anychar, alt((line_ending, eof))))),
             )),
             |_| (),
         ),
@@ -528,17 +530,15 @@ pub(crate) mod test_rust {
             assert_eq!(UNIT_RESULT, parse_test_failures(input), "#{index}: {input}")
         }
 
-        // for (index, input) in [
-        //     "",
-        //     "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
-        //     " test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n",
-        //     "prefix test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
-        // ]
-        // .iter()
-        // .enumerate()
-        // {
-        //     assert_eq!(true, parse_test_failures(input).is_err(), "#{index}: {input}")
-        // }
+        for (index, input) in [
+            "",
+            "failures:\n\n--- tests::benchmark_failure stdout ----\nthread 'main' panicked at 'explicit panic', src/tests.rs:28:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\ntests::benchmark_failure\n",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(true, parse_test_failures(input).is_err(), "#{index}: {input}")
+        }
     }
 
     #[test]
