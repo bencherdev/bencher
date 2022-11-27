@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt, str::FromStr};
+use std::{fmt, str::FromStr};
 
 use derive_more::Display;
 #[cfg(feature = "schema")]
@@ -9,28 +9,23 @@ use serde::{
 };
 use uuid::Uuid;
 
+use crate::Slug;
+
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct ResourceId(pub String);
-
-impl ResourceId {
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
+pub struct ResourceId(String);
 
 impl FromStr for ResourceId {
     type Err = String;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if let Ok(uuid) = Uuid::try_parse(value) {
-            return Ok(ResourceId(uuid.to_string()));
+        if let Ok(uuid) = Uuid::from_str(value) {
+            Ok(ResourceId(uuid.to_string()))
+        } else if let Ok(slug) = Slug::from_str(value) {
+            Ok(ResourceId(slug.into()))
+        } else {
+            Err("Failed to to convert to string".into())
         }
-        let slug = slug::slugify(value);
-        if value == slug {
-            return Ok(ResourceId(slug));
-        }
-        Err("Failed to to convert to string".into())
     }
 }
 
@@ -40,9 +35,15 @@ impl From<Uuid> for ResourceId {
     }
 }
 
-impl Borrow<str> for ResourceId {
-    fn borrow(&self) -> &str {
+impl AsRef<str> for ResourceId {
+    fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl From<ResourceId> for String {
+    fn from(resource_id: ResourceId) -> Self {
+        resource_id.0
     }
 }
 
@@ -61,7 +62,7 @@ impl<'de> Visitor<'de> for ResourceIdVisitor {
     type Value = ResourceId;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a resource ID as a slug or UUID.")
+        formatter.write_str("a valid UUID or slug.")
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>

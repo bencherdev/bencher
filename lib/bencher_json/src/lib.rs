@@ -1,10 +1,10 @@
+pub use bencher_valid::{Email, Jwt, ResourceId, Slug, UserName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod organization;
 pub mod project;
-pub mod resource_id;
 pub mod system;
 pub mod user;
 
@@ -22,7 +22,6 @@ pub use project::{
     threshold::{JsonNewThreshold, JsonThreshold},
     JsonNewProject, JsonProject,
 };
-pub use resource_id::ResourceId;
 pub use system::{
     auth::{JsonAuthToken, JsonLogin, JsonSignup},
     config::JsonConfig,

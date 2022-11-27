@@ -1,24 +1,26 @@
+use std::str::FromStr;
+
+use bencher_valid::Slug;
 use uuid::Uuid;
 
 use crate::ApiError;
 
 pub enum ResourceId {
     Uuid(Uuid),
-    Slug(String),
+    Slug(Slug),
 }
 
 impl TryFrom<&bencher_json::ResourceId> for ResourceId {
     type Error = ApiError;
 
     fn try_from(resource_id: &bencher_json::ResourceId) -> Result<Self, Self::Error> {
-        if let Ok(uuid) = Uuid::try_parse(&resource_id.0) {
-            return Ok(ResourceId::Uuid(uuid));
+        if let Ok(uuid) = Uuid::from_str(resource_id.as_ref()) {
+            Ok(ResourceId::Uuid(uuid))
+        } else if let Ok(slug) = Slug::from_str(resource_id.as_ref()) {
+            Ok(ResourceId::Slug(slug))
+        } else {
+            Err(ApiError::ResourceId)
         }
-        let slug = slug::slugify(&resource_id.0);
-        if resource_id.0 == slug {
-            return Ok(ResourceId::Slug(slug));
-        }
-        Err(ApiError::ResourceId)
     }
 }
 
@@ -41,7 +43,7 @@ macro_rules! fn_resource_id {
                     Box::new(crate::schema::$table::uuid.eq(uuid.to_string()))
                 },
                 crate::util::resource_id::ResourceId::Slug(slug) => {
-                    Box::new(crate::schema::$table::slug.eq(slug.clone()))
+                    Box::new(crate::schema::$table::slug.eq(slug.to_string()))
                 },
             })
         }

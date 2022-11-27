@@ -261,6 +261,7 @@ dependencies = [
  "serde",
  "slug",
  "thiserror",
+ "uuid",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
