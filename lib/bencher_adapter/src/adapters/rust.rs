@@ -51,27 +51,8 @@ fn parse_running(
     settings: Settings,
 ) -> IResult<&str, HashMap<String, AdapterMetrics>> {
     map_res(
-        tuple((
-            tuple((
-                many0(line_ending),
-                alt((
-                    // A non-initial multi-target run
-                    parse_multi_mod,
-                    // The start of a run
-                    map(success(""), |_| ()),
-                )),
-                many0(line_ending),
-                parse_running_x_tests,
-            )),
-            // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
-            many0(|input| parse_cargo_bench(input, settings)),
-            tuple((
-                many0(line_ending),
-                parse_test_failures_and_result,
-                many0(line_ending),
-            )),
-        )),
-        |(_, benchmarks, _)| -> Result<_, AdapterError> {
+        |input| parse_cargo(input, settings),
+        |benchmarks| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
                 if let Some((benchmark_name, metric)) = benchmark? {
@@ -87,6 +68,34 @@ fn parse_running(
             }
             Ok(results)
         },
+    )(input)
+}
+
+fn parse_cargo(
+    input: &str,
+    settings: Settings,
+) -> IResult<&str, Vec<Result<Option<(String, JsonMetric)>, AdapterError>>> {
+    map(
+        tuple((
+            tuple((
+                many0(line_ending),
+                alt((
+                    // A non-initial multi-target run
+                    parse_multi_mod,
+                    // The start of a run
+                    map(success(""), |_| ()),
+                )),
+                many0(line_ending),
+                parse_running_x_tests,
+            )),
+            many0(|input| parse_cargo_bench(input, settings)),
+            tuple((
+                many0(line_ending),
+                parse_test_failures_and_result,
+                many0(line_ending),
+            )),
+        )),
+        |(_, benchmarks, _)| benchmarks,
     )(input)
 }
 
@@ -118,6 +127,7 @@ fn parse_running_x_tests(input: &str) -> IResult<&str, ()> {
     )(input)
 }
 
+// test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
 fn parse_cargo_bench(
     input: &str,
     settings: Settings,
@@ -183,9 +193,6 @@ fn parse_test_failures_and_result(input: &str) -> IResult<&str, ()> {
 }
 
 fn parse_test_failures(input: &str) -> IResult<&str, ()> {
-    println!("---------------------");
-    println!("{input}");
-    println!("^^^^^^^^^^^^^^^^^^^^^");
     map(
         tuple((
             tag("failures:"),
