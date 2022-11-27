@@ -11,6 +11,7 @@ use nom::{
     sequence::{delimited, tuple},
     IResult,
 };
+use ordered_float::OrderedFloat;
 
 use crate::{
     results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
@@ -138,6 +139,48 @@ fn parse_criterion_benchmarking_file(input: &str) -> IResult<&str, ()> {
     )(input)
 }
 
+fn parse_criterion_bench(
+    input: &str,
+    settings: Settings,
+) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
+    map(
+        tuple((
+            take_until1(" "),
+            tuple((space1, tag("time:"), space1)),
+            parse_criterion_metric,
+        )),
+        |(key, _, metric)| Ok(None),
+    )(input)
+}
+
+fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
+    map(
+        delimited(
+            tag("["),
+            tuple((
+                parse_criterion_duration,
+                space1,
+                parse_criterion_duration,
+                space1,
+                parse_criterion_duration,
+            )),
+            tag("]"),
+        ),
+        |(lower_bound, _, value, _, upper_bound)| JsonMetric {
+            value,
+            lower_bound: Some(lower_bound),
+            upper_bound: Some(upper_bound),
+        },
+    )(input)
+}
+
+fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
+    map(
+        tuple((parse_float, space1, parse_units)),
+        |(duration, _, units)| (to_f64(duration) * units.as_nanos()).into(),
+    )(input)
+}
+
 // Doc-tests ...
 // Running ...
 fn parse_multi_mod(input: &str) -> IResult<&str, ()> {
@@ -261,10 +304,21 @@ fn parse_test_result(input: &str) -> IResult<&str, ()> {
 }
 
 pub enum Units {
+    Pico,
     Nano,
     Micro,
     Milli,
     Sec,
+}
+
+fn parse_units(input: &str) -> IResult<&str, Units> {
+    alt((
+        map(tag("ps"), |_| Units::Pico),
+        map(tag("ns"), |_| Units::Nano),
+        map(tag("µs"), |_| Units::Micro),
+        map(tag("ms"), |_| Units::Milli),
+        map(tag("s"), |_| Units::Sec),
+    ))(input)
 }
 
 impl From<&str> for Units {
@@ -280,12 +334,13 @@ impl From<&str> for Units {
 }
 
 impl Units {
-    fn as_nanos(&self) -> usize {
+    fn as_nanos(&self) -> f64 {
         match self {
-            Self::Nano => 1,
-            Self::Micro => 1_000,
-            Self::Milli => 1_000_000,
-            Self::Sec => 1_000_000_000,
+            Self::Pico => 1.0 / 1_000.0,
+            Self::Nano => 1.0,
+            Self::Micro => 1_000.0,
+            Self::Milli => 1_000_000.0,
+            Self::Sec => 1_000_000_000.0,
         }
     }
 }
@@ -331,6 +386,7 @@ fn to_u64(input: Vec<(&str, &str)>) -> u64 {
 
 fn to_duration(time: u64, units: &Units) -> Duration {
     match units {
+        Units::Pico => Duration::from_nanos((time as f64 / units.as_nanos()) as u64),
         Units::Nano => Duration::from_nanos(time),
         Units::Micro => Duration::from_micros(time),
         Units::Milli => Duration::from_millis(time),
@@ -385,8 +441,9 @@ pub(crate) mod test_rust {
     use pretty_assertions::assert_eq;
 
     use super::{
-        parse_criterion_benchmarking_file, parse_multi_mod, parse_running_x_tests, parse_test,
-        parse_test_failures, parse_test_result, AdapterRust, Test,
+        parse_criterion_benchmarking_file, parse_criterion_metric, parse_multi_mod,
+        parse_running_x_tests, parse_test, parse_test_failures, parse_test_result, AdapterRust,
+        Test,
     };
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
@@ -609,6 +666,39 @@ pub(crate) mod test_rust {
         {
             assert_eq!(true, parse_criterion_benchmarking_file(input).is_err(), "#{index}: {input}")
         }
+    }
+
+    #[test]
+    fn test_parse_criterion_metric() {
+        for (index, (expected, input)) in [(
+            Ok((
+                "",
+                JsonMetric {
+                    value: 280.0.into(),
+                    lower_bound: Some(222.2.into()),
+                    upper_bound: Some(333.33.into()),
+                },
+            )),
+            "[222.2 ns 280.0 ns 333.33 ns]",
+        )]
+        .into_iter()
+        .enumerate()
+        {
+            assert_eq!(expected, parse_criterion_metric(input), "#{index}: {input}")
+        }
+
+        // for (index, input) in [
+        //     "",
+        //     "tests::is_ignored",
+        //     "test tests::is_ignored ... ignored",
+        //     " test tests::is_ignored ... ignored\n",
+        //     "prefix test tests::is_ignored ... ignored\n",
+        // ]
+        // .iter()
+        // .enumerate()
+        // {
+        //     assert_eq!(true, parse_test(input).is_err(), "#{index}: {input}")
+        // }
     }
 
     #[test]
