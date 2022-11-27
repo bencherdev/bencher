@@ -417,11 +417,15 @@ fn parse_ok(input: &str) -> IResult<&str, JsonMetric> {
 
 fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
     fold_many1(
-        alt((digit1, tag("."))),
+        alt((digit1, tag("."), tag(","))),
         Vec::new,
         |mut float_chars, float_char| {
-            float_chars.push(float_char);
-            float_chars
+            if float_char == "," {
+                float_chars
+            } else {
+                float_chars.push(float_char);
+                float_chars
+            }
         },
     )(input)
 }
@@ -670,17 +674,30 @@ pub(crate) mod test_rust {
 
     #[test]
     fn test_parse_criterion_metric() {
-        for (index, (expected, input)) in [(
-            Ok((
-                "",
-                JsonMetric {
-                    value: 280.0.into(),
-                    lower_bound: Some(222.2.into()),
-                    upper_bound: Some(333.33.into()),
-                },
-            )),
-            "[222.2 ns 280.0 ns 333.33 ns]",
-        )]
+        for (index, (expected, input)) in [
+            (
+                Ok((
+                    "",
+                    JsonMetric {
+                        value: 280.0.into(),
+                        lower_bound: Some(222.2.into()),
+                        upper_bound: Some(333.33.into()),
+                    },
+                )),
+                "[222.2 ns 280.0 ns 333.33 ns]",
+            ),
+            (
+                Ok((
+                    "",
+                    JsonMetric {
+                        value: 5.280.into(),
+                        lower_bound: Some(0.222.into()),
+                        upper_bound: Some(0.33333.into()),
+                    },
+                )),
+                "[222.0 ps 5,280.0 ps 333.33 ps]",
+            ),
+        ]
         .into_iter()
         .enumerate()
         {
