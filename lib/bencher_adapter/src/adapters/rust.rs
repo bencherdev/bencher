@@ -7,11 +7,10 @@ use nom::{
     bytes::complete::{tag, take_until1},
     character::complete::{anychar, digit1, line_ending, space1},
     combinator::{map, map_res, peek, success},
-    multi::{fold_many1, many0, many1, many_m_n, many_till},
+    multi::{fold_many1, many0, many1, many_till},
     sequence::{delimited, tuple},
     IResult,
 };
-use ordered_float::OrderedFloat;
 
 use crate::{
     results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
@@ -65,37 +64,42 @@ fn parse_running(
                 // The start of a run
                 map(many0(line_ending), |_| ()),
             )),
-            alt((
-                // running X test(s)
-                map(
-                    tuple((
-                        tag("running"),
-                        space1,
-                        digit1,
-                        space1,
-                        alt((tag("tests"), tag("test"))),
-                        line_ending,
-                    )),
-                    |_| (),
-                ),
-                map(
-                    tuple((
-                        take_until1("Running unittests"),
-                        many_till(anychar, line_ending),
-                    )),
-                    |_| (),
-                ),
+            // running X test(s)
+            tuple((
+                tag("running"),
+                space1,
+                digit1,
+                space1,
+                alt((tag("tests"), tag("test"))),
+                line_ending,
             )),
-            many0(alt((
-                // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
-                |input| parse_cargo_bench(input, settings),
-                // Benchmarking test: Analyzing test            time:   [XXX.XX ps YYY.YY ps ZZZ.ZZ ps]
-                |input| parse_cargo_criterion(input, settings),
+            // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
+            many0(tuple((
+                tag("test"),
+                space1,
+                take_until1(" "),
+                space1,
+                tag("..."),
+                space1,
+                alt((
+                    map(tag("ignored"), |_| Test::Ignored),
+                    map(
+                        tuple((
+                            tag("FAILED"),
+                            // Strip trailing report time
+                            many_till(anychar, peek(line_ending)),
+                        )),
+                        |_| Test::Failed,
+                    ),
+                    map(parse_bench, Test::Bench),
+                    map(parse_ok, Test::Ok),
+                )),
+                line_ending,
             ))),
             tuple((
                 // This will contain failure information
                 // failures: ...
-                take_until1("test result:"),
+                many_till(anychar, tag("test result:")),
                 many_till(anychar, line_ending),
                 alt((
                     // error: test failed ...
@@ -115,7 +119,7 @@ fn parse_running(
         |(_, _, benchmarks, _)| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
-                if let Some((benchmark_name, metric)) = benchmark? {
+                if let Some((benchmark_name, metric)) = to_latency(benchmark, settings)? {
                     results.insert(
                         benchmark_name,
                         AdapterMetrics {
@@ -131,148 +135,50 @@ fn parse_running(
     )(input)
 }
 
-fn parse_cargo_bench(
-    input: &str,
+fn to_latency(
+    bench: (&str, &str, &str, &str, &str, &str, Test, &str),
     settings: Settings,
-) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
-    map(
-        tuple((
-            tag("test"),
-            space1,
-            take_until1(" "),
-            space1,
-            tag("..."),
-            space1,
-            alt((
-                map(tag("ignored"), |_| Test::Ignored),
-                map(
-                    tuple((
-                        tag("FAILED"),
-                        // Strip trailing report time
-                        many_till(anychar, peek(line_ending)),
-                    )),
-                    |_| Test::Failed,
-                ),
-                map(parse_bench, Test::Bench),
-                map(parse_ok, Test::Ok),
-            )),
-            line_ending,
-        )),
-        |(_, _, key, _, _, _, test, _)| match test {
-            Test::Ignored => Ok(None),
-            Test::Failed => {
-                if settings.allow_failure {
-                    Ok(None)
-                } else {
-                    Err(AdapterError::BenchmarkFailed(key.into()))
-                }
-            },
-            Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
+) -> Result<Option<(String, JsonMetric)>, AdapterError> {
+    let (_, _, key, _, _, _, test, _) = bench;
+    match test {
+        Test::Ignored => Ok(None),
+        Test::Failed => {
+            if settings.allow_failure {
+                Ok(None)
+            } else {
+                Err(AdapterError::BenchmarkFailed(key.into()))
+            }
         },
-    )(input)
+        Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
+    }
 }
 
-fn parse_cargo_criterion(
-    input: &str,
-    settings: Settings,
-) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
-    println!("------------------");
-    println!("{input}");
-    println!("******************");
-    map(
-        tuple((
-            many_m_n(
-                4,
-                4,
-                tuple((tag("Benchmarking"), many_till(anychar, line_ending))),
-            ),
-            tuple((
-                take_until1(" "),
-                tuple((
-                    space1,
-                    tag("time:"),
-                    space1,
-                    map(success(""), |_| println!("time")),
-                )),
-                delimited(
-                    tag("["),
-                    tuple((
-                        map(success(""), |_| println!("lower")),
-                        parse_criterion_duration,
-                        space1,
-                        map(success(""), |_| println!("value")),
-                        parse_criterion_duration,
-                        space1,
-                        map(success(""), |_| println!("upper")),
-                        parse_criterion_duration,
-                    )),
-                    tag("]"),
-                ),
-            )),
-            tuple((
-                line_ending,
-                take_until1("change:"),
-                many_till(anychar, line_ending),
-                take_until1("Performance"),
-                many_till(anychar, line_ending),
-                tag("Found"),
-                many_till(anychar, line_ending),
-                many1(tuple((space1, digit1, many_till(anychar, line_ending)))),
-                line_ending,
-            )),
-        )),
-        |(_, (name, _, (_, lower_bound, _, _, value, _, _, upper_bound)), _)| {
-            println!("{name} {value}");
-
-            Ok(Some((
-                name.to_owned(),
-                JsonMetric {
-                    value,
-                    lower_bound: Some(lower_bound),
-                    upper_bound: Some(upper_bound),
-                },
-            )))
-        },
-    )(input)
-}
-
-fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-    map(
-        tuple((parse_float, space1, parse_units)),
-        |(duration, _, units)| {
-            println!("{duration:?} {units:?}");
-            (to_f64(duration) * units.as_nanos()).into()
-        },
-    )(input)
-}
-
-#[derive(Debug)]
 pub enum Units {
-    Pico,
     Nano,
     Micro,
     Milli,
     Sec,
 }
 
-fn parse_units(input: &str) -> IResult<&str, Units> {
-    alt((
-        map(tag("ps"), |_| Units::Pico),
-        map(tag("ns"), |_| Units::Nano),
-        map(tag("µs"), |_| Units::Micro),
-        map(tag("ms"), |_| Units::Milli),
-        map(tag("s"), |_| Units::Sec),
-    ))(input)
+impl From<&str> for Units {
+    fn from(time: &str) -> Self {
+        match time {
+            "ns" => Self::Nano,
+            "μs" => Self::Micro,
+            "ms" => Self::Milli,
+            "s" => Self::Sec,
+            _ => panic!("Unexpected time abbreviation"),
+        }
+    }
 }
 
 impl Units {
-    fn as_nanos(&self) -> f64 {
+    fn as_nanos(&self) -> usize {
         match self {
-            Self::Pico => 1.0 / 1_000.0,
-            Self::Nano => 1.0,
-            Self::Micro => 1_000.0,
-            Self::Milli => 1_000_000.0,
-            Self::Sec => 1_000_000_000.0,
+            Self::Nano => 1,
+            Self::Micro => 1_000,
+            Self::Milli => 1_000_000,
+            Self::Sec => 1_000_000_000,
         }
     }
 }
@@ -286,12 +192,13 @@ fn parse_bench(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             parse_int,
             space1,
-            parse_units,
+            take_until1("/"),
             tag("/iter"),
             space1,
             delimited(tag("("), tuple((tag("+/-"), space1, parse_int)), tag(")")),
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
+            let units = Units::from(units);
             let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
             let variance = Some((to_duration(to_u64(variance), &units).as_nanos() as f64).into());
             JsonMetric {
@@ -304,7 +211,7 @@ fn parse_bench(input: &str) -> IResult<&str, JsonMetric> {
 }
 
 fn parse_int(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
-    many1(tuple((digit1, alt((tag(","), success(""))))))(input)
+    many1(tuple((digit1, alt((tag(","), success(" "))))))(input)
 }
 
 fn to_u64(input: Vec<(&str, &str)>) -> u64 {
@@ -317,7 +224,6 @@ fn to_u64(input: Vec<(&str, &str)>) -> u64 {
 
 fn to_duration(time: u64, units: &Units) -> Duration {
     match units {
-        Units::Pico => Duration::from_nanos((time as f64 / units.as_nanos()) as u64),
         Units::Nano => Duration::from_nanos(time),
         Units::Micro => Duration::from_micros(time),
         Units::Milli => Duration::from_millis(time),
@@ -332,10 +238,11 @@ fn parse_ok(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tag("ok"),
             space1,
-            delimited(tag("<"), tuple((parse_float, parse_units)), tag(">")),
+            delimited(tag("<"), tuple((parse_float, take_until1(">"))), tag(">")),
         )),
         |(_, _, (duration, units))| {
-            let value = to_f64(duration) * units.as_nanos();
+            let units = Units::from(units);
+            let value = to_f64(duration) * units.as_nanos() as f64;
             JsonMetric {
                 value: value.into(),
                 lower_bound: None,
@@ -468,12 +375,6 @@ pub(crate) mod test_rust {
 
         let metrics = results.inner.get("tests::benchmark_c").unwrap();
         validate_metrics(metrics, 3_215.0, Some(356.0), Some(356.0));
-    }
-
-    #[test]
-    fn test_adapter_rust_criterion() {
-        let results = convert_rust_bench("criterion");
-        assert_eq!(results.inner.len(), 0);
     }
 
     #[test]
