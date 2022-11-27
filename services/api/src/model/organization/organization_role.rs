@@ -8,6 +8,7 @@ use crate::{
     ApiError,
 };
 use bencher_json::{organization::JsonOrganizationPermission, system::jwt::JsonWebToken};
+use bencher_valid::Jwt;
 use diesel::{Insertable, Queryable, SqliteConnection};
 
 use super::QueryOrganization;
@@ -23,13 +24,12 @@ pub struct InsertOrganizationRole {
 impl InsertOrganizationRole {
     pub fn from_jwt(
         conn: &mut SqliteConnection,
-        invite: &JsonWebToken,
+        invite: &Jwt,
         secret_key: &SecretKey,
         user_id: i32,
     ) -> Result<Self, ApiError> {
         // Validate the invite JWT
-        let token_data = invite
-            .validate_invite(&secret_key.decoding)
+        let token_data = JsonWebToken::validate_invite(invite, &secret_key.decoding)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         // Make sure that there is an `org` field in the claims

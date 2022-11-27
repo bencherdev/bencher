@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonEmpty, JsonLogin};
-use bencher_valid::{is_valid_jwt, Email};
+use bencher_valid::{Email, Jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -15,7 +15,7 @@ const LOGIN_PATH: &str = "/v0/auth/login";
 #[derive(Debug, Clone)]
 pub struct Login {
     pub email: Email,
-    pub invite: Option<String>,
+    pub invite: Option<Jwt>,
     pub backend: Backend,
 }
 
@@ -28,14 +28,13 @@ impl TryFrom<CliAuthLogin> for Login {
             invite,
             host,
         } = login;
-        if let Some(invite) = &invite {
-            if !is_valid_jwt(invite) {
-                return Err(CliError::Jwt(invite.clone()));
-            }
-        }
         Ok(Self {
             email: email.parse()?,
-            invite,
+            invite: if let Some(invite) = invite {
+                Some(invite.parse()?)
+            } else {
+                None
+            },
             backend: Backend::new(None, host)?,
         })
     }
@@ -48,10 +47,7 @@ impl From<Login> for JsonLogin {
             invite,
             backend: _,
         } = login;
-        Self {
-            email,
-            invite: invite.map(Into::into),
-        }
+        Self { email, invite }
     }
 }
 

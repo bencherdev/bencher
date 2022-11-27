@@ -113,9 +113,6 @@ pub enum ApiError {
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_valid::ValidError),
 
-    #[error("Invalid email: {0}")]
-    Email(String),
-
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },
     #[error("User ({0}) cannot create a new organization")]

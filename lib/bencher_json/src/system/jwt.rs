@@ -1,4 +1,4 @@
-use bencher_valid::Email;
+use bencher_valid::{Email, Jwt};
 use chrono::Utc;
 use derive_more::Display;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
@@ -18,13 +18,7 @@ static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonWebToken(pub String);
-
-impl From<String> for JsonWebToken {
-    fn from(token: String) -> Self {
-        Self(token)
-    }
-}
+pub struct JsonWebToken(String);
 
 impl AsRef<str> for JsonWebToken {
     fn as_ref(&self) -> &str {
@@ -41,7 +35,7 @@ impl JsonWebToken {
         org: Option<OrgClaims>,
     ) -> Result<Self, jsonwebtoken::errors::Error> {
         let claims = JsonClaims::new(audience, email, ttl, org);
-        encode(&HEADER, &claims, key).map(Into::into)
+        Ok(Self(encode(&HEADER, &claims, key)?))
     }
 
     pub fn new_auth(
@@ -83,7 +77,7 @@ impl JsonWebToken {
     }
 
     fn validate(
-        &self,
+        token: &Jwt,
         key: &DecodingKey,
         audience: &[Audience],
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
@@ -91,35 +85,35 @@ impl JsonWebToken {
         validation.set_audience(audience);
         validation.set_issuer(&[BENCHER_DEV]);
         validation.set_required_spec_claims(&["aud", "exp", "iss"]);
-        decode(&self.0, key, &validation)
+        decode(token.as_ref(), key, &validation)
     }
 
     pub fn validate_auth(
-        &self,
+        token: &Jwt,
         key: &DecodingKey,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
-        self.validate(key, &[Audience::Auth])
+        Self::validate(token, key, &[Audience::Auth])
     }
 
     pub fn validate_user(
-        &self,
+        token: &Jwt,
         key: &DecodingKey,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
-        self.validate(key, &[Audience::Client, Audience::ApiKey])
+        Self::validate(token, key, &[Audience::Client, Audience::ApiKey])
     }
 
     pub fn validate_api_key(
-        &self,
+        token: &Jwt,
         key: &DecodingKey,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
-        self.validate(key, &[Audience::ApiKey])
+        Self::validate(token, key, &[Audience::ApiKey])
     }
 
     pub fn validate_invite(
-        &self,
+        token: &Jwt,
         key: &DecodingKey,
     ) -> Result<TokenData<JsonClaims>, jsonwebtoken::errors::Error> {
-        self.validate(key, &[Audience::Invite])
+        Self::validate(token, key, &[Audience::Invite])
     }
 }
 

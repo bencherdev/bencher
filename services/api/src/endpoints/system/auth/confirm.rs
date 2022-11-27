@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bencher_json::system::{
-    auth::{JsonAuthToken, JsonConfirm},
-    jwt::JsonWebToken,
+use bencher_json::{
+    system::{auth::JsonConfirm, jwt::JsonWebToken},
+    JsonAuthToken,
 };
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -56,10 +56,9 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database;
 
-    let token_data = json_token
-        .token
-        .validate_auth(&api_context.secret_key.decoding)
-        .map_err(api_error!())?;
+    let token_data =
+        JsonWebToken::validate_auth(&json_token.token, &api_context.secret_key.decoding)
+            .map_err(api_error!())?;
 
     let user = schema::user::table
         .filter(schema::user::email.eq(token_data.claims.email()))

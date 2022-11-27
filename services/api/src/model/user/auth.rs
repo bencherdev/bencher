@@ -4,6 +4,7 @@ use bencher_rbac::{
 };
 
 use bencher_json::system::jwt::JsonWebToken;
+use bencher_valid::Jwt;
 use diesel::{JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
@@ -89,11 +90,10 @@ impl AuthUser {
         let (_, token) = headers
             .split_once("Bearer ")
             .ok_or_else(auth_header_error!("Missing \"Authorization\" Bearer"))?;
-        let jwt: JsonWebToken = token.trim().to_string().into();
+        let jwt: Jwt = token.trim().parse()?;
 
         let api_context = &mut *rqctx.context().lock().await;
-        let token_data = jwt
-            .validate_user(&api_context.secret_key.decoding)
+        let token_data = JsonWebToken::validate_user(&jwt, &api_context.secret_key.decoding)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let conn = &mut api_context.database;

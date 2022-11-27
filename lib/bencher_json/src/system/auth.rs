@@ -1,4 +1,4 @@
-use bencher_valid::{Email, UserName};
+use bencher_valid::{Email, Jwt, UserName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -12,28 +12,20 @@ pub struct JsonSignup {
     pub name: UserName,
     pub slug: Option<String>,
     pub email: Email,
-    pub invite: Option<JsonWebToken>,
+    pub invite: Option<Jwt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLogin {
     pub email: Email,
-    pub invite: Option<JsonWebToken>,
+    pub invite: Option<Jwt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAuthToken {
-    pub token: JsonWebToken,
-}
-
-impl From<String> for JsonAuthToken {
-    fn from(token: String) -> Self {
-        Self {
-            token: JsonWebToken::from(token),
-        }
-    }
+    pub token: Jwt,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

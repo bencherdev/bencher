@@ -122,9 +122,11 @@ impl InsertToken {
         )
         .map_err(api_error!())?;
 
-        let token_data = jwt
-            .validate_api_key(&api_context.secret_key.decoding)
-            .map_err(api_error!())?;
+        let token_data = JsonWebToken::validate_api_key(
+            &jwt.as_ref().parse()?,
+            &api_context.secret_key.decoding,
+        )
+        .map_err(api_error!())?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
