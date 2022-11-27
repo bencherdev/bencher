@@ -39,7 +39,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             return Err(CliError::Email(email));
         }
         if let Some(invite) = &invite {
-            if !is_valid_jwt(&invite) {
+            if !is_valid_jwt(invite) {
                 return Err(CliError::Jwt(invite.clone()));
             }
         }

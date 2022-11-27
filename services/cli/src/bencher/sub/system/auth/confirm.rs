@@ -24,7 +24,7 @@ impl TryFrom<CliAuthConfirm> for Confirm {
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
         let CliAuthConfirm { token, host } = confirm;
         if !is_valid_jwt(&token) {
-            return Err(CliError::Jwt(token.clone()));
+            return Err(CliError::Jwt(token));
         }
         let backend = Backend::new(None, host)?;
         Ok(Self { token, backend })
