@@ -12,7 +12,7 @@ swagger = ["dep:literally"]
 bencher_adapter = { path = "../../lib/bencher_adapter" }
 bencher_json = { path = "../../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../../lib/bencher_rbac" }
-bencher_valid = { path = "../../lib/bencher_valid" }
+bencher_valid = { path = "../../lib/bencher_valid", features = ["schema"] }
 # Workspace
 chrono.workspace = true
 derive_more.workspace = true

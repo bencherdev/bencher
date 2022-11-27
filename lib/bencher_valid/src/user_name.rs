@@ -1,32 +1,32 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+#[cfg(feature = "schema")]
+use schemars::JsonSchema;
 use std::fmt;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
 use serde::{
     de::{self, Visitor},
-    Deserialize, Deserializer,
+    Deserialize, Deserializer, Serialize,
 };
 
 use crate::REGEX_ERROR;
 
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-pub fn is_valid_user_name(name: &str) -> bool {
-    static NAME_REGEX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
-
-    if name != name.trim() {
-        return false;
+impl AsRef<str> for UserName {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
+}
 
-    if name.len() < 4 || name.len() > 50 {
-        return false;
-    };
-
-    NAME_REGEX.is_match(name)
+impl From<UserName> for String {
+    fn from(username: UserName) -> Self {
+        username.0
+    }
 }
 
 impl<'de> Deserialize<'de> for UserName {
@@ -68,6 +68,22 @@ impl<'de> Visitor<'de> for UserNameVisitor {
             Err(E::custom(format!("Invalid user name: {value}")))
         }
     }
+}
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn is_valid_user_name(name: &str) -> bool {
+    static NAME_REGEX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
+
+    if name != name.trim() {
+        return false;
+    }
+
+    if name.len() < 4 || name.len() > 50 {
+        return false;
+    };
+
+    NAME_REGEX.is_match(name)
 }
 
 #[cfg(test)]

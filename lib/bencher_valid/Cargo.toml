@@ -10,10 +10,12 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["wasm", "dep:console_error_panic_hook"]
 wasm = ["dep:wasm-bindgen"]
+schema = ["dep:schemars"]
 
 [dependencies]
 # Workspace
 once_cell.workspace = true
+schemars = { workspace = true, optional = true }
 serde.workspace = true
 # Crate
 base64 = "0.13"
