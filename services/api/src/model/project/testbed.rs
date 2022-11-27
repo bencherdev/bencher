@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId};
+use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId, Slug};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -64,7 +64,7 @@ impl QueryTestbed {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
-            slug,
+            slug: Slug::from_str(&slug).map_err(api_error!())?,
             os_name,
             os_version,
             runtime_name,

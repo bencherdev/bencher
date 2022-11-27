@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use bencher_valid::{Email, UserName};
+use bencher_valid::{Email, Slug, UserName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,7 @@ pub struct JsonNewMember {
 pub struct JsonMember {
     pub uuid: Uuid,
     pub name: UserName,
-    pub slug: String,
+    pub slug: Slug,
     pub email: Email,
     pub role: JsonOrganizationRole,
 }

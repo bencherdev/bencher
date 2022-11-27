@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonMetricKind, JsonNewMetricKind, ResourceId};
+use bencher_json::{JsonMetricKind, JsonNewMetricKind, ResourceId, Slug};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -66,7 +66,7 @@ impl QueryMetricKind {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
-            slug,
+            slug: Slug::from_str(&slug).map_err(api_error!())?,
             units,
         })
     }

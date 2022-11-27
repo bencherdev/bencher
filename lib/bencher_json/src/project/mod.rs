@@ -1,3 +1,4 @@
+use bencher_valid::Slug;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,7 +20,7 @@ pub mod threshold;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewProject {
     pub name: String,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub description: Option<String>,
     pub url: Option<Url>,
     #[serde(default)]
@@ -32,7 +33,7 @@ pub struct JsonProject {
     pub uuid: Uuid,
     pub organization: Uuid,
     pub name: String,
-    pub slug: String,
+    pub slug: Slug,
     pub description: Option<String>,
     pub url: Option<Url>,
     pub public: bool,

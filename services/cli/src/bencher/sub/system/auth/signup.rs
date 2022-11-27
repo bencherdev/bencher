@@ -1,7 +1,7 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{Email, JsonEmpty, JsonSignup, Jwt, UserName};
+use bencher_json::{Email, JsonEmpty, JsonSignup, Jwt, Slug, UserName};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -14,7 +14,7 @@ const SIGNUP_PATH: &str = "/v0/auth/signup";
 #[derive(Debug, Clone)]
 pub struct Signup {
     pub name: UserName,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub email: Email,
     pub invite: Option<Jwt>,
     pub backend: Backend,
@@ -33,7 +33,11 @@ impl TryFrom<CliAuthSignup> for Signup {
         } = signup;
         Ok(Self {
             name: name.parse()?,
-            slug,
+            slug: if let Some(slug) = slug {
+                Some(Slug::from_str(&slug)?)
+            } else {
+                None
+            },
             email: email.parse()?,
             invite: if let Some(invite) = invite {
                 Some(invite.parse()?)

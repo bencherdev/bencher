@@ -1,3 +1,4 @@
+use bencher_valid::Slug;
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -10,7 +11,7 @@ pub mod member;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewOrganization {
     pub name: String,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -18,7 +19,7 @@ pub struct JsonNewOrganization {
 pub struct JsonOrganization {
     pub uuid: Uuid,
     pub name: String,
-    pub slug: String,
+    pub slug: Slug,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]

@@ -1,7 +1,7 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewProject, ResourceId};
+use bencher_json::{JsonNewProject, ResourceId, Slug};
 use url::Url;
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
 pub struct Create {
     pub org: ResourceId,
     pub name: String,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub description: Option<String>,
     pub url: Option<Url>,
     pub public: bool,
@@ -37,7 +37,11 @@ impl TryFrom<CliProjectCreate> for Create {
         Ok(Self {
             org,
             name,
-            slug,
+            slug: if let Some(slug) = slug {
+                Some(Slug::from_str(&slug)?)
+            } else {
+                None
+            },
             description,
             url: map_url(url)?,
             public,

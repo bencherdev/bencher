@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bencher_adapter::{results::adapter_metrics::AdapterMetrics, AdapterResults};
-use bencher_json::{project::metric_kind::LATENCY_SLUG, JsonMetric};
+use bencher_json::{project::metric_kind::LATENCY_SLUG_STR, JsonMetric};
 use literally::hmap;
 use rand::Rng;
 
@@ -37,7 +37,7 @@ impl SubCmd for Mock {
                 format!("bencher::mock_{c}"),
                 AdapterMetrics {
                     inner: hmap! {
-                        LATENCY_SLUG => JsonMetric {
+                        LATENCY_SLUG_STR => JsonMetric {
                              value: value.into(),
                              lower_bound: Some(bound),
                              upper_bound: Some(bound),

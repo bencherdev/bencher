@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::string::ToString;
 
-use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
+use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId, Slug};
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
@@ -128,7 +128,7 @@ impl QueryOrganization {
         Ok(JsonOrganization {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             name,
-            slug,
+            slug: Slug::from_str(&slug).map_err(api_error!())?,
         })
     }
 

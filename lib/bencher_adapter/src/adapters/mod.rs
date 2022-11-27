@@ -4,7 +4,7 @@ pub mod rust;
 
 #[cfg(test)]
 pub(crate) mod test_util {
-    use bencher_json::project::metric_kind::LATENCY_SLUG;
+    use bencher_json::project::metric_kind::LATENCY_SLUG_STR;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -29,7 +29,7 @@ pub(crate) mod test_util {
         upper_bound: Option<f64>,
     ) {
         assert_eq!(metrics.inner.len(), 1);
-        let metric = metrics.inner.get(LATENCY_SLUG).unwrap();
+        let metric = metrics.inner.get(LATENCY_SLUG_STR).unwrap();
         assert_eq!(metric.value, OrderedFloat::from(value));
         assert_eq!(metric.lower_bound, lower_bound.map(OrderedFloat::from));
         assert_eq!(metric.upper_bound, upper_bound.map(OrderedFloat::from));

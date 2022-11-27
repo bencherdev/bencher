@@ -1,7 +1,7 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewBranch, ResourceId};
+use bencher_json::{JsonNewBranch, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -13,7 +13,7 @@ use crate::{
 pub struct Create {
     pub project: ResourceId,
     pub name: String,
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
     pub backend: Backend,
 }
 
@@ -30,7 +30,11 @@ impl TryFrom<CliBranchCreate> for Create {
         Ok(Self {
             project,
             name,
-            slug,
+            slug: if let Some(slug) = slug {
+                Some(Slug::from_str(&slug)?)
+            } else {
+                None
+            },
             backend: backend.try_into()?,
         })
     }

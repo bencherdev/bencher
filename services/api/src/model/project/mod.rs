@@ -1,6 +1,6 @@
 use std::{str::FromStr, string::ToString};
 
-use bencher_json::{JsonNewProject, JsonProject, ResourceId};
+use bencher_json::{JsonNewProject, JsonProject, ResourceId, Slug};
 use bencher_rbac::{Organization, Project};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use url::Url;
@@ -95,7 +95,7 @@ impl QueryProject {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name,
-            slug,
+            slug: Slug::from_str(&slug).map_err(api_error!())?,
             description,
             url: ok_url(url.as_deref())?,
             public,

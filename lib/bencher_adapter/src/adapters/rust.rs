@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use bencher_json::{project::metric_kind::LATENCY_SLUG, JsonMetric};
+use bencher_json::{project::metric_kind::LATENCY_SLUG_STR, JsonMetric};
 use literally::hmap;
 use nom::{
     branch::alt,
@@ -124,7 +124,7 @@ fn parse_running(
                         benchmark_name,
                         AdapterMetrics {
                             inner: hmap! {
-                                LATENCY_SLUG => metric
+                                LATENCY_SLUG_STR => metric
                             },
                         },
                     );
