@@ -3,9 +3,8 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 use bencher_json::{
     organization::member::{JsonNewMember, JsonOrganizationRole},
-    ResourceId,
+    Email, ResourceId, UserName,
 };
-use bencher_valid::{Email, UserName};
 
 use crate::{
     bencher::backend::Backend,

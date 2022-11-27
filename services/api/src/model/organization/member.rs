@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::JsonMember;
-use bencher_valid::{Email, UserName};
+use bencher_json::{Email, JsonMember, UserName};
 use diesel::Queryable;
 use uuid::Uuid;
 

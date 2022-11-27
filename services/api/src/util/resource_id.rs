@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_valid::Slug;
+use bencher_json::Slug;
 use uuid::Uuid;
 
 use crate::ApiError;

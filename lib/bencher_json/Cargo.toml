@@ -9,7 +9,9 @@ schema = ["dep:schemars", "ordered-float/schemars"]
 
 [dependencies]
 # Local
-bencher_valid = { path = "../bencher_valid", features = ["schema"] }
+bencher_valid = { path = "../bencher_valid", default-features = false, features = [
+    "schema",
+] }
 # Workspace
 chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true

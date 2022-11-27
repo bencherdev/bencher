@@ -1,4 +1,4 @@
-pub use bencher_valid::{Email, Jwt, ResourceId, Slug, UserName};
+pub use bencher_valid::{Email, Jwt, ResourceId, Slug, UserName, ValidError};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

@@ -42,5 +42,5 @@ pub enum CliError {
     #[error("Failed run adapter: {0}")]
     Adapter(#[from] bencher_adapter::AdapterError),
     #[error("Failed to validate: {0}")]
-    Valid(#[from] bencher_valid::ValidError),
+    Valid(#[from] bencher_json::ValidError),
 }

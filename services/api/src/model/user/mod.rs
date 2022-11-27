@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonSignup, JsonUser, ResourceId};
-use bencher_valid::{Email, UserName};
+use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, UserName};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 

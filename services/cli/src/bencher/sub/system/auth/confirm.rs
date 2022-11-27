@@ -1,8 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{system::auth::JsonConfirm, JsonAuthToken};
-use bencher_valid::Jwt;
+use bencher_json::{system::auth::JsonConfirm, JsonAuthToken, Jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},

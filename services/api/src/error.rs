@@ -111,7 +111,7 @@ pub enum ApiError {
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
     #[error("Failed to validate: {0}")]
-    Valid(#[from] bencher_valid::ValidError),
+    Valid(#[from] bencher_json::ValidError),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },
