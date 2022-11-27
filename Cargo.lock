@@ -221,6 +221,7 @@ dependencies = [
 name = "bencher_json"
 version = "0.2.27"
 dependencies = [
+ "bencher_valid",
  "chrono",
  "derive_more",
  "jsonwebtoken",

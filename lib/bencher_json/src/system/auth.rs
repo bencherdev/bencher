@@ -1,3 +1,4 @@
+pub use bencher_valid::UserName;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -8,7 +9,7 @@ use crate::JsonUser;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSignup {
-    pub name: String,
+    pub name: UserName,
     pub slug: Option<String>,
     pub email: String,
     pub invite: Option<JsonWebToken>,

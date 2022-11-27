@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::fmt;
+use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -17,6 +17,18 @@ use crate::REGEX_ERROR;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);
 
+impl FromStr for UserName {
+    type Err = String;
+
+    fn from_str(user_name: &str) -> Result<Self, Self::Err> {
+        if is_valid_user_name(user_name) {
+            Ok(UserName(user_name.into()))
+        } else {
+            Err(format!("Invalid user name: {user_name}"))
+        }
+    }
+}
+
 impl AsRef<str> for UserName {
     fn as_ref(&self) -> &str {
         &self.0
@@ -24,8 +36,8 @@ impl AsRef<str> for UserName {
 }
 
 impl From<UserName> for String {
-    fn from(username: UserName) -> Self {
-        username.0
+    fn from(user_name: UserName) -> Self {
+        user_name.0
     }
 }
 
@@ -51,22 +63,7 @@ impl<'de> Visitor<'de> for UserNameVisitor {
     where
         E: de::Error,
     {
-        if is_valid_user_name(value) {
-            Ok(UserName(value.into()))
-        } else {
-            Err(E::custom(format!("Invalid user name: {value}")))
-        }
-    }
-
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        if is_valid_user_name(&value) {
-            Ok(UserName(value))
-        } else {
-            Err(E::custom(format!("Invalid user name: {value}")))
-        }
+        value.parse().map_err(E::custom)
     }
 }
 

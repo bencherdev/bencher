@@ -1,8 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_json::system::auth::UserName;
 use bencher_json::{JsonEmpty, JsonSignup};
-use bencher_valid::{is_valid_email, is_valid_jwt, is_valid_user_name};
+use bencher_valid::{is_valid_email, is_valid_jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -14,7 +15,7 @@ const SIGNUP_PATH: &str = "/v0/auth/signup";
 
 #[derive(Debug, Clone)]
 pub struct Signup {
-    pub name: String,
+    pub name: UserName,
     pub slug: Option<String>,
     pub email: String,
     pub invite: Option<String>,
@@ -32,9 +33,6 @@ impl TryFrom<CliAuthSignup> for Signup {
             invite,
             host,
         } = signup;
-        if !is_valid_user_name(&name) {
-            return Err(CliError::UserName(name));
-        }
         if !is_valid_email(&email) {
             return Err(CliError::Email(email));
         }
@@ -43,13 +41,12 @@ impl TryFrom<CliAuthSignup> for Signup {
                 return Err(CliError::Jwt(invite.clone()));
             }
         }
-        let backend = Backend::new(None, host)?;
         Ok(Self {
-            name,
+            name: name.parse().map_err(CliError::UserName)?,
             slug,
             email,
             invite,
-            backend,
+            backend: Backend::new(None, host)?,
         })
     }
 }
