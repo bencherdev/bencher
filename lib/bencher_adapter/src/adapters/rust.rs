@@ -7,7 +7,7 @@ use nom::{
     bytes::complete::{tag, take_until1},
     character::complete::{anychar, digit1, line_ending, space1},
     combinator::{map, map_res, peek, success},
-    multi::{fold_many1, many0, many1, many_till},
+    multi::{fold_many1, many0, many1, many_m_n, many_till},
     sequence::{delimited, tuple},
     IResult,
 };
@@ -181,13 +181,16 @@ fn parse_test_failures_and_result(input: &str) -> IResult<&str, ()> {
 }
 
 fn parse_test_failures(input: &str) -> IResult<&str, ()> {
+    println!("---------------------");
+    println!("{input}");
+    println!("^^^^^^^^^^^^^^^^^^^^^");
     map(
         tuple((
             tag("failures:"),
             many_till(anychar, line_ending),
             line_ending,
-            delimited(tag("----"), anychar, tag("----")),
-            line_ending,
+            many_m_n(3, 4, tag("-")),
+            many_till(anychar, line_ending),
             tag("thread"),
             many_till(anychar, line_ending),
             tag("note:"),
@@ -195,8 +198,8 @@ fn parse_test_failures(input: &str) -> IResult<&str, ()> {
             line_ending,
             line_ending,
             tag("failures:"),
-            many1(tuple((space1, many_till(anychar, line_ending)))),
             line_ending,
+            many1(tuple((space1, many_till(anychar, line_ending)))),
         )),
         |_| (),
     )(input)
@@ -334,7 +337,8 @@ pub(crate) mod test_rust {
     use pretty_assertions::assert_eq;
 
     use super::{
-        parse_multi_mod, parse_running_x_tests, parse_test, parse_test_result, AdapterRust, Test,
+        parse_multi_mod, parse_running_x_tests, parse_test, parse_test_failures, parse_test_result,
+        AdapterRust, Test,
     };
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
@@ -511,6 +515,30 @@ pub(crate) mod test_rust {
         {
             assert_eq!(true, parse_test_result(input).is_err(), "#{index}: {input}")
         }
+    }
+
+    #[test]
+    fn test_parse_test_failures() {
+        for (index, input) in [
+            "failures:\n\n--- tests::benchmark_failure stdout ----\nthread 'main' panicked at 'explicit panic', src/tests.rs:28:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n     tests::benchmark_failure\n",
+        ]
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(UNIT_RESULT, parse_test_failures(input), "#{index}: {input}")
+        }
+
+        // for (index, input) in [
+        //     "",
+        //     "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        //     " test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n",
+        //     "prefix test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
+        // ]
+        // .iter()
+        // .enumerate()
+        // {
+        //     assert_eq!(true, parse_test_failures(input).is_err(), "#{index}: {input}")
+        // }
     }
 
     #[test]
