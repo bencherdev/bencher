@@ -52,7 +52,10 @@ fn parse_running(
     settings: Settings,
 ) -> IResult<&str, HashMap<String, AdapterMetrics>> {
     map_res(
-        |input| parse_cargo(input, settings),
+        alt((
+            |input| parse_cargo(input, settings),
+            |input| parse_criterion(input, settings),
+        )),
         |benchmarks| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
@@ -117,12 +120,8 @@ fn parse_criterion(
                 many0(line_ending),
                 parse_criterion_benchmarking_file,
             )),
-            many0(|input| parse_cargo_bench(input, settings)),
-            tuple((
-                many0(line_ending),
-                parse_test_failures_and_result,
-                many0(line_ending),
-            )),
+            many0(|input| parse_criterion_bench(input)),
+            tuple((parse_criterion_change, many0(line_ending))),
         )),
         |(_, benchmarks, _)| benchmarks,
     )(input)
@@ -141,15 +140,15 @@ fn parse_criterion_benchmarking_file(input: &str) -> IResult<&str, ()> {
 
 fn parse_criterion_bench(
     input: &str,
-    settings: Settings,
 ) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
     map(
         tuple((
             take_until1(" "),
             tuple((space1, tag("time:"), space1)),
             parse_criterion_metric,
+            line_ending,
         )),
-        |(key, _, metric)| Ok(None),
+        |(key, _, metric, _)| Ok(Some((key.into(), metric))),
     )(input)
 }
 
@@ -178,6 +177,21 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map(
         tuple((parse_float, space1, parse_units)),
         |(duration, _, units)| (to_f64(duration) * units.as_nanos()).into(),
+    )(input)
+}
+
+fn parse_criterion_change(input: &str) -> IResult<&str, ()> {
+    map(
+        tuple((
+            take_until1("change:"),
+            many_till(anychar, line_ending),
+            many_till(anychar, alt((tag("No change"), tag("Performance has")))),
+            many_till(anychar, line_ending),
+            tag("Found"),
+            many_till(anychar, line_ending),
+            many1(tuple((space1, digit1, many_till(anychar, line_ending)))),
+        )),
+        |_| (),
     )(input)
 }
 
@@ -321,18 +335,6 @@ fn parse_units(input: &str) -> IResult<&str, Units> {
     ))(input)
 }
 
-impl From<&str> for Units {
-    fn from(time: &str) -> Self {
-        match time {
-            "ns" => Self::Nano,
-            "μs" => Self::Micro,
-            "ms" => Self::Milli,
-            "s" => Self::Sec,
-            _ => panic!("Unexpected time abbreviation"),
-        }
-    }
-}
-
 impl Units {
     fn as_nanos(&self) -> f64 {
         match self {
@@ -400,10 +402,9 @@ fn parse_ok(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tag("ok"),
             space1,
-            delimited(tag("<"), tuple((parse_float, take_until1(">"))), tag(">")),
+            delimited(tag("<"), tuple((parse_float, parse_units)), tag(">")),
         )),
         |(_, _, (duration, units))| {
-            let units = Units::from(units);
             let value = to_f64(duration) * units.as_nanos() as f64;
             JsonMetric {
                 value: value.into(),
@@ -444,9 +445,9 @@ pub(crate) mod test_rust {
     use pretty_assertions::assert_eq;
 
     use super::{
-        parse_bench, parse_criterion_benchmarking_file, parse_criterion_metric, parse_multi_mod,
-        parse_running_x_tests, parse_test, parse_test_failures, parse_test_result, AdapterRust,
-        Test,
+        parse_bench, parse_criterion_benchmarking_file, parse_criterion_change,
+        parse_criterion_metric, parse_multi_mod, parse_running_x_tests, parse_test,
+        parse_test_failures, parse_test_result, AdapterRust, Test,
     };
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
@@ -735,19 +736,23 @@ pub(crate) mod test_rust {
         {
             assert_eq!(expected, parse_criterion_metric(input), "#{index}: {input}")
         }
+    }
 
-        // for (index, input) in [
-        //     "",
-        //     "tests::is_ignored",
-        //     "test tests::is_ignored ... ignored",
-        //     " test tests::is_ignored ... ignored\n",
-        //     "prefix test tests::is_ignored ... ignored\n",
-        // ]
-        // .iter()
-        // .enumerate()
-        // {
-        //     assert_eq!(true, parse_test(input).is_err(), "#{index}: {input}")
-        // }
+    #[test]
+    fn test_parse_criterion_change() {
+        for (index, input) in [
+            "                        change: [-2.0565% -0.2521% +1.6377%] (p = 0.79 > 0.05)\nNo change in performance detected.\nFound 8 outliers among 100 measurements (8.00%)\n  6 (6.00%) high mild\n  2 (2.00%) high severe\n",
+            "                        change: [+11.193% +20.965% +31.814%] (p = 0.00 < 0.05)\nPerformance has regressed.\nFound 11 outliers among 100 measurements (11.00%)\n  6 (6.00%) high mild\n  5 (5.00%) high severe\n",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(
+                UNIT_RESULT,
+                parse_criterion_change(input),
+                "#{index}: {input}"
+            )
+        }
     }
 
     #[test]
@@ -833,7 +838,8 @@ pub(crate) mod test_rust {
     #[test]
     fn test_adapter_rust_criterion() {
         let results = convert_rust_bench("criterion");
-        assert_eq!(results.inner.len(), 0);
+        println!("{results:#?}");
+        assert_eq!(results.inner.len(), 4);
     }
 
     #[test]
