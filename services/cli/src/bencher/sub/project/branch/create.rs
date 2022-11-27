@@ -38,7 +38,12 @@ impl TryFrom<CliBranchCreate> for Create {
 
 impl From<Create> for JsonNewBranch {
     fn from(create: Create) -> Self {
-        let Create { name, slug, .. } = create;
+        let Create {
+            project: _,
+            name,
+            slug,
+            backend: _,
+        } = create;
         Self { name, slug }
     }
 }

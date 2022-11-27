@@ -37,7 +37,11 @@ impl TryFrom<CliOrganizationCreate> for Create {
 
 impl From<Create> for JsonNewOrganization {
     fn from(create: Create) -> Self {
-        let Create { name, slug, .. } = create;
+        let Create {
+            name,
+            slug,
+            backend: _,
+        } = create;
         Self { name, slug }
     }
 }

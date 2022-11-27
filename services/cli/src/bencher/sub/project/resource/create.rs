@@ -63,7 +63,7 @@ impl From<Create> for JsonNewProject {
             description,
             url,
             public,
-            ..
+            backend: _,
         } = create;
         Self {
             name,

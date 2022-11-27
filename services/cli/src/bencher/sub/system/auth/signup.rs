@@ -54,7 +54,7 @@ impl From<Signup> for JsonSignup {
             slug,
             email,
             invite,
-            ..
+            backend: _,
         } = signup;
         Self {
             name,
