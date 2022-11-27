@@ -74,28 +74,7 @@ fn parse_running(
                 line_ending,
             )),
             // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
-            many0(tuple((
-                tag("test"),
-                space1,
-                take_until1(" "),
-                space1,
-                tag("..."),
-                space1,
-                alt((
-                    map(tag("ignored"), |_| Test::Ignored),
-                    map(
-                        tuple((
-                            tag("FAILED"),
-                            // Strip trailing report time
-                            many_till(anychar, peek(line_ending)),
-                        )),
-                        |_| Test::Failed,
-                    ),
-                    map(parse_bench, Test::Bench),
-                    map(parse_ok, Test::Ok),
-                )),
-                line_ending,
-            ))),
+            many0(|input| parse_cargo_bench(input, settings)),
             tuple((
                 // This will contain failure information
                 // failures: ...
@@ -119,7 +98,7 @@ fn parse_running(
         |(_, _, benchmarks, _)| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
-                if let Some((benchmark_name, metric)) = to_latency(benchmark, settings)? {
+                if let Some((benchmark_name, metric)) = benchmark? {
                     results.insert(
                         benchmark_name,
                         AdapterMetrics {
@@ -135,22 +114,45 @@ fn parse_running(
     )(input)
 }
 
-fn to_latency(
-    bench: (&str, &str, &str, &str, &str, &str, Test, &str),
+fn parse_cargo_bench(
+    input: &str,
     settings: Settings,
-) -> Result<Option<(String, JsonMetric)>, AdapterError> {
-    let (_, _, key, _, _, _, test, _) = bench;
-    match test {
-        Test::Ignored => Ok(None),
-        Test::Failed => {
-            if settings.allow_failure {
-                Ok(None)
-            } else {
-                Err(AdapterError::BenchmarkFailed(key.into()))
-            }
+) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
+    map(
+        tuple((
+            tag("test"),
+            space1,
+            take_until1(" "),
+            space1,
+            tag("..."),
+            space1,
+            alt((
+                map(tag("ignored"), |_| Test::Ignored),
+                map(
+                    tuple((
+                        tag("FAILED"),
+                        // Strip trailing report time
+                        many_till(anychar, peek(line_ending)),
+                    )),
+                    |_| Test::Failed,
+                ),
+                map(parse_bench, Test::Bench),
+                map(parse_ok, Test::Ok),
+            )),
+            line_ending,
+        )),
+        |(_, _, key, _, _, _, test, _)| match test {
+            Test::Ignored => Ok(None),
+            Test::Failed => {
+                if settings.allow_failure {
+                    Ok(None)
+                } else {
+                    Err(AdapterError::BenchmarkFailed(key.into()))
+                }
+            },
+            Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
         },
-        Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
-    }
+    )(input)
 }
 
 pub enum Units {
