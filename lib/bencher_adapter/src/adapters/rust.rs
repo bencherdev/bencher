@@ -64,23 +64,9 @@ fn parse_running(
             // test rust::mod::path::to_test ... ignored/Y ns/iter (+/- Z)
             many0(|input| parse_cargo_bench(input, settings)),
             tuple((
-                // This will contain failure information
-                // failures: ...
-                many_till(anychar, tag("test result:")),
-                many_till(anychar, line_ending),
-                alt((
-                    // error: test failed ...
-                    map(
-                        tuple((
-                            many0(line_ending),
-                            tag("error:"),
-                            many_till(anychar, line_ending),
-                            many0(line_ending),
-                        )),
-                        |_| (),
-                    ),
-                    map(many0(line_ending), |_| ()),
-                )),
+                many0(line_ending),
+                parse_test_failures_and_result,
+                many0(line_ending),
             )),
         )),
         |(_, benchmarks, _)| -> Result<_, AdapterError> {
@@ -178,23 +164,47 @@ fn parse_test(input: &str) -> IResult<&str, (String, Test)> {
     )(input)
 }
 
-fn parse_test_result(input: &str) -> IResult<&str, ()> {
+fn parse_test_failures_and_result(input: &str) -> IResult<&str, ()> {
+    alt((
+        map(
+            tuple((
+                parse_test_failures,
+                many0(line_ending),
+                parse_test_result,
+                many0(line_ending),
+                tuple((tag("error:"), many_till(anychar, line_ending))),
+            )),
+            |_| (),
+        ),
+        parse_test_result,
+    ))(input)
+}
+
+fn parse_test_failures(input: &str) -> IResult<&str, ()> {
     map(
         tuple((
-            // This will contain failure information
-            // failures: ...
-            tag("test result:"),
+            tag("failures:"),
             many_till(anychar, line_ending),
-            many0(line_ending),
-            alt((
-                // error: test failed ...
-                map(
-                    tuple((tag("error:"), many_till(anychar, line_ending))),
-                    |_| (),
-                ),
-                map(success(""), |_| ()),
-            )),
+            line_ending,
+            delimited(tag("----"), anychar, tag("----")),
+            line_ending,
+            tag("thread"),
+            many_till(anychar, line_ending),
+            tag("note:"),
+            many_till(anychar, line_ending),
+            line_ending,
+            line_ending,
+            tag("failures:"),
+            many1(tuple((space1, many_till(anychar, line_ending)))),
+            line_ending,
         )),
+        |_| (),
+    )(input)
+}
+
+fn parse_test_result(input: &str) -> IResult<&str, ()> {
+    map(
+        tuple((tag("test result:"), many_till(anychar, line_ending))),
         |_| (),
     )(input)
 }
@@ -483,8 +493,6 @@ pub(crate) mod test_rust {
     fn test_parse_test_result() {
         for (index, input) in [
             "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n",
-            "test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00\n\nerror: test failed, to rerun pass `--bin rust_bench`\n",
-            "test result: FAILED. 0 passed; 1 failed; 1 ignored; 2 measured; 0 filtered out; finished in 6.00s\n\nerror: bench failed, to rerun pass `--bin rust_bench`\n",
         ]
             .iter()
             .enumerate()
