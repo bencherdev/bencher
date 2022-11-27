@@ -27,6 +27,7 @@ impl Adapter for AdapterRust {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum Test {
     Ignored,
     Failed,
@@ -134,6 +135,23 @@ fn parse_cargo_bench(
     settings: Settings,
 ) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
     map(
+        tuple((|input| parse_test_result(input), success(""))),
+        |((key, test), _)| match test {
+            Test::Ignored => Ok(None),
+            Test::Failed => {
+                if settings.allow_failure {
+                    Ok(None)
+                } else {
+                    Err(AdapterError::BenchmarkFailed(key.into()))
+                }
+            },
+            Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
+        },
+    )(input)
+}
+
+fn parse_test_result(input: &str) -> IResult<&str, (String, Test)> {
+    map(
         tuple((
             tag("test"),
             space1,
@@ -156,36 +174,8 @@ fn parse_cargo_bench(
             )),
             line_ending,
         )),
-        |(_, _, key, _, _, _, test, _)| match test {
-            Test::Ignored => Ok(None),
-            Test::Failed => {
-                if settings.allow_failure {
-                    Ok(None)
-                } else {
-                    Err(AdapterError::BenchmarkFailed(key.into()))
-                }
-            },
-            Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
-        },
+        |(_, _, key, _, _, _, test, _)| (key.into(), test),
     )(input)
-}
-
-fn to_latency(
-    bench: (&str, &str, &str, &str, &str, &str, Test, &str),
-    settings: Settings,
-) -> Result<Option<(String, JsonMetric)>, AdapterError> {
-    let (_, _, key, _, _, _, test, _) = bench;
-    match test {
-        Test::Ignored => Ok(None),
-        Test::Failed => {
-            if settings.allow_failure {
-                Ok(None)
-            } else {
-                Err(AdapterError::BenchmarkFailed(key.into()))
-            }
-        },
-        Test::Ok(metric) | Test::Bench(metric) => Ok(Some((key.into(), metric))),
-    }
 }
 
 pub enum Units {
@@ -308,10 +298,11 @@ fn to_f64(input: Vec<&str>) -> f64 {
 
 #[cfg(test)]
 pub(crate) mod test_rust {
+    use bencher_json::JsonMetric;
     use nom::IResult;
     use pretty_assertions::assert_eq;
 
-    use super::{parse_multi_mod, parse_running_x_tests, AdapterRust};
+    use super::{parse_multi_mod, parse_running_x_tests, parse_test_result, AdapterRust, Test};
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
@@ -397,6 +388,60 @@ pub(crate) mod test_rust {
                 parse_running_x_tests(input).is_err(),
                 "#{index}: {input}"
             )
+        }
+    }
+
+    #[test]
+    fn test_parse_test_result() {
+        for (index, (expected, input)) in [
+            (
+                Ok(("", ("tests::is_ignored".into(), Test::Ignored))),
+                "test tests::is_ignored ... ignored\n",
+            ),
+            (
+                Ok(("", ("tests::is_failed".into(), Test::Failed))),
+                "test tests::is_failed ... FAILED\n",
+            ),
+            (
+                Ok((
+                    "",
+                    (
+                        "tests::is_unit_test".into(),
+                        Test::Ok(JsonMetric {
+                            value: 1_000_000_000.0.into(),
+                            lower_bound: None,
+                            upper_bound: None,
+                        }),
+                    ),
+                )),
+                "test tests::is_unit_test ... ok <1.000s>\n",
+            ),
+            (
+                Ok((
+                    "",
+                    (
+                        "tests::is_bench_test".into(),
+                        Test::Bench(JsonMetric {
+                            value: 5_280.0.into(),
+                            lower_bound: Some(333.0.into()),
+                            upper_bound: Some(333.0.into()),
+                        }),
+                    ),
+                )),
+                "test tests::is_bench_test ... bench:             5,280 ns/iter (+/- 333)\n",
+            ),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert_eq!(expected, parse_test_result(input), "#{index}: {input}")
+        }
+
+        for (index, input) in ["", "tests::is_ignored", " tests::is_ignored"]
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(true, parse_test_result(input).is_err(), "#{index}: {input}")
         }
     }
 
