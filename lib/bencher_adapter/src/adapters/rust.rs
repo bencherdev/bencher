@@ -39,12 +39,18 @@ enum Test {
 }
 
 pub fn parse_rust(input: &str, settings: Settings) -> IResult<&str, AdapterResults> {
-    fold_many1(
-        |i| parse_running(i, settings),
-        HashMap::new,
-        |benchmarks, new_benchmarks| benchmarks.into_iter().chain(new_benchmarks).collect(),
-    )(input)
-    .map(|(remainder, benchmarks)| (remainder, benchmarks.into()))
+    tuple((
+        fold_many1(
+            |i| parse_running(i, settings),
+            HashMap::new,
+            |benchmarks, new_benchmarks| benchmarks.into_iter().chain(new_benchmarks).collect(),
+        ),
+        eof,
+    ))(input)
+    .map(|(remainder, (benchmarks, _))| {
+        debug_assert!(remainder.is_empty(), "{remainder}");
+        (remainder, benchmarks.into())
+    })
 }
 
 fn parse_running(
@@ -118,12 +124,23 @@ fn parse_criterion(
                     map(success(""), |_| ()),
                 )),
                 many0(line_ending),
-                parse_criterion_benchmarking_file,
             )),
-            many0(|input| parse_criterion_bench(input)),
-            tuple((parse_criterion_change, many0(line_ending))),
+            many1(tuple((
+                print_ln,
+                parse_criterion_benchmarking_file,
+                many0(line_ending),
+                |input| parse_criterion_bench(input),
+                parse_criterion_change,
+                many0(line_ending),
+            ))),
         )),
-        |(_, benchmarks, _)| benchmarks,
+        |(_, benchmarks)| {
+            println!("{benchmarks:#?}");
+            benchmarks
+                .into_iter()
+                .map(|(_, _, _, benchmarks, _, _)| benchmarks)
+                .collect()
+        },
     )(input)
 }
 
@@ -183,9 +200,11 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
 fn parse_criterion_change(input: &str) -> IResult<&str, ()> {
     map(
         tuple((
-            take_until1("change:"),
+            space1,
+            tag("change:"),
             many_till(anychar, line_ending),
-            many_till(anychar, alt((tag("No change"), tag("Performance has")))),
+            space1,
+            alt((tag("No change"), tag("Performance has"))),
             many_till(anychar, line_ending),
             tag("Found"),
             many_till(anychar, line_ending),
@@ -741,8 +760,8 @@ pub(crate) mod test_rust {
     #[test]
     fn test_parse_criterion_change() {
         for (index, input) in [
-            "                        change: [-2.0565% -0.2521% +1.6377%] (p = 0.79 > 0.05)\nNo change in performance detected.\nFound 8 outliers among 100 measurements (8.00%)\n  6 (6.00%) high mild\n  2 (2.00%) high severe\n",
-            "                        change: [+11.193% +20.965% +31.814%] (p = 0.00 < 0.05)\nPerformance has regressed.\nFound 11 outliers among 100 measurements (11.00%)\n  6 (6.00%) high mild\n  5 (5.00%) high severe\n",
+            "                        change: [-2.0565% -0.2521% +1.6377%] (p = 0.79 > 0.05)\n                        No change in performance detected.\nFound 8 outliers among 100 measurements (8.00%)\n  6 (6.00%) high mild\n  2 (2.00%) high severe\n",
+            "                        change: [+11.193% +20.965% +31.814%] (p = 0.00 < 0.05)\n                        Performance has regressed.\nFound 11 outliers among 100 measurements (11.00%)\n  6 (6.00%) high mild\n  5 (5.00%) high severe\n",
         ]
         .iter()
         .enumerate()
