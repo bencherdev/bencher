@@ -135,7 +135,7 @@ fn parse_cargo_bench(
     settings: Settings,
 ) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
     map(
-        tuple((|input| parse_test_result(input), success(""))),
+        tuple((|input| parse_test(input), success(""))),
         |((key, test), _)| match test {
             Test::Ignored => Ok(None),
             Test::Failed => {
@@ -150,7 +150,7 @@ fn parse_cargo_bench(
     )(input)
 }
 
-fn parse_test_result(input: &str) -> IResult<&str, (String, Test)> {
+fn parse_test(input: &str) -> IResult<&str, (String, Test)> {
     map(
         tuple((
             tag("test"),
@@ -175,6 +175,27 @@ fn parse_test_result(input: &str) -> IResult<&str, (String, Test)> {
             line_ending,
         )),
         |(_, _, key, _, _, _, test, _)| (key.into(), test),
+    )(input)
+}
+
+fn parse_test_result(input: &str) -> IResult<&str, ()> {
+    map(
+        tuple((
+            // This will contain failure information
+            // failures: ...
+            tag("test result:"),
+            many_till(anychar, line_ending),
+            many0(line_ending),
+            alt((
+                // error: test failed ...
+                map(
+                    tuple((tag("error:"), many_till(anychar, line_ending))),
+                    |_| (),
+                ),
+                map(success(""), |_| ()),
+            )),
+        )),
+        |_| (),
     )(input)
 }
 
@@ -302,7 +323,9 @@ pub(crate) mod test_rust {
     use nom::IResult;
     use pretty_assertions::assert_eq;
 
-    use super::{parse_multi_mod, parse_running_x_tests, parse_test_result, AdapterRust, Test};
+    use super::{
+        parse_multi_mod, parse_running_x_tests, parse_test, parse_test_result, AdapterRust, Test,
+    };
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
@@ -353,7 +376,10 @@ pub(crate) mod test_rust {
         for (index, input) in [
             "",
             "Running benches/name.rs (/oath/to/target/release/deps/name-hash)\n",
-            "Running benches/name.rs (/oath/to/target/release/deps/name-hash)",
+            "Doc-tests bencher_adapter\n",
+            "   Doc-tests bencher_adapter",
+            "prefix   Doc-tests bencher_adapter",
+            "   prefix Doc-tests bencher_adapter",
         ]
         .iter()
         .enumerate()
@@ -378,6 +404,8 @@ pub(crate) mod test_rust {
         for (index, input) in [
             "",
             "running 0 tests",
+            " running 0 tests\n",
+            "prefix running 0 tests\n",
             "Courage the Cowardly Dog\nrunning 0 tests\n",
         ]
         .iter()
@@ -392,7 +420,7 @@ pub(crate) mod test_rust {
     }
 
     #[test]
-    fn test_parse_test_result() {
+    fn test_parse_test() {
         for (index, (expected, input)) in [
             (
                 Ok(("", ("tests::is_ignored".into(), Test::Ignored))),
@@ -434,12 +462,44 @@ pub(crate) mod test_rust {
         .into_iter()
         .enumerate()
         {
-            assert_eq!(expected, parse_test_result(input), "#{index}: {input}")
+            assert_eq!(expected, parse_test(input), "#{index}: {input}")
         }
 
-        for (index, input) in ["", "tests::is_ignored", " tests::is_ignored"]
+        for (index, input) in [
+            "",
+            "tests::is_ignored",
+            "test tests::is_ignored ... ignored",
+            " test tests::is_ignored ... ignored\n",
+            "prefix test tests::is_ignored ... ignored\n",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(true, parse_test(input).is_err(), "#{index}: {input}")
+        }
+    }
+
+    #[test]
+    fn test_parse_test_result() {
+        for (index, input) in [
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n",
+            "test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00\n\nerror: test failed, to rerun pass `--bin rust_bench`\n",
+            "test result: FAILED. 0 passed; 1 failed; 1 ignored; 2 measured; 0 filtered out; finished in 6.00s\n\nerror: bench failed, to rerun pass `--bin rust_bench`\n",
+        ]
             .iter()
             .enumerate()
+        {
+            assert_eq!(UNIT_RESULT, parse_test_result(input), "#{index}: {input}")
+        }
+
+        for (index, input) in [
+            "",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            " test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n",
+            "prefix test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
+        ]
+        .iter()
+        .enumerate()
         {
             assert_eq!(true, parse_test_result(input).is_err(), "#{index}: {input}")
         }
