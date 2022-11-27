@@ -99,6 +99,45 @@ fn parse_cargo(
     )(input)
 }
 
+fn parse_criterion(
+    input: &str,
+    settings: Settings,
+) -> IResult<&str, Vec<Result<Option<(String, JsonMetric)>, AdapterError>>> {
+    map(
+        tuple((
+            tuple((
+                many0(line_ending),
+                alt((
+                    // A non-initial multi-target run
+                    parse_multi_mod,
+                    // The start of a run
+                    map(success(""), |_| ()),
+                )),
+                many0(line_ending),
+                parse_criterion_benchmarking_file,
+            )),
+            many0(|input| parse_cargo_bench(input, settings)),
+            tuple((
+                many0(line_ending),
+                parse_test_failures_and_result,
+                many0(line_ending),
+            )),
+        )),
+        |(_, benchmarks, _)| benchmarks,
+    )(input)
+}
+
+fn parse_criterion_benchmarking_file(input: &str) -> IResult<&str, ()> {
+    map(
+        many_m_n(
+            4,
+            4,
+            tuple((tag("Benchmarking"), many_till(anychar, line_ending))),
+        ),
+        |_| (),
+    )(input)
+}
+
 // Doc-tests ...
 // Running ...
 fn parse_multi_mod(input: &str) -> IResult<&str, ()> {
@@ -346,8 +385,8 @@ pub(crate) mod test_rust {
     use pretty_assertions::assert_eq;
 
     use super::{
-        parse_multi_mod, parse_running_x_tests, parse_test, parse_test_failures, parse_test_result,
-        AdapterRust, Test,
+        parse_criterion_benchmarking_file, parse_multi_mod, parse_running_x_tests, parse_test,
+        parse_test_failures, parse_test_result, AdapterRust, Test,
     };
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
@@ -545,6 +584,30 @@ pub(crate) mod test_rust {
         .enumerate()
         {
             assert_eq!(true, parse_test_failures(input).is_err(), "#{index}: {input}")
+        }
+    }
+
+    #[test]
+    fn test_parse_criterion_benchmarking_file() {
+        for (index, input) in [
+            "Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing\n",
+        ]
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(UNIT_RESULT, parse_criterion_benchmarking_file(input), "#{index}: {input}")
+        }
+
+        for (index, input) in [
+            "",
+            "Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing",
+            " Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing\n",
+            "prefix Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing\n",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(true, parse_criterion_benchmarking_file(input).is_err(), "#{index}: {input}")
         }
     }
 
