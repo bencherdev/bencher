@@ -182,41 +182,48 @@ fn parse_cargo_criterion(
     map(
         tuple((
             many_m_n(
-                3,
-                3,
-                tuple((
-                    tag("Benchmarking"),
-                    many_till(anychar, line_ending),
-                    line_ending,
-                )),
+                4,
+                4,
+                tuple((tag("Benchmarking"), many_till(anychar, line_ending))),
             ),
             tuple((
-                tuple((tag("Benchmarking"), space1)),
-                take_until1(":"),
+                take_until1(" "),
                 tuple((
-                    tag(":"),
-                    space1,
-                    tag("Analyzing"),
-                    space1,
-                    take_until1(" "),
                     space1,
                     tag("time:"),
                     space1,
+                    map(success(""), |_| println!("time")),
                 )),
                 delimited(
                     tag("["),
                     tuple((
+                        map(success(""), |_| println!("lower")),
                         parse_criterion_duration,
                         space1,
+                        map(success(""), |_| println!("value")),
                         parse_criterion_duration,
                         space1,
+                        map(success(""), |_| println!("upper")),
                         parse_criterion_duration,
                     )),
                     tag("]"),
                 ),
             )),
+            tuple((
+                line_ending,
+                take_until1("change:"),
+                many_till(anychar, line_ending),
+                take_until1("Performance"),
+                many_till(anychar, line_ending),
+                tag("Found"),
+                many_till(anychar, line_ending),
+                many1(tuple((space1, digit1, many_till(anychar, line_ending)))),
+                line_ending,
+            )),
         )),
-        |(_, (_, name, _, (lower_bound, _, value, _, upper_bound)))| {
+        |(_, (name, _, (_, lower_bound, _, _, value, _, _, upper_bound)), _)| {
+            println!("{name} {value}");
+
             Ok(Some((
                 name.to_owned(),
                 JsonMetric {
@@ -232,10 +239,14 @@ fn parse_cargo_criterion(
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map(
         tuple((parse_float, space1, parse_units)),
-        |(duration, _, units)| (to_f64(duration) * units.as_nanos()).into(),
+        |(duration, _, units)| {
+            println!("{duration:?} {units:?}");
+            (to_f64(duration) * units.as_nanos()).into()
+        },
     )(input)
 }
 
+#[derive(Debug)]
 pub enum Units {
     Pico,
     Nano,
@@ -248,7 +259,7 @@ fn parse_units(input: &str) -> IResult<&str, Units> {
     alt((
         map(tag("ps"), |_| Units::Pico),
         map(tag("ns"), |_| Units::Nano),
-        map(tag("μs"), |_| Units::Micro),
+        map(tag("µs"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)
