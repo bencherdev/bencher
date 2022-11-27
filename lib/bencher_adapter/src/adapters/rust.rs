@@ -154,6 +154,7 @@ fn to_latency(
 }
 
 pub enum Units {
+    Pico,
     Nano,
     Micro,
     Milli,
@@ -163,6 +164,7 @@ pub enum Units {
 impl From<&str> for Units {
     fn from(time: &str) -> Self {
         match time {
+            "ps" => Self::Pico,
             "ns" => Self::Nano,
             "μs" => Self::Micro,
             "ms" => Self::Milli,
@@ -173,12 +175,13 @@ impl From<&str> for Units {
 }
 
 impl Units {
-    fn as_nanos(&self) -> usize {
+    fn as_nanos(&self) -> f64 {
         match self {
-            Self::Nano => 1,
-            Self::Micro => 1_000,
-            Self::Milli => 1_000_000,
-            Self::Sec => 1_000_000_000,
+            Self::Pico => 1.0 / 1_000.0,
+            Self::Nano => 1.0,
+            Self::Micro => 1_000.0,
+            Self::Milli => 1_000_000.0,
+            Self::Sec => 1_000_000_000.0,
         }
     }
 }
@@ -211,7 +214,7 @@ fn parse_bench(input: &str) -> IResult<&str, JsonMetric> {
 }
 
 fn parse_int(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
-    many1(tuple((digit1, alt((tag(","), success(" "))))))(input)
+    many1(tuple((digit1, alt((tag(","), success(""))))))(input)
 }
 
 fn to_u64(input: Vec<(&str, &str)>) -> u64 {
@@ -224,6 +227,7 @@ fn to_u64(input: Vec<(&str, &str)>) -> u64 {
 
 fn to_duration(time: u64, units: &Units) -> Duration {
     match units {
+        Units::Pico => Duration::from_nanos((time as f64 / units.as_nanos()) as u64),
         Units::Nano => Duration::from_nanos(time),
         Units::Micro => Duration::from_micros(time),
         Units::Milli => Duration::from_millis(time),
@@ -375,6 +379,12 @@ pub(crate) mod test_rust {
 
         let metrics = results.inner.get("tests::benchmark_c").unwrap();
         validate_metrics(metrics, 3_215.0, Some(356.0), Some(356.0));
+    }
+
+    #[test]
+    fn test_adapter_rust_criterion() {
+        let results = convert_rust_bench("criterion");
+        assert_eq!(results.inner.len(), 0);
     }
 
     #[test]

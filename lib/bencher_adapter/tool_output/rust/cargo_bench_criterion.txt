@@ -1,0 +1,72 @@
+
+running 9 tests
+test appenders::test::correct_paths ... ignored
+test appenders::test::size_delete_roll ... ignored
+test appenders::test::size_window_roll ... ignored
+test appenders::test::size_window_roll_no_pattern ... ignored
+test appenders::test::size_window_roll_no_pattern_relative ... ignored
+test appenders::test::size_window_roll_relative ... ignored
+test env::test::expand_env_vars_tests ... ignored
+test env::test::expand_nonexistent_env_vars_tests ... ignored
+test test::test_set_global ... ignored
+
+test result: ok. 0 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests (target/release/deps/log4rs_bench-f36c88332bd25d23)
+Benchmarking file
+Benchmarking file: Warming up for 3.0000 s
+Benchmarking file: Collecting 100 samples in estimated 5.0000 s (15B iterations)
+Benchmarking file: Analyzing
+file                    time:   [320.62 ps 323.90 ps 327.55 ps]
+                        change: [-2.0565% -0.2521% +1.6377%] (p = 0.79 > 0.05)
+                        No change in performance detected.
+Found 8 outliers among 100 measurements (8.00%)
+  6 (6.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking rolling_file
+Benchmarking rolling_file: Warming up for 3.0000 s
+Benchmarking rolling_file: Collecting 100 samples in estimated 5.0000 s (16B iterations)
+Benchmarking rolling_file: Analyzing
+rolling_file            time:   [381.79 ps 429.66 ps 483.28 ps]
+                        change: [+11.193% +20.965% +31.814%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  6 (6.00%) high mild
+  5 (5.00%) high severe
+
+     Running unittests (target/release/deps/trace4rs_bench-ca13ba7c7c994a3d)
+Benchmarking tracing_file
+Benchmarking tracing_file: Warming up for 3.0000 s
+Benchmarking tracing_file: Collecting 100 samples in estimated 5.0654 s (328k iterations)
+Benchmarking tracing_file: Analyzing
+tracing_file            time:   [16.652 µs 18.019 µs 19.562 µs]
+                        change: [+2.0909% +10.813% +19.663%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 9 outliers among 100 measurements (9.00%)
+  8 (8.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking tracing_rolling_file
+Benchmarking tracing_rolling_file: Warming up for 3.0000 s
+Benchmarking tracing_rolling_file: Collecting 100 samples in estimated 5.0695 s (308k iterations)
+Benchmarking tracing_rolling_file: Analyzing
+tracing_rolling_file    time:   [18.195 µs 20.930 µs 24.240 µs]
+                        change: [+21.885% +31.300% +41.180%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+     Running unittests (target/release/deps/trace4rs_config-58132514d3d5f496)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests (target/release/deps/trace4rs_fmtorp-9252ade4fe7725f2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
