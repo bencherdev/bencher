@@ -315,7 +315,7 @@ fn parse_units(input: &str) -> IResult<&str, Units> {
     alt((
         map(tag("ps"), |_| Units::Pico),
         map(tag("ns"), |_| Units::Nano),
-        map(tag("µs"), |_| Units::Micro),
+        map(tag("μs"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)
@@ -354,13 +354,12 @@ fn parse_bench(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             parse_int,
             space1,
-            take_until1("/"),
+            parse_units,
             tag("/iter"),
             space1,
             delimited(tag("("), tuple((tag("+/-"), space1, parse_int)), tag(")")),
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
-            let units = Units::from(units);
             let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
             let variance = Some((to_duration(to_u64(variance), &units).as_nanos() as f64).into());
             JsonMetric {
@@ -445,7 +444,7 @@ pub(crate) mod test_rust {
     use pretty_assertions::assert_eq;
 
     use super::{
-        parse_criterion_benchmarking_file, parse_criterion_metric, parse_multi_mod,
+        parse_bench, parse_criterion_benchmarking_file, parse_criterion_metric, parse_multi_mod,
         parse_running_x_tests, parse_test, parse_test_failures, parse_test_result, AdapterRust,
         Test,
     };
@@ -669,6 +668,39 @@ pub(crate) mod test_rust {
         .enumerate()
         {
             assert_eq!(true, parse_criterion_benchmarking_file(input).is_err(), "#{index}: {input}")
+        }
+    }
+
+    #[test]
+    fn test_parse_bench() {
+        for (index, (expected, input)) in [
+            (
+                Ok((
+                    "",
+                    JsonMetric {
+                        value: 3_161.0.into(),
+                        lower_bound: Some(975.0.into()),
+                        upper_bound: Some(975.0.into()),
+                    },
+                )),
+                "bench:             3,161 ns/iter (+/- 975)",
+            ),
+            (
+                Ok((
+                    "",
+                    JsonMetric {
+                        value: 1_000.0.into(),
+                        lower_bound: Some(1_000.0.into()),
+                        upper_bound: Some(1_000.0.into()),
+                    },
+                )),
+                "bench:                 1 μs/iter (+/- 1)",
+            ),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert_eq!(expected, parse_bench(input), "#{index}: {input}")
         }
     }
 
