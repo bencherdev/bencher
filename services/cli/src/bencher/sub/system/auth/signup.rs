@@ -1,9 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::system::auth::UserName;
 use bencher_json::{JsonEmpty, JsonSignup};
-use bencher_valid::{is_valid_email, is_valid_jwt};
+use bencher_valid::{is_valid_email, is_valid_jwt, UserName};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -42,7 +41,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             }
         }
         Ok(Self {
-            name: name.parse().map_err(CliError::UserName)?,
+            name: name.parse()?,
             slug,
             email,
             invite,

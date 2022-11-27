@@ -110,8 +110,9 @@ pub enum ApiError {
     },
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
-    #[error("Invalid user name: {0}")]
-    UserName(String),
+    #[error("Failed to validate: {0}")]
+    Valid(#[from] bencher_valid::ValidError),
+
     #[error("Invalid email: {0}")]
     Email(String),
 

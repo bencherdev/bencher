@@ -2,10 +2,12 @@
 use wasm_bindgen::prelude::*;
 
 mod email;
+mod error;
 mod jwt;
 mod user_name;
 
 pub use email::is_valid_email;
+pub use error::ValidError;
 pub use jwt::is_valid_jwt;
 pub use user_name::{is_valid_user_name, UserName};
 

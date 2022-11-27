@@ -1,4 +1,4 @@
-pub use bencher_valid::UserName;
+use bencher_valid::UserName;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

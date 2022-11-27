@@ -11,20 +11,20 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::REGEX_ERROR;
+use crate::{ValidError, REGEX_ERROR};
 
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);
 
 impl FromStr for UserName {
-    type Err = String;
+    type Err = ValidError;
 
     fn from_str(user_name: &str) -> Result<Self, Self::Err> {
         if is_valid_user_name(user_name) {
             Ok(UserName(user_name.into()))
         } else {
-            Err(format!("Invalid user name: {user_name}"))
+            Err(ValidError::UserName(user_name.into()))
         }
     }
 }
@@ -46,7 +46,7 @@ impl<'de> Deserialize<'de> for UserName {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_string(UserNameVisitor)
+        deserializer.deserialize_str(UserNameVisitor)
     }
 }
 
