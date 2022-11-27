@@ -18,6 +18,7 @@ derive_more.workspace = true
 once_cell.workspace = true
 schemars = { workspace = true, optional = true }
 serde.workspace = true
+slug.workspace = true
 thiserror.workspace = true
 # Crate
 base64 = "0.13"

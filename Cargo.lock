@@ -259,6 +259,7 @@ dependencies = [
  "regex",
  "schemars",
  "serde",
+ "slug",
  "thiserror",
  "wasm-bindgen",
  "wasm-bindgen-test",
