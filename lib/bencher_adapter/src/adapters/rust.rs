@@ -58,11 +58,23 @@ fn parse_running(
     settings: Settings,
 ) -> IResult<&str, HashMap<String, AdapterMetrics>> {
     map_res(
-        alt((
-            |input| parse_cargo(input, settings),
-            |input| parse_criterion(input, settings),
+        tuple((
+            tuple((
+                many0(line_ending),
+                alt((
+                    // A non-initial multi-target run
+                    parse_multi_mod,
+                    // The start of a run
+                    map(success(""), |_| ()),
+                )),
+                many0(line_ending),
+            )),
+            alt((
+                |input| parse_cargo(input, settings),
+                |input| parse_criterion(input, settings),
+            )),
         )),
-        |benchmarks| -> Result<_, AdapterError> {
+        |(_, benchmarks)| -> Result<_, AdapterError> {
             let mut results = HashMap::new();
             for benchmark in benchmarks {
                 if let Some((benchmark_name, metric)) = benchmark? {
@@ -87,17 +99,7 @@ fn parse_cargo(
 ) -> IResult<&str, Vec<Result<Option<(String, JsonMetric)>, AdapterError>>> {
     map(
         tuple((
-            tuple((
-                many0(line_ending),
-                alt((
-                    // A non-initial multi-target run
-                    parse_multi_mod,
-                    // The start of a run
-                    map(success(""), |_| ()),
-                )),
-                many0(line_ending),
-                parse_running_x_tests,
-            )),
+            parse_running_x_tests,
             many0(|input| parse_cargo_bench(input, settings)),
             tuple((
                 many0(line_ending),
@@ -114,31 +116,17 @@ fn parse_criterion(
     settings: Settings,
 ) -> IResult<&str, Vec<Result<Option<(String, JsonMetric)>, AdapterError>>> {
     map(
-        tuple((
-            tuple((
-                many0(line_ending),
-                alt((
-                    // A non-initial multi-target run
-                    parse_multi_mod,
-                    // The start of a run
-                    map(success(""), |_| ()),
-                )),
-                many0(line_ending),
-            )),
-            many1(tuple((
-                print_ln,
-                parse_criterion_benchmarking_file,
-                many0(line_ending),
-                |input| parse_criterion_bench(input),
-                parse_criterion_change,
-                many0(line_ending),
-            ))),
-        )),
-        |(_, benchmarks)| {
-            println!("{benchmarks:#?}");
+        many1(tuple((
+            parse_criterion_benchmarking_file,
+            many0(line_ending),
+            |input| parse_criterion_bench(input),
+            parse_criterion_change,
+            many0(line_ending),
+        ))),
+        |benchmarks| {
             benchmarks
                 .into_iter()
-                .map(|(_, _, _, benchmarks, _, _)| benchmarks)
+                .map(|(_, _, benchmarks, _, _)| benchmarks)
                 .collect()
         },
     )(input)
@@ -349,6 +337,7 @@ fn parse_units(input: &str) -> IResult<&str, Units> {
         map(tag("ps"), |_| Units::Pico),
         map(tag("ns"), |_| Units::Nano),
         map(tag("μs"), |_| Units::Micro),
+        map(tag("µs"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)
@@ -748,6 +737,17 @@ pub(crate) mod test_rust {
                     },
                 )),
                 "[222.0 ps 5,280.0 ps 333.33 ps]",
+            ),
+            (
+                Ok((
+                    "",
+                    JsonMetric {
+                        value: 18_019.0.into(),
+                        lower_bound: Some(16_652.0.into()),
+                        upper_bound: Some(19_562.0.into()),
+                    },
+                )),
+                "[16.652 µs 18.019 µs 19.562 µs]",
             ),
         ]
         .into_iter()

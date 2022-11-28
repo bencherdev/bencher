@@ -18,5 +18,6 @@
     "mtxr.sqltools",
     "mtxr.sqltools-driver-sqlite",
     "ms-azuretools.vscode-docker",
+    "ms-vscode.hexeditor",
   ]
 }
