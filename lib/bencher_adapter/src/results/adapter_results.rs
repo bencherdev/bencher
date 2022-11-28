@@ -20,6 +20,10 @@ impl From<ResultsMap> for AdapterResults {
 }
 
 impl AdapterResults {
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut results_map = HashMap::new();
         for (benchmark_name, metrics) in self.inner.into_iter() {

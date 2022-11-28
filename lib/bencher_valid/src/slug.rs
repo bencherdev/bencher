@@ -68,7 +68,7 @@ impl<'de> Visitor<'de> for SlugVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_slug(slug: &str) -> bool {
-    slug == slug::slugify(&slug)
+    slug == slug::slugify(slug)
 }
 
 #[cfg(test)]

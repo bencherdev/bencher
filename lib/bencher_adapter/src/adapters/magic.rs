@@ -1,16 +1,23 @@
-use nom::branch::alt;
-
-use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError, Settings};
-
-use super::{json::parse_json, rust::parse_rust};
+use crate::{
+    results::adapter_results::AdapterResults, Adapter, AdapterError, AdapterJson, AdapterRust,
+    Settings,
+};
 
 pub struct AdapterMagic;
 
 impl Adapter for AdapterMagic {
     fn parse(input: &str, settings: Settings) -> Result<AdapterResults, AdapterError> {
-        alt((parse_json, |i| parse_rust(i, settings)))(input)
-            .map(|(_, benchmarks)| benchmarks)
-            .map_err(|err| AdapterError::Nom(err.map_input(Into::into)))
+        let json = AdapterJson::parse(input, settings);
+        if json.is_ok() {
+            return json;
+        }
+
+        let rust = AdapterRust::parse(input, settings)?;
+        if !rust.is_empty() {
+            return Ok(rust);
+        }
+
+        Ok(AdapterResults::default())
     }
 }
 

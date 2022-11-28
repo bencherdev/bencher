@@ -9,4 +9,10 @@ pub enum AdapterError {
 
     #[error("Benchmark failed: {0}")]
     BenchmarkFailed(String),
+    #[error("Benchmark thread {thread} panicked at {context}: {location}")]
+    Panic {
+        thread: String,
+        context: String,
+        location: String,
+    },
 }
