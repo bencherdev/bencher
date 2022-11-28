@@ -1,0 +1,62 @@
+
+running 9 tests
+test appenders::test::correct_paths ... ignored
+test appenders::test::size_delete_roll ... ignored
+test appenders::test::size_window_roll ... ignored
+test appenders::test::size_window_roll_no_pattern ... ignored
+test appenders::test::size_window_roll_no_pattern_relative ... ignored
+test appenders::test::size_window_roll_relative ... ignored
+test env::test::expand_env_vars_tests ... ignored
+test env::test::expand_nonexistent_env_vars_tests ... ignored
+test test::test_set_global ... ignored
+
+test result: ok. 0 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests (target/release/deps/log4rs_bench-f36c88332bd25d23)
+Benchmarking file
+Benchmarking file: Warming up for 3.0000 s
+Benchmarking file: Collecting 100 samples in estimated 5.0000 s (3.3B iterations)
+Benchmarking file: Analyzing
+file                    time:   [2.0246 ns 2.2311 ns 2.4461 ns]
+                        change: [+506.22% +649.99% +857.69%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking rolling_file
+Benchmarking rolling_file: Warming up for 3.0000 s
+Benchmarking rolling_file: Collecting 100 samples in estimated 5.0000 s (3.2B iterations)
+Benchmarking rolling_file: Analyzing
+rolling_file            time:   [1.7480 ns 1.9488 ns 2.1506 ns]
+                        change: [+273.25% +322.36% +372.41%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+     Running unittests (target/release/deps/trace4rs_bench-ca13ba7c7c994a3d)
+Benchmarking tracing_file
+Benchmarking tracing_file: Warming up for 3.0000 s
+Benchmarking tracing_file: Collecting 100 samples in estimated 5.0926 s (56k iterations)
+Benchmarking tracing_file: Analyzing
+tracing_file            time:   [52.371 µs 60.753 µs 71.099 µs]
+                        change: [+259.04% +377.89% +572.03%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  4 (4.00%) high mild
+  4 (4.00%) high severe
+
+Benchmarking tracing_rolling_file
+Benchmarking tracing_rolling_file: Warming up for 3.0000 s
+Benchmarking tracing_rolling_file: Collecting 100 samples in estimated 5.1836 s (101k iterations)
+Benchmarking tracing_rolling_file: Analyzing
+tracing_rolling_file    time:   [25.687 µs 27.365 µs 29.160 µs]
+                        change: [+28.480% +41.938% +56.362%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+
+thread 'main' panicked at 'explicit panic', trace4rs/benches/trace4rs_bench.rs:42:5
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: bench failed

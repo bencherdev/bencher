@@ -18,8 +18,6 @@ use crate::{
     Adapter, AdapterError, Settings,
 };
 
-use super::print_ln;
-
 pub struct AdapterRust;
 
 impl Adapter for AdapterRust {
@@ -111,6 +109,10 @@ fn parse_cargo(
     )(input)
 }
 
+enum Status {
+    Ok,
+    Fail,
+}
 fn parse_criterion(
     input: &str,
     settings: Settings,
@@ -122,11 +124,24 @@ fn parse_criterion(
             |input| parse_criterion_bench(input),
             parse_criterion_change,
             many0(line_ending),
+            alt((
+                map(parse_criterion_failures, |_| Status::Fail),
+                map(success(""), |_| Status::Ok),
+            )),
         ))),
         |benchmarks| {
             benchmarks
                 .into_iter()
-                .map(|(_, _, benchmarks, _, _)| benchmarks)
+                .map(|(_, _, benchmarks, _, _, status)| match status {
+                    Status::Ok => Ok(Some(benchmarks)),
+                    Status::Fail => {
+                        if settings.allow_failure {
+                            Ok(None)
+                        } else {
+                            Err(AdapterError::BenchmarkFailed(benchmarks.0))
+                        }
+                    },
+                })
                 .collect()
         },
     )(input)
@@ -135,7 +150,7 @@ fn parse_criterion(
 fn parse_criterion_benchmarking_file(input: &str) -> IResult<&str, ()> {
     map(
         many_m_n(
-            4,
+            1,
             4,
             tuple((tag("Benchmarking"), many_till(anychar, line_ending))),
         ),
@@ -143,9 +158,7 @@ fn parse_criterion_benchmarking_file(input: &str) -> IResult<&str, ()> {
     )(input)
 }
 
-fn parse_criterion_bench(
-    input: &str,
-) -> IResult<&str, Result<Option<(String, JsonMetric)>, AdapterError>> {
+fn parse_criterion_bench(input: &str) -> IResult<&str, (String, JsonMetric)> {
     map(
         tuple((
             take_until1(" "),
@@ -153,7 +166,7 @@ fn parse_criterion_bench(
             parse_criterion_metric,
             line_ending,
         )),
-        |(key, _, metric, _)| Ok(Some((key.into(), metric))),
+        |(key, _, metric, _)| (key.into(), metric),
     )(input)
 }
 
@@ -197,6 +210,24 @@ fn parse_criterion_change(input: &str) -> IResult<&str, ()> {
             tag("Found"),
             many_till(anychar, line_ending),
             many1(tuple((space1, digit1, many_till(anychar, line_ending)))),
+        )),
+        |_| (),
+    )(input)
+}
+
+fn parse_criterion_failures(input: &str) -> IResult<&str, ()> {
+    map(
+        tuple((
+            many0(line_ending),
+            tag("thread"),
+            many_till(anychar, line_ending),
+            many0(line_ending),
+            tag("note:"),
+            many_till(anychar, line_ending),
+            many0(line_ending),
+            tag("error:"),
+            many_till(anychar, line_ending),
+            many0(line_ending),
         )),
         |_| (),
     )(input)
@@ -454,8 +485,8 @@ pub(crate) mod test_rust {
 
     use super::{
         parse_bench, parse_criterion_benchmarking_file, parse_criterion_change,
-        parse_criterion_metric, parse_multi_mod, parse_running_x_tests, parse_test,
-        parse_test_failures, parse_test_result, AdapterRust, Test,
+        parse_criterion_failures, parse_criterion_metric, parse_multi_mod, parse_running_x_tests,
+        parse_test, parse_test_failures, parse_test_result, AdapterRust, Test,
     };
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
@@ -480,6 +511,7 @@ pub(crate) mod test_rust {
         validate_metrics(metrics, 3_161.0, Some(975.0), Some(975.0));
     }
 
+    #[allow(dead_code)]
     fn parse_assert<T>(
         parse_fn: &impl Fn(&str) -> IResult<&str, T>,
         input: &str,
@@ -660,6 +692,7 @@ pub(crate) mod test_rust {
     fn test_parse_criterion_benchmarking_file() {
         for (index, input) in [
             "Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing\n",
+            "Benchmarking tracing_file\nBenchmarking tracing_file: Warming up for 3.0000 s\n"
         ]
             .iter()
             .enumerate()
@@ -669,7 +702,6 @@ pub(crate) mod test_rust {
 
         for (index, input) in [
             "",
-            "Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing",
             " Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing\n",
             "prefix Benchmarking crit_test\nBenchmarking crit_test: Warming up for 3.0000 s\nBenchmarking crit_test: Collecting 100 samples in estimated 5.0000 s (15B iterations)\nBenchmarking crit_test: Analyzing\n",
         ]
@@ -775,6 +807,22 @@ pub(crate) mod test_rust {
     }
 
     #[test]
+    fn test_parse_criterion_failures() {
+        for (index, input) in [
+            "thread 'main' panicked at 'explicit panic', trace4rs/benches/trace4rs_bench.rs:42:5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: bench failed\n",
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(
+                UNIT_RESULT,
+                parse_criterion_failures(input),
+                "#{index}: {input}"
+            )
+        }
+    }
+
+    #[test]
     fn test_adapter_rust_zero() {
         let results = convert_rust_bench("zero");
         assert_eq!(results.inner.len(), 0);
@@ -859,6 +907,27 @@ pub(crate) mod test_rust {
         let results = convert_rust_bench("criterion");
         println!("{results:#?}");
         assert_eq!(results.inner.len(), 4);
+    }
+
+    #[test]
+    fn test_adapter_rust_criterion_failed() {
+        let contents =
+            std::fs::read_to_string("./tool_output/rust/cargo_bench_criterion_failed.txt").unwrap();
+        assert!(AdapterRust::parse(&contents, Settings::default()).is_err());
+    }
+
+    #[test]
+    fn test_adapter_rust_criterion_failed_allow_failure() {
+        let contents =
+            std::fs::read_to_string("./tool_output/rust/cargo_bench_criterion_failed.txt").unwrap();
+        let results = AdapterRust::parse(
+            &contents,
+            Settings {
+                allow_failure: true,
+            },
+        )
+        .unwrap();
+        assert_eq!(results.inner.len(), 3);
     }
 
     #[test]
