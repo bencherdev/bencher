@@ -3,8 +3,7 @@ import { createSignal, createResource, createMemo } from "solid-js";
 
 import DeckHeader from "./DeckHeader";
 import Deck from "./Deck";
-import { getToken, validate_jwt } from "../../../site/util";
-import validator from "validator";
+import { get_options, validate_jwt } from "../../../site/util";
 
 const DeckPanel = (props) => {
   const url = createMemo(() => props.config?.deck?.url(props.path_params()));
@@ -14,26 +13,15 @@ const DeckPanel = (props) => {
     setRefresh(refresh() + 1);
   };
 
-  const options = () => {
-    return {
-      url: url(),
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${props.user()?.token}`,
-      },
-    };
-  };
-
   const fetchData = async () => {
     const EMPTY_OBJECT = {};
-
     try {
-      if (!validate_jwt(props.user()?.token)) {
+      const token = props.user()?.token;
+      if (!validate_jwt(token)) {
         return EMPTY_OBJECT;
       }
 
-      let reports = await axios(options());
+      let reports = await axios(get_options(url(), token));
       return reports.data;
     } catch (error) {
       console.error(error);

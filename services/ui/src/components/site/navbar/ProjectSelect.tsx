@@ -1,6 +1,17 @@
 import axios from "axios";
-import { createSignal, createResource, createEffect, For } from "solid-js";
-import { BENCHER_API_URL, getToken, validate_jwt } from "../../site/util";
+import {
+  createSignal,
+  createResource,
+  createEffect,
+  For,
+  createMemo,
+} from "solid-js";
+import {
+  BENCHER_API_URL,
+  getToken,
+  get_options,
+  validate_jwt,
+} from "../../site/util";
 import { useNavigate } from "solid-app-router";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
@@ -8,16 +19,10 @@ const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 const ProjectSelect = (props) => {
   const navigate = useNavigate();
 
-  const options = (token: string) => {
-    return {
-      url: `${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/projects`,
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
+  const url = createMemo(
+    () =>
+      `${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/projects`
+  );
 
   const fetchProjects = async () => {
     const all_projects = {
@@ -26,15 +31,14 @@ const ProjectSelect = (props) => {
     };
 
     try {
-      const token = getToken();
+      const token = props.user()?.token;
       if (!validate_jwt(token)) {
         return [all_projects];
       }
 
-      const resp = await axios(options(token));
+      const resp = await axios(get_options(url(), token));
       let data = resp?.data;
       data.push(all_projects);
-
       return data;
     } catch (error) {
       console.error(error);

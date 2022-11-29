@@ -62,6 +62,29 @@ export const validate_jwt = (token: string): boolean => {
   return validate_string(token, is_valid_jwt);
 };
 
+const HEADERS_CONTENT_TYPE = {
+  "Content-Type": "application/json",
+};
+
+const get_headers = (token: null | string) => {
+  if (is_valid_jwt(token)) {
+    return {
+      ...HEADERS_CONTENT_TYPE,
+      Authorization: `Bearer ${token}`,
+    };
+  } else {
+    return HEADERS_CONTENT_TYPE;
+  }
+};
+
+export const get_options = (url: string, token: null | string) => {
+  return {
+    url: url,
+    method: "GET",
+    headers: get_headers(token),
+  };
+};
+
 export const getToken = () =>
   JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY))?.token;
 

@@ -55,6 +55,7 @@ export const Navbar = (props) => {
           {validate_jwt(props.user()?.token) && props.organization_slug() && (
             <div class="navbar-item">
               <ProjectSelect
+                user={props.user}
                 organization_slug={props.organization_slug}
                 project_slug={props?.project_slug}
                 handleRedirect={props?.handleRedirect}

@@ -1,6 +1,11 @@
 import { useLocation, useNavigate, useParams } from "solid-app-router";
 import { createEffect, createMemo, createResource, For } from "solid-js";
-import { BENCHER_API_URL, getToken, validate_jwt } from "../site/util";
+import {
+  BENCHER_API_URL,
+  getToken,
+  get_options,
+  validate_jwt,
+} from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 import axios from "axios";
@@ -34,17 +39,6 @@ export const projectSlug = (pathname) => {
   return path[3];
 };
 
-const options = (token: string, project_slug: string) => {
-  return {
-    url: `${BENCHER_API_URL()}/v0/projects/${project_slug}`,
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
-
 const ConsolePage = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,17 +47,23 @@ const ConsolePage = (props) => {
   const params = useParams();
   const path_params = createMemo(() => params);
 
+  const url = createMemo(
+    () => `${BENCHER_API_URL()}/v0/projects/${props.project_slug()}`
+  );
+
   const fetchProject = async (project_slug: string) => {
+    const EMPTY_OBJECT = {};
     try {
+      const token = props.user()?.token;
       if (!validate_jwt(props.user()?.token)) {
-        return;
+        return EMPTY_OBJECT;
       }
 
-      const resp = await axios(options(props.user()?.token, project_slug));
+      const resp = await axios(get_options(url(), token));
       return resp?.data;
     } catch (error) {
       console.error(error);
-      return;
+      return EMPTY_OBJECT;
     }
   };
 

@@ -7,7 +7,7 @@ import {
   createSignal,
 } from "solid-js";
 import { isMetricKind, isPerfTab, PerfTab } from "../../config/types";
-import { getToken, validate_jwt } from "../../../site/util";
+import { getToken, get_options, validate_jwt } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 
@@ -220,32 +220,20 @@ const PerfPanel = (props) => {
 
   const [perf_data] = createResource(perf_query_fetcher, fetchPerfData);
 
-  const perf_tab_options = (token: string, perf_tab: PerfTab) => {
-    return {
-      url: props.config?.plot?.tab_url(props.path_params(), perf_tab),
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
-
   const fetchPerfTab = async (perf_tab: PerfTab) => {
+    const EMPTY_ARRAY = [];
     try {
       const token = getToken();
       if (token && !validate_jwt(token)) {
-        return [];
+        return EMPTY_ARRAY;
       }
 
-      let resp = await axios(perf_tab_options(token, perf_tab));
-      const data = resp.data;
-
-      return data;
+      const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
+      let resp = await axios(get_options(url, token));
+      return resp.data;
     } catch (error) {
       console.error(error);
-
-      return [];
+      return EMPTY_ARRAY;
     }
   };
 

@@ -8,22 +8,13 @@ import {
 import Table from "./Table";
 
 import TableHeader from "./TableHeader";
-import { getToken, validate_jwt } from "../../../site/util";
+import { get_options, validate_jwt } from "../../../site/util";
 import { useNavigate } from "solid-app-router";
 
 const TablePanel = (props) => {
   const navigate = useNavigate();
 
-  const options = () => {
-    return {
-      url: props.config?.table?.url(props.path_params()),
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${props.user()?.token}`,
-      },
-    };
-  };
+  const url = createMemo(() => props.config?.table?.url(props.path_params()));
 
   const [refresh, setRefresh] = createSignal(0);
   const handleRefresh = () => {
@@ -38,17 +29,15 @@ const TablePanel = (props) => {
     };
   });
 
-  const fetchData = async (new_fetcher) => {
+  const fetchData = async (fetcher) => {
     const EMPTY_ARRAY = [];
     try {
-      if (!validate_jwt(props.user()?.token)) {
+      if (!validate_jwt(fetcher.token)) {
         return EMPTY_ARRAY;
       }
 
-      let resp = await axios(options());
-      const data = resp.data;
-
-      return data;
+      let resp = await axios(get_options(url(), fetcher.token));
+      return resp.data;
     } catch (error) {
       console.error(error);
 

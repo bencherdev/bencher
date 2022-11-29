@@ -2,20 +2,9 @@ import axios from "axios";
 import { createMemo, createResource, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
-import { getToken, validate_jwt } from "../../../../site/util";
+import { get_options, validate_jwt } from "../../../../site/util";
 
 const PlotKey = (props) => {
-  const key_data_options = (token: string, perf_tab: PerfTab, uuid: string) => {
-    return {
-      url: props.config?.key_url(props.path_params(), perf_tab, uuid),
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
-
   const fetchKeyData = async (perf_tab: PerfTab, fetcher) => {
     const key_data = {};
 
@@ -27,7 +16,10 @@ const PlotKey = (props) => {
       fetcher[perf_tab]?.map(async (uuid: string) => {
         try {
           let resp = await axios(
-            key_data_options(fetcher.token, perf_tab, uuid)
+            get_options(
+              props.config?.key_url(props.path_params(), perf_tab, uuid),
+              fetcher.token
+            )
           );
           const data = resp.data;
           key_data[uuid] = data;
