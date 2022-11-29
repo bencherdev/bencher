@@ -26,6 +26,9 @@ const TablePanel = (props) => {
   };
 
   const [refresh, setRefresh] = createSignal(0);
+  const handleRefresh = () => {
+    setRefresh(refresh() + 1);
+  };
   const [page, setPage] = createSignal(1);
   const fetcher = createMemo(() => {
     return {
@@ -34,15 +37,9 @@ const TablePanel = (props) => {
       token: props.user()?.token,
     };
   });
-  const [fetcher_cache, setFetcherCache] = createSignal(fetcher());
 
   const fetchData = async (new_fetcher) => {
     const EMPTY_ARRAY = [];
-    if (new_fetcher === fetcher_cache()) {
-      return EMPTY_ARRAY;
-    }
-    setFetcherCache(new_fetcher);
-
     try {
       if (!validate_jwt(props.user()?.token)) {
         return EMPTY_ARRAY;
@@ -58,14 +55,9 @@ const TablePanel = (props) => {
       return EMPTY_ARRAY;
     }
   };
-
   const [table_data] = createResource(fetcher, fetchData);
 
   const redirect = createMemo(() => props.config.redirect?.(table_data()));
-
-  const handleRefresh = () => {
-    setRefresh(refresh() + 1);
-  };
 
   createEffect(() => {
     if (redirect()) {
