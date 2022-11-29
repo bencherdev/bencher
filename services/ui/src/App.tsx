@@ -9,16 +9,11 @@ import {
   For,
 } from "solid-js";
 import { Routes, Route, useLocation } from "solid-app-router";
-import bencher_valid_init from "bencher_valid";
 
 import { Navbar } from "./components/site/navbar/Navbar";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
-import {
-  BENCHER_USER_KEY,
-  BENCHER_VERSION,
-  validate_jwt,
-} from "./components/site/util";
+import { BENCHER_USER_KEY, validate_jwt } from "./components/site/util";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -42,6 +37,15 @@ const initUser = () => {
   };
 };
 
+export const getUser = () => {
+  const cookie_user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
+  if (validate_jwt(cookie_user?.token)) {
+    return cookie_user;
+  } else {
+    return initUser();
+  }
+};
+
 const App: Component = () => {
   const location = useLocation();
   const pathname = createMemo(() => location.pathname);
@@ -54,7 +58,7 @@ const App: Component = () => {
     projectSlug(pathname)
   );
 
-  const [user, setUser] = createSignal(initUser());
+  const [user, setUser] = createSignal(getUser());
 
   const handleUser = (user) => {
     window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
@@ -67,16 +71,21 @@ const App: Component = () => {
   };
 
   createEffect(() => {
-    if (user()?.token === null) {
-      const cookie_user = JSON.parse(
-        window.localStorage.getItem(BENCHER_USER_KEY)
-      );
-      // TODO properly validate entire user
-      if (validate_jwt(cookie_user?.token)) {
-        setUser(cookie_user);
-      }
-    }
+    console.log(user());
+    // if (user()?.token === null) {
+    //   const cookie_user = JSON.parse(
+    //     window.localStorage.getItem(BENCHER_USER_KEY)
+    //   );
+    //   // TODO properly validate entire user
+    //   if (validate_jwt(cookie_user?.token)) {
+    //     setUser(cookie_user);
+    //   }
+    // }
   });
+
+  // setInterval(() => {
+  //   console.log(user());
+  // }, 2000);
 
   return (
     <>
