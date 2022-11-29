@@ -14,13 +14,13 @@ const DeckPanel = (props) => {
     setRefresh(refresh() + 1);
   };
 
-  const options = (token: string) => {
+  const options = () => {
     return {
       url: url(),
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${props.user()?.token}`,
       },
     };
   };
@@ -29,12 +29,11 @@ const DeckPanel = (props) => {
     const EMPTY_OBJECT = {};
 
     try {
-      const token = getToken();
-      if (!validate_jwt(token)) {
+      if (!validate_jwt(props.user()?.token)) {
         return EMPTY_OBJECT;
       }
 
-      let reports = await axios(options(token));
+      let reports = await axios(options());
       return reports.data;
     } catch (error) {
       console.error(error);
