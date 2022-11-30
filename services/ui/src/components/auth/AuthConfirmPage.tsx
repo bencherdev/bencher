@@ -8,6 +8,7 @@ import {
   NotifyKind,
   notifyParams,
   pageTitle,
+  post_options,
   validate_jwt,
 } from "../site/util";
 import Notification from "../site/Notification";
@@ -44,12 +45,19 @@ const AuthConfirmPage = (props: {
     });
   };
 
-  const handleFormSubmit = () => {
-    handleFormSubmitting(true);
-    const json_data = {
+  const fetchData = async () => {
+    const url = props.config?.form?.path;
+    const no_token = null;
+    const data = {
       token: token(),
     };
-    fetchData(json_data)
+    let resp = await axios(post_options(url, no_token, data));
+    return resp.data;
+  };
+
+  const handleFormSubmit = () => {
+    handleFormSubmitting(true);
+    fetchData()
       .then((resp) => {
         props.handleUser(resp.data);
         navigate(
@@ -70,23 +78,6 @@ const AuthConfirmPage = (props: {
 
   const handleFormSubmitting = (submitting) => {
     setForm({ ...form(), submitting: submitting });
-  };
-
-  const request_config = (data) => {
-    return {
-      url: props.config?.form?.path,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      data: data,
-    };
-  };
-
-  const fetchData = async (auth_json) => {
-    const config = request_config(auth_json);
-    let resp = await axios(config);
-    return resp;
   };
 
   createEffect(() => {

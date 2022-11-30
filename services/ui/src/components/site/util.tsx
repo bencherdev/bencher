@@ -62,6 +62,14 @@ export const validate_jwt = (token: string): boolean => {
   return validate_string(token, is_valid_jwt);
 };
 
+enum HttpMethod {
+  GET = "GET",
+  POST = "POST",
+  PUT = "PUT",
+  PATCH = "PATCH",
+  DELETE = "DELETE",
+}
+
 const HEADERS_CONTENT_TYPE = {
   "Content-Type": "application/json",
 };
@@ -80,17 +88,51 @@ const get_headers = (token: null | string) => {
 export const get_options = (url: string, token: null | string) => {
   return {
     url: url,
-    method: "GET",
+    method: HttpMethod.GET,
     headers: get_headers(token),
   };
+};
+
+export const data_options = (
+  url: string,
+  method: HttpMethod,
+  token: null | string,
+  data: {}
+) => {
+  return {
+    url: url,
+    method: method,
+    headers: get_headers(token),
+    data: data,
+  };
+};
+
+export const post_options = (url: string, token: null | string, data: {}) => {
+  return data_options(url, HttpMethod.POST, token, data);
+};
+
+export const put_options = (
+  url: string,
+  token: null | string,
+  data: { any }
+) => {
+  return data_options(url, HttpMethod.PUT, token, data);
+};
+
+export const patch_options = (
+  url: string,
+  token: null | string,
+  data: { any }
+) => {
+  return data_options(url, HttpMethod.PATCH, token, data);
 };
 
 export const getToken = () =>
   JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY))?.token;
 
-export const isAllowedAdmin = async () => {
-  return isAllowed(`${BENCHER_API_URL()}/v0/admin/allowed`);
-};
+// export const isAllowedAdmin = async () => {
+//   return isAllowed(`${BENCHER_API_URL()}/v0/admin/allowed`);
+// };
 
 export enum OrganizationPermission {
   VIEW = "view",
@@ -144,15 +186,8 @@ export const isAllowed = async (url: string) => {
     if (!validate_jwt(token)) {
       return false;
     }
-    const options = {
-      url: url,
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    let resp = await axios(options);
+
+    let resp = await axios(get_options(url, token));
     return resp?.data?.allowed;
   } catch (error) {
     console.error(error);

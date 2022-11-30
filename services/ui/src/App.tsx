@@ -70,23 +70,6 @@ const App: Component = () => {
     setUser(initUser());
   };
 
-  createEffect(() => {
-    console.log(user());
-    // if (user()?.token === null) {
-    //   const cookie_user = JSON.parse(
-    //     window.localStorage.getItem(BENCHER_USER_KEY)
-    //   );
-    //   // TODO properly validate entire user
-    //   if (validate_jwt(cookie_user?.token)) {
-    //     setUser(cookie_user);
-    //   }
-    // }
-  });
-
-  // setInterval(() => {
-  //   console.log(user());
-  // }, 2000);
-
   return (
     <>
       <Navbar
