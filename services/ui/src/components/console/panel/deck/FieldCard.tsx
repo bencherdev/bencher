@@ -1,6 +1,6 @@
 import { createResource, createSignal, Match, Switch } from "solid-js";
 import SiteField from "../../../fields/SiteField";
-import { validate_jwt } from "../../../site/util";
+import { patch_options, validate_jwt } from "../../../site/util";
 import { Display, Field } from "../../config/types";
 import axios from "axios";
 
@@ -107,38 +107,28 @@ const UpdateCard = (props) => {
   );
   const [valid, setValid] = createSignal(false);
 
-  const options = (data: any) => {
-    return {
-      url: props.url(),
-      method: "PATCH",
-      data: data,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${props.user()?.token}`,
-      },
-    };
-  };
-
-  const patchData = async (data) => {
-    try {
-      if (!validate_jwt(props.user()?.token)) {
-        return;
-      }
-
-      await axios(options(data));
-      props.handleRefresh();
-    } catch (error) {
-      console.error(error);
-      return;
-    }
-  };
-
   const is_sendable = (): boolean => {
     return !form()?.submitting && valid() && !is_value_unchanged();
   };
 
+  const patch = async (data) => {
+    try {
+      const token = props.user()?.token;
+      if (!validate_jwt(token)) {
+        return;
+      }
+
+      const url = props.url();
+      await axios(patch_options(url, token, data));
+      props.handleRefresh();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   function sendForm(e) {
     e.preventDefault();
+
     if (!is_sendable()) {
       return;
     }
@@ -164,7 +154,7 @@ const UpdateCard = (props) => {
       }
     }
 
-    patchData(data).then(() => handleFormSubmitting(false));
+    patch(data).then(() => handleFormSubmitting(false));
   }
 
   const is_value_unchanged = () => {
@@ -192,18 +182,17 @@ const UpdateCard = (props) => {
           valid: valid,
         },
       });
-      setValid(getValid());
+      setValid(isValid());
     }
   };
 
-  function getValid() {
-    let allValid = true;
+  function isValid() {
     Object.values(form()).forEach((field) => {
       if (field.validate && !field.valid) {
-        allValid = false;
+        return false;
       }
     });
-    return allValid;
+    return true;
   }
 
   return (

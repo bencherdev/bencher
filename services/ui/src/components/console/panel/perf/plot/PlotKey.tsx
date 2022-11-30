@@ -5,33 +5,6 @@ import * as d3 from "d3";
 import { get_options, validate_jwt } from "../../../../site/util";
 
 const PlotKey = (props) => {
-  const fetchKeyData = async (perf_tab: PerfTab, fetcher) => {
-    const key_data = {};
-
-    if (!validate_jwt(fetcher.token)) {
-      return key_data;
-    }
-
-    await Promise.all(
-      fetcher[perf_tab]?.map(async (uuid: string) => {
-        try {
-          let resp = await axios(
-            get_options(
-              props.config?.key_url(props.path_params(), perf_tab, uuid),
-              fetcher.token
-            )
-          );
-          const data = resp.data;
-          key_data[uuid] = data;
-        } catch (error) {
-          console.error(error);
-        }
-      })
-    );
-
-    return key_data;
-  };
-
   const branches_fetcher = createMemo(() => {
     return {
       branches: props.branches(),
@@ -51,14 +24,40 @@ const PlotKey = (props) => {
     };
   });
 
+  const getOne = async (perf_tab: PerfTab, fetcher) => {
+    const key_data = {};
+
+    if (!validate_jwt(fetcher.token)) {
+      return key_data;
+    }
+
+    await Promise.all(
+      fetcher[perf_tab]?.map(async (uuid: string) => {
+        try {
+          const url = props.config?.key_url(
+            props.path_params(),
+            perf_tab,
+            uuid
+          );
+          const resp = await axios(get_options(url, fetcher.token));
+          key_data[uuid] = resp.data;
+        } catch (error) {
+          console.error(error);
+        }
+      })
+    );
+
+    return key_data;
+  };
+
   const [branches] = createResource(branches_fetcher, async (fetcher) => {
-    return fetchKeyData(PerfTab.BRANCHES, fetcher);
+    return getOne(PerfTab.BRANCHES, fetcher);
   });
   const [testbeds] = createResource(testbeds_fetcher, async (fetcher) => {
-    return fetchKeyData(PerfTab.TESTBEDS, fetcher);
+    return getOne(PerfTab.TESTBEDS, fetcher);
   });
   const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) => {
-    return fetchKeyData(PerfTab.BENCHMARKS, fetcher);
+    return getOne(PerfTab.BENCHMARKS, fetcher);
   });
 
   return (

@@ -8,7 +8,7 @@ import {
   Switch,
 } from "solid-js";
 import SiteField from "../../../fields/SiteField";
-import { validate_jwt } from "../../../site/util";
+import { post_options, validate_jwt } from "../../../site/util";
 import { Field } from "../../config/types";
 import { useLocation, useNavigate } from "solid-app-router";
 
@@ -37,34 +37,23 @@ const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
 
-  const options = (data: any) => {
-    return {
-      url: props.config?.url?.(props.path_params()),
-      method: "POST",
-      data: data,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${props.user()?.token}`,
-      },
-    };
+  const is_sendable = (): boolean => {
+    return !form()?.submitting && valid();
   };
 
-  const postData = async (data) => {
+  const post = async (data: {}) => {
     try {
+      const token = props.user()?.token;
       if (!validate_jwt(props.user()?.token)) {
         return;
       }
 
-      await axios(options(data));
+      const url = props.config?.url?.(props.path_params());
+      await axios(post_options(url, token, data));
       navigate(props.config?.path?.(pathname()));
     } catch (error) {
       console.error(error);
-      return;
     }
-  };
-
-  const is_sendable = (): boolean => {
-    return !form()?.submitting && valid();
   };
 
   function sendForm(e) {
@@ -94,7 +83,7 @@ const Poster = (props) => {
       }
     }
 
-    postData(data).then(() => handleFormSubmitting(false));
+    post(data).then(() => handleFormSubmitting(false));
   }
 
   const handleFormSubmitting = (submitting) => {
@@ -111,18 +100,17 @@ const Poster = (props) => {
           valid: valid,
         },
       });
-      setValid(getValid());
+      setValid(isValid());
     }
   };
 
-  function getValid() {
-    let allValid = true;
+  function isValid() {
     Object.values(form()).forEach((field) => {
       if (field.validate && !field.valid) {
-        allValid = false;
+        return false;
       }
     });
-    return allValid;
+    return true;
   }
 
   return (

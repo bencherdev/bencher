@@ -13,7 +13,7 @@ const DeckPanel = (props) => {
     setRefresh(refresh() + 1);
   };
 
-  const fetchData = async () => {
+  const getOne = async () => {
     const EMPTY_OBJECT = {};
     try {
       const token = props.user()?.token;
@@ -29,7 +29,7 @@ const DeckPanel = (props) => {
     }
   };
 
-  const [deck_data] = createResource(refresh, fetchData);
+  const [deck_data] = createResource(refresh, getOne);
 
   return (
     <>

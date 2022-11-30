@@ -29,22 +29,21 @@ const TablePanel = (props) => {
     };
   });
 
-  const fetchData = async (fetcher) => {
+  const getLs = async (fetcher) => {
     const EMPTY_ARRAY = [];
     try {
       if (!validate_jwt(fetcher.token)) {
         return EMPTY_ARRAY;
       }
 
-      let resp = await axios(get_options(url(), fetcher.token));
+      const resp = await axios(get_options(url(), fetcher.token));
       return resp.data;
     } catch (error) {
       console.error(error);
-
       return EMPTY_ARRAY;
     }
   };
-  const [table_data] = createResource(fetcher, fetchData);
+  const [table_data] = createResource(fetcher, getLs);
 
   const redirect = createMemo(() => props.config.redirect?.(table_data()));
 

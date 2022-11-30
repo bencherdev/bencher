@@ -70,9 +70,9 @@ const ConsolePage = (props) => {
   const [project] = createResource(props.project_slug, fetchProject);
 
   createEffect(() => {
-    if (!validate_jwt(props.user()?.token)) {
-      navigate("/auth/login");
-    }
+    // if (!validate_jwt(props.user()?.token)) {
+    //   navigate("/auth/login");
+    // }
 
     const organization_uuid = project()?.organization;
     if (organization_uuid) {

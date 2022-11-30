@@ -13,7 +13,11 @@ import { Routes, Route, useLocation } from "solid-app-router";
 import { Navbar } from "./components/site/navbar/Navbar";
 import SiteFooter from "./components/site/pages/SiteFooter";
 import { projectSlug } from "./components/console/ConsolePage";
-import { BENCHER_USER_KEY, validate_jwt } from "./components/site/util";
+import {
+  BENCHER_USER_KEY,
+  validate_jwt,
+  validate_user,
+} from "./components/site/util";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -23,7 +27,7 @@ const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/Repo"));
 
-const initUser = () => {
+const defaultUser = () => {
   return {
     user: {
       uuid: null,
@@ -37,12 +41,12 @@ const initUser = () => {
   };
 };
 
-export const getUser = () => {
+export const loadUser = () => {
   const cookie_user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
-  if (validate_jwt(cookie_user?.token)) {
+  if (validate_user(cookie_user)) {
     return cookie_user;
   } else {
-    return initUser();
+    return defaultUser();
   }
 };
 
@@ -58,16 +62,21 @@ const App: Component = () => {
     projectSlug(pathname)
   );
 
-  const [user, setUser] = createSignal(getUser());
+  const [user, setUser] = createSignal(loadUser());
 
-  const handleUser = (user) => {
-    window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
-    setUser(user);
+  const handleUser = (user): boolean => {
+    if (validate_user(user)) {
+      window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
+      setUser(user);
+      return true;
+    } else {
+      return false;
+    }
   };
 
   const removeUser = () => {
     window.localStorage.clear();
-    setUser(initUser());
+    setUser(defaultUser());
   };
 
   return (

@@ -7,7 +7,12 @@ import {
   createSignal,
 } from "solid-js";
 import { isMetricKind, isPerfTab, PerfTab } from "../../config/types";
-import { getToken, get_options, validate_jwt } from "../../../site/util";
+import {
+  getToken,
+  get_options,
+  post_options,
+  validate_jwt,
+} from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 
@@ -174,18 +179,6 @@ const PerfPanel = (props) => {
     testbeds().length === 0 ||
     benchmarks().length === 0;
 
-  const perf_data_options = () => {
-    return {
-      url: props.config?.plot?.url(props.path_params()),
-      method: "POST",
-      data: perf_query(),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${props.user()?.token}`,
-      },
-    };
-  };
-
   // Refresh pref query
   const [refresh, setRefresh] = createSignal(0);
   const handleRefresh = () => {
@@ -200,42 +193,26 @@ const PerfPanel = (props) => {
     };
   });
 
-  const fetchPerfData = async (new_fetcher) => {
+  const postQuery = async (fetcher) => {
     const EMPTY_OBJECT = {};
     try {
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
-      if (isPlotInit() || !validate_jwt(props.user()?.token)) {
+      if (isPlotInit() || !validate_jwt(fetcher.token)) {
         return EMPTY_OBJECT;
       }
 
-      let resp = await axios(perf_data_options());
-      const data = resp.data;
-      console.log(data);
-      return data;
+      const url = props.config?.plot?.url(props.path_params());
+      const resp = await axios(
+        post_options(url, fetcher.token, fetcher.perf_query)
+      );
+      return resp.data;
     } catch (error) {
       console.error(error);
       return EMPTY_OBJECT;
     }
   };
 
-  const [perf_data] = createResource(perf_query_fetcher, fetchPerfData);
-
-  const fetchPerfTab = async (perf_tab: PerfTab) => {
-    const EMPTY_ARRAY = [];
-    try {
-      const token = getToken();
-      if (token && !validate_jwt(token)) {
-        return EMPTY_ARRAY;
-      }
-
-      const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
-      let resp = await axios(get_options(url, token));
-      return resp.data;
-    } catch (error) {
-      console.error(error);
-      return EMPTY_ARRAY;
-    }
-  };
+  const [perf_data] = createResource(perf_query_fetcher, postQuery);
 
   const project_refresh = createMemo(() => {
     return {
@@ -244,15 +221,32 @@ const PerfPanel = (props) => {
     };
   });
 
+  const getLs = async (perf_tab: PerfTab) => {
+    const EMPTY_ARRAY = [];
+    try {
+      const token = getToken();
+      if (token && !validate_jwt(token)) {
+        return EMPTY_ARRAY;
+      }
+
+      const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
+      const resp = await axios(get_options(url, token));
+      return resp.data;
+    } catch (error) {
+      console.error(error);
+      return EMPTY_ARRAY;
+    }
+  };
+
   // Resource tabs data: Branches, Testbeds, Benchmarks
   const [branches_data] = createResource(project_refresh, async () => {
-    return fetchPerfTab(PerfTab.BRANCHES);
+    return getLs(PerfTab.BRANCHES);
   });
   const [testbeds_data] = createResource(project_refresh, async () => {
-    return fetchPerfTab(PerfTab.TESTBEDS);
+    return getLs(PerfTab.TESTBEDS);
   });
   const [benchmarks_data] = createResource(project_refresh, async () => {
-    return fetchPerfTab(PerfTab.BENCHMARKS);
+    return getLs(PerfTab.BENCHMARKS);
   });
 
   // Initialize as empty, wait for resources to load

@@ -83,7 +83,7 @@ const SiteField = (props) => {
     }
   }
 
-  function getValidate() {
+  function shouldValidate() {
     switch (props.kind) {
       case Field.CHECKBOX:
       case Field.SWITCH:
@@ -98,7 +98,7 @@ const SiteField = (props) => {
     <div class="field">
       {props.label && <label class="label is-medium">{props.label}</label>}
       {getField()}
-      {getValidate() && props.valid === false && (
+      {shouldValidate() && props.valid === false && (
         <FieldHelp fieldText={props.config.help} fieldValid={props.valid} />
       )}
     </div>

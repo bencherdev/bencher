@@ -9,6 +9,7 @@ import {
   BENCHER_API_URL,
   NotifyKind,
   notifyParams,
+  post_options,
   validate_jwt,
 } from "../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
@@ -37,13 +38,6 @@ export const AuthForm = (props: Props) => {
     });
   };
 
-  const handleFormValid = () => {
-    var valid = validateForm();
-    if (valid !== form()?.valid) {
-      setForm({ ...form(), valid: valid });
-    }
-  };
-
   const validateForm = () => {
     if (form()?.email?.valid) {
       if (props.config?.kind === FormKind.LOGIN) {
@@ -60,6 +54,29 @@ export const AuthForm = (props: Props) => {
     return false;
   };
 
+  const handleFormValid = () => {
+    var valid = validateForm();
+    if (valid !== form()?.valid) {
+      setForm({ ...form(), valid: valid });
+    }
+  };
+
+  const handleFormSubmitting = (submitting) => {
+    setForm({ ...form(), submitting: submitting });
+  };
+
+  const post = async (data: {
+    name: null | string;
+    slug: null | string;
+    email: string;
+    invite: null | string;
+  }) => {
+    const url = `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`;
+    const no_token = null;
+    let resp = await axios(post_options(url, no_token, data));
+    return resp.data;
+  };
+
   const handleAuthFormSubmit = (event) => {
     event.preventDefault();
     handleFormSubmitting(true);
@@ -71,10 +88,10 @@ export const AuthForm = (props: Props) => {
       invite = null;
     }
 
-    let json_data;
+    let data;
     if (props.config?.kind === FormKind.SIGNUP) {
       const signup_form = form();
-      json_data = {
+      data = {
         name: signup_form.username.value?.trim(),
         slug: null,
         email: signup_form.email.value?.trim(),
@@ -82,12 +99,13 @@ export const AuthForm = (props: Props) => {
       };
     } else if (props.config?.kind === FormKind.LOGIN) {
       const login_form = form();
-      json_data = {
+      data = {
         email: login_form.email.value?.trim(),
         invite: invite,
       };
     }
-    fetchData(json_data)
+
+    post(data)
       .then((_resp) => {
         navigate(
           notifyParams(
@@ -106,28 +124,8 @@ export const AuthForm = (props: Props) => {
           )
         );
       });
+
     handleFormSubmitting(false);
-  };
-
-  const handleFormSubmitting = (submitting) => {
-    setForm({ ...form(), submitting: submitting });
-  };
-
-  const request_config = (data) => {
-    return {
-      url: `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      data: data,
-    };
-  };
-
-  const fetchData = async (auth_json) => {
-    const config = request_config(auth_json);
-    let resp = await axios(config);
-    return resp;
   };
 
   createEffect(() => {

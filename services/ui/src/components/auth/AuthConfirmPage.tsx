@@ -45,24 +45,33 @@ const AuthConfirmPage = (props: {
     });
   };
 
-  const fetchData = async () => {
+  const post = async () => {
     const url = props.config?.form?.path;
     const no_token = null;
     const data = {
       token: token(),
     };
-    let resp = await axios(post_options(url, no_token, data));
+    const resp = await axios(post_options(url, no_token, data));
     return resp.data;
   };
 
   const handleFormSubmit = () => {
     handleFormSubmitting(true);
-    fetchData()
-      .then((resp) => {
-        props.handleUser(resp.data);
-        navigate(
-          notifyParams(props.config?.form?.redirect, NotifyKind.OK, "Ahoy!")
-        );
+    post()
+      .then((data) => {
+        if (props.handleUser(data)) {
+          navigate(
+            notifyParams(props.config?.form?.redirect, NotifyKind.OK, "Ahoy!")
+          );
+        } else {
+          navigate(
+            notifyParams(
+              pathname(),
+              NotifyKind.ERROR,
+              "Invalid user please try again."
+            )
+          );
+        }
       })
       .catch((e) => {
         navigate(

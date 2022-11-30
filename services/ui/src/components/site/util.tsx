@@ -62,6 +62,11 @@ export const validate_jwt = (token: string): boolean => {
   return validate_string(token, is_valid_jwt);
 };
 
+// TODO improve this validation
+export const validate_user = (user: {}) => {
+  return validate_jwt(user?.token);
+};
+
 enum HttpMethod {
   GET = "GET",
   POST = "POST",
@@ -75,7 +80,7 @@ const HEADERS_CONTENT_TYPE = {
 };
 
 const get_headers = (token: null | string) => {
-  if (is_valid_jwt(token)) {
+  if (validate_jwt(token)) {
     return {
       ...HEADERS_CONTENT_TYPE,
       Authorization: `Bearer ${token}`,
@@ -187,7 +192,7 @@ export const isAllowed = async (url: string) => {
       return false;
     }
 
-    let resp = await axios(get_options(url, token));
+    const resp = await axios(get_options(url, token));
     return resp?.data?.allowed;
   } catch (error) {
     console.error(error);
