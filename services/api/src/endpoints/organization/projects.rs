@@ -132,6 +132,12 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
+    // TODO private projects
+    if !auth_user.is_admin(&api_context.rbac) {
+        if let Some(false) = json_project.public {
+            return Err(ApiError::CreatePrivateProject(auth_user.id));
+        }
+    }
     let conn = &mut api_context.database;
 
     // Create the project

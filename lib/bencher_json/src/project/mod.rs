@@ -23,8 +23,7 @@ pub struct JsonNewProject {
     pub slug: Option<Slug>,
     pub description: Option<String>,
     pub url: Option<Url>,
-    #[serde(default)]
-    pub public: bool,
+    pub public: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

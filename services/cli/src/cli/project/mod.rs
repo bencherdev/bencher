@@ -54,9 +54,13 @@ pub struct CliProjectCreate {
     #[clap(long)]
     pub url: Option<String>,
 
-    /// Set project as public
+    /// Set project as public (default)
     #[clap(long)]
     pub public: bool,
+
+    /// Set project as private
+    #[clap(long, alias = "branch-name", conflicts_with = "public")]
+    pub private: bool,
 
     /// Project name
     pub name: String,

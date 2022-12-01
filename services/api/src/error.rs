@@ -108,6 +108,8 @@ pub enum ApiError {
         testbed_id: i32,
         testbed_project_id: i32,
     },
+    #[error("Tried to create a private project: {0}")]
+    CreatePrivateProject(i32),
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
     #[error("Failed to validate: {0}")]
