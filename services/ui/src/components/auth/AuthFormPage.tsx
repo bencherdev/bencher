@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from "solid-app-router";
-import { createEffect, createMemo, lazy } from "solid-js";
+import { createEffect, createMemo } from "solid-js";
 
 import { pageTitle, validate_jwt } from "../site/util";
 import { AuthForm } from "./AuthForm";

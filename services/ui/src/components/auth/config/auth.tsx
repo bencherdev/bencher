@@ -1,7 +1,7 @@
 import { BENCHER_API_URL } from "../../site/util";
 import { Auth, FormKind } from "./types";
 
-const authConfig = {
+const AUTH_CONFIG = {
   [Auth.SIGNUP]: {
     auth: Auth.SIGNUP,
     title: "Sign up",
@@ -44,4 +44,4 @@ const authConfig = {
   },
 };
 
-export default authConfig;
+export default AUTH_CONFIG;

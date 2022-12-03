@@ -1,7 +1,7 @@
 import { is_valid_email, is_valid_user_name } from "bencher_valid";
 import { validate_jwt, validate_string } from "../../site/util";
 
-const authFieldsConfig = {
+const AUTH_FIELDS = {
   username: {
     label: "Name",
     type: "text",
@@ -50,4 +50,4 @@ const authFieldsConfig = {
   },
 };
 
-export default authFieldsConfig;
+export default AUTH_FIELDS;

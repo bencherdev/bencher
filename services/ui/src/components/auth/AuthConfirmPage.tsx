@@ -2,7 +2,7 @@ import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Field } from "../console/config/types";
-import authFieldsConfig from "./config/fields";
+import AUTH_FIELDS from "./config/fields";
 import SiteField from "../fields/SiteField";
 import {
   NotifyKind,
@@ -131,7 +131,7 @@ const AuthConfirmPage = (props: {
                   label={true}
                   value={form()?.token?.value}
                   valid={form()?.token?.valid}
-                  config={authFieldsConfig.token}
+                  config={AUTH_FIELDS.token}
                   handleField={handleField}
                 />
 

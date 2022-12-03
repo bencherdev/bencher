@@ -2,7 +2,7 @@ import { createSignal, createEffect, Accessor, createMemo } from "solid-js";
 import axios from "axios";
 
 import SiteField from "../fields/SiteField";
-import authFieldsConfig from "./config/fields";
+import AUTH_FIELDS from "./config/fields";
 import { Field } from "../console/config/types";
 import { FormKind } from "./config/types";
 import {
@@ -141,7 +141,7 @@ export const AuthForm = (props: Props) => {
           label={true}
           value={form()?.username?.value}
           valid={form()?.username?.valid}
-          config={authFieldsConfig.username}
+          config={AUTH_FIELDS.username}
           handleField={handleField}
         />
       )}
@@ -152,7 +152,7 @@ export const AuthForm = (props: Props) => {
         label={true}
         value={form()?.email?.value}
         valid={form()?.email?.valid}
-        config={authFieldsConfig.email}
+        config={AUTH_FIELDS.email}
         handleField={handleField}
       />
 
@@ -167,7 +167,7 @@ export const AuthForm = (props: Props) => {
             label={false}
             value={form()?.consent?.value}
             valid={form()?.consent?.valid}
-            config={authFieldsConfig.consent}
+            config={AUTH_FIELDS.consent}
             handleField={handleField}
           />
         )}

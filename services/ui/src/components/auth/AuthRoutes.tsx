@@ -5,12 +5,10 @@ const AuthFormPage = lazy(() => import("./AuthFormPage"));
 const AuthLogoutPage = lazy(() => import("./AuthLogoutPage"));
 const AuthConfirmPage = lazy(() => import("./AuthConfirmPage"));
 
-import authConfig from "./config/auth";
+import AUTH_CONFIG from "./config/auth";
 import { Auth } from "./config/types";
 
 const AuthRoutes = (props) => {
-  const config = authConfig;
-
   return (
     <>
       <Route path="/" element={<Navigate href="/auth/signup" />} />
@@ -18,7 +16,7 @@ const AuthRoutes = (props) => {
         path="/signup"
         element={
           <AuthFormPage
-            config={config[Auth.SIGNUP]}
+            config={AUTH_CONFIG[Auth.SIGNUP]}
             user={props.user}
             handleUser={props.handleUser}
           />
@@ -28,7 +26,7 @@ const AuthRoutes = (props) => {
         path="/login"
         element={
           <AuthFormPage
-            config={config[Auth.LOGIN]}
+            config={AUTH_CONFIG[Auth.LOGIN]}
             user={props.user}
             handleUser={props.handleUser}
           />
@@ -38,7 +36,7 @@ const AuthRoutes = (props) => {
         path="/confirm"
         element={
           <AuthConfirmPage
-            config={config[Auth.CONFIRM]}
+            config={AUTH_CONFIG[Auth.CONFIRM]}
             user={props.user}
             handleUser={props.handleUser}
           />
@@ -48,7 +46,7 @@ const AuthRoutes = (props) => {
         path="/logout"
         element={
           <AuthLogoutPage
-            config={config[Auth.LOGOUT]}
+            config={AUTH_CONFIG[Auth.LOGOUT]}
             removeUser={props.removeUser}
           />
         }
