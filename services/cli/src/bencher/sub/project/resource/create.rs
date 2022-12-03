@@ -17,7 +17,7 @@ pub struct Create {
     pub slug: Option<Slug>,
     pub description: Option<String>,
     pub url: Option<Url>,
-    pub public: bool,
+    pub public: Option<bool>,
     pub backend: Backend,
 }
 
@@ -32,6 +32,7 @@ impl TryFrom<CliProjectCreate> for Create {
             description,
             url,
             public,
+            private,
             backend,
         } = create;
         Ok(Self {
@@ -44,7 +45,13 @@ impl TryFrom<CliProjectCreate> for Create {
             },
             description,
             url: map_url(url)?,
-            public,
+            public: Some(if public {
+                true
+            } else if private {
+                false
+            } else {
+                true
+            }),
             backend: backend.try_into()?,
         })
     }

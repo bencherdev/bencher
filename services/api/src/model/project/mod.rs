@@ -60,7 +60,7 @@ impl InsertProject {
             slug,
             description,
             url: url.map(|u| u.to_string()),
-            public,
+            public: public.unwrap_or(true),
         })
     }
 }
