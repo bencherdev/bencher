@@ -1,13 +1,14 @@
-import { validate_branch_name } from "../../../site/util";
+import { is_valid_branch_name } from "bencher_valid";
+import { validate_string } from "../../../site/util";
 
-const branchFieldsConfig = {
+const BRANCH_FIELDS = {
   name: {
     type: "text",
     placeholder: "Branch Name",
     icon: "fas fa-code-branch",
     help: "Must be a valid git reference.",
-    validate: validate_branch_name,
+    validate: (input) => validate_string(input, is_valid_branch_name),
   },
 };
 
-export default branchFieldsConfig;
+export default BRANCH_FIELDS;

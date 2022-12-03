@@ -1,6 +1,6 @@
-import branchFieldsConfig from "../../fields/config/org/branchFieldsConfig";
+import BRANCH_FIELDS from "./fields/branch";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
-import {  parentPath, addPath, viewSlugPath } from "./util";
+import { parentPath, addPath, viewSlugPath } from "./util";
 import { BENCHER_API_URL } from "../../site/util";
 
 const branchesConfig = {
@@ -17,7 +17,10 @@ const branchesConfig = {
       ],
     },
     table: {
-      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/branches`,
+      url: (path_params) =>
+        `${BENCHER_API_URL()}/v0/projects/${
+          path_params?.project_slug
+        }/branches`,
       add: {
         path: addPath,
         text: "Add a Branch",
@@ -47,7 +50,10 @@ const branchesConfig = {
       path: parentPath,
     },
     form: {
-      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/branches`,
+      url: (path_params) =>
+        `${BENCHER_API_URL()}/v0/projects/${
+          path_params?.project_slug
+        }/branches`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -63,10 +69,10 @@ const branchesConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: branchFieldsConfig.name,
+          config: BRANCH_FIELDS.name,
         },
       ],
-      path: parentPath
+      path: parentPath,
     },
   },
   [Operation.VIEW]: {
@@ -76,7 +82,10 @@ const branchesConfig = {
       path: parentPath,
     },
     deck: {
-      url: (path_params) => `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/branches/${path_params?.branch_slug}`,
+      url: (path_params) =>
+        `${BENCHER_API_URL()}/v0/projects/${
+          path_params?.project_slug
+        }/branches/${path_params?.branch_slug}`,
       cards: [
         {
           kind: Card.FIELD,
