@@ -8,6 +8,8 @@ import { Field } from "../console/config/types";
 
 const SiteField = (props) => {
   function handleField(event, field = null) {
+    console.log(event);
+
     switch (props.kind) {
       case Field.CHECKBOX:
         props.handleField(
@@ -17,7 +19,7 @@ const SiteField = (props) => {
         );
         break;
       case Field.SWITCH:
-        props.handleField(props.fieldKey, event.target.checked, true);
+        props.handleField(props.fieldKey, event, true);
         break;
       case Field.SELECT:
         props.handleField(

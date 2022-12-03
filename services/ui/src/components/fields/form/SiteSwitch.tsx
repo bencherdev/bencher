@@ -8,9 +8,16 @@ const SiteSwitch = (props) => {
         name={props.config?.label}
         checked={props.value}
         disabled={props.config?.disabled}
-        onInput={(e) => props.handleField(e)}
       />
-      <label for={props.config?.label}></label>
+      <label
+        for={props.config?.label}
+        onClick={(e) => {
+          if (props.config?.disabled) {
+            return;
+          }
+          props.handleField(!props.value);
+        }}
+      ></label>
     </div>
   );
 };
