@@ -45,13 +45,7 @@ impl TryFrom<CliProjectCreate> for Create {
             },
             description,
             url: map_url(url)?,
-            public: Some(if public {
-                true
-            } else if private {
-                false
-            } else {
-                true
-            }),
+            public: Some(if public { true } else { !private }),
             backend: backend.try_into()?,
         })
     }
