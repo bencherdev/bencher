@@ -33,6 +33,7 @@ const projectFieldsConfig = {
   },
   public: {
     type: "checkbox",
+    disabled: true,
   },
 };
 
