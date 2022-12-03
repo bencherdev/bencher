@@ -1,6 +1,7 @@
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
+mod branch_name;
 mod email;
 mod error;
 mod jwt;
@@ -9,6 +10,7 @@ mod slug;
 mod user_name;
 
 pub use crate::slug::Slug;
+pub use branch_name::BranchName;
 pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;

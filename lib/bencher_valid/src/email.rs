@@ -89,6 +89,7 @@ mod test {
         assert_eq!(true, is_valid_email("abc@example"));
         assert_eq!(true, is_valid_email("a@example"));
 
+        assert_eq!(false, is_valid_email(""));
         assert_eq!(false, is_valid_email(" abc@example.com"));
         assert_eq!(false, is_valid_email("abc @example.com"));
         assert_eq!(false, is_valid_email("abc@example.com "));

@@ -12,4 +12,6 @@ pub enum ValidError {
     Email(String),
     #[error("Failed to validate JWT (JSON Web Token): {0}")]
     Jwt(String),
+    #[error("Failed to validate branch name: {0}")]
+    BranchName(String),
 }

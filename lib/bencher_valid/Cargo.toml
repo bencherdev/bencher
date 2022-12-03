@@ -25,6 +25,7 @@ uuid = { workspace = true, features = ["serde"] }
 base64 = "0.13"
 console_error_panic_hook = { version = "0.1", optional = true }
 email_address = "0.2"
+git-validate = "0.7"
 regex = "1.7"
 wasm-bindgen = { version = "0.2", optional = true }
 

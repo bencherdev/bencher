@@ -68,6 +68,10 @@ impl<'de> Visitor<'de> for SlugVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_slug(slug: &str) -> bool {
+    if slug.is_empty() {
+        return false;
+    }
+
     slug == slug::slugify(slug)
 }
 
@@ -81,6 +85,7 @@ mod test {
         assert_eq!(true, is_valid_slug("a-valid-slug"));
         assert_eq!(true, is_valid_slug("2nd-valid-slug"));
 
+        assert_eq!(false, is_valid_slug(""));
         assert_eq!(false, is_valid_slug(" a-valid-slug"));
         assert_eq!(false, is_valid_slug("a- valid-slug"));
         assert_eq!(false, is_valid_slug("a-valid-slug "));

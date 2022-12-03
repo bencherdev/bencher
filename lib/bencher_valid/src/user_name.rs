@@ -102,6 +102,7 @@ mod test {
         assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
 
+        assert_eq!(false, is_valid_user_name(""));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
         assert_eq!(false, is_valid_user_name("Muriel Bagge "));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge "));
