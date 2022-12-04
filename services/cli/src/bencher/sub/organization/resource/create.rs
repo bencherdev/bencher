@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewOrganization, Slug};
+use bencher_json::{JsonNewOrganization, NonEmpty, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -13,7 +13,7 @@ const ORGANIZATIONS_PATH: &str = "/v0/organizations";
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Option<Slug>,
     pub backend: Backend,
 }
@@ -28,7 +28,7 @@ impl TryFrom<CliOrganizationCreate> for Create {
             backend,
         } = create;
         Ok(Self {
-            name,
+            name: NonEmpty::from_str(&name)?,
             slug: if let Some(slug) = slug {
                 Some(Slug::from_str(&slug)?)
             } else {

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::string::ToString;
 
-use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId, Slug};
+use bencher_json::{JsonNewOrganization, JsonOrganization, NonEmpty, ResourceId, Slug};
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
@@ -29,10 +29,10 @@ pub struct InsertOrganization {
 impl InsertOrganization {
     pub fn from_json(conn: &mut SqliteConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = unwrap_slug!(conn, &name, slug, organization, QueryOrganization);
+        let slug = unwrap_slug!(conn, &name.as_ref(), slug, organization, QueryOrganization);
         Self {
             uuid: Uuid::new_v4().to_string(),
-            name,
+            name: name.into(),
             slug,
         }
     }
@@ -127,7 +127,7 @@ impl QueryOrganization {
         } = self;
         Ok(JsonOrganization {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            name,
+            name: NonEmpty::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
         })
     }

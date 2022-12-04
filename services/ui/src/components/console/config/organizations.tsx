@@ -1,7 +1,6 @@
-import organizationFieldsConfig from "../../fields/config/org/organizationFieldsConfig";
 import { BENCHER_API_URL } from "../../site/util";
-import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
-import { parentPath, addPath, viewSlugPath } from "./util";
+import { Button, Card, Display, Operation, Row } from "./types";
+import { parentPath, viewSlugPath } from "./util";
 
 const organizationsConfig = {
   [Operation.LIST]: {
@@ -43,7 +42,9 @@ const organizationsConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}`,
+        `${BENCHER_API_URL()}/v0/organizations/${
+          path_params?.organization_slug
+        }`,
       cards: [
         {
           kind: Card.FIELD,

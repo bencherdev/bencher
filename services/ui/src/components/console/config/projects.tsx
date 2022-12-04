@@ -1,7 +1,7 @@
 import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
-import { parentPath, addPath, viewSlugPath } from "./util";
+import { parentPath, addPath } from "./util";
 
 const projectsConfig = {
   [Operation.LIST]: {

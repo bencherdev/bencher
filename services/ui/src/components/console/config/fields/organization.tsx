@@ -1,16 +1,14 @@
-import validateDescription from "../../validators/validateDescription";
-import validateName from "../../validators/validateName";
-import validateSlug from "../../validators/validateSlug";
-import validator from "validator";
+import { validate_string } from "../../../site/util";
+import { is_valid_slug, is_valid_non_empty } from "bencher_valid";
 
-const projectFieldsConfig = {
+const ORGANIZATION_FIELDS = {
   name: {
     label: "Name",
     type: "text",
     placeholder: "Organization Name",
     icon: "fas fa-project-diagram",
     help: "Must be at least four characters or longer.",
-    validate: validateName,
+    validate: (input) => validate_string(input, is_valid_non_empty),
   },
   slug: {
     label: "Slug",
@@ -18,8 +16,8 @@ const projectFieldsConfig = {
     placeholder: "Organization Slug",
     icon: "fas fa-exclamation-triangle",
     help: "Must be at least four characters or longer.",
-    validate: validateSlug,
+    validate: (input) => validate_string(input, is_valid_slug),
   },
 };
 
-export default projectFieldsConfig;
+export default ORGANIZATION_FIELDS;
