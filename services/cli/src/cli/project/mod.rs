@@ -46,10 +46,6 @@ pub struct CliProjectCreate {
     #[clap(long)]
     pub slug: Option<String>,
 
-    /// Project description
-    #[clap(long)]
-    pub description: Option<String>,
-
     /// Project URL
     #[clap(long)]
     pub url: Option<String>,

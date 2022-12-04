@@ -90,7 +90,6 @@ diesel::table! {
         organization_id -> Integer,
         name -> Text,
         slug -> Text,
-        description -> Nullable<Text>,
         url -> Nullable<Text>,
         public -> Bool,
     }

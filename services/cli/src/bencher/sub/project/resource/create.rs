@@ -15,7 +15,6 @@ pub struct Create {
     pub org: ResourceId,
     pub name: String,
     pub slug: Option<Slug>,
-    pub description: Option<String>,
     pub url: Option<Url>,
     pub public: Option<bool>,
     pub backend: Backend,
@@ -29,7 +28,6 @@ impl TryFrom<CliProjectCreate> for Create {
             org,
             name,
             slug,
-            description,
             url,
             public,
             private,
@@ -43,7 +41,6 @@ impl TryFrom<CliProjectCreate> for Create {
             } else {
                 None
             },
-            description,
             url: map_url(url)?,
             public: Some(if public { true } else { !private }),
             backend: backend.try_into()?,
@@ -65,7 +62,6 @@ impl From<Create> for JsonNewProject {
             org: _,
             name,
             slug,
-            description,
             url,
             public,
             backend: _,
@@ -73,7 +69,6 @@ impl From<Create> for JsonNewProject {
         Self {
             name,
             slug,
-            description,
             url,
             public,
         }

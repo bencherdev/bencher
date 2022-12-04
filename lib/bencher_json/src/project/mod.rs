@@ -21,7 +21,6 @@ pub mod threshold;
 pub struct JsonNewProject {
     pub name: String,
     pub slug: Option<Slug>,
-    pub description: Option<String>,
     pub url: Option<Url>,
     pub public: Option<bool>,
 }
@@ -33,7 +32,6 @@ pub struct JsonProject {
     pub organization: Uuid,
     pub name: String,
     pub slug: Slug,
-    pub description: Option<String>,
     pub url: Option<Url>,
     pub public: bool,
 }

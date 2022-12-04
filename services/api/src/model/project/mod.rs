@@ -34,7 +34,6 @@ pub struct InsertProject {
     pub organization_id: i32,
     pub name: String,
     pub slug: String,
-    pub description: Option<String>,
     pub url: Option<String>,
     pub public: bool,
 }
@@ -48,7 +47,6 @@ impl InsertProject {
         let JsonNewProject {
             name,
             slug,
-            description,
             url,
             public,
         } = project;
@@ -58,7 +56,6 @@ impl InsertProject {
             organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
             name,
             slug,
-            description,
             url: url.map(|u| u.to_string()),
             public: public.unwrap_or(true),
         })
@@ -74,7 +71,6 @@ pub struct QueryProject {
     pub organization_id: i32,
     pub name: String,
     pub slug: String,
-    pub description: Option<String>,
     pub url: Option<String>,
     pub public: bool,
 }
@@ -87,7 +83,6 @@ impl QueryProject {
             organization_id,
             name,
             slug,
-            description,
             url,
             public,
         } = self;
@@ -96,7 +91,6 @@ impl QueryProject {
             organization: QueryOrganization::get_uuid(conn, organization_id)?,
             name,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
-            description,
             url: ok_url(url.as_deref())?,
             public,
         })
