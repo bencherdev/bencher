@@ -1,6 +1,6 @@
-import validateDescription from "../../validators/validateDescription";
-import validateName from "../../validators/validateName";
-import validateSlug from "../../validators/validateSlug";
+import validateDescription from "../../../fields/validators/validateDescription";
+import validateName from "../../../fields/validators/validateName";
+import validateSlug from "../../../fields/validators/validateSlug";
 import validator from "validator";
 
 const projectFieldsConfig = {

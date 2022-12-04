@@ -1,4 +1,4 @@
-import projectFieldsConfig from "../../fields/config/org/projectFieldsConfig";
+import projectFieldsConfig from "./fields/project";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
 import { parentPath, addPath } from "./util";
