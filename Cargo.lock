@@ -260,6 +260,7 @@ dependencies = [
  "serde",
  "slug",
  "thiserror",
+ "url",
  "uuid",
  "wasm-bindgen",
  "wasm-bindgen-test",

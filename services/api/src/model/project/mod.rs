@@ -1,9 +1,8 @@
 use std::{str::FromStr, string::ToString};
 
-use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug};
+use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
 use bencher_rbac::{Organization, Project};
 use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
-use url::Url;
 use uuid::Uuid;
 
 use crate::{
@@ -178,7 +177,7 @@ impl QueryProject {
 
 fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {
     Ok(if let Some(url) = url {
-        Some(Url::parse(url).map_err(api_error!())?)
+        Some(Url::from_str(url).map_err(api_error!())?)
     } else {
         None
     })

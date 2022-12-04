@@ -16,4 +16,6 @@ pub enum ValidError {
     BranchName(String),
     #[error("Failed to validate non-empty string: {0}")]
     NonEmpty(String),
+    #[error("Failed to validate URL: {0}")]
+    Url(String),
 }

@@ -1,8 +1,7 @@
-use bencher_valid::{NonEmpty, Slug};
+use bencher_valid::{NonEmpty, Slug, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use url::Url;
 use uuid::Uuid;
 
 pub mod alert;

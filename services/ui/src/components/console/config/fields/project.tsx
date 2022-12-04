@@ -1,7 +1,5 @@
-import validator from "validator";
-
 import { validate_string } from "../../../site/util";
-import { is_valid_slug, is_valid_non_empty } from "bencher_valid";
+import { is_valid_slug, is_valid_non_empty, is_valid_url } from "bencher_valid";
 
 const PROJECT_FIELDS = {
   name: {
@@ -23,7 +21,7 @@ const PROJECT_FIELDS = {
     placeholder: "www.example.com",
     icon: "fas fa-link",
     help: "Must be a valid URL",
-    validate: validator.isURL,
+    validate: (input) => validate_string(input, is_valid_url),
   },
   public: {
     type: "checkbox",

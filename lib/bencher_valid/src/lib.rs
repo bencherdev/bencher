@@ -8,9 +8,11 @@ mod jwt;
 mod non_empty;
 mod resource_id;
 mod slug;
+mod url;
 mod user_name;
 
 pub use crate::slug::Slug;
+pub use crate::url::Url;
 pub use branch_name::BranchName;
 pub use email::Email;
 pub use error::ValidError;

@@ -1,8 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewProject, NonEmpty, ResourceId, Slug};
-use url::Url;
+use bencher_json::{JsonNewProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -48,9 +47,9 @@ impl TryFrom<CliProjectCreate> for Create {
     }
 }
 
-pub fn map_url(url: Option<String>) -> Result<Option<Url>, url::ParseError> {
+pub fn map_url(url: Option<String>) -> Result<Option<Url>, CliError> {
     Ok(if let Some(url) = url {
-        Some(Url::parse(&url)?)
+        Some(Url::from_str(&url)?)
     } else {
         None
     })
