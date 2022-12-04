@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonBranch, JsonNewBranch, ResourceId, Slug};
+use bencher_json::{BranchName, JsonBranch, JsonNewBranch, ResourceId, Slug};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -47,7 +47,7 @@ impl QueryBranch {
         Ok(JsonBranch {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name,
+            name: BranchName::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
         })
     }
@@ -82,11 +82,11 @@ impl InsertBranch {
         branch: JsonNewBranch,
     ) -> Self {
         let JsonNewBranch { name, slug } = branch;
-        let slug = unwrap_slug!(conn, &name, slug, branch, QueryBranch);
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, branch, QueryBranch);
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
-            name,
+            name: name.into(),
             slug,
         }
     }

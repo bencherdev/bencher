@@ -2,7 +2,7 @@ use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
 use bencher_json::{
-    project::{branch::BRANCH_MAIN, report::JsonReportSettings, testbed::TESTBED_LOCALHOST},
+    project::{branch::BRANCH_MAIN_STR, report::JsonReportSettings, testbed::TESTBED_LOCALHOST},
     JsonBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
@@ -113,7 +113,7 @@ fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<B
     } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
         Ok(Branch::Name(name))
     } else {
-        BRANCH_MAIN
+        BRANCH_MAIN_STR
             .parse()
             .map(Branch::ResourceId)
             .map_err(CliError::BranchInvalid)
