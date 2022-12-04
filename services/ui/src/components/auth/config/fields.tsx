@@ -7,7 +7,7 @@ const AUTH_FIELDS = {
     type: "text",
     placeholder: "Full Name",
     icon: "fas fa-user",
-    help: "Must be at least four characters using only: letters, numbers, spaces, apostrophes, periods, commas, and dashes",
+    help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
     validate: (input) => validate_string(input, is_valid_user_name),
   },
   email: {

@@ -10,7 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::ValidError;
+use crate::{is_valid_len, ValidError};
 
 #[derive(Debug, Display, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -68,7 +68,7 @@ impl<'de> Visitor<'de> for SlugVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_slug(slug: &str) -> bool {
-    if slug.is_empty() {
+    if !is_valid_len(slug) {
         return false;
     }
 
@@ -77,6 +77,7 @@ pub fn is_valid_slug(slug: &str) -> bool {
 
 #[cfg(test)]
 mod test {
+
     use super::is_valid_slug;
     use pretty_assertions::assert_eq;
 
@@ -85,7 +86,6 @@ mod test {
         assert_eq!(true, is_valid_slug("a-valid-slug"));
         assert_eq!(true, is_valid_slug("2nd-valid-slug"));
 
-        assert_eq!(false, is_valid_slug(""));
         assert_eq!(false, is_valid_slug(" a-valid-slug"));
         assert_eq!(false, is_valid_slug("a- valid-slug"));
         assert_eq!(false, is_valid_slug("a-valid-slug "));

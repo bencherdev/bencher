@@ -12,7 +12,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{ValidError, REGEX_ERROR};
+use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
 #[derive(Debug, Display, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -70,16 +70,12 @@ impl<'de> Visitor<'de> for UserNameVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {
-    if name.len() < 4 || name.len() > 50 {
-        return false;
-    };
-
-    if name != name.trim() {
+    if !is_valid_len(name) {
         return false;
     }
 
     static NAME_REGEX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
+        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
 
     NAME_REGEX.is_match(name)
 }
@@ -102,22 +98,10 @@ mod test {
         assert_eq!(true, is_valid_user_name("Muriel De'Bagge"));
         assert_eq!(true, is_valid_user_name("Mrs. Muriel Linda-De'Bagge"));
 
-        assert_eq!(false, is_valid_user_name(""));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge"));
         assert_eq!(false, is_valid_user_name("Muriel Bagge "));
         assert_eq!(false, is_valid_user_name(" Muriel Bagge "));
         assert_eq!(false, is_valid_user_name("Muriel!"));
         assert_eq!(false, is_valid_user_name("Muriel! Bagge"));
-        assert_eq!(true, is_valid_user_name("Dumb"));
-        assert_eq!(false, is_valid_user_name("Dog"));
-        assert_eq!(
-            true,
-            is_valid_user_name("01234567890123456789012345678901234567890123456789")
-        );
-        assert_eq!(
-            false,
-            is_valid_user_name("012345678901234567890123456789012345678901234567890")
-        );
-        assert_eq!(false, is_valid_user_name(""));
     }
 }

@@ -10,7 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::ValidError;
+use crate::{is_valid_len, ValidError};
 
 #[derive(Debug, Display, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -68,25 +68,5 @@ impl<'de> Visitor<'de> for NonEmptyVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_non_empty(non_empty: &str) -> bool {
-    !non_empty.is_empty()
-}
-
-#[cfg(test)]
-mod test {
-    use super::is_valid_non_empty;
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn test_non_empty() {
-        assert_eq!(true, is_valid_non_empty("refs/heads/main"));
-        assert_eq!(true, is_valid_non_empty("main"));
-        assert_eq!(true, is_valid_non_empty("MAIN"));
-        assert_eq!(true, is_valid_non_empty("bencher/main"));
-        assert_eq!(true, is_valid_non_empty(" main"));
-        assert_eq!(true, is_valid_non_empty("ma in"));
-        assert_eq!(true, is_valid_non_empty("main "));
-        assert_eq!(true, is_valid_non_empty(".main"));
-
-        assert_eq!(false, is_valid_non_empty(""));
-    }
+    is_valid_len(non_empty)
 }
