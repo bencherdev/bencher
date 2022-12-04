@@ -14,4 +14,6 @@ pub enum ValidError {
     Jwt(String),
     #[error("Failed to validate branch name: {0}")]
     BranchName(String),
+    #[error("Failed to validate non-empty string: {0}")]
+    NonEmpty(String),
 }

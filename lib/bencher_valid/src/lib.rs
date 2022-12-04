@@ -5,6 +5,7 @@ mod branch_name;
 mod email;
 mod error;
 mod jwt;
+mod non_empty;
 mod resource_id;
 mod slug;
 mod user_name;
@@ -15,6 +16,7 @@ pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
+pub use non_empty::NonEmpty;
 pub use resource_id::ResourceId;
 pub use user_name::UserName;
 

@@ -70,16 +70,16 @@ impl<'de> Visitor<'de> for UserNameVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {
-    static NAME_REGEX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
+    if name.len() < 4 || name.len() > 50 {
+        return false;
+    };
 
     if name != name.trim() {
         return false;
     }
 
-    if name.len() < 4 || name.len() > 50 {
-        return false;
-    };
+    static NAME_REGEX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{4,50}$").expect(REGEX_ERROR));
 
     NAME_REGEX.is_match(name)
 }

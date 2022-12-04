@@ -78,7 +78,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_email() {
+    fn test_branch_name() {
         assert_eq!(true, is_valid_branch_name("refs/heads/main"));
         assert_eq!(true, is_valid_branch_name("main"));
         assert_eq!(true, is_valid_branch_name("MAIN"));
