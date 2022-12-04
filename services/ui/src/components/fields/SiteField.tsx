@@ -8,8 +8,6 @@ import { Field } from "../console/config/types";
 
 const SiteField = (props) => {
   function handleField(event, field = null) {
-    console.log(event);
-
     switch (props.kind) {
       case Field.CHECKBOX:
         props.handleField(

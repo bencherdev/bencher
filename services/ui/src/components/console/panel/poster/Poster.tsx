@@ -37,6 +37,8 @@ const Poster = (props) => {
   const [form, setForm] = createSignal(initForm(props.config?.fields));
   const [valid, setValid] = createSignal(false);
 
+  // setInterval(() => console.log(form()), 3000);
+
   const is_sendable = (): boolean => {
     return !form()?.submitting && valid();
   };
@@ -105,11 +107,12 @@ const Poster = (props) => {
   };
 
   function isValid() {
-    Object.values(form()).forEach((field) => {
-      if (field.validate && !field.valid) {
+    const form_values = Object.values(form());
+    for (let i = 0; i < form_values.length; i++) {
+      if (form_values[i]?.validate && !form_values[i]?.valid) {
         return false;
       }
-    });
+    }
     return true;
   }
 

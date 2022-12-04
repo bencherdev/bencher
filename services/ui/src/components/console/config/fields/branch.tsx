@@ -6,7 +6,7 @@ const BRANCH_FIELDS = {
     type: "text",
     placeholder: "branch-name",
     icon: "fas fa-code-branch",
-    help: "Must be a valid git reference.",
+    help: "Must be a valid git reference",
     validate: (input) => validate_string(input, is_valid_branch_name),
   },
 };
