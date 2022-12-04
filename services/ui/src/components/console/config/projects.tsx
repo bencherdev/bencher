@@ -1,4 +1,4 @@
-import projectFieldsConfig from "./fields/project";
+import PROJECT_FIELDS from "./fields/project";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
 import { parentPath, addPath } from "./util";
@@ -68,18 +68,7 @@ const projectsConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: projectFieldsConfig.name,
-        },
-        {
-          kind: Field.TEXTAREA,
-          label: "Description",
-          key: "description",
-          value: "",
-          valid: null,
-          validate: false,
-          nullify: true,
-          clear: false,
-          config: projectFieldsConfig.description,
+          config: PROJECT_FIELDS.name,
         },
         {
           kind: Field.INPUT,
@@ -90,7 +79,7 @@ const projectsConfig = {
           validate: false,
           nullify: true,
           clear: false,
-          config: projectFieldsConfig.url,
+          config: PROJECT_FIELDS.url,
         },
         {
           kind: Field.SWITCH,
@@ -101,7 +90,7 @@ const projectsConfig = {
           validate: false,
           nullify: false,
           clear: false,
-          config: projectFieldsConfig.public,
+          config: PROJECT_FIELDS.public,
         },
       ],
       path: parentPath,
