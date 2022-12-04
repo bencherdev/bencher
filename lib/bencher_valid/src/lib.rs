@@ -27,7 +27,6 @@ const MAX_LEN: usize = 50;
 #[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]
 pub fn startup() {
-    #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 }
 

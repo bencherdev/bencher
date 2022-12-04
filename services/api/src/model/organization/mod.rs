@@ -29,7 +29,7 @@ pub struct InsertOrganization {
 impl InsertOrganization {
     pub fn from_json(conn: &mut SqliteConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
-        let slug = unwrap_slug!(conn, &name.as_ref(), slug, organization, QueryOrganization);
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
         Self {
             uuid: Uuid::new_v4().to_string(),
             name: name.into(),
