@@ -1,5 +1,5 @@
-import { lazy } from "solid-js";
-import { Navigate, Route } from "solid-app-router";
+import { createMemo, lazy } from "solid-js";
+import { Navigate, Route, useParams } from "solid-app-router";
 import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
@@ -24,7 +24,6 @@ const ConsoleRoutes = (props) => {
   return (
     <>
       {/* Console Routes */}
-      {/* TODO add a smarter automatic redirect if the user only belongs to a single organization */}
       <Route path="/" element={<Navigate href="/console/organizations" />} />
       {/* Console Projects Routes */}
       <Route
@@ -35,6 +34,16 @@ const ConsoleRoutes = (props) => {
       />
       <Route
         path="/organizations/:organization_slug"
+        element={<NavigateToProjects />}
+      />
+      <Route
+        path="/organizations/:organization_slug/"
+        element={consolePage(
+          config?.[Resource.ORGANIZATIONS]?.[Operation.VIEW]
+        )}
+      />
+      <Route
+        path="/organizations/:organization_slug/settings"
         element={consolePage(
           config?.[Resource.ORGANIZATIONS]?.[Operation.VIEW]
         )}
@@ -64,10 +73,8 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.MEMBERS]?.[Operation.VIEW])}
       />
       <Route
-        path="/organizations/:organization_slug/settings"
-        element={consolePage(
-          config?.[Resource.ORGANIZATION_SETTINGS]?.[Operation.VIEW]
-        )}
+        path="/projects/:project_slug/settings"
+        element={consolePage(config?.[Resource.PROJECTS]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/perf"
@@ -150,12 +157,6 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.VIEW])}
       />
       <Route
-        path="/projects/:project_slug/settings"
-        element={consolePage(
-          config?.[Resource.PROJECT_SETTINGS]?.[Operation.VIEW]
-        )}
-      />
-      <Route
         path="/user/account"
         element={consolePage(config?.[Resource.USER_ACCOUNT]?.[Operation.VIEW])}
       />
@@ -170,3 +171,16 @@ const ConsoleRoutes = (props) => {
 };
 
 export default ConsoleRoutes;
+
+const NavigateToProjects = () => {
+  const params = useParams();
+  const path_params = createMemo(() => params);
+
+  return (
+    <Navigate
+      href={`/console/organizations/${
+        path_params().organization_slug
+      }/projects`}
+    />
+  );
+};

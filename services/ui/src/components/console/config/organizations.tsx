@@ -58,11 +58,13 @@ const organizationsConfig = {
           key: "slug",
           display: Display.RAW,
         },
+        {
+          kind: Card.FIELD,
+          label: "Organization UUID",
+          key: "uuid",
+          display: Display.RAW,
+        },
       ],
-      buttons: {
-        path: (path_params) =>
-          `/console/organizations/${path_params?.organization_slug}/projects`,
-      },
     },
   },
 };
