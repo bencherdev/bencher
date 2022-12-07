@@ -1,4 +1,4 @@
-import validateName from "../../validators/validateName";
+import validateName from "../../../fields/validators/validateName";
 
 const testbedFieldsConfig = {
   name: {
