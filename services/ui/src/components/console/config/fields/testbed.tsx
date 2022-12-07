@@ -1,69 +1,14 @@
-import validateName from "../../../fields/validators/validateName";
+import { validate_string } from "../../../site/util";
+import { is_valid_non_empty } from "bencher_valid";
 
-const testbedFieldsConfig = {
+const TESTBED_FIELDS = {
   name: {
     type: "text",
     placeholder: "Testbed Name",
     icon: "fas fa-server",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  os_name: {
-    type: "text",
-    placeholder: "Operating System",
-    icon: "fas fa-desktop",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  os_version: {
-    type: "text",
-    placeholder: "v1.2.3",
-    icon: "fas fa-desktop",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  runtime_name: {
-    type: "text",
-    placeholder: "Runtime",
-    icon: "fas fa-code",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  runtime_version: {
-    type: "text",
-    placeholder: "v1.2.3",
-    icon: "fas fa-code",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  cpu: {
-    type: "text",
-    placeholder: "Intel Pentium IV",
-    icon: "fas fa-microchip",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  gpu: {
-    type: "text",
-    placeholder: "NVIDIA GeForce 650 Ti",
-    icon: "fas fa-fan",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  ram: {
-    type: "text",
-    placeholder: "8GB",
-    icon: "fas fa-memory",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
-  },
-  disk: {
-    type: "text",
-    placeholder: "64GB",
-    icon: "fas fa-compact-disc",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
+    help: "Must be a non-empty string",
+    validate: (input) => validate_string(input, is_valid_non_empty),
   },
 };
 
-export default testbedFieldsConfig;
+export default TESTBED_FIELDS;
