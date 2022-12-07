@@ -1,5 +1,5 @@
-import testbedFieldsConfig from "../../fields/config/org/testbedFieldsConfig";
 import { BENCHER_API_URL } from "../../site/util";
+import TESTBED_FIELDS from "./fields/testbed";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { parentPath, addPath, viewSlugPath } from "./util";
 
@@ -69,7 +69,7 @@ const testbedsConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: testbedFieldsConfig.name,
+          config: TESTBED_FIELDS.name,
         },
         {
           kind: Field.INPUT,
