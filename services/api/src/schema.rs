@@ -137,14 +137,6 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
-        os_name -> Nullable<Text>,
-        os_version -> Nullable<Text>,
-        runtime_name -> Nullable<Text>,
-        runtime_version -> Nullable<Text>,
-        cpu -> Nullable<Text>,
-        gpu -> Nullable<Text>,
-        ram -> Nullable<Text>,
-        disk -> Nullable<Text>,
     }
 }
 
