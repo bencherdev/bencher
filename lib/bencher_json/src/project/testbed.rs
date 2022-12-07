@@ -13,14 +13,6 @@ static TESTBED_LOCALHOST_SLUG: Lazy<Option<Slug>> = Lazy::new(|| TESTBED_LOCALHO
 pub struct JsonNewTestbed {
     pub name: String,
     pub slug: Option<Slug>,
-    pub os_name: Option<String>,
-    pub os_version: Option<String>,
-    pub runtime_name: Option<String>,
-    pub runtime_version: Option<String>,
-    pub cpu: Option<String>,
-    pub gpu: Option<String>,
-    pub ram: Option<String>,
-    pub disk: Option<String>,
 }
 
 impl JsonNewTestbed {
@@ -28,7 +20,6 @@ impl JsonNewTestbed {
         Self {
             name: TESTBED_LOCALHOST.into(),
             slug: TESTBED_LOCALHOST_SLUG.clone(),
-            ..Default::default()
         }
     }
 }
@@ -40,12 +31,4 @@ pub struct JsonTestbed {
     pub project: Uuid,
     pub name: String,
     pub slug: Slug,
-    pub os_name: Option<String>,
-    pub os_version: Option<String>,
-    pub runtime_name: Option<String>,
-    pub runtime_version: Option<String>,
-    pub cpu: Option<String>,
-    pub gpu: Option<String>,
-    pub ram: Option<String>,
-    pub disk: Option<String>,
 }

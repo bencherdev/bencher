@@ -16,14 +16,6 @@ pub struct QueryTestbed {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
-    pub os_name: Option<String>,
-    pub os_version: Option<String>,
-    pub runtime_name: Option<String>,
-    pub runtime_version: Option<String>,
-    pub cpu: Option<String>,
-    pub gpu: Option<String>,
-    pub ram: Option<String>,
-    pub disk: Option<String>,
 }
 
 impl QueryTestbed {
@@ -51,28 +43,12 @@ impl QueryTestbed {
             project_id,
             name,
             slug,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
         } = self;
         Ok(JsonTestbed {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
         })
     }
 }
@@ -84,14 +60,6 @@ pub struct InsertTestbed {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
-    pub os_name: Option<String>,
-    pub os_version: Option<String>,
-    pub runtime_name: Option<String>,
-    pub runtime_version: Option<String>,
-    pub cpu: Option<String>,
-    pub gpu: Option<String>,
-    pub ram: Option<String>,
-    pub disk: Option<String>,
 }
 
 impl InsertTestbed {
@@ -113,32 +81,13 @@ impl InsertTestbed {
         project_id: i32,
         testbed: JsonNewTestbed,
     ) -> Self {
-        let JsonNewTestbed {
-            name,
-            slug,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
-        } = testbed;
+        let JsonNewTestbed { name, slug } = testbed;
         let slug = unwrap_slug!(conn, &name, slug, testbed, QueryTestbed);
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
             name,
             slug,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
         }
     }
 }

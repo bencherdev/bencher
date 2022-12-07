@@ -14,14 +14,6 @@ pub struct Create {
     pub project: ResourceId,
     pub name: String,
     pub slug: Option<Slug>,
-    pub os_name: Option<String>,
-    pub os_version: Option<String>,
-    pub runtime_name: Option<String>,
-    pub runtime_version: Option<String>,
-    pub cpu: Option<String>,
-    pub gpu: Option<String>,
-    pub ram: Option<String>,
-    pub disk: Option<String>,
     pub backend: Backend,
 }
 
@@ -33,14 +25,6 @@ impl TryFrom<CliTestbedCreate> for Create {
             project,
             name,
             slug,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
             backend,
         } = create;
         Ok(Self {
@@ -51,14 +35,6 @@ impl TryFrom<CliTestbedCreate> for Create {
             } else {
                 None
             },
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
             backend: backend.try_into()?,
         })
     }
@@ -70,28 +46,9 @@ impl From<Create> for JsonNewTestbed {
             project: _,
             name,
             slug,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            cpu,
-            gpu,
-            ram,
-            disk,
             backend: _,
         } = create;
-        Self {
-            name,
-            slug,
-            os_name,
-            os_version,
-            runtime_name,
-            runtime_version,
-            gpu,
-            cpu,
-            ram,
-            disk,
-        }
+        Self { name, slug }
     }
 }
 
