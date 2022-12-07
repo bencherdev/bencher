@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewTestbed, ResourceId, Slug};
+use bencher_json::{JsonNewTestbed, NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Option<Slug>,
     pub backend: Backend,
 }
@@ -29,7 +29,7 @@ impl TryFrom<CliTestbedCreate> for Create {
         } = create;
         Ok(Self {
             project,
-            name,
+            name: NonEmpty::from_str(&name)?,
             slug: if let Some(slug) = slug {
                 Some(Slug::from_str(&slug)?)
             } else {

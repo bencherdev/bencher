@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonNewTestbed, JsonTestbed, ResourceId, Slug};
+use bencher_json::{JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -47,7 +47,7 @@ impl QueryTestbed {
         Ok(JsonTestbed {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name,
+            name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
         })
     }
@@ -82,11 +82,11 @@ impl InsertTestbed {
         testbed: JsonNewTestbed,
     ) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = unwrap_slug!(conn, &name, slug, testbed, QueryTestbed);
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, testbed, QueryTestbed);
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
-            name,
+            name: name.into(),
             slug,
         }
     }

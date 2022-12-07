@@ -1,24 +1,35 @@
-use bencher_valid::Slug;
+use bencher_valid::{NonEmpty, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub const TESTBED_LOCALHOST: &str = "localhost";
-static TESTBED_LOCALHOST_SLUG: Lazy<Option<Slug>> = Lazy::new(|| TESTBED_LOCALHOST.parse().ok());
+pub const TESTBED_LOCALHOST_STR: &str = "localhost";
+static TESTBED_LOCALHOST: Lazy<NonEmpty> = Lazy::new(|| {
+    TESTBED_LOCALHOST_STR
+        .parse()
+        .expect("Failed to parse testbed name.")
+});
+static TESTBED_LOCALHOST_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
+    Some(
+        TESTBED_LOCALHOST_STR
+            .parse()
+            .expect("Failed to parse testbed slug."),
+    )
+});
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewTestbed {
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Option<Slug>,
 }
 
 impl JsonNewTestbed {
     pub fn localhost() -> Self {
         Self {
-            name: TESTBED_LOCALHOST.into(),
+            name: TESTBED_LOCALHOST.clone(),
             slug: TESTBED_LOCALHOST_SLUG.clone(),
         }
     }
@@ -29,6 +40,6 @@ impl JsonNewTestbed {
 pub struct JsonTestbed {
     pub uuid: Uuid,
     pub project: Uuid,
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Slug,
 }
