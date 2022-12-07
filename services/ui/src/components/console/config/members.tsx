@@ -1,6 +1,10 @@
-import memberFieldsConfig from "../../fields/config/org/memberFieldsConfig";
-import { BENCHER_API_URL, isAllowedOrganization, OrganizationPermission } from "../../site/util";
-import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
+import {
+  BENCHER_API_URL,
+  isAllowedOrganization,
+  OrganizationPermission,
+} from "../../site/util";
+import MEMBER_FIELDS from "./fields/member";
+import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { parentPath, invitePath, viewSlugPath } from "./util";
 
 const ROLE_VALUE = {
@@ -38,7 +42,9 @@ const MembersConfig = {
     },
     table: {
       url: (path_params) =>
-        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/members`,
+        `${BENCHER_API_URL()}/v0/organizations/${
+          path_params?.organization_slug
+        }/members`,
       add: {
         path: invitePath,
         text: "Invite an Organization Member",
@@ -76,7 +82,9 @@ const MembersConfig = {
     },
     form: {
       url: (path_params) =>
-        `${BENCHER_API_URL()}/v0/organizations/${path_params.organization_slug}/members`,
+        `${BENCHER_API_URL()}/v0/organizations/${
+          path_params.organization_slug
+        }/members`,
       fields: [
         {
           kind: Field.HIDDEN,
@@ -92,7 +100,7 @@ const MembersConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: memberFieldsConfig.name,
+          config: MEMBER_FIELDS.name,
         },
         {
           kind: Field.INPUT,
@@ -103,7 +111,7 @@ const MembersConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: memberFieldsConfig.email,
+          config: MEMBER_FIELDS.email,
         },
         {
           kind: Field.SELECT,
@@ -113,7 +121,7 @@ const MembersConfig = {
           validate: false,
           nullify: false,
           clear: false,
-          config: memberFieldsConfig.role,
+          config: MEMBER_FIELDS.role,
         },
       ],
       path: parentPath,
@@ -127,7 +135,9 @@ const MembersConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL()}/v0/organizations/${path_params?.organization_slug}/members/${path_params?.member_slug}`,
+        `${BENCHER_API_URL()}/v0/organizations/${
+          path_params?.organization_slug
+        }/members/${path_params?.member_slug}`,
       cards: [
         {
           kind: Card.FIELD,
@@ -170,7 +180,7 @@ const MembersConfig = {
             validate: false,
             nullify: false,
             clear: false,
-            config: memberFieldsConfig.role,
+            config: MEMBER_FIELDS.role,
           },
         },
       ],
