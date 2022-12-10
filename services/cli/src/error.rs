@@ -29,8 +29,6 @@ pub enum CliError {
     Url(#[from] url::ParseError),
     #[error("Failed to parse UUID: {0}")]
     Uuid(#[from] uuid::Error),
-    #[error("Failed to parse git commit: {0}")]
-    Git(#[from] git2::Error),
     #[error("Failed to (de)serialize JSON: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("Failed to send request: {0}")]

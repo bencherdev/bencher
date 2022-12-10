@@ -1,3 +1,4 @@
+use bencher_valid::GitHash;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -10,7 +11,7 @@ use crate::ResourceId;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
     pub branch: ResourceId,
-    pub hash: Option<String>,
+    pub hash: Option<GitHash>,
     pub testbed: ResourceId,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,

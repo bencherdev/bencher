@@ -23,7 +23,6 @@ uuid.workspace = true
 # Crate
 async-trait = "0.1"
 clap = { version = "4.0", features = ["derive"] }
-git2 = "0.15"
 rand = "0.8"
 reqwest = { version = "0.11", features = ["json"] }
 

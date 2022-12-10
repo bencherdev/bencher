@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use bencher_json::GitHash;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, Queryable, RunQueryDsl,
     SqliteConnection,
@@ -41,7 +42,7 @@ impl InsertVersion {
     pub fn increment(
         conn: &mut SqliteConnection,
         branch_id: i32,
-        hash: Option<String>,
+        hash: Option<GitHash>,
     ) -> Result<i32, ApiError> {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
@@ -60,7 +61,7 @@ impl InsertVersion {
             uuid: Uuid::new_v4().to_string(),
             branch_id,
             number,
-            hash,
+            hash: hash.map(Into::into),
         };
 
         diesel::insert_into(schema::version::table)

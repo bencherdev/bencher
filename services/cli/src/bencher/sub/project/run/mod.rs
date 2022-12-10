@@ -5,11 +5,10 @@ use bencher_json::{
     project::{
         branch::BRANCH_MAIN_STR, report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR,
     },
-    JsonBranch, JsonNewReport, JsonReport, ResourceId,
+    GitHash, JsonBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
 use clap::ValueEnum;
-use git2::Oid;
 use uuid::Uuid;
 
 use crate::{
@@ -42,7 +41,7 @@ pub struct Run {
     locality: Locality,
     runner: Runner,
     branch: Branch,
-    hash: Option<Oid>,
+    hash: Option<GitHash>,
     testbed: ResourceId,
     adapter: Option<RunAdapter>,
     iter: usize,
@@ -122,9 +121,9 @@ fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<B
     }
 }
 
-fn map_hash(hash: Option<String>) -> Result<Option<Oid>, CliError> {
+fn map_hash(hash: Option<String>) -> Result<Option<GitHash>, CliError> {
     Ok(if let Some(hash) = hash {
-        Some(Oid::from_str(&hash)?)
+        Some(GitHash::from_str(&hash)?)
     } else {
         None
     })
@@ -185,7 +184,7 @@ impl SubCmd for Run {
 
         let report = JsonNewReport {
             branch,
-            hash: self.hash.map(|hash| hash.to_string()),
+            hash: self.hash.clone(),
             testbed: self.testbed.clone(),
             start_time,
             end_time: Utc::now(),

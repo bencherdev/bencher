@@ -178,7 +178,7 @@ async fn post_inner(
             .filter(
                 schema::version::branch_id
                     .eq(branch_id)
-                    .and(schema::version::hash.eq(hash)),
+                    .and(schema::version::hash.eq(hash.as_ref())),
             )
             .select(schema::version::id)
             .first::<i32>(conn)
