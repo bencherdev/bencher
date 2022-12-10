@@ -137,7 +137,7 @@ const Poster = (props) => {
             disabled={!is_sendable()}
             onClick={sendForm}
           >
-            Submit
+            Save
           </button>
         </form>
       </div>
