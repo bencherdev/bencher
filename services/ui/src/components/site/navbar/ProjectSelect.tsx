@@ -25,7 +25,7 @@ const ProjectSelect = (props) => {
   );
 
   const fetchProjects = async () => {
-    const all_projects = {
+    const ALL_PROJECTS = {
       name: "All Projects",
       slug: BENCHER_ALL_PROJECTS,
     };
@@ -33,16 +33,16 @@ const ProjectSelect = (props) => {
     try {
       const token = props.user()?.token;
       if (!validate_jwt(token)) {
-        return [all_projects];
+        return [ALL_PROJECTS];
       }
 
       const resp = await axios(get_options(url(), token));
       let data = resp?.data;
-      data.push(all_projects);
+      data.push(ALL_PROJECTS);
       return data;
     } catch (error) {
       console.error(error);
-      return [all_projects];
+      return [ALL_PROJECTS];
     }
   };
 

@@ -312,12 +312,11 @@ const PerfPanel = (props) => {
   };
 
   const handleMetricKind = (metric_kind: string) => {
-    if (validate_string(metric_kind, is_valid_slug)) {
-      console.log("SET " + metric_kind);
-      setSearchParams({
-        [METRIC_KIND_PARAM]: metric_kind,
-      });
-    }
+    setSearchParams({
+      [METRIC_KIND_PARAM]: validate_string(metric_kind, is_valid_slug)
+        ? metric_kind
+        : null,
+    });
   };
   const handleStartTime = (date: string) =>
     setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });

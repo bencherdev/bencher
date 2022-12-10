@@ -1,7 +1,14 @@
 import axios from "axios";
-import { createMemo, createResource, For } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+} from "solid-js";
 import { get_options } from "../../../../site/util";
-import { toCapitalized } from "../../../config/util";
+
+const BENCHER_SELECT_METRIC_KIND = "--bencher--select---metric--kind--";
 
 const PlotHeader = (props) => {
   const metric_kinds_fetcher = createMemo(() => {
@@ -12,34 +19,70 @@ const PlotHeader = (props) => {
   });
 
   const getMetricKinds = async (fetcher) => {
-    console.log(props.metric_kind());
+    const SELECT_METRIC_KIND = {
+      name: "Select Metric Kind",
+      slug: BENCHER_SELECT_METRIC_KIND,
+    };
+
     try {
       const url = props.config?.metric_kinds_url(props.path_params());
       const resp = await axios(get_options(url, fetcher.token));
-      const data = resp.data;
-      if (data.length > 0) {
-        props.handleMetricKind(data[0]?.slug);
-      }
+      let data = resp?.data;
+      data.push(SELECT_METRIC_KIND);
       return data;
     } catch (error) {
       console.error(error);
-      return [];
+      return [SELECT_METRIC_KIND];
     }
   };
 
   const [metric_kinds] = createResource(metric_kinds_fetcher, getMetricKinds);
+
+  const getSelected = () => {
+    const slug = props.metric_kind();
+    if (slug) {
+      return slug;
+    } else {
+      return BENCHER_SELECT_METRIC_KIND;
+    }
+  };
+
+  const [selected, setSelected] = createSignal(getSelected());
+
+  createEffect(() => {
+    const slug = props.metric_kind();
+    if (slug) {
+      setSelected(slug);
+    } else {
+      setSelected(BENCHER_SELECT_METRIC_KIND);
+    }
+  });
+
+  const handleInput = (e) => {
+    const target_slug = e.currentTarget.value;
+    if (target_slug === BENCHER_SELECT_METRIC_KIND) {
+      props.handleMetricKind(null);
+      return;
+    }
+
+    props.handleMetricKind(target_slug);
+  };
 
   return (
     <nav class="panel-heading level">
       <div class="level-left">
         <select
           class="card-header-title level-item"
-          value={props.metric_kind()}
-          onInput={(e) => props.handleMetricKind(e.currentTarget?.value)}
+          onInput={(e) => handleInput(e)}
         >
           <For each={metric_kinds()}>
             {(metric_kind: { name: string; slug: string }) => (
-              <option value={metric_kind?.slug}>{metric_kind?.name}</option>
+              <option
+                value={metric_kind.slug}
+                selected={metric_kind.slug === selected()}
+              >
+                {metric_kind.name}
+              </option>
             )}
           </For>
         </select>
