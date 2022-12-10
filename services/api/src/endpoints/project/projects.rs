@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonProject, ResourceId};
-use bencher_rbac::organization::Permission;
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -12,14 +12,79 @@ use crate::{
         endpoint::{response_ok, ResponseOk},
         Endpoint, Method,
     },
+    error::api_error,
     model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
-    util::cors::{get_cors, CorsResponse},
+    schema,
+    util::{
+        cors::{get_cors, CorsResponse},
+        error::into_json,
+    },
     ApiError,
 };
 
 use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects",
+    tags = ["projects"]
+}]
+pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<Context>())
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects",
+    tags = ["projects"]
+}]
+pub async fn get_ls(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
+
+    let json = get_ls_inner(rqctx.context(), auth_user.as_ref(), endpoint)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_ok!(endpoint, json)
+}
+
+async fn get_ls_inner(
+    context: &Context,
+    auth_user: Option<&AuthUser>,
+    endpoint: Endpoint,
+) -> Result<Vec<JsonProject>, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.database;
+
+    let mut sql = schema::project::table.into_boxed();
+
+    if let Some(auth_user) = auth_user {
+        if !auth_user.is_admin(&api_context.rbac) {
+            let projects =
+                auth_user.projects(&api_context.rbac, bencher_rbac::project::Permission::View);
+            sql = sql.filter(
+                schema::project::id
+                    .eq_any(projects)
+                    .or(schema::project::public.eq(true)),
+            );
+        }
+    } else {
+        sql = sql.filter(schema::project::public.eq(true));
+    }
+
+    Ok(sql
+        .order((schema::project::name, schema::project::slug))
+        .load::<QueryProject>(conn)
+        .map_err(api_error!())?
+        .into_iter()
+        .filter_map(into_json!(endpoint, conn))
+        .collect())
+}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OnePath {
@@ -71,7 +136,7 @@ async fn get_one_inner(
         api_context,
         query_project.organization_id,
         auth_user,
-        Permission::View,
+        bencher_rbac::organization::Permission::View,
     )?;
 
     query_project.into_json(&mut api_context.database)

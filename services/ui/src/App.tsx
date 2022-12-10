@@ -23,6 +23,7 @@ const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const PricingPage = lazy(() => import("./components/site/pages/PricingPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
+const PerfRoutes = lazy(() => import("./components/perf/PerfRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/Repo"));
@@ -111,12 +112,21 @@ const App: Component = () => {
           />
         </Route>
 
+        {/* Perf Routes */}
+        <Route path="/perf">
+          <PerfRoutes
+            user={user}
+            handleUser={handleUser}
+            removeUser={removeUser}
+          />
+        </Route>
+
         {/* Docs Routes */}
         <Route path="/docs">
           <DocsRoutes />
         </Route>
 
-        {/* Auth Routes */}
+        {/* Legal Routes */}
         <Route path="/legal">
           <LegalRoutes />
         </Route>
