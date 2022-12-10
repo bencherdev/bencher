@@ -49,6 +49,11 @@ export const Navbar = (props) => {
           <a class="navbar-item" href="/docs">
             Docs
           </a>
+          {!validate_jwt(props.user()?.token) && (
+            <a class="navbar-item" href="/perf">
+              Projects
+            </a>
+          )}
           <a class="navbar-item" href={BENCHER_GITHUB_URL} target="_blank">
             GitHub
           </a>

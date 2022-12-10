@@ -1,7 +1,7 @@
 import { lazy } from "solid-js";
 import { Route, Navigate } from "solid-app-router";
 
-// const AuthFormPage = lazy(() => import("./AuthFormPage"));
+const ProjectsPage = lazy(() => import("./ProjectsPage"));
 // const AuthLogoutPage = lazy(() => import("./AuthLogoutPage"));
 // const AuthConfirmPage = lazy(() => import("./AuthConfirmPage"));
 
@@ -11,7 +11,7 @@ import { Route, Navigate } from "solid-app-router";
 const PerfRoutes = (props) => {
   return (
     <>
-      <Route path="/" element={<div>List top projects</div>} />
+      <Route path="/" element={<ProjectsPage user={props.user} />} />
       <Route path="/:project_slug" element={<div>Project Perf Page</div>} />
     </>
   );
