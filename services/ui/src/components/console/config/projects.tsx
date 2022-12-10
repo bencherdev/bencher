@@ -148,7 +148,7 @@ const projectsConfig = {
   [Operation.PERF]: {
     operation: Operation.PERF,
     header: {
-      title: "Benchmark Perf",
+      title: "Project Perf",
     },
     plot: {
       url: (path_params) =>
