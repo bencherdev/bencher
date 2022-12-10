@@ -7,6 +7,15 @@ const PlotInit = (props) => {
         <li class="checkbox">
           <input
             type="checkbox"
+            checked={props.metric_kind()}
+            disabled={true}
+          />
+          Select a Metric Kind
+        </li>
+        <br />
+        <li class="checkbox">
+          <input
+            type="checkbox"
             checked={props.branches().length > 0}
             disabled={true}
           />

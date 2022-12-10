@@ -23,6 +23,7 @@ const PerfPlot = (props) => {
           <div class="panel-block">
             {props.isPlotInit() ? (
               <PlotInit
+                metric_kind={props.metric_kind}
                 branches={props.branches}
                 testbeds={props.testbeds}
                 benchmarks={props.benchmarks}

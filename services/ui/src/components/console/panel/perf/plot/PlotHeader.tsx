@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { get_options } from "../../../../site/util";
 
-const BENCHER_SELECT_METRIC_KIND = "--bencher--select---metric--kind--";
+const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 
 const PlotHeader = (props) => {
   const metric_kinds_fetcher = createMemo(() => {
@@ -20,8 +20,8 @@ const PlotHeader = (props) => {
 
   const getMetricKinds = async (fetcher) => {
     const SELECT_METRIC_KIND = {
-      name: "Select Metric Kind",
-      slug: BENCHER_SELECT_METRIC_KIND,
+      name: "Metric Kind",
+      slug: BENCHER_METRIC_KIND,
     };
 
     try {
@@ -43,7 +43,7 @@ const PlotHeader = (props) => {
     if (slug) {
       return slug;
     } else {
-      return BENCHER_SELECT_METRIC_KIND;
+      return BENCHER_METRIC_KIND;
     }
   };
 
@@ -54,13 +54,13 @@ const PlotHeader = (props) => {
     if (slug) {
       setSelected(slug);
     } else {
-      setSelected(BENCHER_SELECT_METRIC_KIND);
+      setSelected(BENCHER_METRIC_KIND);
     }
   });
 
   const handleInput = (e) => {
     const target_slug = e.currentTarget.value;
-    if (target_slug === BENCHER_SELECT_METRIC_KIND) {
+    if (target_slug === BENCHER_METRIC_KIND) {
       props.handleMetricKind(null);
       return;
     }
