@@ -70,3 +70,20 @@ impl<'de> Visitor<'de> for NonEmptyVisitor {
 pub fn is_valid_non_empty(non_empty: &str) -> bool {
     is_valid_len(non_empty)
 }
+
+#[cfg(test)]
+mod test {
+    use super::is_valid_non_empty;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_non_empty() {
+        assert_eq!(true, is_valid_non_empty("a"));
+        assert_eq!(true, is_valid_non_empty("ab"));
+        assert_eq!(true, is_valid_non_empty("abc"));
+        assert_eq!(true, is_valid_non_empty("ABC"));
+        assert_eq!(true, is_valid_non_empty("abc ~ABC!"));
+
+        assert_eq!(false, is_valid_non_empty(""));
+    }
+}

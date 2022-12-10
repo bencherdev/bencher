@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 mod branch_name;
 mod email;
 mod error;
+mod git_hash;
 mod jwt;
 mod non_empty;
 mod resource_id;
@@ -11,6 +12,7 @@ mod slug;
 mod url;
 mod user_name;
 
+pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
 pub use crate::url::Url;
 pub use branch_name::BranchName;

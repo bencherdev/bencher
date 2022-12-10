@@ -86,6 +86,7 @@ mod test {
         assert_eq!(true, is_valid_slug("a-valid-slug"));
         assert_eq!(true, is_valid_slug("2nd-valid-slug"));
 
+        assert_eq!(false, is_valid_slug(""));
         assert_eq!(false, is_valid_slug(" a-valid-slug"));
         assert_eq!(false, is_valid_slug("a- valid-slug"));
         assert_eq!(false, is_valid_slug("a-valid-slug "));
