@@ -14,7 +14,7 @@ pub struct Create {
     pub project: ResourceId,
     pub name: NonEmpty,
     pub slug: Option<Slug>,
-    pub units: Option<NonEmpty>,
+    pub units: NonEmpty,
     pub backend: Backend,
 }
 
@@ -37,11 +37,7 @@ impl TryFrom<CliMetricKindCreate> for Create {
             } else {
                 None
             },
-            units: if let Some(units) = units {
-                Some(NonEmpty::from_str(&units)?)
-            } else {
-                None
-            },
+            units: NonEmpty::from_str(&units)?,
             backend: backend.try_into()?,
         })
     }

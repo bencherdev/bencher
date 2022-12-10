@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    project::metric_kind::DEFAULT_UNITS_STR, JsonMetricKind, JsonNewMetricKind, NonEmpty,
-    ResourceId, Slug,
-};
+use bencher_json::{JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -73,34 +70,6 @@ impl QueryMetricKind {
             units: NonEmpty::from_str(&units).map_err(api_error!())?,
         })
     }
-
-    pub fn get_or_create(
-        conn: &mut SqliteConnection,
-        project_id: i32,
-        metric_kind: &str,
-    ) -> Result<i32, ApiError> {
-        if let Ok(resource_id) = metric_kind.parse() {
-            if let Ok(metric_kind) = QueryMetricKind::from_resource_id(conn, &resource_id) {
-                return Ok(metric_kind.id);
-            }
-        }
-
-        let insert_metric_kind = InsertMetricKind::from_json_inner(
-            conn,
-            project_id,
-            JsonNewMetricKind {
-                name: NonEmpty::from_str(metric_kind).map_err(api_error!())?,
-                slug: None,
-                units: None,
-            },
-        );
-        diesel::insert_into(schema::metric_kind::table)
-            .values(&insert_metric_kind)
-            .execute(conn)
-            .map_err(api_error!())?;
-
-        QueryMetricKind::get_id(conn, insert_metric_kind.uuid)
-    }
 }
 
 #[derive(Insertable)]
@@ -139,9 +108,7 @@ impl InsertMetricKind {
             project_id,
             name: name.into(),
             slug,
-            units: units
-                .map(Into::into)
-                .unwrap_or_else(|| DEFAULT_UNITS_STR.into()),
+            units: units.into(),
         }
     }
 }

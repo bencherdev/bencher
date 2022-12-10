@@ -94,31 +94,24 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
     Ok(if let Some(project) = project {
         project
     } else if let Ok(project) = std::env::var(BENCHER_PROJECT) {
-        ResourceId::from_str(&project).map_err(CliError::ResourceId)?
+        project.parse()?
     } else {
         return Err(CliError::ProjectNotFound);
     })
 }
 
 fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<Branch, CliError> {
-    if let Some(branch) = branch {
-        Ok(Branch::ResourceId(branch))
+    Ok(if let Some(branch) = branch {
+        Branch::ResourceId(branch)
     } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
-        branch
-            .as_str()
-            .parse()
-            .map(Branch::ResourceId)
-            .map_err(CliError::BranchInvalid)
+        branch.as_str().parse().map(Branch::ResourceId)?
     } else if let Some(name) = if_branch {
-        Ok(Branch::Name(name))
+        Branch::Name(name)
     } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
-        Ok(Branch::Name(name))
+        Branch::Name(name)
     } else {
-        BRANCH_MAIN_STR
-            .parse()
-            .map(Branch::ResourceId)
-            .map_err(CliError::BranchInvalid)
-    }
+        BRANCH_MAIN_STR.parse().map(Branch::ResourceId)?
+    })
 }
 
 fn map_hash(hash: Option<String>) -> Result<Option<GitHash>, CliError> {
@@ -130,15 +123,13 @@ fn map_hash(hash: Option<String>) -> Result<Option<GitHash>, CliError> {
 }
 
 fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, CliError> {
-    if let Some(testbed) = testbed {
-        Ok(testbed)
+    Ok(if let Some(testbed) = testbed {
+        testbed
     } else if let Ok(testbed) = std::env::var(BENCHER_TESTBED) {
-        testbed.as_str().parse().map_err(CliError::TestbedInvalid)
+        testbed.as_str().parse()?
     } else {
-        TESTBED_LOCALHOST_STR
-            .parse()
-            .map_err(CliError::TestbedInvalid)
-    }
+        TESTBED_LOCALHOST_STR.parse()?
+    })
 }
 
 fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {

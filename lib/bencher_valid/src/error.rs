@@ -4,6 +4,8 @@ pub(crate) const REGEX_ERROR: &str = "Failed to compile regex.";
 
 #[derive(Debug, Error)]
 pub enum ValidError {
+    #[error("Failed to validate resource ID: {0}")]
+    ResourceId(String),
     #[error("Failed to validate user name: {0}")]
     UserName(String),
     #[error("Failed to validate slug: {0}")]

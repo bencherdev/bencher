@@ -138,8 +138,9 @@ impl ReportResults {
             if let Some(id) = self.metric_kind_cache.get(&metric_kind_key) {
                 *id
             } else {
-                let metric_kind_id =
-                    QueryMetricKind::get_or_create(conn, self.project_id, &metric_kind_key)?;
+                let resource_id = metric_kind_key.parse()?;
+                let metric_kind_id = QueryMetricKind::from_resource_id(conn, &resource_id)?.id;
+
                 self.metric_kind_cache
                     .insert(metric_kind_key, metric_kind_id);
                 metric_kind_id

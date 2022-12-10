@@ -20,21 +20,18 @@ static LATENCY_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     )
 });
 pub const LATENCY_UNITS_STR: &str = "nanoseconds (ns)";
-static LATENCY_UNITS: Lazy<Option<NonEmpty>> = Lazy::new(|| {
-    Some(
-        LATENCY_UNITS_STR
-            .parse()
-            .expect("Failed to parse metric kind units."),
-    )
+static LATENCY_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
+    LATENCY_UNITS_STR
+        .parse()
+        .expect("Failed to parse metric kind units.")
 });
-pub const DEFAULT_UNITS_STR: &str = "units";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMetricKind {
     pub name: NonEmpty,
     pub slug: Option<Slug>,
-    pub units: Option<NonEmpty>,
+    pub units: NonEmpty,
 }
 
 impl JsonNewMetricKind {

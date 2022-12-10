@@ -40,7 +40,7 @@ pub struct CliMetricKindCreate {
 
     /// Metric kind unit of measure
     #[clap(long)]
-    pub units: Option<String>,
+    pub units: String,
 
     #[clap(flatten)]
     pub backend: CliBackend,

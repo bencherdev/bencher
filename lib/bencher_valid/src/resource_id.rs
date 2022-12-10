@@ -9,14 +9,14 @@ use serde::{
 };
 use uuid::Uuid;
 
-use crate::Slug;
+use crate::{Slug, ValidError};
 
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ResourceId(String);
 
 impl FromStr for ResourceId {
-    type Err = String;
+    type Err = ValidError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         if let Ok(uuid) = Uuid::from_str(value) {
@@ -24,7 +24,7 @@ impl FromStr for ResourceId {
         } else if let Ok(slug) = Slug::from_str(value) {
             Ok(ResourceId(slug.into()))
         } else {
-            Err("Failed to to convert to string".into())
+            Err(ValidError::ResourceId(value.into()))
         }
     }
 }
