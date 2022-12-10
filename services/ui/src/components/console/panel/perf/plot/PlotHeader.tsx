@@ -1,9 +1,34 @@
-import { For } from "solid-js";
+import axios from "axios";
+import { createMemo, createResource, For } from "solid-js";
+import { get_options } from "../../../../site/util";
 import { toCapitalized } from "../../../config/util";
 
-const metric_kinds = ["latency"];
-
 const PlotHeader = (props) => {
+  const metric_kinds_fetcher = createMemo(() => {
+    return {
+      refresh: props.refresh(),
+      token: props.user()?.token,
+    };
+  });
+
+  const getMetricKinds = async (fetcher) => {
+    console.log(props.metric_kind());
+    try {
+      const url = props.config?.metric_kinds_url(props.path_params());
+      const resp = await axios(get_options(url, fetcher.token));
+      const data = resp.data;
+      if (data.length > 0) {
+        props.handleMetricKind(data[0]?.slug);
+      }
+      return data;
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  };
+
+  const [metric_kinds] = createResource(metric_kinds_fetcher, getMetricKinds);
+
   return (
     <nav class="panel-heading level">
       <div class="level-left">
@@ -12,9 +37,9 @@ const PlotHeader = (props) => {
           value={props.metric_kind()}
           onInput={(e) => props.handleMetricKind(e.currentTarget?.value)}
         >
-          <For each={metric_kinds}>
-            {(metric_kind) => (
-              <option value={metric_kind}>{toCapitalized(metric_kind)}</option>
+          <For each={metric_kinds()}>
+            {(metric_kind: { name: string; slug: string }) => (
+              <option value={metric_kind?.slug}>{metric_kind?.name}</option>
             )}
           </For>
         </select>

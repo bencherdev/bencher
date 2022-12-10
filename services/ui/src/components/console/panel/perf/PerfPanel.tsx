@@ -28,7 +28,6 @@ const END_TIME_PARAM = "end_time";
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 
-const DEFAULT_METRIC_KIND = "latency";
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
 
@@ -155,16 +154,6 @@ const PerfPanel = (props) => {
       return DEFAULT_PERF_KEY;
     }
   });
-
-  // const perf_query_fetcher = createMemo(() => {
-  //   return {
-  //     perf_query: perf_query(),
-  //     refresh: refresh(),
-  //     token: props.user()?.token,
-  //   };
-  // });
-
-  // const [metric_kinds] = createResource(perf_query_fetcher, postQuery);
 
   // The perf query sent to the server
   const perf_query = createMemo(() => {
@@ -324,6 +313,7 @@ const PerfPanel = (props) => {
 
   const handleMetricKind = (metric_kind: string) => {
     if (validate_string(metric_kind, is_valid_slug)) {
+      console.log("SET " + metric_kind);
       setSearchParams({
         [METRIC_KIND_PARAM]: metric_kind,
       });
@@ -365,6 +355,7 @@ const PerfPanel = (props) => {
         metric_kind={metric_kind}
         start_date={start_date}
         end_date={end_date}
+        refresh={refresh}
         perf_data={perf_data}
         tab={tab}
         key={key}
