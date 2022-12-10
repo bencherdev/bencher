@@ -197,7 +197,7 @@ const PerfPanel = (props) => {
     const EMPTY_OBJECT = {};
     try {
       // Don't even send query if there isn't at least one: branch, testbed, and benchmark
-      if (isPlotInit() || !validate_jwt(fetcher.token)) {
+      if (isPlotInit()) {
         return EMPTY_OBJECT;
       }
 
@@ -214,39 +214,34 @@ const PerfPanel = (props) => {
 
   const [perf_data] = createResource(perf_query_fetcher, postQuery);
 
-  const project_refresh = createMemo(() => {
+  const project_fetcher = createMemo(() => {
     return {
       project_slug: props.path_params().project_slug,
       refresh: refresh(),
+      token: props.user()?.token,
     };
   });
 
-  const getLs = async (perf_tab: PerfTab) => {
-    const EMPTY_ARRAY = [];
+  const getPerfTab = async (perf_tab: PerfTab, token: null | string) => {
     try {
-      const token = getToken();
-      if (token && !validate_jwt(token)) {
-        return EMPTY_ARRAY;
-      }
-
       const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
       const resp = await axios(get_options(url, token));
       return resp.data;
     } catch (error) {
       console.error(error);
-      return EMPTY_ARRAY;
+      return [];
     }
   };
 
   // Resource tabs data: Branches, Testbeds, Benchmarks
-  const [branches_data] = createResource(project_refresh, async () => {
-    return getLs(PerfTab.BRANCHES);
+  const [branches_data] = createResource(project_fetcher, async (fetcher) => {
+    return getPerfTab(PerfTab.BRANCHES, fetcher.token);
   });
-  const [testbeds_data] = createResource(project_refresh, async () => {
-    return getLs(PerfTab.TESTBEDS);
+  const [testbeds_data] = createResource(project_fetcher, async (fetcher) => {
+    return getPerfTab(PerfTab.TESTBEDS, fetcher.token);
   });
-  const [benchmarks_data] = createResource(project_refresh, async () => {
-    return getLs(PerfTab.BENCHMARKS);
+  const [benchmarks_data] = createResource(project_fetcher, async (fetcher) => {
+    return getPerfTab(PerfTab.BENCHMARKS, fetcher.token);
   });
 
   // Initialize as empty, wait for resources to load
