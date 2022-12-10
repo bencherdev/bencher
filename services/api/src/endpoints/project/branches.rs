@@ -65,12 +65,12 @@ pub async fn get_ls(
     path_params: Path<DirPath>,
     query_params: Query<DirQuery>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
 
     let json = get_ls_inner(
         rqctx.context(),
-        &auth_user,
+        auth_user.as_ref(),
         path_params.into_inner(),
         query_params.into_inner(),
         endpoint,
@@ -83,7 +83,7 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &Context,
-    auth_user: &AuthUser,
+    auth_user: Option<&AuthUser>,
     path_params: DirPath,
     query_params: DirQuery,
     endpoint: Endpoint,

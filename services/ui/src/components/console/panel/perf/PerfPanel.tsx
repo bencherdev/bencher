@@ -8,13 +8,7 @@ import {
 } from "solid-js";
 import { isPerfTab, PerfTab } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
-import {
-  getToken,
-  get_options,
-  post_options,
-  validate_jwt,
-  validate_string,
-} from "../../../site/util";
+import { get_options, post_options, validate_string } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 

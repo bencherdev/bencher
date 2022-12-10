@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -50,7 +50,11 @@ pub async fn get_ls(
         .await
         .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 async fn get_ls_inner(
@@ -68,9 +72,9 @@ async fn get_ls_inner(
             let projects =
                 auth_user.projects(&api_context.rbac, bencher_rbac::project::Permission::View);
             sql = sql.filter(
-                schema::project::id
-                    .eq_any(projects)
-                    .or(schema::project::public.eq(true)),
+                schema::project::public
+                    .eq(true)
+                    .or(schema::project::id.eq_any(projects)),
             );
         }
     } else {
