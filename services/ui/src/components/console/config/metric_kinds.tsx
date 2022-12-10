@@ -33,7 +33,10 @@ const metricKindsConfig = {
             key: "slug",
           },
           {},
-          {},
+          {
+            kind: Row.TEXT,
+            key: "units",
+          },
           {},
         ],
         button: {
