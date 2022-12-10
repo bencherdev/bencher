@@ -66,6 +66,3 @@ export const isPerfTab = (tab: string) =>
   tab === PerfTab.BRANCHES ||
   tab === PerfTab.TESTBEDS ||
   tab === PerfTab.BENCHMARKS;
-
-export const isMetricKind = (metric_kind: any) =>
-  typeof metric_kind === "string" && metric_kind.length > 0;

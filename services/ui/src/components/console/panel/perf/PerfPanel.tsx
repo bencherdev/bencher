@@ -6,12 +6,14 @@ import {
   createResource,
   createSignal,
 } from "solid-js";
-import { isMetricKind, isPerfTab, PerfTab } from "../../config/types";
+import { isPerfTab, PerfTab } from "../../config/types";
+import { is_valid_slug } from "bencher_valid";
 import {
   getToken,
   get_options,
   post_options,
   validate_jwt,
+  validate_string,
 } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
@@ -92,8 +94,8 @@ const PerfPanel = (props) => {
   if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
     setSearchParams({ [BENCHMARKS_PARAM]: null });
   }
-  if (!isMetricKind(searchParams[METRIC_KIND_PARAM])) {
-    setSearchParams({ [METRIC_KIND_PARAM]: DEFAULT_METRIC_KIND });
+  if (!validate_string(searchParams[METRIC_KIND_PARAM], is_valid_slug)) {
+    setSearchParams({ [METRIC_KIND_PARAM]: null });
   }
   if (!dateToISO(searchParams[START_TIME_PARAM])) {
     setSearchParams({ [START_TIME_PARAM]: null });
@@ -123,15 +125,7 @@ const PerfPanel = (props) => {
   const benchmarks = createMemo(() =>
     arrayFromString(searchParams[BENCHMARKS_PARAM])
   );
-  const metric_kind = createMemo(() => {
-    // This check is required for the initial load
-    // before the query params have been sanitized
-    if (isMetricKind(searchParams[METRIC_KIND_PARAM])) {
-      return searchParams[METRIC_KIND_PARAM];
-    } else {
-      return DEFAULT_METRIC_KIND;
-    }
-  });
+  const metric_kind = createMemo(() => searchParams[METRIC_KIND_PARAM]);
   // start/end_time is used for the query
   const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
   const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
@@ -162,6 +156,16 @@ const PerfPanel = (props) => {
     }
   });
 
+  // const perf_query_fetcher = createMemo(() => {
+  //   return {
+  //     perf_query: perf_query(),
+  //     refresh: refresh(),
+  //     token: props.user()?.token,
+  //   };
+  // });
+
+  // const [metric_kinds] = createResource(perf_query_fetcher, postQuery);
+
   // The perf query sent to the server
   const perf_query = createMemo(() => {
     return {
@@ -177,7 +181,8 @@ const PerfPanel = (props) => {
   const isPlotInit = () =>
     branches().length === 0 ||
     testbeds().length === 0 ||
-    benchmarks().length === 0;
+    benchmarks().length === 0 ||
+    !metric_kind();
 
   // Refresh pref query
   const [refresh, setRefresh] = createSignal(0);
@@ -318,7 +323,7 @@ const PerfPanel = (props) => {
   };
 
   const handleMetricKind = (metric_kind: string) => {
-    if (isMetricKind(metric_kind)) {
+    if (validate_string(metric_kind, is_valid_slug)) {
       setSearchParams({
         [METRIC_KIND_PARAM]: metric_kind,
       });
