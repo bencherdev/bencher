@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonMetricKind, JsonNewMetricKind, ResourceId, Slug};
+use bencher_json::{
+    project::metric_kind::DEFAULT_UNITS_STR, JsonMetricKind, JsonNewMetricKind, NonEmpty,
+    ResourceId, Slug,
+};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -22,7 +25,7 @@ pub struct QueryMetricKind {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
-    pub units: Option<String>,
+    pub units: String,
 }
 
 impl QueryMetricKind {
@@ -65,9 +68,9 @@ impl QueryMetricKind {
         Ok(JsonMetricKind {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name,
+            name: NonEmpty::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
-            units,
+            units: NonEmpty::from_str(&units).map_err(api_error!())?,
         })
     }
 
@@ -86,7 +89,7 @@ impl QueryMetricKind {
             conn,
             project_id,
             JsonNewMetricKind {
-                name: metric_kind.into(),
+                name: NonEmpty::from_str(metric_kind).map_err(api_error!())?,
                 slug: None,
                 units: None,
             },
@@ -107,7 +110,7 @@ pub struct InsertMetricKind {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
-    pub units: Option<String>,
+    pub units: String,
 }
 
 impl InsertMetricKind {
@@ -130,13 +133,15 @@ impl InsertMetricKind {
         metric_kind: JsonNewMetricKind,
     ) -> Self {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
-        let slug = unwrap_slug!(conn, &name, slug, metric_kind, QueryMetricKind);
+        let slug = unwrap_slug!(conn, name.as_ref(), slug, metric_kind, QueryMetricKind);
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
-            name,
+            name: name.into(),
             slug,
-            units,
+            units: units
+                .map(Into::into)
+                .unwrap_or_else(|| DEFAULT_UNITS_STR.into()),
         }
     }
 }

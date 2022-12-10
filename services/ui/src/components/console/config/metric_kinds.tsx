@@ -77,7 +77,7 @@ const metricKindsConfig = {
           key: "units",
           value: "",
           valid: null,
-          validate: false,
+          validate: true,
           nullify: false,
           clear: false,
           config: METRIC_KIND_FIELDS.units,

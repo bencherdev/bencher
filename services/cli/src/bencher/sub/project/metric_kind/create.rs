@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewMetricKind, ResourceId, Slug};
+use bencher_json::{JsonNewMetricKind, NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -12,9 +12,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Option<Slug>,
-    pub units: Option<String>,
+    pub units: Option<NonEmpty>,
     pub backend: Backend,
 }
 
@@ -31,13 +31,17 @@ impl TryFrom<CliMetricKindCreate> for Create {
         } = create;
         Ok(Self {
             project,
-            name,
+            name: NonEmpty::from_str(&name)?,
             slug: if let Some(slug) = slug {
                 Some(Slug::from_str(&slug)?)
             } else {
                 None
             },
-            units,
+            units: if let Some(units) = units {
+                Some(NonEmpty::from_str(&units)?)
+            } else {
+                None
+            },
             backend: backend.try_into()?,
         })
     }

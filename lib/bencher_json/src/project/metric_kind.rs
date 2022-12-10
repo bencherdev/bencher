@@ -1,29 +1,48 @@
-use bencher_valid::Slug;
+use bencher_valid::{NonEmpty, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub const LATENCY_NAME: &str = "Latency";
+pub const LATENCY_NAME_STR: &str = "Latency";
+static LATENCY_NAME: Lazy<NonEmpty> = Lazy::new(|| {
+    LATENCY_NAME_STR
+        .parse()
+        .expect("Failed to parse metric kind name.")
+});
 pub const LATENCY_SLUG_STR: &str = "latency";
-static LATENCY_SLUG: Lazy<Option<Slug>> = Lazy::new(|| LATENCY_SLUG_STR.parse().ok());
-pub const LATENCY_UNITS: &str = "nanoseconds (ns)";
+static LATENCY_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
+    Some(
+        LATENCY_SLUG_STR
+            .parse()
+            .expect("Failed to parse metric kind slug."),
+    )
+});
+pub const LATENCY_UNITS_STR: &str = "nanoseconds (ns)";
+static LATENCY_UNITS: Lazy<Option<NonEmpty>> = Lazy::new(|| {
+    Some(
+        LATENCY_UNITS_STR
+            .parse()
+            .expect("Failed to parse metric kind units."),
+    )
+});
+pub const DEFAULT_UNITS_STR: &str = "units";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMetricKind {
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Option<Slug>,
-    pub units: Option<String>,
+    pub units: Option<NonEmpty>,
 }
 
 impl JsonNewMetricKind {
     pub fn latency() -> Self {
         Self {
-            name: LATENCY_NAME.into(),
+            name: LATENCY_NAME.clone(),
             slug: LATENCY_SLUG.clone(),
-            units: Some(LATENCY_UNITS.into()),
+            units: LATENCY_UNITS.clone(),
         }
     }
 }
@@ -33,7 +52,7 @@ impl JsonNewMetricKind {
 pub struct JsonMetricKind {
     pub uuid: Uuid,
     pub project: Uuid,
-    pub name: String,
+    pub name: NonEmpty,
     pub slug: Slug,
-    pub units: Option<String>,
+    pub units: NonEmpty,
 }
