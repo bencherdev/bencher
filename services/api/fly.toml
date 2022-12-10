@@ -2,7 +2,10 @@ app = "bencher-api"
 kill_timeout = 6
 
 [build]
-image = "bencherdev/bencher-api-local:nightly"
+image = "bencherdev/bencher-api-litestream:nightly"
+
+[env]
+LITESTREAM_DB_PATH = "/data/bencher.db"
 
 [mounts]
 source = "bencher_data"
