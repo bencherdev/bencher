@@ -22,7 +22,7 @@ SELECT id,
     project_id,
     name,
     slug,
-    units
+    IFNULL(units, 'units') AS units
 FROM metric_kind;
 DROP TABLE metric_kind;
 ALTER TABLE up_metric_kind
