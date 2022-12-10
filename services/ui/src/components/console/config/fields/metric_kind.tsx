@@ -1,20 +1,21 @@
-import validateName from "../../validators/validateName";
+import { validate_string } from "../../../site/util";
+import { is_valid_non_empty } from "bencher_valid";
 
-const metricKindFieldsConfig = {
+const METRIC_KIND_FIELDS = {
   name: {
     type: "text",
-    placeholder: "Name",
-    icon: "fas fa-stopwatch",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
+    placeholder: "Metric Kind Name",
+    icon: "fas fa-shapes",
+    help: "Must be non-empty string",
+    validate: (input) => validate_string(input, is_valid_non_empty),
   },
   units: {
     type: "text",
-    placeholder: "Units",
+    placeholder: "units/time",
     icon: "fas fa-ruler",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
+    help: "Must be non-empty string",
+    validate: (input) => validate_string(input, is_valid_non_empty),
   },
 };
 
-export default metricKindFieldsConfig;
+export default METRIC_KIND_FIELDS;

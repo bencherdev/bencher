@@ -1,5 +1,5 @@
-import metricKindFieldsConfig from "../../fields/config/org/metricKindFieldsConfig";
 import { BENCHER_API_URL } from "../../site/util";
+import METRIC_KIND_FIELDS from "./fields/metric_kind";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { parentPath, addPath, viewSlugPath } from "./util";
 
@@ -69,7 +69,7 @@ const metricKindsConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: metricKindFieldsConfig.name,
+          config: METRIC_KIND_FIELDS.name,
         },
         {
           kind: Field.INPUT,
@@ -80,7 +80,7 @@ const metricKindsConfig = {
           validate: false,
           nullify: false,
           clear: false,
-          config: metricKindFieldsConfig.units,
+          config: METRIC_KIND_FIELDS.units,
         },
       ],
       path: parentPath,
