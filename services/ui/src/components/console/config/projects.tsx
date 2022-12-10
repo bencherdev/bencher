@@ -159,6 +159,10 @@ const projectsConfig = {
         `${BENCHER_API_URL()}/v0/projects/${
           path_params?.project_slug
         }/${tab}/${uuid}`,
+      metric_kinds_url: (path_params) =>
+        `${BENCHER_API_URL()}/v0/projects/${
+          path_params?.project_slug
+        }/metric-kinds`,
     },
   },
 };
