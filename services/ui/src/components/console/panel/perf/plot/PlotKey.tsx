@@ -27,10 +27,6 @@ const PlotKey = (props) => {
   const getOne = async (perf_tab: PerfTab, fetcher) => {
     const key_data = {};
 
-    if (!validate_jwt(fetcher.token)) {
-      return key_data;
-    }
-
     await Promise.all(
       fetcher[perf_tab]?.map(async (uuid: string) => {
         try {
