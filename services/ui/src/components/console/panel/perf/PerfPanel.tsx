@@ -332,7 +332,9 @@ const PerfPanel = (props) => {
   return (
     <>
       <PerfHeader
+        user={props.user}
         config={props.config?.header}
+        path_params={props.path_params}
         refresh={refresh}
         handleRefresh={handleRefresh}
       />

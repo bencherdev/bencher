@@ -1,23 +1,36 @@
-import { createEffect } from "solid-js";
-import { pageTitle } from "../../../site/util";
+import axios from "axios";
+import { createEffect, createResource } from "solid-js";
+import { get_options, pageTitle } from "../../../site/util";
 
 const PerfHeader = (props) => {
+  const getProject = async (token: null | string) => {
+    try {
+      const url = props.config?.url(props.path_params());
+      const resp = await axios(get_options(url, props.user()?.token));
+      return resp.data;
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  };
+
+  const [project_data] = createResource(props.refresh, getProject);
+
   createEffect(() => {
-    pageTitle(props.config?.title);
+    pageTitle(project_data()?.name);
   });
 
   return (
     <nav class="level">
       <div class="level-left">
         <div class="level-item">
-          <h3 class="title is-3">{props.config?.title}</h3>
+          <h3 class="title is-3">{project_data()?.name}</h3>
         </div>
       </div>
 
       <div class="level-right">
         <button
           class="button is-outlined"
-          // disabled={props.refresh() > 0}
           onClick={(e) => {
             e.preventDefault();
             props.handleRefresh();

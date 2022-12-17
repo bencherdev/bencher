@@ -149,6 +149,8 @@ const projectsConfig = {
     operation: Operation.PERF,
     header: {
       title: "Project Perf",
+      url: (path_params) =>
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}`,
     },
     plot: {
       url: (path_params) =>
