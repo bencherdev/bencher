@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -78,7 +78,11 @@ pub async fn get_ls(
     .await
     .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 async fn get_ls_inner(
@@ -89,12 +93,8 @@ async fn get_ls_inner(
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed_resource_id(
-        api_context,
-        &path_params.project,
-        auth_user,
-        Permission::View,
-    )?;
+    let query_project =
+        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
     let conn = &mut api_context.database;
 
     let mut query = schema::branch::table
@@ -196,14 +196,22 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        auth_user.as_ref(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 fn_resource_id!(branch);
@@ -211,15 +219,11 @@ fn_resource_id!(branch);
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,
-    auth_user: &AuthUser,
+    auth_user: Option<&AuthUser>,
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;
-    let query_project = QueryProject::is_allowed_resource_id(
-        api_context,
-        &path_params.project,
-        auth_user,
-        Permission::View,
-    )?;
+    let query_project =
+        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
     let conn = &mut api_context.database;
 
     schema::branch::table
