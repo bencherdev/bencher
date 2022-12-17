@@ -3,7 +3,7 @@ import { createEffect, createResource } from "solid-js";
 import { get_options, pageTitle } from "../../../site/util";
 
 const PerfHeader = (props) => {
-  const getProject = async (token: null | string) => {
+  const getProject = async (_refresh: number) => {
     try {
       const url = props.config?.url(props.path_params());
       const resp = await axios(get_options(url, props.user()?.token));
@@ -29,6 +29,21 @@ const PerfHeader = (props) => {
       </div>
 
       <div class="level-right">
+        {project_data()?.url && (
+          <div class="level-item">
+            <a
+              class="button is-outlined"
+              href={project_data()?.url}
+              rel="nofollow"
+              target="_blank"
+            >
+              <span class="icon">
+                <i class="fas fa-globe" aria-hidden="true" />
+              </span>
+              <span>Project Webpage</span>
+            </a>
+          </div>
+        )}
         <div class="level-item">
           <button
             class="button is-outlined"

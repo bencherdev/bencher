@@ -20,7 +20,7 @@ const ProjectsPage = (props) => {
   const [projects] = createResource(props.user, fetchProjects);
 
   createEffect(() => {
-    pageTitle("Public Projects");
+    pageTitle("Projects");
   });
 
   return (
@@ -29,7 +29,7 @@ const ProjectsPage = (props) => {
         <div class="columns is-mobile">
           <div class="column">
             <div class="content">
-              <h2 class="title">Public Projects</h2>
+              <h2 class="title">Projects</h2>
               <hr />
               <br />
               <For each={projects()}>
