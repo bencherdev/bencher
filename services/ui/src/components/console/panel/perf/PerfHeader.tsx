@@ -3,10 +3,10 @@ import { createEffect, createResource } from "solid-js";
 import { get_options, pageTitle } from "../../../site/util";
 
 const PerfHeader = (props) => {
-  const getProject = async (_refresh: number) => {
+  const getProject = async (fetcher) => {
     try {
-      const url = props.config?.url(props.path_params());
-      const resp = await axios(get_options(url, props.user()?.token));
+      const url = props.config?.url(fetcher.project_slug);
+      const resp = await axios(get_options(url, fetcher.token));
       return resp.data;
     } catch (error) {
       console.error(error);
@@ -14,7 +14,7 @@ const PerfHeader = (props) => {
     }
   };
 
-  const [project_data] = createResource(props.refresh, getProject);
+  const [project_data] = createResource(props.project_fetcher, getProject);
 
   createEffect(() => {
     pageTitle(project_data()?.name);
