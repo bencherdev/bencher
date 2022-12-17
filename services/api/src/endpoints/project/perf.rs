@@ -62,7 +62,7 @@ pub async fn post(
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PERF_RESOURCE, Method::Put);
+    let endpoint = Endpoint::new(PERF_RESOURCE, Method::Post);
 
     let json = post_inner(
         rqctx.context(),

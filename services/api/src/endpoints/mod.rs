@@ -65,6 +65,8 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(organization::projects::get_one)?;
 
     // Projects
+    // All of a projects's GET APIs and its Perf POST API
+    // are public if the project is public
     api.register(project::projects::dir_options)?;
     api.register(project::projects::get_ls)?;
     api.register(project::projects::one_options)?;

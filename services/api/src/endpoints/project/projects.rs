@@ -13,7 +13,7 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::{organization::QueryOrganization, project::QueryProject, user::auth::AuthUser},
+    model::{project::QueryProject, user::auth::AuthUser},
     schema,
     util::{
         cors::{get_cors, CorsResponse},
@@ -116,32 +116,30 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        auth_user.as_ref(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,
-    auth_user: &AuthUser,
+    auth_user: Option<&AuthUser>,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
-
-    let query_project =
-        QueryProject::from_resource_id(&mut api_context.database, &path_params.project)?;
-
-    QueryOrganization::is_allowed_id(
-        api_context,
-        query_project.organization_id,
-        auth_user,
-        bencher_rbac::organization::Permission::View,
-    )?;
-
-    query_project.into_json(&mut api_context.database)
+    QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?
+        .into_json(&mut api_context.database)
 }

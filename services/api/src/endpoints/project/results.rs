@@ -1,7 +1,6 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use bencher_json::{JsonMetric, JsonMetrics, JsonResult, ResourceId};
-use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
@@ -11,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -53,29 +52,32 @@ pub async fn get_one(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonResult>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(RESULT_RESOURCE, Method::GetOne);
 
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_one_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        auth_user.as_ref(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
-    response_ok!(endpoint, json)
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
 }
 
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,
-    auth_user: &AuthUser,
+    auth_user: Option<&AuthUser>,
 ) -> Result<JsonResult, ApiError> {
     let api_context = &mut *context.lock().await;
-    let project_id = QueryProject::is_allowed_resource_id(
-        api_context,
-        &path_params.project,
-        auth_user,
-        Permission::View,
-    )?
-    .id;
+    let project_id =
+        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
     let conn = &mut api_context.database;
 
     let perf = schema::perf::table
