@@ -29,18 +29,34 @@ const PerfHeader = (props) => {
       </div>
 
       <div class="level-right">
-        <button
-          class="button is-outlined"
-          onClick={(e) => {
-            e.preventDefault();
-            props.handleRefresh();
-          }}
-        >
-          <span class="icon">
-            <i class="fas fa-sync-alt" aria-hidden="true" />
-          </span>
-          <span>Refresh</span>
-        </button>
+        <div class="level-item">
+          <button
+            class="button is-outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              navigator.clipboard.writeText(window.location.href);
+            }}
+          >
+            <span class="icon">
+              <i class="fas fa-link" aria-hidden="true" />
+            </span>
+            <span>Copy Link</span>
+          </button>
+        </div>
+        <div class="level-item">
+          <button
+            class="button is-outlined"
+            onClick={(e) => {
+              e.preventDefault();
+              props.handleRefresh();
+            }}
+          >
+            <span class="icon">
+              <i class="fas fa-sync-alt" aria-hidden="true" />
+            </span>
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
     </nav>
   );
