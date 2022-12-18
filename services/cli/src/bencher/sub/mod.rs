@@ -11,6 +11,7 @@ mod sub_cmd;
 mod system;
 mod user;
 
+use mock::Mock;
 use organization::{member::Member, resource::Organization};
 use project::{
     alert::Alert, benchmark::Benchmark, branch::Branch, metric_kind::MetricKind, perf::Perf,
@@ -19,9 +20,8 @@ use project::{
 };
 pub use sub_cmd::SubCmd;
 use system::{auth::Auth, server::Server};
+use user::resource::User;
 use user::token::Token;
-
-use self::mock::Mock;
 
 #[derive(Debug)]
 pub enum Sub {
@@ -40,6 +40,7 @@ pub enum Sub {
     Benchmark(Benchmark),
     Perf(Perf),
     Alert(Alert),
+    User(User),
     Token(Token),
     Mock(Mock),
 }
@@ -64,6 +65,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Benchmark(benchmark) => Self::Benchmark(benchmark.try_into()?),
             CliSub::Perf(perf) => Self::Perf(perf.try_into()?),
             CliSub::Alert(alert) => Self::Alert(alert.try_into()?),
+            CliSub::User(user) => Self::User(user.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
         })
@@ -89,6 +91,7 @@ impl SubCmd for Sub {
             Self::Benchmark(benchmark) => benchmark.exec().await,
             Self::Perf(perf) => perf.exec().await,
             Self::Alert(alert) => alert.exec().await,
+            Self::User(user) => user.exec().await,
             Self::Token(token) => token.exec().await,
             Self::Mock(mock) => mock.exec().await,
         }

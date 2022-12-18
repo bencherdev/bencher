@@ -118,6 +118,9 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(project::alerts::one_options)?;
     api.register(project::alerts::get_one)?;
 
+    // Users
+    api.register(user::users::one_options)?;
+    api.register(user::users::get_one)?;
     // Tokens
     api.register(user::tokens::dir_options)?;
     api.register(user::tokens::get_ls)?;

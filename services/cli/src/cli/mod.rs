@@ -16,6 +16,8 @@ use project::{
 use system::{auth::CliAuth, server::CliServer};
 use user::token::CliToken;
 
+use self::user::CliUser;
+
 /// Bencher CLI
 #[derive(Parser, Debug)]
 #[clap(name = "bencher", author, version, about, long_about = None)]
@@ -70,7 +72,10 @@ pub enum CliSub {
     /// Query benchmark data
     Perf(CliPerf),
 
-    /// User API tokens
+    /// View user
+    #[clap(subcommand)]
+    User(CliUser),
+    /// Manage user API tokens
     #[clap(subcommand)]
     Token(CliToken),
 
