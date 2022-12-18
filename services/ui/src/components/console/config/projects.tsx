@@ -74,7 +74,7 @@ const projectsConfig = {
           label: "URL",
           key: "url",
           value: "",
-          valid: null,
+          valid: true,
           validate: true,
           nullable: true,
           config: PROJECT_FIELDS.url,

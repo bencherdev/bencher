@@ -182,6 +182,11 @@ const UpdateCard = (props) => {
 
   const handleField = (key, value, valid) => {
     if (key && form()?.[key]) {
+      if (form()?.[key]?.nullable && !value) {
+        value = null;
+        valid = true;
+      }
+
       setForm({
         ...form(),
         [key]: {
