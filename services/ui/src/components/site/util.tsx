@@ -72,7 +72,7 @@ export const validate_u32 = (input: string) => {
     return false;
   }
   const num = Number(input);
-  return Number.isInteger(num) && num > 0 && num <= 4294967295;
+  return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
 };
 
 enum HttpMethod {

@@ -1,8 +1,12 @@
-import {
-  BENCHER_API_URL,
-  validate_string,
-  validate_u32,
-} from "../../../site/util";
+import { BENCHER_API_URL, validate_u32 } from "../../../site/util";
+
+const validate_boundary = (input: string) => {
+  if (input.length === 0) {
+    return false;
+  }
+  const num = Number(input);
+  return Number.isFinite(num) && num >= 0.5 && num <= 1.0;
+};
 
 const THRESHOLD_FIELDS = {
   branch: {
@@ -51,6 +55,20 @@ const THRESHOLD_FIELDS = {
     icon: "fas fa-calendar-week",
     help: "Must be an integer greater than zero",
     validate: validate_u32,
+  },
+  left_side: {
+    type: "input",
+    placeholder: "0.95",
+    icon: "fas fa-hand-point-left",
+    help: "Must be between 0.5000 and 1.0000",
+    validate: validate_boundary,
+  },
+  right_side: {
+    type: "input",
+    placeholder: "0.95",
+    icon: "fas fa-hand-point-right",
+    help: "Must be between 0.5000 and 1.0000",
+    validate: validate_boundary,
   },
 };
 
