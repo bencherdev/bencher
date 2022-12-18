@@ -100,7 +100,6 @@ const MembersConfig = {
           valid: null,
           validate: true,
           nullify: false,
-          clear: false,
           config: MEMBER_FIELDS.name,
         },
         {
@@ -111,7 +110,6 @@ const MembersConfig = {
           valid: null,
           validate: true,
           nullify: false,
-          clear: false,
           config: MEMBER_FIELDS.email,
         },
         {
@@ -121,7 +119,6 @@ const MembersConfig = {
           value: ROLE_VALUE,
           validate: false,
           nullify: false,
-          clear: false,
           config: MEMBER_FIELDS.role,
         },
       ],
@@ -180,7 +177,6 @@ const MembersConfig = {
             value: ROLE_VALUE,
             validate: false,
             nullify: false,
-            clear: false,
             config: MEMBER_FIELDS.role,
           },
         },

@@ -68,7 +68,6 @@ const projectsConfig = {
           valid: null,
           validate: true,
           nullify: false,
-          clear: false,
           config: PROJECT_FIELDS.name,
         },
         {
@@ -77,9 +76,8 @@ const projectsConfig = {
           key: "url",
           value: "",
           valid: null,
-          validate: false,
+          validate: true,
           nullify: true,
-          clear: false,
           config: PROJECT_FIELDS.url,
         },
         {
@@ -90,7 +88,6 @@ const projectsConfig = {
           value: true,
           validate: false,
           nullify: false,
-          clear: false,
           config: PROJECT_FIELDS.public,
         },
       ],

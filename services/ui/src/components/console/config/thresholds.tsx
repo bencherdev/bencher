@@ -89,7 +89,6 @@ const thresholdsConfig = {
           valid: null,
           validate: true,
           nullify: false,
-          clear: false,
           config: THRESHOLD_FIELDS.branch,
         },
         {
@@ -100,7 +99,6 @@ const thresholdsConfig = {
           valid: null,
           validate: true,
           nullify: false,
-          clear: false,
           config: THRESHOLD_FIELDS.testbed,
         },
         {
@@ -111,7 +109,6 @@ const thresholdsConfig = {
           valid: null,
           validate: true,
           nullify: false,
-          clear: false,
           config: THRESHOLD_FIELDS.metric_kind,
         },
         {
@@ -121,7 +118,6 @@ const thresholdsConfig = {
           value: TEST_VALUE,
           validate: false,
           nullify: false,
-          clear: false,
           config: THRESHOLD_FIELDS.test,
         },
       ],
