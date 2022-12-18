@@ -104,9 +104,7 @@ const projectsConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL()}/v0/organizations/${
-          path_params?.organization_slug
-        }/projects/${path_params?.project_slug}`,
+        `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}`,
       cards: [
         {
           kind: Card.FIELD,
@@ -122,12 +120,6 @@ const projectsConfig = {
         },
         {
           kind: Card.FIELD,
-          label: "Project Description",
-          key: "description",
-          display: Display.RAW,
-        },
-        {
-          kind: Card.FIELD,
           label: "Project URL",
           key: "url",
           display: Display.RAW,
@@ -139,10 +131,6 @@ const projectsConfig = {
           display: Display.RAW,
         },
       ],
-      buttons: {
-        path: (path_params) =>
-          `/console/projects/${path_params?.project_slug}/perf`,
-      },
     },
   },
   [Operation.PERF]: {
