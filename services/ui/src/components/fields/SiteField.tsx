@@ -1,4 +1,3 @@
-import FieldHelp from "./FieldHelp";
 import SiteInput from "./form/SiteInput";
 import SiteTextarea from "./form/SiteTextarea";
 import SiteCheckbox from "./form/SiteCheckbox";
@@ -99,7 +98,7 @@ const SiteField = (props) => {
       {props.label && <label class="label is-medium">{props.label}</label>}
       {getField()}
       {shouldValidate() && props.valid === false && (
-        <FieldHelp fieldText={props.config.help} fieldValid={props.valid} />
+        <p class="help is-danger">{props.config.help}</p>
       )}
     </div>
   );

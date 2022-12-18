@@ -1,5 +1,3 @@
-import InputCheckMark from "./InputCheckMark";
-
 const SiteInput = (props) => {
   return (
     <div class="control has-icons-left has-icons-right">
@@ -14,7 +12,11 @@ const SiteInput = (props) => {
         disabled={props.config.disabled}
         onInput={(e) => props.handleField(e)}
       />
-      <InputCheckMark fieldValid={props.valid} />
+      {props.valid && (
+        <span class="icon is-small is-right">
+          <i class="fas fa-check"></i>
+        </span>
+      )}
     </div>
   );
 };
