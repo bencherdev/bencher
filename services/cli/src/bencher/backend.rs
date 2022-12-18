@@ -104,9 +104,24 @@ impl Backend {
         if let Some(token) = &self.token {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
-        let res: serde_json::Value = builder.send().await?.json().await?;
-        cli_println!("{}", serde_json::to_string_pretty(&res)?);
-        Ok(res)
+
+        for attempt in 0..3 {
+            match builder
+                .try_clone()
+                .ok_or(CliError::CloneBackend)?
+                .send()
+                .await
+            {
+                Ok(res) => {
+                    let res: serde_json::Value = res.json().await?;
+                    cli_println!("{}", serde_json::to_string_pretty(&res)?);
+                    return Ok(res);
+                },
+                Err(e) => eprintln!("Send attempt #{attempt}: {e}"),
+            }
+        }
+
+        Err(CliError::Send(3))
     }
 }
 

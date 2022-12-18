@@ -24,6 +24,10 @@ pub enum CliError {
     BranchName(String, String, usize),
     #[error("Alerts detected.")]
     Alerts,
+    #[error("Failed to clone backend")]
+    CloneBackend,
+    #[error("Failed to send after {0} attempt(s)")]
+    Send(usize),
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),
