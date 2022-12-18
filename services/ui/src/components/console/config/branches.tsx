@@ -1,7 +1,8 @@
 import BRANCH_FIELDS from "./fields/branch";
-import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
+import { Button, Card, Display, Operation, Row } from "./types";
 import { parentPath, addPath, viewSlugPath } from "./util";
 import { BENCHER_API_URL } from "../../site/util";
+import FieldKind from "../../fields/kind";
 
 const branchesConfig = {
   [Operation.LIST]: {

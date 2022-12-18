@@ -1,8 +1,9 @@
 import { createResource, createSignal, Match, Switch } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import { patch_options, validate_jwt } from "../../../site/util";
-import { Display, FieldKind } from "../../config/types";
+import { Display } from "../../config/types";
 import axios from "axios";
+import FieldKind from "../../../fields/kind";
 
 const FieldCard = (props) => {
   const [update, setUpdate] = createSignal(false);

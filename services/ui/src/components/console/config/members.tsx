@@ -1,10 +1,11 @@
+import FieldKind from "../../fields/kind";
 import {
   BENCHER_API_URL,
   isAllowedOrganization,
   OrganizationPermission,
 } from "../../site/util";
 import MEMBER_FIELDS from "./fields/member";
-import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
+import { Button, Card, Display, Operation, Row } from "./types";
 import { parentPath, invitePath, viewSlugPath } from "./util";
 
 const ROLE_VALUE = {

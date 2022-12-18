@@ -1,6 +1,7 @@
+import FieldKind from "../../fields/kind";
 import { BENCHER_API_URL } from "../../site/util";
 import TESTBED_FIELDS from "./fields/testbed";
-import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
+import { Button, Card, Display, Operation, Row } from "./types";
 import { parentPath, addPath, viewSlugPath } from "./util";
 
 const testbedsConfig = {

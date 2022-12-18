@@ -3,7 +3,6 @@ import axios from "axios";
 
 import SiteField from "../fields/SiteField";
 import AUTH_FIELDS from "./config/fields";
-import { FieldKind } from "../console/config/types";
 import { FormKind } from "./config/types";
 import {
   BENCHER_API_URL,
@@ -13,6 +12,7 @@ import {
   validate_jwt,
 } from "../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
+import FieldKind from "../fields/kind";
 
 export interface Props {
   config: any;

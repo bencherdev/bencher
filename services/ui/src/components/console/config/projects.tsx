@@ -1,15 +1,8 @@
 import PROJECT_FIELDS from "./fields/project";
 import { BENCHER_API_URL } from "../../site/util";
-import {
-  Button,
-  Card,
-  Display,
-  FieldKind,
-  Operation,
-  PerfTab,
-  Row,
-} from "./types";
+import { Button, Card, Display, Operation, PerfTab, Row } from "./types";
 import { parentPath, addPath } from "./util";
+import FieldKind from "../../fields/kind";
 
 const projectsConfig = {
   [Operation.LIST]: {

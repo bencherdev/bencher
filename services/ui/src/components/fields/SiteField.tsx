@@ -2,7 +2,7 @@ import Input from "./form/Input";
 import Checkbox from "./form/Checkbox";
 import Switch from "./form/Switch";
 import Select from "./form/Select";
-import { FieldKind } from "../console/config/types";
+import FieldKind from "./kind";
 
 const SiteField = (props) => {
   function handleField(value) {

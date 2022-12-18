@@ -31,15 +31,6 @@ export enum Resource {
   USER_SETTINGS,
 }
 
-export enum FieldKind {
-  HIDDEN,
-  INPUT,
-  CHECKBOX,
-  SWITCH,
-  SELECT,
-  TABLE,
-}
-
 export enum Row {
   TEXT,
   BOOL,

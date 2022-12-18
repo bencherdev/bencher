@@ -9,8 +9,8 @@ import {
 } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import { post_options, validate_jwt } from "../../../site/util";
-import { FieldKind } from "../../config/types";
 import { useLocation, useNavigate } from "solid-app-router";
+import FieldKind from "../../../fields/kind";
 
 const initForm = (fields) => {
   let newForm = {};

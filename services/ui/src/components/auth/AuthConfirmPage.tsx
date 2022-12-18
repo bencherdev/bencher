@@ -1,7 +1,6 @@
 import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import { FieldKind } from "../console/config/types";
 import AUTH_FIELDS from "./config/fields";
 import SiteField from "../fields/SiteField";
 import {
@@ -12,6 +11,7 @@ import {
   validate_jwt,
 } from "../site/util";
 import Notification from "../site/Notification";
+import FieldKind from "../fields/kind";
 
 const TOKEN_PARAM = "token";
 
