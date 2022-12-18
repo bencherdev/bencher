@@ -53,6 +53,7 @@ export enum Card {
 
 export enum Display {
   RAW,
+  SWITCH,
   SELECT,
 }
 

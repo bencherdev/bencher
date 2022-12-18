@@ -50,6 +50,17 @@ const ViewCard = (props) => {
       <div class="card-content">
         <div class="content">
           <Switch fallback={props.value}>
+            <Match when={props.card?.display === Display.SWITCH}>
+              <div class="field">
+                <input
+                  type="checkbox"
+                  class="switch"
+                  checked={props.value}
+                  disabled={true}
+                />
+                <label></label>
+              </div>
+            </Match>
             <Match when={props.card?.display === Display.SELECT}>
               {props.card?.field?.value?.options.reduce((field, option) => {
                 if (props.value === option.value) {

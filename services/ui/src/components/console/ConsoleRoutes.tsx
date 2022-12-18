@@ -72,6 +72,7 @@ const ConsoleRoutes = (props) => {
         path="/organizations/:organization_slug/members/:member_slug"
         element={consolePage(config?.[Resource.MEMBERS]?.[Operation.VIEW])}
       />
+      <Route path="/projects/:project_slug" element={<NavigateToPerf />} />
       <Route
         path="/projects/:project_slug/settings"
         element={consolePage(config?.[Resource.PROJECTS]?.[Operation.VIEW])}
@@ -182,5 +183,14 @@ const NavigateToProjects = () => {
         path_params().organization_slug
       }/projects`}
     />
+  );
+};
+
+const NavigateToPerf = () => {
+  const params = useParams();
+  const path_params = createMemo(() => params);
+
+  return (
+    <Navigate href={`/console/projects/${path_params().project_slug}/perf`} />
   );
 };

@@ -128,7 +128,7 @@ const projectsConfig = {
           kind: Card.FIELD,
           label: "Public Project",
           key: "public",
-          display: Display.RAW,
+          display: Display.SWITCH,
         },
       ],
     },
