@@ -67,15 +67,24 @@ const Poster = (props) => {
     handleFormSubmitting(true);
     let data = {};
     for (let key of Object.keys(form())) {
+      const value = form()?.[key]?.value;
       switch (form()?.[key]?.kind) {
         case FieldKind.SELECT:
-          data[key] = form()?.[key]?.value?.selected;
+          if (form()?.[key]?.nullable && !value?.selected) {
+            continue;
+          }
+          data[key] = value?.selected;
           break;
         case FieldKind.NUMBER:
-          data[key] = Number(form()?.[key]?.value);
+          if (form()?.[key]?.nullable && !value) {
+            continue;
+          }
+          data[key] = Number(value);
           break;
         default:
-          const value = form()?.[key]?.value;
+          if (form()?.[key]?.nullable && !value) {
+            continue;
+          }
           if (typeof value === "string") {
             data[key] = value.trim();
           } else {
