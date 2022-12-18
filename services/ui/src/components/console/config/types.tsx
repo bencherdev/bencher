@@ -24,7 +24,8 @@ export enum Resource {
   METRIC_KINDS,
   THRESHOLDS,
   ALERTS,
-  USER,
+  USERS,
+  TOKENS,
 }
 
 export enum Row {

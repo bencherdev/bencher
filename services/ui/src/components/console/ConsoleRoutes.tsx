@@ -150,22 +150,20 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.ALERTS]?.[Operation.VIEW])}
       />
       <Route
-        path="/projects/:project_slug/connections"
-        element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.LIST])}
+        path="/users/:user_slug/settings"
+        element={consolePage(config?.[Resource.USERS]?.[Operation.VIEW])}
       />
       <Route
-        path="/projects/:project_slug/connections/:connection_uuid"
-        element={consolePage(config?.[Resource.CONNECTIONS]?.[Operation.VIEW])}
+        path="/users/:user_slug/tokens"
+        element={consolePage(config?.[Resource.TOKENS]?.[Operation.LIST])}
       />
       <Route
-        path="/user/account"
-        element={consolePage(config?.[Resource.USER_ACCOUNT]?.[Operation.VIEW])}
+        path="/users/:user_slug/tokens"
+        element={consolePage(config?.[Resource.TOKENS]?.[Operation.ADD])}
       />
       <Route
-        path="/user/settings"
-        element={consolePage(
-          config?.[Resource.USER_SETTINGS]?.[Operation.VIEW]
-        )}
+        path="/users/:user_slug/tokens/:token_uuid"
+        element={consolePage(config?.[Resource.TOKENS]?.[Operation.VIEW])}
       />
     </>
   );

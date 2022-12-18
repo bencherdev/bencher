@@ -8,6 +8,7 @@ import thresholdsConfig from "./resources/thresholds";
 import alertsConfig from "./resources/alerts";
 import membersConfig from "./resources/members";
 import metricKindsConfig from "./resources/metric_kinds";
+import usersConfig from "./resources/users";
 
 const consoleConfig = {
   [Resource.ORGANIZATIONS]: organizationsConfig,
@@ -19,6 +20,7 @@ const consoleConfig = {
   [Resource.METRIC_KINDS]: metricKindsConfig,
   [Resource.THRESHOLDS]: thresholdsConfig,
   [Resource.ALERTS]: alertsConfig,
+  [Resource.USERS]: usersConfig,
 };
 
 export default consoleConfig;
