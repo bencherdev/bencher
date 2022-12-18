@@ -32,13 +32,13 @@ pub struct CliThresholdCreate {
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Branch UUID
+    /// Branch slug or UUID
     #[clap(long)]
-    pub branch: Uuid,
+    pub branch: ResourceId,
 
-    /// Threshold UUID
+    /// Threshold slug or UUID
     #[clap(long)]
-    pub testbed: Uuid,
+    pub testbed: ResourceId,
 
     /// Benchmark kind slug or UUID
     #[clap(value_enum, long)]

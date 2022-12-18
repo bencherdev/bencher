@@ -6,8 +6,14 @@ use uuid::Uuid;
 
 use super::QueryProject;
 use crate::{
-    error::api_error, schema, schema::testbed as testbed_table, util::slug::unwrap_slug, ApiError,
+    error::api_error,
+    schema,
+    schema::testbed as testbed_table,
+    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    ApiError,
 };
+
+fn_resource_id!(testbed);
 
 #[derive(Queryable)]
 pub struct QueryTestbed {
@@ -34,6 +40,16 @@ impl QueryTestbed {
             .first(conn)
             .map_err(api_error!())?;
         Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn from_resource_id(
+        conn: &mut SqliteConnection,
+        testbed: &ResourceId,
+    ) -> Result<Self, ApiError> {
+        schema::testbed::table
+            .filter(resource_id(testbed)?)
+            .first::<QueryTestbed>(conn)
+            .map_err(api_error!())
     }
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, ApiError> {

@@ -31,6 +31,23 @@ impl SameProject {
         })
     }
 
+    pub fn validate_resource_ids(
+        conn: &mut SqliteConnection,
+        project: &ResourceId,
+        branch: &ResourceId,
+        testbed: &ResourceId,
+    ) -> Result<Self, ApiError> {
+        let project_id = QueryProject::from_resource_id(conn, project)?.id;
+        let branch_id = QueryBranch::from_resource_id(conn, branch)?.id;
+        let testbed_id = QueryTestbed::from_resource_id(conn, testbed)?.id;
+
+        Self::validate_ids(conn, project_id, branch_id, testbed_id).map(|_| Self {
+            project_id,
+            branch_id,
+            testbed_id,
+        })
+    }
+
     pub fn validate_ids(
         conn: &mut SqliteConnection,
         project_id: i32,

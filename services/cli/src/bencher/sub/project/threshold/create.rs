@@ -2,7 +2,6 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonNewThreshold, ResourceId};
-use uuid::Uuid;
 
 use super::statistic::Statistic;
 use crate::{
@@ -14,8 +13,8 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub project: ResourceId,
-    pub branch: Uuid,
-    pub testbed: Uuid,
+    pub branch: ResourceId,
+    pub testbed: ResourceId,
     pub metric_kind: ResourceId,
     pub statistic: Statistic,
     pub backend: Backend,

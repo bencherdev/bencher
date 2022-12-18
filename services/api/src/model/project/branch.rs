@@ -6,8 +6,14 @@ use uuid::Uuid;
 
 use super::QueryProject;
 use crate::{
-    error::api_error, schema, schema::branch as branch_table, util::slug::unwrap_slug, ApiError,
+    error::api_error,
+    schema,
+    schema::branch as branch_table,
+    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    ApiError,
 };
+
+fn_resource_id!(branch);
 
 #[derive(Queryable)]
 pub struct QueryBranch {
@@ -34,6 +40,16 @@ impl QueryBranch {
             .first(conn)
             .map_err(api_error!())?;
         Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn from_resource_id(
+        conn: &mut SqliteConnection,
+        branch: &ResourceId,
+    ) -> Result<Self, ApiError> {
+        schema::branch::table
+            .filter(resource_id(branch)?)
+            .first::<QueryBranch>(conn)
+            .map_err(api_error!())
     }
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, ApiError> {

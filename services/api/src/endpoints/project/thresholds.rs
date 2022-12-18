@@ -151,11 +151,11 @@ async fn post_inner(
         project_id,
         branch_id,
         testbed_id,
-    } = SameProject::validate(
+    } = SameProject::validate_resource_ids(
         &mut api_context.database,
         &path_params.project,
-        json_threshold.branch,
-        json_threshold.testbed,
+        &json_threshold.branch,
+        &json_threshold.testbed,
     )?;
 
     // Verify that the user is allowed

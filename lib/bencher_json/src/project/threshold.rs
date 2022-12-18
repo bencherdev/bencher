@@ -9,8 +9,8 @@ use crate::ResourceId;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
-    pub branch: Uuid,
-    pub testbed: Uuid,
+    pub branch: ResourceId,
+    pub testbed: ResourceId,
     pub metric_kind: ResourceId,
     pub statistic: JsonNewStatistic,
 }
