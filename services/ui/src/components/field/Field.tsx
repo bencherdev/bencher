@@ -63,6 +63,8 @@ const Field = (props) => {
           <Radio
             value={props.value}
             config={props.config}
+            user={props.user}
+            path_params={props.path_params}
             handleField={handleField}
           />
         );

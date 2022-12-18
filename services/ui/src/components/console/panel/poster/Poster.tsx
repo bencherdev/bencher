@@ -126,8 +126,9 @@ const Poster = (props) => {
                 field={field}
                 i={i}
                 form={form}
-                handleField={handleField}
+                user={props.user}
                 path_params={props.path_params}
+                handleField={handleField}
               />
             )}
           </For>
@@ -150,7 +151,7 @@ const PosterField = (props) => {
     const path_param = props.field.path_param;
     if (path_param) {
       props.handleField(props.field.key, path_params?.[path_param], true);
-      return path_params?.[path_param];
+      return;
     }
   });
 
@@ -165,6 +166,8 @@ const PosterField = (props) => {
           value={props.form()?.[props.field?.key]?.value}
           valid={props.form()?.[props.field?.key]?.valid}
           config={props.field?.config}
+          user={props.user}
+          path_params={props.path_params}
           handleField={props.handleField}
         />
       }
