@@ -1,12 +1,12 @@
-import FieldKind from "../../field/kind";
+import FieldKind from "../../../field/kind";
 import {
   BENCHER_API_URL,
   isAllowedOrganization,
   OrganizationPermission,
-} from "../../site/util";
+} from "../../../site/util";
 import MEMBER_FIELDS from "./fields/member";
-import { Button, Card, Display, Operation, Row } from "./types";
-import { parentPath, invitePath, viewSlugPath } from "./util";
+import { Button, Card, Display, Operation, Row } from "../types";
+import { parentPath, invitePath, viewSlugPath } from "../util";
 
 const ROLE_VALUE = {
   selected: "leader",

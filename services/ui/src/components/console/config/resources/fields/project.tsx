@@ -1,4 +1,4 @@
-import { validate_string } from "../../../site/util";
+import { validate_string } from "../../../../site/util";
 import { is_valid_slug, is_valid_non_empty, is_valid_url } from "bencher_valid";
 
 const PROJECT_FIELDS = {

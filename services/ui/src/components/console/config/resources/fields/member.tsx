@@ -3,7 +3,7 @@ import {
   is_valid_slug,
   is_valid_user_name,
 } from "bencher_valid";
-import { validate_string } from "../../../site/util";
+import { validate_string } from "../../../../site/util";
 
 const MEMBER_FIELDS = {
   name: {

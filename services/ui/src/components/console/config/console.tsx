@@ -1,13 +1,13 @@
 import { Resource } from "./types";
-import organizationsConfig from "./organizations";
-import projectsConfig from "./projects";
-import testbedsConfig from "./testbeds";
-import branchesConfig from "./branches";
-import reportsConfig from "./reports";
-import thresholdsConfig from "./thresholds";
-import alertsConfig from "./alerts";
-import membersConfig from "./members";
-import metricKindsConfig from "./metric_kinds";
+import organizationsConfig from "./resources/organizations";
+import projectsConfig from "./resources/projects";
+import testbedsConfig from "./resources/testbeds";
+import branchesConfig from "./resources/branches";
+import reportsConfig from "./resources/reports";
+import thresholdsConfig from "./resources/thresholds";
+import alertsConfig from "./resources/alerts";
+import membersConfig from "./resources/members";
+import metricKindsConfig from "./resources/metric_kinds";
 
 const consoleConfig = {
   [Resource.ORGANIZATIONS]: organizationsConfig,

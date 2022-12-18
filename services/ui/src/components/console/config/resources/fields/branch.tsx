@@ -1,5 +1,5 @@
 import { is_valid_branch_name } from "bencher_valid";
-import { validate_string } from "../../../site/util";
+import { validate_string } from "../../../../site/util";
 
 const BRANCH_FIELDS = {
   name: {

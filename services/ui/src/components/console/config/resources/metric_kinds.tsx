@@ -1,14 +1,14 @@
-import FieldKind from "../../field/kind";
-import { BENCHER_API_URL } from "../../site/util";
-import TESTBED_FIELDS from "./fields/testbed";
-import { Button, Card, Display, Operation, Row } from "./types";
-import { parentPath, addPath, viewSlugPath } from "./util";
+import FieldKind from "../../../field/kind";
+import { BENCHER_API_URL } from "../../../site/util";
+import METRIC_KIND_FIELDS from "./fields/metric_kind";
+import { Button, Card, Display, Operation, Row } from "../types";
+import { parentPath, addPath, viewSlugPath } from "../util";
 
-const testbedsConfig = {
+const metricKindsConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
     header: {
-      title: "Testbeds",
+      title: "Metric Kinds",
       buttons: [
         {
           kind: Button.ADD,
@@ -21,10 +21,10 @@ const testbedsConfig = {
       url: (path_params) =>
         `${BENCHER_API_URL()}/v0/projects/${
           path_params?.project_slug
-        }/testbeds`,
+        }/metric-kinds`,
       add: {
         path: addPath,
-        text: "Add a Testbed",
+        text: "Add a Metric Kind",
       },
       row: {
         key: "name",
@@ -34,7 +34,10 @@ const testbedsConfig = {
             key: "slug",
           },
           {},
-          {},
+          {
+            kind: Row.TEXT,
+            key: "units",
+          },
           {},
         ],
         button: {
@@ -47,14 +50,14 @@ const testbedsConfig = {
   [Operation.ADD]: {
     operation: Operation.ADD,
     header: {
-      title: "Add Testbed",
+      title: "Add Metric Kind",
       path: parentPath,
     },
     form: {
       url: (path_params) =>
         `${BENCHER_API_URL()}/v0/projects/${
           path_params?.project_slug
-        }/testbeds`,
+        }/metric-kinds`,
       fields: [
         {
           kind: FieldKind.HIDDEN,
@@ -68,7 +71,16 @@ const testbedsConfig = {
           value: "",
           valid: null,
           validate: true,
-          config: TESTBED_FIELDS.name,
+          config: METRIC_KIND_FIELDS.name,
+        },
+        {
+          kind: FieldKind.INPUT,
+          label: "Units",
+          key: "units",
+          value: "",
+          valid: null,
+          validate: true,
+          config: METRIC_KIND_FIELDS.units,
         },
       ],
       path: parentPath,
@@ -84,24 +96,30 @@ const testbedsConfig = {
       url: (path_params) =>
         `${BENCHER_API_URL()}/v0/projects/${
           path_params?.project_slug
-        }/testbeds/${path_params?.testbed_slug}`,
+        }/metric-kinds/${path_params?.metric_kind_slug}`,
       cards: [
         {
           kind: Card.FIELD,
-          label: "Testbed Name",
+          label: "Metric Kind Name",
           key: "name",
           display: Display.RAW,
         },
         {
           kind: Card.FIELD,
-          label: "Testbed Slug",
+          label: "Metric Kind Slug",
           key: "slug",
           display: Display.RAW,
         },
         {
           kind: Card.FIELD,
-          label: "Testbed UUID",
+          label: "Metric Kind UUID",
           key: "uuid",
+          display: Display.RAW,
+        },
+        {
+          kind: Card.FIELD,
+          label: "Metric Kind Units",
+          key: "units",
           display: Display.RAW,
         },
       ],
@@ -110,4 +128,4 @@ const testbedsConfig = {
   },
 };
 
-export default testbedsConfig;
+export default metricKindsConfig;

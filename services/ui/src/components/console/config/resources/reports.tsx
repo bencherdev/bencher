@@ -1,6 +1,6 @@
-import { BENCHER_API_URL } from "../../site/util";
-import { Button, Card, Display, Operation, Row } from "./types";
-import { parentPath, viewUuidPath } from "./util";
+import { BENCHER_API_URL } from "../../../site/util";
+import { Button, Card, Display, Operation, Row } from "../types";
+import { parentPath, viewUuidPath } from "../util";
 
 const reportsConfig = {
   [Operation.LIST]: {

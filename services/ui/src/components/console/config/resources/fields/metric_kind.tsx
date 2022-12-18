@@ -1,4 +1,4 @@
-import { validate_string } from "../../../site/util";
+import { validate_string } from "../../../../site/util";
 import { is_valid_non_empty } from "bencher_valid";
 
 const METRIC_KIND_FIELDS = {

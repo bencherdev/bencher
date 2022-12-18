@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Link, useParams } from "solid-app-router";
 import { createEffect, createMemo, createResource, For } from "solid-js";
-import projectsConfig from "../console/config/projects";
+import projectsConfig from "../console/config/resources/projects";
 import { Operation } from "../console/config/types";
 import PerfPanel from "../console/panel/perf/PerfPanel";
 import { BENCHER_API_URL, get_options, pageTitle } from "../site/util";

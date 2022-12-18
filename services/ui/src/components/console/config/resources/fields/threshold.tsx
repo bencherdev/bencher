@@ -1,4 +1,4 @@
-import { BENCHER_API_URL, validate_u32 } from "../../../site/util";
+import { BENCHER_API_URL, validate_u32 } from "../../../../site/util";
 
 const validate_boundary = (input: string) => {
   if (input.length === 0) {

@@ -1,8 +1,8 @@
 import THRESHOLD_FIELDS from "./fields/threshold";
-import { BENCHER_API_URL } from "../../site/util";
-import { Button, Card, Display, Operation, Row } from "./types";
-import { parentPath, addPath, viewUuidPath } from "./util";
-import FieldKind from "../../field/kind";
+import { BENCHER_API_URL } from "../../../site/util";
+import { Button, Card, Display, Operation, Row } from "../types";
+import { parentPath, addPath, viewUuidPath } from "../util";
+import FieldKind from "../../../field/kind";
 
 const TEST_VALUE = {
   selected: "z",

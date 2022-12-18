@@ -1,24 +1,19 @@
-import { BENCHER_API_URL } from "../../site/util";
-import { Button, Card, Display, Operation, } from "./types";
-import {
-  parentPath,
-  addPath,
-  viewSlugPath,
-  viewUuidPath,
-} from "./util";
+import { BENCHER_API_URL } from "../../../site/util";
+import { Button, Card, Display, Operation } from "../types";
+import { parentPath, addPath, viewSlugPath, viewUuidPath } from "../util";
 
 const alertsConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
     header: {
       title: "Alerts",
-      buttons: [
-        { kind: Button.REFRESH },
-      ],
+      buttons: [{ kind: Button.REFRESH }],
     },
     table: {
       url: (path_params) => {
-        return `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/alerts`;
+        return `${BENCHER_API_URL()}/v0/projects/${
+          path_params?.project_slug
+        }/alerts`;
       },
       add: {
         path: (_pathname) => {
@@ -48,7 +43,9 @@ const alertsConfig = {
     },
     deck: {
       url: (path_params) => {
-        return `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/alerts/${path_params?.alert_uuid}`;
+        return `${BENCHER_API_URL()}/v0/projects/${
+          path_params?.project_slug
+        }/alerts/${path_params?.alert_uuid}`;
       },
       cards: [
         {
