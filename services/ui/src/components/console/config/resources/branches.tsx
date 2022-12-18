@@ -57,11 +57,6 @@ const branchesConfig = {
         }/branches`,
       fields: [
         {
-          kind: FieldKind.HIDDEN,
-          key: "project",
-          path_param: "project_slug",
-        },
-        {
           kind: FieldKind.INPUT,
           label: "Name",
           key: "name",

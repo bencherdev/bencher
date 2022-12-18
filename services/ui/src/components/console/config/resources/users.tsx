@@ -1,6 +1,5 @@
 import { BENCHER_API_URL } from "../../../site/util";
-import { Button, Card, Display, Operation } from "../types";
-import { parentPath, addPath, viewSlugPath, viewUuidPath } from "../util";
+import { Card, Display, Operation } from "../types";
 
 const usersConfig = {
   [Operation.VIEW]: {

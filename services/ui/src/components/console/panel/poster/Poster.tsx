@@ -126,10 +126,14 @@ const Poster = (props) => {
         <form class="box">
           <For each={props.config?.fields}>
             {(field, i) => (
-              <PosterField
-                field={field}
-                i={i}
-                form={form}
+              <Field
+                key={i}
+                kind={field?.kind}
+                label={form()?.[field?.key]?.label}
+                fieldKey={field?.key}
+                value={form()?.[field?.key]?.value}
+                valid={form()?.[field?.key]?.valid}
+                config={field?.config}
                 user={props.user}
                 path_params={props.path_params}
                 handleField={handleField}
@@ -147,37 +151,6 @@ const Poster = (props) => {
         </form>
       </div>
     </div>
-  );
-};
-
-const PosterField = (props) => {
-  const [_hidden_field] = createResource(props.path_params, (path_params) => {
-    const path_param = props.field.path_param;
-    if (path_param) {
-      props.handleField(props.field.key, path_params?.[path_param], true);
-      return;
-    }
-  });
-
-  return (
-    <Switch
-      fallback={
-        <Field
-          key={props.i}
-          kind={props.field?.kind}
-          label={props.form()?.[props.field?.key]?.label}
-          fieldKey={props.field?.key}
-          value={props.form()?.[props.field?.key]?.value}
-          valid={props.form()?.[props.field?.key]?.valid}
-          config={props.field?.config}
-          user={props.user}
-          path_params={props.path_params}
-          handleField={props.handleField}
-        />
-      }
-    >
-      <Match when={props.field?.kind === FieldKind.HIDDEN}></Match>
-    </Switch>
   );
 };
 

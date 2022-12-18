@@ -88,11 +88,6 @@ const MembersConfig = {
         }/members`,
       fields: [
         {
-          kind: FieldKind.HIDDEN,
-          key: "organization",
-          path_param: "organization_slug",
-        },
-        {
           kind: FieldKind.INPUT,
           label: "Name",
           key: "name",

@@ -158,7 +158,7 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.TOKENS]?.[Operation.LIST])}
       />
       <Route
-        path="/users/:user_slug/tokens"
+        path="/users/:user_slug/tokens/add"
         element={consolePage(config?.[Resource.TOKENS]?.[Operation.ADD])}
       />
       <Route

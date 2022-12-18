@@ -75,7 +75,7 @@ const ConsoleMenu = (props) => {
       <p class="menu-label">User</p>
       <ul class="menu-list">
         <li>
-          <Link href={getUsersPath("tokens")}>Tokens</Link>
+          <Link href={getUsersPath("tokens")}>API Tokens</Link>
         </li>
         <li>
           <Link href={getUsersPath("settings")}>Settings</Link>

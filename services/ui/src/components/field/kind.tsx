@@ -1,5 +1,4 @@
 enum FieldKind {
-  HIDDEN,
   INPUT,
   NUMBER,
   CHECKBOX,
