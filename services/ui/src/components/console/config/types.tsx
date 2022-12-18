@@ -34,7 +34,6 @@ export enum Resource {
 export enum Field {
   HIDDEN,
   INPUT,
-  TEXTAREA,
   CHECKBOX,
   SWITCH,
   SELECT,

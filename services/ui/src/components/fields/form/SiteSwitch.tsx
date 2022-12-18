@@ -11,7 +11,7 @@ const SiteSwitch = (props) => {
       />
       <label
         for={props.config?.label}
-        onClick={(e) => {
+        onClick={(_event) => {
           if (props.config?.disabled) {
             return;
           }

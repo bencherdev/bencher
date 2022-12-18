@@ -10,7 +10,7 @@ const SiteInput = (props) => {
         placeholder={props.config.placeholder}
         value={props.value}
         disabled={props.config.disabled}
-        onInput={(e) => props.handleField(e)}
+        onInput={(event) => props.handleField(event.target?.value)}
       />
       {props.valid && (
         <span class="icon is-small is-right">

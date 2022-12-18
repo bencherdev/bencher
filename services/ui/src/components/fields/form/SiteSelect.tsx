@@ -23,7 +23,7 @@ const SiteSelect = (props) => {
             <div class="select">
               <select
                 value={props.value.selected}
-                onInput={(e) => props.handleField(e)}
+                onInput={(event) => props.handleField(event.target?.value)}
               >
                 {props.value.options.map((option) => {
                   return (

@@ -1,51 +1,37 @@
 import SiteInput from "./form/SiteInput";
-import SiteTextarea from "./form/SiteTextarea";
 import SiteCheckbox from "./form/SiteCheckbox";
 import SiteSwitch from "./form/SiteSwitch";
 import SiteSelect from "./form/SiteSelect";
 import { Field } from "../console/config/types";
 
 const SiteField = (props) => {
-  function handleField(event, field = null) {
+  function handleField(value) {
     switch (props.kind) {
       case Field.CHECKBOX:
-        props.handleField(
-          props.fieldKey,
-          event.target.checked,
-          event.target.checked
-        );
+        props.handleField(props.fieldKey, value, value);
         break;
       case Field.SWITCH:
-        props.handleField(props.fieldKey, event, true);
+        props.handleField(props.fieldKey, value, true);
         break;
       case Field.SELECT:
         props.handleField(
           props.fieldKey,
-          { ...props.value, selected: event.target.value },
+          { ...props.value, selected: value },
           true
         );
         break;
-      default:
+      case Field.INPUT:
         props.handleField(
           props.fieldKey,
-          event.target.value,
-          props.config.validate
-            ? props.config.validate(event.target.value)
-            : true
+          value,
+          props.config.validate ? props.config.validate(value) : true
         );
+        break;
     }
   }
 
   function getField() {
     switch (props.kind) {
-      case Field.TEXTAREA:
-        return (
-          <SiteTextarea
-            value={props.value}
-            config={props.config}
-            handleField={handleField}
-          />
-        );
       case Field.CHECKBOX:
         return (
           <SiteCheckbox
@@ -70,7 +56,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      default:
+      case Field.INPUT:
         return (
           <SiteInput
             value={props.value}
@@ -79,6 +65,8 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
+      default:
+        return <div>UNKNOWN FIELD</div>;
     }
   }
 
@@ -87,6 +75,7 @@ const SiteField = (props) => {
       case Field.CHECKBOX:
       case Field.SWITCH:
       case Field.SELECT:
+      case Field.TABLE:
         return false;
       default:
         return true;
