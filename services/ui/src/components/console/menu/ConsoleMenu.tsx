@@ -11,6 +11,10 @@ const ConsoleMenu = (props) => {
     return `/console/projects/${props.project_slug()}/${section}`;
   };
 
+  const getUsersPath = (section: string) => {
+    return `/console/users/${props.user()?.user?.slug}/${section}`;
+  };
+
   return (
     <aside class="menu">
       {typeof props.organization_slug() === "string" &&
@@ -71,10 +75,10 @@ const ConsoleMenu = (props) => {
       <p class="menu-label">User</p>
       <ul class="menu-list">
         <li>
-          <Link href="/console/user/account">Account</Link>
+          <Link href={getUsersPath("tokens")}>Tokens</Link>
         </li>
         <li>
-          <Link href="/console/user/settings">Settings</Link>
+          <Link href={getUsersPath("settings")}>Settings</Link>
         </li>
       </ul>
     </aside>

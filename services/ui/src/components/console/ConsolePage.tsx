@@ -92,6 +92,7 @@ const ConsolePage = (props) => {
         <div class="columns is-reverse-mobile">
           <div class="column is-narrow">
             <ConsoleMenu
+              user={props.user}
               organization_slug={props.organization_slug}
               project_slug={props.project_slug}
               handleProjectSlug={props.handleProjectSlug}
