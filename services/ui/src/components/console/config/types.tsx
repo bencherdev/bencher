@@ -38,6 +38,7 @@ export enum Field {
   CHECKBOX,
   SWITCH,
   SELECT,
+  TABLE,
 }
 
 export enum Row {

@@ -1,4 +1,4 @@
-import thresholdFieldsConfig from "../../fields/config/org/thresholdFieldsConfig";
+import thresholdFieldsConfig from "./fields/thresholdFieldsConfig";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { parentPath, addPath, viewUuidPath } from "./util";
@@ -53,7 +53,7 @@ const thresholdsConfig = {
           path_param: "project_slug",
         },
         {
-          kind: Field.INPUT,
+          kind: Field.TABLE,
           label: "Branch",
           key: "branch",
           value: "",
@@ -64,7 +64,7 @@ const thresholdsConfig = {
           config: thresholdFieldsConfig.name,
         },
         {
-          kind: Field.INPUT,
+          kind: Field.TABLE,
           label: "Testbed",
           key: "testbed",
           value: "",
@@ -75,9 +75,9 @@ const thresholdsConfig = {
           config: thresholdFieldsConfig.name,
         },
         {
-          kind: Field.INPUT,
-          label: "TODO",
-          key: "kind",
+          kind: Field.TABLE,
+          label: "Metric Kind",
+          key: "metric_kind",
           value: "",
           valid: null,
           validate: true,
