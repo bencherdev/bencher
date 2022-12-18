@@ -45,6 +45,13 @@ const THRESHOLD_FIELDS = {
     help: "Must be an integer greater than zero",
     validate: validate_u32,
   },
+  window: {
+    type: "number",
+    placeholder: "525600",
+    icon: "fas fa-calendar-week",
+    help: "Must be an integer greater than zero",
+    validate: validate_u32,
+  },
 };
 
 export default THRESHOLD_FIELDS;

@@ -65,7 +65,7 @@ pub struct CliStatisticCreate {
     #[clap(long)]
     pub max_sample_size: Option<u32>,
 
-    /// Limit sampling window in nanoseconds
+    /// Window size (seconds)
     #[clap(long)]
     pub window: Option<u32>,
 

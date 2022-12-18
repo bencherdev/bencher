@@ -27,7 +27,7 @@ impl MetricsData {
             .into_boxed();
 
         if let Some(window) = statistic.window {
-            let now = Utc::now().timestamp_nanos();
+            let now = Utc::now().timestamp();
             query = query.filter(schema::report::start_time.ge(now - window));
         }
 
