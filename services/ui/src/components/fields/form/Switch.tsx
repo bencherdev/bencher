@@ -1,4 +1,4 @@
-const SiteSwitch = (props) => {
+const Switch = (props) => {
   return (
     <div class="field" id={props.config?.label}>
       <input
@@ -22,4 +22,4 @@ const SiteSwitch = (props) => {
   );
 };
 
-export default SiteSwitch;
+export default Switch;

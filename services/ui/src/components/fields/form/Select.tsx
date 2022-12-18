@@ -1,4 +1,4 @@
-const SiteSelect = (props) => {
+const Select = (props) => {
   function getStatus() {
     let selected = props.value.options.find((option) => {
       return props.value.selected === option.value;
@@ -42,4 +42,4 @@ const SiteSelect = (props) => {
   );
 };
 
-export default SiteSelect;
+export default Select;

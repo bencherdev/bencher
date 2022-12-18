@@ -1,4 +1,4 @@
-const SiteCheckbox = (props) => {
+const Checkbox = (props) => {
   return (
     <div class="field" id={props.config.label}>
       <input
@@ -16,4 +16,4 @@ const SiteCheckbox = (props) => {
   );
 };
 
-export default SiteCheckbox;
+export default Checkbox;

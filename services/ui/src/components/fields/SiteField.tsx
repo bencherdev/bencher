@@ -1,7 +1,7 @@
-import SiteInput from "./form/SiteInput";
-import SiteCheckbox from "./form/SiteCheckbox";
-import SiteSwitch from "./form/SiteSwitch";
-import SiteSelect from "./form/SiteSelect";
+import Input from "./form/Input";
+import Checkbox from "./form/Checkbox";
+import Switch from "./form/Switch";
+import Select from "./form/Select";
 import { Field } from "../console/config/types";
 
 const SiteField = (props) => {
@@ -34,7 +34,7 @@ const SiteField = (props) => {
     switch (props.kind) {
       case Field.CHECKBOX:
         return (
-          <SiteCheckbox
+          <Checkbox
             value={props.value}
             config={props.config}
             handleField={handleField}
@@ -42,7 +42,7 @@ const SiteField = (props) => {
         );
       case Field.SWITCH:
         return (
-          <SiteSwitch
+          <Switch
             value={props.value}
             config={props.config}
             handleField={handleField}
@@ -50,7 +50,7 @@ const SiteField = (props) => {
         );
       case Field.SELECT:
         return (
-          <SiteSelect
+          <Select
             value={props.value}
             config={props.config}
             handleField={handleField}
@@ -58,7 +58,7 @@ const SiteField = (props) => {
         );
       case Field.INPUT:
         return (
-          <SiteInput
+          <Input
             value={props.value}
             valid={props.valid}
             config={props.config}

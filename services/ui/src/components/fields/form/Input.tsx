@@ -1,4 +1,4 @@
-const SiteInput = (props) => {
+const Input = (props) => {
   return (
     <div class="control has-icons-left has-icons-right">
       <span class="icon is-small is-left">
@@ -21,4 +21,4 @@ const SiteInput = (props) => {
   );
 };
 
-export default SiteInput;
+export default Input;
