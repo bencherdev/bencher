@@ -40,7 +40,7 @@ const PerfHeader = (props) => {
               <span class="icon">
                 <i class="fas fa-globe" aria-hidden="true" />
               </span>
-              <span>Project Webpage</span>
+              <span>Website</span>
             </a>
           </div>
         )}
