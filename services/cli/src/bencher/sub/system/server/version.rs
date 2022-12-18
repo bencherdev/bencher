@@ -19,9 +19,10 @@ impl TryFrom<CliVersion> for Version {
     type Error = CliError;
 
     fn try_from(version: CliVersion) -> Result<Self, Self::Error> {
-        let CliVersion { host } = version;
-        let backend = Backend::new(None, host)?;
-        Ok(Self { backend })
+        let CliVersion { backend } = version;
+        Ok(Self {
+            backend: backend.try_into()?,
+        })
     }
 }
 

@@ -21,10 +21,14 @@ impl TryFrom<CliAuthConfirm> for Confirm {
     type Error = CliError;
 
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
-        let CliAuthConfirm { token, host } = confirm;
+        let CliAuthConfirm { mut backend } = confirm;
         Ok(Self {
-            token: token.parse()?,
-            backend: Backend::new(None, host)?,
+            token: backend
+                .token
+                .take()
+                .ok_or(CliError::TokenNotFound)?
+                .parse()?,
+            backend: backend.try_into()?,
         })
     }
 }

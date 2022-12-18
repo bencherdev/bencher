@@ -17,16 +17,14 @@ pub enum CliServer {
 
 #[derive(Parser, Debug)]
 pub struct CliPing {
-    /// Backend host URL (default https://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliVersion {
-    /// Backend host URL (default https://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]

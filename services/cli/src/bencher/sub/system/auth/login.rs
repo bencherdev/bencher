@@ -25,7 +25,7 @@ impl TryFrom<CliAuthLogin> for Login {
         let CliAuthLogin {
             email,
             invite,
-            host,
+            backend,
         } = login;
         Ok(Self {
             email: email.parse()?,
@@ -34,7 +34,7 @@ impl TryFrom<CliAuthLogin> for Login {
             } else {
                 None
             },
-            backend: Backend::new(None, host)?,
+            backend: backend.try_into()?,
         })
     }
 }

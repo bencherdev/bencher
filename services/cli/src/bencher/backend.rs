@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 
+use bencher_json::Jwt;
 use serde::Serialize;
+use tokio::time::{sleep, Duration};
 use url::Url;
 
 use crate::{cli::CliBackend, cli_println, CliError};
@@ -11,11 +13,15 @@ pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const DEFAULT_HOST: &str = "http://localhost:61016";
 #[cfg(not(debug_assertions))]
 pub const DEFAULT_HOST: &str = "https://api.bencher.dev";
+const DEFAULT_ATTEMPTS: usize = 3;
+const DEFAULT_SLEEP: u64 = 1;
 
 #[derive(Debug, Clone)]
 pub struct Backend {
-    pub token: Option<String>,
     pub host: Url,
+    pub token: Option<Jwt>,
+    pub attempts: Option<usize>,
+    pub sleep: Option<u64>,
 }
 
 impl TryFrom<CliBackend> for Backend {
@@ -23,42 +29,37 @@ impl TryFrom<CliBackend> for Backend {
 
     fn try_from(backend: CliBackend) -> Result<Self, Self::Error> {
         Ok(Self {
-            token: map_token(backend.token)?,
             host: unwrap_host(backend.host)?,
+            token: map_token(backend.token)?,
+            attempts: backend.attempts,
+            sleep: backend.sleep,
         })
     }
 }
 
-fn map_token(token: Option<String>) -> Result<Option<String>, CliError> {
-    // TODO add first pass token validation
-    if let Some(token) = token {
-        Ok(Some(token))
-    } else if let Ok(token) = std::env::var(BENCHER_API_TOKEN) {
-        Ok(Some(token))
-    } else {
-        Err(CliError::TokenNotFound)
-    }
-}
-
-fn unwrap_host(host: Option<String>) -> Result<Url, url::ParseError> {
-    let url = if let Some(url) = host {
+fn unwrap_host(host: Option<String>) -> Result<Url, CliError> {
+    if let Some(url) = host {
         url
     } else if let Ok(url) = std::env::var(BENCHER_HOST) {
         url
     } else {
         DEFAULT_HOST.into()
-    };
-    Url::parse(&url)
+    }
+    .parse()
+    .map_err(Into::into)
+}
+
+fn map_token(token: Option<String>) -> Result<Option<Jwt>, CliError> {
+    Ok(if let Some(token) = token {
+        Some(token.parse()?)
+    } else if let Ok(token) = std::env::var(BENCHER_API_TOKEN) {
+        Some(token.parse()?)
+    } else {
+        None
+    })
 }
 
 impl Backend {
-    pub fn new(token: Option<String>, host: Option<String>) -> Result<Self, CliError> {
-        Ok(Self {
-            token,
-            host: unwrap_host(host)?,
-        })
-    }
-
     pub async fn get(&self, path: &str) -> Result<serde_json::Value, CliError> {
         self.send::<()>(Method::Get, path).await
     }
@@ -105,7 +106,9 @@ impl Backend {
             builder = builder.header("Authorization", format!("Bearer {token}"));
         }
 
-        for attempt in 0..3 {
+        let attempts = self.attempts.unwrap_or(DEFAULT_ATTEMPTS);
+        let sleep_secs = self.sleep.unwrap_or(DEFAULT_SLEEP);
+        for attempt in 0..attempts {
             match builder
                 .try_clone()
                 .ok_or(CliError::CloneBackend)?
@@ -113,15 +116,21 @@ impl Backend {
                 .await
             {
                 Ok(res) => {
-                    let res: serde_json::Value = res.json().await?;
-                    cli_println!("{}", serde_json::to_string_pretty(&res)?);
-                    return Ok(res);
+                    let json = res.json().await?;
+                    cli_println!("{}", serde_json::to_string_pretty(&json)?);
+                    return Ok(json);
                 },
-                Err(e) => eprintln!("Send attempt #{attempt}: {e}"),
+                Err(e) => {
+                    cli_println!("Send attempt #{attempt}: {e}");
+                    if attempt != attempts - 1 {
+                        cli_println!("Will attempt to send again in {sleep_secs} second(s).");
+                        sleep(Duration::from_secs(sleep_secs)).await;
+                    }
+                },
             }
         }
 
-        Err(CliError::Send(3))
+        Err(CliError::Send(attempts))
     }
 }
 

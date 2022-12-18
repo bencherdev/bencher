@@ -107,4 +107,12 @@ pub struct CliBackend {
     /// User API token
     #[clap(long)]
     pub token: Option<String>,
+
+    /// Request attempts (default 3)
+    #[clap(long)]
+    pub attempts: Option<usize>,
+
+    /// Attempt interval seconds (default 1)
+    #[clap(long)]
+    pub sleep: Option<u64>,
 }

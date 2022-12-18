@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+use crate::cli::CliBackend;
+
 #[derive(Subcommand, Debug)]
 pub enum CliAuth {
     // Create a user account
@@ -12,10 +14,6 @@ pub enum CliAuth {
 
 #[derive(Parser, Debug)]
 pub struct CliAuthSignup {
-    /// Backend host URL (default https://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
-
     /// User name
     #[clap(long)]
     pub name: String,
@@ -30,28 +28,26 @@ pub struct CliAuthSignup {
 
     /// User email
     pub email: String,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliAuthLogin {
-    /// Backend host URL (default https://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
-
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]
     pub invite: Option<String>,
 
     /// User email
     pub email: String,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
 pub struct CliAuthConfirm {
-    /// Backend host URL (default https://api.bencher.dev)
-    #[clap(long)]
-    pub host: Option<String>,
-
-    /// Confirmation token
-    pub token: String,
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }

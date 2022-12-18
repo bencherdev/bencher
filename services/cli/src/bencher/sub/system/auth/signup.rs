@@ -29,7 +29,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             slug,
             email,
             invite,
-            host,
+            backend,
         } = signup;
         Ok(Self {
             name: name.parse()?,
@@ -44,7 +44,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             } else {
                 None
             },
-            backend: Backend::new(None, host)?,
+            backend: backend.try_into()?,
         })
     }
 }

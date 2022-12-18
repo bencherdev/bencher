@@ -19,9 +19,10 @@ impl TryFrom<CliPing> for Ping {
     type Error = CliError;
 
     fn try_from(ping: CliPing) -> Result<Self, Self::Error> {
-        let CliPing { host } = ping;
-        let backend = Backend::new(None, host)?;
-        Ok(Self { backend })
+        let CliPing { backend } = ping;
+        Ok(Self {
+            backend: backend.try_into()?,
+        })
     }
 }
 
