@@ -4,6 +4,20 @@ import { Button, Card, Display, Operation, Row } from "./types";
 import { parentPath, addPath, viewUuidPath } from "./util";
 import FieldKind from "../../field/kind";
 
+const TEST_VALUE = {
+  selected: "z",
+  options: [
+    {
+      value: "z",
+      option: "Z-Score",
+    },
+    {
+      value: "t",
+      option: "Student's t-test",
+    },
+  ],
+};
+
 const thresholdsConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
@@ -99,6 +113,16 @@ const thresholdsConfig = {
           nullify: false,
           clear: false,
           config: THRESHOLD_FIELDS.metric_kind,
+        },
+        {
+          kind: FieldKind.SELECT,
+          label: "Test Type",
+          key: "test",
+          value: TEST_VALUE,
+          validate: false,
+          nullify: false,
+          clear: false,
+          config: THRESHOLD_FIELDS.test,
         },
       ],
       path: parentPath,

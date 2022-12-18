@@ -24,6 +24,9 @@ const THRESHOLD_FIELDS = {
         path_params?.project_slug
       }/metric-kinds`,
   },
+  test: {
+    icon: "fas fa-vial",
+  },
 };
 
 export default THRESHOLD_FIELDS;
