@@ -9,7 +9,7 @@ const TEST_VALUE = {
   options: [
     {
       value: "z",
-      option: "Z-Score",
+      option: "Z-score",
     },
     {
       value: "t",
@@ -116,7 +116,7 @@ const thresholdsConfig = {
         },
         {
           kind: FieldKind.SELECT,
-          label: "Test Type",
+          label: "Statistical Hypothesis Test",
           key: "test",
           value: TEST_VALUE,
           validate: false,
