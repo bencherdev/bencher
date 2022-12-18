@@ -201,7 +201,6 @@ const thresholdsConfig = {
           display: Display.RAW,
         },
       ],
-      buttons: false,
     },
   },
 };

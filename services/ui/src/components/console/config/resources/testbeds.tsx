@@ -105,7 +105,6 @@ const testbedsConfig = {
           display: Display.RAW,
         },
       ],
-      buttons: false,
     },
   },
 };

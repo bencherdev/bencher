@@ -71,7 +71,6 @@ const reportsConfig = {
           display: Display.RAW,
         },
       ],
-      buttons: false,
     },
   },
 };

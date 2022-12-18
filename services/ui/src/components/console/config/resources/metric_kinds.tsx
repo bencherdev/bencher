@@ -123,7 +123,6 @@ const metricKindsConfig = {
           display: Display.RAW,
         },
       ],
-      buttons: false,
     },
   },
 };

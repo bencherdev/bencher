@@ -177,7 +177,6 @@ const MembersConfig = {
           },
         },
       ],
-      buttons: false,
     },
   },
 };

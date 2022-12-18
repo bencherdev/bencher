@@ -2,37 +2,7 @@ import { BENCHER_API_URL } from "../../../site/util";
 import { Button, Card, Display, Operation } from "../types";
 import { parentPath, addPath, viewSlugPath, viewUuidPath } from "../util";
 
-const alertsConfig = {
-  [Operation.LIST]: {
-    operation: Operation.LIST,
-    header: {
-      title: "Alerts",
-      buttons: [{ kind: Button.REFRESH }],
-    },
-    table: {
-      url: (path_params) => {
-        return `${BENCHER_API_URL()}/v0/projects/${
-          path_params?.project_slug
-        }/alerts`;
-      },
-      add: {
-        path: (_pathname) => {
-          return "/docs/how-to/run-a-report";
-        },
-        text: "Run a Report",
-      },
-      row: {
-        key: "uuid",
-        items: [{}, {}, {}, {}],
-        button: {
-          text: "View",
-          path: (pathname, datum) => {
-            return viewUuidPath(pathname, datum);
-          },
-        },
-      },
-    },
-  },
+const userConfig = {
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
@@ -89,4 +59,4 @@ const alertsConfig = {
   },
 };
 
-export default alertsConfig;
+export default userConfig;

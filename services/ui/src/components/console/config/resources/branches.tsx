@@ -110,7 +110,6 @@ const branchesConfig = {
         //   key: "versions",
         // },
       ],
-      buttons: false,
     },
   },
 };
