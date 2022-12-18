@@ -37,7 +37,7 @@ const reportsConfig = {
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
-      key: "name",
+      key: "uuid",
       path: parentPath,
     },
     deck: {

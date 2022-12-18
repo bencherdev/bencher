@@ -24,7 +24,9 @@ const PerfHeader = (props) => {
     <nav class="level">
       <div class="level-left">
         <div class="level-item">
-          <h3 class="title is-3">{project_data()?.name}</h3>
+          <h3 class="title is-3" style="overflow-wrap:break-word;">
+            {project_data()?.name}
+          </h3>
         </div>
       </div>
 

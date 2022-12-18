@@ -29,7 +29,9 @@ const DeckHeader = (props) => {
       </div>
       <div class="level-left">
         <div class="level-item">
-          <h3 class="title is-3">{props.data?.[props.config?.key]}</h3>
+          <h3 class="title is-3" style="overflow-wrap:break-word;">
+            {props.data?.[props.config?.key]}
+          </h3>
         </div>
       </div>
 

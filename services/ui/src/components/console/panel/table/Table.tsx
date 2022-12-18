@@ -26,23 +26,25 @@ const Table = (props) => {
                   <For each={props.config?.row?.items}>
                     {(item, i) => (
                       <div class="plan-item">
-                        <Switch fallback="-">
-                          <Match when={item.kind === Row.TEXT}>
-                            {datum[item.key]}
-                          </Match>
-                          <Match when={item.kind === Row.BOOL}>
-                            {item.text}: {datum[item.key] ? "true" : "false"}
-                          </Match>
-                          <Match when={item.kind === Row.SELECT}>
-                            {item.value?.options.reduce((field, option) => {
-                              if (datum[item.key] === option.value) {
-                                return option.option;
-                              } else {
-                                return field;
-                              }
-                            }, datum[item.key])}
-                          </Match>
-                        </Switch>
+                        <p style="overflow-wrap:break-word;">
+                          <Switch fallback="-">
+                            <Match when={item.kind === Row.TEXT}>
+                              {datum[item.key]}
+                            </Match>
+                            <Match when={item.kind === Row.BOOL}>
+                              {item.text}: {datum[item.key] ? "true" : "false"}
+                            </Match>
+                            <Match when={item.kind === Row.SELECT}>
+                              {item.value?.options.reduce((field, option) => {
+                                if (datum[item.key] === option.value) {
+                                  return option.option;
+                                } else {
+                                  return field;
+                                }
+                              }, datum[item.key])}
+                            </Match>
+                          </Switch>
+                        </p>
                       </div>
                     )}
                   </For>
