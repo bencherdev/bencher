@@ -50,7 +50,9 @@ const ViewCard = (props) => {
       </div>
       <div class="card-content">
         <div class="content">
-          <Switch fallback={props.value}>
+          <Switch
+            fallback={<p style="overflow-wrap:break-word;">{props.value}</p>}
+          >
             <Match when={props.card?.display === Display.SWITCH}>
               <div class="field">
                 <input

@@ -1,8 +1,8 @@
 import FieldKind from "../../../field/kind";
 import { BENCHER_API_URL } from "../../../site/util";
-import TESTBED_FIELDS from "./fields/testbed";
 import { Button, Card, Display, Operation, Row } from "../types";
-import { parentPath, addPath, viewSlugPath } from "../util";
+import { parentPath, addPath, viewUuidPath } from "../util";
+import TOKEN_FIELDS from "./fields/token";
 
 const tokensConfig = {
   [Operation.LIST]: {
@@ -29,7 +29,7 @@ const tokensConfig = {
         items: [{}, {}, {}, {}],
         button: {
           text: "View",
-          path: (pathname, datum) => viewSlugPath(pathname, datum),
+          path: (pathname, datum) => viewUuidPath(pathname, datum),
         },
       },
     },
@@ -51,7 +51,17 @@ const tokensConfig = {
           value: "",
           valid: null,
           validate: true,
-          config: TESTBED_FIELDS.name,
+          config: TOKEN_FIELDS.name,
+        },
+        {
+          kind: FieldKind.NUMBER,
+          label: "Time to Live (TTL) (seconds)",
+          key: "ttl",
+          value: "",
+          valid: true,
+          validate: true,
+          nullable: true,
+          config: TOKEN_FIELDS.ttl,
         },
       ],
       path: parentPath,
@@ -65,26 +75,38 @@ const tokensConfig = {
     },
     deck: {
       url: (path_params) =>
-        `${BENCHER_API_URL()}/v0/projects/${
-          path_params?.project_slug
-        }/testbeds/${path_params?.testbed_slug}`,
+        `${BENCHER_API_URL()}/v0/users/${path_params?.user_slug}/tokens/${
+          path_params?.token_uuid
+        }`,
       cards: [
         {
           kind: Card.FIELD,
-          label: "Testbed Name",
+          label: "API Token Name",
           key: "name",
           display: Display.RAW,
         },
         {
           kind: Card.FIELD,
-          label: "Testbed Slug",
-          key: "slug",
+          label: "API Token UUID",
+          key: "uuid",
           display: Display.RAW,
         },
         {
           kind: Card.FIELD,
-          label: "Testbed UUID",
-          key: "uuid",
+          label: "API Token",
+          key: "token",
+          display: Display.RAW,
+        },
+        {
+          kind: Card.FIELD,
+          label: "API Token Creation",
+          key: "creation",
+          display: Display.RAW,
+        },
+        {
+          kind: Card.FIELD,
+          label: "API Token Expiration",
+          key: "expiration",
           display: Display.RAW,
         },
       ],
