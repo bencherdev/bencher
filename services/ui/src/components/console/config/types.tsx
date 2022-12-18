@@ -45,6 +45,7 @@ export enum Row {
   TEXT,
   BOOL,
   SELECT,
+  FOREIGN,
 }
 
 export enum Card {

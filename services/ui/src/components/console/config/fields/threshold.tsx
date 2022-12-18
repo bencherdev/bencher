@@ -1,6 +1,6 @@
 import validateName from "../../../fields/validators/validateName";
 
-const thresholdFieldsConfig = {
+const THRESHOLD_FIELDS = {
   name: {
     ype: "text",
     placeholder: "Threshold TODO",
@@ -10,4 +10,4 @@ const thresholdFieldsConfig = {
   },
 };
 
-export default thresholdFieldsConfig;
+export default THRESHOLD_FIELDS;

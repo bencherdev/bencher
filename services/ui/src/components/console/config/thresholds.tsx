@@ -1,4 +1,4 @@
-import thresholdFieldsConfig from "./fields/thresholdFieldsConfig";
+import thresholdFieldsConfig from "./fields/threshold";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { parentPath, addPath, viewUuidPath } from "./util";
@@ -27,7 +27,21 @@ const thresholdsConfig = {
       },
       row: {
         key: "uuid",
-        items: [{}, {}, {}, {}],
+        items: [
+          {
+            kind: Row.FOREIGN,
+            key: "branch",
+          },
+          {
+            kind: Row.FOREIGN,
+            key: "testbed",
+          },
+          {
+            kind: Row.FOREIGN,
+            key: "metric_kind",
+          },
+          {},
+        ],
         button: {
           text: "View",
           path: (pathname, datum) => viewUuidPath(pathname, datum),
@@ -111,6 +125,12 @@ const thresholdsConfig = {
           kind: Card.FIELD,
           label: "Testbed UUID",
           key: "testbed",
+          display: Display.RAW,
+        },
+        {
+          kind: Card.FIELD,
+          label: "Metric Kind UUID",
+          key: "metric_kind",
           display: Display.RAW,
         },
       ],
