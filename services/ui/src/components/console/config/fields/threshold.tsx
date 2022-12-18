@@ -1,4 +1,8 @@
-import { BENCHER_API_URL } from "../../../site/util";
+import {
+  BENCHER_API_URL,
+  validate_string,
+  validate_u32,
+} from "../../../site/util";
 
 const THRESHOLD_FIELDS = {
   branch: {
@@ -26,6 +30,20 @@ const THRESHOLD_FIELDS = {
   },
   test: {
     icon: "fas fa-vial",
+  },
+  min_sample_size: {
+    type: "number",
+    placeholder: "30",
+    icon: "fas fa-cube",
+    help: "Must be an integer greater than zero",
+    validate: validate_u32,
+  },
+  max_sample_size: {
+    type: "number",
+    placeholder: "100",
+    icon: "fas fa-cubes",
+    help: "Must be an integer greater than zero",
+    validate: validate_u32,
   },
 };
 
