@@ -68,7 +68,6 @@ const testbedsConfig = {
           value: "",
           valid: null,
           validate: true,
-          nullify: false,
           config: TESTBED_FIELDS.name,
         },
       ],

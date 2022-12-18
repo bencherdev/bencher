@@ -22,7 +22,7 @@ const initForm = (fields) => {
       newForm[field.key].value = field.value;
       newForm[field.key].valid = field.valid;
       newForm[field.key].validate = field.validate;
-      newForm[field.key].nullify = field.nullify;
+      newForm[field.key].nullable = field.nullable;
     }
   });
   newForm.submitting = false;
@@ -72,15 +72,11 @@ const Poster = (props) => {
           data[key] = form()?.[key]?.value?.selected;
           break;
         default:
-          if (!form()?.[key]?.value && form()?.[key]?.nullify) {
-            data[key] = null;
+          const value = form()?.[key]?.value;
+          if (typeof value === "string") {
+            data[key] = value.trim();
           } else {
-            const value = form()?.[key]?.value;
-            if (typeof value === "string") {
-              data[key] = value.trim();
-            } else {
-              data[key] = value;
-            }
+            data[key] = value;
           }
       }
     }

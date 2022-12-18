@@ -99,7 +99,6 @@ const MembersConfig = {
           value: "",
           valid: null,
           validate: true,
-          nullify: false,
           config: MEMBER_FIELDS.name,
         },
         {
@@ -109,7 +108,6 @@ const MembersConfig = {
           value: "",
           valid: null,
           validate: true,
-          nullify: false,
           config: MEMBER_FIELDS.email,
         },
         {
@@ -118,7 +116,6 @@ const MembersConfig = {
           key: "role",
           value: ROLE_VALUE,
           validate: false,
-          nullify: false,
           config: MEMBER_FIELDS.role,
         },
       ],
@@ -176,7 +173,6 @@ const MembersConfig = {
             key: "role",
             value: ROLE_VALUE,
             validate: false,
-            nullify: false,
             config: MEMBER_FIELDS.role,
           },
         },

@@ -107,7 +107,7 @@ const initForm = (field, value) => {
       value: field?.value,
       valid: field?.valid,
       validate: field?.validate,
-      nullify: field?.nullify,
+      nullable: field?.nullable,
     },
     submitting: false,
   };
@@ -153,15 +153,11 @@ const UpdateCard = (props) => {
           data[key] = form()?.[key]?.value?.selected;
           break;
         default:
-          if (!form()?.[key]?.value && form()?.[key]?.nullify) {
-            data[key] = null;
+          const value = form()?.[key]?.value;
+          if (typeof value === "string") {
+            data[key] = value.trim();
           } else {
-            const value = form()?.[key]?.value;
-            if (typeof value === "string") {
-              data[key] = value.trim();
-            } else {
-              data[key] = value;
-            }
+            data[key] = value;
           }
       }
     }

@@ -71,7 +71,6 @@ const metricKindsConfig = {
           value: "",
           valid: null,
           validate: true,
-          nullify: false,
           config: METRIC_KIND_FIELDS.name,
         },
         {
@@ -81,7 +80,6 @@ const metricKindsConfig = {
           value: "",
           valid: null,
           validate: true,
-          nullify: false,
           config: METRIC_KIND_FIELDS.units,
         },
       ],

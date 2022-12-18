@@ -68,7 +68,6 @@ const branchesConfig = {
           value: "",
           valid: null,
           validate: true,
-          nullify: false,
           config: BRANCH_FIELDS.name,
         },
       ],
