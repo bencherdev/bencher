@@ -4,7 +4,7 @@ enum FieldKind {
   CHECKBOX,
   SWITCH,
   SELECT,
-  TABLE,
+  RADIO,
 }
 
 export default FieldKind;

@@ -68,7 +68,7 @@ const thresholdsConfig = {
           path_param: "project_slug",
         },
         {
-          kind: FieldKind.TABLE,
+          kind: FieldKind.RADIO,
           label: "Branch",
           key: "branch",
           value: "",
@@ -79,7 +79,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.branch,
         },
         {
-          kind: FieldKind.TABLE,
+          kind: FieldKind.RADIO,
           label: "Testbed",
           key: "testbed",
           value: "",
@@ -90,7 +90,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.testbed,
         },
         {
-          kind: FieldKind.TABLE,
+          kind: FieldKind.RADIO,
           label: "Metric Kind",
           key: "metric_kind",
           value: "",

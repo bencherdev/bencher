@@ -3,6 +3,7 @@ import Checkbox from "./kinds/Checkbox";
 import Switch from "./kinds/Switch";
 import Select from "./kinds/Select";
 import FieldKind from "./kind";
+import Radio from "./kinds/Radio";
 
 const Field = (props) => {
   function handleField(value) {
@@ -11,6 +12,7 @@ const Field = (props) => {
         props.handleField(props.fieldKey, value, value);
         break;
       case FieldKind.SWITCH:
+      case FieldKind.RADIO:
         props.handleField(props.fieldKey, value, true);
         break;
       case FieldKind.SELECT:
@@ -56,6 +58,14 @@ const Field = (props) => {
             handleField={handleField}
           />
         );
+      case FieldKind.RADIO:
+        return (
+          <Radio
+            value={props.value}
+            config={props.config}
+            handleField={handleField}
+          />
+        );
       case FieldKind.INPUT:
         return (
           <Input
@@ -75,7 +85,7 @@ const Field = (props) => {
       case FieldKind.CHECKBOX:
       case FieldKind.SWITCH:
       case FieldKind.SELECT:
-      case FieldKind.TABLE:
+      case FieldKind.RADIO:
         return false;
       default:
         return true;

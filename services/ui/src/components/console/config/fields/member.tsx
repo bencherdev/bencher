@@ -28,7 +28,6 @@ const MEMBER_FIELDS = {
     validate: (input) => validate_string(input, is_valid_email),
   },
   role: {
-    type: "select",
     icon: "fas fa-user-tag",
   },
 };

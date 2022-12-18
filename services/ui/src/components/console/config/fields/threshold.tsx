@@ -1,12 +1,12 @@
 const THRESHOLD_FIELDS = {
   branch: {
-    type: "table",
+    icon: "fas fa-code-branch",
   },
   testbed: {
-    type: "table",
+    icon: "fas fa-server",
   },
   metric_kind: {
-    type: "table",
+    icon: "fas fa-shapes",
   },
 };
 
