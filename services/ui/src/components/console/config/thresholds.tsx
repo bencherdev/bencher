@@ -1,6 +1,6 @@
 import THRESHOLD_FIELDS from "./fields/threshold";
 import { BENCHER_API_URL } from "../../site/util";
-import { Button, Card, Display, Field, Operation, Row } from "./types";
+import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
 import { parentPath, addPath, viewUuidPath } from "./util";
 
 const thresholdsConfig = {
@@ -62,12 +62,12 @@ const thresholdsConfig = {
         }/thresholds`,
       fields: [
         {
-          kind: Field.HIDDEN,
+          kind: FieldKind.HIDDEN,
           key: "project",
           path_param: "project_slug",
         },
         {
-          kind: Field.TABLE,
+          kind: FieldKind.TABLE,
           label: "Branch",
           key: "branch",
           value: "",
@@ -78,7 +78,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.branch,
         },
         {
-          kind: Field.TABLE,
+          kind: FieldKind.TABLE,
           label: "Testbed",
           key: "testbed",
           value: "",
@@ -89,7 +89,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.testbed,
         },
         {
-          kind: Field.TABLE,
+          kind: FieldKind.TABLE,
           label: "Metric Kind",
           key: "metric_kind",
           value: "",

@@ -1,6 +1,6 @@
 import { BENCHER_API_URL } from "../../site/util";
 import METRIC_KIND_FIELDS from "./fields/metric_kind";
-import { Button, Card, Display, Field, Operation, Row } from "./types";
+import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
 import { parentPath, addPath, viewSlugPath } from "./util";
 
 const metricKindsConfig = {
@@ -59,12 +59,12 @@ const metricKindsConfig = {
         }/metric-kinds`,
       fields: [
         {
-          kind: Field.HIDDEN,
+          kind: FieldKind.HIDDEN,
           key: "project",
           path_param: "project_slug",
         },
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "Name",
           key: "name",
           value: "",
@@ -75,7 +75,7 @@ const metricKindsConfig = {
           config: METRIC_KIND_FIELDS.name,
         },
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "Units",
           key: "units",
           value: "",

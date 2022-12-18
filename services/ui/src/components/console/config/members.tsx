@@ -4,7 +4,7 @@ import {
   OrganizationPermission,
 } from "../../site/util";
 import MEMBER_FIELDS from "./fields/member";
-import { Button, Card, Display, Field, Operation, Row } from "./types";
+import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
 import { parentPath, invitePath, viewSlugPath } from "./util";
 
 const ROLE_VALUE = {
@@ -87,12 +87,12 @@ const MembersConfig = {
         }/members`,
       fields: [
         {
-          kind: Field.HIDDEN,
+          kind: FieldKind.HIDDEN,
           key: "organization",
           path_param: "organization_slug",
         },
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "Name",
           key: "name",
           value: "",
@@ -103,7 +103,7 @@ const MembersConfig = {
           config: MEMBER_FIELDS.name,
         },
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "Email",
           key: "email",
           value: "",
@@ -114,7 +114,7 @@ const MembersConfig = {
           config: MEMBER_FIELDS.email,
         },
         {
-          kind: Field.SELECT,
+          kind: FieldKind.SELECT,
           label: "Role",
           key: "role",
           value: ROLE_VALUE,
@@ -174,7 +174,7 @@ const MembersConfig = {
               OrganizationPermission.EDIT_ROLE
             ),
           field: {
-            kind: Field.SELECT,
+            kind: FieldKind.SELECT,
             key: "role",
             value: ROLE_VALUE,
             validate: false,

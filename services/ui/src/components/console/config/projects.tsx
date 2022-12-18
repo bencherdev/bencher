@@ -1,6 +1,14 @@
 import PROJECT_FIELDS from "./fields/project";
 import { BENCHER_API_URL } from "../../site/util";
-import { Button, Card, Display, Field, Operation, PerfTab, Row } from "./types";
+import {
+  Button,
+  Card,
+  Display,
+  FieldKind,
+  Operation,
+  PerfTab,
+  Row,
+} from "./types";
 import { parentPath, addPath } from "./util";
 
 const projectsConfig = {
@@ -60,7 +68,7 @@ const projectsConfig = {
         }/projects`,
       fields: [
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "Name",
           key: "name",
           value: "",
@@ -71,7 +79,7 @@ const projectsConfig = {
           config: PROJECT_FIELDS.name,
         },
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "URL",
           key: "url",
           value: "",
@@ -82,7 +90,7 @@ const projectsConfig = {
           config: PROJECT_FIELDS.url,
         },
         {
-          kind: Field.SWITCH,
+          kind: FieldKind.SWITCH,
           label: "Public Project",
           key: "public",
           type: "switch",

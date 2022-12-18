@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import { Field } from "../console/config/types";
+import { FieldKind } from "../console/config/types";
 import AUTH_FIELDS from "./config/fields";
 import SiteField from "../fields/SiteField";
 import {
@@ -126,7 +126,7 @@ const AuthConfirmPage = (props: {
 
               <form class="box">
                 <SiteField
-                  kind={Field.INPUT}
+                  kind={FieldKind.INPUT}
                   fieldKey="token"
                   label={true}
                   value={form()?.token?.value}

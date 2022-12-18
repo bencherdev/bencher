@@ -3,7 +3,7 @@ import axios from "axios";
 
 import SiteField from "../fields/SiteField";
 import AUTH_FIELDS from "./config/fields";
-import { Field } from "../console/config/types";
+import { FieldKind } from "../console/config/types";
 import { FormKind } from "./config/types";
 import {
   BENCHER_API_URL,
@@ -136,7 +136,7 @@ export const AuthForm = (props: Props) => {
     <form class="box">
       {props.config?.kind === FormKind.SIGNUP && (
         <SiteField
-          kind={Field.INPUT}
+          kind={FieldKind.INPUT}
           fieldKey="username"
           label={true}
           value={form()?.username?.value}
@@ -147,7 +147,7 @@ export const AuthForm = (props: Props) => {
       )}
 
       <SiteField
-        kind={Field.INPUT}
+        kind={FieldKind.INPUT}
         fieldKey="email"
         label={true}
         value={form()?.email?.value}
@@ -162,7 +162,7 @@ export const AuthForm = (props: Props) => {
         form()?.username?.valid &&
         form()?.email?.valid && (
           <SiteField
-            kind={Field.CHECKBOX}
+            kind={FieldKind.CHECKBOX}
             fieldKey="consent"
             label={false}
             value={form()?.consent?.value}

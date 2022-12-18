@@ -1,7 +1,7 @@
 import { createResource, createSignal, Match, Switch } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import { patch_options, validate_jwt } from "../../../site/util";
-import { Display, Field } from "../../config/types";
+import { Display, FieldKind } from "../../config/types";
 import axios from "axios";
 
 const FieldCard = (props) => {
@@ -92,7 +92,7 @@ const ViewCard = (props) => {
 
 const initForm = (field, value) => {
   switch (field?.kind) {
-    case Field.SELECT:
+    case FieldKind.SELECT:
       field.value.selected = value;
       break;
     default:
@@ -148,7 +148,7 @@ const UpdateCard = (props) => {
     let data = {};
     for (let key of Object.keys(form())) {
       switch (form()?.[key]?.kind) {
-        case Field.SELECT:
+        case FieldKind.SELECT:
           data[key] = form()?.[key]?.value?.selected;
           break;
         default:
@@ -170,7 +170,7 @@ const UpdateCard = (props) => {
 
   const is_value_unchanged = () => {
     switch (props.card?.field?.kind) {
-      case Field.SELECT:
+      case FieldKind.SELECT:
         return (
           props.value === form()?.[props.card?.field?.key]?.value?.selected
         );

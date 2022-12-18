@@ -2,25 +2,25 @@ import Input from "./form/Input";
 import Checkbox from "./form/Checkbox";
 import Switch from "./form/Switch";
 import Select from "./form/Select";
-import { Field } from "../console/config/types";
+import { FieldKind } from "../console/config/types";
 
 const SiteField = (props) => {
   function handleField(value) {
     switch (props.kind) {
-      case Field.CHECKBOX:
+      case FieldKind.CHECKBOX:
         props.handleField(props.fieldKey, value, value);
         break;
-      case Field.SWITCH:
+      case FieldKind.SWITCH:
         props.handleField(props.fieldKey, value, true);
         break;
-      case Field.SELECT:
+      case FieldKind.SELECT:
         props.handleField(
           props.fieldKey,
           { ...props.value, selected: value },
           true
         );
         break;
-      case Field.INPUT:
+      case FieldKind.INPUT:
         props.handleField(
           props.fieldKey,
           value,
@@ -32,7 +32,7 @@ const SiteField = (props) => {
 
   function getField() {
     switch (props.kind) {
-      case Field.CHECKBOX:
+      case FieldKind.CHECKBOX:
         return (
           <Checkbox
             value={props.value}
@@ -40,7 +40,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      case Field.SWITCH:
+      case FieldKind.SWITCH:
         return (
           <Switch
             value={props.value}
@@ -48,7 +48,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      case Field.SELECT:
+      case FieldKind.SELECT:
         return (
           <Select
             value={props.value}
@@ -56,7 +56,7 @@ const SiteField = (props) => {
             handleField={handleField}
           />
         );
-      case Field.INPUT:
+      case FieldKind.INPUT:
         return (
           <Input
             value={props.value}
@@ -72,10 +72,10 @@ const SiteField = (props) => {
 
   function shouldValidate() {
     switch (props.kind) {
-      case Field.CHECKBOX:
-      case Field.SWITCH:
-      case Field.SELECT:
-      case Field.TABLE:
+      case FieldKind.CHECKBOX:
+      case FieldKind.SWITCH:
+      case FieldKind.SELECT:
+      case FieldKind.TABLE:
         return false;
       default:
         return true;

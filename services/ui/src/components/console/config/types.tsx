@@ -31,7 +31,7 @@ export enum Resource {
   USER_SETTINGS,
 }
 
-export enum Field {
+export enum FieldKind {
   HIDDEN,
   INPUT,
   CHECKBOX,

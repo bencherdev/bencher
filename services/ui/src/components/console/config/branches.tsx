@@ -1,5 +1,5 @@
 import BRANCH_FIELDS from "./fields/branch";
-import { Button, Card, Display, Field, Operation, Row } from "./types";
+import { Button, Card, Display, FieldKind, Operation, Row } from "./types";
 import { parentPath, addPath, viewSlugPath } from "./util";
 import { BENCHER_API_URL } from "../../site/util";
 
@@ -56,12 +56,12 @@ const branchesConfig = {
         }/branches`,
       fields: [
         {
-          kind: Field.HIDDEN,
+          kind: FieldKind.HIDDEN,
           key: "project",
           path_param: "project_slug",
         },
         {
-          kind: Field.INPUT,
+          kind: FieldKind.INPUT,
           label: "Name",
           key: "name",
           value: "",

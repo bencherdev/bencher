@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import SiteField from "../../../fields/SiteField";
 import { post_options, validate_jwt } from "../../../site/util";
-import { Field } from "../../config/types";
+import { FieldKind } from "../../config/types";
 import { useLocation, useNavigate } from "solid-app-router";
 
 const initForm = (fields) => {
@@ -68,7 +68,7 @@ const Poster = (props) => {
     let data = {};
     for (let key of Object.keys(form())) {
       switch (form()?.[key]?.kind) {
-        case Field.SELECT:
+        case FieldKind.SELECT:
           data[key] = form()?.[key]?.value?.selected;
           break;
         default:
@@ -169,7 +169,7 @@ const PosterField = (props) => {
         />
       }
     >
-      <Match when={props.field?.kind === Field.HIDDEN}></Match>
+      <Match when={props.field?.kind === FieldKind.HIDDEN}></Match>
     </Switch>
   );
 };
