@@ -85,7 +85,17 @@ impl JsonWebToken {
         validation.set_audience(audience);
         validation.set_issuer(&[BENCHER_DEV]);
         validation.set_required_spec_claims(&["aud", "exp", "iss"]);
-        decode(token.as_ref(), key, &validation)
+        let token_data: TokenData<JsonClaims> = decode(token.as_ref(), key, &validation)?;
+
+        // TODO deep dive on this
+        // Even though the above should validate the expiration,
+        // it appears to do so statically based off of compilation
+        // or something, so just double check here.
+        if token_data.claims.exp < Utc::now().timestamp() as u64 {
+            Err(jsonwebtoken::errors::ErrorKind::ExpiredSignature.into())
+        } else {
+            Ok(token_data)
+        }
     }
 
     pub fn validate_auth(
