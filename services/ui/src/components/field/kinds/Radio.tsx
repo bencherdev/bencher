@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createMemo, createResource } from "solid-js";
+import { createMemo, createResource, For } from "solid-js";
 import { get_options } from "../../site/util";
 
 const Radio = (props) => {
@@ -13,7 +13,6 @@ const Radio = (props) => {
   const getRadio = async (fetcher) => {
     try {
       const resp = await axios(get_options(fetcher.url, fetcher.token));
-      console.log(resp.data);
       return resp.data;
     } catch (error) {
       console.error(error);
@@ -21,7 +20,7 @@ const Radio = (props) => {
     }
   };
 
-  const [radio_data] = createResource(radioFetcher, getRadio);
+  const [data] = createResource(radioFetcher, getRadio);
 
   return (
     <nav class="level is-mobile">
@@ -33,15 +32,31 @@ const Radio = (props) => {
         </div>
         <div class="level-item">
           <div class="control">
-            <label class="radio">
-              <input type="radio" name={radioFetcher().url} />
-              Foo
-            </label>
-            <br />
-            <label class="radio">
-              <input type="radio" name={radioFetcher().url} />
-              Bar
-            </label>
+            <For each={data()}>
+              {(datum) => (
+                <>
+                  <label class="radio">
+                    <nav class="level is-mobile">
+                      <div class="level-left">
+                        <div class="level-item">
+                          <input
+                            type="radio"
+                            name={radioFetcher().url}
+                            onInput={(_event) =>
+                              props.handleField(datum[props.config?.value_key])
+                            }
+                          />
+                        </div>
+                        <div class="level-item">
+                          {datum[props.config?.option_key]}
+                        </div>
+                      </div>
+                    </nav>
+                  </label>
+                  <br />
+                </>
+              )}
+            </For>
           </div>
         </div>
       </div>

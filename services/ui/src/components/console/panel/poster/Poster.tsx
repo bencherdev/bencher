@@ -84,7 +84,7 @@ const Poster = (props) => {
           }
       }
     }
-
+    delete data.submitting;
     post(data).then(() => handleFormSubmitting(false));
   }
 

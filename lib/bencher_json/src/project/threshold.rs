@@ -12,6 +12,7 @@ pub struct JsonNewThreshold {
     pub branch: ResourceId,
     pub testbed: ResourceId,
     pub metric_kind: ResourceId,
+    #[serde(flatten)]
     pub statistic: JsonNewStatistic,
 }
 
