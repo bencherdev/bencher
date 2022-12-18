@@ -1,12 +1,12 @@
-import validateName from "../../../fields/validators/validateName";
-
 const THRESHOLD_FIELDS = {
-  name: {
-    ype: "text",
-    placeholder: "Threshold TODO",
-    icon: "fas fa-server",
-    help: "Must be at least four characters or longer.",
-    validate: validateName,
+  branch: {
+    type: "table",
+  },
+  testbed: {
+    type: "table",
+  },
+  metric_kind: {
+    type: "table",
   },
 };
 

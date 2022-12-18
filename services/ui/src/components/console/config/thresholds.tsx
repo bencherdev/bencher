@@ -1,4 +1,4 @@
-import thresholdFieldsConfig from "./fields/threshold";
+import THRESHOLD_FIELDS from "./fields/threshold";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Field, Operation, Row } from "./types";
 import { parentPath, addPath, viewUuidPath } from "./util";
@@ -75,7 +75,7 @@ const thresholdsConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: thresholdFieldsConfig.name,
+          config: THRESHOLD_FIELDS.branch,
         },
         {
           kind: Field.TABLE,
@@ -86,7 +86,7 @@ const thresholdsConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: thresholdFieldsConfig.name,
+          config: THRESHOLD_FIELDS.testbed,
         },
         {
           kind: Field.TABLE,
@@ -97,7 +97,7 @@ const thresholdsConfig = {
           validate: true,
           nullify: false,
           clear: false,
-          config: thresholdFieldsConfig.name,
+          config: THRESHOLD_FIELDS.metric_kind,
         },
       ],
       path: parentPath,
