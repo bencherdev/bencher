@@ -152,6 +152,9 @@ const UpdateCard = (props) => {
         case FieldKind.SELECT:
           data[key] = form()?.[key]?.value?.selected;
           break;
+        case FieldKind.NUMBER:
+          data[key] = Number(form()?.[key]?.value);
+          break;
         default:
           const value = form()?.[key]?.value;
           if (typeof value === "string") {

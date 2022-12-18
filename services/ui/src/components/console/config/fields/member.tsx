@@ -17,7 +17,7 @@ const MEMBER_FIELDS = {
     type: "text",
     placeholder: "Member Slug",
     icon: "fas fa-exclamation-triangle",
-    help: "Must be at least four characters or longer.",
+    help: "Must be at least four characters or longer",
     validate: (input) => validate_string(input, is_valid_slug),
   },
   email: {

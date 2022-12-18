@@ -23,6 +23,7 @@ const Field = (props) => {
         );
         break;
       case FieldKind.INPUT:
+      case FieldKind.NUMBER:
         props.handleField(
           props.fieldKey,
           value,
@@ -69,6 +70,7 @@ const Field = (props) => {
           />
         );
       case FieldKind.INPUT:
+      case FieldKind.NUMBER:
         return (
           <Input
             value={props.value}
@@ -89,7 +91,8 @@ const Field = (props) => {
       case FieldKind.SELECT:
       case FieldKind.RADIO:
         return false;
-      default:
+      case FieldKind.INPUT:
+      case FieldKind.NUMBER:
         return true;
     }
   }

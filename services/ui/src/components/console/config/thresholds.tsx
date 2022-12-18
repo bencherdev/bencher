@@ -117,7 +117,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.test,
         },
         {
-          kind: FieldKind.INPUT,
+          kind: FieldKind.NUMBER,
           label: "Minimum Sample Size",
           key: "min_sample_size",
           value: "",
@@ -127,7 +127,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.min_sample_size,
         },
         {
-          kind: FieldKind.INPUT,
+          kind: FieldKind.NUMBER,
           label: "Maximum Sample Size",
           key: "max_sample_size",
           value: "",
@@ -137,7 +137,7 @@ const thresholdsConfig = {
           config: THRESHOLD_FIELDS.max_sample_size,
         },
         {
-          kind: FieldKind.INPUT,
+          kind: FieldKind.NUMBER,
           label: "Window Size (seconds)",
           key: "window",
           value: "",
