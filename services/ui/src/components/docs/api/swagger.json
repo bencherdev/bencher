@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.27"
+    "version": "0.2.28"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -1333,6 +1333,91 @@
             "style": "simple"
           }
         ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "operationId": "get_ls",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Array_of_JsonProject",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JsonProject"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects"
+        ],
+        "operationId": "dir_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4143,6 +4228,109 @@
         }
       }
     },
+    "/v0/users/{user}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonUser"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "one_options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/users/{user}/tokens": {
       "get": {
         "tags": [
@@ -4468,6 +4656,12 @@
       }
     },
     "schemas": {
+      "BranchName": {
+        "type": "string"
+      },
+      "Email": {
+        "type": "string"
+      },
       "Error": {
         "description": "Error information from a response.",
         "type": "object",
@@ -4486,6 +4680,9 @@
           "message",
           "request_id"
         ]
+      },
+      "GitHash": {
+        "type": "string"
       },
       "IfExists": {
         "type": "string",
@@ -4559,7 +4756,7 @@
         "type": "object",
         "properties": {
           "token": {
-            "$ref": "#/components/schemas/JsonWebToken"
+            "$ref": "#/components/schemas/Jwt"
           }
         },
         "required": [
@@ -4591,14 +4788,14 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/BranchName"
           },
           "project": {
             "type": "string",
             "format": "uuid"
           },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -4705,13 +4902,13 @@
         "type": "object",
         "properties": {
           "email": {
-            "type": "string"
+            "$ref": "#/components/schemas/Email"
           },
           "invite": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonWebToken"
+                "$ref": "#/components/schemas/Jwt"
               }
             ]
           }
@@ -4724,16 +4921,16 @@
         "type": "object",
         "properties": {
           "email": {
-            "type": "string"
+            "$ref": "#/components/schemas/Email"
           },
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/UserName"
           },
           "role": {
             "$ref": "#/components/schemas/JsonOrganizationRole"
           },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -4774,18 +4971,17 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "project": {
             "type": "string",
             "format": "uuid"
           },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "units": {
-            "nullable": true,
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "uuid": {
             "type": "string",
@@ -4796,6 +4992,7 @@
           "name",
           "project",
           "slug",
+          "units",
           "uuid"
         ]
       },
@@ -4803,11 +5000,15 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/BranchName"
           },
           "slug": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
           }
         },
         "required": [
@@ -4818,11 +5019,15 @@
         "type": "object",
         "properties": {
           "email": {
-            "type": "string"
+            "$ref": "#/components/schemas/Email"
           },
           "name": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserName"
+              }
+            ]
           },
           "role": {
             "$ref": "#/components/schemas/JsonOrganizationRole"
@@ -4837,30 +5042,38 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "slug": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
           },
           "units": {
-            "nullable": true,
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           }
         },
         "required": [
-          "name"
+          "name",
+          "units"
         ]
       },
       "JsonNewOrganization": {
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "slug": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
           }
         },
         "required": [
@@ -4870,25 +5083,28 @@
       "JsonNewProject": {
         "type": "object",
         "properties": {
-          "description": {
-            "nullable": true,
-            "type": "string"
-          },
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "public": {
-            "default": false,
+            "nullable": true,
             "type": "boolean"
           },
           "slug": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
           },
           "url": {
             "nullable": true,
-            "type": "string",
-            "format": "uri"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
           }
         },
         "required": [
@@ -4907,7 +5123,11 @@
           },
           "hash": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
+              }
+            ]
           },
           "results": {
             "type": "array",
@@ -4939,9 +5159,31 @@
           "testbed"
         ]
       },
-      "JsonNewStatistic": {
+      "JsonNewTestbed": {
         "type": "object",
         "properties": {
+          "name": {
+            "$ref": "#/components/schemas/NonEmpty"
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "JsonNewThreshold": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "$ref": "#/components/schemas/ResourceId"
+          },
           "left_side": {
             "nullable": true,
             "type": "number",
@@ -4952,6 +5194,9 @@
             "type": "integer",
             "format": "uint32",
             "minimum": 0
+          },
+          "metric_kind": {
+            "$ref": "#/components/schemas/ResourceId"
           },
           "min_sample_size": {
             "nullable": true,
@@ -4967,6 +5212,9 @@
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
           },
+          "testbed": {
+            "$ref": "#/components/schemas/ResourceId"
+          },
           "window": {
             "nullable": true,
             "type": "integer",
@@ -4975,78 +5223,9 @@
           }
         },
         "required": [
-          "test"
-        ]
-      },
-      "JsonNewTestbed": {
-        "type": "object",
-        "properties": {
-          "cpu": {
-            "nullable": true,
-            "type": "string"
-          },
-          "disk": {
-            "nullable": true,
-            "type": "string"
-          },
-          "gpu": {
-            "nullable": true,
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "os_name": {
-            "nullable": true,
-            "type": "string"
-          },
-          "os_version": {
-            "nullable": true,
-            "type": "string"
-          },
-          "ram": {
-            "nullable": true,
-            "type": "string"
-          },
-          "runtime_name": {
-            "nullable": true,
-            "type": "string"
-          },
-          "runtime_version": {
-            "nullable": true,
-            "type": "string"
-          },
-          "slug": {
-            "nullable": true,
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "JsonNewThreshold": {
-        "type": "object",
-        "properties": {
-          "branch": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "metric_kind": {
-            "$ref": "#/components/schemas/ResourceId"
-          },
-          "statistic": {
-            "$ref": "#/components/schemas/JsonNewStatistic"
-          },
-          "testbed": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
           "branch",
           "metric_kind",
-          "statistic",
+          "test",
           "testbed"
         ]
       },
@@ -5071,10 +5250,10 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -5241,12 +5420,8 @@
       "JsonProject": {
         "type": "object",
         "properties": {
-          "description": {
-            "nullable": true,
-            "type": "string"
-          },
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "organization": {
             "type": "string",
@@ -5256,12 +5431,15 @@
             "type": "boolean"
           },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "url": {
             "nullable": true,
-            "type": "string",
-            "format": "uri"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
           },
           "uuid": {
             "type": "string",
@@ -5446,22 +5624,26 @@
         "type": "object",
         "properties": {
           "email": {
-            "type": "string"
+            "$ref": "#/components/schemas/Email"
           },
           "invite": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonWebToken"
+                "$ref": "#/components/schemas/Jwt"
               }
             ]
           },
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/UserName"
           },
           "slug": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
           }
         },
         "required": [
@@ -5506,47 +5688,15 @@
       "JsonTestbed": {
         "type": "object",
         "properties": {
-          "cpu": {
-            "nullable": true,
-            "type": "string"
-          },
-          "disk": {
-            "nullable": true,
-            "type": "string"
-          },
-          "gpu": {
-            "nullable": true,
-            "type": "string"
-          },
           "name": {
-            "type": "string"
-          },
-          "os_name": {
-            "nullable": true,
-            "type": "string"
-          },
-          "os_version": {
-            "nullable": true,
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "project": {
             "type": "string",
             "format": "uuid"
           },
-          "ram": {
-            "nullable": true,
-            "type": "string"
-          },
-          "runtime_name": {
-            "nullable": true,
-            "type": "string"
-          },
-          "runtime_version": {
-            "nullable": true,
-            "type": "string"
-          },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -5679,16 +5829,16 @@
             "type": "boolean"
           },
           "email": {
-            "type": "string"
+            "$ref": "#/components/schemas/Email"
           },
           "locked": {
             "type": "boolean"
           },
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/UserName"
           },
           "slug": {
-            "type": "string"
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -5718,6 +5868,9 @@
       "JsonWebToken": {
         "type": "string"
       },
+      "Jwt": {
+        "type": "string"
+      },
       "LogLevel": {
         "type": "string",
         "enum": [
@@ -5728,6 +5881,9 @@
           "error",
           "critical"
         ]
+      },
+      "NonEmpty": {
+        "type": "string"
       },
       "ResourceId": {
         "type": "string"
@@ -5783,6 +5939,15 @@
             "additionalProperties": false
           }
         ]
+      },
+      "Slug": {
+        "type": "string"
+      },
+      "Url": {
+        "type": "string"
+      },
+      "UserName": {
+        "type": "string"
       },
       "JsonOrganizationPermission": {
         "type": "string",
