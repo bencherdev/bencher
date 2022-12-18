@@ -24,7 +24,7 @@ pub use non_empty::NonEmpty;
 pub use resource_id::ResourceId;
 pub use user_name::UserName;
 
-const MAX_LEN: usize = 50;
+pub const MAX_LEN: usize = 50;
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]

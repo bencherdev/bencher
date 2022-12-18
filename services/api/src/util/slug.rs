@@ -1,4 +1,6 @@
-use bencher_json::Slug;
+use std::str::FromStr;
+
+use bencher_json::{Slug, MAX_LEN};
 use diesel::SqliteConnection;
 
 macro_rules! unwrap_slug {
@@ -28,12 +30,20 @@ pub fn validate_slug(
         slug::slugify(name)
     };
 
-    if exists(conn, &slug) {
+    let slug = if exists(conn, &slug) {
         let rand_suffix = rand::random::<u32>().to_string();
         format!("{slug}-{rand_suffix}")
     } else {
         slug
-    }
+    };
+
+    let slug = if slug.len() > MAX_LEN {
+        slug::slugify(slug.split_at(MAX_LEN).0)
+    } else {
+        slug
+    };
+
+    Slug::from_str(&slug).expect("Invalid slug").into()
 }
 
 macro_rules! slug_exists {
