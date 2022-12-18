@@ -1,7 +1,7 @@
 import { createSignal, createEffect, Accessor, createMemo } from "solid-js";
 import axios from "axios";
 
-import SiteField from "../fields/SiteField";
+import Field from "../field/Field";
 import AUTH_FIELDS from "./config/fields";
 import { FormKind } from "./config/types";
 import {
@@ -12,7 +12,7 @@ import {
   validate_jwt,
 } from "../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
-import FieldKind from "../fields/kind";
+import FieldKind from "../field/kind";
 
 export interface Props {
   config: any;
@@ -135,7 +135,7 @@ export const AuthForm = (props: Props) => {
   return (
     <form class="box">
       {props.config?.kind === FormKind.SIGNUP && (
-        <SiteField
+        <Field
           kind={FieldKind.INPUT}
           fieldKey="username"
           label={true}
@@ -146,7 +146,7 @@ export const AuthForm = (props: Props) => {
         />
       )}
 
-      <SiteField
+      <Field
         kind={FieldKind.INPUT}
         fieldKey="email"
         label={true}
@@ -161,7 +161,7 @@ export const AuthForm = (props: Props) => {
       {props.config?.kind === FormKind.SIGNUP &&
         form()?.username?.valid &&
         form()?.email?.valid && (
-          <SiteField
+          <Field
             kind={FieldKind.CHECKBOX}
             fieldKey="consent"
             label={false}

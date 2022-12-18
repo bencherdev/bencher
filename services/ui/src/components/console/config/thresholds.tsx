@@ -2,7 +2,7 @@ import THRESHOLD_FIELDS from "./fields/threshold";
 import { BENCHER_API_URL } from "../../site/util";
 import { Button, Card, Display, Operation, Row } from "./types";
 import { parentPath, addPath, viewUuidPath } from "./util";
-import FieldKind from "../../fields/kind";
+import FieldKind from "../../field/kind";
 
 const thresholdsConfig = {
   [Operation.LIST]: {

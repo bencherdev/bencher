@@ -1,9 +1,9 @@
 import { createResource, createSignal, Match, Switch } from "solid-js";
-import SiteField from "../../../fields/SiteField";
+import Field from "../../../field/Field";
 import { patch_options, validate_jwt } from "../../../site/util";
 import { Display } from "../../config/types";
 import axios from "axios";
-import FieldKind from "../../../fields/kind";
+import FieldKind from "../../../field/kind";
 
 const FieldCard = (props) => {
   const [update, setUpdate] = createSignal(false);
@@ -215,7 +215,7 @@ const UpdateCard = (props) => {
       </div>
       <div class="card-content">
         <div class="content">
-          <SiteField
+          <Field
             kind={props.card?.field?.kind}
             fieldKey={props.card?.field?.key}
             value={form()?.[props.card?.field?.key]?.value}

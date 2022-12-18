@@ -1,4 +1,4 @@
-import FieldKind from "../../fields/kind";
+import FieldKind from "../../field/kind";
 import {
   BENCHER_API_URL,
   isAllowedOrganization,

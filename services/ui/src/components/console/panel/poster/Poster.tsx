@@ -7,10 +7,10 @@ import {
   Match,
   Switch,
 } from "solid-js";
-import SiteField from "../../../fields/SiteField";
+import Field from "../../../field/Field";
 import { post_options, validate_jwt } from "../../../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
-import FieldKind from "../../../fields/kind";
+import FieldKind from "../../../field/kind";
 
 const initForm = (fields) => {
   let newForm = {};
@@ -157,7 +157,7 @@ const PosterField = (props) => {
   return (
     <Switch
       fallback={
-        <SiteField
+        <Field
           key={props.i}
           kind={props.field?.kind}
           label={props.form()?.[props.field?.key]?.label}

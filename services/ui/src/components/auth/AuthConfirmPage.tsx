@@ -2,7 +2,7 @@ import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import AUTH_FIELDS from "./config/fields";
-import SiteField from "../fields/SiteField";
+import Field from "../field/Field";
 import {
   NotifyKind,
   notifyParams,
@@ -11,7 +11,7 @@ import {
   validate_jwt,
 } from "../site/util";
 import Notification from "../site/Notification";
-import FieldKind from "../fields/kind";
+import FieldKind from "../field/kind";
 
 const TOKEN_PARAM = "token";
 
@@ -125,7 +125,7 @@ const AuthConfirmPage = (props: {
               <h3 class="subtitle">{props.config?.sub}</h3>
 
               <form class="box">
-                <SiteField
+                <Field
                   kind={FieldKind.INPUT}
                   fieldKey="token"
                   label={true}

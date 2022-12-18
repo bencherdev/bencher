@@ -1,10 +1,10 @@
-import Input from "./form/Input";
-import Checkbox from "./form/Checkbox";
-import Switch from "./form/Switch";
-import Select from "./form/Select";
+import Input from "./kinds/Input";
+import Checkbox from "./kinds/Checkbox";
+import Switch from "./kinds/Switch";
+import Select from "./kinds/Select";
 import FieldKind from "./kind";
 
-const SiteField = (props) => {
+const Field = (props) => {
   function handleField(value) {
     switch (props.kind) {
       case FieldKind.CHECKBOX:
@@ -93,4 +93,4 @@ const SiteField = (props) => {
   );
 };
 
-export default SiteField;
+export default Field;
