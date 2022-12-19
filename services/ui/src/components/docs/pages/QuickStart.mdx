@@ -2,8 +2,94 @@
 
 Bencher is a suite of open source tools designed to catch performance regressions in CI. If you believe [performance is a feature](https://blog.codinghorror.com/performance-is-a-feature), then Bencher is the tool you have been missing.
 
-Though bencher is open source, there is also a hosted version available at [bencher.dev](https://bencher.dev).
+Though Bencher is open source, there is also a hosted version available at [bencher.dev](https://bencher.dev).
 
-`cargo install --path services/cli --locked`
+## Clone the Repo
 
-`bencher --version`
+In order to work through this tutorial you will need to have `git` installed. Check to see if you have `git` installed.
+
+Run: `git --version`
+
+You should see something like:
+
+```
+$ git --version
+git version 2.37.3
+```
+
+It is okay if your version number is different. It's just important that this command works. If not follow the [instructions for installing `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+
+<br />
+
+With `git` installed, we can now clone the Bencher repository.
+
+Run: `git clone https://github.com/bencherdev/bencher.git`
+
+You should see something like:
+
+```
+$ git clone https://github.com/bencherdev/bencher.git
+Cloning into 'bencher'...
+remote: Enumerating objects: 24752, done.
+remote: Counting objects: 100% (7363/7363), done.
+remote: Compressing objects: 100% (2396/2396), done.
+remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
+Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
+Resolving deltas: 100% (16108/16108), done.
+```
+
+Again, it is okay if your output is different. It's just important that this command works.
+
+Finally, navigate into the Bencher repo that you just cloned.
+
+Run: `cd bencher`
+
+## Install `bencher` CLI
+
+In order to install the `bencher` CLI you will need to have `cargo` installed. Check to see if you have `cargo` installed.
+
+Run: `cargo --version`
+
+You should see something like:
+
+```
+$ cargo --version
+cargo 1.65.0 (4bc8f24d3 2022-10-20)
+```
+
+It is okay if your version number is different. It's just important that this command works. If not follow the [instructions for installing `cargo` via `rustup`](https://rustup.rs/).
+
+<br />
+
+With `cargo` installed, we can install the `bencher` CLI.
+
+Run: `cargo install --path services/cli --locked`
+
+You should see something like:
+
+```
+$ cargo install --path services/cli --locked
+  Installing bencher_cli v0.2.28 (/workspace/bencher/services/cli)
+    Updating crates.io index
+    ...
+    Finished release [optimized] target(s) in 0.27s
+  Installing /workspace/.cargo/bin/bencher
+   Installed package `bencher_cli v0.2.28 (/workspace/bencher/services/cli)` (executable `bencher`)
+```
+
+Again, it is okay if your output is different. It's just important that this command works. When running this command, you should be in the root folder of the Bencher repo.
+
+<br />
+
+Finally, lets test that we have the `bencher` CLI installed.
+
+Run: `bencher --version`
+
+You should see something like:
+
+```
+$ bencher --version
+bencher 0.2.28
+```
+
+As before, it is okay if your version number is different. It's just important that this command works.

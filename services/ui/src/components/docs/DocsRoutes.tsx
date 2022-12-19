@@ -1,6 +1,6 @@
 import { Route, Navigate } from "solid-app-router";
 import docsConfig from "./config/docs";
-import { Docs } from "./config/types";
+import Page from "./config/page";
 import DocsPage from "./DocsPage";
 
 const DocsRoutes = (props) => {
@@ -16,7 +16,7 @@ const DocsRoutes = (props) => {
       />
       <Route
         path="/how-to/quick-start"
-        element={<DocsPage config={config[Docs.QUICK_START]} />}
+        element={<DocsPage config={config[Page.QUICK_START]} />}
       />
       {/* <Route path="/how-to/run-a-report" element={<p>TODO</p>} /> */}
       <Route
@@ -29,11 +29,11 @@ const DocsRoutes = (props) => {
       />
       <Route
         path="/reference/api/v0"
-        element={<DocsPage config={config[Docs.API_V0]} />}
+        element={<DocsPage config={config[Page.API_V0]} />}
       />
       <Route
         path="/reference/changelog"
-        element={<DocsPage config={config[Docs.CHANGELOG]} />}
+        element={<DocsPage config={config[Page.CHANGELOG]} />}
       />
     </>
   );

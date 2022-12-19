@@ -1,15 +1,10 @@
 import { Link } from "solid-app-router";
 import slugify from "slugify";
+import Page from "./config/page";
 
 enum Section {
   HOW_TO = "How To",
   REFERENCE = "Reference",
-}
-
-enum Page {
-  QUICK_START = "Quick Start",
-  API = "API",
-  CHANGELOG = "Changelog",
 }
 
 const asSlug = (text: string) => {
@@ -33,9 +28,12 @@ const DocsMenu = (props) => {
           </Link>
         </li>
       </ul>
+
       <p class="menu-label">{Section.REFERENCE}</p>
       <ul class="menu-list">
-        <Link href={getDocsPath(Section.REFERENCE, Page.API)}>{Page.API}</Link>
+        <Link href={getDocsPath(Section.REFERENCE, Page.API_V0)}>
+          {Page.API_V0}
+        </Link>
         <Link href={getDocsPath(Section.REFERENCE, Page.CHANGELOG)}>
           {Page.CHANGELOG}
         </Link>
