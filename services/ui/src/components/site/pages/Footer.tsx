@@ -1,7 +1,7 @@
 import { Link } from "solid-app-router";
 import { BENCHER_GITHUB_URL } from "../util";
 
-const SiteFooter = () => {
+const Footer = () => {
   return (
     <footer class="footer">
       <div class="container">
@@ -57,4 +57,4 @@ const SiteFooter = () => {
   );
 };
 
-export default SiteFooter;
+export default Footer;

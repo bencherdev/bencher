@@ -1,8 +1,8 @@
 import axios from "axios";
-import validator from "validator";
 import { is_valid_jwt } from "bencher_valid";
+import { Analytics } from "analytics";
+import googleAnalytics from "@analytics/google-analytics";
 
-import { site_analytics } from "./site_analytics";
 import swagger from "../docs/api/swagger.json";
 
 // Either supply `VITE_BENCHER_API_URL` at build time,
@@ -31,6 +31,24 @@ export const BENCHER_USER_KEY: string = "BENCHER_USER";
 export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
 
 export const BENCHER_VERSION = `v${swagger?.info?.version}`;
+
+export const site_analytics = () => {
+  let plugins = [];
+
+  const google_analytics_id = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
+  if (google_analytics_id) {
+    plugins.push(
+      googleAnalytics({
+        measurementIds: [google_analytics_id],
+      })
+    );
+  }
+
+  return Analytics({
+    app: "bencher.dev",
+    plugins: plugins,
+  });
+};
 
 export const pageTitle = (new_title: string) => {
   if (new_title && new_title.length > 0) {

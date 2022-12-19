@@ -1,5 +1,5 @@
-import HeaderPage from "./pages/HeaderPage";
-import { BENCHER_GITHUB_URL } from "./util";
+import HeaderPage from "./HeaderPage";
+import { BENCHER_GITHUB_URL } from "../util";
 
 const Repo = () => {
   window.location.href = BENCHER_GITHUB_URL;

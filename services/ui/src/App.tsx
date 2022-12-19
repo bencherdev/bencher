@@ -1,23 +1,12 @@
 import "./styles/styles.scss";
 
-import {
-  createSignal,
-  createEffect,
-  lazy,
-  Component,
-  createMemo,
-  For,
-} from "solid-js";
+import { createSignal, lazy, Component, createMemo, For } from "solid-js";
 import { Routes, Route, useLocation } from "solid-app-router";
 
 import { Navbar } from "./components/site/navbar/Navbar";
-import SiteFooter from "./components/site/pages/SiteFooter";
+import Footer from "./components/site/pages/Footer";
 import { projectSlug } from "./components/console/ConsolePage";
-import {
-  BENCHER_USER_KEY,
-  validate_jwt,
-  validate_user,
-} from "./components/site/util";
+import { BENCHER_USER_KEY, validate_user } from "./components/site/util";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -26,7 +15,7 @@ const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const PerfRoutes = lazy(() => import("./components/perf/PerfRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
-const Repo = lazy(() => import("./components/site/Repo"));
+const Repo = lazy(() => import("./components/site/pages/Repo"));
 
 const defaultUser = () => {
   return {
@@ -122,6 +111,9 @@ const App: Component = () => {
           <PerfRoutes user={user} />
         </Route>
 
+        {/* Pricing Routes */}
+        <Route path="/pricing" element={<PricingPage user={user} />} />
+
         {/* Legal Routes */}
         <Route path="/legal">
           <LegalRoutes />
@@ -129,13 +121,10 @@ const App: Component = () => {
 
         {/* GitHub repo shortcut */}
         <Route path="/repo" element={<Repo />} />
-
-        {/* Pricing Routes */}
-        <Route path="/pricing" element={<PricingPage user={user} />} />
       </Routes>
 
       <For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
-      <SiteFooter />
+      <Footer />
     </>
   );
 };
