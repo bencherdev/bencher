@@ -16,8 +16,13 @@ export const Navbar = (props) => {
   return (
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
-        <Link class="navbar-item" href="/">
-          <img src={BENCHER_LOGO_URL} width="152" height="28" />
+        <Link class="navbar-item" href="/" aria-label="home">
+          <img
+            src={BENCHER_LOGO_URL}
+            width="152"
+            height="28"
+            alt="🐰 Bencher"
+          />
         </Link>
 
         <a
