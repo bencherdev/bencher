@@ -2,7 +2,7 @@
 
 Bencher is a suite of open source tools designed to catch performance regressions in CI. If you believe [performance is a feature](https://blog.codinghorror.com/performance-is-a-feature), then Bencher is the tool you have been missing.
 
-Though Bencher is open source, there is also a hosted version available at [bencher.dev](https://bencher.dev).
+Though Bencher is open source, there is also a hosted SaaS version available at [bencher.dev](https://bencher.dev).
 
 ## Clone the Repo
 
@@ -77,7 +77,9 @@ $ cargo install --path services/cli --locked
    Installed package `bencher_cli v0.2.28 (/workspace/bencher/services/cli)` (executable `bencher`)
 ```
 
-Again, it is okay if your output is different. It's just important that this command works. When running this command, you should be in the root folder of the Bencher repo.
+Again, it is okay if your output is different. It's just important that this command works.
+
+> Note: When running this command, you should be in the root folder of the Bencher repo.
 
 <br />
 
@@ -93,3 +95,181 @@ bencher 0.2.28
 ```
 
 As before, it is okay if your version number is different. It's just important that this command works.
+
+## Run UI & API Servers
+
+In order to run the UI and API servers in this tutorial you will need to have `docker` installed. Check to see if you have `docker` installed.
+
+Run: `docker --version`
+
+You should see something like:
+
+```
+$ docker --version
+Docker version 20.10.17, build 100c701
+```
+
+It is okay if your version number is different. It's just important that this command works. If not follow the [instructions for installing `docker`](https://docs.docker.com/get-docker/).
+
+<br />
+
+With `docker` installed, we can now run the UI and API servers.
+
+Run: `docker compose up -d`
+
+You should see something like:
+
+```
+$ docker compose up -d
+[+] Running 16/16
+ ⠿ bencher_ui Pulled                                           5.9s
+ ...
+ ⠿ bencher_api Pulled                                          6.3s
+ ...
+[+] Running 3/3
+ ⠿ Network bencher_default      Started                        0.1s
+ ⠿ Container bencher_ui         Started                        0.8s
+ ⠿ Container bencher_api_local  Started                        0.4s
+```
+
+Again, it is okay if your output is different. It's just important that this command works.
+
+<br />
+
+Next, check to see both docker containers are running.
+
+Run: `docker ps`
+
+You should see something like:
+
+```
+$ docker ps
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
+1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
+7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
+```
+
+As before, it is okay if your output is different. It's just important that this command works.
+
+<br />
+
+With the `bencher` CLI installed and the services running, we should now be able to run a command from the `bencher` CLI that talks to our Bencher API server.
+
+Run: `bencher server version --host http://localhost:61016`
+
+You should see something like:
+
+```
+$ bencher server version --host http://localhost:61016
+{
+  "version": "0.2.28"
+}
+```
+
+It is okay if the version number is different. It's just important that this command works.
+
+<br />
+
+> Note: You can also navigate to [localhost:3000](http://localhost:3000) in your browser and investigate the UI. However, in this tutorial we will not be using the UI.
+
+## Create an Account
+
+In order to user the Bencher API server beyond a few basic commands, like checking the version number, you will need to create an account on your API server.
+
+<br />
+
+First, lets set our hostname as an environment variable, so we don't have to provide it with the `--host` flag on every single command.
+
+Run: `export BENCHER_HOST=http://localhost:61016`
+
+If you then run: `echo $BENCHER_HOST`
+
+You should see:
+
+```
+$ echo $BENCHER_HOST
+http://localhost:61016
+```
+
+<br />
+
+> Note: The `bencher` CLI defaults to [https://api.bencher.dev](https://api.bencher.dev) as the host, so when using the hosted SaaS version of Bencher this step is not required.
+
+<br />
+
+Now lets create an account.
+
+Run: `bencher auth signup --name "Saul Goodman" saul@bettercallsaul.com`
+
+You should see:
+
+```
+$ bencher auth signup --name "Saul Goodman" saul@bettercallsaul.com
+{}
+```
+
+Because we haven't set up email on the API server yet, the invite code that we need is going to be in the server logs.
+
+Run: `docker compose logs bencher_api`
+
+You should see something like:
+
+```
+bencher_api_local  | 2022-12-19T16:45:19.353613Z  INFO bencher_api::context::messenger:
+bencher_api_local  | To: Saul Goodman <saul@bettercallsaul.com>>
+bencher_api_local  | Subject: Confirm Bencher Signup
+bencher_api_local  | Body:
+bencher_api_local  | Ahoy Saul Goodman,
+bencher_api_local  | Please, click the button below or use the provided code to signup for Bencher.
+bencher_api_local  | Confirm Email: http://localhost:3000/auth/confirm?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjcxNDcwMTE5LCJpYXQiOjE2NzE0NjgzMTksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoic2F1bEBiZXR0ZXJjYWxsc2F1bC5jb20iLCJvcmciOm51bGx9.WrLWRINLwa9Nzo6GDzKtNE8b9y732PBMFxlimvru63s
+bencher_api_local  | Confirmation Code: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjcxNDcwMTE5LCJpYXQiOjE2NzE0NjgzMTksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoic2F1bEBiZXR0ZXJjYWxsc2F1bC5jb20iLCJvcmciOm51bGx9.WrLWRINLwa9Nzo6GDzKtNE8b9y732PBMFxlimvru63s
+bencher_api_local  |
+bencher_api_local  | See you soon,
+bencher_api_local  | The Bencher Team
+bencher_api_local  | Bencher - Continuous Benchmarking
+bencher_api_local  | Manage email settings (http://localhost:3000/console/settings/email)
+```
+
+Your output should be sligtly different than the above, namely the Confirmation Code. It's just important that this command works. Take note of the Confirmation Code.
+
+Next, we will use the Confirmation Code from the API server logs to confirm your signup. Substitute your Confirmation Code for `YOUR_CONFIRMATION_CODE` in the following command.
+
+Run: `bencher auth confirm --token YOUR_CONFIRMATION_CODE`
+
+You should see something like:
+
+```
+bencher auth confirm --token YOUR_CONFIRMATION_CODE
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc",
+  "user": {
+    "admin": true,
+    "email": "saul@bettercallsaul.com",
+    "locked": false,
+    "name": "Saul Goodman",
+    "slug": "saul-goodman",
+    "uuid": "e8938f3a-d8cb-4ba5-b09e-5b5a29169c51"
+  }
+}
+```
+
+Again, your output should be sligtly different than the above. It's just important that this command works. Take note of the `token` field.
+
+<br />
+
+Finally, lets set our session token as an environment variable, so we don't have to provide it with the `--token` flag on every single command. Substitute your `token` field for `YOUR_TOKEN` in the following command.
+
+Run: `export BENCHER_API_TOKEN=YOUR_TOKEN`
+
+If you then run: `echo $BENCHER_API_TOKEN`
+
+You should see:
+
+```
+$ echo $BENCHER_API_TOKEN
+YOUR_TOKEN
+```
+
+<br />
+
+> Note: This this is only a session token, and it will expire within a few weeks. Longer lived API tokens are available, but they will not be covered in this tutorial.
