@@ -7,6 +7,7 @@ macro_rules! unwrap_slug {
     ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
         crate::util::slug::validate_slug(
             $conn,
+            None,
             $name,
             $slug,
             crate::util::slug::slug_exists!($table, $query),
@@ -16,10 +17,25 @@ macro_rules! unwrap_slug {
 
 pub(crate) use unwrap_slug;
 
-pub type SlugExistsFn = dyn FnOnce(&mut SqliteConnection, &str) -> bool;
+macro_rules! unwrap_child_slug {
+    ($conn:expr, $parent:ident, $name:expr, $slug:expr, $table:ident, $query:ident) => {
+        crate::util::slug::validate_slug(
+            $conn,
+            Some($parent),
+            $name,
+            $slug,
+            crate::util::slug::child_slug_exists!($table, $query),
+        )
+    };
+}
+
+pub(crate) use unwrap_child_slug;
+
+pub type SlugExistsFn = dyn FnOnce(&mut SqliteConnection, Option<i32>, &str) -> bool;
 
 pub fn validate_slug(
     conn: &mut SqliteConnection,
+    parent: Option<i32>,
     name: &str,
     slug: Option<Slug>,
     exists: Box<SlugExistsFn>,
@@ -30,7 +46,7 @@ pub fn validate_slug(
         slug::slugify(name)
     };
 
-    let slug = if exists(conn, &slug) {
+    let slug = if exists(conn, parent, &slug) {
         let rand_suffix = rand::random::<u32>().to_string();
         format!("{slug}-{rand_suffix}")
     } else {
@@ -48,7 +64,7 @@ pub fn validate_slug(
 
 macro_rules! slug_exists {
     ($table:ident, $query:ident) => {
-        Box::new(|conn, slug| {
+        Box::new(|conn, _parent, slug| {
             schema::$table::table
                 .filter(schema::$table::slug.eq(slug))
                 .first::<$query>(conn)
@@ -58,3 +74,17 @@ macro_rules! slug_exists {
 }
 
 pub(crate) use slug_exists;
+
+macro_rules! child_slug_exists {
+    ($table:ident, $query:ident) => {
+        Box::new(|conn, parent, slug| {
+            schema::$table::table
+                .filter(schema::$table::project_id.eq(parent.expect("Missing Project ID")))
+                .filter(schema::$table::slug.eq(slug))
+                .first::<$query>(conn)
+                .is_ok()
+        })
+    };
+}
+
+pub(crate) use child_slug_exists;

@@ -79,7 +79,7 @@ $ cargo install --path services/cli --locked
 
 Again, it is okay if your output is different. It's just important that this command works.
 
-> Note: When running this command, you should be in the root folder of the Bencher repo.
+> 🐰 Note: When running this command, you should be in the root folder of the Bencher repo.
 
 <br />
 
@@ -189,7 +189,7 @@ http://localhost:61016
 
 <br />
 
-> Note: The `bencher` CLI defaults to [https://api.bencher.dev](https://api.bencher.dev) as the host, so when using the hosted SaaS version of Bencher this step is not required.
+> 🐰 Note: The `bencher` CLI defaults to [https://api.bencher.dev](https://api.bencher.dev) as the host, so when using the hosted SaaS version of Bencher this step is not required.
 
 <br />
 
@@ -228,6 +228,8 @@ bencher_api_local  | Manage email settings (http://localhost:3000/console/settin
 
 Your output should be sligtly different than the above, namely the Confirmation Code. It's just important that this command works. Take note of the Confirmation Code.
 
+<br />
+
 Next, we will use the Confirmation Code from the API server logs to confirm your signup. Substitute your Confirmation Code for `YOUR_CONFIRMATION_CODE` in the following command.
 
 Run: `bencher auth confirm YOUR_CONFIRMATION_CODE`
@@ -235,7 +237,7 @@ Run: `bencher auth confirm YOUR_CONFIRMATION_CODE`
 You should see something like:
 
 ```
-bencher auth confirm YOUR_CONFIRMATION_CODE
+$ bencher auth confirm YOUR_CONFIRMATION_CODE
 {
   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc",
   "user": {
@@ -268,8 +270,207 @@ YOUR_TOKEN
 
 <br />
 
-> Note: This this is only a session token, and it will expire within a few weeks. Longer lived API tokens are available, but they will not be covered in this tutorial.
+> 🐰 Note: This this is only a session token, and it will expire within a few weeks. Longer lived API tokens are available, but they will not be covered in this tutorial.
+
+## Create a Project
+
+Now that we have a user account and API token, we can create a project. First, we need to know which organization our new project will belong to.
+
+Run: `bencher org ls`
+
+You should see something like:
+
+```
+$ bencher org ls
+[
+  {
+    "name": "Saul Goodman",
+    "slug": "saul-goodman",
+    "uuid": "4581feb0-6cac-40a9-bd8a-d7865183b01e"
+  }
+]
+```
+
+Your output should be sligtly different than the above, as the `uuid` is pseudorandom. It's just important that this command works. Take note of the `slug` field, `saul-goodman`.
 
 <br />
 
-> Note: You can also navigate to [localhost:3000](http://localhost:3000) in your browser and investigate the UI. However, in this tutorial we will not be using the UI.
+We can now create a new project inside of this organization.
+
+Run: `bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"`
+
+You should see something like:
+
+```
+$ bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"
+{
+  "name": "Save Walter White",
+  "organization": "4581feb0-6cac-40a9-bd8a-d7865183b01e",
+  "public": true,
+  "slug": "save-walter-white",
+  "url": "http://www.savewalterwhite.com",
+  "uuid": "c6c2a8e8-685e-4413-9a19-5b79053a71b1"
+}
+```
+
+Again, your output should be sligtly different than the above, as the `uuid` is pseudorandom. It's just important that this command works. Take note of the `slug` field, `save-walter-white`.
+
+## Run a Report
+
+We are finally ready to collect some benchmark metrics! For simplicity's sake, we will be using mock data in this tutorial.
+
+Run: `bencher mock`
+
+You should see something like:
+
+```
+$ bencher mock
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 664.920713092842,
+      "lower_bound": 120.97225391404781,
+      "upper_bound": 120.97225391404781
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 467.39985366685045,
+      "lower_bound": 141.14955678680445,
+      "upper_bound": 141.14955678680445
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 1455.1649334810777,
+      "lower_bound": 1128.587011933387,
+      "upper_bound": 1128.587011933387
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 3371.0619770609646,
+      "lower_bound": 916.8607925887267,
+      "upper_bound": 916.8607925887267
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 2713.996561550342,
+      "lower_bound": 126.84709587684537,
+      "upper_bound": 126.84709587684537
+    }
+  }
+}
+```
+
+Your output should be sligtly different than the above, as the data are pseudorandom. It's just important that this command works.
+
+<br />
+
+Now lets run a report using mock benchmark metric data.
+
+Run: `bencher run --project save-walter-white "bencher mock"`
+
+You should see something like:
+
+```
+$ bencher run --project save-walter-white "bencher mock"
+{
+  "bencher::mock_0": {
+    "latency": {
+      "value": 772.5701071258295,
+      "lower_bound": 357.3861405240051,
+      "upper_bound": 357.3861405240051
+    }
+  },
+  "bencher::mock_1": {
+    "latency": {
+      "value": 804.9167301961905,
+      "lower_bound": 141.14276314094766,
+      "upper_bound": 141.14276314094766
+    }
+  },
+  "bencher::mock_4": {
+    "latency": {
+      "value": 4550.102188508512,
+      "lower_bound": 3993.3600909502256,
+      "upper_bound": 3993.3600909502256
+    }
+  },
+  "bencher::mock_3": {
+    "latency": {
+      "value": 2554.2216404288697,
+      "lower_bound": 1715.4786051114245,
+      "upper_bound": 1715.4786051114245
+    }
+  },
+  "bencher::mock_2": {
+    "latency": {
+      "value": 1547.7221975809248,
+      "lower_bound": 842.9554498116182,
+      "upper_bound": 842.9554498116182
+    }
+  }
+}
+
+{
+  "branch": "main",
+  "hash": null,
+  "testbed": "localhost",
+  "start_time": "2022-12-20T16:01:21.523728845Z",
+  "end_time": "2022-12-20T16:01:21.526691505Z",
+  "results": [
+    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 772.5701071258295,\n      \"lower_bound\": 357.3861405240051,\n      \"upper_bound\": 357.3861405240051\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 804.9167301961905,\n      \"lower_bound\": 141.14276314094766,\n      \"upper_bound\": 141.14276314094766\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 4550.102188508512,\n      \"lower_bound\": 3993.3600909502256,\n      \"upper_bound\": 3993.3600909502256\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 2554.2216404288697,\n      \"lower_bound\": 1715.4786051114245,\n      \"upper_bound\": 1715.4786051114245\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 1547.7221975809248,\n      \"lower_bound\": 842.9554498116182,\n      \"upper_bound\": 842.9554498116182\n    }\n  }\n}\n"
+  ],
+  "settings": {
+    "adapter": null,
+    "fold": null,
+    "allow_failure": false
+  }
+}
+{
+  "adapter": "magic",
+  "alerts": [],
+  "end_time": "2022-12-20T16:01:21.526691505Z",
+  "results": [
+    "babf3c2c-30c2-4e2a-ada4-17c7ad0fafff",
+    "3d86b33a-4505-4762-8132-830cfd0dc6d6",
+    "b5aef1a4-ec01-41c2-9adf-f9eb26f97893",
+    "d9a6e82a-2dc6-4e40-a059-6282a62e30c0",
+    "2aca6972-835a-4f97-bb0d-d452ef73eac9"
+  ],
+  "start_time": "2022-12-20T16:01:21.523728845Z",
+  "testbed": "abb0fbe0-0550-4f80-b53f-37d89303e6b8",
+  "user": "14a828c8-7eb4-4f78-ad0f-ea7a2b9b06e6",
+  "uuid": "524b5016-87af-4484-8817-247b0e0d01c7",
+  "version": "70a228ed-eb20-42a3-89b9-3ebebc5c2593"
+}
+```
+
+Again, your output should be sligtly different than the above, as the data are pseudorandom. It's just important that this command works.
+
+<br />
+
+Now, lets rerun this same command again to generate more data.
+
+Rerun: `bencher run --project save-walter-white "bencher mock"`
+
+<br />
+
+You can now view your results on your project's perf page at [localhost:3000/perf/save-walter-white](http://localhost:3000/perf/save-walter-white).
+
+Select:
+
+- `Latency` from the `Metric Kind` dropdown
+- `main` from the `Branches` tab
+- `localhost` from the `Testbeds` tab
+- `bencher::mock_0` and `bencher::mock_1` from the `Benchmarks` tab
+
+<br />
+
+> 🐰 Note: The project's perf page URL is based off of the project `slug`, that is why it is `save-walter-white`.
+
+<br />
+
+🎉 Congrats! You tracked your first benchmarks!

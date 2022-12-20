@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::JsonBenchmark;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl,
-    SqliteConnection,
-};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
 use super::QueryProject;
@@ -33,11 +30,8 @@ impl QueryBenchmark {
         name: &str,
     ) -> Result<i32, ApiError> {
         schema::benchmark::table
-            .filter(
-                schema::benchmark::project_id
-                    .eq(project_id)
-                    .and(schema::benchmark::name.eq(name)),
-            )
+            .filter(schema::benchmark::project_id.eq(project_id))
+            .filter(schema::benchmark::name.eq(name))
             .select(schema::benchmark::id)
             .first(conn)
             .map_err(api_error!())

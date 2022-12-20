@@ -151,7 +151,7 @@ async fn post_inner(
         project_id,
         branch_id,
         testbed_id,
-    } = SameProject::validate_resource_ids(
+    } = SameProject::validate(
         &mut api_context.database,
         &path_params.project,
         &json_threshold.branch,
@@ -162,7 +162,8 @@ async fn post_inner(
     QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
     let conn = &mut api_context.database;
 
-    let insert_threshold = InsertThreshold::from_json(conn, branch_id, testbed_id, json_threshold)?;
+    let insert_threshold =
+        InsertThreshold::from_json(conn, project_id, branch_id, testbed_id, json_threshold)?;
     diesel::insert_into(schema::threshold::table)
         .values(&insert_threshold)
         .execute(conn)

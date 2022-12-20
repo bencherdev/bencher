@@ -9,7 +9,7 @@ use crate::{
     error::api_error,
     schema,
     schema::testbed as testbed_table,
-    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{resource_id::fn_resource_id, slug::unwrap_child_slug},
     ApiError,
 };
 
@@ -44,9 +44,11 @@ impl QueryTestbed {
 
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
+        project_id: i32,
         testbed: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::testbed::table
+            .filter(schema::testbed::project_id.eq(project_id))
             .filter(resource_id(testbed)?)
             .first::<QueryTestbed>(conn)
             .map_err(api_error!())
@@ -98,7 +100,7 @@ impl InsertTestbed {
         testbed: JsonNewTestbed,
     ) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, testbed, QueryTestbed);
+        let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, testbed, QueryTestbed);
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,

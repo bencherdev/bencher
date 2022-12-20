@@ -100,7 +100,7 @@ async fn post_inner(
         end_time,
     } = json_perf_query;
 
-    let metric_kind = QueryMetricKind::from_resource_id(conn, &metric_kind)?;
+    let metric_kind = QueryMetricKind::from_resource_id(conn, project_id, &metric_kind)?;
     let start_time_nanos = start_time.as_ref().map(|t| t.timestamp_nanos());
     let end_time_nanos = end_time.as_ref().map(|t| t.timestamp_nanos());
 

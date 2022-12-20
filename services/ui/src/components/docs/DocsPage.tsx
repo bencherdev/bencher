@@ -15,7 +15,7 @@ const DocsPage = (props) => {
           <div class="column is-narrow">
             <DocsMenu />
           </div>
-          <div class="column">
+          <div class="column is-10">
             <DocsPanel config={props.config} />
             <For each={[...Array(3).keys()]}>{(_k, _i) => <br />}</For>
             <hr />

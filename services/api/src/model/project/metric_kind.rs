@@ -9,7 +9,7 @@ use crate::{
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
-    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{resource_id::fn_resource_id, slug::unwrap_child_slug},
     ApiError,
 };
 
@@ -45,9 +45,11 @@ impl QueryMetricKind {
 
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
+        project_id: i32,
         metric_kind: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::metric_kind::table
+            .filter(schema::metric_kind::project_id.eq(project_id))
             .filter(resource_id(metric_kind)?)
             .first::<QueryMetricKind>(conn)
             .map_err(api_error!())
@@ -102,7 +104,14 @@ impl InsertMetricKind {
         metric_kind: JsonNewMetricKind,
     ) -> Self {
         let JsonNewMetricKind { name, slug, units } = metric_kind;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, metric_kind, QueryMetricKind);
+        let slug = unwrap_child_slug!(
+            conn,
+            project_id,
+            name.as_ref(),
+            slug,
+            metric_kind,
+            QueryMetricKind
+        );
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,

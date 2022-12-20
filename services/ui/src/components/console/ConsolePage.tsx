@@ -98,7 +98,7 @@ const ConsolePage = (props) => {
               handleProjectSlug={props.handleProjectSlug}
             />
           </div>
-          <div class="column">
+          <div class="column is-10">
             <ConsolePanel
               user={props.user}
               project_slug={props.project_slug}

@@ -9,7 +9,7 @@ use crate::{
     error::api_error,
     schema,
     schema::branch as branch_table,
-    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{resource_id::fn_resource_id, slug::unwrap_child_slug},
     ApiError,
 };
 
@@ -44,9 +44,11 @@ impl QueryBranch {
 
     pub fn from_resource_id(
         conn: &mut SqliteConnection,
+        project_id: i32,
         branch: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::branch::table
+            .filter(schema::branch::project_id.eq(project_id))
             .filter(resource_id(branch)?)
             .first::<QueryBranch>(conn)
             .map_err(api_error!())
@@ -98,7 +100,7 @@ impl InsertBranch {
         branch: JsonNewBranch,
     ) -> Self {
         let JsonNewBranch { name, slug } = branch;
-        let slug = unwrap_slug!(conn, name.as_ref(), slug, branch, QueryBranch);
+        let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,

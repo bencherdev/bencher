@@ -71,6 +71,7 @@ pub struct InsertThreshold {
 impl InsertThreshold {
     pub fn from_json(
         conn: &mut SqliteConnection,
+        project_id: i32,
         branch_id: i32,
         testbed_id: i32,
         json_threshold: JsonNewThreshold,
@@ -85,8 +86,12 @@ impl InsertThreshold {
             uuid: Uuid::new_v4().to_string(),
             branch_id,
             testbed_id,
-            metric_kind_id: QueryMetricKind::from_resource_id(conn, &json_threshold.metric_kind)?
-                .id,
+            metric_kind_id: QueryMetricKind::from_resource_id(
+                conn,
+                project_id,
+                &json_threshold.metric_kind,
+            )?
+            .id,
             statistic_id: QueryStatistic::get_id(conn, &insert_statistic.uuid)?,
         })
     }

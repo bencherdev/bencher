@@ -17,7 +17,7 @@ const alertsConfig = {
       },
       add: {
         path: (_pathname) => {
-          return "/docs/how-to/run-a-report";
+          return "/docs/how-to/quick-start";
         },
         text: "Run a Report",
       },

@@ -17,31 +17,14 @@ impl SameProject {
     pub fn validate(
         conn: &mut SqliteConnection,
         project: &ResourceId,
-        branch: impl ToString,
-        testbed: impl ToString,
-    ) -> Result<Self, ApiError> {
-        let project_id = QueryProject::from_resource_id(conn, project)?.id;
-        let branch_id = QueryBranch::get_id(conn, branch)?;
-        let testbed_id = QueryTestbed::get_id(conn, testbed)?;
-
-        Self::validate_ids(conn, project_id, branch_id, testbed_id).map(|_| Self {
-            project_id,
-            branch_id,
-            testbed_id,
-        })
-    }
-
-    pub fn validate_resource_ids(
-        conn: &mut SqliteConnection,
-        project: &ResourceId,
         branch: &ResourceId,
         testbed: &ResourceId,
     ) -> Result<Self, ApiError> {
         let project_id = QueryProject::from_resource_id(conn, project)?.id;
-        let branch_id = QueryBranch::from_resource_id(conn, branch)?.id;
-        let testbed_id = QueryTestbed::from_resource_id(conn, testbed)?.id;
+        let branch_id = QueryBranch::from_resource_id(conn, project_id, branch)?.id;
+        let testbed_id = QueryTestbed::from_resource_id(conn, project_id, testbed)?.id;
 
-        Self::validate_ids(conn, project_id, branch_id, testbed_id).map(|_| Self {
+        Ok(Self {
             project_id,
             branch_id,
             testbed_id,

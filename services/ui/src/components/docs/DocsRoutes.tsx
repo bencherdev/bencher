@@ -18,7 +18,6 @@ const DocsRoutes = (props) => {
         path="/how-to/quick-start"
         element={<DocsPage config={config[Page.QUICK_START]} />}
       />
-      {/* <Route path="/how-to/run-a-report" element={<p>TODO</p>} /> */}
       <Route
         path="/reference"
         element={<Navigate href="/docs/reference/api" />}

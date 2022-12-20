@@ -13,7 +13,7 @@ const reportsConfig = {
       url: (path_params) =>
         `${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/reports`,
       add: {
-        path: (_pathname) => "/docs/how-to/run-a-report",
+        path: (_pathname) => "/docs/how-to/quick-start",
         text: "Run a Report",
       },
       row: {
