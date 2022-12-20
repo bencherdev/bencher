@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, str::FromStr};
 
 use async_trait::async_trait;
 use bencher_json::{system::auth::JsonConfirm, JsonAuthToken, Jwt};
@@ -21,13 +21,9 @@ impl TryFrom<CliAuthConfirm> for Confirm {
     type Error = CliError;
 
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
-        let CliAuthConfirm { mut backend } = confirm;
+        let CliAuthConfirm { token, backend } = confirm;
         Ok(Self {
-            token: backend
-                .token
-                .take()
-                .ok_or(CliError::TokenNotFound)?
-                .parse()?,
+            token: Jwt::from_str(&token)?,
             backend: backend.try_into()?,
         })
     }

@@ -168,10 +168,6 @@ $ bencher server version --host http://localhost:61016
 
 It is okay if the version number is different. It's just important that this command works.
 
-<br />
-
-> Note: You can also navigate to [localhost:3000](http://localhost:3000) in your browser and investigate the UI. However, in this tutorial we will not be using the UI.
-
 ## Create an Account
 
 In order to user the Bencher API server beyond a few basic commands, like checking the version number, you will need to create an account on your API server.
@@ -234,12 +230,12 @@ Your output should be sligtly different than the above, namely the Confirmation 
 
 Next, we will use the Confirmation Code from the API server logs to confirm your signup. Substitute your Confirmation Code for `YOUR_CONFIRMATION_CODE` in the following command.
 
-Run: `bencher auth confirm --token YOUR_CONFIRMATION_CODE`
+Run: `bencher auth confirm YOUR_CONFIRMATION_CODE`
 
 You should see something like:
 
 ```
-bencher auth confirm --token YOUR_CONFIRMATION_CODE
+bencher auth confirm YOUR_CONFIRMATION_CODE
 {
   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc",
   "user": {
@@ -273,3 +269,7 @@ YOUR_TOKEN
 <br />
 
 > Note: This this is only a session token, and it will expire within a few weeks. Longer lived API tokens are available, but they will not be covered in this tutorial.
+
+<br />
+
+> Note: You can also navigate to [localhost:3000](http://localhost:3000) in your browser and investigate the UI. However, in this tutorial we will not be using the UI.
