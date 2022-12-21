@@ -35,4 +35,4 @@ wasm-bindgen = { version = "0.2", optional = true }
 # Workspace
 pretty_assertions.workspace = true
 # Crate
-wasm-bindgen-test = "0.3.13"
+wasm-bindgen-test = "0.3.33"
