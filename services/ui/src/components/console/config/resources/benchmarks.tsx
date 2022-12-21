@@ -2,18 +2,18 @@ import { BENCHER_API_URL } from "../../../site/util";
 import { Button, Card, Display, Operation } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
-const alertsConfig = {
+const benchmarksConfig = {
   [Operation.LIST]: {
     operation: Operation.LIST,
     header: {
-      title: "Alerts",
+      title: "Benchmarks",
       buttons: [{ kind: Button.REFRESH }],
     },
     table: {
       url: (path_params) => {
         return `${BENCHER_API_URL()}/v0/projects/${
           path_params?.project_slug
-        }/alerts`;
+        }/benchmarks`;
       },
       add: {
         path: (_pathname) => {
@@ -22,7 +22,7 @@ const alertsConfig = {
         text: "Run a Report",
       },
       row: {
-        key: "uuid",
+        key: "name",
         items: [{}, {}, {}, {}],
         button: {
           text: "View",
@@ -36,7 +36,7 @@ const alertsConfig = {
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
-      key: "uuid",
+      key: "name",
       path: (pathname) => {
         return parentPath(pathname);
       },
@@ -45,43 +45,19 @@ const alertsConfig = {
       url: (path_params) => {
         return `${BENCHER_API_URL()}/v0/projects/${
           path_params?.project_slug
-        }/alerts/${path_params?.alert_uuid}`;
+        }/benchmarks/${path_params?.benchmark_uuid}`;
       },
       cards: [
         {
           kind: Card.FIELD,
-          label: "Perf UUID",
-          key: "perf",
+          label: "Benchmark Name",
+          key: "name",
           display: Display.RAW,
         },
         {
           kind: Card.FIELD,
-          label: "Threshold UUID",
-          key: "threshold",
-          display: Display.RAW,
-        },
-        {
-          kind: Card.FIELD,
-          label: "Statistic UUID",
-          key: "statistic",
-          display: Display.RAW,
-        },
-        {
-          kind: Card.FIELD,
-          label: "Side",
-          key: "side",
-          display: Display.RAW,
-        },
-        {
-          kind: Card.FIELD,
-          label: "Boundary",
-          key: "boundary",
-          display: Display.RAW,
-        },
-        {
-          kind: Card.FIELD,
-          label: "Outlier",
-          key: "outlier",
+          label: "Benchmark UUID",
+          key: "uuid",
           display: Display.RAW,
         },
       ],
@@ -89,4 +65,4 @@ const alertsConfig = {
   },
 };
 
-export default alertsConfig;
+export default benchmarksConfig;

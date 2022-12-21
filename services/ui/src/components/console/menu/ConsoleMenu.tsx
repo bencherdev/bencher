@@ -52,13 +52,16 @@ const ConsoleMenu = (props) => {
               <Link href={getProjectPath("reports")}>Reports</Link>
             </li>
             <li>
+              <Link href={getProjectPath("metric-kinds")}>Metric Kinds</Link>
+            </li>
+            <li>
               <Link href={getProjectPath("branches")}>Branches</Link>
             </li>
             <li>
               <Link href={getProjectPath("testbeds")}>Testbeds</Link>
             </li>
             <li>
-              <Link href={getProjectPath("metric-kinds")}>Metric Kinds</Link>
+              <Link href={getProjectPath("benchmarks")}>Benchmarks</Link>
             </li>
             <li>
               <Link href={getProjectPath("thresholds")}>Thresholds</Link>

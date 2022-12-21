@@ -10,15 +10,17 @@ import membersConfig from "./resources/members";
 import metricKindsConfig from "./resources/metric_kinds";
 import usersConfig from "./resources/users";
 import tokensConfig from "./resources/tokens";
+import benchmarksConfig from "./resources/benchmarks";
 
 const consoleConfig = {
   [Resource.ORGANIZATIONS]: organizationsConfig,
   [Resource.MEMBERS]: membersConfig,
   [Resource.PROJECTS]: projectsConfig,
   [Resource.REPORTS]: reportsConfig,
+  [Resource.METRIC_KINDS]: metricKindsConfig,
   [Resource.BRANCHES]: branchesConfig,
   [Resource.TESTBEDS]: testbedsConfig,
-  [Resource.METRIC_KINDS]: metricKindsConfig,
+  [Resource.BENCHMARKS]: benchmarksConfig,
   [Resource.THRESHOLDS]: thresholdsConfig,
   [Resource.ALERTS]: alertsConfig,
   [Resource.USERS]: usersConfig,

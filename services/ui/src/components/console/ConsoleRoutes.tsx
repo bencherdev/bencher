@@ -90,6 +90,18 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.REPORTS]?.[Operation.VIEW])}
       />
       <Route
+        path="/projects/:project_slug/metric-kinds"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.LIST])}
+      />
+      <Route
+        path="/projects/:project_slug/metric-kinds/add"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.ADD])}
+      />
+      <Route
+        path="/projects/:project_slug/metric-kinds/:metric_kind_slug"
+        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.VIEW])}
+      />
+      <Route
         path="/projects/:project_slug/branches"
         element={consolePage(config?.[Resource.BRANCHES]?.[Operation.LIST])}
       />
@@ -114,20 +126,16 @@ const ConsoleRoutes = (props) => {
         element={consolePage(config?.[Resource.TESTBEDS]?.[Operation.VIEW])}
       />
       <Route
+        path="/projects/:project_slug/benchmarks"
+        element={consolePage(config?.[Resource.BENCHMARKS]?.[Operation.LIST])}
+      />
+      <Route
+        path="/projects/:project_slug/benchmarks/:benchmark_uuid"
+        element={consolePage(config?.[Resource.BENCHMARKS]?.[Operation.VIEW])}
+      />
+      <Route
         path="/projects/:project_slug/thresholds"
         element={consolePage(config?.[Resource.THRESHOLDS]?.[Operation.LIST])}
-      />
-      <Route
-        path="/projects/:project_slug/metric-kinds"
-        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.LIST])}
-      />
-      <Route
-        path="/projects/:project_slug/metric-kinds/add"
-        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.ADD])}
-      />
-      <Route
-        path="/projects/:project_slug/metric-kinds/:metric_kind_slug"
-        element={consolePage(config?.[Resource.METRIC_KINDS]?.[Operation.VIEW])}
       />
       <Route
         path="/projects/:project_slug/thresholds"
