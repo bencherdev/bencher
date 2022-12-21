@@ -127,7 +127,7 @@ fn parse_cargo_ok(input: &str) -> IResult<&str, JsonMetric> {
             delimited(tag("<"), tuple((parse_float, parse_units)), tag(">")),
         )),
         |(_, _, (duration, units))| {
-            let value = to_f64(duration) * units.as_nanos() as f64;
+            let value = to_f64(duration) * units.as_nanos();
             JsonMetric {
                 value: value.into(),
                 lower_bound: None,
