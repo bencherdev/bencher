@@ -253,6 +253,7 @@ jobs:
     name: Release CLI
     runs-on: ubuntu-latest
     needs:
+      - cargo_bench
       - build_cli_deb
       - latest_api_docker
       - latest_ui_docker

@@ -1,3 +1,4 @@
 User-agent: *
-Disallow: /console
-Disallow: /repo
+Disallow: /console$
+Disallow: /console/
+Disallow: /repo$
