@@ -164,14 +164,19 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
 }
 
 fn parse_criterion(input: &str) -> IResult<&str, (String, JsonMetric)> {
+    map(many_till(anychar, parse_criterion_time), |(key, metric)| {
+        (key.into_iter().collect(), metric)
+    })(input)
+}
+
+fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
     map(
         tuple((
-            take_until1(" "),
             tuple((space1, tag("time:"), space1)),
             parse_criterion_metric,
             eof,
         )),
-        |(key, _, metric, _)| (key.into(), metric),
+        |(_, metric, _)| metric,
     )(input)
 }
 
@@ -597,7 +602,7 @@ pub(crate) mod test_rust {
     #[test]
     fn test_adapter_rust_criterion() {
         let results = convert_rust_bench("criterion");
-        assert_eq!(results.inner.len(), 4);
+        assert_eq!(results.inner.len(), 5);
     }
 
     #[test]
