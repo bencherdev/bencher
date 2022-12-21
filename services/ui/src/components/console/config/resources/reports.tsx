@@ -37,7 +37,7 @@ const reportsConfig = {
   [Operation.VIEW]: {
     operation: Operation.VIEW,
     header: {
-      key: "uuid",
+      key: "start_time",
       path: parentPath,
     },
     deck: {
@@ -48,12 +48,6 @@ const reportsConfig = {
       cards: [
         {
           kind: Card.FIELD,
-          label: "Report UUID",
-          key: "uuid",
-          display: Display.RAW,
-        },
-        {
-          kind: Card.FIELD,
           label: "Report Start Time",
           key: "start_time",
           display: Display.RAW,
@@ -62,6 +56,12 @@ const reportsConfig = {
           kind: Card.FIELD,
           label: "Report End Time",
           key: "end_time",
+          display: Display.RAW,
+        },
+        {
+          kind: Card.FIELD,
+          label: "Report UUID",
+          key: "uuid",
           display: Display.RAW,
         },
         {
