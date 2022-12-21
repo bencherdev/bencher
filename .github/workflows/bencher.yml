@@ -74,6 +74,25 @@ jobs:
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
 
+  # Benchmark
+  cargo_bench:
+    name: Cargo Bench
+    runs-on: ubuntu-latest
+    needs: cargo_test
+    env:
+      BENCHER_PROJECT: bencher
+      BENCHER_TESTBED: ubuntu-latest
+      BENCHER_ADAPTER: rust
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install nightly toolchain
+        run: rustup toolchain install nightly
+      - name: Install `bencher` CLI
+        run: cargo install --path services/cli --locked
+      - name: Dogfooding Benchmarks with Bencher
+        run: bencher run --if-branch $GITHUB_REF_NAME --err "cargo +nightly bench"
+
   # Audit
   cargo_audit:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
