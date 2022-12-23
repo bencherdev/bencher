@@ -31,6 +31,10 @@ const DocsRoutes = (props) => {
         element={<DocsPage config={config[Page.API_V0]} />}
       />
       <Route
+        path="/reference/prior-art"
+        element={<DocsPage config={config[Page.PRIOR_ART]} />}
+      />
+      <Route
         path="/reference/changelog"
         element={<DocsPage config={config[Page.CHANGELOG]} />}
       />

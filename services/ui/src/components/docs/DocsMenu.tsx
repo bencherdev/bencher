@@ -34,6 +34,9 @@ const DocsMenu = (props) => {
         <Link href={getDocsPath(Section.REFERENCE, Page.API_V0)}>
           {Page.API_V0}
         </Link>
+        <Link href={getDocsPath(Section.REFERENCE, Page.PRIOR_ART)}>
+          {Page.PRIOR_ART}
+        </Link>
         <Link href={getDocsPath(Section.REFERENCE, Page.CHANGELOG)}>
           {Page.CHANGELOG}
         </Link>

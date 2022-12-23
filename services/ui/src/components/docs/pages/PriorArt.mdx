@@ -1,0 +1,130 @@
+## Why make Bencher?
+
+Before creating Bencher, I set out to find a tool that could/had:
+
+- Track benchmarks across multiple languages
+- Ingest language standard benchmark harness output
+- Extensible for custom benchmark harness output
+- Open source and able to self-host
+- Work with multiple CI hosts
+- User authentication and authorization
+
+Unfortunately, nothing like this seems to have existed.
+Below are the tools that I did find and took inspiration from.
+
+## Benchmark Harnesses:
+
+- C++
+  - [google/benchmark](https://github.com/google/benchmark)
+- C#
+  - [donet/BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)
+- Go
+  - [testing](https://pkg.go.dev/testing#hdr-Benchmarks)
+  - [Testing flags](https://pkg.go.dev/cmd/go#hdr-Testing_flags)
+- Haskell
+  - [haskell/criterion](https://github.com/haskell/criterion)
+- Java
+  - [openjdk/jmh](https://github.com/openjdk/jmh)
+  - [Android Microbenchmark](https://developer.android.com/topic/performance/benchmarking/microbenchmark-overview)
+  - [Android Macrobenchmark](https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview)
+- JavaScript
+  - [bestiejs/benchmark.js](https://github.com/bestiejs/benchmark.js)
+- Python
+  - [python/pyperformance](https://github.com/python/pyperformance)
+  - [pytorch/benchmark](https://github.com/pytorch/benchmark)
+  - [timeit](https://docs.python.org/3/library/timeit.html)
+- Rust
+  - [bheisler/criterion.rs](https://github.com/bheisler/criterion.rs)
+  - [bluss/bencher](https://github.com/bluss/bencher)
+  - [cargo-benchcmp](https://github.com/BurntSushi/cargo-benchcmp)
+- Swift
+  - [apple/swift](https://github.com/apple/swift/tree/main/benchmark)
+  - [google/swift-benchmark](https://github.com/google/swift-benchmark)
+- [bestiejs/benchmark.js]()
+- [HASKELL criterion]()
+- [bheisler/criterion.rs]()
+- [pkg.go.dev/testing]()
+- [pkg.go.dev/benchstat]()
+
+## Benchmark Tracking Tools:
+
+- [Hyperfoil/Horreum](https://github.com/Hyperfoil/Horreum)
+- [Conbench](https://github.com/conbench/conbench)
+- [Phoronix Test Suite](https://www.phoronix-test-suite.com) / [OpenBenchmarking.org](https://openbenchmarking.org/)
+- [novadiscovery/benchgraph](https://github.com/novadiscovery/benchgraph)
+- [codingberg/benchgraph](https://github.com/codingberg/benchgraph)
+- [rust-lang/rustc-perf](https://github.com/rust-lang/rustc-perf)
+- [golang/benchmarks](https://github.com/golang/benchmarks)
+- [airspeed velocity](https://asv.readthedocs.io/en/stable/)
+- [ElasticSearch Benchmarks]()
+- [dynamtrace performance in continuous integration]
+- [SpeedCurve](https://www.speedcurve.com)
+- [Nimbleapp functional performance testing for android & iOS]()
+- [jsperf/jsperf.com](https://github.com/jsperf/jsperf.com)
+- [Cybench](https://cybench.io)
+- [Lucene Nightly Benchmarks](https://people.apache.org/~mikemccand/lucenebench)
+- [Elasticsearch Benchmarks](https://elasticsearch-benchmarks.elastic.co)
+- [JfrUnit](https://github.com/moditect/jfrunit)
+- [NimbleDroid](https://nimbledroid.com/)
+- [OctoPerf](https://octoperf.com/)
+- [Orijtech bencher](https://bencher.orijtech.com)
+- [Buildkite Test Analytics](https://buildkite.com/test-analytics)
+- [Unflakable](https://unflakable.com)
+- [Criterion.rs](https://bheisler.github.io/criterion.rs/book/user_guide/comparing_functions.html)
+- [Skia Perf](https://skia.org/docs/dev/testing/skiaperf/)
+
+## Benchmark Tracking Posts:
+
+- [Keeping sync fast with automated performance regression detection](https://dropbox.tech/infrastructure/keeping-sync-fast-with-automated-performance-regression-detectio)
+- [Mobile performance: Tooling infrastructure at Facebook](https://engineering.fb.com/2015/04/10/developer-tools/mobile-performance-tooling-infrastructure-at-facebook/)
+- [MobileLab: Highly accurate testing to prevent mobile performance regressions](https://engineering.fb.com/2018/10/19/android/mobilelab/)
+- [BrowserLab: Automated regression detection for the web](https://engineering.fb.com/2016/08/31/web/browserlab-automated-regression-detection-for-the-web/)
+- [Fixing Performance Regressions Before they Happen](https://netflixtechblog.com/fixing-performance-regressions-before-they-happen-eab2602b86fe)
+- [Performance regression tests at Microsoft Security](https://devblogs.microsoft.com/premier-developer/performance-regression-tests-at-microsoft-security/)
+- [Is GitHub Actions suitable for running benchmarks?](https://labs.quansight.org/blog/2021/08/github-actions-benchmarks)
+- [Pefromance Testing in the CI/CD Pipeline](https://www.subject-7.com/performance-testing-in-the-ci-cd-pipeline/)
+- [Performance testing in CI: Let's break the build!](https://www.speedcurve.com/blog/performance-testing-in-ci-lets-break-the-build/)
+- [pythonspeed.com consistent benchmarking in ci]()
+- [chromium google source addressing performance regresssions]()
+- [research gate automated detection pf performance regressions using regession models]
+- [Performance Regression Testing](https://octoperf.com/blog/2020/11/16/performance-regression-testing)
+- [StackOverflow Automatically prevent performance regressions]()
+- [ee times performance regression pitfalls every project should avoid]()
+- [search based detectio of code changes introducint performance regressions]()
+- [Storing Continuous Benchmarking Data in Prometheus](https://www.youtube.com/watch?v=1Yj2pSfsu8I)
+- [Microbenchmarks vs Macrobenchmarks](https://engineering.appfolio.com/appfolio-engineering/2019/1/7/microbenchmarks-vs-macrobenchmarks-ie-whats-a-microbenchmark)
+- [Android Developers: Run benchmarks in Continuous Integration](https://developer.android.com/topic/performance/benchmarking/benchmarking-in-ci)
+- [How we perform continuous performance testing on Enterprise Search](https://www.elastic.co/blog/how-to-use-continuous-performance-testing-for-enterprise-search)
+- [Towards Continuous Performance Regression Testing](https://www.morling.dev/blog/towards-continuous-performance-regression-testing)
+- [Continuous performance regression testing with JfrUnit](https://developers.redhat.com/devnation/tech-talks/jfrunit)
+- [Performance in Continuous Integration](https://www.dynatrace.com/resources/ebooks/javabook/performance-in-continuous-integration/)
+- [Addressing Performance Regressions](https://chromium.googlesource.com/chromium/src/+/master/docs/speed/addressing_performance_regressions.md)
+- [Locating Performance Regression Root Causes in the Field Operations of Web-Based Systems: An Experience Report](https://ieeexplore.ieee.org/document/9629300)
+- [Automated Detection of Performance Regressions Using Regression Models on Clustered Performance Counters](https://www.researchgate.net/publication/281117799_Automated_Detection_of_Performance_Regressions_Using_Regression_Models_on_Clustered_Performance_Counters)
+- [automatically prevent performance regressions](https://stackoverflow.com/questions/19713319/automatically-prevent-performance-regressions)
+- [Performance-Regression Pitfalls Every Project Should Avoid](https://www.eetimes.eu/performance-regression-pitfalls-every-project-should-avoid/)
+- [Search-based detection of code changes introducing performance regression](https://www.sciencedirect.com/science/article/abs/pii/S2210650222000712)
+- [WebKit’s no performance regression policy](https://nicoverbruggen.be/blog/webkit-no-regression-policy)
+- [WebKit Regression Testing](https://webkit.org/regression-testing/)
+- [Autonomously Finding Performance Regressions In The Linux Kernel](https://www.phoronix.com/review/linux_perf_regressions)
+- [Flaky Tests at Google and How We Mitigate Them ](https://testing.googleblog.com/2016/05/flaky-tests-at-google-and-how-we.html)
+- [Test Flakiness – Methods for identifying and dealing with flaky tests ](https://engineering.atspotify.com/2019/11/test-flakiness-methods-for-identifying-and-dealing-with-flaky-tests/)
+- [Athena: Our automated build health management system](https://dropbox.tech/infrastructure/athena-our-automated-build-health-management-system)
+- [How do you test your tests?](https://engineering.fb.com/2020/12/10/developer-tools/probabilistic-flakiness/)
+- [Handling Flaky Tests at Scale: Auto Detection & Suppression](https://slack.engineering/handling-flaky-tests-at-scale-auto-detection-suppression/)
+- [Continuous Performance Regression Testing for CI/CD](https://www.nastel.com/continuous-performance-regression-testing-for-ci-cd/)
+- [Compare and optimize your code with Datadog Profile Comparison](https://www.datadoghq.com/blog/code-optimization-datadog-profile-comparison/)
+- [A Nonparametric Approach for Multiple Change Point
+  Analysis of Multivariate Data](https://arxiv.org/pdf/1306.4933.pdf)
+- [Fighting regressions with Benchmarks in CI](https://medium.com/androiddevelopers/fighting-regressions-with-benchmarks-in-ci-6ea9a14b5c71)
+- [Detecting Benchmark Regression](https://bitworking.org/news/2014/11/detecting-benchmark-regressions/)
+
+### Benchmark Tracking using [Prometheus](https://prometheus.io):
+
+- that video about continuous benchmarking with Prometheus
+
+## Benchmark Comparisons:
+
+- [krausest/js-framework-benchmark](https://github.com/krausest/js-framework-benchmark)
+- [TechEmpower/FrameworkBenchmarks](https://github.com/TechEmpower/FrameworkBenchmarks)
+- [CH-benCHmark](https://db.in.tum.de/research/projects/CHbenCHmark/index.shtml)
