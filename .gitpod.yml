@@ -33,7 +33,7 @@ tasks:
     command: ./scripts/setup.sh
   - name: API Setup
     before: cd services/api
-    command: cargo run
+    command: ../../scripts/start_api.sh
   - name: UI Setup
     before: cd services/ui
     command: ../../scripts/start_ui.sh
