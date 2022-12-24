@@ -7,6 +7,7 @@ pub mod project;
 pub mod system;
 pub mod user;
 
+#[cfg(feature = "docs")]
 use docs::CliDocs;
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};

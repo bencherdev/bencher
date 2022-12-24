@@ -4,6 +4,8 @@ use async_trait::async_trait;
 
 use crate::{cli::CliSub, CliError};
 
+#[cfg(feature = "docs")]
+mod docs;
 mod mock;
 mod organization;
 mod project;
@@ -11,6 +13,8 @@ mod sub_cmd;
 mod system;
 mod user;
 
+#[cfg(feature = "docs")]
+use docs::Docs;
 use mock::Mock;
 use organization::{member::Member, resource::Organization};
 use project::{
@@ -19,8 +23,6 @@ use project::{
     threshold::Threshold,
 };
 pub use sub_cmd::SubCmd;
-#[cfg(feature = "docs")]
-use system::docs::Docs;
 use system::{auth::Auth, server::Server};
 use user::resource::User;
 use user::token::Token;

@@ -1,3 +1,5 @@
+#![cfg(feature = "docs")]
+
 use clap::{Parser, ValueEnum};
 
 #[derive(Parser, Debug)]
