@@ -14,14 +14,14 @@ pub const DEFAULT_HOST: &str = "http://localhost:61016";
 #[cfg(not(debug_assertions))]
 pub const DEFAULT_HOST: &str = "https://api.bencher.dev";
 const DEFAULT_ATTEMPTS: usize = 3;
-const DEFAULT_SLEEP: u64 = 1;
+const DEFAULT_RETRY_AFTER: u64 = 1;
 
 #[derive(Debug, Clone)]
 pub struct Backend {
     pub host: Url,
     pub token: Option<Jwt>,
     pub attempts: Option<usize>,
-    pub sleep: Option<u64>,
+    pub retry_after: Option<u64>,
 }
 
 impl TryFrom<CliBackend> for Backend {
@@ -32,7 +32,7 @@ impl TryFrom<CliBackend> for Backend {
             host: unwrap_host(backend.host)?,
             token: map_token(backend.token)?,
             attempts: backend.attempts,
-            sleep: backend.sleep,
+            retry_after: backend.retry_after,
         })
     }
 }
@@ -107,7 +107,7 @@ impl Backend {
         }
 
         let attempts = self.attempts.unwrap_or(DEFAULT_ATTEMPTS);
-        let sleep_secs = self.sleep.unwrap_or(DEFAULT_SLEEP);
+        let retry_after = self.retry_after.unwrap_or(DEFAULT_RETRY_AFTER);
         for attempt in 0..attempts {
             match builder
                 .try_clone()
@@ -123,8 +123,8 @@ impl Backend {
                 Err(e) => {
                     cli_println!("Send attempt #{attempt}: {e}");
                     if attempt != attempts - 1 {
-                        cli_println!("Will attempt to send again in {sleep_secs} second(s).");
-                        sleep(Duration::from_secs(sleep_secs)).await;
+                        cli_println!("Will retry after {retry_after} second(s).");
+                        sleep(Duration::from_secs(retry_after)).await;
                     }
                 },
             }
