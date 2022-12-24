@@ -86,6 +86,7 @@ pub enum CliSub {
     /// Generate mock benchmark data
     Mock(CliMock),
 
+    #[cfg(feature = "docs")]
     /// Generate documentation
     Docs(CliDocs),
 }

@@ -19,7 +19,9 @@ use project::{
     threshold::Threshold,
 };
 pub use sub_cmd::SubCmd;
-use system::{auth::Auth, docs::Docs, server::Server};
+#[cfg(feature = "docs")]
+use system::docs::Docs;
+use system::{auth::Auth, server::Server};
 use user::resource::User;
 use user::token::Token;
 
@@ -43,6 +45,7 @@ pub enum Sub {
     User(User),
     Token(Token),
     Mock(Mock),
+    #[cfg(feature = "docs")]
     Docs(Docs),
 }
 
@@ -69,6 +72,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::User(user) => Self::User(user.try_into()?),
             CliSub::Token(token) => Self::Token(token.try_into()?),
             CliSub::Mock(mock) => Self::Mock(mock.into()),
+            #[cfg(feature = "docs")]
             CliSub::Docs(docs) => Self::Docs(docs.into()),
         })
     }
@@ -96,6 +100,7 @@ impl SubCmd for Sub {
             Self::User(user) => user.exec().await,
             Self::Token(token) => token.exec().await,
             Self::Mock(mock) => mock.exec().await,
+            #[cfg(feature = "docs")]
             Self::Docs(docs) => docs.exec().await,
         }
     }
