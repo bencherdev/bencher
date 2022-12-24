@@ -10,23 +10,14 @@ It consists of:
 
 The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/how-to/quick-start) tutorial.
 
-## Run Bencher Locally
+## Documentation
 
-Pull and run Docker images:
-
-```
-docker compose up -d
-```
-
-OR
-
-Build and run Docker images:
-
-```
-./scripts/docker_run.sh
-```
-
-Then open your browser to [localhost:3000](http://localhost:3000).
+- How To
+  - [Quick Start](https://bencher.dev/docs/how-to/quick-start)
+- Reference
+  - [API](https://bencher.dev/docs/reference/api/v0)
+  - [Prior Art](https://bencher.dev/docs/reference/prior-art)
+  - [Changelog](https://bencher.dev/docs/reference/changelog)
 
 ## Contributing
 
