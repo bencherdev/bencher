@@ -34,7 +34,6 @@ async fn exec() -> Result<(), CliError> {
     Ok(())
 }
 
-#[cfg(not(feature = "docs"))]
 async fn exec() -> Result<(), CliError> {
     use bencher::{sub::SubCmd, Bencher};
 

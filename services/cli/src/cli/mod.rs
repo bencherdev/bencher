@@ -1,11 +1,13 @@
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
+pub mod docs;
 pub mod mock;
 pub mod organization;
 pub mod project;
 pub mod system;
 pub mod user;
 
+use docs::CliDocs;
 use mock::CliMock;
 use organization::{member::CliMember, CliOrganization};
 use project::{
@@ -14,9 +16,7 @@ use project::{
     threshold::CliThreshold, CliProject,
 };
 use system::{auth::CliAuth, server::CliServer};
-use user::token::CliToken;
-
-use self::user::CliUser;
+use user::{token::CliToken, CliUser};
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -85,6 +85,9 @@ pub enum CliSub {
 
     /// Generate mock benchmark data
     Mock(CliMock),
+
+    /// Generate documentation
+    Docs(CliDocs),
 }
 
 #[derive(Args, Debug)]
