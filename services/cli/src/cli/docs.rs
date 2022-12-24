@@ -6,6 +6,10 @@ pub struct CliDocs {
     #[clap(long)]
     pub path: Option<String>,
 
+    /// File output name
+    #[clap(long)]
+    pub name: Option<String>,
+
     /// Documentation format
     pub format: Option<CliDocsFmt>,
 }
