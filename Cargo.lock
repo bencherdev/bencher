@@ -201,6 +201,7 @@ dependencies = [
  "bencher_json",
  "chrono",
  "clap 4.0.30",
+ "clap_mangen",
  "literally",
  "pretty_assertions",
  "rand 0.8.5",
@@ -457,6 +458,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d4198f73e42b4936b35b5bb248d81d2b595ecb170da0bac7655c54eedfa8da8"
 dependencies = [
  "os_str_bytes",
+]
+
+[[package]]
+name = "clap_mangen"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "904eb24d05ad587557e0f484ddce5c737c30cf81372badb16d13e41c4b8340b1"
+dependencies = [
+ "clap 4.0.30",
+ "roff",
 ]
 
 [[package]]
@@ -2656,6 +2667,12 @@ dependencies = [
  "web-sys",
  "winapi",
 ]
+
+[[package]]
+name = "roff"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b833d8d034ea094b1ea68aa6d5c740e0d04bad9d16568d08ba6f76823a114316"
 
 [[package]]
 name = "rsa"

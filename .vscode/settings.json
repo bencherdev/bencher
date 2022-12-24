@@ -41,6 +41,7 @@
     "Insertable",
     "jsonwebtoken",
     "litestream",
+    "mangen",
     "Milli",
     "nanos",
     "netlifly",

@@ -49,7 +49,7 @@ pub struct CliAuthLogin {
 #[derive(Parser, Debug)]
 pub struct CliAuthConfirm {
     /// Email confirmation JWT (JSON Web Token)
-    pub token: String,
+    pub confirm: String,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -21,9 +21,9 @@ impl TryFrom<CliAuthConfirm> for Confirm {
     type Error = CliError;
 
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
-        let CliAuthConfirm { token, backend } = confirm;
+        let CliAuthConfirm { confirm, backend } = confirm;
         Ok(Self {
-            token: Jwt::from_str(&token)?,
+            token: Jwt::from_str(&confirm)?,
             backend: backend.try_into()?,
         })
     }

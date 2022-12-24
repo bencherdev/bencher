@@ -1,10 +1,9 @@
+use std::{io, process::ExitCode};
+
 mod bencher;
 mod cli;
 mod error;
 
-use std::{io, process::ExitCode};
-
-use bencher::{sub::SubCmd, Bencher};
 pub use error::CliError;
 
 #[tokio::main(flavor = "current_thread")]
@@ -20,7 +19,25 @@ async fn main() -> ExitCode {
     }
 }
 
+#[cfg(feature = "docs")]
 async fn exec() -> Result<(), CliError> {
+    use clap::CommandFactory;
+    use cli::CliBencher;
+
+    let cmd = CliBencher::command();
+    let man = clap_mangen::Man::new(cmd);
+    let mut buffer: Vec<u8> = Default::default();
+    man.render(&mut buffer)?;
+
+    std::fs::write("out.1", buffer)?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "docs"))]
+async fn exec() -> Result<(), CliError> {
+    use bencher::{sub::SubCmd, Bencher};
+
     let bencher = Bencher::new()?;
     bencher.exec().await
 }
