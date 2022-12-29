@@ -62,7 +62,7 @@ Benchmarking benchmark: name with spaces
 Benchmarking benchmark: name with spaces: Warming up for 3.0000 s
 Benchmarking benchmark: name with spaces: Collecting 100 samples in estimated 5.0695 s (308k iterations)
 Benchmarking benchmark: name with spaces: Analyzing
-benchmark: name with spaces    time:   [18.195 µs 20.930 µs 24.240 µs]
+benchmark: name with spaces    time:   [18.195 ns 20.930 ns 24.240 ns]
                         change: [+21.885% +31.300% +41.180%] (p = 0.00 < 0.05)
                         Performance has regressed.
 Found 7 outliers among 100 measurements (7.00%)

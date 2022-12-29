@@ -603,6 +603,21 @@ pub(crate) mod test_rust {
     fn test_adapter_rust_criterion() {
         let results = convert_rust_bench("criterion");
         assert_eq!(results.inner.len(), 5);
+
+        let metrics = results.inner.get("file").unwrap();
+        validate_metrics(metrics, 0.32389999999999997, Some(0.32062), Some(0.32755));
+
+        let metrics = results.inner.get("rolling_file").unwrap();
+        validate_metrics(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328 ));
+
+        let metrics = results.inner.get("tracing_file").unwrap();
+        validate_metrics(metrics, 18019.0, Some(16652.0), Some(19562.0));
+
+        let metrics = results.inner.get("tracing_rolling_file").unwrap();
+        validate_metrics(metrics, 20930.0, Some(18195.0), Some(24240.0 ));
+
+        let metrics = results.inner.get("benchmark: name with spaces").unwrap();
+        validate_metrics(metrics, 20.930, Some(18.195), Some(24.240));
     }
 
     #[test]
