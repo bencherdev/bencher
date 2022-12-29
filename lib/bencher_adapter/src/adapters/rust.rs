@@ -153,11 +153,11 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
             let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
-            let variance = Some((to_duration(to_u64(variance), &units).as_nanos() as f64).into());
+            let variance = Some(OrderedFloat::from(to_duration(to_u64(variance), &units).as_nanos() as f64));
             JsonMetric {
                 value,
-                lower_bound: variance,
-                upper_bound: variance,
+                lower_bound: variance.map(|v| value - v),
+                upper_bound: variance.map(|v| value + v),
             }
         },
     )(input)
@@ -328,7 +328,7 @@ pub(crate) mod test_rust {
 
     fn validate_bench_metrics(results: &AdapterResults, key: &str) {
         let metrics = results.inner.get(key).unwrap();
-        validate_metrics(metrics, 3_161.0, Some(975.0), Some(975.0));
+        validate_metrics(metrics, 3_161.0, Some(2_186.0), Some(4_136.0));
     }
 
     #[test]
@@ -369,8 +369,8 @@ pub(crate) mod test_rust {
                         "tests::is_bench_test".into(),
                         TestMetric::Bench(JsonMetric {
                             value: 5_280.0.into(),
-                            lower_bound: Some(333.0.into()),
-                            upper_bound: Some(333.0.into()),
+                            lower_bound: Some(4_947.0.into()),
+                            upper_bound: Some(5_613.0.into()),
                         }),
                     ),
                 )),
@@ -510,15 +510,15 @@ pub(crate) mod test_rust {
 
         let number = 1_000.0;
         let metrics = results.inner.get("tests::one_digit").unwrap();
-        validate_metrics(metrics, number, Some(number), Some(number));
+        validate_metrics(metrics, number, Some(0.0), Some(2000.0));
 
         let number = 22_000_000.0;
         let metrics = results.inner.get("tests::two_digit").unwrap();
-        validate_metrics(metrics, number, Some(number), Some(number));
+        validate_metrics(metrics, number, Some(0.0), Some(44_000_000.0));
 
         let number = 333_000_000_000.0;
         let metrics = results.inner.get("tests::three_digit").unwrap();
-        validate_metrics(metrics, number, Some(number), Some(number));
+        validate_metrics(metrics, number, Some(0.0), Some(666_000_000_000.0));
     }
 
     #[test]
@@ -550,10 +550,10 @@ pub(crate) mod test_rust {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.inner.get("tests::benchmark_a").unwrap();
-        validate_metrics(metrics, 3_296.0, Some(521.0), Some(521.0));
+        validate_metrics(metrics, 3_296.0, Some(2_775.0), Some(3_817.0));
 
         let metrics = results.inner.get("tests::benchmark_c").unwrap();
-        validate_metrics(metrics, 3_215.0, Some(356.0), Some(356.0));
+        validate_metrics(metrics, 3_215.0, Some(2_859.0), Some(3_571.0));
     }
 
     #[test]
