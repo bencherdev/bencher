@@ -153,7 +153,9 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| {
             let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
-            let variance = Some(OrderedFloat::from(to_duration(to_u64(variance), &units).as_nanos() as f64));
+            let variance = Some(OrderedFloat::from(
+                to_duration(to_u64(variance), &units).as_nanos() as f64,
+            ));
             JsonMetric {
                 value,
                 lower_bound: variance.map(|v| value - v),
@@ -608,13 +610,13 @@ pub(crate) mod test_rust {
         validate_metrics(metrics, 0.32389999999999997, Some(0.32062), Some(0.32755));
 
         let metrics = results.inner.get("rolling_file").unwrap();
-        validate_metrics(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328 ));
+        validate_metrics(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328));
 
         let metrics = results.inner.get("tracing_file").unwrap();
         validate_metrics(metrics, 18019.0, Some(16652.0), Some(19562.0));
 
         let metrics = results.inner.get("tracing_rolling_file").unwrap();
-        validate_metrics(metrics, 20930.0, Some(18195.0), Some(24240.0 ));
+        validate_metrics(metrics, 20930.0, Some(18195.0), Some(24240.0));
 
         let metrics = results.inner.get("benchmark: name with spaces").unwrap();
         validate_metrics(metrics, 20.930, Some(18.195), Some(24.240));
