@@ -7,9 +7,7 @@
   "paths": {
     "/v0/auth/confirm": {
       "post": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "operationId": "post",
         "requestBody": {
           "content": {
@@ -71,9 +69,7 @@
         }
       },
       "options": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "operationId": "options",
         "responses": {
           "200": {
@@ -98,9 +94,7 @@
     },
     "/v0/auth/login": {
       "post": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "operationId": "post",
         "requestBody": {
           "content": {
@@ -162,9 +156,7 @@
         }
       },
       "options": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "operationId": "options",
         "responses": {
           "200": {
@@ -189,9 +181,7 @@
     },
     "/v0/auth/signup": {
       "post": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "operationId": "post",
         "requestBody": {
           "content": {
@@ -253,9 +243,7 @@
         }
       },
       "options": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "operationId": "options",
         "responses": {
           "200": {
@@ -280,9 +268,7 @@
     },
     "/v0/organizations": {
       "get": {
-        "tags": [
-          "organizations"
-        ],
+        "tags": ["organizations"],
         "operationId": "get_ls",
         "responses": {
           "200": {
@@ -338,9 +324,7 @@
         }
       },
       "post": {
-        "tags": [
-          "organizations"
-        ],
+        "tags": ["organizations"],
         "operationId": "post",
         "requestBody": {
           "content": {
@@ -402,9 +386,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations"
-        ],
+        "tags": ["organizations"],
         "operationId": "dir_options",
         "responses": {
           "200": {
@@ -429,9 +411,7 @@
     },
     "/v0/organizations/{organization}": {
       "get": {
-        "tags": [
-          "organizations"
-        ],
+        "tags": ["organizations"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -494,9 +474,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations"
-        ],
+        "tags": ["organizations"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -532,10 +510,7 @@
     },
     "/v0/organizations/{organization}/allowed/{permission}": {
       "get": {
-        "tags": [
-          "organizations",
-          "allowed"
-        ],
+        "tags": ["organizations", "allowed"],
         "operationId": "get",
         "parameters": [
           {
@@ -607,10 +582,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations",
-          "allowed"
-        ],
+        "tags": ["organizations", "allowed"],
         "operationId": "options",
         "parameters": [
           {
@@ -655,10 +627,7 @@
     },
     "/v0/organizations/{organization}/members": {
       "get": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
+        "tags": ["organizations", "members"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -725,10 +694,7 @@
         }
       },
       "post": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
+        "tags": ["organizations", "members"],
         "operationId": "post",
         "parameters": [
           {
@@ -801,10 +767,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
+        "tags": ["organizations", "members"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -840,10 +803,7 @@
     },
     "/v0/organizations/{organization}/members/{user}": {
       "get": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
+        "tags": ["organizations", "members"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -915,10 +875,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
+        "tags": ["organizations", "members"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -961,10 +918,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
+        "tags": ["organizations", "members"],
         "operationId": "patch",
         "parameters": [
           {
@@ -1048,10 +1002,7 @@
     },
     "/v0/organizations/{organization}/projects": {
       "get": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
+        "tags": ["organizations", "projects"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -1118,10 +1069,7 @@
         }
       },
       "post": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
+        "tags": ["organizations", "projects"],
         "operationId": "post",
         "parameters": [
           {
@@ -1194,10 +1142,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
+        "tags": ["organizations", "projects"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -1233,10 +1178,7 @@
     },
     "/v0/organizations/{organization}/projects/{project}": {
       "get": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
+        "tags": ["organizations", "projects"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -1308,10 +1250,7 @@
         }
       },
       "options": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
+        "tags": ["organizations", "projects"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -1356,9 +1295,7 @@
     },
     "/v0/projects": {
       "get": {
-        "tags": [
-          "projects"
-        ],
+        "tags": ["projects"],
         "operationId": "get_ls",
         "responses": {
           "200": {
@@ -1414,9 +1351,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects"
-        ],
+        "tags": ["projects"],
         "operationId": "dir_options",
         "responses": {
           "200": {
@@ -1441,9 +1376,7 @@
     },
     "/v0/projects/{project}": {
       "get": {
-        "tags": [
-          "projects"
-        ],
+        "tags": ["projects"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -1506,9 +1439,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects"
-        ],
+        "tags": ["projects"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -1544,10 +1475,7 @@
     },
     "/v0/projects/{project}/alerts": {
       "get": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
+        "tags": ["projects", "alerts"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -1614,10 +1542,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
+        "tags": ["projects", "alerts"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -1653,10 +1578,7 @@
     },
     "/v0/projects/{project}/alerts/{alert}": {
       "get": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
+        "tags": ["projects", "alerts"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -1729,10 +1651,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
+        "tags": ["projects", "alerts"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -1778,10 +1697,7 @@
     },
     "/v0/projects/{project}/benchmarks": {
       "get": {
-        "tags": [
-          "projects",
-          "benchmarks"
-        ],
+        "tags": ["projects", "benchmarks"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -1848,10 +1764,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "benchmarks"
-        ],
+        "tags": ["projects", "benchmarks"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -1887,10 +1800,7 @@
     },
     "/v0/projects/{project}/benchmarks/{benchmark}": {
       "get": {
-        "tags": [
-          "projects",
-          "benchmarks"
-        ],
+        "tags": ["projects", "benchmarks"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -1963,10 +1873,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "benchmarks"
-        ],
+        "tags": ["projects", "benchmarks"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -2012,10 +1919,7 @@
     },
     "/v0/projects/{project}/branches": {
       "get": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
+        "tags": ["projects", "branches"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -2091,10 +1995,7 @@
         }
       },
       "post": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
+        "tags": ["projects", "branches"],
         "operationId": "post",
         "parameters": [
           {
@@ -2167,10 +2068,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
+        "tags": ["projects", "branches"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -2215,10 +2113,7 @@
     },
     "/v0/projects/{project}/branches/{branch}": {
       "get": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
+        "tags": ["projects", "branches"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -2290,10 +2185,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
+        "tags": ["projects", "branches"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -2338,10 +2230,7 @@
     },
     "/v0/projects/{project}/metric-kinds": {
       "get": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
+        "tags": ["projects", "metric kinds"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -2408,10 +2297,7 @@
         }
       },
       "post": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
+        "tags": ["projects", "metric kinds"],
         "operationId": "post",
         "parameters": [
           {
@@ -2484,10 +2370,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
+        "tags": ["projects", "metric kinds"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -2523,10 +2406,7 @@
     },
     "/v0/projects/{project}/metric-kinds/{metric_kind}": {
       "get": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
+        "tags": ["projects", "metric kinds"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -2598,10 +2478,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
+        "tags": ["projects", "metric kinds"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -2646,10 +2523,7 @@
     },
     "/v0/projects/{project}/perf": {
       "post": {
-        "tags": [
-          "projects",
-          "perf"
-        ],
+        "tags": ["projects", "perf"],
         "operationId": "post",
         "parameters": [
           {
@@ -2722,10 +2596,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "perf"
-        ],
+        "tags": ["projects", "perf"],
         "operationId": "options",
         "parameters": [
           {
@@ -2761,10 +2632,7 @@
     },
     "/v0/projects/{project}/reports": {
       "get": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
+        "tags": ["projects", "reports"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -2831,10 +2699,7 @@
         }
       },
       "post": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
+        "tags": ["projects", "reports"],
         "operationId": "post",
         "parameters": [
           {
@@ -2907,10 +2772,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
+        "tags": ["projects", "reports"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -2946,10 +2808,7 @@
     },
     "/v0/projects/{project}/reports/{report_uuid}": {
       "get": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
+        "tags": ["projects", "reports"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -3022,10 +2881,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
+        "tags": ["projects", "reports"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -3071,10 +2927,7 @@
     },
     "/v0/projects/{project}/results/{result}": {
       "get": {
-        "tags": [
-          "projects",
-          "results"
-        ],
+        "tags": ["projects", "results"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -3147,10 +3000,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "results"
-        ],
+        "tags": ["projects", "results"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -3196,10 +3046,7 @@
     },
     "/v0/projects/{project}/testbeds": {
       "get": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
+        "tags": ["projects", "testbeds"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -3266,10 +3113,7 @@
         }
       },
       "post": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
+        "tags": ["projects", "testbeds"],
         "operationId": "post",
         "parameters": [
           {
@@ -3342,10 +3186,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
+        "tags": ["projects", "testbeds"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -3381,10 +3222,7 @@
     },
     "/v0/projects/{project}/testbeds/{testbed}": {
       "get": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
+        "tags": ["projects", "testbeds"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -3456,10 +3294,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
+        "tags": ["projects", "testbeds"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -3504,10 +3339,7 @@
     },
     "/v0/projects/{project}/thresholds": {
       "get": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
+        "tags": ["projects", "thresholds"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -3574,10 +3406,7 @@
         }
       },
       "post": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
+        "tags": ["projects", "thresholds"],
         "operationId": "post",
         "parameters": [
           {
@@ -3650,10 +3479,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
+        "tags": ["projects", "thresholds"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -3689,10 +3515,7 @@
     },
     "/v0/projects/{project}/thresholds/{threshold}": {
       "get": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
+        "tags": ["projects", "thresholds"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -3765,10 +3588,7 @@
         }
       },
       "options": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
+        "tags": ["projects", "thresholds"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -3814,10 +3634,7 @@
     },
     "/v0/server/config": {
       "get": {
-        "tags": [
-          "server",
-          "config"
-        ],
+        "tags": ["server", "config"],
         "operationId": "get_one",
         "responses": {
           "200": {
@@ -3869,10 +3686,7 @@
         }
       },
       "put": {
-        "tags": [
-          "server",
-          "config"
-        ],
+        "tags": ["server", "config"],
         "operationId": "put",
         "requestBody": {
           "content": {
@@ -3934,10 +3748,7 @@
         }
       },
       "options": {
-        "tags": [
-          "server",
-          "config"
-        ],
+        "tags": ["server", "config"],
         "operationId": "options",
         "responses": {
           "200": {
@@ -3962,10 +3773,7 @@
     },
     "/v0/server/ping": {
       "get": {
-        "tags": [
-          "server",
-          "ping"
-        ],
+        "tags": ["server", "ping"],
         "operationId": "get",
         "responses": {
           "200": {
@@ -4018,10 +3826,7 @@
         }
       },
       "options": {
-        "tags": [
-          "server",
-          "ping"
-        ],
+        "tags": ["server", "ping"],
         "operationId": "options",
         "responses": {
           "200": {
@@ -4046,9 +3851,7 @@
     },
     "/v0/server/restart": {
       "post": {
-        "tags": [
-          "server"
-        ],
+        "tags": ["server"],
         "operationId": "post",
         "requestBody": {
           "content": {
@@ -4110,9 +3913,7 @@
         }
       },
       "options": {
-        "tags": [
-          "server"
-        ],
+        "tags": ["server"],
         "operationId": "options",
         "requestBody": {
           "content": {
@@ -4147,10 +3948,7 @@
     },
     "/v0/server/version": {
       "get": {
-        "tags": [
-          "server",
-          "version"
-        ],
+        "tags": ["server", "version"],
         "operationId": "get",
         "responses": {
           "200": {
@@ -4202,10 +4000,7 @@
         }
       },
       "options": {
-        "tags": [
-          "server",
-          "version"
-        ],
+        "tags": ["server", "version"],
         "operationId": "options",
         "responses": {
           "200": {
@@ -4230,9 +4025,7 @@
     },
     "/v0/users/{user}": {
       "get": {
-        "tags": [
-          "users"
-        ],
+        "tags": ["users"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -4295,9 +4088,7 @@
         }
       },
       "options": {
-        "tags": [
-          "users"
-        ],
+        "tags": ["users"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -4333,10 +4124,7 @@
     },
     "/v0/users/{user}/tokens": {
       "get": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
+        "tags": ["users", "tokens"],
         "operationId": "get_ls",
         "parameters": [
           {
@@ -4403,10 +4191,7 @@
         }
       },
       "post": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
+        "tags": ["users", "tokens"],
         "operationId": "post",
         "parameters": [
           {
@@ -4479,10 +4264,7 @@
         }
       },
       "options": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
+        "tags": ["users", "tokens"],
         "operationId": "dir_options",
         "parameters": [
           {
@@ -4518,10 +4300,7 @@
     },
     "/v0/users/{user}/tokens/{token}": {
       "get": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
+        "tags": ["users", "tokens"],
         "operationId": "get_one",
         "parameters": [
           {
@@ -4594,10 +4373,7 @@
         }
       },
       "options": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
+        "tags": ["users", "tokens"],
         "operationId": "one_options",
         "parameters": [
           {
@@ -4676,29 +4452,18 @@
             "type": "string"
           }
         },
-        "required": [
-          "message",
-          "request_id"
-        ]
+        "required": ["message", "request_id"]
       },
       "GitHash": {
         "type": "string"
       },
       "IfExists": {
         "type": "string",
-        "enum": [
-          "fail",
-          "truncate",
-          "append"
-        ]
+        "enum": ["fail", "truncate", "append"]
       },
       "JsonAdapter": {
         "type": "string",
-        "enum": [
-          "magic",
-          "json",
-          "rust"
-        ]
+        "enum": ["magic", "json", "rust"]
       },
       "JsonAlert": {
         "type": "object",
@@ -4748,9 +4513,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "allowed"
-        ]
+        "required": ["allowed"]
       },
       "JsonAuthToken": {
         "type": "object",
@@ -4759,9 +4522,7 @@
             "$ref": "#/components/schemas/Jwt"
           }
         },
-        "required": [
-          "token"
-        ]
+        "required": ["token"]
       },
       "JsonBenchmark": {
         "type": "object",
@@ -4778,11 +4539,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "name",
-          "project",
-          "uuid"
-        ]
+        "required": ["name", "project", "uuid"]
       },
       "JsonBranch": {
         "type": "object",
@@ -4802,12 +4559,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "name",
-          "project",
-          "slug",
-          "uuid"
-        ]
+        "required": ["name", "project", "slug", "uuid"]
       },
       "JsonConfig": {
         "type": "object",
@@ -4838,12 +4590,7 @@
             ]
           }
         },
-        "required": [
-          "database",
-          "endpoint",
-          "logging",
-          "server"
-        ]
+        "required": ["database", "endpoint", "logging", "server"]
       },
       "JsonConfirm": {
         "type": "object",
@@ -4855,10 +4602,7 @@
             "$ref": "#/components/schemas/JsonUser"
           }
         },
-        "required": [
-          "token",
-          "user"
-        ]
+        "required": ["token", "user"]
       },
       "JsonDatabase": {
         "type": "object",
@@ -4867,21 +4611,14 @@
             "type": "string"
           }
         },
-        "required": [
-          "file"
-        ]
+        "required": ["file"]
       },
       "JsonEmpty": {
         "type": "object"
       },
       "JsonFold": {
         "type": "string",
-        "enum": [
-          "min",
-          "max",
-          "mean",
-          "median"
-        ]
+        "enum": ["min", "max", "mean", "median"]
       },
       "JsonLogging": {
         "type": "object",
@@ -4893,10 +4630,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "log",
-          "name"
-        ]
+        "required": ["log", "name"]
       },
       "JsonLogin": {
         "type": "object",
@@ -4913,9 +4647,7 @@
             ]
           }
         },
-        "required": [
-          "email"
-        ]
+        "required": ["email"]
       },
       "JsonMember": {
         "type": "object",
@@ -4937,13 +4669,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "email",
-          "name",
-          "role",
-          "slug",
-          "uuid"
-        ]
+        "required": ["email", "name", "role", "slug", "uuid"]
       },
       "JsonMetric": {
         "type": "object",
@@ -4963,9 +4689,7 @@
             "format": "double"
           }
         },
-        "required": [
-          "value"
-        ]
+        "required": ["value"]
       },
       "JsonMetricKind": {
         "type": "object",
@@ -4988,13 +4712,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "name",
-          "project",
-          "slug",
-          "units",
-          "uuid"
-        ]
+        "required": ["name", "project", "slug", "units", "uuid"]
       },
       "JsonNewBranch": {
         "type": "object",
@@ -5011,9 +4729,7 @@
             ]
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "JsonNewMember": {
         "type": "object",
@@ -5033,10 +4749,7 @@
             "$ref": "#/components/schemas/JsonOrganizationRole"
           }
         },
-        "required": [
-          "email",
-          "role"
-        ]
+        "required": ["email", "role"]
       },
       "JsonNewMetricKind": {
         "type": "object",
@@ -5056,10 +4769,7 @@
             "$ref": "#/components/schemas/NonEmpty"
           }
         },
-        "required": [
-          "name",
-          "units"
-        ]
+        "required": ["name", "units"]
       },
       "JsonNewOrganization": {
         "type": "object",
@@ -5076,9 +4786,7 @@
             ]
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "JsonNewProject": {
         "type": "object",
@@ -5107,9 +4815,7 @@
             ]
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "JsonNewReport": {
         "type": "object",
@@ -5151,13 +4857,7 @@
             "$ref": "#/components/schemas/ResourceId"
           }
         },
-        "required": [
-          "branch",
-          "end_time",
-          "results",
-          "start_time",
-          "testbed"
-        ]
+        "required": ["branch", "end_time", "results", "start_time", "testbed"]
       },
       "JsonNewTestbed": {
         "type": "object",
@@ -5174,9 +4874,7 @@
             ]
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "JsonNewThreshold": {
         "type": "object",
@@ -5222,12 +4920,7 @@
             "minimum": 0
           }
         },
-        "required": [
-          "branch",
-          "metric_kind",
-          "test",
-          "testbed"
-        ]
+        "required": ["branch", "metric_kind", "test", "testbed"]
       },
       "JsonNewToken": {
         "type": "object",
@@ -5242,9 +4935,7 @@
             "minimum": 0
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "JsonOrganization": {
         "type": "object",
@@ -5260,17 +4951,11 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "name",
-          "slug",
-          "uuid"
-        ]
+        "required": ["name", "slug", "uuid"]
       },
       "JsonOrganizationRole": {
         "type": "string",
-        "enum": [
-          "leader"
-        ]
+        "enum": ["leader"]
       },
       "JsonPerf": {
         "type": "object",
@@ -5296,10 +4981,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "metric_kind",
-          "results"
-        ]
+        "required": ["metric_kind", "results"]
       },
       "JsonPerfMetric": {
         "type": "object",
@@ -5365,12 +5047,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "benchmark",
-          "branch",
-          "metrics",
-          "testbed"
-        ]
+        "required": ["benchmark", "branch", "metrics", "testbed"]
       },
       "JsonPerfQuery": {
         "type": "object",
@@ -5410,12 +5087,7 @@
             }
           }
         },
-        "required": [
-          "benchmarks",
-          "branches",
-          "metric_kind",
-          "testbeds"
-        ]
+        "required": ["benchmarks", "branches", "metric_kind", "testbeds"]
       },
       "JsonProject": {
         "type": "object",
@@ -5446,13 +5118,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "name",
-          "organization",
-          "public",
-          "slug",
-          "uuid"
-        ]
+        "required": ["name", "organization", "public", "slug", "uuid"]
       },
       "JsonReport": {
         "type": "object",
@@ -5580,13 +5246,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "benchmark",
-          "iteration",
-          "metrics",
-          "report",
-          "uuid"
-        ]
+        "required": ["benchmark", "iteration", "metrics", "report", "uuid"]
       },
       "JsonServer": {
         "type": "object",
@@ -5608,17 +5268,11 @@
             ]
           }
         },
-        "required": [
-          "bind_address",
-          "request_body_max_bytes"
-        ]
+        "required": ["bind_address", "request_body_max_bytes"]
       },
       "JsonSide": {
         "type": "string",
-        "enum": [
-          "left",
-          "right"
-        ]
+        "enum": ["left", "right"]
       },
       "JsonSignup": {
         "type": "object",
@@ -5646,10 +5300,7 @@
             ]
           }
         },
-        "required": [
-          "email",
-          "name"
-        ]
+        "required": ["email", "name"]
       },
       "JsonSmtp": {
         "type": "object",
@@ -5680,10 +5331,7 @@
       },
       "JsonStatisticKind": {
         "type": "string",
-        "enum": [
-          "z",
-          "t"
-        ]
+        "enum": ["z", "t"]
       },
       "JsonTestbed": {
         "type": "object",
@@ -5703,12 +5351,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "name",
-          "project",
-          "slug",
-          "uuid"
-        ]
+        "required": ["name", "project", "slug", "uuid"]
       },
       "JsonThreshold": {
         "type": "object",
@@ -5734,13 +5377,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "branch",
-          "metric_kind",
-          "statistic",
-          "testbed",
-          "uuid"
-        ]
+        "required": ["branch", "metric_kind", "statistic", "testbed", "uuid"]
       },
       "JsonTls": {
         "type": "object",
@@ -5752,10 +5389,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "cert_file",
-          "key_file"
-        ]
+        "required": ["cert_file", "key_file"]
       },
       "JsonToken": {
         "type": "object",
@@ -5783,14 +5417,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "creation",
-          "expiration",
-          "name",
-          "token",
-          "user",
-          "uuid"
-        ]
+        "required": ["creation", "expiration", "name", "token", "user", "uuid"]
       },
       "JsonUpdateConfig": {
         "type": "object",
@@ -5805,9 +5432,7 @@
             "minimum": 0
           }
         },
-        "required": [
-          "config"
-        ]
+        "required": ["config"]
       },
       "JsonUpdateMember": {
         "type": "object",
@@ -5845,14 +5470,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "admin",
-          "email",
-          "locked",
-          "name",
-          "slug",
-          "uuid"
-        ]
+        "required": ["admin", "email", "locked", "name", "slug", "uuid"]
       },
       "JsonVersion": {
         "type": "object",
@@ -5861,9 +5479,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "version"
-        ]
+        "required": ["version"]
       },
       "JsonWebToken": {
         "type": "string"
@@ -5873,14 +5489,7 @@
       },
       "LogLevel": {
         "type": "string",
-        "enum": [
-          "trace",
-          "debug",
-          "info",
-          "warn",
-          "error",
-          "critical"
-        ]
+        "enum": ["trace", "debug", "info", "warn", "error", "critical"]
       },
       "NonEmpty": {
         "type": "string"
@@ -5900,14 +5509,10 @@
                     "$ref": "#/components/schemas/LogLevel"
                   }
                 },
-                "required": [
-                  "level"
-                ]
+                "required": ["level"]
               }
             },
-            "required": [
-              "stderr_terminal"
-            ],
+            "required": ["stderr_terminal"],
             "additionalProperties": false
           },
           {
@@ -5926,16 +5531,10 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "if_exists",
-                  "level",
-                  "path"
-                ]
+                "required": ["if_exists", "level", "path"]
               }
             },
-            "required": [
-              "file"
-            ],
+            "required": ["file"],
             "additionalProperties": false
           }
         ]
