@@ -28,7 +28,7 @@ env:
   UI_BUILD_DIST: bencher-ui-dist
 
 jobs:
-  # Pretty
+  # Pretty Rust
   cargo_fmt:
     name: Cargo Format
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
       - name: Run udeps
         run: cargo +nightly udeps
 
-  # Test
+  # Cargo Test
   cargo_test:
     name: Cargo Test
     runs-on: ubuntu-latest
@@ -74,7 +74,7 @@ jobs:
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
 
-  # Benchmark
+  # Cargo Benchmark
   cargo_bench:
     name: Cargo Bench
     runs-on: ubuntu-latest
@@ -91,7 +91,7 @@ jobs:
       - name: Dogfooding Benchmarks with Bencher
         run: bencher run --if-branch $GITHUB_REF_NAME --err "cargo bench"
 
-  # Audit
+  # Cargo Audit
   cargo_audit:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     name: Cargo Audit
@@ -103,6 +103,16 @@ jobs:
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  # NPM Test
+  npm_test:
+    name: NPM Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: npm test
+        working-directory: ./services/ui
+        run: npm test run
 
   # API Docker
   build_api_docker:
