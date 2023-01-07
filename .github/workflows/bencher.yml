@@ -106,13 +106,24 @@ jobs:
 
   # Pretty JS
   npx_prettier:
-    name: Prettier JS
+    name: Prettier
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: npx prettier
         working-directory: ./services/ui
         run: npx prettier --check .
+
+  npx_eslint:
+    name: eslint
+    runs-on: ubuntu-latest
+    # TODO fix all lints
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - name: npx eslint
+        working-directory: ./services/ui
+        run: npx eslint .
 
   # NPM Test
   npm_test:

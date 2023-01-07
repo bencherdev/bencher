@@ -15,6 +15,7 @@ vscode:
       "redhat.vscode-yaml",
       "esbenp.prettier-vscode",
       "Syler.sass-indented",
+      "dbaeumer.vscode-eslint",
       "ZixuanChen.vitest-explorer",
       "osohq.oso",
       "TabNine.tabnine-vscode",
