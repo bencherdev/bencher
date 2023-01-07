@@ -17,7 +17,7 @@ const PerfRoutes = lazy(() => import("./components/perf/PerfRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/pages/Repo"));
 
-const defaultUser = () => {
+export const defaultUser = () => {
   return {
     user: {
       uuid: null,
