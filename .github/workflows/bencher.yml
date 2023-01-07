@@ -357,12 +357,17 @@ jobs:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-latest
     needs: cargo_test
+    env:
+      WASM_PACK_BUILD: wasm-pack build --target web --no-default-features --features wasm
     steps:
       - uses: actions/checkout@v3
       - uses: jetli/wasm-pack-action@v0.3.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
-        run: wasm-pack build --target web --no-default-features --features wasm
+        run: |
+          $(WASM_PACK_BUILD) || \
+          $(WASM_PACK_BUILD) || \
+          $(WASM_PACK_BUILD)
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
