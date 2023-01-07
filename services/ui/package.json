@@ -6,8 +6,8 @@
   "scripts": {
     "wasm": "wasm-pack build ../../lib/bencher_valid --target web",
     "dev": "npm run wasm && vite",
-    "test": "vitest",
-    "coverage": "vitest run --coverage",
+    "test": "npm run wasm && vitest",
+    "coverage": "npm run wasm && vitest run --coverage",
     "host": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
