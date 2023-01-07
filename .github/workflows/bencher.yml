@@ -365,9 +365,9 @@ jobs:
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
         run: |
-          $(WASM_PACK_BUILD) || \
-          $(WASM_PACK_BUILD) || \
-          $(WASM_PACK_BUILD)
+          $WASM_PACK_BUILD || \
+          $WASM_PACK_BUILD || \
+          $WASM_PACK_BUILD
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
