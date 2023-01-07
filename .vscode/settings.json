@@ -59,6 +59,7 @@
     "schemars",
     "signup",
     "udeps",
-    "VITE"
+    "VITE",
+    "vitest"
   ]
 }
