@@ -11,25 +11,26 @@ const LinePlot = (props) => {
     setMaxUnits(Math.max(max_units(), Math.round(value).toString().length));
   };
 
-  // const getUnits = async (perf_data) => {
-  //   try {
-  //     const url = props.config?.plot?.metric_kind_url(
-  //       props.path_params(),
-  //       perf_data.metric_kind
-  //     );
-  //     const resp = await axios(get_options(url, props.user()?.token));
-  //     console.log(resp);
-  //     return resp.data?.units;
-  //   } catch (error) {
-  //     console.error(error);
-  //     return "UNITS";
-  //   }
-  // };
+  const getUnits = async (perf_data) => {
+    try {
+      const url = props.config?.metric_kind_url(
+        props.path_params(),
+        perf_data.metric_kind
+      );
+      const resp = await axios(get_options(url, props.user()?.token));
+      return resp.data?.units;
+    } catch (error) {
+      console.error(error);
+      return "UNITS";
+    }
+  };
 
-  // const [units] = createResource(props.perf_data, getUnits);
+  const [units] = createResource(props.perf_data, getUnits);
 
   const plotted = () => {
     const json_perf = props.perf_data();
+
+    console.log(json_perf);
 
     if (
       typeof json_perf !== "object" ||
@@ -61,10 +62,12 @@ const LinePlot = (props) => {
       plot_arrays.push(Plot.line(line_data, { stroke: color }));
     });
 
+    console.log(plot_arrays);
+
     return Plot.plot({
       y: {
         grid: true,
-        label: "UNITS",
+        label: `↑ ${units()}`,
       },
       marks: plot_arrays,
       width: props.width(),
