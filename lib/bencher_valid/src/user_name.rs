@@ -14,7 +14,7 @@ use serde::{
 
 use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
-#[derive(Debug, Display, Clone, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);
 

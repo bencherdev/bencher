@@ -1,9 +1,14 @@
 use std::collections::HashMap;
 
-use bencher_json::project::{
-    metric::Mean,
-    report::{JsonAdapter, JsonFold},
+use bencher_json::{
+    project::{
+        metric::Mean,
+        metric_kind::LATENCY_SLUG_STR,
+        report::{JsonAdapter, JsonFold},
+    },
+    NonEmpty, ResourceId,
 };
+use once_cell::sync::Lazy;
 
 use crate::AdapterError;
 use crate::{Adapter, Settings};
@@ -15,8 +20,14 @@ pub mod results_reducer;
 use adapter_results::{AdapterResults, ResultsMap};
 use results_reducer::ResultsReducer;
 
-pub type BenchmarkName = String;
-pub type MetricKind = String;
+pub static LATENCY_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
+    LATENCY_SLUG_STR
+        .parse()
+        .expect("Failed to parse metric kind slug.")
+});
+
+pub type BenchmarkName = NonEmpty;
+pub type MetricKind = ResourceId;
 
 #[derive(Debug, Clone)]
 pub struct AdapterResultsArray {

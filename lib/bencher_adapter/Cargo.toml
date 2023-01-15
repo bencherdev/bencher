@@ -9,6 +9,7 @@ edition.workspace = true
 bencher_json = { path = "../bencher_json" }
 # Workspace
 literally.workspace = true
+once_cell.workspace = true
 ordered-float.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -18,7 +19,6 @@ nom = "7.1"
 
 [dev-dependencies]
 # Workspace
-once_cell.workspace = true
 pretty_assertions.workspace = true
 # Crate
 criterion = "0.4"

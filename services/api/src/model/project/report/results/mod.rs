@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    results::adapter_metrics::AdapterMetrics, AdapterResults, AdapterResultsArray,
+    results::{adapter_metrics::AdapterMetrics, BenchmarkName, MetricKind},
+    AdapterResults, AdapterResultsArray,
 };
 use bencher_json::project::report::{JsonAdapter, JsonReportSettings};
 use diesel::{RunQueryDsl, SqliteConnection};
@@ -21,15 +22,17 @@ pub mod detector;
 
 use detector::Detector;
 
+type MetricKindId = i32;
+
 /// ReportResults is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct ReportResults {
     pub project_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
     pub report_id: i32,
-    pub benchmark_cache: HashMap<String, i32>,
-    pub metric_kind_cache: HashMap<String, i32>,
-    pub detector_cache: HashMap<i32, Option<Detector>>,
+    pub benchmark_cache: HashMap<BenchmarkName, i32>,
+    pub metric_kind_cache: HashMap<MetricKind, i32>,
+    pub detector_cache: HashMap<MetricKindId, Option<Detector>>,
 }
 
 impl ReportResults {
@@ -82,7 +85,7 @@ impl ReportResults {
         &mut self,
         conn: &mut SqliteConnection,
         iteration: usize,
-        benchmark_name: String,
+        benchmark_name: BenchmarkName,
         metrics: AdapterMetrics,
     ) -> Result<(), ApiError> {
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
@@ -115,14 +118,14 @@ impl ReportResults {
     fn benchmark_id(
         &mut self,
         conn: &mut SqliteConnection,
-        benchmark_name: String,
+        benchmark_name: BenchmarkName,
     ) -> Result<i32, ApiError> {
         Ok(
             if let Some(id) = self.benchmark_cache.get(&benchmark_name) {
                 *id
             } else {
                 let benchmark_id =
-                    QueryBenchmark::get_or_create(conn, self.project_id, &benchmark_name)?;
+                    QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name.as_ref())?;
                 self.benchmark_cache.insert(benchmark_name, benchmark_id);
                 benchmark_id
             },
@@ -132,15 +135,14 @@ impl ReportResults {
     fn metric_kind_id(
         &mut self,
         conn: &mut SqliteConnection,
-        metric_kind_key: String,
+        metric_kind_key: MetricKind,
     ) -> Result<i32, ApiError> {
         Ok(
             if let Some(id) = self.metric_kind_cache.get(&metric_kind_key) {
                 *id
             } else {
-                let resource_id = metric_kind_key.parse()?;
                 let metric_kind_id =
-                    QueryMetricKind::from_resource_id(conn, self.project_id, &resource_id)?.id;
+                    QueryMetricKind::from_resource_id(conn, self.project_id, &metric_kind_key)?.id;
 
                 self.metric_kind_cache
                     .insert(metric_kind_key, metric_kind_id);
@@ -152,7 +154,7 @@ impl ReportResults {
     fn detector(
         &mut self,
         conn: &mut SqliteConnection,
-        metric_kind_id: i32,
+        metric_kind_id: MetricKindId,
     ) -> Result<Option<Detector>, ApiError> {
         Ok(
             if let Some(detector) = self.detector_cache.get(&metric_kind_id) {

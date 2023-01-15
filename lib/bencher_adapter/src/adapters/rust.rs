@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use bencher_json::{project::metric_kind::LATENCY_SLUG_STR, JsonMetric};
+use bencher_json::JsonMetric;
 use literally::hmap;
 use nom::{
     branch::alt,
@@ -14,7 +14,9 @@ use nom::{
 use ordered_float::OrderedFloat;
 
 use crate::{
-    results::{adapter_metrics::AdapterMetrics, adapter_results::AdapterResults},
+    results::{
+        adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, LATENCY_RESOURCE_ID,
+    },
     Adapter, AdapterError, Settings,
 };
 
@@ -69,15 +71,15 @@ impl Adapter for AdapterRust {
 
         Ok(benchmark_metrics
             .into_iter()
-            .map(|(benchmark_name, metric)| {
-                (
-                    benchmark_name,
+            .filter_map(|(benchmark_name, metric)| {
+                Some((
+                    benchmark_name.as_str().parse().ok()?,
                     AdapterMetrics {
                         inner: hmap! {
-                            LATENCY_SLUG_STR => metric
+                            LATENCY_RESOURCE_ID.clone() => metric
                         },
                     },
-                )
+                ))
             })
             .collect::<HashMap<_, _>>()
             .into())

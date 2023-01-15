@@ -12,7 +12,7 @@ use serde::{
 
 use crate::ValidError;
 
-#[derive(Debug, Display, Clone, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Jwt(String);
 

@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{Slug, ValidError};
 
-#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ResourceId(String);
 
@@ -20,9 +20,9 @@ impl FromStr for ResourceId {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         if let Ok(uuid) = Uuid::from_str(value) {
-            Ok(ResourceId(uuid.to_string()))
+            Ok(Self(uuid.to_string()))
         } else if let Ok(slug) = Slug::from_str(value) {
-            Ok(ResourceId(slug.into()))
+            Ok(Self(slug.into()))
         } else {
             Err(ValidError::ResourceId(value.into()))
         }
