@@ -1,0 +1,99 @@
+
+running 19 tests
+test adapters::json::test_json::test_adapter_json_latency ... ignored
+test adapters::magic::test::test_adapter_magic_json_latency ... ignored
+test adapters::magic::test::test_adapter_magic_rust_many ... ignored
+test adapters::rust::test_rust::test_adapter_rust_criterion ... ignored
+test adapters::rust::test_rust::test_adapter_rust_criterion_failed ... ignored
+test adapters::rust::test_rust::test_adapter_rust_criterion_failed_allow_failure ... ignored
+test adapters::rust::test_rust::test_adapter_rust_failed ... ignored
+test adapters::rust::test_rust::test_adapter_rust_failed_allow_failure ... ignored
+test adapters::rust::test_rust::test_adapter_rust_ignore ... ignored
+test adapters::rust::test_rust::test_adapter_rust_many ... ignored
+test adapters::rust::test_rust::test_adapter_rust_multi_target ... ignored
+test adapters::rust::test_rust::test_adapter_rust_one ... ignored
+test adapters::rust::test_rust::test_adapter_rust_test_failed ... ignored
+test adapters::rust::test_rust::test_adapter_rust_test_failed_allow_failure ... ignored
+test adapters::rust::test_rust::test_adapter_rust_test_report_time ... ignored
+test adapters::rust::test_rust::test_adapter_rust_zero ... ignored
+test adapters::rust::test_rust::test_parse_cargo ... ignored
+test adapters::rust::test_rust::test_parse_criterion ... ignored
+test adapters::rust::test_rust::test_parse_panic ... ignored
+
+test result: ok. 0 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+JsonAdapter::Magic (JSON)
+                        time:   [3.4623 µs 3.4632 µs 3.4641 µs]
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+
+JsonAdapter::Json       time:   [3.4793 µs 3.4796 µs 3.4800 µs]
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) low mild
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+JsonAdapter::Magic (Rust)
+                        time:   [14.721 µs 14.726 µs 14.730 µs]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+
+JsonAdapter::Rust       time:   [14.881 µs 14.884 µs 14.887 µs]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+
+
+running 9 tests
+test model::project::report::results::detector::test::test_normal ... ignored
+test model::project::report::results::detector::test::test_students_t ... ignored
+test util::cors::tests::test_cors_handles_duplicate_valid_values ... ignored
+test util::cors::tests::test_cors_returns_invalid_error_when_missing ... ignored
+test util::cors::tests::test_cors_returns_subset_of_allowed_values ... ignored
+test util::cors::tests::test_cors_returns_values_when_all_are_valid ... ignored
+test util::cors::tests::test_cors_simple_content_type ... ignored
+test util::cors::tests::test_cors_simple_methods_header ... ignored
+test util::cors::tests::test_cors_simple_origin ... ignored
+
+test result: ok. 0 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test test::test_endpoint ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test test::test_rbac ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test branch_name::test::test_branch_name ... ignored
+test email::test::test_email ... ignored
+test git_hash::test::test_git_hash ... ignored
+test jwt::test::test_jwt ... ignored
+test non_empty::test::test_non_empty ... ignored
+test slug::test::test_slug ... ignored
+test test::test_is_valid_len ... ignored
+test url::test::test_email ... ignored
+test user_name::test::test_is_valid_user_name ... ignored
+
+test result: ok. 0 passed; 0 failed; 9 ignored; 0 measured; 0 filtered out; finished in 0.00s

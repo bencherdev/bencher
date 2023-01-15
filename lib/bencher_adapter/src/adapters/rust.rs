@@ -24,6 +24,7 @@ impl Adapter for AdapterRust {
     fn parse(input: &str, settings: Settings) -> Result<AdapterResults, AdapterError> {
         let mut benchmark_metrics = Vec::new();
 
+        let mut prior_line = None;
         for line in input.lines() {
             if let Ok((remainder, (benchmark_name, test_metric))) = parse_cargo(line) {
                 if remainder.is_empty() {
@@ -43,7 +44,7 @@ impl Adapter for AdapterRust {
                 }
             }
 
-            if let Ok((remainder, benchmark_metric)) = parse_criterion(line) {
+            if let Ok((remainder, benchmark_metric)) = parse_criterion(prior_line, line) {
                 if remainder.is_empty() {
                     benchmark_metrics.push(benchmark_metric);
                 }
@@ -62,6 +63,8 @@ impl Adapter for AdapterRust {
                     }
                 }
             }
+
+            prior_line = Some(line);
         }
 
         Ok(benchmark_metrics
@@ -165,10 +168,20 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
-fn parse_criterion(input: &str) -> IResult<&str, (String, JsonMetric)> {
-    map(many_till(anychar, parse_criterion_time), |(key, metric)| {
-        (key.into_iter().collect(), metric)
-    })(input)
+fn parse_criterion<'i>(
+    prior_line: Option<&str>,
+    input: &'i str,
+) -> IResult<&'i str, (String, JsonMetric)> {
+    map(
+        many_till(anychar, parse_criterion_time),
+        |(key_chars, metric)| {
+            let mut key: String = key_chars.into_iter().collect();
+            if key.is_empty() {
+                key = prior_line.unwrap_or_default().into();
+            }
+            (key, metric)
+        },
+    )(input)
 }
 
 fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
@@ -298,7 +311,7 @@ fn to_u64(input: Vec<(&str, &str)>) -> u64 {
 
 fn to_duration(time: u64, units: &Units) -> Duration {
     match units {
-        Units::Pico => Duration::from_nanos((time as f64 / units.as_nanos()) as u64),
+        Units::Pico => Duration::from_nanos((time as f64 * units.as_nanos()) as u64),
         Units::Nano => Duration::from_nanos(time),
         Units::Micro => Duration::from_micros(time),
         Units::Milli => Duration::from_millis(time),
@@ -448,7 +461,7 @@ pub(crate) mod test_rust {
         .into_iter()
         .enumerate()
         {
-            assert_eq!(expected, parse_criterion(input), "#{index}: {input}")
+            assert_eq!(expected, parse_criterion(None, input), "#{index}: {input}")
         }
 
         for (index, input) in [
@@ -641,5 +654,28 @@ pub(crate) mod test_rust {
         )
         .unwrap();
         assert_eq!(results.inner.len(), 4);
+    }
+
+    #[test]
+    fn test_adapter_rust_criterion_dogfood() {
+        let results = convert_rust_bench("criterion_dogfood");
+        assert_eq!(results.inner.len(), 4);
+
+        let metrics = results.inner.get("JsonAdapter::Magic (JSON)").unwrap();
+        validate_metrics(
+            metrics,
+            3463.2000000000003,
+            Some(3462.2999999999997),
+            Some(3464.1000000000003),
+        );
+
+        let metrics = results.inner.get("JsonAdapter::Json").unwrap();
+        validate_metrics(metrics, 3479.6, Some(3479.2999999999997), Some(3480.0));
+
+        let metrics = results.inner.get("JsonAdapter::Magic (Rust)").unwrap();
+        validate_metrics(metrics, 14726.0, Some(14721.0), Some(14730.0));
+
+        let metrics = results.inner.get("JsonAdapter::Rust").unwrap();
+        validate_metrics(metrics, 14884.0, Some(14881.0), Some(14887.0));
     }
 }

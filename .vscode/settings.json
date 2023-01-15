@@ -32,6 +32,7 @@
     "consts",
     "Deque",
     "devel",
+    "dogfood",
     "Dogfooding",
     "dropshot",
     "ello",
