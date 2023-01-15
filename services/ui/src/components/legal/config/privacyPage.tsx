@@ -54,23 +54,16 @@ const privacyPage = {
         from that information. This includes your name, address, telephone
         number, email address, credit card, or other account number. Personal
         Information does not include: (1) aggregated or anonymized information
-        (2) any publicly available information about legal products or legal
-        services (3) information about you that is provided by third parties (4)
-        information that is posted to publicly accessible areas of the Services.
-        Examples of Personal Information we collect include information that you
-        provide when you: (a) create or update your Bencher account (b)
-        communicate with us (c) purchase services from us (d) contact or
-        recommend a legal resource or legal service (e) submit referrals. If you
-        are a Partner and claim or update your listings ("Listings"), or post
-        information using your Listings, we may also collect verification
-        information.
+        (2) any publicly available information (3) information about you that is
+        provided by third parties (4) information that is posted to publicly
+        accessible areas of the Services, such as projects ("Projects").
       </p>
       <h5>Publicly Posted Information</h5>
       <p>
         Personal Information that you post to public areas of the Services or
-        via your Listings may become publicly available and is no longer
+        via your Projects may become publicly available and is no longer
         considered Personal Information. For example, information you post in
-        your Listings or any other interactive areas may be made publicly
+        your Projects or any other interactive areas may be made publicly
         available and can potentially be viewed by anyone. Your posting to such
         public areas of the Services constitutes consent to share such
         information publicly, and you should assume that such information will

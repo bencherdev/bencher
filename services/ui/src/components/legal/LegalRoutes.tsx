@@ -3,6 +3,7 @@ import HeaderPage from "../site/pages/HeaderPage";
 import termsPage from "./config/termsPage";
 import privacyPage from "./config/privacyPage";
 import licensePage from "./config/licensePage";
+import legalPage from "./config/legalPage";
 
 const LegalRoutes = (props) => {
   const headerPage = (page) => {
@@ -12,7 +13,7 @@ const LegalRoutes = (props) => {
   return (
     <>
       {/* Legal Routes */}
-      <Route path="/" element={<Navigate href="/legal/terms-of-use" />} />
+      <Route path="/" element={headerPage(legalPage)} />
       <Route path="/terms-of-use" element={headerPage(termsPage)} />
       <Route path="/privacy" element={headerPage(privacyPage)} />
       <Route path="/license" element={headerPage(licensePage)} />
