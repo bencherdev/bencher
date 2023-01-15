@@ -61,6 +61,9 @@ const Plot = (props) => {
           <nav class="level">
             <div class="level-item" ref={(e) => (plot_ref = e)}>
               <LinePlot
+                user={props.user}
+                config={props.config}
+                path_params={props.path_params}
                 perf_data={props.perf_data}
                 perf_active={perf_active}
                 width={width}

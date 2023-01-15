@@ -1,15 +1,8 @@
 import * as Plot from "@observablehq/plot";
+import axios from "axios";
 import * as d3 from "d3";
-import { createSignal } from "solid-js";
-import { PerKind } from "../../../config/types";
-
-// TODO query the backend based off of metric kind
-const getLabel = (kind) => {
-  switch (kind) {
-    default:
-      return "↑ UNITS";
-  }
-};
+import { createMemo, createResource, createSignal } from "solid-js";
+import { get_options } from "../../../../site/util";
 
 const LinePlot = (props) => {
   const [max_units, setMaxUnits] = createSignal(1);
@@ -18,8 +11,26 @@ const LinePlot = (props) => {
     setMaxUnits(Math.max(max_units(), Math.round(value).toString().length));
   };
 
+  // const getUnits = async (perf_data) => {
+  //   try {
+  //     const url = props.config?.plot?.metric_kind_url(
+  //       props.path_params(),
+  //       perf_data.metric_kind
+  //     );
+  //     const resp = await axios(get_options(url, props.user()?.token));
+  //     console.log(resp);
+  //     return resp.data?.units;
+  //   } catch (error) {
+  //     console.error(error);
+  //     return "UNITS";
+  //   }
+  // };
+
+  // const [units] = createResource(props.perf_data, getUnits);
+
   const plotted = () => {
     const json_perf = props.perf_data();
+
     if (
       typeof json_perf !== "object" ||
       json_perf === null ||
@@ -53,7 +64,7 @@ const LinePlot = (props) => {
     return Plot.plot({
       y: {
         grid: true,
-        label: getLabel(json_perf.kind),
+        label: "UNITS",
       },
       marks: plot_arrays,
       width: props.width(),
