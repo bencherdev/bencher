@@ -1,7 +1,10 @@
 #!/bin/sh
 
-# Format code
+# Format Rust code
 cargo fmt
+
+# Format JS code
+cd services/ui && npx prettier --write . && cd -
 
 # If there was a change/the git tree is diry add all updated files and commit
 git diff --quiet || git add .
