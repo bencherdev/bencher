@@ -39,7 +39,7 @@ pub(crate) mod test_util {
         upper_bound: Option<f64>,
     ) {
         assert_eq!(metrics.inner.len(), 1);
-        let metric = metrics.inner.get(LATENCY_SLUG_STR).unwrap();
+        let metric = metrics.get(LATENCY_SLUG_STR).unwrap();
         assert_eq!(metric.value, OrderedFloat::from(value));
         assert_eq!(metric.lower_bound, lower_bound.map(OrderedFloat::from));
         assert_eq!(metric.upper_bound, upper_bound.map(OrderedFloat::from));

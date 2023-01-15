@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::JsonMetric;
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,10 @@ impl AdapterMetrics {
         }
         metric_map.extend(other.inner.into_iter());
         metric_map.into()
+    }
+
+    pub fn get(&self, key: &str) -> Option<&JsonMetric> {
+        self.inner.get(&MetricKind::from_str(key).ok()?)
     }
 }
 

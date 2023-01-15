@@ -344,7 +344,7 @@ pub(crate) mod test_rust {
     }
 
     fn validate_bench_metrics(results: &AdapterResults, key: &str) {
-        let metrics = results.inner.get(key).unwrap();
+        let metrics = results.get(key).unwrap();
         validate_metrics(metrics, 3_161.0, Some(2_186.0), Some(4_136.0));
     }
 
@@ -526,15 +526,15 @@ pub(crate) mod test_rust {
         validate_bench_metrics(&results, "tests::last_benchmark");
 
         let number = 1_000.0;
-        let metrics = results.inner.get("tests::one_digit").unwrap();
+        let metrics = results.get("tests::one_digit").unwrap();
         validate_metrics(metrics, number, Some(0.0), Some(2000.0));
 
         let number = 22_000_000.0;
-        let metrics = results.inner.get("tests::two_digit").unwrap();
+        let metrics = results.get("tests::two_digit").unwrap();
         validate_metrics(metrics, number, Some(0.0), Some(44_000_000.0));
 
         let number = 333_000_000_000.0;
-        let metrics = results.inner.get("tests::three_digit").unwrap();
+        let metrics = results.get("tests::three_digit").unwrap();
         validate_metrics(metrics, number, Some(0.0), Some(666_000_000_000.0));
     }
 
@@ -566,10 +566,10 @@ pub(crate) mod test_rust {
         .unwrap();
         assert_eq!(results.inner.len(), 2);
 
-        let metrics = results.inner.get("tests::benchmark_a").unwrap();
+        let metrics = results.get("tests::benchmark_a").unwrap();
         validate_metrics(metrics, 3_296.0, Some(2_775.0), Some(3_817.0));
 
-        let metrics = results.inner.get("tests::benchmark_c").unwrap();
+        let metrics = results.get("tests::benchmark_c").unwrap();
         validate_metrics(metrics, 3_215.0, Some(2_859.0), Some(3_571.0));
     }
 
@@ -578,13 +578,13 @@ pub(crate) mod test_rust {
         let results = convert_rust_test("report_time");
         assert_eq!(results.inner.len(), 3);
 
-        let metrics = results.inner.get("tests::unit_test").unwrap();
+        let metrics = results.get("tests::unit_test").unwrap();
         validate_metrics(metrics, 0.0, None, None);
 
-        let metrics = results.inner.get("tests::other_test").unwrap();
+        let metrics = results.get("tests::other_test").unwrap();
         validate_metrics(metrics, 1_000_000.0, None, None);
 
-        let metrics = results.inner.get("tests::last_test").unwrap();
+        let metrics = results.get("tests::last_test").unwrap();
         validate_metrics(metrics, 2_000_000.0, None, None);
     }
 
@@ -606,13 +606,13 @@ pub(crate) mod test_rust {
         .unwrap();
         assert_eq!(results.inner.len(), 3);
 
-        let metrics = results.inner.get("tests::ignored").unwrap();
+        let metrics = results.get("tests::ignored").unwrap();
         validate_metrics(metrics, 0.0, None, None);
 
-        let metrics = results.inner.get("tests::benchmark_a").unwrap();
+        let metrics = results.get("tests::benchmark_a").unwrap();
         validate_metrics(metrics, 1_000_000.0, None, None);
 
-        let metrics = results.inner.get("tests::benchmark_b").unwrap();
+        let metrics = results.get("tests::benchmark_b").unwrap();
         validate_metrics(metrics, 2_000_000.0, None, None);
     }
 
@@ -621,19 +621,19 @@ pub(crate) mod test_rust {
         let results = convert_rust_bench("criterion");
         assert_eq!(results.inner.len(), 5);
 
-        let metrics = results.inner.get("file").unwrap();
+        let metrics = results.get("file").unwrap();
         validate_metrics(metrics, 0.32389999999999997, Some(0.32062), Some(0.32755));
 
-        let metrics = results.inner.get("rolling_file").unwrap();
+        let metrics = results.get("rolling_file").unwrap();
         validate_metrics(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328));
 
-        let metrics = results.inner.get("tracing_file").unwrap();
+        let metrics = results.get("tracing_file").unwrap();
         validate_metrics(metrics, 18019.0, Some(16652.0), Some(19562.0));
 
-        let metrics = results.inner.get("tracing_rolling_file").unwrap();
+        let metrics = results.get("tracing_rolling_file").unwrap();
         validate_metrics(metrics, 20930.0, Some(18195.0), Some(24240.0));
 
-        let metrics = results.inner.get("benchmark: name with spaces").unwrap();
+        let metrics = results.get("benchmark: name with spaces").unwrap();
         validate_metrics(metrics, 20.930, Some(18.195), Some(24.240));
     }
 
@@ -663,7 +663,7 @@ pub(crate) mod test_rust {
         let results = convert_rust_bench("criterion_dogfood");
         assert_eq!(results.inner.len(), 4);
 
-        let metrics = results.inner.get("JsonAdapter::Magic (JSON)").unwrap();
+        let metrics = results.get("JsonAdapter::Magic (JSON)").unwrap();
         validate_metrics(
             metrics,
             3463.2000000000003,
@@ -671,13 +671,13 @@ pub(crate) mod test_rust {
             Some(3464.1000000000003),
         );
 
-        let metrics = results.inner.get("JsonAdapter::Json").unwrap();
+        let metrics = results.get("JsonAdapter::Json").unwrap();
         validate_metrics(metrics, 3479.6, Some(3479.2999999999997), Some(3480.0));
 
-        let metrics = results.inner.get("JsonAdapter::Magic (Rust)").unwrap();
+        let metrics = results.get("JsonAdapter::Magic (Rust)").unwrap();
         validate_metrics(metrics, 14726.0, Some(14721.0), Some(14730.0));
 
-        let metrics = results.inner.get("JsonAdapter::Rust").unwrap();
+        let metrics = results.get("JsonAdapter::Rust").unwrap();
         validate_metrics(metrics, 14884.0, Some(14881.0), Some(14887.0));
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::project::metric::Mean;
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,10 @@ impl AdapterResults {
         }
         results_map.extend(other.inner.into_iter());
         results_map.into()
+    }
+
+    pub fn get(&self, key: &str) -> Option<&AdapterMetrics> {
+        self.inner.get(&BenchmarkName::from_str(key).ok()?)
     }
 }
 
