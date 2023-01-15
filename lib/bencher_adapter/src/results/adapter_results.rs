@@ -1,9 +1,9 @@
 use std::{collections::HashMap, str::FromStr};
 
-use bencher_json::project::metric::Mean;
+use bencher_json::project::{benchmark::BenchmarkName, metric::Mean};
 use serde::{Deserialize, Serialize};
 
-use super::{adapter_metrics::AdapterMetrics, BenchmarkName, CombinedKind};
+use super::{adapter_metrics::AdapterMetrics, CombinedKind};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {

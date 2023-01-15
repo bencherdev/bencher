@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
-use bencher_json::{project::metric::Median, JsonMetric};
+use bencher_json::{
+    project::{benchmark::BenchmarkName, metric::Median},
+    JsonMetric,
+};
 
 use super::{
     adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, AdapterResultsArray,
-    BenchmarkName, MetricKind,
+    MetricKind,
 };
 
 #[derive(Debug, Clone, Default)]

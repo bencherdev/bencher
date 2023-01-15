@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::JsonBenchmark;
+use bencher_json::{project::benchmark::BenchmarkName, JsonBenchmark};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
@@ -56,7 +56,7 @@ impl QueryBenchmark {
         Ok(JsonBenchmark {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
-            name,
+            name: BenchmarkName::from_str(&name).map_err(api_error!())?,
         })
     }
 

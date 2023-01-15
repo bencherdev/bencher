@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    results::{adapter_metrics::AdapterMetrics, BenchmarkName, MetricKind},
+    results::{adapter_metrics::AdapterMetrics, MetricKind},
     AdapterResults, AdapterResultsArray,
 };
-use bencher_json::project::report::{JsonAdapter, JsonReportSettings};
+use bencher_json::project::{
+    benchmark::BenchmarkName,
+    report::{JsonAdapter, JsonReportSettings},
+};
 use diesel::{RunQueryDsl, SqliteConnection};
 
 use crate::{

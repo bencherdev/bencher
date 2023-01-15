@@ -6,7 +6,7 @@ use bencher_json::{
         metric_kind::LATENCY_SLUG_STR,
         report::{JsonAdapter, JsonFold},
     },
-    NonEmpty, ResourceId,
+    ResourceId,
 };
 use once_cell::sync::Lazy;
 
@@ -26,7 +26,6 @@ pub static LATENCY_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
         .expect("Failed to parse metric kind slug.")
 });
 
-pub type BenchmarkName = NonEmpty;
 pub type MetricKind = ResourceId;
 
 #[derive(Debug, Clone)]
