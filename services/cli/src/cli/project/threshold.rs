@@ -32,6 +32,10 @@ pub struct CliThresholdCreate {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Metric kind slug or UUID
+    #[clap(value_enum, long)]
+    pub metric_kind: ResourceId,
+
     /// Branch slug or UUID
     #[clap(long)]
     pub branch: ResourceId,
@@ -39,10 +43,6 @@ pub struct CliThresholdCreate {
     /// Threshold slug or UUID
     #[clap(long)]
     pub testbed: ResourceId,
-
-    /// Benchmark kind slug or UUID
-    #[clap(value_enum, long)]
-    pub kind: ResourceId,
 
     #[clap(flatten)]
     pub statistic: CliStatisticCreate,

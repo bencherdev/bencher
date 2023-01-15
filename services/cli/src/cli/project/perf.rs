@@ -11,6 +11,10 @@ pub struct CliPerf {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Metric kind slug or UUID
+    #[clap(long)]
+    pub metric_kind: ResourceId,
+
     /// Branch UUIDs
     #[clap(long)]
     pub branches: Vec<Uuid>,
@@ -23,14 +27,12 @@ pub struct CliPerf {
     #[clap(long)]
     pub benchmarks: Vec<Uuid>,
 
-    /// Benchmark kind slug or UUID
-    #[clap(value_enum, long)]
-    pub kind: ResourceId,
-
     /// Start time
+    #[clap(long)]
     pub start_time: Option<DateTime<Utc>>,
 
     /// End time
+    #[clap(long)]
     pub end_time: Option<DateTime<Utc>>,
 
     #[clap(flatten)]

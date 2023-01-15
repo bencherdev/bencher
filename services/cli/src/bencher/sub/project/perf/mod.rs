@@ -12,10 +12,10 @@ use crate::bencher::SubCmd;
 #[derive(Debug, Clone)]
 pub struct Perf {
     project: ResourceId,
+    metric_kind: ResourceId,
     branches: Vec<Uuid>,
     testbeds: Vec<Uuid>,
     benchmarks: Vec<Uuid>,
-    metric_kind: ResourceId,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
     backend: Backend,
@@ -27,20 +27,20 @@ impl TryFrom<CliPerf> for Perf {
     fn try_from(perf: CliPerf) -> Result<Self, Self::Error> {
         let CliPerf {
             project,
+            metric_kind,
             branches,
             testbeds,
             benchmarks,
-            kind,
             start_time,
             end_time,
             backend,
         } = perf;
         Ok(Self {
             project,
+            metric_kind,
             branches,
             testbeds,
             benchmarks,
-            metric_kind: kind,
             start_time,
             end_time,
             backend: backend.try_into()?,
@@ -52,19 +52,19 @@ impl From<Perf> for JsonPerfQuery {
     fn from(perf: Perf) -> Self {
         let Perf {
             project: _,
+            metric_kind,
             branches,
             testbeds,
             benchmarks,
-            metric_kind,
             start_time,
             end_time,
             backend: _,
         } = perf;
         Self {
+            metric_kind,
             branches,
             testbeds,
             benchmarks,
-            metric_kind,
             start_time,
             end_time,
         }
@@ -76,7 +76,7 @@ impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
         self.backend
-            .put(&format!("/v0/projects/{}/branches", self.project), &perf)
+            .post(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;
         Ok(())
     }
