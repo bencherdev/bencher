@@ -5,7 +5,7 @@ CREATE TABLE down_metric_kind (
     project_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
-    units TEXT NOT NULL,
+    units TEXT,
     FOREIGN KEY (project_id) REFERENCES project (id),
     UNIQUE(project_id, slug)
 );
