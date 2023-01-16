@@ -1,3 +1,4 @@
+use bencher_json::{Email, Jwt, Slug, UserName};
 use clap::{Parser, Subcommand};
 
 use crate::cli::CliBackend;
@@ -16,18 +17,18 @@ pub enum CliAuth {
 pub struct CliAuthSignup {
     /// User name
     #[clap(long)]
-    pub name: String,
+    pub name: UserName,
 
     /// User slug
     #[clap(long)]
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
 
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]
-    pub invite: Option<String>,
+    pub invite: Option<Jwt>,
 
     /// User email
-    pub email: String,
+    pub email: Email,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -37,10 +38,10 @@ pub struct CliAuthSignup {
 pub struct CliAuthLogin {
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]
-    pub invite: Option<String>,
+    pub invite: Option<Jwt>,
 
     /// User email
-    pub email: String,
+    pub email: Email,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -49,7 +50,7 @@ pub struct CliAuthLogin {
 #[derive(Parser, Debug)]
 pub struct CliAuthConfirm {
     /// Email confirmation JWT (JSON Web Token)
-    pub confirm: String,
+    pub confirm: Jwt,
 
     #[clap(flatten)]
     pub backend: CliBackend,

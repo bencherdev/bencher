@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{NonEmpty, ResourceId, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
@@ -28,11 +28,11 @@ pub struct CliOrganizationList {
 #[derive(Parser, Debug)]
 pub struct CliOrganizationCreate {
     /// Organization name
-    pub name: String,
+    pub name: NonEmpty,
 
     /// Organization slug
     #[clap(long)]
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

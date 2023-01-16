@@ -1,9 +1,8 @@
 use std::convert::TryFrom;
 
-use bencher_json::Jwt;
+use bencher_json::{Jwt, Url};
 use serde::Serialize;
 use tokio::time::{sleep, Duration};
-use url::Url;
 
 use crate::{cli::CliBackend, cli_println, CliError};
 
@@ -18,7 +17,7 @@ const DEFAULT_RETRY_AFTER: u64 = 1;
 
 #[derive(Debug, Clone)]
 pub struct Backend {
-    pub host: Url,
+    pub host: url::Url,
     pub token: Option<Jwt>,
     pub attempts: Option<usize>,
     pub retry_after: Option<u64>,
@@ -37,11 +36,11 @@ impl TryFrom<CliBackend> for Backend {
     }
 }
 
-fn unwrap_host(host: Option<String>) -> Result<Url, CliError> {
+fn unwrap_host(host: Option<Url>) -> Result<url::Url, CliError> {
     if let Some(url) = host {
-        url
-    } else if let Ok(url) = std::env::var(BENCHER_HOST) {
-        url
+        url.into()
+    } else if let Ok(env_url) = std::env::var(BENCHER_HOST) {
+        env_url
     } else {
         DEFAULT_HOST.into()
     }
@@ -49,9 +48,9 @@ fn unwrap_host(host: Option<String>) -> Result<Url, CliError> {
     .map_err(Into::into)
 }
 
-fn map_token(token: Option<String>) -> Result<Option<Jwt>, CliError> {
+fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, CliError> {
     Ok(if let Some(token) = token {
-        Some(token.parse()?)
+        Some(token)
     } else if let Ok(env_token) = std::env::var(BENCHER_API_TOKEN) {
         Some(env_token.parse()?)
     } else {

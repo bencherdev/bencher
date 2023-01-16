@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{Email, ResourceId, UserName};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
@@ -38,11 +38,11 @@ pub struct CliMemberInvite {
 
     /// Name of user for invitation (optional)
     #[clap(long)]
-    pub name: Option<String>,
+    pub name: Option<UserName>,
 
     /// Email for the invitation
     #[clap(long)]
-    pub email: String,
+    pub email: Email,
 
     /// Member role
     #[clap(value_enum, long)]

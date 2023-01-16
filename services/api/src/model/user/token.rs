@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{system::jwt::JsonWebToken, JsonNewToken, JsonToken, ResourceId};
+use bencher_json::{system::jwt::JsonWebToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId};
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
@@ -58,8 +58,8 @@ impl QueryToken {
         Ok(JsonToken {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             user: QueryUser::get_uuid(conn, user_id)?,
-            name,
-            token: jwt,
+            name: NonEmpty::from_str(&name).map_err(api_error!())?,
+            token: Jwt::from_str(&jwt).map_err(api_error!())?,
             creation: to_date_time(creation)?,
             expiration: to_date_time(expiration)?,
         })
@@ -127,7 +127,7 @@ impl InsertToken {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             user_id: query_user.id,
-            name,
+            name: name.to_string(),
             jwt: jwt.to_string(),
             creation: token_data.claims.iat as i64,
             expiration: token_data.claims.exp as i64,

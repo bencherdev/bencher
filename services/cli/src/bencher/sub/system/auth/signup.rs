@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{Email, JsonEmpty, JsonSignup, Jwt, Slug, UserName};
@@ -32,18 +32,10 @@ impl TryFrom<CliAuthSignup> for Signup {
             backend,
         } = signup;
         Ok(Self {
-            name: name.parse()?,
-            slug: if let Some(slug) = slug {
-                Some(Slug::from_str(&slug)?)
-            } else {
-                None
-            },
-            email: email.parse()?,
-            invite: if let Some(invite) = invite {
-                Some(invite.parse()?)
-            } else {
-                None
-            },
+            name,
+            slug,
+            email,
+            invite,
             backend: backend.try_into()?,
         })
     }

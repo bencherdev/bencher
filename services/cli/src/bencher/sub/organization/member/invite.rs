@@ -36,12 +36,8 @@ impl TryFrom<CliMemberInvite> for Invite {
         } = invite;
         Ok(Self {
             org,
-            name: if let Some(name) = name {
-                Some(name.parse()?)
-            } else {
-                None
-            },
-            email: email.parse()?,
+            name,
+            email,
             role: role.into(),
             backend: backend.try_into()?,
         })

@@ -5,7 +5,7 @@ use bencher_json::{
     project::{
         branch::BRANCH_MAIN_STR, report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR,
     },
-    GitHash, JsonBranch, JsonNewReport, JsonReport, ResourceId,
+    BranchName, GitHash, JsonBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
 use clap::ValueEnum;
@@ -53,7 +53,7 @@ pub struct Run {
 #[derive(Debug, Clone)]
 enum Branch {
     ResourceId(ResourceId),
-    Name(String),
+    Name(BranchName),
 }
 
 impl TryFrom<CliRun> for Run {
@@ -100,15 +100,18 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
     })
 }
 
-fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<Branch, CliError> {
+fn map_branch(
+    branch: Option<ResourceId>,
+    if_branch: Option<BranchName>,
+) -> Result<Branch, CliError> {
     Ok(if let Some(branch) = branch {
         Branch::ResourceId(branch)
     } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
         env_branch.as_str().parse().map(Branch::ResourceId)?
     } else if let Some(name) = if_branch {
         Branch::Name(name)
-    } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
-        Branch::Name(name)
+    } else if let Ok(env_name) = std::env::var(BENCHER_BRANCH_NAME) {
+        env_name.parse().map(Branch::Name)?
     } else {
         BRANCH_MAIN_STR.parse().map(Branch::ResourceId)?
     })
@@ -152,7 +155,7 @@ impl SubCmd for Run {
         let branch = match &self.branch {
             Branch::ResourceId(resource_id) => resource_id.clone(),
             Branch::Name(name) => {
-                if let Some(uuid) = if_branch(&self.project, name, &self.locality).await? {
+                if let Some(uuid) = if_branch(&self.project, name.as_ref(), &self.locality).await? {
                     uuid.into()
                 } else {
                     return Ok(());

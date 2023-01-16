@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{NonEmpty, ResourceId, Slug};
 use clap::{Parser, Subcommand};
 
 use crate::cli::CliBackend;
@@ -32,15 +32,15 @@ pub struct CliMetricKindCreate {
     pub project: ResourceId,
 
     /// Metric kind name
-    pub name: String,
+    pub name: NonEmpty,
 
     /// Metric kind slug
     #[clap(long)]
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
 
     /// Metric kind unit of measure
     #[clap(long)]
-    pub units: String,
+    pub units: NonEmpty,
 
     #[clap(flatten)]
     pub backend: CliBackend,

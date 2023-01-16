@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{NonEmpty, ResourceId, Slug, Url};
 use clap::{Parser, Subcommand};
 
 use crate::cli::CliBackend;
@@ -42,13 +42,16 @@ pub struct CliProjectCreate {
     #[clap(long)]
     pub org: ResourceId,
 
+    /// Project name
+    pub name: NonEmpty,
+
     /// Project slug
     #[clap(long)]
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
 
     /// Project URL
     #[clap(long)]
-    pub url: Option<String>,
+    pub url: Option<Url>,
 
     /// Set project as public (default)
     #[clap(long)]
@@ -57,9 +60,6 @@ pub struct CliProjectCreate {
     /// Set project as private
     #[clap(long, alias = "branch-name", conflicts_with = "public")]
     pub private: bool,
-
-    /// Project name
-    pub name: String,
 
     #[clap(flatten)]
     pub backend: CliBackend,

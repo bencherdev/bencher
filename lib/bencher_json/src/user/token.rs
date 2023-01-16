@@ -1,3 +1,4 @@
+use bencher_valid::{Jwt, NonEmpty};
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -7,7 +8,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewToken {
-    pub name: String,
+    pub name: NonEmpty,
     pub ttl: Option<u32>,
 }
 
@@ -16,8 +17,8 @@ pub struct JsonNewToken {
 pub struct JsonToken {
     pub uuid: Uuid,
     pub user: Uuid,
-    pub name: String,
-    pub token: String,
+    pub name: NonEmpty,
+    pub token: Jwt,
     pub creation: DateTime<Utc>,
     pub expiration: DateTime<Utc>,
 }

@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{BranchName, ResourceId};
 use clap::{Args, Parser, ValueEnum};
 
 use crate::cli::CliLocality;
@@ -15,7 +15,7 @@ pub struct CliRun {
 
     /// Run if branch name exists (or set BENCHER_BRANCH_NAME)
     #[clap(long, alias = "branch-name", conflicts_with = "branch")]
-    pub if_branch: Option<String>,
+    pub if_branch: Option<BranchName>,
 
     /// Software commit hash
     #[clap(long)]

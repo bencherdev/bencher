@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonNewProject, NonEmpty, ResourceId, Slug, Url};
@@ -34,25 +34,13 @@ impl TryFrom<CliProjectCreate> for Create {
         } = create;
         Ok(Self {
             org,
-            name: NonEmpty::from_str(&name)?,
-            slug: if let Some(slug) = slug {
-                Some(Slug::from_str(&slug)?)
-            } else {
-                None
-            },
-            url: map_url(url)?,
+            name,
+            slug,
+            url,
             public: Some(if public { true } else { !private }),
             backend: backend.try_into()?,
         })
     }
-}
-
-pub fn map_url(url: Option<String>) -> Result<Option<Url>, CliError> {
-    Ok(if let Some(url) = url {
-        Some(Url::from_str(&url)?)
-    } else {
-        None
-    })
 }
 
 impl From<Create> for JsonNewProject {

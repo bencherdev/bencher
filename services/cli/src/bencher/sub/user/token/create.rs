@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewToken, ResourceId};
+use bencher_json::{JsonNewToken, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub user: ResourceId,
-    pub name: String,
+    pub name: NonEmpty,
     pub ttl: Option<u32>,
     pub backend: Backend,
 }

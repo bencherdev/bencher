@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{NonEmpty, ResourceId, Slug};
 use clap::{Parser, Subcommand};
 
 use crate::cli::CliBackend;
@@ -32,11 +32,11 @@ pub struct CliTestbedCreate {
     pub project: ResourceId,
 
     /// Testbed name
-    pub name: String,
+    pub name: NonEmpty,
 
     /// Testbed slug
     #[clap(long)]
-    pub slug: Option<String>,
+    pub slug: Option<Slug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

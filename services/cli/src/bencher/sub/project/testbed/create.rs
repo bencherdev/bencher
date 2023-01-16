@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonNewTestbed, NonEmpty, ResourceId, Slug};
@@ -29,12 +29,8 @@ impl TryFrom<CliTestbedCreate> for Create {
         } = create;
         Ok(Self {
             project,
-            name: NonEmpty::from_str(&name)?,
-            slug: if let Some(slug) = slug {
-                Some(Slug::from_str(&slug)?)
-            } else {
-                None
-            },
+            name,
+            slug,
             backend: backend.try_into()?,
         })
     }

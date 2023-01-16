@@ -1,3 +1,4 @@
+use bencher_json::{Jwt, Url};
 use clap::{ArgGroup, Args, Parser, Subcommand};
 
 pub mod docs;
@@ -112,11 +113,11 @@ pub struct CliLocality {
 pub struct CliBackend {
     /// Backend host URL (default https://api.bencher.dev)
     #[clap(long)]
-    pub host: Option<String>,
+    pub host: Option<Url>,
 
     /// User API token
     #[clap(long)]
-    pub token: Option<String>,
+    pub token: Option<Jwt>,
 
     /// Request attempt(s) (default 3)
     #[clap(long)]

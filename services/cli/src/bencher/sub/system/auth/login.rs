@@ -28,12 +28,8 @@ impl TryFrom<CliAuthLogin> for Login {
             backend,
         } = login;
         Ok(Self {
-            email: email.parse()?,
-            invite: if let Some(invite) = invite {
-                Some(invite.parse()?)
-            } else {
-                None
-            },
+            email,
+            invite,
             backend: backend.try_into()?,
         })
     }

@@ -1,4 +1,4 @@
-use bencher_json::ResourceId;
+use bencher_json::{NonEmpty, ResourceId};
 use clap::{Parser, Subcommand};
 use uuid::Uuid;
 
@@ -33,7 +33,7 @@ pub struct CliTokenCreate {
     pub user: ResourceId,
 
     /// Token name
-    pub name: String,
+    pub name: NonEmpty,
 
     /// Time to live (seconds)
     #[clap(long)]
