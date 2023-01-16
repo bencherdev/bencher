@@ -30,7 +30,7 @@ export const BENCHER_USER_KEY: string = "BENCHER_USER";
 
 export const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
 
-export const BENCHER_VERSION = `v${swagger?.info?.version}`;
+export const BENCHER_VERSION = `${swagger?.info?.version}`;
 
 export const site_analytics = () => {
   let plugins = [];

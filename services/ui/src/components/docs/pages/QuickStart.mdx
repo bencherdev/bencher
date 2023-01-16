@@ -1,3 +1,5 @@
+import { BENCHER_VERSION } from "../../site/util";
+
 ## What is Bencher?
 
 Bencher is a suite of open source tools designed to catch performance regressions in CI. If you believe [performance is a feature](https://blog.codinghorror.com/performance-is-a-feature), then Bencher is the tool you have been missing.
@@ -67,15 +69,17 @@ Run: `cargo install --path services/cli --locked`
 
 You should see something like:
 
-```
-$ cargo install --path services/cli --locked
-  Installing bencher_cli v0.2.28 (/workspace/bencher/services/cli)
+<pre>
+  <code>
+    {`$ cargo install --path services/cli --locked
+  Installing bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)
     Updating crates.io index
     ...
     Finished release [optimized] target(s) in 0.27s
   Installing /workspace/.cargo/bin/bencher
-   Installed package `bencher_cli v0.2.28 (/workspace/bencher/services/cli)` (executable `bencher`)
-```
+   Installed package \`bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)\` (executable \`bencher\`)`}
+  </code>
+</pre>
 
 Again, it is okay if your output is different. It's just important that this command works.
 
@@ -89,10 +93,12 @@ Run: `bencher --version`
 
 You should see something like:
 
-```
-$ bencher --version
-bencher 0.2.28
-```
+<pre>
+  <code>
+    {`$ bencher --version
+bencher ${BENCHER_VERSION}`}
+  </code>
+</pre>
 
 As before, it is okay if your version number is different. It's just important that this command works.
 
@@ -159,12 +165,14 @@ Run: `bencher server version --host http://localhost:61016`
 
 You should see something like:
 
-```
-$ bencher server version --host http://localhost:61016
+<pre>
+  <code>
+    {`$ bencher server version --host http://localhost:61016
 {
-  "version": "0.2.28"
-}
-```
+  "version": "${BENCHER_VERSION}"
+}`}
+  </code>
+</pre>
 
 It is okay if the version number is different. It's just important that this command works.
 
