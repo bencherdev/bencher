@@ -31,8 +31,9 @@ Once set up, both the UI and API should be built, running, and seeded at [localh
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bencherdev/bencher)
 
 ## License
+All content that resides under any directory named "plus" is licensed under the <a href="LICENSE-PLUS">Bencher Plus License</a>.
 
-Licensed under either of <a href="LICENSE-APACHE">Apache License, Version 2.0</a>
+All other content is license under either of <a href="LICENSE-APACHE">Apache License, Version 2.0</a>
 or <a href="LICENSE-MIT">MIT license</a> at your discretion.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted

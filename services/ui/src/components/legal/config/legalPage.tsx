@@ -13,6 +13,12 @@ const licensingPage = {
         <li>
           <a href="/legal/license">License Agreement</a>
         </li>
+        <li>
+          <a href="/legal/subscription">Subscription Agreement</a>
+        </li>
+        <li>
+          <a href="/legal/plus">Bencher Plus License</a>
+        </li>
       </ul>
     </div>
   ),

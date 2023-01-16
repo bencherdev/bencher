@@ -14,7 +14,7 @@ const privacyPage = {
       </p>
       <p>
         If you have any questions, please{" "}
-        <a href="mailto:info@bencher.dev">contact us</a>.
+        <a href="mailto:legal@bencher.dev">contact us</a>.
       </p>
       <h3>Information Collection</h3>
       <h5>Usage and Log Information</h5>

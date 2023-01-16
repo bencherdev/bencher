@@ -3,9 +3,13 @@ const licensingPage = {
   heading: "Bencher License Agreement",
   content: (
     <div>
-      <p>© {new Date().getFullYear()} Pompeii LLC</p>
+      <p>Copyright © 2022-{new Date().getFullYear()} Pompeii LLC</p>
       <p>
-        Licensed under either of{" "}
+        All content that resides under any directory named "plus" is licensed
+        under the <a href="/legal/plus">Bencher Plus License</a>.
+      </p>
+      <p>
+        All other content is licensed under either of{" "}
         <a href="https://opensource.org/licenses/Apache-2.0">
           Apache License, Version 2.0
         </a>{" "}
