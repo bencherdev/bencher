@@ -56,11 +56,11 @@ impl QueryTestbed {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, ApiError> {
         let Self {
-            id: _,
             uuid,
             project_id,
             name,
             slug,
+            ..
         } = self;
         Ok(JsonTestbed {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

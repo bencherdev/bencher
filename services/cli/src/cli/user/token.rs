@@ -32,12 +32,12 @@ pub struct CliTokenCreate {
     #[clap(long)]
     pub user: ResourceId,
 
+    /// Token name
+    pub name: String,
+
     /// Time to live (seconds)
     #[clap(long)]
     pub ttl: Option<u32>,
-
-    /// Token name
-    pub name: String,
 
     #[clap(flatten)]
     pub backend: CliBackend,

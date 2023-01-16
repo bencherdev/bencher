@@ -46,11 +46,7 @@ impl TryFrom<CliMetricKindCreate> for Create {
 impl From<Create> for JsonNewMetricKind {
     fn from(create: Create) -> Self {
         let Create {
-            project: _,
-            name,
-            slug,
-            units,
-            backend: _,
+            name, slug, units, ..
         } = create;
         Self { name, slug, units }
     }

@@ -93,8 +93,8 @@ impl TryFrom<CliRun> for Run {
 fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
     Ok(if let Some(project) = project {
         project
-    } else if let Ok(project) = std::env::var(BENCHER_PROJECT) {
-        project.parse()?
+    } else if let Ok(env_project) = std::env::var(BENCHER_PROJECT) {
+        env_project.parse()?
     } else {
         return Err(CliError::ProjectNotFound);
     })
@@ -103,8 +103,8 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
 fn map_branch(branch: Option<ResourceId>, if_branch: Option<String>) -> Result<Branch, CliError> {
     Ok(if let Some(branch) = branch {
         Branch::ResourceId(branch)
-    } else if let Ok(branch) = std::env::var(BENCHER_BRANCH) {
-        branch.as_str().parse().map(Branch::ResourceId)?
+    } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
+        env_branch.as_str().parse().map(Branch::ResourceId)?
     } else if let Some(name) = if_branch {
         Branch::Name(name)
     } else if let Ok(name) = std::env::var(BENCHER_BRANCH_NAME) {
@@ -125,8 +125,8 @@ fn map_hash(hash: Option<String>) -> Result<Option<GitHash>, CliError> {
 fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, CliError> {
     Ok(if let Some(testbed) = testbed {
         testbed
-    } else if let Ok(testbed) = std::env::var(BENCHER_TESTBED) {
-        testbed.as_str().parse()?
+    } else if let Ok(env_testbed) = std::env::var(BENCHER_TESTBED) {
+        env_testbed.as_str().parse()?
     } else {
         TESTBED_LOCALHOST_STR.parse()?
     })
@@ -135,9 +135,9 @@ fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, CliError> {
 fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
     if let Some(adapter) = adapter {
         Some(adapter.into())
-    } else if let Ok(adapter_str) = std::env::var(BENCHER_ADAPTER) {
-        if let Ok(adapter) = CliRunAdapter::from_str(&adapter_str, false) {
-            Some(adapter.into())
+    } else if let Ok(env_adapter) = std::env::var(BENCHER_ADAPTER) {
+        if let Ok(cli_adapter) = CliRunAdapter::from_str(&env_adapter, false) {
+            Some(cli_adapter.into())
         } else {
             None
         }

@@ -48,10 +48,10 @@ impl QueryBenchmark {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, ApiError> {
         let QueryBenchmark {
-            id: _,
             uuid,
             project_id,
             name,
+            ..
         } = self;
         Ok(JsonBenchmark {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

@@ -11,10 +11,10 @@ use super::metric::JsonMetric;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQuery {
+    pub metric_kind: ResourceId,
     pub branches: Vec<Uuid>,
     pub testbeds: Vec<Uuid>,
     pub benchmarks: Vec<Uuid>,
-    pub metric_kind: ResourceId,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
 }

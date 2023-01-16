@@ -56,11 +56,11 @@ impl QueryBranch {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, ApiError> {
         let Self {
-            id: _,
             uuid,
             project_id,
             name,
             slug,
+            ..
         } = self;
         Ok(JsonBranch {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

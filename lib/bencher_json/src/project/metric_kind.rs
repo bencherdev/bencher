@@ -6,12 +6,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub const LATENCY_NAME_STR: &str = "Latency";
+#[allow(clippy::expect_used)]
 static LATENCY_NAME: Lazy<NonEmpty> = Lazy::new(|| {
     LATENCY_NAME_STR
         .parse()
         .expect("Failed to parse metric kind name.")
 });
 pub const LATENCY_SLUG_STR: &str = "latency";
+#[allow(clippy::expect_used)]
 static LATENCY_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     Some(
         LATENCY_SLUG_STR
@@ -20,6 +22,7 @@ static LATENCY_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     )
 });
 pub const LATENCY_UNITS_STR: &str = "nanoseconds (ns)";
+#[allow(clippy::expect_used)]
 static LATENCY_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
     LATENCY_UNITS_STR
         .parse()

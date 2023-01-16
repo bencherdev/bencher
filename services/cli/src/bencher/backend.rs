@@ -52,8 +52,8 @@ fn unwrap_host(host: Option<String>) -> Result<Url, CliError> {
 fn map_token(token: Option<String>) -> Result<Option<Jwt>, CliError> {
     Ok(if let Some(token) = token {
         Some(token.parse()?)
-    } else if let Ok(token) = std::env::var(BENCHER_API_TOKEN) {
-        Some(token.parse()?)
+    } else if let Ok(env_token) = std::env::var(BENCHER_API_TOKEN) {
+        Some(env_token.parse()?)
     } else {
         None
     })
@@ -107,6 +107,7 @@ impl Backend {
         }
 
         let attempts = self.attempts.unwrap_or(DEFAULT_ATTEMPTS);
+        let max_attempts = attempts.checked_sub(1).ok_or(CliError::BadMath)?;
         let retry_after = self.retry_after.unwrap_or(DEFAULT_RETRY_AFTER);
         for attempt in 0..attempts {
             match builder
@@ -122,7 +123,7 @@ impl Backend {
                 },
                 Err(e) => {
                     cli_println!("Send attempt #{attempt}: {e}");
-                    if attempt != attempts - 1 {
+                    if attempt != max_attempts {
                         cli_println!("Will retry after {retry_after} second(s).");
                         sleep(Duration::from_secs(retry_after)).await;
                     }

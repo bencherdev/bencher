@@ -58,12 +58,11 @@ pub fn map_url(url: Option<String>) -> Result<Option<Url>, CliError> {
 impl From<Create> for JsonNewProject {
     fn from(create: Create) -> Self {
         let Create {
-            org: _,
             name,
             slug,
             url,
             public,
-            backend: _,
+            ..
         } = create;
         Self {
             name,

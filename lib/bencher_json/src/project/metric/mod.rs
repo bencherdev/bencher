@@ -67,6 +67,7 @@ impl Ord for JsonMetric {
 impl Add for JsonMetric {
     type Output = Self;
 
+    #[allow(clippy::arithmetic_side_effects)]
     fn add(self, other: Self) -> Self {
         let value = self.value + other.value;
         let lower_bound = option_add(self.lower_bound, self.value, other.lower_bound, other.value);
@@ -79,6 +80,7 @@ impl Add for JsonMetric {
     }
 }
 
+#[allow(clippy::arithmetic_side_effects)]
 fn option_add<T>(
     left_bound: Option<T>,
     left_value: T,
@@ -100,6 +102,7 @@ where
 }
 
 impl Sum for JsonMetric {
+    #[allow(clippy::arithmetic_side_effects)]
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -111,6 +114,11 @@ impl Sum for JsonMetric {
 impl std::ops::Div<usize> for JsonMetric {
     type Output = Self;
 
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_precision_loss,
+        clippy::float_arithmetic
+    )]
     fn div(self, rhs: usize) -> Self::Output {
         Self {
             value: self.value / rhs as f64,

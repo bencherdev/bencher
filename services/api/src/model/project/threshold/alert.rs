@@ -42,7 +42,6 @@ impl QueryAlert {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonAlert, ApiError> {
         let Self {
-            id: _,
             uuid,
             perf_id,
             threshold_id,
@@ -50,6 +49,7 @@ impl QueryAlert {
             side,
             boundary,
             outlier,
+            ..
         } = self;
         Ok(JsonAlert {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

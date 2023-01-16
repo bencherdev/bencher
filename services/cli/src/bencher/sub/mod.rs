@@ -19,7 +19,7 @@ use mock::Mock;
 use organization::{member::Member, resource::Organization};
 use project::{
     alert::Alert, benchmark::Benchmark, branch::Branch, metric_kind::MetricKind, perf::Perf,
-    report::Report, resource::Project, result::Resultant, run::Run, testbed::Testbed,
+    project::Project, report::Report, result::Resultant, run::Run, testbed::Testbed,
     threshold::Threshold,
 };
 pub use sub_cmd::SubCmd;

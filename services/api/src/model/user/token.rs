@@ -52,13 +52,13 @@ impl QueryToken {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonToken, ApiError> {
         let Self {
-            id: _,
             uuid,
             user_id,
             name,
             jwt,
             creation,
             expiration,
+            ..
         } = self;
         Ok(JsonToken {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
@@ -108,9 +108,9 @@ impl InsertToken {
                     requested: ttl,
                     max: max_ttl,
                 });
-            } else {
-                ttl
             }
+
+            ttl
         } else {
             max_ttl
         };

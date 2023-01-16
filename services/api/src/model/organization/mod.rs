@@ -120,10 +120,7 @@ impl QueryOrganization {
 
     pub fn into_json(self) -> Result<JsonOrganization, ApiError> {
         let Self {
-            id: _,
-            uuid,
-            name,
-            slug,
+            uuid, name, slug, ..
         } = self;
         Ok(JsonOrganization {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

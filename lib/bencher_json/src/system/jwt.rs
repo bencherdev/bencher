@@ -91,6 +91,7 @@ impl JsonWebToken {
         // Even though the above should validate the expiration,
         // it appears to do so statically based off of compilation
         // or something, so just double check here.
+        #[allow(clippy::cast_sign_loss)]
         if token_data.claims.exp < Utc::now().timestamp() as u64 {
             Err(jsonwebtoken::errors::ErrorKind::ExpiredSignature.into())
         } else {
@@ -146,11 +147,16 @@ pub struct OrgClaims {
 }
 
 impl JsonClaims {
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_sign_loss,
+        clippy::integer_arithmetic
+    )]
     fn new(audience: Audience, email: Email, ttl: u32, org: Option<OrgClaims>) -> Self {
         let now = Utc::now().timestamp() as u64;
         Self {
             aud: audience.into(),
-            exp: now + ttl as u64,
+            exp: now + u64::from(ttl),
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: email.into(),

@@ -44,7 +44,6 @@ impl QueryReport {
         let results = self.get_results(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {
-            id: _,
             uuid,
             user_id,
             version_id,
@@ -52,6 +51,7 @@ impl QueryReport {
             adapter,
             start_time,
             end_time,
+            ..
         } = self;
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

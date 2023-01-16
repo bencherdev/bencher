@@ -27,7 +27,7 @@ impl TryFrom<CliRunCommand> for Runner {
         if let Some(cmd) = command.cmd {
             Ok(Self::Command(Command::try_from((command.shell, cmd))?))
         } else {
-            let input = Input::new()?;
+            let input = Input::new();
             if input.is_empty() {
                 if let Ok(cmd) = std::env::var(BENCHER_CMD) {
                     Ok(Self::Command(Command::try_from((command.shell, cmd))?))

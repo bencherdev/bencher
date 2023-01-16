@@ -28,6 +28,8 @@ pub enum CliError {
     CloneBackend,
     #[error("Failed to send after {0} attempt(s)")]
     Send(usize),
+    #[error("Arithmetic error")]
+    BadMath,
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),

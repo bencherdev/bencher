@@ -61,11 +61,7 @@ impl From<CliMemberRole> for JsonOrganizationRole {
 impl From<Invite> for JsonNewMember {
     fn from(invite: Invite) -> Self {
         let Invite {
-            org: _,
-            name,
-            email,
-            role,
-            backend: _,
+            name, email, role, ..
         } = invite;
         Self { name, email, role }
     }

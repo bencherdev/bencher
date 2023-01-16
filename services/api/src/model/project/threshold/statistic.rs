@@ -38,7 +38,6 @@ impl QueryStatistic {
 
     pub fn into_json(self) -> Result<JsonStatistic, ApiError> {
         let Self {
-            id: _,
             uuid,
             test,
             min_sample_size,
@@ -46,6 +45,7 @@ impl QueryStatistic {
             window,
             left_side,
             right_side,
+            ..
         } = self;
         Ok(JsonStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

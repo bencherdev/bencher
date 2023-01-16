@@ -57,12 +57,12 @@ impl QueryMetricKind {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonMetricKind, ApiError> {
         let Self {
-            id: _,
             uuid,
             project_id,
             name,
             slug,
             units,
+            ..
         } = self;
         Ok(JsonMetricKind {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

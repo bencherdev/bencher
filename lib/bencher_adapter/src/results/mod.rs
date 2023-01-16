@@ -20,6 +20,7 @@ pub mod results_reducer;
 use adapter_results::{AdapterResults, ResultsMap};
 use results_reducer::ResultsReducer;
 
+#[allow(clippy::expect_used)]
 pub static LATENCY_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
     LATENCY_SLUG_STR
         .parse()
@@ -54,9 +55,7 @@ impl AdapterResultsArray {
         }
         Ok(parsed_results_array.into())
     }
-}
 
-impl AdapterResultsArray {
     pub fn min(self) -> AdapterResults {
         self.ord(OrdKind::Min)
     }

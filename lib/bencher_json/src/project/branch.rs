@@ -6,11 +6,13 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub const BRANCH_MAIN_STR: &str = "main";
+#[allow(clippy::expect_used)]
 static BRANCH_MAIN: Lazy<BranchName> = Lazy::new(|| {
     BRANCH_MAIN_STR
         .parse()
         .expect("Failed to parse branch name.")
 });
+#[allow(clippy::expect_used)]
 static BRANCH_MAIN_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     Some(
         BRANCH_MAIN_STR

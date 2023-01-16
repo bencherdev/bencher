@@ -4,7 +4,7 @@ pub mod json;
 pub mod magic;
 pub mod rust;
 
-#[allow(dead_code)]
+#[allow(dead_code, clippy::print_stdout, clippy::unnecessary_wraps)]
 fn print_ln(input: &str) -> IResult<&str, ()> {
     println!("--- START ---");
     println!("{input}");

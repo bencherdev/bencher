@@ -41,12 +41,12 @@ impl QueryThreshold {
 
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, ApiError> {
         let Self {
-            id: _,
             uuid,
             branch_id,
             testbed_id,
             metric_kind_id,
             statistic_id,
+            ..
         } = self;
         Ok(JsonThreshold {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

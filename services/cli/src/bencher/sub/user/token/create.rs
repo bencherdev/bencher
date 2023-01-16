@@ -12,8 +12,8 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Create {
     pub user: ResourceId,
-    pub ttl: Option<u32>,
     pub name: String,
+    pub ttl: Option<u32>,
     pub backend: Backend,
 }
 
@@ -23,14 +23,14 @@ impl TryFrom<CliTokenCreate> for Create {
     fn try_from(create: CliTokenCreate) -> Result<Self, Self::Error> {
         let CliTokenCreate {
             user,
-            ttl,
             name,
+            ttl,
             backend,
         } = create;
         Ok(Self {
             user,
-            ttl,
             name,
+            ttl,
             backend: backend.try_into()?,
         })
     }
@@ -38,13 +38,8 @@ impl TryFrom<CliTokenCreate> for Create {
 
 impl From<Create> for JsonNewToken {
     fn from(create: Create) -> Self {
-        let Create {
-            user: _,
-            ttl,
-            name,
-            backend: _,
-        } = create;
-        Self { ttl, name }
+        let Create { name, ttl, .. } = create;
+        Self { name, ttl }
     }
 }
 

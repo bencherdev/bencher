@@ -5,5 +5,33 @@ rustflags = [
     "-Wclippy::cargo",
     "-Wclippy::restriction",
     # https://rust-lang.github.io/rust-clippy/master/
+    "-Aclippy::as_conversions",
+    "-Aclippy::cargo_common_metadata",
+    "-Aclippy::empty_structs_with_brackets",
+    "-Aclippy::exhaustive_enums",
+    "-Aclippy::exhaustive_structs",
+    "-Aclippy::implicit_return",
+    "-Aclippy::missing_docs_in_private_items",
+    "-Aclippy::missing_errors_doc",
+    "-Aclippy::missing_inline_in_public_items",
+    "-Aclippy::missing_trait_methods",
+    "-Aclippy::mod_module_files",
+    "-Aclippy::must_use_candidate",
+    "-Aclippy::pattern_type_mismatch",
     "-Aclippy::pub_use",
+    "-Aclippy::self_named_module_files",
+    "-Aclippy::shadow_reuse",
+    "-Aclippy::shadow_same",
+    "-Aclippy::single_char_lifetime_names",
+    "-Aclippy::std_instead_of_alloc",
+    "-Aclippy::std_instead_of_core",
+
+    "-Aclippy::else-if-without-else",     #  ..
+    "-Aclippy::default_trait_access",     # ..
+    "-Aclippy::if_then_some_else_none",   # ..
+    "-Aclippy::str_to_string",            # rustc suggests `.to_string()`, so non-std style
+    "-Aclippy::multiple_crate_versions",  # This isnt something we have much control over
+    "-Aclippy::default_numeric_fallback", # should be allowed with '0'.
+    "-Aclippy::module_name_repetitions",  # I found this impractical
+    "-Aclippy::implicit_hasher",          # Adds a lot of complication only a bit of generalization
 ]

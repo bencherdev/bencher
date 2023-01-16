@@ -31,7 +31,7 @@ impl TryFrom<CliRestart> for Restart {
 
 impl From<Restart> for JsonRestart {
     fn from(restart: Restart) -> Self {
-        let Restart { delay, backend: _ } = restart;
+        let Restart { delay, .. } = restart;
         Self { delay }
     }
 }

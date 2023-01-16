@@ -18,13 +18,10 @@ pub struct QueryMetric {
 impl QueryMetric {
     pub fn into_json(self) -> JsonMetric {
         let Self {
-            id: _,
-            uuid: _,
-            perf_id: _,
-            metric_kind_id: _,
             value,
             lower_bound,
             upper_bound,
+            ..
         } = self;
         JsonMetric {
             value: value.into(),

@@ -29,6 +29,11 @@ impl From<CliMock> for Mock {
 
 #[async_trait]
 impl SubCmd for Mock {
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_precision_loss,
+        clippy::float_arithmetic
+    )]
     async fn exec(&self) -> Result<(), CliError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
         let mut results = HashMap::with_capacity(count);

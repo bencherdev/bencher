@@ -69,6 +69,6 @@ impl<'de> Visitor<'de> for ResourceIdVisitor {
     where
         E: de::Error,
     {
-        ResourceId::from_str(value).map_err(|_| E::invalid_value(Unexpected::Str(value), &self))
+        ResourceId::from_str(value).map_err(|_e| E::invalid_value(Unexpected::Str(value), &self))
     }
 }

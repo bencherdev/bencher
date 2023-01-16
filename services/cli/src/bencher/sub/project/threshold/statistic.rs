@@ -65,8 +65,8 @@ impl From<Statistic> for JsonNewStatistic {
             min_sample_size,
             max_sample_size,
             window,
-            left_side: left_side.map(|s| s.into()),
-            right_side: right_side.map(|s| s.into()),
+            left_side: left_side.map(Into::into),
+            right_side: right_side.map(Into::into),
         }
     }
 }

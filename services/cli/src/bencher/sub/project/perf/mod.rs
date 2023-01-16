@@ -51,14 +51,13 @@ impl TryFrom<CliPerf> for Perf {
 impl From<Perf> for JsonPerfQuery {
     fn from(perf: Perf) -> Self {
         let Perf {
-            project: _,
             metric_kind,
             branches,
             testbeds,
             benchmarks,
             start_time,
             end_time,
-            backend: _,
+            ..
         } = perf;
         Self {
             metric_kind,

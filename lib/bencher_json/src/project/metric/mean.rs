@@ -1,4 +1,5 @@
 pub trait Mean {
+    #[allow(clippy::arithmetic_side_effects)]
     fn mean(array: Vec<Self>) -> Option<Self>
     where
         Self: std::iter::Sum + std::ops::Div<usize, Output = Self>,

@@ -21,9 +21,12 @@ impl TryFrom<CliAuthConfirm> for Confirm {
     type Error = CliError;
 
     fn try_from(confirm: CliAuthConfirm) -> Result<Self, Self::Error> {
-        let CliAuthConfirm { confirm, backend } = confirm;
+        let CliAuthConfirm {
+            confirm: confirm_token,
+            backend,
+        } = confirm;
         Ok(Self {
-            token: Jwt::from_str(&confirm)?,
+            token: Jwt::from_str(&confirm_token)?,
             backend: backend.try_into()?,
         })
     }
@@ -31,7 +34,7 @@ impl TryFrom<CliAuthConfirm> for Confirm {
 
 impl From<Confirm> for JsonAuthToken {
     fn from(confirm: Confirm) -> Self {
-        let Confirm { token, backend: _ } = confirm;
+        let Confirm { token, .. } = confirm;
         Self { token }
     }
 }
@@ -41,7 +44,7 @@ impl SubCmd for Confirm {
     async fn exec(&self) -> Result<(), CliError> {
         let json_token: JsonAuthToken = self.clone().into();
         let res = self.backend.post(CONFIRM_PATH, &json_token).await?;
-        let _: JsonConfirm = serde_json::from_value(res)?;
+        let _json: JsonConfirm = serde_json::from_value(res)?;
         Ok(())
     }
 }

@@ -18,7 +18,7 @@ pub struct ResultsReducer {
 impl From<AdapterResultsArray> for ResultsReducer {
     fn from(results_array: AdapterResultsArray) -> Self {
         let mut results_reducer = Self::default();
-        for results in results_array.inner.into_iter() {
+        for results in results_array.inner {
             results_reducer.reduce(results);
         }
         results_reducer
@@ -27,7 +27,7 @@ impl From<AdapterResultsArray> for ResultsReducer {
 
 impl ResultsReducer {
     fn reduce(&mut self, results: AdapterResults) {
-        for (benchmark_name, metrics) in results.inner.into_iter() {
+        for (benchmark_name, metrics) in results.inner {
             if let Some(metric_kind_map) = self.inner.get_mut(&benchmark_name) {
                 for (metric_kind, metric) in metrics.inner {
                     if let Some(list) = metric_kind_map.inner.get_mut(&metric_kind) {
@@ -60,7 +60,7 @@ pub struct MetricKindMap {
 impl MetricKindMap {
     pub(crate) fn median(self) -> AdapterMetrics {
         let mut metric_map = HashMap::new();
-        for (metric_kind, metric) in self.inner.into_iter() {
+        for (metric_kind, metric) in self.inner {
             if let Some(median) = JsonMetric::median(metric) {
                 metric_map.insert(metric_kind, median);
             }

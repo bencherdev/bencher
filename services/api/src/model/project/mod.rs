@@ -77,13 +77,13 @@ pub struct QueryProject {
 impl QueryProject {
     pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, ApiError> {
         let Self {
-            id: _,
             uuid,
             organization_id,
             name,
             slug,
             url,
             public,
+            ..
         } = self;
         Ok(JsonProject {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,

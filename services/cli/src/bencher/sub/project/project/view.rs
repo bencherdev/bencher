@@ -37,7 +37,7 @@ impl TryFrom<CliProjectView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         let path = if let Some(org) = &self.org {
-            format!("/v0/organizations/{}/projects/{}", org, self.project)
+            format!("/v0/organizations/{org}/projects/{}", self.project)
         } else {
             format!("/v0/projects/{}", self.project)
         };

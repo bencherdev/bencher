@@ -20,8 +20,6 @@ pub struct ButtonBody {
 impl FmtBody for ButtonBody {
     fn text(&self) -> String {
         let Self {
-            title: _,
-            preheader: _,
             greeting,
             pre_body,
             button_text,
@@ -32,6 +30,7 @@ impl FmtBody for ButtonBody {
             closing,
             signature,
             settings_url,
+            ..
         } = self;
 
         format!("\n{greeting}\n{pre_body}\n{button_text}: {button_url}\n{clipboard_text}: {clipboard_target}\n{post_body}\n{closing}\n{signature}\nBencher - Continuous Benchmarking\nManage email settings ({settings_url})")

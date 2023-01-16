@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
     character::complete::{anychar, digit1, space1},
-    combinator::{eof, map, peek, success},
+    combinator::{eof, map, map_res, peek, success},
     multi::{fold_many1, many1, many_till},
     sequence::{delimited, tuple},
     IResult,
@@ -35,12 +35,12 @@ impl Adapter for AdapterRust {
                         TestMetric::Failed => {
                             if settings.allow_failure {
                                 continue;
-                            } else {
-                                return Err(AdapterError::BenchmarkFailed(benchmark_name));
                             }
+
+                            return Err(AdapterError::BenchmarkFailed(benchmark_name));
                         },
                         TestMetric::Ok(metric) | TestMetric::Bench(metric) => {
-                            benchmark_metrics.push((benchmark_name, metric))
+                            benchmark_metrics.push((benchmark_name, metric));
                         },
                     }
                 }
@@ -56,13 +56,13 @@ impl Adapter for AdapterRust {
                 if remainder.is_empty() {
                     if settings.allow_failure {
                         continue;
-                    } else {
-                        return Err(AdapterError::Panic {
-                            thread,
-                            context,
-                            location,
-                        });
                     }
+
+                    return Err(AdapterError::Panic {
+                        thread,
+                        context,
+                        location,
+                    });
                 }
             }
 
@@ -124,28 +124,30 @@ fn parse_cargo(input: &str) -> IResult<&str, (String, TestMetric)> {
 
 // cargo test -- -Z unstable-options --report-time
 // TODO cargo test -- -Z unstable-options --format json --report-time
+#[allow(clippy::float_arithmetic)]
 fn parse_cargo_ok(input: &str) -> IResult<&str, JsonMetric> {
-    map(
+    map_res(
         tuple((
             tag("ok"),
             space1,
             delimited(tag("<"), tuple((parse_float, parse_units)), tag(">")),
         )),
-        |(_, _, (duration, units))| {
-            let value = to_f64(duration) * units.as_nanos();
-            JsonMetric {
+        |(_, _, (duration, units))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
+            let value = to_f64(duration)? * units.as_nanos();
+            Ok(JsonMetric {
                 value: value.into(),
                 lower_bound: None,
                 upper_bound: None,
-            }
+            })
         },
     )(input)
 }
 
 // cargo bench
 // TODO cargo test -- -Z unstable-options --format json
+#[allow(clippy::arithmetic_side_effects, clippy::cast_precision_loss)]
 fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
-    map(
+    map_res(
         tuple((
             tag("bench:"),
             space1,
@@ -156,16 +158,16 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             delimited(tag("("), tuple((tag("+/-"), space1, parse_int)), tag(")")),
         )),
-        |(_, _, duration, _, units, _, _, (_, _, variance))| {
-            let value = (to_duration(to_u64(duration), &units).as_nanos() as f64).into();
+        |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
+            let value = (to_duration(to_u64(duration)?, &units).as_nanos() as f64).into();
             let variance = Some(OrderedFloat::from(
-                to_duration(to_u64(variance), &units).as_nanos() as f64,
+                to_duration(to_u64(variance)?, &units).as_nanos() as f64,
             ));
-            JsonMetric {
+            Ok(JsonMetric {
                 value,
                 lower_bound: variance.map(|v| value - v),
                 upper_bound: variance.map(|v| value + v),
-            }
+            })
         },
     )(input)
 }
@@ -218,10 +220,13 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
+#[allow(clippy::float_arithmetic)]
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-    map(
+    map_res(
         tuple((parse_float, space1, parse_units)),
-        |(duration, _, units)| (to_f64(duration) * units.as_nanos()).into(),
+        |(duration, _, units)| -> Result<OrderedFloat<f64>, nom::Err<nom::error::Error<String>>> {
+            Ok((to_f64(duration)? * units.as_nanos()).into())
+        },
     )(input)
 }
 
@@ -257,14 +262,15 @@ fn parse_units(input: &str) -> IResult<&str, Units> {
     alt((
         map(tag("ps"), |_| Units::Pico),
         map(tag("ns"), |_| Units::Nano),
-        map(tag("μs"), |_| Units::Micro),
-        map(tag("µs"), |_| Units::Micro),
+        map(tag("\u{3bc}s"), |_| Units::Micro),
+        map(tag("\u{b5}s"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)
 }
 
 impl Units {
+    #[allow(clippy::float_arithmetic)]
     fn as_nanos(&self) -> f64 {
         match self {
             Self::Pico => 1.0 / 1_000.0,
@@ -295,22 +301,30 @@ fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
     )(input)
 }
 
-fn to_f64(input: Vec<&str>) -> f64 {
+fn to_f64(input: Vec<&str>) -> Result<f64, nom::Err<nom::error::Error<String>>> {
     let mut number = String::new();
     for floating_point in input {
         number.push_str(floating_point);
     }
-    f64::from_str(&number).unwrap()
+    f64::from_str(&number)
+        .map_err(|_e| nom::Err::Error(nom::error::make_error(number, nom::error::ErrorKind::Tag)))
 }
 
-fn to_u64(input: Vec<(&str, &str)>) -> u64 {
+fn to_u64(input: Vec<(&str, &str)>) -> Result<u64, nom::Err<nom::error::Error<String>>> {
     let mut number = String::new();
     for (digit, _) in input {
         number.push_str(digit);
     }
-    u64::from_str(&number).unwrap()
+    u64::from_str(&number)
+        .map_err(|_e| nom::Err::Error(nom::error::make_error(number, nom::error::ErrorKind::Tag)))
 }
 
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_arithmetic
+)]
 fn to_duration(time: u64, units: &Units) -> Duration {
     match units {
         Units::Pico => Duration::from_nanos((time as f64 * units.as_nanos()) as u64),

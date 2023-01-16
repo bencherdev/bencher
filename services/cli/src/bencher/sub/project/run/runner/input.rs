@@ -1,12 +1,10 @@
 use std::io::BufRead;
 
-use crate::CliError;
-
 #[derive(Debug)]
 pub struct Input(String);
 
 impl Input {
-    pub fn new() -> Result<Self, CliError> {
+    pub fn new() -> Self {
         let mut stdin_buf = String::new();
         let stdin = std::io::stdin();
         let mut handle = stdin.lock();
@@ -15,7 +13,7 @@ impl Input {
                 break;
             }
         }
-        Ok(Self(stdin_buf))
+        Self(stdin_buf)
     }
 
     pub fn is_empty(&self) -> bool {

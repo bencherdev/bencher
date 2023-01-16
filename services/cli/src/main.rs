@@ -7,6 +7,7 @@ mod error;
 use bencher::{sub::SubCmd, Bencher};
 pub use error::CliError;
 
+#[allow(clippy::print_stderr)]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
     match exec().await {
@@ -32,11 +33,11 @@ macro_rules! cli_println {
     () => (print!("\n"));
     ($fmt:expr) => ({
         use std::io::Write;
-        let _ = writeln!(std::io::stdout(), $fmt);
+        let _w = writeln!(std::io::stdout(), $fmt);
     });
     ($fmt:expr, $($arg:tt)*) => ({
         use std::io::Write;
-        let _ = writeln!(std::io::stdout(), $fmt, $($arg)*);
+        let _w = writeln!(std::io::stdout(), $fmt, $($arg)*);
     })
 }
 

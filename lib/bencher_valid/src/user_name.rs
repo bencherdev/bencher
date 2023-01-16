@@ -68,14 +68,15 @@ impl<'de> Visitor<'de> for UserNameVisitor {
     }
 }
 
+#[allow(clippy::expect_used)]
+static NAME_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
+
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {
     if !is_valid_len(name) {
         return false;
     }
-
-    static NAME_REGEX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
 
     NAME_REGEX.is_match(name)
 }

@@ -6,11 +6,13 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub const TESTBED_LOCALHOST_STR: &str = "localhost";
+#[allow(clippy::expect_used)]
 static TESTBED_LOCALHOST: Lazy<NonEmpty> = Lazy::new(|| {
     TESTBED_LOCALHOST_STR
         .parse()
         .expect("Failed to parse testbed name.")
 });
+#[allow(clippy::expect_used)]
 static TESTBED_LOCALHOST_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     Some(
         TESTBED_LOCALHOST_STR

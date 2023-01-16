@@ -102,13 +102,13 @@ impl QueryUser {
 
     pub fn into_json(self) -> Result<JsonUser, ApiError> {
         let Self {
-            id: _,
             uuid,
             name,
             slug,
             email,
             admin,
             locked,
+            ..
         } = self;
         Ok(JsonUser {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
