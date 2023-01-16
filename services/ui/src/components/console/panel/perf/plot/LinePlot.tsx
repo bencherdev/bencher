@@ -1,7 +1,7 @@
 import * as Plot from "@observablehq/plot";
 import axios from "axios";
 import * as d3 from "d3";
-import { createMemo, createResource, createSignal } from "solid-js";
+import { createResource, createSignal } from "solid-js";
 import { get_options } from "../../../../site/util";
 
 const LinePlot = (props) => {
@@ -12,6 +12,12 @@ const LinePlot = (props) => {
   };
 
   const getUnits = async (perf_data) => {
+    const default_units = "UNITS";
+
+    if (!perf_data.metric_kind) {
+      return default_units;
+    }
+
     try {
       const url = props.config?.metric_kind_url(
         props.path_params(),
@@ -21,7 +27,7 @@ const LinePlot = (props) => {
       return resp.data?.units;
     } catch (error) {
       console.error(error);
-      return "UNITS";
+      return default_units;
     }
   };
 
@@ -29,8 +35,6 @@ const LinePlot = (props) => {
 
   const plotted = () => {
     const json_perf = props.perf_data();
-
-    console.log(json_perf);
 
     if (
       typeof json_perf !== "object" ||
@@ -61,8 +65,6 @@ const LinePlot = (props) => {
       const color = colors[index % 10];
       plot_arrays.push(Plot.line(line_data, { stroke: color }));
     });
-
-    console.log(plot_arrays);
 
     return Plot.plot({
       y: {
