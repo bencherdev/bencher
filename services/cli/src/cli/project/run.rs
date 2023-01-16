@@ -13,11 +13,15 @@ pub struct CliRun {
     #[clap(long)]
     pub branch: Option<ResourceId>,
 
-    /// Run if branch name exists
+    /// Run iff a single instance of the branch name exists
     #[clap(long, conflicts_with = "branch")]
     pub if_branch: Option<BranchName>,
 
-    /// Create a new branch if it does not exist (requires `--if-branch`)
+    /// Create a new branch, clone data, and run if given start point branch name exists (requires `--if-branch`)
+    #[clap(long, requires = "if_branch")]
+    pub else_if_branch: Option<BranchName>,
+
+    /// Create a new branch and run if neither `--if-branch` or `--else-if-branch` exists (requires `--if-branch`)
     #[clap(long, requires = "if_branch")]
     pub else_branch: bool,
 

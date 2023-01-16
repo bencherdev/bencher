@@ -12,7 +12,7 @@ use clap::ValueEnum;
 use uuid::Uuid;
 
 use crate::{
-    bencher::locality::Locality,
+    bencher::{backend::Backend, locality::Locality},
     cli::project::run::{CliRun, CliRunAdapter},
     cli_println, CliError,
 };
@@ -52,7 +52,11 @@ pub struct Run {
 #[derive(Debug, Clone)]
 enum Branch {
     ResourceId(ResourceId),
-    Name { name: BranchName, create: bool },
+    Name {
+        name: BranchName,
+        start_point: Option<BranchName>,
+        create: bool,
+    },
 }
 
 impl TryFrom<CliRun> for Run {
@@ -65,6 +69,7 @@ impl TryFrom<CliRun> for Run {
             command,
             branch,
             if_branch,
+            else_if_branch,
             else_branch,
             hash,
             testbed,
@@ -78,7 +83,7 @@ impl TryFrom<CliRun> for Run {
             project: unwrap_project(project)?,
             locality: locality.try_into()?,
             runner: command.try_into()?,
-            branch: map_branch(branch, if_branch, else_branch)?,
+            branch: map_branch(branch, if_branch, else_if_branch, else_branch)?,
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
             adapter: map_adapter(adapter),
@@ -103,6 +108,7 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
 fn map_branch(
     branch: Option<ResourceId>,
     if_branch: Option<BranchName>,
+    else_if_branch: Option<BranchName>,
     else_branch: bool,
 ) -> Result<Branch, CliError> {
     Ok(if let Some(branch) = branch {
@@ -112,6 +118,7 @@ fn map_branch(
     } else if let Some(name) = if_branch {
         Branch::Name {
             name,
+            start_point: else_if_branch,
             create: else_branch,
         }
     } else {
@@ -156,8 +163,20 @@ impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
         let branch = match &self.branch {
             Branch::ResourceId(resource_id) => resource_id.clone(),
-            Branch::Name { name, create } => {
-                if let Some(uuid) = if_branch(&self.project, name, *create, &self.locality).await? {
+            Branch::Name {
+                name,
+                start_point,
+                create,
+            } => {
+                if let Some(uuid) = if_branch(
+                    &self.project,
+                    name,
+                    start_point.as_ref(),
+                    *create,
+                    &self.locality,
+                )
+                .await?
+                {
                     uuid.into()
                 } else {
                     return Ok(());
@@ -217,27 +236,15 @@ impl SubCmd for Run {
 async fn if_branch(
     project: &ResourceId,
     branch_name: &BranchName,
+    start_point: Option<&BranchName>,
     create: bool,
     locality: &Locality,
 ) -> Result<Option<Uuid>, CliError> {
     if let Locality::Backend(backend) = &locality {
-        let value = backend
-            .get(&format!(
-                "/v0/projects/{project}/branches?name={branch_name}"
-            ))
-            .await?;
-        let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
-        let branch_count = json_branches.len();
-        if let Some(branch) = json_branches.pop() {
-            return if branch_count == 1 {
-                Ok(Some(branch.uuid))
-            } else {
-                Err(CliError::BranchName(
-                    project.to_string(),
-                    branch_name.as_ref().into(),
-                    branch_count,
-                ))
-            };
+        let branch = get_branch(project, branch_name, backend).await?;
+
+        if branch.is_some() {
+            return Ok(branch);
         }
     }
 
@@ -270,4 +277,31 @@ async fn else_branch(
 
     cli_println!("Failed to create new branch with name \"{branch_name}\" in project \"{project}\". Skipping benchmark run.");
     Ok(None)
+}
+
+async fn get_branch(
+    project: &ResourceId,
+    branch_name: &BranchName,
+    backend: &Backend,
+) -> Result<Option<Uuid>, CliError> {
+    let value = backend
+        .get(&format!(
+            "/v0/projects/{project}/branches?name={branch_name}"
+        ))
+        .await?;
+    let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
+    let branch_count = json_branches.len();
+    if let Some(branch) = json_branches.pop() {
+        if branch_count == 1 {
+            Ok(Some(branch.uuid))
+        } else {
+            Err(CliError::BranchName(
+                project.to_string(),
+                branch_name.as_ref().into(),
+                branch_count,
+            ))
+        }
+    } else {
+        Ok(None)
+    }
 }
