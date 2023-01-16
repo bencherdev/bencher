@@ -31,6 +31,7 @@ pub struct OnePath {
     pub result: Uuid,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/results/{result}",
@@ -70,6 +71,7 @@ pub async fn get_one(
     }
 }
 
+#[allow(clippy::cast_sign_loss)]
 async fn get_one_inner(
     context: &Context,
     path_params: OnePath,

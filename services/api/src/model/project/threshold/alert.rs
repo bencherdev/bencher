@@ -7,7 +7,7 @@ use uuid::Uuid;
 use super::{statistic::QueryStatistic, QueryThreshold};
 use crate::{
     error::api_error, model::project::perf::QueryPerf, schema, schema::alert as alert_table,
-    ApiError,
+    util::query::fn_get_id, ApiError,
 };
 
 #[derive(Queryable)]
@@ -23,13 +23,7 @@ pub struct QueryAlert {
 }
 
 impl QueryAlert {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::alert::table
-            .filter(schema::alert::uuid.eq(uuid.to_string()))
-            .select(schema::alert::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(alert);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::alert::table
@@ -70,9 +64,10 @@ pub enum Side {
 
 impl From<bool> for Side {
     fn from(side: bool) -> Self {
-        match side {
-            false => Self::Left,
-            true => Self::Right,
+        if side {
+            Self::Right
+        } else {
+            Self::Left
         }
     }
 }

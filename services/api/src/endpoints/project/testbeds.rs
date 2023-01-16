@@ -37,6 +37,7 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/testbeds",
@@ -162,6 +163,7 @@ pub struct OnePath {
     pub testbed: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/testbeds/{testbed}",

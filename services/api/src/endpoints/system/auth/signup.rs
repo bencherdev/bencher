@@ -29,6 +29,7 @@ use super::AUTH_TOKEN_TTL;
 
 const SIGNUP_RESOURCE: Resource = Resource::Signup;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/signup",
@@ -126,7 +127,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
             .unwrap_or_default(),
         clipboard_text: "Confirmation Code".into(),
         clipboard_target: token_string,
-        post_body: "".into(),
+        post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context

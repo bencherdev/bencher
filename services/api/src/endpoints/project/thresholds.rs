@@ -43,6 +43,7 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/thresholds",
@@ -129,7 +130,7 @@ pub async fn post(
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
-        body.into_inner(),
+        &body.into_inner(),
         &auth_user,
     )
     .await
@@ -141,7 +142,7 @@ pub async fn post(
 async fn post_inner(
     context: &Context,
     path_params: DirPath,
-    json_threshold: JsonNewThreshold,
+    json_threshold: &JsonNewThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -182,6 +183,7 @@ pub struct OnePath {
     pub threshold: Uuid,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/thresholds/{threshold}",

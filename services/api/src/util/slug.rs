@@ -33,6 +33,7 @@ pub(crate) use unwrap_child_slug;
 
 pub type SlugExistsFn = dyn FnOnce(&mut SqliteConnection, Option<i32>, &str) -> bool;
 
+#[allow(clippy::expect_used)]
 pub fn validate_slug(
     conn: &mut SqliteConnection,
     parent: Option<i32>,

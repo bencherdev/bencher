@@ -32,6 +32,7 @@ use super::Resource;
 
 const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations",
@@ -144,6 +145,7 @@ pub struct OnePath {
     pub organization: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}",

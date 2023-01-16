@@ -29,6 +29,7 @@ const DEFAULT_PORT: u16 = 61016;
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 10;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 
+#[allow(clippy::panic)]
 static DEFAULT_ENDPOINT: Lazy<Url> = Lazy::new(|| {
     DEFAULT_ENDPOINT_STR.parse().unwrap_or_else(|e| {
         panic!("Failed to parse default endpoint \"{DEFAULT_ENDPOINT_STR}\": {e}")

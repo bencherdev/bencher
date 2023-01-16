@@ -49,7 +49,7 @@ impl InsertOrganizationRole {
 
         Ok(InsertOrganizationRole {
             user_id,
-            organization_id: QueryOrganization::get_id(conn, org_claims.uuid)?,
+            organization_id: QueryOrganization::get_id(conn, &org_claims.uuid)?,
             role: org_claims.role.to_string(),
         })
     }

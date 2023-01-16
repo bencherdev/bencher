@@ -78,6 +78,15 @@ const thresholdsConfig = {
       fields: [
         {
           kind: FieldKind.RADIO,
+          label: "Metric Kind",
+          key: "metric_kind",
+          value: "",
+          valid: null,
+          validate: true,
+          config: THRESHOLD_FIELDS.metric_kind,
+        },
+        {
+          kind: FieldKind.RADIO,
           label: "Branch",
           key: "branch",
           value: "",
@@ -93,15 +102,6 @@ const thresholdsConfig = {
           valid: null,
           validate: true,
           config: THRESHOLD_FIELDS.testbed,
-        },
-        {
-          kind: FieldKind.RADIO,
-          label: "Metric Kind",
-          key: "metric_kind",
-          value: "",
-          valid: null,
-          validate: true,
-          config: THRESHOLD_FIELDS.metric_kind,
         },
         {
           kind: FieldKind.SELECT,

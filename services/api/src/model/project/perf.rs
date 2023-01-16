@@ -8,6 +8,7 @@ use crate::{
     error::api_error,
     schema,
     schema::perf as perf_table,
+    util::query::fn_get_id,
     ApiError,
 };
 
@@ -21,13 +22,7 @@ pub struct QueryPerf {
 }
 
 impl QueryPerf {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::perf::table
-            .filter(schema::perf::uuid.eq(uuid.to_string()))
-            .select(schema::perf::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(perf);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::perf::table
@@ -49,6 +44,7 @@ pub struct InsertPerf {
 }
 
 impl InsertPerf {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub fn from_json(report_id: i32, iteration: usize, benchmark_id: i32) -> Self {
         InsertPerf {
             uuid: Uuid::new_v4().to_string(),

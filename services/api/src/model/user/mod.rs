@@ -8,7 +8,7 @@ use crate::{
     diesel::ExpressionMethods,
     error::api_error,
     schema::{self, user as user_table},
-    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug},
     ApiError,
 };
 
@@ -57,13 +57,7 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::user::table
-            .filter(schema::user::uuid.eq(uuid.to_string()))
-            .select(schema::user::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(user);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::user::table

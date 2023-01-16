@@ -6,7 +6,8 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use uuid::Uuid;
 
 use crate::{
-    context::ApiContext, error::api_error, schema, schema::token as token_table, ApiError,
+    context::ApiContext, error::api_error, schema, schema::token as token_table,
+    util::query::fn_get_id, ApiError,
 };
 
 use super::{auth::AuthUser, QueryUser};
@@ -33,13 +34,7 @@ pub struct QueryToken {
 }
 
 impl QueryToken {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::token::table
-            .filter(schema::token::uuid.eq(uuid.to_string()))
-            .select(schema::token::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(token);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::token::table
@@ -89,6 +84,7 @@ pub struct InsertToken {
 }
 
 impl InsertToken {
+    #[allow(clippy::cast_possible_wrap)]
     pub fn from_json(
         api_context: &mut ApiContext,
         user: &ResourceId,

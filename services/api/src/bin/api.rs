@@ -54,6 +54,11 @@ async fn run() -> Result<(), ApiError> {
 }
 
 #[cfg(not(feature = "swagger"))]
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::integer_arithmetic,
+    clippy::integer_arithmetic
+)]
 async fn run() -> Result<(), ApiError> {
     use bencher_api::config::{config_tx::ConfigTx, Config};
     use dropshot::HttpServer;
@@ -72,7 +77,7 @@ async fn run() -> Result<(), ApiError> {
             }
 
             if let Err(e) = run_http_server(config_tx).await {
-                error!("Server Failure: {e}")
+                error!("Server Failure: {e}");
             }
         });
 

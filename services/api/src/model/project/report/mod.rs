@@ -100,6 +100,11 @@ impl QueryReport {
 }
 
 // https://docs.rs/chrono/latest/chrono/serde/ts_nanoseconds/index.html
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::integer_division,
+    clippy::modulo_arithmetic
+)]
 pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
     Utc.timestamp_opt(
         timestamp / 1_000_000_000,

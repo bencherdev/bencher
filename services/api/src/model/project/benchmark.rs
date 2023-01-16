@@ -5,7 +5,10 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use uuid::Uuid;
 
 use super::QueryProject;
-use crate::{error::api_error, schema, schema::benchmark as benchmark_table, ApiError};
+use crate::{
+    error::api_error, schema, schema::benchmark as benchmark_table, util::query::fn_get_id,
+    ApiError,
+};
 
 #[derive(Queryable)]
 pub struct QueryBenchmark {
@@ -16,13 +19,7 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::benchmark::table
-            .filter(schema::benchmark::uuid.eq(uuid.to_string()))
-            .select(schema::benchmark::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(benchmark);
 
     pub fn get_id_from_name(
         conn: &mut SqliteConnection,
@@ -77,7 +74,7 @@ impl QueryBenchmark {
             .execute(conn)
             .map_err(api_error!())?;
 
-        QueryBenchmark::get_id(conn, insert_benchmark.uuid)
+        QueryBenchmark::get_id(conn, &insert_benchmark.uuid)
     }
 }
 

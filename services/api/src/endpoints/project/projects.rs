@@ -26,6 +26,7 @@ use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects",
@@ -95,6 +96,7 @@ pub struct OnePath {
     pub project: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}",

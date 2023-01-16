@@ -11,7 +11,7 @@ use crate::{
     error::api_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
-    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug},
     ApiError,
 };
 
@@ -57,13 +57,7 @@ pub struct QueryOrganization {
 }
 
 impl QueryOrganization {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::organization::table
-            .filter(schema::organization::uuid.eq(uuid.to_string()))
-            .select(schema::organization::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(organization);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::organization::table
@@ -127,18 +121,6 @@ impl QueryOrganization {
             name: NonEmpty::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
         })
-    }
-
-    pub fn into_rbac(
-        conn: &mut SqliteConnection,
-        uuid: impl ToString,
-    ) -> Result<Organization, ApiError> {
-        schema::organization::table
-            .filter(schema::organization::uuid.eq(uuid.to_string()))
-            .select(schema::organization::id)
-            .first::<i32>(conn)
-            .map(|id| Organization { id: id.to_string() })
-            .map_err(api_error!())
     }
 }
 

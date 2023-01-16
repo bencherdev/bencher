@@ -25,6 +25,7 @@ use super::{Resource, CLIENT_TOKEN_TTL};
 
 const CONFIRM_RESOURCE: Resource = Resource::Confirm;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/confirm",

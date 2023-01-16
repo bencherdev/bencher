@@ -42,6 +42,7 @@ pub struct DirQuery {
     pub name: Option<String>,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches",
@@ -175,6 +176,7 @@ pub struct OnePath {
     pub branch: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/branches/{branch}",

@@ -17,6 +17,7 @@ use super::Resource;
 const VERSION_RESOURCE: Resource = Resource::Version;
 const API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/version",
@@ -26,6 +27,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     Ok(get_cors::<Context>())
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = GET,
     path = "/v0/server/version",

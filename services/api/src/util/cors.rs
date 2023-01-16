@@ -30,7 +30,7 @@ pub fn get_cors<Context>() -> HttpResponseHeaders<HttpResponseOk<String>>
 where
     Context: ServerContext,
 {
-    let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".into()));
+    let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(String::new()));
     let headers = resp.headers_mut();
 
     headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
@@ -74,14 +74,14 @@ pub async fn get_cors_headers_header<C: ServerContext>(
 
 /// Constructs a header value to use in conjunction with a
 /// Access-Control-Allow-Methods header
-#[allow(dead_code)]
+#[allow(dead_code, clippy::expect_used)]
 pub fn get_cors_method_header(allowed_methods: &[http::Method]) -> HeaderValue {
     // This should never fail has we know that [`http::Method`] converts to valid
     // str values and joining those values with , remains valid
     HeaderValue::from_str(
         &allowed_methods
             .iter()
-            .map(|m| m.as_str())
+            .map(dropshot::Method::as_str)
             .collect::<Vec<&str>>()
             .join(", "),
     )
@@ -106,6 +106,7 @@ pub async fn get_cors_header<C: ServerContext>(
     validate_header(req_value, allowed)
 }
 
+#[allow(clippy::expect_used)]
 pub fn validate_header(
     req_header: &str,
     allowed: &[&'static str],

@@ -9,7 +9,7 @@ use crate::{
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
-    util::{resource_id::fn_resource_id, slug::unwrap_child_slug},
+    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_child_slug},
     ApiError,
 };
 
@@ -26,13 +26,7 @@ pub struct QueryMetricKind {
 }
 
 impl QueryMetricKind {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::metric_kind::table
-            .filter(schema::metric_kind::uuid.eq(uuid.to_string()))
-            .select(schema::metric_kind::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(metric_kind);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::metric_kind::table

@@ -16,6 +16,7 @@ use super::Resource;
 const PING_RESOURCE: Resource = Resource::Ping;
 const PONG: &str = "PONG";
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/ping",
@@ -25,6 +26,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     Ok(get_cors::<Context>())
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = GET,
     path = "/v0/server/ping",

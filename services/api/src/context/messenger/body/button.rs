@@ -37,6 +37,7 @@ impl FmtBody for ButtonBody {
     }
 
     // https://github.com/leemunroe/responsive-html-email-template
+    #[allow(clippy::too_many_lines)]
     fn html(&self) -> String {
         let Self {
             title,
@@ -115,7 +116,7 @@ impl FmtBody for ButtonBody {
                             </p>
                             <button class=\"button is-small\" onclick=\"copy_to_clipboard('clipboard-target')\" alt=\"{clipboard_text}\">
                                 <span class=\"icon\">
-                                    📄
+                                  \u{1f4c4}
                                 </span>
                                 <span>Copy</span>
                             </button>

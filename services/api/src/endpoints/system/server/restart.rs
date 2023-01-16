@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bencher_json::{JsonEmpty, JsonRestart};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tokio::sync::mpsc::Sender;
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::{
     context::Context,
@@ -22,6 +22,7 @@ const RESTART_RESOURCE: Resource = Resource::Restart;
 
 pub const DEFAULT_DELAY: u64 = 3;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/restart",
@@ -81,7 +82,9 @@ pub async fn countdown(restart_tx: Sender<()>, delay: u64, user_id: i32) {
         for tick in (0..=delay).rev() {
             if tick == 0 {
                 warn!("Received admin request from {user_id} to restart. Restarting server now.",);
-                let _ = restart_tx.send(()).await;
+                if let Err(e) = restart_tx.send(()).await {
+                    error!("Failed to send restart for {user_id}: {e}");
+                }
             } else {
                 warn!(
                     "Received admin request from {user_id} to restart. Server will restart in {tick} seconds.",

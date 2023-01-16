@@ -41,6 +41,7 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/reports",
@@ -152,7 +153,6 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database;
 
     // Verify that the branch and testbed are part of the same project
     let SameProject {
@@ -160,7 +160,7 @@ async fn post_inner(
         branch_id,
         testbed_id,
     } = SameProject::validate(
-        conn,
+        &mut api_context.database,
         &path_params.project,
         &json_report.branch,
         &json_report.testbed,
@@ -231,6 +231,7 @@ pub struct OnePath {
     pub report_uuid: Uuid,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/reports/{report_uuid}",

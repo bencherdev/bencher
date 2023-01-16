@@ -63,7 +63,7 @@ impl Email {
             match send(transport, message_builder).await {
                 Ok(_) => tracing::trace!("Email sent email from {from_email} to {to_email}"),
                 Err(e) => {
-                    tracing::error!("Failed to send email from {from_email} to {to_email}: {e}")
+                    tracing::error!("Failed to send email from {from_email} to {to_email}: {e}");
                 },
             }
         });

@@ -10,24 +10,26 @@ const licensingPage = {
         This software and associated documentation files (the "Software") may
         only be used in production, if you (and any entity that you represent)
         have agreed to, and are in compliance with, the Bencher Subscription
-        Agreement available at https://bencher.dev/legal/subscription (the "Plus
-        Agreement"), or other agreements governing the use of the Software, as
-        mutually agreed by you and Pompeii LLC ("Bencher"), and otherwise have a
-        valid Bencher Plus subscription ("Plus Subscription") for the correct
-        number of metrics as defined in the Plus Agreement ("Metrics"). Subject
-        to the foregoing sentence, you are free to modify this Software and
-        publish patches to the Software. You agree that Bencher and/or its
-        licensors (as applicable) retain all right, title and interest in and to
-        all such modifications and/or patches, and all such modifications and/or
-        patches may only be used, copied, modified, displayed, distributed, or
-        otherwise exploited with a valid Plus Subscription for the correct
-        number of hosts. Notwithstanding the foregoing, you may copy and modify
-        the Software for development and testing purposes, without requiring a
-        subscription. You agree that Bencher and/or its licensors (as
-        applicable) retain all right, title and interest in and to all such
-        modifications. You are not granted any other rights beyond what is
-        expressly stated herein. Subject to the foregoing, it is forbidden to
-        copy, merge, publish, distribute, sublicense, and/or sell the Software.
+        Agreement available at{" "}
+        <a href="/legal/subscription">https://bencher.dev/legal/subscription</a>{" "}
+        (the "Plus Agreement"), or other agreements governing the use of the
+        Software, as mutually agreed by you and Pompeii LLC ("Bencher"), and
+        otherwise have a valid Bencher Plus subscription ("Plus Subscription")
+        for the correct number of metrics as defined in the Plus Agreement
+        ("Metrics"). Subject to the foregoing sentence, you are free to modify
+        this Software and publish patches to the Software. You agree that
+        Bencher and/or its licensors (as applicable) retain all right, title and
+        interest in and to all such modifications and/or patches, and all such
+        modifications and/or patches may only be used, copied, modified,
+        displayed, distributed, or otherwise exploited with a valid Plus
+        Subscription for the correct number of hosts. Notwithstanding the
+        foregoing, you may copy and modify the Software for development and
+        testing purposes, without requiring a subscription. You agree that
+        Bencher and/or its licensors (as applicable) retain all right, title and
+        interest in and to all such modifications. You are not granted any other
+        rights beyond what is expressly stated herein. Subject to the foregoing,
+        it is forbidden to copy, merge, publish, distribute, sublicense, and/or
+        sell the Software.
       </p>
       <p>
         This Plus License applies only to the part of this Software that is not

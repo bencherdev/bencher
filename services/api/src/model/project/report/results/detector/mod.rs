@@ -51,6 +51,14 @@ impl Detector {
         }))
     }
 
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss,
+        clippy::float_arithmetic,
+        clippy::integer_arithmetic
+    )]
     pub fn detect(
         &self,
         conn: &mut SqliteConnection,
@@ -80,21 +88,16 @@ impl Detector {
         let datum = metric.value.into();
         if let Some(mean) = mean(data) {
             if let Some(std_dev) = std_deviation(mean, data) {
-                let (abs_datum, side, boundary) = match datum < mean {
-                    true => {
-                        if let Some(left_side) = self.threshold.statistic.left_side {
-                            (mean * 2.0 - datum, Side::Left, left_side)
-                        } else {
-                            return Ok(());
-                        }
-                    },
-                    false => {
-                        if let Some(right_side) = self.threshold.statistic.right_side {
-                            (datum, Side::Right, right_side)
-                        } else {
-                            return Ok(());
-                        }
-                    },
+                let (abs_datum, side, boundary) = if datum < mean {
+                    if let Some(left_side) = self.threshold.statistic.left_side {
+                        (mean * 2.0 - datum, Side::Left, left_side)
+                    } else {
+                        return Ok(());
+                    }
+                } else if let Some(right_side) = self.threshold.statistic.right_side {
+                    (datum, Side::Right, right_side)
+                } else {
+                    return Ok(());
                 };
 
                 let percentile = match self.threshold.statistic.test.try_into()? {
@@ -109,7 +112,7 @@ impl Detector {
                     },
                 };
 
-                if percentile > boundary as f64 {
+                if percentile > f64::from(boundary) {
                     self.alert(conn, perf_id, side, boundary, percentile)?;
                 }
             }
@@ -118,6 +121,7 @@ impl Detector {
         Ok(())
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn alert(
         &self,
         conn: &mut SqliteConnection,
@@ -145,19 +149,11 @@ impl Detector {
     }
 }
 
-#[allow(dead_code)]
-fn z_score(mean: f64, std_dev: f64, datum: f64) -> Option<f64> {
-    if std_dev.is_normal() {
-        Some((datum - mean) / std_dev)
-    } else {
-        None
-    }
-}
-
 fn std_deviation(mean: f64, data: &[f64]) -> Option<f64> {
-    variance(mean, data).map(|variance| variance.sqrt())
+    variance(mean, data).map(f64::sqrt)
 }
 
+#[allow(clippy::cast_precision_loss, clippy::float_arithmetic)]
 fn variance(mean: f64, data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         return None;
@@ -170,6 +166,7 @@ fn variance(mean: f64, data: &[f64]) -> Option<f64> {
     )
 }
 
+#[allow(clippy::cast_precision_loss, clippy::float_arithmetic)]
 fn mean(data: &[f64]) -> Option<f64> {
     if data.is_empty() {
         return None;

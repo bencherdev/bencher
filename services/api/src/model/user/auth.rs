@@ -210,11 +210,8 @@ impl AuthUser {
         self.organizations
             .iter()
             .filter_map(|org_id| {
-                if rbac.is_allowed_unwrap(self, action, Organization::from(*org_id)) {
-                    Some(org_id.id)
-                } else {
-                    None
-                }
+                rbac.is_allowed_unwrap(self, action, Organization::from(*org_id))
+                    .then_some(org_id.id)
             })
             .collect()
     }
@@ -223,11 +220,8 @@ impl AuthUser {
         self.projects
             .iter()
             .filter_map(|proj_id| {
-                if rbac.is_allowed_unwrap(self, action, Project::from(*proj_id)) {
-                    Some(proj_id.id)
-                } else {
-                    None
-                }
+                rbac.is_allowed_unwrap(self, action, Project::from(*proj_id))
+                    .then_some(proj_id.id)
             })
             .collect()
     }

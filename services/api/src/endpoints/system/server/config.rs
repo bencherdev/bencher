@@ -22,6 +22,7 @@ use super::{
 
 const CONFIG_RESOURCE: Resource = Resource::Config;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/server/config",

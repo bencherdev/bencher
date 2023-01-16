@@ -27,7 +27,7 @@ use detector::Detector;
 
 type MetricKindId = i32;
 
-/// ReportResults is used to add benchmarks, perf, metric kinds, metrics, and alerts.
+/// `ReportResults` is used to add benchmarks, perf, metric kinds, metrics, and alerts.
 pub struct ReportResults {
     pub project_id: i32,
     pub branch_id: i32,

@@ -33,6 +33,7 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts",
@@ -115,6 +116,7 @@ pub struct OnePath {
     pub alert: Uuid,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects/{project}/alerts/{alert}",

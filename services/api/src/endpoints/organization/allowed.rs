@@ -26,6 +26,7 @@ pub struct GetParams {
     pub permission: JsonOrganizationPermission,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/allowed/{permission}",

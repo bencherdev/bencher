@@ -50,7 +50,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
             logging,
         }) = config;
 
-        let private = into_private(endpoint, secret_key, smtp, database, restart_tx)?;
+        let private = into_private(endpoint, secret_key, smtp, &database, restart_tx)?;
         let config_dropshot = into_config_dropshot(server);
         let log = into_log(logging)?;
 
@@ -70,10 +70,10 @@ fn into_private(
     endpoint: Url,
     secret_key: Option<String>,
     smtp: Option<JsonSmtp>,
-    database: JsonDatabase,
+    json_database: &JsonDatabase,
     restart_tx: Sender<()>,
 ) -> Result<Mutex<ApiContext>, ApiError> {
-    let database_path = database.file.to_string_lossy();
+    let database_path = json_database.file.to_string_lossy();
     diesel_database_url(&database_path);
     let mut database = SqliteConnection::establish(&database_path)?;
     run_migrations(&mut database)?;
@@ -98,7 +98,7 @@ fn diesel_database_url(database_path: &str) {
         trace!("Failed to find \"{DATABASE_URL}\"");
     }
     trace!("Setting \"{DATABASE_URL}\" to {database_path}");
-    std::env::set_var(DATABASE_URL, database_path)
+    std::env::set_var(DATABASE_URL, database_path);
 }
 
 fn run_migrations(database: &mut SqliteConnection) -> Result<(), ApiError> {
@@ -115,7 +115,8 @@ fn into_secret_key(secret_key: Option<String>) -> SecretKey {
 }
 
 fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
-    smtp.map(
+    smtp.map_or(
+        Messenger::StdOut,
         |JsonSmtp {
              hostname,
              username,
@@ -132,7 +133,6 @@ fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
             })
         },
     )
-    .unwrap_or(Messenger::StdOut)
 }
 
 fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
@@ -160,23 +160,23 @@ fn into_log(logging: JsonLogging) -> Result<Logger, ApiError> {
     let JsonLogging { name, log } = logging;
     match log {
         ServerLog::StderrTerminal { level } => ConfigLogging::StderrTerminal {
-            level: into_level(level),
+            level: into_level(&level),
         },
         ServerLog::File {
             level,
             path,
             if_exists,
         } => ConfigLogging::File {
-            level: into_level(level),
+            level: into_level(&level),
             path,
-            if_exists: into_if_exists(if_exists),
+            if_exists: into_if_exists(&if_exists),
         },
     }
     .to_logger(name)
     .map_err(ApiError::CreateLogger)
 }
 
-fn into_level(log_level: LogLevel) -> ConfigLoggingLevel {
+fn into_level(log_level: &LogLevel) -> ConfigLoggingLevel {
     match log_level {
         LogLevel::Trace => ConfigLoggingLevel::Trace,
         LogLevel::Debug => ConfigLoggingLevel::Debug,
@@ -187,7 +187,7 @@ fn into_level(log_level: LogLevel) -> ConfigLoggingLevel {
     }
 }
 
-fn into_if_exists(if_exists: IfExists) -> ConfigLoggingIfExists {
+fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
     match if_exists {
         IfExists::Fail => ConfigLoggingIfExists::Fail,
         IfExists::Truncate => ConfigLoggingIfExists::Truncate,

@@ -25,6 +25,7 @@ impl Endpoint {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     pub fn err(&self, e: ApiError) -> ApiError {
         let api_error = ApiError::Endpoint(*self);
         tracing::info!("{api_error}: {e}");
@@ -72,15 +73,14 @@ impl fmt::Debug for Endpoint {
 
 impl fmt::Display for Endpoint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let method = http::Method::from(self.method);
         let resource = match self.method {
-            Method::GetOne => self.resource.singular(),
+            Method::GetOne | Method::Post | Method::Put | Method::Patch | Method::Delete => {
+                self.resource.singular()
+            },
             Method::GetLs => self.resource.plural(),
-            Method::Post => self.resource.singular(),
-            Method::Put => self.resource.singular(),
-            Method::Patch => self.resource.singular(),
-            Method::Delete => self.resource.singular(),
         };
-        write!(f, "{} {}", http::Method::from(self.method), resource)
+        write!(f, "{method} {resource}")
     }
 }
 

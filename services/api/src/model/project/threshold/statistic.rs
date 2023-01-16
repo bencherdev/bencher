@@ -4,7 +4,10 @@ use bencher_json::project::threshold::{JsonNewStatistic, JsonStatistic, JsonStat
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
-use crate::{error::api_error, schema, schema::statistic as statistic_table, ApiError};
+use crate::{
+    error::api_error, schema, schema::statistic as statistic_table, util::query::fn_get_id,
+    ApiError,
+};
 
 #[derive(Queryable, Debug, Clone)]
 pub struct QueryStatistic {
@@ -19,13 +22,7 @@ pub struct QueryStatistic {
 }
 
 impl QueryStatistic {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::statistic::table
-            .filter(schema::statistic::uuid.eq(uuid.to_string()))
-            .select(schema::statistic::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(statistic);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::statistic::table
@@ -36,6 +33,7 @@ impl QueryStatistic {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn into_json(self) -> Result<JsonStatistic, ApiError> {
         let Self {
             uuid,
@@ -120,9 +118,9 @@ impl InsertStatistic {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             test: StatisticKind::from(test) as i32,
-            min_sample_size: min_sample_size.map(|ss| ss as i64),
-            max_sample_size: max_sample_size.map(|ss| ss as i64),
-            window: window.map(|w| w as i64),
+            min_sample_size: min_sample_size.map(Into::into),
+            max_sample_size: max_sample_size.map(Into::into),
+            window: window.map(Into::into),
             left_side: left_side.map(Into::into),
             right_side: right_side.map(Into::into),
         })

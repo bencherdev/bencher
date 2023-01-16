@@ -41,6 +41,7 @@ pub struct DirPath {
     pub organization: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/members",
@@ -208,7 +209,7 @@ async fn post_inner(
             .unwrap_or_default(),
         clipboard_text: "Invite Code".into(),
         clipboard_target: token_string,
-        post_body: "".into(),
+        post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context
@@ -235,6 +236,7 @@ pub struct OnePath {
     pub user: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/organizations/{organization}/members/{user}",

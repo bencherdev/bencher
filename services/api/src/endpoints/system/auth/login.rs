@@ -26,6 +26,7 @@ use super::AUTH_TOKEN_TTL;
 
 const LOGIN_RESOURCE: Resource = Resource::Login;
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/auth/login",
@@ -103,7 +104,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .unwrap_or_default(),
         clipboard_text: "Confirmation Code".into(),
         clipboard_target: token_string,
-        post_body: "".into(),
+        post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
         settings_url: api_context

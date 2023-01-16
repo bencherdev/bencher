@@ -29,6 +29,7 @@ pub struct OnePath {
     pub user: ResourceId,
 }
 
+#[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/users/{user}",

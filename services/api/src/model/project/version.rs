@@ -52,7 +52,7 @@ impl InsertVersion {
             .order(schema::version::number.desc())
             .first::<i32>(conn)
         {
-            number + 1
+            number.checked_add(1).ok_or(ApiError::BadMath)?
         } else {
             0
         };

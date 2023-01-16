@@ -6,7 +6,10 @@ use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed};
-use crate::{error::api_error, schema, schema::threshold as threshold_table, ApiError};
+use crate::{
+    error::api_error, schema, schema::threshold as threshold_table, util::query::fn_get_id,
+    ApiError,
+};
 
 pub mod alert;
 pub mod statistic;
@@ -22,13 +25,7 @@ pub struct QueryThreshold {
 }
 
 impl QueryThreshold {
-    pub fn get_id(conn: &mut SqliteConnection, uuid: impl ToString) -> Result<i32, ApiError> {
-        schema::threshold::table
-            .filter(schema::threshold::uuid.eq(uuid.to_string()))
-            .select(schema::threshold::id)
-            .first(conn)
-            .map_err(api_error!())
-    }
+    fn_get_id!(threshold);
 
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::threshold::table
@@ -74,7 +71,7 @@ impl InsertThreshold {
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,
-        json_threshold: JsonNewThreshold,
+        json_threshold: &JsonNewThreshold,
     ) -> Result<Self, ApiError> {
         let insert_statistic = InsertStatistic::from_json(json_threshold.statistic)?;
         diesel::insert_into(schema::statistic::table)

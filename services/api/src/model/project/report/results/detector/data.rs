@@ -28,7 +28,9 @@ impl MetricsData {
 
         if let Some(window) = statistic.window {
             let now = Utc::now().timestamp();
-            query = query.filter(schema::report::start_time.ge(now - window));
+            query = query.filter(
+                schema::report::start_time.ge(now.checked_sub(window).ok_or(ApiError::BadMath)?),
+            );
         }
 
         let mut query = query
