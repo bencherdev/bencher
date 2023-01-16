@@ -2,6 +2,7 @@ import Page from "./page";
 import QuickStart from "../pages/QuickStart.mdx";
 import Changelog from "../pages/Changelog.mdx";
 import PriorArt from "../pages/PriorArt.mdx";
+import GitHubActions from "../pages/GitHubActions.mdx";
 
 const docsConfig = {
   [Page.QUICK_START]: {
@@ -10,6 +11,14 @@ const docsConfig = {
     page: {
       heading: "Quick Start",
       content: <QuickStart />,
+    },
+  },
+  [Page.GITHUB_ACTIONS]: {
+    kind: Page.GITHUB_ACTIONS,
+    title: "GitHub Actions",
+    page: {
+      heading: "How to use Bencher in GitHub Actions",
+      content: <GitHubActions />,
     },
   },
   [Page.API_V0]: {

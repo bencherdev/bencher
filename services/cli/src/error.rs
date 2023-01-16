@@ -17,7 +17,7 @@ pub enum CliError {
     #[error("No default shell command flag for target family. Try setting a custom shell command flag with the `--flag` flag.")]
     Flag,
     #[error("The subcommand `run` requires either a command argument or results via stdin.")]
-    NoPerf,
+    NoCommand,
     #[error(
         "{2} branches were found with name \"{1}\" in project \"{0}\"! Exactly one was expected."
     )]

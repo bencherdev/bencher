@@ -19,6 +19,10 @@ const DocsRoutes = (props) => {
         element={<DocsPage config={config[Page.QUICK_START]} />}
       />
       <Route
+        path="/how-to/github-actions"
+        element={<DocsPage config={config[Page.GITHUB_ACTIONS]} />}
+      />
+      <Route
         path="/reference"
         element={<Navigate href="/docs/reference/api" />}
       />

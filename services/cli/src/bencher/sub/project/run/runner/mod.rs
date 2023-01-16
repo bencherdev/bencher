@@ -32,7 +32,7 @@ impl TryFrom<CliRunCommand> for Runner {
                 if let Ok(cmd) = std::env::var(BENCHER_CMD) {
                     Ok(Self::Command(Command::try_from((command.shell, cmd))?))
                 } else {
-                    Err(CliError::NoPerf)
+                    Err(CliError::NoCommand)
                 }
             } else {
                 Ok(Self::Input(input))

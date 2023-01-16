@@ -27,6 +27,11 @@ const DocsMenu = (props) => {
             {Page.QUICK_START}
           </Link>
         </li>
+        <li>
+          <Link href={getDocsPath(Section.HOW_TO, Page.GITHUB_ACTIONS)}>
+            {Page.GITHUB_ACTIONS}
+          </Link>
+        </li>
       </ul>
 
       <p class="menu-label">{Section.REFERENCE}</p>
