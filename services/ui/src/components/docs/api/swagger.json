@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.28"
+    "version": "0.2.29"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -4528,7 +4528,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "project": {
             "type": "string",
