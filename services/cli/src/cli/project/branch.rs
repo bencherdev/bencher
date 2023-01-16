@@ -38,6 +38,11 @@ pub struct CliBranchCreate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
+    /// Branch slug or UUID to use as the new branch start point
+    /// https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
+    #[clap(long)]
+    pub start_point: Option<ResourceId>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

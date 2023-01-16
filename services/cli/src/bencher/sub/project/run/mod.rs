@@ -265,6 +265,7 @@ async fn else_branch(
     if let Locality::Backend(backend) = &locality {
         let new_branch = JsonNewBranch {
             name: branch_name.clone(),
+            start_point: None,
             slug: None,
         };
 

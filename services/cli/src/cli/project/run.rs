@@ -17,7 +17,7 @@ pub struct CliRun {
     #[clap(long, conflicts_with = "branch")]
     pub if_branch: Option<BranchName>,
 
-    /// Create a new branch, clone data, and run if given start point branch name exists (requires `--if-branch`)
+    /// Create a new branch, clone data, and run iff a single instance of the start point branch name exists (requires `--if-branch`)
     #[clap(long, requires = "if_branch")]
     pub else_if_branch: Option<BranchName>,
 

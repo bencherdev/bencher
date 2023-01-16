@@ -1,4 +1,4 @@
-use bencher_valid::{BranchName, Slug};
+use bencher_valid::{BranchName, ResourceId, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -26,6 +26,7 @@ static BRANCH_MAIN_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
 pub struct JsonNewBranch {
     pub name: BranchName,
     pub slug: Option<Slug>,
+    pub start_point: Option<ResourceId>,
 }
 
 impl JsonNewBranch {
@@ -33,6 +34,7 @@ impl JsonNewBranch {
         Self {
             name: BRANCH_MAIN.clone(),
             slug: BRANCH_MAIN_SLUG.clone(),
+            start_point: None,
         }
     }
 }

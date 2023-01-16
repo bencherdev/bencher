@@ -93,7 +93,11 @@ impl InsertBranch {
         project_id: i32,
         branch: JsonNewBranch,
     ) -> Self {
-        let JsonNewBranch { name, slug } = branch;
+        let JsonNewBranch {
+            name,
+            slug,
+            start_point,
+        } = branch;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
         Self {
             uuid: Uuid::new_v4().to_string(),

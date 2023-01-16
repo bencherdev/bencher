@@ -14,6 +14,7 @@ pub struct Create {
     pub project: ResourceId,
     pub name: BranchName,
     pub slug: Option<Slug>,
+    pub start_point: Option<ResourceId>,
     pub backend: Backend,
 }
 
@@ -25,12 +26,14 @@ impl TryFrom<CliBranchCreate> for Create {
             project,
             name,
             slug,
+            start_point,
             backend,
         } = create;
         Ok(Self {
             project,
             name,
             slug,
+            start_point,
             backend: backend.try_into()?,
         })
     }
@@ -38,8 +41,17 @@ impl TryFrom<CliBranchCreate> for Create {
 
 impl From<Create> for JsonNewBranch {
     fn from(create: Create) -> Self {
-        let Create { name, slug, .. } = create;
-        Self { name, slug }
+        let Create {
+            name,
+            slug,
+            start_point,
+            ..
+        } = create;
+        Self {
+            name,
+            slug,
+            start_point,
+        }
     }
 }
 
