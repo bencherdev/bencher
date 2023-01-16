@@ -1,0 +1,9 @@
+[target.'cfg(all())']
+rustflags = [
+    "-Wclippy::all",
+    "-Wclippy::pedantic",
+    "-Wclippy::cargo",
+    "-Wclippy::restriction",
+    # https://rust-lang.github.io/rust-clippy/master/
+    "-Aclippy::pub_use",
+]
