@@ -13,9 +13,13 @@ pub struct CliRun {
     #[clap(long)]
     pub branch: Option<ResourceId>,
 
-    /// Run if branch name exists (or set BENCHER_BRANCH_NAME)
-    #[clap(long, alias = "branch-name", conflicts_with = "branch")]
+    /// Run if branch name exists
+    #[clap(long, conflicts_with = "branch")]
     pub if_branch: Option<BranchName>,
+
+    /// Create a new branch if it does not exist (requires `--if-branch`)
+    #[clap(long, requires = "if_branch")]
+    pub else_branch: bool,
 
     /// Software commit hash
     #[clap(long)]

@@ -5,7 +5,7 @@ use bencher_json::{
     project::{
         branch::BRANCH_MAIN_STR, report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR,
     },
-    BranchName, GitHash, JsonBranch, JsonNewReport, JsonReport, ResourceId,
+    BranchName, GitHash, JsonBranch, JsonNewBranch, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::Utc;
 use clap::ValueEnum;
@@ -30,7 +30,6 @@ use crate::bencher::SubCmd;
 
 const BENCHER_PROJECT: &str = "BENCHER_PROJECT";
 const BENCHER_BRANCH: &str = "BENCHER_BRANCH";
-const BENCHER_BRANCH_NAME: &str = "BENCHER_BRANCH_NAME";
 const BENCHER_TESTBED: &str = "BENCHER_TESTBED";
 const BENCHER_ADAPTER: &str = "BENCHER_ADAPTER";
 const BENCHER_CMD: &str = "BENCHER_CMD";
@@ -53,7 +52,7 @@ pub struct Run {
 #[derive(Debug, Clone)]
 enum Branch {
     ResourceId(ResourceId),
-    Name(BranchName),
+    Name { name: BranchName, create: bool },
 }
 
 impl TryFrom<CliRun> for Run {
@@ -66,6 +65,7 @@ impl TryFrom<CliRun> for Run {
             command,
             branch,
             if_branch,
+            else_branch,
             hash,
             testbed,
             adapter,
@@ -78,7 +78,7 @@ impl TryFrom<CliRun> for Run {
             project: unwrap_project(project)?,
             locality: locality.try_into()?,
             runner: command.try_into()?,
-            branch: map_branch(branch, if_branch)?,
+            branch: map_branch(branch, if_branch, else_branch)?,
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
             adapter: map_adapter(adapter),
@@ -103,15 +103,17 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
 fn map_branch(
     branch: Option<ResourceId>,
     if_branch: Option<BranchName>,
+    else_branch: bool,
 ) -> Result<Branch, CliError> {
     Ok(if let Some(branch) = branch {
         Branch::ResourceId(branch)
     } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
         env_branch.as_str().parse().map(Branch::ResourceId)?
     } else if let Some(name) = if_branch {
-        Branch::Name(name)
-    } else if let Ok(env_name) = std::env::var(BENCHER_BRANCH_NAME) {
-        env_name.parse().map(Branch::Name)?
+        Branch::Name {
+            name,
+            create: else_branch,
+        }
     } else {
         BRANCH_MAIN_STR.parse().map(Branch::ResourceId)?
     })
@@ -154,8 +156,8 @@ impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
         let branch = match &self.branch {
             Branch::ResourceId(resource_id) => resource_id.clone(),
-            Branch::Name(name) => {
-                if let Some(uuid) = if_branch(&self.project, name.as_ref(), &self.locality).await? {
+            Branch::Name { name, create } => {
+                if let Some(uuid) = if_branch(&self.project, name, *create, &self.locality).await? {
                     uuid.into()
                 } else {
                     return Ok(());
@@ -214,12 +216,15 @@ impl SubCmd for Run {
 
 async fn if_branch(
     project: &ResourceId,
-    name: &str,
+    branch_name: &BranchName,
+    create: bool,
     locality: &Locality,
 ) -> Result<Option<Uuid>, CliError> {
     if let Locality::Backend(backend) = &locality {
         let value = backend
-            .get(&format!("/v0/projects/{project}/branches?name={name}"))
+            .get(&format!(
+                "/v0/projects/{project}/branches?name={branch_name}"
+            ))
             .await?;
         let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
         let branch_count = json_branches.len();
@@ -229,13 +234,40 @@ async fn if_branch(
             } else {
                 Err(CliError::BranchName(
                     project.to_string(),
-                    name.into(),
+                    branch_name.as_ref().into(),
                     branch_count,
                 ))
             };
         }
     }
 
-    cli_println!("Failed to find branch with name \"{name}\" in project \"{project}\". Skipping benchmark run.");
+    cli_println!("Failed to find branch with name \"{branch_name}\" in project \"{project}\". Skipping benchmark run.");
+
+    if create {
+        else_branch(project, branch_name, locality).await
+    } else {
+        Ok(None)
+    }
+}
+
+async fn else_branch(
+    project: &ResourceId,
+    branch_name: &BranchName,
+    locality: &Locality,
+) -> Result<Option<Uuid>, CliError> {
+    if let Locality::Backend(backend) = &locality {
+        let new_branch = JsonNewBranch {
+            name: branch_name.clone(),
+            slug: None,
+        };
+
+        let value = backend
+            .post(&format!("/v0/projects/{project}/branches"), &new_branch)
+            .await?;
+        let json_branch: JsonBranch = serde_json::from_value(value)?;
+        return Ok(Some(json_branch.uuid));
+    }
+
+    cli_println!("Failed to create new branch with name \"{branch_name}\" in project \"{project}\". Skipping benchmark run.");
     Ok(None)
 }
