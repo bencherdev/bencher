@@ -32,6 +32,11 @@ const DocsMenu = (props) => {
             {Page.GITHUB_ACTIONS}
           </Link>
         </li>
+        <li>
+          <Link href={getDocsPath(Section.HOW_TO, Page.GITLAB_CI)}>
+            {Page.GITLAB_CI}
+          </Link>
+        </li>
       </ul>
 
       <p class="menu-label">{Section.REFERENCE}</p>

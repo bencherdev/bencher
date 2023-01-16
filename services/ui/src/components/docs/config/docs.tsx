@@ -3,6 +3,7 @@ import QuickStart from "../pages/QuickStart.mdx";
 import Changelog from "../pages/Changelog.mdx";
 import PriorArt from "../pages/PriorArt.mdx";
 import GitHubActions from "../pages/GitHubActions.mdx";
+import GitLabCi from "../pages/GitLabCi.mdx";
 
 const docsConfig = {
   [Page.QUICK_START]: {
@@ -19,6 +20,14 @@ const docsConfig = {
     page: {
       heading: "How to use Bencher in GitHub Actions",
       content: <GitHubActions />,
+    },
+  },
+  [Page.GITLAB_CI]: {
+    kind: Page.GITLAB_CI,
+    title: "GitLab CI",
+    page: {
+      heading: "How to use Bencher in GitLab CI/CD",
+      content: <GitLabCi />,
     },
   },
   [Page.API_V0]: {
