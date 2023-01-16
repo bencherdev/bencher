@@ -14,7 +14,7 @@ pub struct CliRun {
     pub branch: Option<ResourceId>,
 
     /// Run iff a single instance of the branch name exists
-    #[clap(long, conflicts_with = "branch")]
+    #[clap(long, conflicts_with = "branch", conflicts_with = "local")]
     pub if_branch: Option<BranchName>,
 
     /// Create a new branch, clone data, and run iff a single instance of the start point branch name exists (requires `--if-branch`)

@@ -143,10 +143,11 @@ pub async fn post(
 async fn post_inner(
     context: &Context,
     path_params: DirPath,
-    json_branch: JsonNewBranch,
+    mut json_branch: JsonNewBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;
+    let start_point = json_branch.start_point.take();
     let insert_branch =
         InsertBranch::from_json(&mut api_context.database, &path_params.project, json_branch)?;
     // Verify that the user is allowed
@@ -162,6 +163,9 @@ async fn post_inner(
         .values(&insert_branch)
         .execute(conn)
         .map_err(api_error!())?;
+
+    // TODO clone the data from the start point for this branch
+    if let Some(start_point) = start_point {}
 
     schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))

@@ -240,43 +240,44 @@ async fn if_branch(
     create: bool,
     locality: &Locality,
 ) -> Result<Option<Uuid>, CliError> {
-    if let Locality::Backend(backend) = &locality {
-        let branch = get_branch(project, branch_name, backend).await?;
+    let Locality::Backend(backend) = &locality else {
+        return  Ok(None);
+    };
+
+    let branch = get_branch(project, branch_name, backend).await?;
+
+    if branch.is_some() {
+        return Ok(branch);
+    }
+
+    cli_println!("Failed to find branch with name \"{branch_name}\" in project \"{project}\".");
+
+    if let Some(start_point) = start_point {
+        let branch = if let Some(start_point) = get_branch(project, start_point, backend).await? {
+            create_branch(project, branch_name, Some(start_point.into()), backend).await?
+        } else {
+            None
+        };
 
         if branch.is_some() {
             return Ok(branch);
         }
-    }
 
-    cli_println!("Failed to find branch with name \"{branch_name}\" in project \"{project}\". Skipping benchmark run.");
+        cli_println!("Failed to find start point \"{start_point}\" for \"{branch_name}\" in project \"{project}\".");
+    }
 
     if create {
-        else_branch(project, branch_name, locality).await
-    } else {
-        Ok(None)
-    }
-}
+        let branch = create_branch(project, branch_name, None, backend).await?;
 
-async fn else_branch(
-    project: &ResourceId,
-    branch_name: &BranchName,
-    locality: &Locality,
-) -> Result<Option<Uuid>, CliError> {
-    if let Locality::Backend(backend) = &locality {
-        let new_branch = JsonNewBranch {
-            name: branch_name.clone(),
-            start_point: None,
-            slug: None,
-        };
+        if branch.is_some() {
+            return Ok(branch);
+        }
 
-        let value = backend
-            .post(&format!("/v0/projects/{project}/branches"), &new_branch)
-            .await?;
-        let json_branch: JsonBranch = serde_json::from_value(value)?;
-        return Ok(Some(json_branch.uuid));
+        cli_println!(
+            "Failed to create new branch with name \"{branch_name}\" in project \"{project}\"."
+        );
     }
 
-    cli_println!("Failed to create new branch with name \"{branch_name}\" in project \"{project}\". Skipping benchmark run.");
     Ok(None)
 }
 
@@ -305,4 +306,24 @@ async fn get_branch(
     } else {
         Ok(None)
     }
+}
+
+async fn create_branch(
+    project: &ResourceId,
+    branch_name: &BranchName,
+    start_point: Option<ResourceId>,
+    backend: &Backend,
+) -> Result<Option<Uuid>, CliError> {
+    let new_branch = JsonNewBranch {
+        name: branch_name.clone(),
+        start_point,
+        slug: None,
+    };
+
+    let value = backend
+        .post(&format!("/v0/projects/{project}/branches"), &new_branch)
+        .await?;
+    let json_branch: JsonBranch = serde_json::from_value(value)?;
+
+    Ok(Some(json_branch.uuid))
 }
