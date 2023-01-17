@@ -27,6 +27,10 @@ const DocsRoutes = (props) => {
         element={<DocsPage config={config[Page.GITLAB_CI]} />}
       />
       <Route
+        path="/how-to/branch-management"
+        element={<DocsPage config={config[Page.BRANCH_MANAGEMENT]} />}
+      />
+      <Route
         path="/reference"
         element={<Navigate href="/docs/reference/api" />}
       />

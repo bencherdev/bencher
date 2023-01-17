@@ -37,6 +37,11 @@ const DocsMenu = (props) => {
             {Page.GITLAB_CI}
           </Link>
         </li>
+        <li>
+          <Link href={getDocsPath(Section.HOW_TO, Page.BRANCH_MANAGEMENT)}>
+            {Page.BRANCH_MANAGEMENT}
+          </Link>
+        </li>
       </ul>
 
       <p class="menu-label">{Section.REFERENCE}</p>

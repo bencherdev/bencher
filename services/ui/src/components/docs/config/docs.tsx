@@ -4,6 +4,7 @@ import Changelog from "../pages/Changelog.mdx";
 import PriorArt from "../pages/PriorArt.mdx";
 import GitHubActions from "../pages/GitHubActions.mdx";
 import GitLabCi from "../pages/GitLabCi.mdx";
+import BranchManagement from "../pages/BranchManagement.mdx";
 
 const docsConfig = {
   [Page.QUICK_START]: {
@@ -28,6 +29,14 @@ const docsConfig = {
     page: {
       heading: "How to use Bencher in GitLab CI/CD",
       content: <GitLabCi />,
+    },
+  },
+  [Page.BRANCH_MANAGEMENT]: {
+    kind: Page.BRANCH_MANAGEMENT,
+    title: "Branch Management",
+    page: {
+      heading: "How to manage branches",
+      content: <BranchManagement />,
     },
   },
   [Page.API_V0]: {

@@ -14,7 +14,7 @@ import { BENCHER_VERSION } from "../../site/util";
       - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
       - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
     script:
-      - bencher run --if-branch $GITHUB_REF_NAME --err "cargo bench"`}
+      - bencher run --if-branch $CI_COMMIT_REF_NAME --err "cargo bench"`}
   </code>
 </pre>
 
@@ -23,10 +23,10 @@ import { BENCHER_VERSION } from "../../site/util";
 1. The Bencher project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
 1. There are a couple of options for setting the project branch:
    - The project branch must already exist. Set the `--branch` flag or the `BENCHER_BRANCH` environment variable to the branch slug or UUID. (ex: `BENCHER_BRANCH: main`)
-   - **If and only if** the project branch exists, then the benchmarks will be run. Set the `--if-branch` flag. The [GitHub Actions default environment variable](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) `GITHUB_REF_NAME` is a good choice. (ex: `--if-branch $GITHUB_REF_NAME`)
+   - **If and only if** the project branch exists, then the benchmarks will be run. Set the `--if-branch` flag. The [GitLab predefined variable](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) `CI_COMMIT_REF_NAME` is a good choice. (ex: `--if-branch $CI_COMMIT_REF_NAME`)
 1. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: rust-1-66-bullseye`)
 1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` adapter will be used. (ex: `BENCHER_ADAPTER: rust`)
-1. Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
+1. Add `BENCHER_API_TOKEN` to your project's CI/CD secrets, under `Settings -> CI / CD -> Variables -> Add Variable`
 1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Optional: Create an environment variable to make it easy to keep track the CLI version being used (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Install the Bencher CLI from a `.deb`
