@@ -11,6 +11,7 @@ import { is_valid_slug } from "bencher_valid";
 import { get_options, post_options, validate_string } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
+import { createStore } from "solid-js/store";
 
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
@@ -233,9 +234,9 @@ const PerfPanel = (props) => {
   });
 
   // Initialize as empty, wait for resources to load
-  const [branches_tab, setBranchesTab] = createSignal([]);
-  const [testbeds_tab, setTestbedsTab] = createSignal([]);
-  const [benchmarks_tab, setBenchmarksTab] = createSignal([]);
+  const [branches_tab, setBranchesTab] = createStore([]);
+  const [testbeds_tab, setTestbedsTab] = createStore([]);
+  const [benchmarks_tab, setBenchmarksTab] = createStore([]);
 
   // Keep state on whether the resources have been refreshed
   const [tabular_refresh, setTabularRefresh] = createSignal();
@@ -265,8 +266,7 @@ const PerfPanel = (props) => {
     param_array: string[],
     uuid: string
   ) => {
-    const tab = resource_tab;
-    const checked = tab?.[index].checked;
+    const checked = resource_tab?.[index].checked;
     if (typeof checked !== "boolean") {
       return;
     }
@@ -279,30 +279,16 @@ const PerfPanel = (props) => {
         [param]: arrayToString(addToArray(param_array, uuid)),
       });
     }
-    tab[index].checked = !checked;
-    return tab;
   };
 
   const handleBranchChecked = (index: number, uuid: string) => {
-    setBranchesTab(
-      handleChecked(branches_tab(), index, BRANCHES_PARAM, branches(), uuid)
-    );
+    handleChecked(branches_tab, index, BRANCHES_PARAM, branches(), uuid);
   };
   const handleTestbedChecked = (index: number, uuid: string) => {
-    setTestbedsTab(
-      handleChecked(testbeds_tab(), index, TESTBEDS_PARAM, testbeds(), uuid)
-    );
+    handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds(), uuid);
   };
   const handleBenchmarkChecked = (index: number, uuid: string) => {
-    setBenchmarksTab(
-      handleChecked(
-        benchmarks_tab(),
-        index,
-        BENCHMARKS_PARAM,
-        benchmarks(),
-        uuid
-      )
-    );
+    handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks(), uuid);
   };
 
   const handleMetricKind = (metric_kind: string) => {

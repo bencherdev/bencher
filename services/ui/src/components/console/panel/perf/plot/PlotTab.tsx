@@ -9,11 +9,11 @@ const PlotTab = (props) => {
   const getTab = () => {
     switch (props.tab()) {
       case PerfTab.BRANCHES:
-        return props.branches_tab();
+        return props.branches_tab;
       case PerfTab.TESTBEDS:
-        return props.testbeds_tab();
+        return props.testbeds_tab;
       case PerfTab.BENCHMARKS:
-        return props.benchmarks_tab();
+        return props.benchmarks_tab;
       default:
         return [];
     }

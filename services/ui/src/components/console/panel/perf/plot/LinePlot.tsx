@@ -76,7 +76,7 @@ const LinePlot = (props) => {
       nice: true,
       // https://github.com/observablehq/plot/blob/main/README.md#layout-options
       // For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-      marginLeft: max_units() * 10,
+      marginLeft: max_units() * 10 + 10,
     });
   };
 
