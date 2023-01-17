@@ -3,6 +3,7 @@ use clap::{Args, Parser, ValueEnum};
 
 use crate::cli::CliLocality;
 
+#[allow(clippy::option_option, clippy::struct_excessive_bools)]
 #[derive(Parser, Debug)]
 pub struct CliRun {
     /// Project slug or UUID (or set BENCHER_PROJECT)

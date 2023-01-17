@@ -107,6 +107,7 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
     })
 }
 
+#[allow(clippy::option_option)]
 fn map_branch(
     branch: Option<ResourceId>,
     if_branch: Option<Option<BranchName>>,
