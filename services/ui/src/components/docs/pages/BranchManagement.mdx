@@ -1,5 +1,9 @@
 There are a few options for setting the project branch in the `bencher` CLI `run` command (ie: `bencher run`).
 
+### `--branch`
+
+<br />
+
 The simplest is to set the `--branch` flag or the `BENCHER_BRANCH` environment variable to the branch slug or UUID of an already existing branch.
 
 However, if both of these are missing or the provided value is invalid, then the `bencher run` command will error. This is not the most convient in CI/CD environments, where new branches are popping up all the time. Instead of using `--branch` or the `BENCHER_BRANCH` environment variable, there is an `--if-branch` flag.
