@@ -38,6 +38,18 @@ It is also possible to chain all three flags together: `--if-branch`, `--else-if
 
 If the `--if-branch` query succeededs then `--else-branch` is never run, and likewise, if `--if-else-branch` succeeds then `--else-branch` is never run. And `--else-branch` is expected to always succeed and exit successfully.
 
+### `--endif-branch`
+
+<br />
+
+In CI environments, it is very common to get the branch name from a CI host provided environment variable. For example `GITHUB_REF_NAME` in GitHub Actions or `CI_COMMIT_REF_NAME` in GitLab CI. However, sometimes these environemnt variables are empty. The `--endif-branch` flag works as an optional noop flag to prevent a failure in some cases.
+
+For example if `EMPTY_ENV_VAR` is an empty environment variable, then using `--if-branch $EMPTY_ENV_VAR` may or may not error depending on what other flags are after it. Using `--endif-branch` guarantees that the command will exit successfully, `--if-branch $EMPTY_ENV_VAR --endif-branch`.
+
+It is also possible to chain all three flags together: `--if-branch`, `--else-if-branch`, and `--endif-branch`. For example, `--if-branch feature_branch --else-if-branch $EMPTY_ENV_VAR --endif-branch`.
+
+It should never be necessary to use both `--else-branch` and `--endif-branch` together, as using `--else-branch` after `--if-branch` or `--else-if-branch` also accomplishes the same goal.
+
 <br />
 
 > 🐰 Note: The `--branch` flag conflicts with the `--if-branch` flag, but the `BENCHER_BRANCH` environment variable takes precident over the `--if-branch` flag.

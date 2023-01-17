@@ -57,6 +57,7 @@ enum Branch {
         start_point: Option<BranchName>,
         create: bool,
     },
+    None,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -71,6 +72,7 @@ impl TryFrom<CliRun> for Run {
             if_branch,
             else_if_branch,
             else_branch,
+            endif_branch,
             hash,
             testbed,
             adapter,
@@ -83,7 +85,7 @@ impl TryFrom<CliRun> for Run {
             project: unwrap_project(project)?,
             locality: locality.try_into()?,
             runner: command.try_into()?,
-            branch: map_branch(branch, if_branch, else_if_branch, else_branch)?,
+            branch: map_branch(branch, if_branch, else_if_branch, else_branch, endif_branch)?,
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
             adapter: map_adapter(adapter),
@@ -107,19 +109,32 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
 
 fn map_branch(
     branch: Option<ResourceId>,
-    if_branch: Option<BranchName>,
-    else_if_branch: Option<BranchName>,
+    if_branch: Option<Option<BranchName>>,
+    else_if_branch: Option<Option<BranchName>>,
     else_branch: bool,
+    _endif_branch: bool,
 ) -> Result<Branch, CliError> {
     Ok(if let Some(branch) = branch {
         Branch::ResourceId(branch)
     } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
         env_branch.as_str().parse().map(Branch::ResourceId)?
-    } else if let Some(name) = if_branch {
-        Branch::Name {
-            name,
-            start_point: else_if_branch,
-            create: else_branch,
+    } else if let Some(branch_name) = if_branch {
+        if let Some(name) = branch_name {
+            let start_point = match else_if_branch {
+                Some(Some(start_point)) => Some(start_point),
+                Some(None) => {
+                    cli_println!("Failed to get start point branch name. Continuing with run.");
+                    None
+                },
+                None => None,
+            };
+            Branch::Name {
+                name,
+                start_point,
+                create: else_branch,
+            }
+        } else {
+            Branch::None
         }
     } else {
         BRANCH_MAIN_STR.parse().map(Branch::ResourceId)?
@@ -161,30 +176,8 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
-        let branch = match &self.branch {
-            Branch::ResourceId(resource_id) => resource_id.clone(),
-            Branch::Name {
-                name,
-                start_point,
-                create,
-            } => {
-                if let Some(uuid) = if_branch(
-                    &self.project,
-                    name,
-                    start_point.as_ref(),
-                    *create,
-                    &self.locality,
-                )
-                .await?
-                {
-                    uuid.into()
-                } else {
-                    cli_println!(
-                        "Failed to find or create branch \"{name}\". Skipping benchmark run."
-                    );
-                    return Ok(());
-                }
-            },
+        let Some(branch) = branch_resource_id(&self.project, &self.branch, &self.locality).await? else {
+            return Ok(())
         };
 
         let start_time = Utc::now();
@@ -234,6 +227,34 @@ impl SubCmd for Run {
 
         Ok(())
     }
+}
+
+async fn branch_resource_id(
+    project: &ResourceId,
+    branch: &Branch,
+    locality: &Locality,
+) -> Result<Option<ResourceId>, CliError> {
+    Ok(match branch {
+        Branch::ResourceId(resource_id) => Some(resource_id.clone()),
+        Branch::Name {
+            name,
+            start_point,
+            create,
+        } => {
+            if let Some(uuid) =
+                if_branch(project, name, start_point.as_ref(), *create, locality).await?
+            {
+                Some(uuid.into())
+            } else {
+                cli_println!("Failed to find or create branch \"{name}\". Skipping benchmark run.");
+                None
+            }
+        },
+        Branch::None => {
+            cli_println!("Failed to get branch name. Skipping benchmark run.");
+            None
+        },
+    })
 }
 
 async fn if_branch(
