@@ -12,8 +12,12 @@ use uuid::Uuid;
 
 use super::{testbed::QueryTestbed, version::QueryVersion};
 use crate::{
-    error::api_error, model::user::QueryUser, schema, schema::report as report_table,
-    util::error::database_map, ApiError,
+    error::api_error,
+    model::user::QueryUser,
+    schema,
+    schema::report as report_table,
+    util::{error::database_map, query::fn_get_id},
+    ApiError,
 };
 
 pub mod results;
@@ -31,6 +35,8 @@ pub struct QueryReport {
 }
 
 impl QueryReport {
+    fn_get_id!(report);
+
     pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::report::table
             .filter(schema::report::id.eq(id))

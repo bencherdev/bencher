@@ -179,6 +179,9 @@ impl SubCmd for Run {
                 {
                     uuid.into()
                 } else {
+                    cli_println!(
+                        "Failed to find or create branch \"{name}\". Skipping benchmark run."
+                    );
                     return Ok(());
                 }
             },
