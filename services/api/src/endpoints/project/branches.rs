@@ -165,7 +165,9 @@ async fn post_inner(
         .map_err(api_error!())?;
 
     // TODO clone the data from the start point for this branch
-    if let Some(start_point) = start_point {}
+    if let Some(start_point) = &start_point {
+        insert_branch.start_point(conn, start_point)?;
+    }
 
     schema::branch::table
         .filter(schema::branch::uuid.eq(&insert_branch.uuid))

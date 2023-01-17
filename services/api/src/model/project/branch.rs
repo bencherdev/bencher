@@ -4,7 +4,13 @@ use bencher_json::{BranchName, JsonBranch, JsonNewBranch, ResourceId, Slug};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
-use super::QueryProject;
+use super::{
+    metric::{InsertMetric, QueryMetric},
+    perf::{InsertPerf, QueryPerf},
+    report::{InsertReport, QueryReport},
+    version::{InsertVersion, QueryVersion},
+    QueryProject,
+};
 use crate::{
     error::api_error,
     schema,
@@ -102,4 +108,166 @@ impl InsertBranch {
             slug,
         }
     }
+
+    pub fn start_point(
+        &self,
+        conn: &mut SqliteConnection,
+        start_point: &ResourceId,
+    ) -> Result<(), ApiError> {
+        let branch = QueryBranch::from_resource_id(conn, self.project_id, start_point)?;
+        let new_branch_id = QueryBranch::get_id(conn, &self.uuid)?;
+
+        start_point_versions(conn, branch.id, new_branch_id)
+    }
+}
+
+fn start_point_versions(
+    conn: &mut SqliteConnection,
+    start_point_branch_id: i32,
+    new_branch_id: i32,
+) -> Result<(), ApiError> {
+    // Get all versions for the start point
+    let versions = schema::version::table
+        .filter(schema::version::branch_id.eq(start_point_branch_id))
+        .load::<QueryVersion>(conn)?;
+
+    for version in versions {
+        let new_version_uuid = Uuid::new_v4();
+        let insert_version = InsertVersion {
+            uuid: new_version_uuid.to_string(),
+            branch_id: new_branch_id,
+            number: version.number,
+            hash: version.hash,
+        };
+
+        diesel::insert_into(schema::version::table)
+            .values(&insert_version)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        let new_version_id = QueryVersion::get_id(conn, &new_version_uuid)?;
+
+        start_point_reports(conn, version.id, new_version_id)?;
+    }
+    Ok(())
+}
+
+fn start_point_reports(
+    conn: &mut SqliteConnection,
+    start_point_version_id: i32,
+    new_version_id: i32,
+) -> Result<(), ApiError> {
+    // Get all the reports for the start point version
+    let reports = schema::report::table
+        .filter(schema::report::version_id.eq(start_point_version_id))
+        .load::<QueryReport>(conn)?;
+
+    for report in reports {
+        let QueryReport {
+            user_id,
+            testbed_id,
+            adapter,
+            start_time,
+            end_time,
+            ..
+        } = report;
+
+        let new_report_uuid = Uuid::new_v4();
+        let insert_report = InsertReport {
+            uuid: new_report_uuid.to_string(),
+            user_id,
+            version_id: new_version_id,
+            testbed_id,
+            adapter,
+            start_time,
+            end_time,
+        };
+
+        diesel::insert_into(schema::report::table)
+            .values(&insert_report)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        let new_report_id = QueryReport::get_id(conn, &new_report_uuid)?;
+
+        start_point_perfs(conn, report.id, new_report_id)?;
+    }
+
+    Ok(())
+}
+
+fn start_point_perfs(
+    conn: &mut SqliteConnection,
+    start_point_report_id: i32,
+    new_report_id: i32,
+) -> Result<(), ApiError> {
+    // Get all perfs for the start point report
+    let perfs = schema::perf::table
+        .filter(schema::perf::report_id.eq(start_point_report_id))
+        .load::<QueryPerf>(conn)?;
+
+    for perf in perfs {
+        let QueryPerf {
+            iteration,
+            benchmark_id,
+            ..
+        } = perf;
+
+        let new_perf_uuid = Uuid::new_v4();
+        let insert_perf = InsertPerf {
+            uuid: new_perf_uuid.to_string(),
+            report_id: new_report_id,
+            iteration,
+            benchmark_id,
+        };
+
+        diesel::insert_into(schema::perf::table)
+            .values(&insert_perf)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        let new_perf_id = QueryPerf::get_id(conn, &new_perf_uuid)?;
+
+        start_point_metrics(conn, perf.id, new_perf_id)?;
+    }
+
+    Ok(())
+}
+
+fn start_point_metrics(
+    conn: &mut SqliteConnection,
+    start_point_perf_id: i32,
+    new_perf_id: i32,
+) -> Result<(), ApiError> {
+    // Get all metrics for the start point perf
+    let metrics = schema::metric::table
+        .filter(schema::metric::perf_id.eq(start_point_perf_id))
+        .load::<QueryMetric>(conn)?;
+
+    for metric in metrics {
+        let QueryMetric {
+            metric_kind_id,
+            value,
+            lower_bound,
+            upper_bound,
+            ..
+        } = metric;
+
+        let new_metric_uuid = Uuid::new_v4();
+        let insert_metric = InsertMetric {
+            uuid: new_metric_uuid.to_string(),
+            perf_id: new_perf_id,
+            metric_kind_id,
+            value,
+            lower_bound,
+            upper_bound,
+        };
+
+        diesel::insert_into(schema::metric::table)
+            .values(&insert_metric)
+            .execute(conn)
+            .map_err(api_error!())?;
+    }
+
+    Ok(())
 }
