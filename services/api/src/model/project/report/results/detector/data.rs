@@ -41,7 +41,13 @@ impl MetricsData {
             .left_join(
                 schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
             )
-            .left_join(schema::branch::table.on(schema::version::branch_id.eq(schema::branch::id)))
+            .left_join(
+                schema::branch_version::table
+                    .on(schema::version::id.eq(schema::branch_version::version_id)),
+            )
+            .left_join(
+                schema::branch::table.on(schema::branch_version::branch_id.eq(schema::branch::id)),
+            )
             .filter(schema::branch::id.eq(branch_id))
             .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
             .filter(schema::metric::metric_kind_id.eq(metric_kind_id))

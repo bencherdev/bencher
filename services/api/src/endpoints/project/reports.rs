@@ -175,11 +175,13 @@ async fn post_inner(
     // Otherwise, create a new code version for this branch with/without the hash.
     let version_id = if let Some(hash) = &json_report.hash {
         if let Ok(version_id) = schema::version::table
-            .filter(
-                schema::version::branch_id
-                    .eq(branch_id)
-                    .and(schema::version::hash.eq(hash.as_ref())),
+            .left_join(
+                schema::branch_version::table
+                    .on(schema::version::id.eq(schema::branch_version::version_id)),
             )
+            .filter(schema::branch_version::branch_id.eq(branch_id))
+            .filter(schema::version::hash.eq(hash.as_ref()))
+            .order(schema::version::number.desc())
             .select(schema::version::id)
             .first::<i32>(conn)
         {

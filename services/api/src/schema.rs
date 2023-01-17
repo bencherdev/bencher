@@ -33,6 +33,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    branch_version (id) {
+        id -> Integer,
+        branch_id -> Integer,
+        version_id -> Integer,
+    }
+}
+
+diesel::table! {
     metric (id) {
         id -> Integer,
         uuid -> Text,
@@ -179,7 +187,6 @@ diesel::table! {
     version (id) {
         id -> Integer,
         uuid -> Text,
-        branch_id -> Integer,
         number -> Integer,
         hash -> Nullable<Text>,
     }
@@ -190,6 +197,8 @@ diesel::joinable!(alert -> statistic (statistic_id));
 diesel::joinable!(alert -> threshold (threshold_id));
 diesel::joinable!(benchmark -> project (project_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(branch_version -> branch (branch_id));
+diesel::joinable!(branch_version -> version (version_id));
 diesel::joinable!(metric -> metric_kind (metric_kind_id));
 diesel::joinable!(metric -> perf (perf_id));
 diesel::joinable!(metric_kind -> project (project_id));
@@ -209,12 +218,12 @@ diesel::joinable!(threshold -> metric_kind (metric_kind_id));
 diesel::joinable!(threshold -> statistic (statistic_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));
-diesel::joinable!(version -> branch (branch_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     alert,
     benchmark,
     branch,
+    branch_version,
     metric,
     metric_kind,
     organization,

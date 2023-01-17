@@ -224,7 +224,11 @@ fn perf_query(
 
     let metrics = query
         .inner_join(schema::version::table.on(schema::report::version_id.eq(schema::version::id)))
-        .filter(schema::version::branch_id.eq(branch_id))
+        .left_join(
+            schema::branch_version::table
+                .on(schema::version::id.eq(schema::branch_version::version_id)),
+        )
+        .filter(schema::branch_version::branch_id.eq(branch_id))
         .filter(schema::report::testbed_id.eq(testbed_id))
         .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
