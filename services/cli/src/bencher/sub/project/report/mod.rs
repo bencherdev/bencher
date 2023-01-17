@@ -9,7 +9,7 @@ mod view;
 #[derive(Debug)]
 pub enum Report {
     List(list::List),
-    Create(Create),
+    Create(Box<Create>),
     View(view::View),
 }
 
@@ -19,7 +19,7 @@ impl TryFrom<CliReport> for Report {
     fn try_from(report: CliReport) -> Result<Self, Self::Error> {
         Ok(match report {
             CliReport::List(list) => Self::List(list.try_into()?),
-            CliReport::Create(create) => Self::Create(create.try_into()?),
+            CliReport::Create(create) => Self::Create(Box::new((*create).try_into()?)),
             CliReport::View(view) => Self::View(view.try_into()?),
         })
     }

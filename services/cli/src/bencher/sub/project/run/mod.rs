@@ -256,24 +256,25 @@ async fn if_branch(
     cli_println!("Failed to find branch with name \"{branch_name}\" in project \"{project}\".");
 
     if let Some(start_point) = start_point {
-        let branch = if let Some(start_point) = get_branch(project, start_point, backend).await? {
-            create_branch(project, branch_name, Some(start_point.into()), backend).await?
-        } else {
-            None
-        };
+        let new_branch =
+            if let Some(start_point) = get_branch(project, start_point, backend).await? {
+                create_branch(project, branch_name, Some(start_point.into()), backend).await?
+            } else {
+                None
+            };
 
-        if branch.is_some() {
-            return Ok(branch);
+        if new_branch.is_some() {
+            return Ok(new_branch);
         }
 
         cli_println!("Failed to find start point \"{start_point}\" for \"{branch_name}\" in project \"{project}\".");
     }
 
     if create {
-        let branch = create_branch(project, branch_name, None, backend).await?;
+        let new_branch = create_branch(project, branch_name, None, backend).await?;
 
-        if branch.is_some() {
-            return Ok(branch);
+        if new_branch.is_some() {
+            return Ok(new_branch);
         }
 
         cli_println!(

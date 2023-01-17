@@ -12,7 +12,7 @@ pub enum CliReport {
     List(CliReportList),
     /// Create a report (alias to `bencher run`)
     #[clap(alias = "add")]
-    Create(CliRun),
+    Create(Box<CliRun>),
     /// View a report
     View(CliReportView),
 }
