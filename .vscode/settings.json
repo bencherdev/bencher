@@ -7,8 +7,8 @@
   "editor.formatOnSave": true,
   "rust-analyzer.cargo.features": [],
   "rust-analyzer.imports.granularity.group": "crate",
-  "rust-analyzer.checkOnSave.command": "clippy",
-  "rust-analyzer.checkOnSave.allTargets": false,
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.allTargets": false,
   "sqltools.connections": [
     {
       "previewLimit": 50,
