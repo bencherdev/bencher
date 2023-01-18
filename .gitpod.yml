@@ -29,15 +29,16 @@ vscode:
 # Commands to start on workspace startup
 tasks:
   - name: General Setup
-    before: ./scripts/init.sh
-    init: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-    command: ./scripts/setup.sh
+    command: ./scripts/start.sh
   - name: API Setup
-    before: cd services/api
-    command: ../../scripts/start_api.sh
+    before: ./scripts/start_api.sh
+    init: ./scripts/wasm_pack.sh
+    command: |
+      cd services/api
+      cargo run
   - name: CLI Setup
     before: cd services/cli
-    command: ../../scripts/start_cli.sh
+    command: source ../../scripts/start_cli.sh
   - name: UI Setup
     before: cd services/ui
     command: ../../scripts/start_ui.sh
