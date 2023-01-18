@@ -14,6 +14,9 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/ho
 
 - How To
   - [Quick Start](https://bencher.dev/docs/how-to/quick-start)
+  - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions)
+  - [GitLab CI](https://bencher.dev/docs/how-to/gitlab-ci)
+  - [Branch Management](https://bencher.dev/docs/how-to/branch-management)
 - Reference
   - [API](https://bencher.dev/docs/reference/api/v0)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art)

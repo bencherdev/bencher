@@ -2,4 +2,4 @@
 
 Contact a maintainer:
 
-- [Everett Pompeii](epompeii@protonmail.com)
+- Everett Pompeii: [first name] AT [repo name] DOT dev
