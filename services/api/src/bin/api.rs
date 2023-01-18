@@ -15,6 +15,7 @@ async fn main() -> Result<(), ApiError> {
 // So if the `SWAGGER_PATH` below is ever updated
 // also update `./git/hooks/pre-push` accordingly.
 #[cfg(feature = "swagger")]
+#[allow(clippy::unused_async)]
 async fn run() -> Result<(), ApiError> {
     use std::fs::File;
     use tracing::trace;

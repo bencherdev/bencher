@@ -63,7 +63,7 @@ impl SubCmd for Docs {
             Fmt::Man => {
                 let cmd = CliBencher::command();
                 let man = clap_mangen::Man::new(cmd);
-                let mut buffer: Vec<u8> = Default::default();
+                let mut buffer = Vec::default();
                 man.render(&mut buffer)?;
 
                 let mut path = self.path.clone();
