@@ -1,227 +1,227 @@
 const termsPage = {
-  title: "Website Terms of Use - Bencher",
-  heading: "Bencher Website Terms of Use",
-  content: (
-    <div>
-      <h2>
-        PLEASE READ THIS AGREEMENT CAREFULLY BEFORE ACCESSING OR USING THE
-        WEBSITE. BY ACCESSING OR USING ANY PART OF THE WEBSITE, YOU AGREE TO BE
-        BOUND BY THE TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE
-        TO THE TERMS AND CONDITIONS OF THIS AGREEMENT, THEN YOU MAY NOT ACCESS
-        THE WEBSITE. THE WEBSITE IS AVAILABLE ONLY TO INDIVIDUALS WHO ARE AT
-        LEAST 13 YEARS OLD.
-      </h2>
-      <p>
-        Bencher's products and services are provided by Pompeii LLC (“we”,
-        “our”, or “us”). These Website Terms of Use (the “Agreement”) govern all
-        use of the bencher.dev website, or other website(s) owned and operated
-        by Pompeii LLC (the “Website”). The Website is offered subject to your
-        acceptance, without modification, to the terms and conditions contained
-        herein as updated subject to this Agreement. For the avoidance of doubt,
-        this Agreement does not control or govern your use of the Bencher
-        products and services. Please visit the{" "}
-        <a href="/legal">Bencher Legal Page</a> to see the applicable
-        agreement(s) related to your use of Bencher products and services.
-      </p>
-      <ol>
-        <li>
-          Website Eligibility.
-          <ol>
-            <li>
-              The Website, and Content (as defined herein) provided on the
-              Website by Bencher, is provided only to entities and persons over
-              the age of 13.
-            </li>
-          </ol>
-        </li>
-        <li>
-          License and Ownership.
-          <ol>
-            <li>
-              Bencher grants to you a limited, personal, non-transferable,
-              non-sublicensable, revocable license to access and use the
-              Website, including Content provided within the Website, in the
-              manner presented by Bencher.
-            </li>
-            <li>
-              Ownership, right and title of all Content provided on the Website
-              shall remain with Bencher (as applicable) at all times. This
-              Agreement does not transfer any Bencher, or third party
-              intellectual property, to you.
-            </li>
-            <li>
-              Your use of the Website grants you no right or license to
-              reproduce or otherwise use any Bencher or third-party trademarks.
-            </li>
-          </ol>
-        </li>
-        <li>
-          Responsibility of Website Visitors.
-          <ol>
-            <li>
-              Bencher has not reviewed, and cannot review, all of the materials,
-              website links (including to third party websites) and content
-              posted on the Website (collectively referred to as the “Content”).
-              Therefore, Bencher cannot and will not be responsible for the
-              Content or their effect(s). By operating the Website, Bencher does
-              not represent or imply that it endorses the Content provided or
-              that it believes such Content to be accurate, useful or
-              non-harmful. You are responsible for taking precautions as
-              necessary to protect yourself and your computer systems from
-              viruses, worms, Trojan horses, and other harmful or destructive
-              Content. Bencher disclaims any responsibility for any harm
-              resulting from the use by visitors of the Website, or from any
-              downloading by those visitors of Content posted on the Website.
-              The Website is provided “AS IS” and Bencher and its affiliates,
-              suppliers and licensors hereby disclaim all warranties of any
-              kind, express or implied, including, without limitation, the
-              warranties of merchantability, fitness for a particular purpose
-              and non-infringement. Neither Bencher nor its suppliers or
-              licensors, makes any warranty that the Website will be error free
-              or that access thereto will be continuous or uninterrupted.
-            </li>
-            <li>
-              By accepting this Agreement, you agree not to use, or facilitate
-              others to use, the Website in a way that is harmful to others or
-              overburdens or otherwise impairs the Website. Examples of such use
-              include, without limitation: Engaging in illegal or fraudulent
-              activities; Infringing a third party's intellectual property
-              rights; Distributing harmful or offensive Content that is
-              defamatory, obscene, abusive, an invasion of privacy or harassing;
-              The distribution of malicious/commercial spam; Violating the
-              security or integrity of any computer, network or communications
-              system; Using the Website to mine or demonstrate proof-of-work for
-              a cryptocurrency or blockchain; or Using any process or device
-              (automated or otherwise) to retrieve, index, "data mine",
-              "scrape", or in any way reproduce the presentation of this website
-              or its Content, unless otherwise permitted under applicable
-              content licensing permissions.
-            </li>
-          </ol>
-        </li>
-        <li>
-          DMCA and Privacy Policies
-          <ol>
-            <li>
-              As Bencher asks others to respect its intellectual property
-              rights, it respects the intellectual property rights of others. If
-              you believe that Content located on or linked to the Website
-              violates your copyright, you are encouraged to{" "}
-              <a href="mailto:legal@bencher.dev">contact us</a>.
-            </li>
-            <li>
-              Your use of the Website is subject to the{" "}
-              <a href="/legal/privacy">Bencher Privacy Policy</a>, which is
-              incorporated herein by reference.
-            </li>
-          </ol>
-        </li>
-        <li>
-          Modifications / Updates
-          <ol>
-            <li>
-              Bencher has the right to update all or any part of the Content,
-              Website, and terms of this Agreement at any time without notice.
-              Your continued use of the Website shall constitute agreement to
-              any and all such updates.
-            </li>
-            <li>
-              Bencher reserves the right at any time, and from time to time, to
-              modify or discontinue, temporarily or permanently, the Website (or
-              any part of it) with or without notice.
-            </li>
-          </ol>
-        </li>
-        <li>
-          General Representation
-          <ol>
-            <li>
-              You represent and warrant that: (i) your use of the Website will
-              be in strict accordance with this Agreement and with all
-              applicable laws and regulations (including without limitation any
-              local laws or regulations in your country, state, city, or other
-              governmental area, regarding online conduct and acceptable
-              content, and including all applicable laws regarding the
-              transmission of technical data exported from the United States or
-              the country in which you reside); and (ii) your use of the Website
-              will not infringe or misappropriate the intellectual property
-              rights of any third party.
-            </li>
-          </ol>
-        </li>
-        <li>
-          Termination
-          <ol>
-            <li>
-              Bencher may terminate your access to all or any part of the
-              Website at any time, with or without cause, with or without
-              notice, effective immediately.
-            </li>
-          </ol>
-        </li>
-        <li>
-          Limitation of Liability
-          <ol>
-            <li>
-              In no event will Bencher or any of its affiliates, suppliers or
-              licensors, be liable with respect to any subject matter of this
-              Agreement under any contract, negligence, strict liability or
-              other legal or equitable theory for: (i) any special, incidental
-              or consequential damages; (ii) the cost of procurement for
-              substitute products or services; (iii) for interruption of use or
-              loss or corruption of data; or (iv) for any damages whatsoever.
-              Bencher shall have no liability for any failure or delay due to
-              matters beyond their reasonable control. The foregoing shall not
-              apply to the extent prohibited by applicable law.
-            </li>
-          </ol>
-        </li>
-        <li>
-          Indemnification
-          <ol>
-            <li>
-              You agree to indemnify and hold harmless Bencher, its affiliates,
-              contractors, licensors, and their respective directors, officers,
-              employees and agents from and against any and all claims and
-              expenses, including attorneys' fees, arising out of your use of
-              this Website, including, but not limited to, your violation of
-              this Agreement.
-            </li>
-          </ol>
-        </li>
-        <li>
-          Miscellaneous
-          <ol>
-            <li>
-              If any provision of this Agreement is held by a court of competent
-              jurisdiction to be invalid, void, or unenforceable, the remaining
-              provisions shall nevertheless continue in full force without being
-              impaired or invalidated in any way.
-            </li>
-            <li>
-              The failure of either party to enforce at any time, or for any
-              period of time, the provisions of this Agreement shall not be
-              construed to be a waiver of such provisions or of the right of
-              such party to enforce each and every such provision.
-            </li>
-            <li>
-              All provisions of this Agreement which by their nature should
-              survive termination shall survive termination, including, without
-              limitation, ownership provisions, warranty disclaimers, indemnity
-              and limitations of liability.
-            </li>
-            <li>
-              This Agreement shall be construed and enforced in accordance with
-              the laws of Virginia, U.S.A., and the parties submit to the
-              jurisdiction of the State and Federal courts in Fairfax County,
-              Virginia, without giving effect to any conflicts of laws
-              principles.
-            </li>
-          </ol>
-        </li>
-      </ol>
-    </div>
-  ),
+	title: "Website Terms of Use - Bencher",
+	heading: "Bencher Website Terms of Use",
+	content: (
+		<div>
+			<h2>
+				PLEASE READ THIS AGREEMENT CAREFULLY BEFORE ACCESSING OR USING THE
+				WEBSITE. BY ACCESSING OR USING ANY PART OF THE WEBSITE, YOU AGREE TO BE
+				BOUND BY THE TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE
+				TO THE TERMS AND CONDITIONS OF THIS AGREEMENT, THEN YOU MAY NOT ACCESS
+				THE WEBSITE. THE WEBSITE IS AVAILABLE ONLY TO INDIVIDUALS WHO ARE AT
+				LEAST 13 YEARS OLD.
+			</h2>
+			<p>
+				Bencher's products and services are provided by Pompeii LLC (“we”,
+				“our”, or “us”). These Website Terms of Use (the “Agreement”) govern all
+				use of the bencher.dev website, or other website(s) owned and operated
+				by Pompeii LLC (the “Website”). The Website is offered subject to your
+				acceptance, without modification, to the terms and conditions contained
+				herein as updated subject to this Agreement. For the avoidance of doubt,
+				this Agreement does not control or govern your use of the Bencher
+				products and services. Please visit the{" "}
+				<a href="/legal">Bencher Legal Page</a> to see the applicable
+				agreement(s) related to your use of Bencher products and services.
+			</p>
+			<ol>
+				<li>
+					Website Eligibility.
+					<ol>
+						<li>
+							The Website, and Content (as defined herein) provided on the
+							Website by Bencher, is provided only to entities and persons over
+							the age of 13.
+						</li>
+					</ol>
+				</li>
+				<li>
+					License and Ownership.
+					<ol>
+						<li>
+							Bencher grants to you a limited, personal, non-transferable,
+							non-sublicensable, revocable license to access and use the
+							Website, including Content provided within the Website, in the
+							manner presented by Bencher.
+						</li>
+						<li>
+							Ownership, right and title of all Content provided on the Website
+							shall remain with Bencher (as applicable) at all times. This
+							Agreement does not transfer any Bencher, or third party
+							intellectual property, to you.
+						</li>
+						<li>
+							Your use of the Website grants you no right or license to
+							reproduce or otherwise use any Bencher or third-party trademarks.
+						</li>
+					</ol>
+				</li>
+				<li>
+					Responsibility of Website Visitors.
+					<ol>
+						<li>
+							Bencher has not reviewed, and cannot review, all of the materials,
+							website links (including to third party websites) and content
+							posted on the Website (collectively referred to as the “Content”).
+							Therefore, Bencher cannot and will not be responsible for the
+							Content or their effect(s). By operating the Website, Bencher does
+							not represent or imply that it endorses the Content provided or
+							that it believes such Content to be accurate, useful or
+							non-harmful. You are responsible for taking precautions as
+							necessary to protect yourself and your computer systems from
+							viruses, worms, Trojan horses, and other harmful or destructive
+							Content. Bencher disclaims any responsibility for any harm
+							resulting from the use by visitors of the Website, or from any
+							downloading by those visitors of Content posted on the Website.
+							The Website is provided “AS IS” and Bencher and its affiliates,
+							suppliers and licensors hereby disclaim all warranties of any
+							kind, express or implied, including, without limitation, the
+							warranties of merchantability, fitness for a particular purpose
+							and non-infringement. Neither Bencher nor its suppliers or
+							licensors, makes any warranty that the Website will be error free
+							or that access thereto will be continuous or uninterrupted.
+						</li>
+						<li>
+							By accepting this Agreement, you agree not to use, or facilitate
+							others to use, the Website in a way that is harmful to others or
+							overburdens or otherwise impairs the Website. Examples of such use
+							include, without limitation: Engaging in illegal or fraudulent
+							activities; Infringing a third party's intellectual property
+							rights; Distributing harmful or offensive Content that is
+							defamatory, obscene, abusive, an invasion of privacy or harassing;
+							The distribution of malicious/commercial spam; Violating the
+							security or integrity of any computer, network or communications
+							system; Using the Website to mine or demonstrate proof-of-work for
+							a cryptocurrency or blockchain; or Using any process or device
+							(automated or otherwise) to retrieve, index, "data mine",
+							"scrape", or in any way reproduce the presentation of this website
+							or its Content, unless otherwise permitted under applicable
+							content licensing permissions.
+						</li>
+					</ol>
+				</li>
+				<li>
+					DMCA and Privacy Policies
+					<ol>
+						<li>
+							As Bencher asks others to respect its intellectual property
+							rights, it respects the intellectual property rights of others. If
+							you believe that Content located on or linked to the Website
+							violates your copyright, you are encouraged to{" "}
+							<a href="mailto:legal@bencher.dev">contact us</a>.
+						</li>
+						<li>
+							Your use of the Website is subject to the{" "}
+							<a href="/legal/privacy">Bencher Privacy Policy</a>, which is
+							incorporated herein by reference.
+						</li>
+					</ol>
+				</li>
+				<li>
+					Modifications / Updates
+					<ol>
+						<li>
+							Bencher has the right to update all or any part of the Content,
+							Website, and terms of this Agreement at any time without notice.
+							Your continued use of the Website shall constitute agreement to
+							any and all such updates.
+						</li>
+						<li>
+							Bencher reserves the right at any time, and from time to time, to
+							modify or discontinue, temporarily or permanently, the Website (or
+							any part of it) with or without notice.
+						</li>
+					</ol>
+				</li>
+				<li>
+					General Representation
+					<ol>
+						<li>
+							You represent and warrant that: (i) your use of the Website will
+							be in strict accordance with this Agreement and with all
+							applicable laws and regulations (including without limitation any
+							local laws or regulations in your country, state, city, or other
+							governmental area, regarding online conduct and acceptable
+							content, and including all applicable laws regarding the
+							transmission of technical data exported from the United States or
+							the country in which you reside); and (ii) your use of the Website
+							will not infringe or misappropriate the intellectual property
+							rights of any third party.
+						</li>
+					</ol>
+				</li>
+				<li>
+					Termination
+					<ol>
+						<li>
+							Bencher may terminate your access to all or any part of the
+							Website at any time, with or without cause, with or without
+							notice, effective immediately.
+						</li>
+					</ol>
+				</li>
+				<li>
+					Limitation of Liability
+					<ol>
+						<li>
+							In no event will Bencher or any of its affiliates, suppliers or
+							licensors, be liable with respect to any subject matter of this
+							Agreement under any contract, negligence, strict liability or
+							other legal or equitable theory for: (i) any special, incidental
+							or consequential damages; (ii) the cost of procurement for
+							substitute products or services; (iii) for interruption of use or
+							loss or corruption of data; or (iv) for any damages whatsoever.
+							Bencher shall have no liability for any failure or delay due to
+							matters beyond their reasonable control. The foregoing shall not
+							apply to the extent prohibited by applicable law.
+						</li>
+					</ol>
+				</li>
+				<li>
+					Indemnification
+					<ol>
+						<li>
+							You agree to indemnify and hold harmless Bencher, its affiliates,
+							contractors, licensors, and their respective directors, officers,
+							employees and agents from and against any and all claims and
+							expenses, including attorneys' fees, arising out of your use of
+							this Website, including, but not limited to, your violation of
+							this Agreement.
+						</li>
+					</ol>
+				</li>
+				<li>
+					Miscellaneous
+					<ol>
+						<li>
+							If any provision of this Agreement is held by a court of competent
+							jurisdiction to be invalid, void, or unenforceable, the remaining
+							provisions shall nevertheless continue in full force without being
+							impaired or invalidated in any way.
+						</li>
+						<li>
+							The failure of either party to enforce at any time, or for any
+							period of time, the provisions of this Agreement shall not be
+							construed to be a waiver of such provisions or of the right of
+							such party to enforce each and every such provision.
+						</li>
+						<li>
+							All provisions of this Agreement which by their nature should
+							survive termination shall survive termination, including, without
+							limitation, ownership provisions, warranty disclaimers, indemnity
+							and limitations of liability.
+						</li>
+						<li>
+							This Agreement shall be construed and enforced in accordance with
+							the laws of Virginia, U.S.A., and the parties submit to the
+							jurisdiction of the State and Federal courts in Fairfax County,
+							Virginia, without giving effect to any conflicts of laws
+							principles.
+						</li>
+					</ol>
+				</li>
+			</ol>
+		</div>
+	),
 };
 
 export default termsPage;

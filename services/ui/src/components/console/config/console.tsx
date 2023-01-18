@@ -13,18 +13,18 @@ import tokensConfig from "./resources/tokens";
 import benchmarksConfig from "./resources/benchmarks";
 
 const consoleConfig = {
-  [Resource.ORGANIZATIONS]: organizationsConfig,
-  [Resource.MEMBERS]: membersConfig,
-  [Resource.PROJECTS]: projectsConfig,
-  [Resource.REPORTS]: reportsConfig,
-  [Resource.METRIC_KINDS]: metricKindsConfig,
-  [Resource.BRANCHES]: branchesConfig,
-  [Resource.TESTBEDS]: testbedsConfig,
-  [Resource.BENCHMARKS]: benchmarksConfig,
-  [Resource.THRESHOLDS]: thresholdsConfig,
-  [Resource.ALERTS]: alertsConfig,
-  [Resource.USERS]: usersConfig,
-  [Resource.TOKENS]: tokensConfig,
+	[Resource.ORGANIZATIONS]: organizationsConfig,
+	[Resource.MEMBERS]: membersConfig,
+	[Resource.PROJECTS]: projectsConfig,
+	[Resource.REPORTS]: reportsConfig,
+	[Resource.METRIC_KINDS]: metricKindsConfig,
+	[Resource.BRANCHES]: branchesConfig,
+	[Resource.TESTBEDS]: testbedsConfig,
+	[Resource.BENCHMARKS]: benchmarksConfig,
+	[Resource.THRESHOLDS]: thresholdsConfig,
+	[Resource.ALERTS]: alertsConfig,
+	[Resource.USERS]: usersConfig,
+	[Resource.TOKENS]: tokensConfig,
 };
 
 export default consoleConfig;

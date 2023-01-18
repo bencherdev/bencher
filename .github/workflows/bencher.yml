@@ -105,29 +105,29 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # Pretty JS
-  npx_prettier:
-    name: Prettier
+  npx_rome_format:
+    name: Rome Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: npx prettier
+      - name: npx rome format
         working-directory: ./services/ui
         run: |
           npm install --include=dev
-          npx prettier --check .
+          npx rome ci --linter-enabled false .
 
-  npx_eslint:
-    name: eslint
+  npx_rome_lint:
+    name: Rome Lint
     runs-on: ubuntu-latest
     # TODO fix all lints
     continue-on-error: true
     steps:
       - uses: actions/checkout@v3
-      - name: npx eslint
+      - name: npx rome check
         working-directory: ./services/ui
         run: |
           npm install --include=dev
-          npx eslint .
+          npx rome ci --formatter-enabled false .
 
 
   # UI WASM
@@ -136,8 +136,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - npx_prettier
-      - npx_eslint
+      - npx_rome_format
+      - npx_rome_lint
     env:
       WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features wasm"
     steps:

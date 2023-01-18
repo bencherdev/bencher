@@ -3,39 +3,39 @@ import { createEffect } from "solid-js";
 import { BENCHER_CALENDLY_URL, pageTitle, validate_jwt } from "../util";
 
 const PricingPage = (props) => {
-  const navigate = useNavigate();
+	const navigate = useNavigate();
 
-  createEffect(() => {
-    if (validate_jwt(props.user().token)) {
-      navigate("/console/");
-    }
+	createEffect(() => {
+		if (validate_jwt(props.user().token)) {
+			navigate("/console/");
+		}
 
-    pageTitle("Pricing");
-  });
+		pageTitle("Pricing");
+	});
 
-  return (
-    <div>
-      <section class="hero">
-        <div class="hero-body">
-          <div class="container">
-            <div class="columns is-mobile">
-              <div class="column">
-                <div class="content has-text-centered">
-                  <h1 class="title">Pricing</h1>
-                  <h3 class="subtitle">
-                    Start tracking your benchmarks for free
-                  </h3>
-                  <a href={BENCHER_CALENDLY_URL} target="_blank">
-                    🐰 Schedule a free demo
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      <hr />
-      {/* <section class="section">
+	return (
+		<div>
+			<section class="hero">
+				<div class="hero-body">
+					<div class="container">
+						<div class="columns is-mobile">
+							<div class="column">
+								<div class="content has-text-centered">
+									<h1 class="title">Pricing</h1>
+									<h3 class="subtitle">
+										Start tracking your benchmarks for free
+									</h3>
+									<a href={BENCHER_CALENDLY_URL} target="_blank">
+										🐰 Schedule a free demo
+									</a>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+			<hr />
+			{/* <section class="section">
         <div class="pricing-table is-comparative">
           <div class="pricing-plan is-features">
             <div class="plan-header">Features</div>
@@ -181,8 +181,8 @@ const PricingPage = (props) => {
           </div>
         </div>
       </section> */}
-    </div>
-  );
+		</div>
+	);
 };
 
 export default PricingPage;

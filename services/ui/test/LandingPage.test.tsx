@@ -7,14 +7,14 @@ import { createSignal } from "solid-js";
 
 // https://github.com/vitest-dev/vitest/tree/main/examples/solid
 describe("<Hello />", () => {
-  test("renders", () => {
-    const [user, _setUser] = createSignal(defaultUser());
-    const { container, unmount } = render(() => (
-      <Router>
-        <LandingPage user={user} />
-      </Router>
-    ));
-    expect(container.innerHTML).toMatchSnapshot();
-    unmount();
-  });
+	test("renders", () => {
+		const [user, _setUser] = createSignal(defaultUser());
+		const { container, unmount } = render(() => (
+			<Router>
+				<LandingPage user={user} />
+			</Router>
+		));
+		expect(container.innerHTML).toMatchSnapshot();
+		unmount();
+	});
 });

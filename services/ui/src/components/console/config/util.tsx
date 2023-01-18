@@ -1,22 +1,22 @@
 export const parentPath = (pathname) => {
-  return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
+	return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
 };
 
 export const addPath = (pathname) => {
-  return `${pathname}/add`;
+	return `${pathname}/add`;
 };
 
 export const invitePath = (pathname) => {
-  return `${pathname}/invite`;
+	return `${pathname}/invite`;
 };
 
 export const viewSlugPath = (pathname, datum) => {
-  return `${pathname}/${datum?.slug}`;
+	return `${pathname}/${datum?.slug}`;
 };
 
 export const viewUuidPath = (pathname, datum) => {
-  return `${pathname}/${datum?.uuid}`;
+	return `${pathname}/${datum?.uuid}`;
 };
 
 export const toCapitalized = (text: string) =>
-  text.charAt(0).toUpperCase() + text.slice(1);
+	text.charAt(0).toUpperCase() + text.slice(1);

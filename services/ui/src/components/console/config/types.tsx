@@ -1,59 +1,59 @@
 export enum Operation {
-  LIST,
-  ADD,
-  VIEW,
-  EDIT,
-  DELETE,
-  PERF,
+	LIST,
+	ADD,
+	VIEW,
+	EDIT,
+	DELETE,
+	PERF,
 }
 
 export enum Button {
-  ADD,
-  INVITE,
-  REFRESH,
-  BACK,
+	ADD,
+	INVITE,
+	REFRESH,
+	BACK,
 }
 
 export enum Resource {
-  ORGANIZATIONS,
-  MEMBERS,
-  PROJECTS,
-  REPORTS,
-  METRIC_KINDS,
-  BRANCHES,
-  TESTBEDS,
-  BENCHMARKS,
-  THRESHOLDS,
-  ALERTS,
-  USERS,
-  TOKENS,
+	ORGANIZATIONS,
+	MEMBERS,
+	PROJECTS,
+	REPORTS,
+	METRIC_KINDS,
+	BRANCHES,
+	TESTBEDS,
+	BENCHMARKS,
+	THRESHOLDS,
+	ALERTS,
+	USERS,
+	TOKENS,
 }
 
 export enum Row {
-  TEXT,
-  BOOL,
-  SELECT,
-  FOREIGN,
+	TEXT,
+	BOOL,
+	SELECT,
+	FOREIGN,
 }
 
 export enum Card {
-  FIELD,
-  TABLE,
+	FIELD,
+	TABLE,
 }
 
 export enum Display {
-  RAW,
-  SWITCH,
-  SELECT,
+	RAW,
+	SWITCH,
+	SELECT,
 }
 
 export enum PerfTab {
-  BRANCHES = "branches",
-  TESTBEDS = "testbeds",
-  BENCHMARKS = "benchmarks",
+	BRANCHES = "branches",
+	TESTBEDS = "testbeds",
+	BENCHMARKS = "benchmarks",
 }
 
 export const isPerfTab = (tab: string) =>
-  tab === PerfTab.BRANCHES ||
-  tab === PerfTab.TESTBEDS ||
-  tab === PerfTab.BENCHMARKS;
+	tab === PerfTab.BRANCHES ||
+	tab === PerfTab.TESTBEDS ||
+	tab === PerfTab.BENCHMARKS;

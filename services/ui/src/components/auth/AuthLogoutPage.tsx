@@ -3,18 +3,18 @@ import { createEffect } from "solid-js";
 import { NotifyKind, notifyParams, pageTitle } from "../site/util";
 
 const AuthLogoutPage = (props: { config: any; removeUser: Function }) => {
-  const navigate = useNavigate();
+	const navigate = useNavigate();
 
-  props.removeUser();
-  navigate(notifyParams(props.config?.redirect, NotifyKind.ALERT, "Goodbye!"), {
-    replace: true,
-  });
+	props.removeUser();
+	navigate(notifyParams(props.config?.redirect, NotifyKind.ALERT, "Goodbye!"), {
+		replace: true,
+	});
 
-  createEffect(() => {
-    pageTitle("Logout");
-  });
+	createEffect(() => {
+		pageTitle("Logout");
+	});
 
-  return <></>;
+	return <></>;
 };
 
 export default AuthLogoutPage;

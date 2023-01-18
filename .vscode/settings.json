@@ -9,9 +9,6 @@
   "rust-analyzer.imports.granularity.group": "crate",
   "rust-analyzer.checkOnSave.command": "clippy",
   "rust-analyzer.checkOnSave.allTargets": false,
-  "prettier.configPath": "./services/ui/.prettierrc.json",
-  "prettier.ignorePath": "./services/ui/.prettierignore",
-  "prettier.prettierPath": "./services/ui/node_modules/prettier",
   "sqltools.connections": [
     {
       "previewLimit": 50,

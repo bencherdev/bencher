@@ -15,15 +15,15 @@ import { BENCHER_VERSION } from "./components/site/util";
 // https://github.com/nshen/vite-plugin-wasm-pack/blob/main/example/src/index.ts
 // https://stackoverflow.com/questions/70373659/solidjs-computations-created-outside-a-createroot-or-render-will-never-be
 bencher_valid_init().then(() => {
-  console.log(`🐰 Bencher v${BENCHER_VERSION}`);
-  render(
-    () => (
-      <Router>
-        <MDXProvider components={{ ...mdx }}>
-          <App />
-        </MDXProvider>
-      </Router>
-    ),
-    document.getElementById("root") as HTMLElement
-  );
+	console.log(`🐰 Bencher v${BENCHER_VERSION}`);
+	render(
+		() => (
+			<Router>
+				<MDXProvider components={{ ...mdx }}>
+					<App />
+				</MDXProvider>
+			</Router>
+		),
+		document.getElementById("root") as HTMLElement,
+	);
 });

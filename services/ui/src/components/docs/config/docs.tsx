@@ -7,58 +7,58 @@ import GitLabCi from "../pages/GitLabCi.mdx";
 import BranchManagement from "../pages/BranchManagement.mdx";
 
 const docsConfig = {
-  [Page.QUICK_START]: {
-    kind: Page.QUICK_START,
-    title: "Quick Start",
-    page: {
-      heading: "Quick Start",
-      content: <QuickStart />,
-    },
-  },
-  [Page.GITHUB_ACTIONS]: {
-    kind: Page.GITHUB_ACTIONS,
-    title: "GitHub Actions",
-    page: {
-      heading: "How to use Bencher in GitHub Actions",
-      content: <GitHubActions />,
-    },
-  },
-  [Page.GITLAB_CI]: {
-    kind: Page.GITLAB_CI,
-    title: "GitLab CI",
-    page: {
-      heading: "How to use Bencher in GitLab CI/CD",
-      content: <GitLabCi />,
-    },
-  },
-  [Page.BRANCH_MANAGEMENT]: {
-    kind: Page.BRANCH_MANAGEMENT,
-    title: "Branch Management",
-    page: {
-      heading: "How to manage branches",
-      content: <BranchManagement />,
-    },
-  },
-  [Page.API_V0]: {
-    kind: Page.API_V0,
-    title: "Bencher REST API",
-  },
-  [Page.PRIOR_ART]: {
-    kind: Page.PRIOR_ART,
-    title: "Prior Art",
-    page: {
-      heading: "Prior Art",
-      content: <PriorArt />,
-    },
-  },
-  [Page.CHANGELOG]: {
-    kind: Page.CHANGELOG,
-    title: "Changelog",
-    page: {
-      heading: "Changelog",
-      content: <Changelog />,
-    },
-  },
+	[Page.QUICK_START]: {
+		kind: Page.QUICK_START,
+		title: "Quick Start",
+		page: {
+			heading: "Quick Start",
+			content: <QuickStart />,
+		},
+	},
+	[Page.GITHUB_ACTIONS]: {
+		kind: Page.GITHUB_ACTIONS,
+		title: "GitHub Actions",
+		page: {
+			heading: "How to use Bencher in GitHub Actions",
+			content: <GitHubActions />,
+		},
+	},
+	[Page.GITLAB_CI]: {
+		kind: Page.GITLAB_CI,
+		title: "GitLab CI",
+		page: {
+			heading: "How to use Bencher in GitLab CI/CD",
+			content: <GitLabCi />,
+		},
+	},
+	[Page.BRANCH_MANAGEMENT]: {
+		kind: Page.BRANCH_MANAGEMENT,
+		title: "Branch Management",
+		page: {
+			heading: "How to manage branches",
+			content: <BranchManagement />,
+		},
+	},
+	[Page.API_V0]: {
+		kind: Page.API_V0,
+		title: "Bencher REST API",
+	},
+	[Page.PRIOR_ART]: {
+		kind: Page.PRIOR_ART,
+		title: "Prior Art",
+		page: {
+			heading: "Prior Art",
+			content: <PriorArt />,
+		},
+	},
+	[Page.CHANGELOG]: {
+		kind: Page.CHANGELOG,
+		title: "Changelog",
+		page: {
+			heading: "Changelog",
+			content: <Changelog />,
+		},
+	},
 };
 
 export default docsConfig;

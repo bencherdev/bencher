@@ -5,15 +5,15 @@ const ProjectsPage = lazy(() => import("./ProjectsPage"));
 const ProjectPage = lazy(() => import("./ProjectPage"));
 
 const PerfRoutes = (props) => {
-  return (
-    <>
-      <Route path="/" element={<ProjectsPage user={props.user} />} />
-      <Route
-        path="/:project_slug"
-        element={<ProjectPage user={props.user} />}
-      />
-    </>
-  );
+	return (
+		<>
+			<Route path="/" element={<ProjectsPage user={props.user} />} />
+			<Route
+				path="/:project_slug"
+				element={<ProjectPage user={props.user} />}
+			/>
+		</>
+	);
 };
 
 export default PerfRoutes;

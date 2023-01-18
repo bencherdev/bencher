@@ -1,10 +1,10 @@
 enum FieldKind {
-  INPUT,
-  NUMBER,
-  CHECKBOX,
-  SWITCH,
-  SELECT,
-  RADIO,
+	INPUT,
+	NUMBER,
+	CHECKBOX,
+	SWITCH,
+	SELECT,
+	RADIO,
 }
 
 export default FieldKind;
