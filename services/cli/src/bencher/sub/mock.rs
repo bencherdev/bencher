@@ -40,15 +40,15 @@ impl SubCmd for Mock {
         let mut rng = rand::thread_rng();
         for c in 0..count {
             let value = 1_000.0 * (c + 1) as f64 * rng.gen::<f64>();
-            let bound = (value * rng.gen::<f64>()).into();
+            let variance = value * rng.gen::<f64>() * 0.1;
             results.insert(
                 format!("bencher::mock_{c}").as_str().parse()?,
                 AdapterMetrics {
                     inner: hmap! {
                         LATENCY_RESOURCE_ID.clone() => JsonMetric {
                              value: value.into(),
-                             lower_bound: Some(bound),
-                             upper_bound: Some(bound),
+                             lower_bound: Some((value - variance).into()),
+                             upper_bound: Some((value + variance).into()),
                         }
                     },
                 },
