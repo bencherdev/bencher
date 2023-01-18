@@ -59,7 +59,12 @@ export const Navbar = (props) => {
 							Projects
 						</a>
 					)}
-					<a class="navbar-item" href={BENCHER_GITHUB_URL} target="_blank">
+					<a
+						class="navbar-item"
+						href={BENCHER_GITHUB_URL}
+						target="_blank"
+						rel="noreferrer"
+					>
 						GitHub
 					</a>
 					{validate_jwt(props.user()?.token) && props.organization_slug() && (

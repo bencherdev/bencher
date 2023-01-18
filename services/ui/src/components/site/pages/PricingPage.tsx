@@ -25,7 +25,11 @@ const PricingPage = (props) => {
 									<h3 class="subtitle">
 										Start tracking your benchmarks for free
 									</h3>
-									<a href={BENCHER_CALENDLY_URL} target="_blank">
+									<a
+										href={BENCHER_CALENDLY_URL}
+										target="_blank"
+										rel="noreferrer"
+									>
 										🐰 Schedule a free demo
 									</a>
 								</div>

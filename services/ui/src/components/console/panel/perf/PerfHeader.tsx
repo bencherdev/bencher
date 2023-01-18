@@ -36,7 +36,7 @@ const PerfHeader = (props) => {
 						<a
 							class="button is-outlined"
 							href={project_data()?.url}
-							rel="nofollow"
+							rel="noreferrer nofollow"
 							target="_blank"
 						>
 							<span class="icon">

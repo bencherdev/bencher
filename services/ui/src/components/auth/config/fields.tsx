@@ -25,17 +25,26 @@ const AUTH_FIELDS = {
 			<small>
 				{" "}
 				I agree to the{" "}
-				<a href="/legal/terms-of-use" target="_blank">
-					terms of use
-				</a>
+				{
+					// rome-ignore lint/a11y/noBlankTarget: Internal link
+					<a href="/legal/terms-of-use" target="_blank">
+						terms of use
+					</a>
+				}
 				,{" "}
-				<a href="/legal/privacy" target="_blank">
-					privacy policy
-				</a>
+				{
+					// rome-ignore lint/a11y/noBlankTarget: Internal link
+					<a href="/legal/privacy" target="_blank">
+						privacy policy
+					</a>
+				}
 				, and{" "}
-				<a href="/legal/license" target="_blank">
-					license agreement
-				</a>
+				{
+					// rome-ignore lint/a11y/noBlankTarget: Internal link
+					<a href="/legal/license" target="_blank">
+						license agreement
+					</a>
+				}
 				.
 			</small>
 		),

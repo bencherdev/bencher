@@ -40,6 +40,7 @@ const Footer = () => {
 									href={BENCHER_GITHUB_URL}
 									target="_blank"
 									aria-label="GitHub"
+									rel="noreferrer"
 								>
 									<span class="icon has-text-primary">
 										<i class="fab fa-github fa-2x" aria-hidden="true" />
