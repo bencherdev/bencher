@@ -3,7 +3,7 @@ members = ["services/api", "services/cli", "lib/*"]
 
 [workspace.package]
 version = "0.2.29"
-authors = ["Everett Pompeii <epompeii@protonmail.com>"]
+authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
 
 [workspace.dependencies]

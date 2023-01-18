@@ -35,6 +35,9 @@ tasks:
   - name: API Setup
     before: cd services/api
     command: ../../scripts/start_api.sh
+  - name: CLI Setup
+    before: cd services/cli
+    command: ../../scripts/start_cli.sh
   - name: UI Setup
     before: cd services/ui
     command: ../../scripts/start_ui.sh
