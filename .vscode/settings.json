@@ -5,11 +5,15 @@
   "files.eol": "\n",
   "editor.wordWrap": "on",
   "editor.formatOnSave": true,
-  "rust-analyzer.cargo.features": ["all"],
+  "rust-analyzer.cargo.features": [
+    "all"
+  ],
   "rust-analyzer.imports.granularity.group": "crate",
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.check.allTargets": false,
-  "rust-analyzer.check.features": ["all"],
+  "rust-analyzer.check.features": [
+    "all"
+  ],
   "sqltools.connections": [
     {
       "previewLimit": 50,
@@ -52,6 +56,7 @@
     "preheader",
     "Punct",
     "reqwest",
+    "roadmap",
     "rqctx",
     "rustfmt",
     "rustup",

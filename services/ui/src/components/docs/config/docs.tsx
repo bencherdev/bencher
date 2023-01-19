@@ -5,6 +5,7 @@ import PriorArt from "../pages/PriorArt.mdx";
 import GitHubActions from "../pages/GitHubActions.mdx";
 import GitLabCi from "../pages/GitLabCi.mdx";
 import BranchManagement from "../pages/BranchManagement.mdx";
+import Roadmap from "../pages/Roadmap.mdx";
 
 const docsConfig = {
 	[Page.QUICK_START]: {
@@ -35,7 +36,11 @@ const docsConfig = {
 		kind: Page.BRANCH_MANAGEMENT,
 		title: "Branch Management",
 		page: {
-			heading: "How to manage branches",
+			heading: (
+				<>
+					Branch Management with <code>bencher run</code>
+				</>
+			),
 			content: <BranchManagement />,
 		},
 	},
@@ -49,6 +54,14 @@ const docsConfig = {
 		page: {
 			heading: "Prior Art",
 			content: <PriorArt />,
+		},
+	},
+	[Page.ROADMAP]: {
+		kind: Page.ROADMAP,
+		title: "Bencher Roadmap",
+		page: {
+			heading: "Bencher Roadmap",
+			content: <Roadmap />,
 		},
 	},
 	[Page.CHANGELOG]: {

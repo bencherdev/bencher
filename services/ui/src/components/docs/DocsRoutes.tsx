@@ -47,6 +47,10 @@ const DocsRoutes = (props) => {
 				element={<DocsPage config={config[Page.PRIOR_ART]} />}
 			/>
 			<Route
+				path="/reference/roadmap"
+				element={<DocsPage config={config[Page.ROADMAP]} />}
+			/>
+			<Route
 				path="/reference/changelog"
 				element={<DocsPage config={config[Page.CHANGELOG]} />}
 			/>

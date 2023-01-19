@@ -5,6 +5,7 @@ enum Page {
 	BRANCH_MANAGEMENT = "Branch Management",
 	API_V0 = "API",
 	PRIOR_ART = "Prior Art",
+	ROADMAP = "Roadmap",
 	CHANGELOG = "Changelog",
 }
 
