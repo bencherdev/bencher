@@ -7,7 +7,10 @@ async fn main() -> Result<(), ApiError> {
     let subscriber = tracing_subscriber::FmtSubscriber::new();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    info!("Bencher API Server v{}", env!("CARGO_PKG_VERSION"));
+    info!(
+        "\u{1f430} Bencher API Server v{}",
+        env!("CARGO_PKG_VERSION")
+    );
     run().await
 }
 

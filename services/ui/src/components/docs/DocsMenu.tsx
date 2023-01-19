@@ -1,64 +1,28 @@
 import { Link } from "solid-app-router";
-import slugify from "slugify";
-import Page from "./config/page";
+import { docs, getHref } from "./config/docs";
+import { For } from "solid-js";
 
-enum Section {
-	HOW_TO = "How To",
-	REFERENCE = "Reference",
-}
-
-const asSlug = (text: string) => {
-	return slugify(text, {
-		lower: true,
-	});
-};
-
-const getDocsPath = (section: Section, page: string) => {
-	return `/docs/${asSlug(section)}/${asSlug(page)}`;
-};
-
-const DocsMenu = (props) => {
+const DocsMenu = (_props) => {
 	return (
 		<aside class="menu">
-			<p class="menu-label">{Section.HOW_TO}</p>
-			<ul class="menu-list">
-				<li>
-					<Link href={getDocsPath(Section.HOW_TO, Page.QUICK_START)}>
-						{Page.QUICK_START}
-					</Link>
-				</li>
-				<li>
-					<Link href={getDocsPath(Section.HOW_TO, Page.GITHUB_ACTIONS)}>
-						{Page.GITHUB_ACTIONS}
-					</Link>
-				</li>
-				<li>
-					<Link href={getDocsPath(Section.HOW_TO, Page.GITLAB_CI)}>
-						{Page.GITLAB_CI}
-					</Link>
-				</li>
-				<li>
-					<Link href={getDocsPath(Section.HOW_TO, Page.BRANCH_MANAGEMENT)}>
-						{Page.BRANCH_MANAGEMENT}
-					</Link>
-				</li>
-			</ul>
-
-			<p class="menu-label">{Section.REFERENCE}</p>
-			<ul class="menu-list">
-				<Link href={getDocsPath(Section.REFERENCE, Page.API_V0)}>
-					{Page.API_V0}
-				</Link>
-				<Link href={getDocsPath(Section.REFERENCE, Page.PRIOR_ART)}>
-					{Page.PRIOR_ART}
-				</Link>
-				<Link href={getDocsPath(Section.REFERENCE, Page.ROADMAP)}>
-					{Page.ROADMAP}
-				</Link>
-				<Link href={getDocsPath(Section.REFERENCE, Page.CHANGELOG)}>
-					{Page.CHANGELOG}
-				</Link>
-			</ul>
+			<For each={docs}>
+				{(doc) => (
+					<>
+						<p class="menu-label">{doc.section?.name}</p>
+						<ul class="menu-list">
+							<For each={doc.pages}>
+								{(page) => (
+									<li>
+										<Link href={getHref(doc.section?.slug, page.slug)}>
+											{page.title}
+										</Link>
+									</li>
+								)}
+							</For>
+						</ul>
+					</>
+				)}
+			</For>
 		</aside>
 	);
 };

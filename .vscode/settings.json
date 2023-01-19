@@ -6,7 +6,7 @@
   "editor.wordWrap": "on",
   "editor.formatOnSave": true,
   "rust-analyzer.cargo.features": [
-    "all"
+    "seed"
   ],
   "rust-analyzer.imports.granularity.group": "crate",
   "rust-analyzer.check.command": "clippy",
@@ -14,6 +14,15 @@
   "rust-analyzer.check.features": [
     "all"
   ],
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[javascript,javascriptreact,typescript,typescriptreact]": {
+    "editor.defaultFormatter": "rome.rome"
+  },
+  // "editor.codeActionsOnSave": {
+  //   "source.organizeImports.rome": true,
+  // },
   "sqltools.connections": [
     {
       "previewLimit": 50,

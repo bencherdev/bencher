@@ -1,20 +1,25 @@
-## 15 Jan 2023
+## `v0.2.30`
+- Added `--if-else-branch`, `--else-branch`, and `--endif-branch` flags to to `bencher run` CLI
+- Wrote a [branch management](/explanation/branch-management) explanation page for using `bencher run`
+- Completely refactored docs UI configuration to make it easier to add new pages, one place instead of three
+- Made the [Diataxis](https://diataxis.fr/) convention explicit in the docs
+- Fixed bounds bug in `bencher mock`
+
+## `v0.2.29`
 
 - Fixed and refixed Criterion empty benchmark name bug
 - Type level checking for benchmark names and metric kind resource IDs
 - Added documentation: Quick Start, Prior Art, and GitHub Actions how to
 - Prettier and eslint added to CI/CD
 - Stubbed out UI tests with `vitest` in CI/CD
-- Released `v0.2.29`!
 
-## 19 Dec 2022
+## `v0.2.28`
 
 - Centralized all validation logic between frontend and backend via Rust + WASM modules
 - All pages in the UI now have basic functionality
 - Added public project perf pages
-- Released `v0.2.28`!
 
-## 21 Nov 2022
+## `v0.2.27`
 
 - Fixed the UI y-axis scale cutoff issue! Note to self: RTFD
 - Fixed the UI documentation + routing bug! It turns out `SwaggerUIBundle` was the solution.
@@ -30,4 +35,3 @@
 - Refactored how pathname and redirects are handled in the UI to increase encapsulation
 - Added the current version to the UI `BETA` tag
 - Created a repo shortcut at [bencher.dev/repo](https://bencher.dev/repo)
-- Released `v0.2.27`!

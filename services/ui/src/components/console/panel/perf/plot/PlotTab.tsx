@@ -77,7 +77,7 @@ const AddButton = (props) => {
 			case PerfTab.TESTBEDS:
 				return `/console/projects/${props.project_slug()}/${props.tab()}/add`;
 			case PerfTab.BENCHMARKS:
-				return "/docs/how-to/quick-start";
+				return "/docs/tutorial/quick-start";
 			default:
 				return "#";
 		}

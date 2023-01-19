@@ -8,18 +8,21 @@ It consists of:
 - Bencher API Server
 - Bencher Web UI
 
-The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/how-to/quick-start) tutorial.
+The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start) tutorial.
 
 ## Documentation
 
+- Tutorial
+  - [Quick Start](https://bencher.dev/docs/tutorial/quick-start)
 - How To
-  - [Quick Start](https://bencher.dev/docs/how-to/quick-start)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions)
-  - [GitLab CI](https://bencher.dev/docs/how-to/gitlab-ci)
-  - [Branch Management](https://bencher.dev/docs/how-to/branch-management)
+  - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
+- Explanation
+  - [Branch Management](https://bencher.dev/docs/explanation/branch-management)
 - Reference
-  - [API](https://bencher.dev/docs/reference/api/v0)
+  - [REST API](https://bencher.dev/docs/reference/api)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art)
+  - [Roadmap](https://bencher.dev/docs/reference/roadmap)
   - [Changelog](https://bencher.dev/docs/reference/changelog)
 
 ## Contributing

@@ -5,7 +5,7 @@ import DocsPanel from "./DocsPanel";
 
 const DocsPage = (props) => {
 	createEffect(() => {
-		pageTitle(props.config?.title);
+		pageTitle(props.page?.title);
 	});
 
 	return (
@@ -16,7 +16,7 @@ const DocsPage = (props) => {
 						<DocsMenu />
 					</div>
 					<div class="column is-10">
-						<DocsPanel config={props.config} />
+						<DocsPanel panel={props.page?.panel} />
 						<For each={[...Array(3).keys()]}>{(_k, _i) => <br />}</For>
 						<hr />
 					</div>
