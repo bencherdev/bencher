@@ -6,7 +6,7 @@ import { Router } from "solid-app-router";
 import { createSignal } from "solid-js";
 
 // https://github.com/vitest-dev/vitest/tree/main/examples/solid
-describe("<Hello />", () => {
+describe("<LandingPage />", () => {
 	test("renders", () => {
 		const [user, _setUser] = createSignal(defaultUser());
 		const { container, unmount } = render(() => (
