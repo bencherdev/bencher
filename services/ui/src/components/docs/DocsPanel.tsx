@@ -1,7 +1,7 @@
 import { Match, Switch } from "solid-js";
 
 import SwaggerPanel from "./api/SwaggerPanel";
-import { PageKind } from "./config/docs";
+import PageKind from "./config/page_kind";
 
 const DocsPanel = (props) => {
 	return (
