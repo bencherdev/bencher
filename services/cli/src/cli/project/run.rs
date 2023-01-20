@@ -20,7 +20,7 @@ pub struct CliRun {
 
     /// Create a new branch, clone data, and run iff a single instance of the start point branch name exists (requires `--if-branch`)
     #[clap(long, requires = "if_branch")]
-    pub else_if_branch: Option<Option<BranchName>>,
+    pub else_if_branch: Vec<String>,
 
     /// Create a new branch and run if neither `--if-branch` or `--else-if-branch` exists (requires `--if-branch`)
     #[clap(long, requires = "if_branch")]
