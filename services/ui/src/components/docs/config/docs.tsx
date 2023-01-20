@@ -2,10 +2,11 @@ import QuickStart from "../pages/QuickStart.mdx";
 import Changelog from "../pages/Changelog.mdx";
 import PriorArt from "../pages/PriorArt.mdx";
 import GitHubActions from "../pages/GitHubActions.mdx";
-import GitLabCi from "../pages/GitLabCi.mdx";
+import GitLabCiCd from "../pages/GitLabCiCd.mdx";
 import BranchManagement from "../pages/BranchManagement.mdx";
 import Roadmap from "../pages/Roadmap.mdx";
 import ServerConfig from "../pages/ServerConfig.mdx";
+import ContinuousBenchmarking from "../pages/ContinuousBenchmarking.mdx";
 
 export const getHref = (section_slug: string, page_slug: string) => {
 	return `/docs/${getPath(section_slug, page_slug)}`;
@@ -65,7 +66,17 @@ export const GitLabCiPage = {
 	panel: {
 		kind: PageKind.MDX,
 		heading: "How to use Bencher in GitLab CI/CD",
-		content: <GitLabCi />,
+		content: <GitLabCiCd />,
+	},
+};
+
+export const ContinuousBenchmarkingPage = {
+	title: "Continuous Benchmarking",
+	slug: "continuous-benchmarking",
+	panel: {
+		kind: PageKind.MDX,
+		heading: "What is Continuous Benchmarking?",
+		content: <ContinuousBenchmarking />,
 	},
 };
 
@@ -73,6 +84,7 @@ export const BranchManagementPage = {
 	title: "Branch Management",
 	slug: "branch-management",
 	panel: {
+		kind: PageKind.MDX,
 		heading: (
 			<>
 				Branch Management with <code>bencher run</code>
@@ -140,7 +152,7 @@ export const docs = [
 	{ section: Section.how_to, pages: [GitHubActionsPage, GitLabCiPage] },
 	{
 		section: Section.explanation,
-		pages: [BranchManagementPage],
+		pages: [ContinuousBenchmarkingPage, BranchManagementPage],
 	},
 	{
 		section: Section.reference,
