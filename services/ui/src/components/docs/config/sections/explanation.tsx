@@ -1,6 +1,7 @@
 import PageKind from "../page_kind";
 import ContinuousBenchmarking from "../../pages/explanation/ContinuousBenchmarking.mdx";
 import BranchManagement from "../../pages/explanation/BranchManagement.mdx";
+import Talks from "../../pages/explanation/Talks.mdx";
 
 const Explanation = [
 	{
@@ -23,6 +24,15 @@ const Explanation = [
 				</>
 			),
 			content: <BranchManagement />,
+		},
+	},
+	{
+		title: "Talks",
+		slug: "talks",
+		panel: {
+			kind: PageKind.MDX,
+			heading: "Talks",
+			content: <Talks />,
 		},
 	},
 ];

@@ -41,7 +41,6 @@ const Reference = [
 			content: <Roadmap />,
 		},
 	},
-
 	{
 		title: "Changelog",
 		slug: "changelog",
