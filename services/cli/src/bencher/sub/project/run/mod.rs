@@ -54,7 +54,7 @@ enum Branch {
     ResourceId(ResourceId),
     Name {
         name: BranchName,
-        start_points: Vec<BranchName>,
+        start_points: Vec<String>,
         create: bool,
     },
     None,
@@ -121,24 +121,9 @@ fn map_branch(
         env_branch.as_str().parse().map(Branch::ResourceId)?
     } else if let Some(branch_name) = if_branch {
         if let Some(name) = branch_name {
-            let start_points = else_if_branch
-                .iter()
-                .enumerate()
-                .filter_map(|(index, else_if)| {
-                    BranchName::from_str(else_if)
-                        .map_err(|e| {
-                            cli_println!(
-                                "Failed to parse start point branch #{} (\"{else_if}\") for \"{name}\".",
-                                index + 1
-                            );
-                            e
-                        })
-                        .ok()
-                })
-                .collect();
             Branch::Name {
                 name,
-                start_points,
+                start_points: else_if_branch,
                 create: else_branch,
             }
         } else {
@@ -249,9 +234,7 @@ async fn branch_resource_id(
             start_points,
             create,
         } => {
-            if let Some(uuid) =
-                if_branch(project, name, start_points.as_ref(), *create, locality).await?
-            {
+            if let Some(uuid) = if_branch(project, name, start_points, *create, locality).await? {
                 Some(uuid.into())
             } else {
                 cli_println!("Failed to find or create branch \"{name}\". Skipping benchmark run.");
@@ -268,7 +251,7 @@ async fn branch_resource_id(
 async fn if_branch(
     project: &ResourceId,
     branch_name: &BranchName,
-    start_points: &Vec<BranchName>,
+    start_points: &[String],
     create: bool,
     locality: &Locality,
 ) -> Result<Option<Uuid>, CliError> {
@@ -284,9 +267,17 @@ async fn if_branch(
 
     cli_println!("Failed to find branch with name \"{branch_name}\" in project \"{project}\".");
 
-    for start_point in start_points {
+    for (index, start_point) in start_points.iter().enumerate() {
+        let count = index.checked_add(1).unwrap_or_default();
+        let Ok(start_point) = BranchName::from_str(start_point) else {
+            cli_println!(
+                "Failed to parse start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
+            );
+            continue
+        };
+
         let new_branch =
-            if let Some(start_point) = get_branch(project, start_point, backend).await? {
+            if let Some(start_point) = get_branch(project, &start_point, backend).await? {
                 create_branch(project, branch_name, Some(start_point.into()), backend).await?
             } else {
                 None
@@ -296,7 +287,9 @@ async fn if_branch(
             return Ok(new_branch);
         }
 
-        cli_println!("Failed to find start point \"{start_point}\" for \"{branch_name}\" in project \"{project}\".");
+        cli_println!(
+            "Failed to find start point branch #{count} \"{start_point}\" for \"{branch_name}\" in project \"{project}\"."
+        );
     }
 
     if create {

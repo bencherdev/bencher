@@ -24,7 +24,7 @@ Often, when working on feature branches, it would be useful to have historical d
 
 For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data. Then using `--if-branch feature_branch --else-if-branch main`, would create a new branch named `feature_branch`, and it would have a copy of all the data from `main`. Then `bencher run` would proceed using `feature_branch`.
 
-It is also possible to use mutliple `--else-if-branch` flags. For example if `EMPTY_ENV_VAR` is an empty environment variable, `--if-branch feature_branch --else-if-branch $EMPTY_ENV_VAR --else-if-branch main` would function the same as the previous example, copying all of the data from `main` and proceeding.
+It is also possible to use mutliple `--else-if-branch` flags. For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main` would effectively function the same as the previous example, copying all of the data from `main` and proceeding.
 
 If the `--if-branch` query succeededs then `--else-if-branch` is never run, and if both `--if-branch` and `--else-if-branch` fail, `bencher run` will simply log and exit successfully.
 
