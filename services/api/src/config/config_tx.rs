@@ -50,7 +50,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
             logging,
         }) = config;
 
-        let private = into_private(endpoint, secret_key, smtp, &database, restart_tx)?;
+        let private = into_private(endpoint, secret_key, smtp, database, restart_tx)?;
         let config_dropshot = into_config_dropshot(server);
         let log = into_log(logging)?;
 
@@ -70,7 +70,7 @@ fn into_private(
     endpoint: Url,
     secret_key: Option<String>,
     smtp: Option<JsonSmtp>,
-    json_database: &JsonDatabase,
+    json_database: JsonDatabase,
     restart_tx: Sender<()>,
 ) -> Result<Mutex<ApiContext>, ApiError> {
     let database_path = json_database.file.to_string_lossy();
@@ -83,6 +83,7 @@ fn into_private(
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database,
+        database_path: json_database.file,
         restart_tx,
     }))
 }

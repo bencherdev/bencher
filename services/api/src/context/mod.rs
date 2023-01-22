@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use tokio::sync::mpsc::Sender;
 use url::Url;
 
@@ -17,5 +19,6 @@ pub struct ApiContext {
     pub rbac: Rbac,
     pub messenger: Messenger,
     pub database: diesel::SqliteConnection,
+    pub database_path: PathBuf,
     pub restart_tx: Sender<()>,
 }

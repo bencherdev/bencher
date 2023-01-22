@@ -26,6 +26,7 @@ pub use project::{
 };
 pub use system::{
     auth::{JsonAuthToken, JsonLogin, JsonSignup},
+    backup::JsonBackup,
     config::JsonConfig,
     jwt::JsonWebToken,
     restart::JsonRestart,
