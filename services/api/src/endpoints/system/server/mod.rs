@@ -2,6 +2,7 @@ use derive_more::Display;
 
 use crate::WordStr;
 
+pub mod backup;
 pub mod config;
 pub mod ping;
 pub mod restart;
@@ -13,6 +14,7 @@ pub enum Resource {
     Version,
     Restart,
     Config,
+    Backup,
 }
 
 impl WordStr for Resource {
@@ -22,6 +24,7 @@ impl WordStr for Resource {
             Self::Version => "version",
             Self::Restart => "restart",
             Self::Config => "config",
+            Self::Backup => "backup",
         }
     }
 
@@ -31,6 +34,7 @@ impl WordStr for Resource {
             Self::Version => "versions",
             Self::Restart => "restarts",
             Self::Config => "configs",
+            Self::Backup => "backups",
         }
     }
 }

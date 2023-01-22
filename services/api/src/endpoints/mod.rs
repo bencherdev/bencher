@@ -33,6 +33,8 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(system::server::config::options)?;
     api.register(system::server::config::put)?;
     api.register(system::server::config::get_one)?;
+    api.register(system::server::backup::options)?;
+    api.register(system::server::backup::post)?;
     // Auth
     api.register(system::auth::signup::options)?;
     api.register(system::auth::signup::post)?;
