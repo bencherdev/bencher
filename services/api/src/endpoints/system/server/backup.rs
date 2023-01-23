@@ -73,16 +73,17 @@ async fn post_inner(
         .file_name()
         .unwrap()
         .to_string_lossy();
-    warn!("FILENAME: {file_name}");
     let backup_file_name = format!("backup-{file_name}");
-    warn!("BACKUP FILENAME: {backup_file_name}");
+    let mut file_path = api_context.database_path.clone();
+    file_path.set_file_name(&backup_file_name);
+    let file_path_str = file_path.to_string_lossy();
 
     let query = if json_backup.vacuum.unwrap_or(true) {
         // sqlite3 /path/to/db "VACUUM INTO '/path/to/backup'"
-        format!("VACUUM INTO '{backup_file_name}'")
+        format!("VACUUM INTO '{file_path_str}'")
     } else {
         // sqlite3 /path/to/db '.backup /path/to/backup'
-        format!(".backup {backup_file_name}")
+        format!("backup {file_path_str}")
     };
 
     conn.batch_execute(&query).map_err(api_error!())?;

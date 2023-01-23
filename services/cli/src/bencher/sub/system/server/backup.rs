@@ -21,9 +21,9 @@ impl TryFrom<CliBackup> for Backup {
     type Error = CliError;
 
     fn try_from(create: CliBackup) -> Result<Self, Self::Error> {
-        let CliBackup { vacuum, backend } = create;
+        let CliBackup { exact, backend } = create;
         Ok(Self {
-            vacuum,
+            vacuum: Some(!exact),
             backend: backend.try_into()?,
         })
     }

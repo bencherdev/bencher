@@ -69,9 +69,9 @@ pub struct CliConfigView {
 
 #[derive(Parser, Debug)]
 pub struct CliBackup {
-    /// Use `VACUUM INTO`
+    /// Do not clean up deleted data
     #[clap(long)]
-    pub vacuum: Option<bool>,
+    pub exact: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,
