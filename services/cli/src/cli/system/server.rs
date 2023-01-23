@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
 
@@ -73,6 +73,18 @@ pub struct CliBackup {
     #[clap(long)]
     pub compress: bool,
 
+    /// Save database backup to data store
+    #[clap(long)]
+    pub data_store: Option<CliBackupDataStore>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+/// Supported Fold Operations
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliBackupDataStore {
+    /// AWS S3
+    AwsS3,
 }

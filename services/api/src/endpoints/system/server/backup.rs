@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::{ffi::OsStr, io::prelude::*};
 
+use bencher_json::system::backup::JsonDataStore;
 use bencher_json::{JsonBackup, JsonEmpty, JsonRestart};
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -86,7 +87,7 @@ async fn post_inner(
     conn.batch_execute(&query).map_err(api_error!())?;
 
     // Compress the database backup
-    if json_backup.compress.unwrap_or_default() {
+    let db_file_path = if json_backup.compress.unwrap_or_default() {
         let mut compress_file_path = backup_file_path.clone();
         let compress_extension = if let Some(extension) = compress_file_path.extension() {
             format!("{}.{GZIP_EXTENSION}", extension.to_string_lossy())
@@ -113,6 +114,18 @@ async fn post_inner(
         gz.write_all(&backup_contents)
             .map_err(ApiError::BackupFile)?;
         gz.finish().map_err(ApiError::BackupFile)?;
+
+        compress_file_path
+    } else {
+        backup_file_path
+    };
+
+    if let Some(JsonDataStore::AwsS3) = json_backup.data_store {
+        let config = aws_sdk_s3::Config::builder();
+        //  - LITESTREAM_DB_PATH=/data/bencher.db
+        //   # - LITESTREAM_REPLICA_URL=
+        //   # - AWS_ACCESS_KEY_ID=
+        //   # - AWS_SECRET_ACCESS_KEY=
     }
 
     Ok(JsonEmpty {})
