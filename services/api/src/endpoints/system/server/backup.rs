@@ -140,21 +140,25 @@ async fn post_inner(
 
         let client = aws_sdk_s3::Client::from_conf(config);
 
-        let endpoint_url = std::env::var("LITESTREAM_REPLICA_URL").unwrap();
-        let s3_uri = http::uri::Uri::from_str(&endpoint_url).unwrap();
-        let scheme = s3_uri.scheme_str().unwrap();
-        warn!("SCHEME {scheme}");
-        let bucket = s3_uri.host().unwrap();
-        warn!("BUCKET {bucket}");
-        let key = s3_uri.path();
-        warn!("KEY {key}");
+        // let endpoint_url = std::env::var("LITESTREAM_REPLICA_URL").unwrap();
+        // let s3_uri = http::uri::Uri::from_str(&endpoint_url).unwrap();
+        // let scheme = s3_uri.scheme_str().unwrap();
+        // warn!("SCHEME {scheme}");
+        // let bucket = s3_uri.host().unwrap();
+        // warn!("BUCKET {bucket}");
+        // let key = s3_uri.path();
+        // warn!("KEY {key}");
+        let bucket = std::env::var("AWS_BUCKET").unwrap();
         let body = aws_sdk_s3::types::ByteStream::from_path(&db_file_path)
             .await
             .unwrap();
         client
             .put_object()
-            .bucket("arn")
-            .key("goop")
+            .bucket(bucket)
+            .key(format!(
+                "backup/{}",
+                db_file_path.file_name().unwrap().to_string_lossy()
+            ))
             .body(body)
             .send()
             .await
