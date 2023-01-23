@@ -69,9 +69,9 @@ pub struct CliConfigView {
 
 #[derive(Parser, Debug)]
 pub struct CliBackup {
-    /// Do not clean up deleted data
+    /// Compress database backup with gzip
     #[clap(long)]
-    pub exact: bool,
+    pub compress: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,

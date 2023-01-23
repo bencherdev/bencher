@@ -13,7 +13,7 @@ const BACKUP_PATH: &str = "/v0/server/backup";
 
 #[derive(Debug, Clone)]
 pub struct Backup {
-    pub vacuum: Option<bool>,
+    pub compress: Option<bool>,
     pub backend: Backend,
 }
 
@@ -21,9 +21,9 @@ impl TryFrom<CliBackup> for Backup {
     type Error = CliError;
 
     fn try_from(create: CliBackup) -> Result<Self, Self::Error> {
-        let CliBackup { exact, backend } = create;
+        let CliBackup { compress, backend } = create;
         Ok(Self {
-            vacuum: Some(!exact),
+            compress: Some(compress),
             backend: backend.try_into()?,
         })
     }
@@ -31,8 +31,8 @@ impl TryFrom<CliBackup> for Backup {
 
 impl From<Backup> for JsonBackup {
     fn from(backup: Backup) -> Self {
-        let Backup { vacuum, .. } = backup;
-        Self { vacuum }
+        let Backup { compress, .. } = backup;
+        Self { compress }
     }
 }
 

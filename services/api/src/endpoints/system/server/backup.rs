@@ -68,6 +68,7 @@ async fn post_inner(
     }
     let conn = &mut api_context.database;
 
+    // Create a database backup
     let file_name = api_context
         .database_path
         .file_name()
@@ -77,14 +78,7 @@ async fn post_inner(
     let mut file_path = api_context.database_path.clone();
     file_path.set_file_name(&backup_file_name);
     let file_path_str = file_path.to_string_lossy();
-
-    let query = if json_backup.vacuum.unwrap_or(true) {
-        // sqlite3 /path/to/db "VACUUM INTO '/path/to/backup'"
-        format!("VACUUM INTO '{file_path_str}'")
-    } else {
-        // sqlite3 /path/to/db '.backup /path/to/backup'
-        format!("backup {file_path_str}")
-    };
+    let query = format!("VACUUM INTO '{file_path_str}'");
 
     conn.batch_execute(&query).map_err(api_error!())?;
 
