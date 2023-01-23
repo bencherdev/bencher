@@ -1,8 +1,11 @@
+use std::io::prelude::*;
 use std::sync::Arc;
 
 use bencher_json::{JsonBackup, JsonEmpty, JsonRestart};
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
+use flate2::{Compression, GzBuilder};
+use tokio::io::AsyncReadExt;
 use tracing::{error, warn};
 
 use crate::{
@@ -75,12 +78,32 @@ async fn post_inner(
         .unwrap()
         .to_string_lossy();
     let backup_file_name = format!("backup-{file_name}");
-    let mut file_path = api_context.database_path.clone();
-    file_path.set_file_name(&backup_file_name);
-    let file_path_str = file_path.to_string_lossy();
-    let query = format!("VACUUM INTO '{file_path_str}'");
+    let mut backup_file_path = api_context.database_path.clone();
+    backup_file_path.set_file_name(&backup_file_name);
+    let backup_file_path_str = backup_file_path.to_string_lossy();
+    let query = format!("VACUUM INTO '{backup_file_path_str}'");
 
     conn.batch_execute(&query).map_err(api_error!())?;
+
+    // Compress the database backup
+    if json_backup.compress.unwrap_or_default() {
+        let mut compress_file_path = backup_file_path.clone();
+        let extension = compress_file_path.extension().unwrap().to_string_lossy();
+        let compress_extension = format!("{extension}.gz");
+        compress_file_path.set_extension(compress_extension);
+
+        let mut backup_file = tokio::fs::File::open(&backup_file_path).await.unwrap();
+        let mut backup_contents = Vec::new();
+        backup_file.read_to_end(&mut backup_contents).await.unwrap();
+
+        let compress_file = std::fs::File::create(&compress_file_path).unwrap();
+        let mut gz = GzBuilder::new()
+            .filename(file_name.as_bytes())
+            .comment("Bencher database backup")
+            .write(compress_file, Compression::default());
+        gz.write_all(&backup_contents).unwrap();
+        gz.finish().unwrap();
+    }
 
     Ok(JsonEmpty {})
 }

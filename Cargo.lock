@@ -169,6 +169,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dropshot",
+ "flate2",
  "http",
  "jsonwebtoken",
  "literally",
