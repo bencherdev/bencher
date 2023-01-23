@@ -20,8 +20,8 @@ pub struct Restart {
 impl TryFrom<CliRestart> for Restart {
     type Error = CliError;
 
-    fn try_from(create: CliRestart) -> Result<Self, Self::Error> {
-        let CliRestart { delay, backend } = create;
+    fn try_from(restart: CliRestart) -> Result<Self, Self::Error> {
+        let CliRestart { delay, backend } = restart;
         Ok(Self {
             delay,
             backend: backend.try_into()?,

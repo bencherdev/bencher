@@ -13,6 +13,8 @@ pub enum CliServer {
     /// Manager server config
     #[clap(subcommand)]
     Config(CliConfig),
+    /// Backup database
+    Backup(CliBackup),
 }
 
 #[derive(Parser, Debug)]
@@ -61,6 +63,16 @@ pub struct CliConfigUpdate {
 
 #[derive(Parser, Debug)]
 pub struct CliConfigView {
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliBackup {
+    /// Use `VACUUM INTO`
+    #[clap(long)]
+    pub vacuum: Option<bool>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

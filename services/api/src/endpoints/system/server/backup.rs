@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use bencher_json::{JsonBackup, JsonEmpty, JsonRestart};
+use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
-use tokio::sync::mpsc::Sender;
 use tracing::{error, warn};
 
 use crate::{
@@ -11,6 +11,7 @@ use crate::{
         endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
     },
+    error::api_error,
     model::user::auth::AuthUser,
     util::cors::{get_cors, CorsResponse},
     ApiError,
@@ -66,6 +67,25 @@ async fn post_inner(
         return Err(ApiError::Admin(auth_user.id));
     }
     let conn = &mut api_context.database;
+
+    let file_name = api_context
+        .database_path
+        .file_name()
+        .unwrap()
+        .to_string_lossy();
+    warn!("FILENAME: {file_name}");
+    let backup_file_name = format!("backup-{file_name}");
+    warn!("BACKUP FILENAME: {backup_file_name}");
+
+    let query = if json_backup.vacuum.unwrap_or(true) {
+        // sqlite3 /path/to/db "VACUUM INTO '/path/to/backup'"
+        format!("VACUUM INTO '{backup_file_name}'")
+    } else {
+        // sqlite3 /path/to/db '.backup /path/to/backup'
+        format!(".backup {backup_file_name}")
+    };
+
+    conn.batch_execute(&query).map_err(api_error!())?;
 
     Ok(JsonEmpty {})
 }

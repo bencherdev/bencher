@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use crate::{bencher::sub::SubCmd, cli::system::server::CliServer, CliError};
 
+mod backup;
 mod config;
 mod ping;
 mod restart;
@@ -13,6 +14,7 @@ pub enum Server {
     Version(version::Version),
     Restart(restart::Restart),
     Config(config::Config),
+    Backup(backup::Backup),
 }
 
 impl TryFrom<CliServer> for Server {
@@ -24,6 +26,7 @@ impl TryFrom<CliServer> for Server {
             CliServer::Version(version) => Self::Version(version.try_into()?),
             CliServer::Restart(restart) => Self::Restart(restart.try_into()?),
             CliServer::Config(config) => Self::Config(config.try_into()?),
+            CliServer::Backup(backup) => Self::Backup(backup.try_into()?),
         })
     }
 }
@@ -36,6 +39,7 @@ impl SubCmd for Server {
             Self::Version(version) => version.exec().await,
             Self::Restart(restart) => restart.exec().await,
             Self::Config(config) => config.exec().await,
+            Self::Backup(backup) => backup.exec().await,
         }
     }
 }
