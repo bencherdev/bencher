@@ -50,6 +50,8 @@ pub enum ApiError {
     Serialize(serde_json::Error),
     #[error("Failed to deserialize: {0}")]
     Deserialize(serde_json::Error),
+    #[error("Failed to open backup file: {0}")]
+    BackupFile(std::io::Error),
 
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]
