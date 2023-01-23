@@ -1,12 +1,17 @@
+use std::os::unix::ffi::OsStrExt;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::{ffi::OsStr, io::prelude::*};
 
 use bencher_json::system::backup::JsonDataStore;
 use bencher_json::{JsonBackup, JsonEmpty, JsonRestart};
+use chrono::Utc;
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use flate2::{Compression, GzBuilder};
 use tokio::io::AsyncReadExt;
+use tracing::warn;
 
 use crate::{
     context::Context,
@@ -23,9 +28,6 @@ use crate::{
 use super::Resource;
 
 const BACKUP_RESOURCE: Resource = Resource::Backup;
-
-pub const DEFAULT_DELAY: u64 = 3;
-const GZIP_EXTENSION: &str = "gz";
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -73,13 +75,20 @@ async fn post_inner(
     let conn = &mut api_context.database;
 
     // Create a database backup
-    let file_name = api_context
-        .database_path
-        .file_name()
-        .unwrap_or_else(|| OsStr::new("bencher.db"))
-        .to_string_lossy();
-    let backup_file_name = format!("backup-{file_name}");
     let mut backup_file_path = api_context.database_path.clone();
+    let file_stem = backup_file_path
+        .file_stem()
+        .unwrap_or_else(|| OsStr::new("bencher"))
+        .to_string_lossy();
+    let file_extension = backup_file_path
+        .extension()
+        .unwrap_or_else(|| OsStr::new("db"))
+        .to_string_lossy();
+    let date_time = Utc::now();
+    let backup_file_name = format!(
+        "backup-{file_stem}-{}.{file_extension}",
+        date_time.format("%Y-%m-%d-%H-%M-%S")
+    );
     backup_file_path.set_file_name(&backup_file_name);
     let backup_file_path_str = backup_file_path.to_string_lossy();
     let query = format!("VACUUM INTO '{backup_file_path_str}'");
@@ -88,13 +97,9 @@ async fn post_inner(
 
     // Compress the database backup
     let db_file_path = if json_backup.compress.unwrap_or_default() {
+        let compress_file_name = format!("{backup_file_name}.gz");
         let mut compress_file_path = backup_file_path.clone();
-        let compress_extension = if let Some(extension) = compress_file_path.extension() {
-            format!("{}.{GZIP_EXTENSION}", extension.to_string_lossy())
-        } else {
-            GZIP_EXTENSION.into()
-        };
-        compress_file_path.set_extension(compress_extension);
+        compress_file_path.set_file_name(&compress_file_name);
 
         let mut backup_file = tokio::fs::File::open(&backup_file_path)
             .await
@@ -108,7 +113,7 @@ async fn post_inner(
         let compress_file =
             std::fs::File::create(&compress_file_path).map_err(ApiError::BackupFile)?;
         let mut gz = GzBuilder::new()
-            .filename(file_name.as_bytes())
+            .filename(api_context.database_path.file_name().unwrap().as_bytes())
             .comment("Bencher database backup")
             .write(compress_file, Compression::default());
         gz.write_all(&backup_contents)
@@ -121,11 +126,39 @@ async fn post_inner(
     };
 
     if let Some(JsonDataStore::AwsS3) = json_backup.data_store {
-        let config = aws_sdk_s3::Config::builder();
-        //  - LITESTREAM_DB_PATH=/data/bencher.db
-        //   # - LITESTREAM_REPLICA_URL=
-        //   # - AWS_ACCESS_KEY_ID=
-        //   # - AWS_SECRET_ACCESS_KEY=
+        let access_key_id = std::env::var("AWS_ACCESS_KEY_ID").unwrap();
+        let secret_access_key = std::env::var("AWS_SECRET_ACCESS_KEY").unwrap();
+        let credentials =
+            aws_sdk_s3::Credentials::new(access_key_id, secret_access_key, None, None, "bencher");
+        let credentials_provider =
+            aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
+
+        let config = aws_sdk_s3::Config::builder()
+            .credentials_provider(credentials_provider)
+            .region(aws_sdk_s3::Region::new("us-east-1"))
+            .build();
+
+        let client = aws_sdk_s3::Client::from_conf(config);
+
+        let endpoint_url = std::env::var("LITESTREAM_REPLICA_URL").unwrap();
+        let s3_uri = http::uri::Uri::from_str(&endpoint_url).unwrap();
+        let scheme = s3_uri.scheme_str().unwrap();
+        warn!("SCHEME {scheme}");
+        let bucket = s3_uri.host().unwrap();
+        warn!("BUCKET {bucket}");
+        let key = s3_uri.path();
+        warn!("KEY {key}");
+        let body = aws_sdk_s3::types::ByteStream::from_path(&db_file_path)
+            .await
+            .unwrap();
+        client
+            .put_object()
+            .bucket("arn")
+            .key("goop")
+            .body(body)
+            .send()
+            .await
+            .unwrap();
     }
 
     Ok(JsonEmpty {})

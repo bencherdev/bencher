@@ -439,6 +439,7 @@ dependencies = [
 name = "bencher_api"
 version = "0.2.29"
 dependencies = [
+ "aws-credential-types",
  "aws-sdk-s3",
  "bencher_adapter",
  "bencher_json",
