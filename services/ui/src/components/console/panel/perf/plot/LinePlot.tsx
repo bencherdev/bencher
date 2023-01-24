@@ -45,6 +45,7 @@ const LinePlot = (props) => {
 		}
 
 		const plot_arrays = [];
+		let metrics_found = false;
 		const colors = d3.schemeTableau10;
 		json_perf.results.forEach((result, index) => {
 			const perf_metrics = result.metrics;
@@ -60,24 +61,37 @@ const LinePlot = (props) => {
 				handleMaxUnits(y_value);
 				const xy = [x_value, y_value];
 				line_data.push(xy);
+				metrics_found = true;
 			});
 
 			const color = colors[index % 10];
 			plot_arrays.push(Plot.line(line_data, { stroke: color }));
 		});
 
-		return Plot.plot({
-			y: {
-				grid: true,
-				label: `↑ ${units()}`,
-			},
-			marks: plot_arrays,
-			width: props.width(),
-			nice: true,
-			// https://github.com/observablehq/plot/blob/main/README.md#layout-options
-			// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-			marginLeft: max_units() * 10 + 10,
-		});
+		if (metrics_found) {
+			return Plot.plot({
+				y: {
+					grid: true,
+					label: `↑ ${units()}`,
+				},
+				marks: plot_arrays,
+				width: props.width(),
+				nice: true,
+				// https://github.com/observablehq/plot/blob/main/README.md#layout-options
+				// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
+				marginLeft: max_units() * 10 + 10,
+			});
+		} else {
+			return (
+				<section class="section">
+					<div class="container">
+						<div class="content">
+							<h3>No data found</h3>
+						</div>
+					</div>
+				</section>
+			);
+		}
 	};
 
 	return <>{plotted()}</>;
