@@ -31,7 +31,7 @@ impl TryFrom<DataStoreConfig> for DataStore {
                 access_key_id,
                 secret_access_key,
                 access_point,
-            } => AwsS3::new(access_key_id, secret_access_key, access_point).map(Self::AwsS3),
+            } => AwsS3::new(access_key_id, secret_access_key, &access_point).map(Self::AwsS3),
         }
     }
 }
@@ -45,24 +45,24 @@ impl DataStore {
 }
 
 const ARN_AWS_S3: &str = "arn:aws:s3:";
-const COLON: &str = ":";
+const COLON: char = ':';
 const ACCESSPOINT: &str = ":accesspoint/";
 
 impl AwsS3 {
     fn new(
         access_key_id: String,
         secret_access_key: String,
-        access_point: String,
+        access_point: &str,
     ) -> Result<Self, ApiError> {
         let credentials =
             aws_sdk_s3::Credentials::new(access_key_id, secret_access_key, None, None, "bencher");
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
 
-        let (region, accesspoint) = access_point
+        let (region, accesspoint_arn) = access_point
             .trim_start_matches(ARN_AWS_S3)
             .split_once(COLON)
-            .ok_or_else(|| ApiError::DataStore(access_point.clone()))?;
+            .ok_or_else(|| ApiError::DataStore(access_point.to_string()))?;
 
         let config = aws_sdk_s3::Config::builder()
             .credentials_provider(credentials_provider)
@@ -70,12 +70,12 @@ impl AwsS3 {
             .build();
         let client = aws_sdk_s3::Client::from_conf(config);
 
-        let (account_id, resource) = accesspoint
+        let (account_id, resource) = accesspoint_arn
             .split_once(ACCESSPOINT)
-            .ok_or_else(|| ApiError::DataStore(access_point.clone()))?;
+            .ok_or_else(|| ApiError::DataStore(access_point.to_string()))?;
 
         let (bucket_name, bucket_path) =
-            if let Some((bucket_name, bucket_path)) = resource.split_once("/") {
+            if let Some((bucket_name, bucket_path)) = resource.split_once('/') {
                 (bucket_name.to_string(), Some(PathBuf::from(bucket_path)))
             } else {
                 (resource.to_string(), None)
