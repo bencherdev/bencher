@@ -1,6 +1,5 @@
 use std::{net::SocketAddr, path::PathBuf};
 
-use bencher_valid::NonEmpty;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -51,11 +50,11 @@ pub struct JsonDatabase {
 #[serde(tag = "service", rename_all = "snake_case")]
 pub enum DataStore {
     AwsS3 {
-        access_key_id: NonEmpty,
-        secret_access_key: NonEmpty,
+        access_key_id: String,
+        secret_access_key: String,
         // arn:aws:s3:<region>:<account-id>:accesspoint/<resource>[/backup-dir-path]
         // https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html
-        access_point: NonEmpty,
+        access_point: String,
     },
 }
 
