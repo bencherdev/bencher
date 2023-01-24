@@ -1,6 +1,6 @@
 # 🐰 Bencher
 
-[Bencher](https://bencher.dev) is a suite of continuous benchmarking tools designed to help catch performance regressions in CI.
+[Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) tools designed to help catch performance regressions in CI. That is, Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
 
 It consists of:
 
@@ -10,6 +10,8 @@ It consists of:
 
 The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start) tutorial.
 
+Though Bencher is open source, there is also a hosted SaaS version available at [bencher.dev](https://bencher.dev).
+
 ## Documentation
 
 - Tutorial
@@ -18,9 +20,12 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
 - Explanation
+  - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
   - [Branch Management](https://bencher.dev/docs/explanation/branch-management)
+  - [Talks](https://bencher.dev/docs/explanation/talks)
 - Reference
   - [REST API](https://bencher.dev/docs/reference/api)
+  - [Server Config](https://bencher.dev/docs/reference/server-config)
   - [Prior Art](https://bencher.dev/docs/reference/prior-art)
   - [Roadmap](https://bencher.dev/docs/reference/roadmap)
   - [Changelog](https://bencher.dev/docs/reference/changelog)
