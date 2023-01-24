@@ -136,11 +136,29 @@ async fn post_inner(
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
 
-        let bucket = std::env::var("AWS_BUCKET").unwrap();
-        let (region, _accesspoint) = bucket
+        let aws_bucket = std::env::var("AWS_BUCKET").unwrap();
+        let (region, arn) = aws_bucket
             .trim_start_matches("arn:aws:s3:")
             .split_once(":")
             .unwrap();
+        warn!("REGION: {region}");
+        let (id, resource) = arn.split_once(":accesspoint/").unwrap();
+        let (bucket_name, key) = if let Some((bucket, key_path)) = resource.split_once("/") {
+            let key_path = Path::new(key_path);
+            let key_path = key_path.join(db_file_path.file_name().unwrap());
+            (bucket.to_string(), key_path.to_string_lossy().to_string())
+        } else {
+            (
+                resource.to_string(),
+                db_file_path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
+            )
+        };
+        let bucket = format!("arn:aws:s3:{region}:{id}:accesspoint/{bucket_name}");
+        warn!("BUCKET: {bucket}");
 
         let config = aws_sdk_s3::Config::builder()
             .credentials_provider(credentials_provider)
@@ -163,10 +181,7 @@ async fn post_inner(
         client
             .put_object()
             .bucket(bucket)
-            .key(format!(
-                "backup/{}",
-                db_file_path.file_name().unwrap().to_string_lossy()
-            ))
+            .key(key)
             .body(body)
             .send()
             .await

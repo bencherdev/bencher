@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, path::PathBuf};
 
+use bencher_valid::NonEmpty;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -44,15 +45,18 @@ pub struct JsonDatabase {
     pub file: PathBuf,
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// #[cfg_attr(feature = "schema", derive(JsonSchema))]
-// #[serde(untagged)]
-// pub enum DataStore {
-//     AwsS3 {
-//         pub access_key_id: NonEmpty,
-//         pub secret_access_key: NonEmpty,
-//     },
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(untagged)]
+pub enum DataStore {
+    AwsS3 {
+        access_key_id: NonEmpty,
+        secret_access_key: NonEmpty,
+        // arn:aws:s3:<region>:<account-id>:accesspoint/<resource>
+        // https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html
+        access_point: NonEmpty,
+    },
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
