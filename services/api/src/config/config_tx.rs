@@ -77,6 +77,11 @@ fn into_private(
     diesel_database_url(&database_path);
     let mut database_connection = SqliteConnection::establish(&database_path)?;
     run_migrations(&mut database_connection)?;
+    let data_store = if let Some(data_store) = json_database.data_store {
+        Some(data_store.try_into()?)
+    } else {
+        None
+    };
     Ok(Mutex::new(ApiContext {
         endpoint,
         secret_key: into_secret_key(secret_key),
@@ -85,6 +90,7 @@ fn into_private(
         database: Database {
             path: json_database.file,
             connection: database_connection,
+            data_store,
         },
         restart_tx,
     }))

@@ -65,6 +65,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compression"
+version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "942c7cd7ae39e91bde4820d74132e9862e62c2f386c3aa90ccf55949f5bad63a"
+dependencies = [
+ "flate2",
+ "futures-core",
+ "memchr",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -439,6 +452,7 @@ dependencies = [
 name = "bencher_api"
 version = "0.2.29"
 dependencies = [
+ "async-compression",
  "aws-credential-types",
  "aws-sdk-s3",
  "bencher_adapter",
@@ -450,7 +464,6 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dropshot",
- "flate2",
  "http",
  "jsonwebtoken",
  "literally",

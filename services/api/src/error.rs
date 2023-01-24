@@ -50,8 +50,12 @@ pub enum ApiError {
     Serialize(serde_json::Error),
     #[error("Failed to deserialize: {0}")]
     Deserialize(serde_json::Error),
-    #[error("Failed to open backup file: {0}")]
+    #[error("Failed to backup file: {0}")]
     BackupFile(std::io::Error),
+    #[error("Failed to configure data store: {0}")]
+    DataStore(String),
+    #[error("Failed to use AWS S3: {0}")]
+    AwsS3(String),
 
     #[cfg(feature = "swagger")]
     #[error("Failed to create swagger file: {0}")]
