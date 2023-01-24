@@ -33,6 +33,7 @@
   ],
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
+    "accesspoint",
     "anychar",
     "bagge",
     "bencherdev",

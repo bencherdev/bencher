@@ -136,13 +136,16 @@ async fn post_inner(
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
 
+        const AWS_S3_ARN: &str = "arn:aws:s3:";
+        const COLON: &str = ":";
+        const ACCESSPOINT: &str = ":accesspoint/";
         let aws_bucket = std::env::var("AWS_BUCKET").unwrap();
         let (region, arn) = aws_bucket
-            .trim_start_matches("arn:aws:s3:")
-            .split_once(":")
+            .trim_start_matches(AWS_S3_ARN)
+            .split_once(COLON)
             .unwrap();
         warn!("REGION: {region}");
-        let (id, resource) = arn.split_once(":accesspoint/").unwrap();
+        let (id, resource) = arn.split_once(ACCESSPOINT).unwrap();
         let (bucket_name, key) = if let Some((bucket, key_path)) = resource.split_once("/") {
             let key_path = Path::new(key_path);
             let key_path = key_path.join(db_file_path.file_name().unwrap());
@@ -157,7 +160,7 @@ async fn post_inner(
                     .to_string(),
             )
         };
-        let bucket = format!("arn:aws:s3:{region}:{id}:accesspoint/{bucket_name}");
+        let bucket = format!("{AWS_S3_ARN}{region}{COLON}{id}{ACCESSPOINT}{bucket_name}");
         warn!("BUCKET: {bucket}");
 
         let config = aws_sdk_s3::Config::builder()

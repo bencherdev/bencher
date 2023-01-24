@@ -43,16 +43,17 @@ pub struct JsonTls {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonDatabase {
     pub file: PathBuf,
+    pub data_store: Option<DataStore>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(untagged)]
+#[serde(tag = "service", rename_all = "snake_case")]
 pub enum DataStore {
     AwsS3 {
         access_key_id: NonEmpty,
         secret_access_key: NonEmpty,
-        // arn:aws:s3:<region>:<account-id>:accesspoint/<resource>
+        // arn:aws:s3:<region>:<account-id>:accesspoint/<resource>[/backup-dir-path]
         // https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html
         access_point: NonEmpty,
     },
