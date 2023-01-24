@@ -80,7 +80,7 @@ async fn get_one_inner(
     let api_context = &mut *context.lock().await;
     let project_id =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let perf = schema::perf::table
         .filter(schema::perf::uuid.eq(path_params.result.to_string()))

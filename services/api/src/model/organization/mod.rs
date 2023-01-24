@@ -84,8 +84,10 @@ impl QueryOrganization {
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, ApiError> {
-        let query_organization =
-            QueryOrganization::from_resource_id(&mut api_context.database, organization)?;
+        let query_organization = QueryOrganization::from_resource_id(
+            &mut api_context.database.connection,
+            organization,
+        )?;
 
         api_context
             .rbac
@@ -102,7 +104,7 @@ impl QueryOrganization {
     ) -> Result<Self, ApiError> {
         let query_organization = schema::organization::table
             .filter(schema::organization::id.eq(organization_id))
-            .first(&mut api_context.database)
+            .first(&mut api_context.database.connection)
             .map_err(api_error!())?;
 
         api_context

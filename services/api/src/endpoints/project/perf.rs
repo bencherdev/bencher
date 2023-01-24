@@ -111,7 +111,7 @@ async fn post_inner(
     let api_context = &mut *context.lock().await;
     let project_id =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let JsonPerfQuery {
         branches,

@@ -69,7 +69,7 @@ async fn get_one_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonUser, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
     same_user!(auth_user, api_context.rbac, query_user.id);

@@ -55,7 +55,7 @@ pub async fn post(
 
 async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<JsonConfirm, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let token_data =
         JsonWebToken::validate_auth(&json_token.token, &api_context.secret_key.decoding)

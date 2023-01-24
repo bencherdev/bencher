@@ -91,7 +91,7 @@ async fn get_ls_inner(
         auth_user,
         Permission::ViewRole,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     Ok(schema::user::table
         .inner_join(
@@ -146,7 +146,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     // Get the organization
     let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
@@ -280,7 +280,7 @@ async fn get_one_inner(
         auth_user,
         Permission::ViewRole,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     json_member(conn, query_user.id, query_organization.id)
@@ -319,9 +319,12 @@ async fn patch_inner(
 ) -> Result<JsonMember, ApiError> {
     let api_context = &mut *context.lock().await;
 
-    let query_organization =
-        QueryOrganization::from_resource_id(&mut api_context.database, &path_params.organization)?;
-    let query_user = QueryUser::from_resource_id(&mut api_context.database, &path_params.user)?;
+    let query_organization = QueryOrganization::from_resource_id(
+        &mut api_context.database.connection,
+        &path_params.organization,
+    )?;
+    let query_user =
+        QueryUser::from_resource_id(&mut api_context.database.connection, &path_params.user)?;
 
     if let Some(role) = json_update.role {
         // Verify that the user is allowed to update member role
@@ -337,12 +340,12 @@ async fn patch_inner(
                 .filter(schema::organization_role::organization_id.eq(query_organization.id)),
         )
         .set(schema::organization_role::role.eq(role.to_string()))
-        .execute(&mut api_context.database)
+        .execute(&mut api_context.database.connection)
         .map_err(api_error!())?;
     }
 
     json_member(
-        &mut api_context.database,
+        &mut api_context.database.connection,
         query_user.id,
         query_organization.id,
     )
@@ -379,7 +382,7 @@ async fn delete_inner(
         auth_user,
         Permission::DeleteRole,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     let json_member = json_member(conn, query_user.id, query_organization.id)?;
@@ -389,7 +392,7 @@ async fn delete_inner(
             .filter(schema::organization_role::user_id.eq(query_user.id))
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
-    .execute(&mut api_context.database)
+    .execute(&mut api_context.database.connection)
     .map_err(api_error!())?;
 
     Ok(json_member)

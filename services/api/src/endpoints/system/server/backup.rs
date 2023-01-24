@@ -73,10 +73,10 @@ async fn post_inner(
     if !auth_user.is_admin(&api_context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     // Create a database backup
-    let mut backup_file_path = api_context.database_path.clone();
+    let mut backup_file_path = api_context.database.path.clone();
     let file_stem = backup_file_path
         .file_stem()
         .unwrap_or_else(|| OsStr::new("bencher"))
@@ -114,7 +114,7 @@ async fn post_inner(
         let compress_file =
             std::fs::File::create(&compress_file_path).map_err(ApiError::BackupFile)?;
         let mut gz = GzBuilder::new()
-            .filename(api_context.database_path.file_name().unwrap().as_bytes())
+            .filename(api_context.database.path.file_name().unwrap().as_bytes())
             .comment("Bencher database backup")
             .write(compress_file, Compression::default());
         gz.write_all(&backup_contents)

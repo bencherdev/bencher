@@ -96,7 +96,7 @@ async fn get_ls_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let mut query = schema::branch::table
         .filter(schema::branch::project_id.eq(&query_project.id))
@@ -148,8 +148,11 @@ async fn post_inner(
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;
     let start_point = json_branch.start_point.take();
-    let insert_branch =
-        InsertBranch::from_json(&mut api_context.database, &path_params.project, json_branch)?;
+    let insert_branch = InsertBranch::from_json(
+        &mut api_context.database.connection,
+        &path_params.project,
+        json_branch,
+    )?;
     // Verify that the user is allowed
     QueryProject::is_allowed_id(
         api_context,
@@ -157,7 +160,7 @@ async fn post_inner(
         auth_user,
         Permission::Create,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
@@ -232,7 +235,7 @@ async fn get_one_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     schema::branch::table
         .filter(

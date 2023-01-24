@@ -19,7 +19,7 @@ use tracing::trace;
 use url::Url;
 
 use crate::{
-    context::{ApiContext, Context, Email, Messenger, SecretKey},
+    context::{ApiContext, Context, Database, Email, Messenger, SecretKey},
     endpoints::Api,
     util::registrar::Registrar,
     ApiError,
@@ -75,15 +75,17 @@ fn into_private(
 ) -> Result<Mutex<ApiContext>, ApiError> {
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(&database_path);
-    let mut database = SqliteConnection::establish(&database_path)?;
-    run_migrations(&mut database)?;
+    let mut database_connection = SqliteConnection::establish(&database_path)?;
+    run_migrations(&mut database_connection)?;
     Ok(Mutex::new(ApiContext {
         endpoint,
         secret_key: into_secret_key(secret_key),
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
-        database,
-        database_path: json_database.file,
+        database: Database {
+            path: json_database.file,
+            connection: database_connection,
+        },
         restart_tx,
     }))
 }

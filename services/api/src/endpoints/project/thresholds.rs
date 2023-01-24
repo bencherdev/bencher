@@ -93,7 +93,7 @@ async fn get_ls_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     Ok(schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
@@ -153,7 +153,7 @@ async fn post_inner(
         branch_id,
         testbed_id,
     } = SameProject::validate(
-        &mut api_context.database,
+        &mut api_context.database.connection,
         &path_params.project,
         &json_threshold.branch,
         &json_threshold.testbed,
@@ -161,7 +161,7 @@ async fn post_inner(
 
     // Verify that the user is allowed
     QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let insert_threshold =
         InsertThreshold::from_json(conn, project_id, branch_id, testbed_id, json_threshold)?;
@@ -231,7 +231,7 @@ async fn get_one_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))

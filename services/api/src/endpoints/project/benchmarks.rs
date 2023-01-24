@@ -85,7 +85,7 @@ async fn get_ls_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     Ok(schema::benchmark::table
         .filter(schema::benchmark::project_id.eq(&query_project.id))
@@ -151,7 +151,7 @@ async fn get_one_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     schema::benchmark::table
         .filter(

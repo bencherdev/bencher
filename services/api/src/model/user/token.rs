@@ -93,7 +93,7 @@ impl InsertToken {
     ) -> Result<Self, ApiError> {
         let JsonNewToken { name, ttl } = token;
 
-        let query_user = QueryUser::from_resource_id(&mut api_context.database, user)?;
+        let query_user = QueryUser::from_resource_id(&mut api_context.database.connection, user)?;
         same_user!(auth_user, api_context.rbac, query_user.id);
 
         // TODO Custom max TTL

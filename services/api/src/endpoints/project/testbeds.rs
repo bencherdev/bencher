@@ -87,7 +87,7 @@ async fn get_ls_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     Ok(schema::testbed::table
         .filter(schema::testbed::project_id.eq(query_project.id))
@@ -132,7 +132,7 @@ async fn post_inner(
 ) -> Result<JsonTestbed, ApiError> {
     let api_context = &mut *context.lock().await;
     let insert_testbed = InsertTestbed::from_json(
-        &mut api_context.database,
+        &mut api_context.database.connection,
         &path_params.project,
         json_testbed,
     )?;
@@ -143,7 +143,7 @@ async fn post_inner(
         auth_user,
         Permission::Create,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     diesel::insert_into(schema::testbed::table)
         .values(&insert_testbed)
@@ -213,7 +213,7 @@ async fn get_one_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     schema::testbed::table
         .filter(

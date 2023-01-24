@@ -87,7 +87,7 @@ async fn get_ls_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     Ok(schema::metric_kind::table
         .filter(schema::metric_kind::project_id.eq(query_project.id))
@@ -132,7 +132,7 @@ async fn post_inner(
 ) -> Result<JsonMetricKind, ApiError> {
     let api_context = &mut *context.lock().await;
     let insert_metric_kind = InsertMetricKind::from_json(
-        &mut api_context.database,
+        &mut api_context.database.connection,
         &path_params.project,
         json_metric_kind,
     )?;
@@ -143,7 +143,7 @@ async fn post_inner(
         auth_user,
         Permission::Create,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
@@ -213,7 +213,7 @@ async fn get_one_inner(
     let api_context = &mut *context.lock().await;
     let query_project =
         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     schema::metric_kind::table
         .filter(

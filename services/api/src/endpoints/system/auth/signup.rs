@@ -59,7 +59,7 @@ pub async fn post(
 
 async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let invite = json_signup.invite.take();
     let email = json_signup.email.clone();

@@ -120,7 +120,8 @@ impl QueryProject {
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
     ) -> Result<Self, ApiError> {
-        let query_project = QueryProject::from_resource_id(&mut api_context.database, project)?;
+        let query_project =
+            QueryProject::from_resource_id(&mut api_context.database.connection, project)?;
 
         api_context
             .rbac
@@ -137,7 +138,7 @@ impl QueryProject {
     ) -> Result<Self, ApiError> {
         let query_project = schema::project::table
             .filter(schema::project::id.eq(project_id))
-            .first(&mut api_context.database)
+            .first(&mut api_context.database.connection)
             .map_err(api_error!())?;
 
         api_context
@@ -164,7 +165,8 @@ impl QueryProject {
             )
         } else {
             // Get the project
-            let project = QueryProject::from_resource_id(&mut api_context.database, project)?;
+            let project =
+                QueryProject::from_resource_id(&mut api_context.database.connection, project)?;
             // See if the project is public or not
             if project.public {
                 Ok(project)

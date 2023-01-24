@@ -64,7 +64,7 @@ async fn get_ls_inner(
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     let mut sql = schema::project::table.into_boxed();
 
@@ -143,5 +143,5 @@ async fn get_one_inner(
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
     QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?
-        .into_json(&mut api_context.database)
+        .into_json(&mut api_context.database.connection)
 }

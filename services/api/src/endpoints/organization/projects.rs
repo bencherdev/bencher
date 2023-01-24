@@ -89,7 +89,7 @@ async fn get_ls_inner(
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     Ok(schema::project::table
         .filter(schema::project::organization_id.eq(query_organization.id))
@@ -139,7 +139,7 @@ async fn post_inner(
             return Err(ApiError::CreatePrivateProject(auth_user.id));
         }
     }
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
 
     // Create the project
     let insert_project = InsertProject::from_json(conn, &path_params.organization, json_project)?;
@@ -245,6 +245,6 @@ async fn get_one_inner(
         Permission::View,
     )?;
 
-    let conn = &mut api_context.database;
+    let conn = &mut api_context.database.connection;
     QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
 }
