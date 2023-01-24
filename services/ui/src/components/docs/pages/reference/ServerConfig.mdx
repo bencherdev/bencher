@@ -1,32 +1,60 @@
 ```
 {
-  "database": {
-    "file": "string"
-  },
-  "endpoint": "string",
-  "logging": {
-    "log": {
-      "stderr_terminal": {
-        "level": "trace"
-      }
-    },
-    "name": "string"
-  },
-  "secret_key": "string",
+  // This should be the URL for your Bencher UI
+  "endpoint": "https://bencher.example.com",
+  // This is the key used to generate tokens
+  // IT SHOULD BE VERY SECURE!
+  "secret_key": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
   "server": {
-    "bind_address": "string",
-    "request_body_max_bytes": 0,
+    // This is the default bind address
+    // This is what is expected in the Docker containers
+    "bind_address": "0.0.0.0:61016",
+    // 1 megabyte or 1_048_576 bytes
+    "request_body_max_bytes": 1048576,
+    // Optional: Server TLS
     "tls": {
-      "cert_file": "string",
-      "key_file": "string"
+      "cert_file": "path/to/cert",
+      "key_file": "path/to/key"
     }
   },
+  "logging": {
+    "name": "Bencher API",
+    // Log to either `stderr_terminal` or a `file`
+    "log": {
+      "stderr_terminal": {
+        // Options are: `trace`, `debug`, `info`, `warn`, `error`, and `critical`
+        "level": "info"
+      }
+      // OR
+      // "file": {
+      //   level: "info",
+      //   path: "path/to/file",
+      //   // Options are: `fail`, `truncate`, and `append`
+      //   if_exists: "append",
+      // }
+    },
+  },
+  "database": {
+    // Path to the database file
+    "file": "data/bencher.db",
+    // Optional: Remote data store for backups
+    "data_store": {
+      // Options are only `aws_s3`
+      "service": "aws_s3"
+      "access_key_id": "XXXXXXXXXXXXXXXX",
+      "secret_access_key": "XXXXXXXXXXXXXXXX",
+      // See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html
+      "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my_bucket/path/to/backup/dir"
+    }
+  },
+  // Optional: Configure email service
+  // Otherwise, all messages will be sent to the logs instead
   "smtp": {
-    "from_email": "string",
-    "from_name": "string",
-    "hostname": "string",
-    "secret": "string",
-    "username": "string"
+    "hostname": "emailservice.com",
+    "username": "abcdefg"
+    "secret": "XXXXXXXXXXXXXXXX",
+    "from_name": "Bencher",
+    "from_email": "info@bencher.example.com"
   }
 }
 ```
