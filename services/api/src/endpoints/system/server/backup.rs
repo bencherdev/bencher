@@ -136,9 +136,15 @@ async fn post_inner(
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
 
+        let bucket = std::env::var("AWS_BUCKET").unwrap();
+        let (region, _accesspoint) = bucket
+            .trim_start_matches("arn:aws:s3:")
+            .split_once(":")
+            .unwrap();
+
         let config = aws_sdk_s3::Config::builder()
             .credentials_provider(credentials_provider)
-            .region(aws_sdk_s3::Region::new("us-east-1"))
+            .region(aws_sdk_s3::Region::new(region.to_string()))
             .build();
 
         let client = aws_sdk_s3::Client::from_conf(config);
@@ -151,7 +157,6 @@ async fn post_inner(
         // warn!("BUCKET {bucket}");
         // let key = s3_uri.path();
         // warn!("KEY {key}");
-        let bucket = std::env::var("AWS_BUCKET").unwrap();
         let body = aws_sdk_s3::types::ByteStream::from_path(&db_file_path)
             .await
             .unwrap();

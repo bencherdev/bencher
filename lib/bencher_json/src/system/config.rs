@@ -44,6 +44,16 @@ pub struct JsonDatabase {
     pub file: PathBuf,
 }
 
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// #[cfg_attr(feature = "schema", derive(JsonSchema))]
+// #[serde(untagged)]
+// pub enum DataStore {
+//     AwsS3 {
+//         pub access_key_id: NonEmpty,
+//         pub secret_access_key: NonEmpty,
+//     },
+// }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSmtp {
