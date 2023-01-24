@@ -3,10 +3,10 @@ name: Bencher
 on:
   workflow_dispatch:
   push:
-    branches: [ main, devel ]
+    branches: [main, devel]
     tags: [v**]
   pull_request:
-    branches: [ main, devel ]
+    branches: [main, devel]
 
 env:
   # General
@@ -128,7 +128,6 @@ jobs:
         run: |
           npm install --include=dev
           npx rome ci --formatter-enabled false .
-
 
   # UI WASM
   build_bencher_valid_wasm:
@@ -450,14 +449,30 @@ jobs:
           name: ${{ env.UI_BUILD_DIST }}
           path: ./services/ui/dist
 
-  # API Fly.io
-  deploy_api_fly:
-    name: Deploy API to Fly.io
+  # API Database
+  backup_database:
+    name: Backup Database
     runs-on: ubuntu-latest
+    # TODO remove after `v0.30.0` release
+    continue-on-error: true
     needs:
       - nightly_api_docker
       - build_ui
       - cargo_bench
+    env:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install `bencher` CLI
+        run: cargo install --path services/cli --locked
+      - name: Backup API Server Database
+        run: bencher server backup --compress --data-store aws_s3 --rm
+
+  # API Fly.io
+  deploy_api_fly:
+    name: Deploy API to Fly.io
+    runs-on: ubuntu-latest
+    needs: backup_database
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
