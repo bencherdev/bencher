@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonBackup {
     pub compress: Option<bool>,
     pub data_store: Option<JsonDataStore>,
+    pub rm: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

@@ -77,6 +77,10 @@ pub struct CliBackup {
     #[clap(long)]
     pub data_store: Option<CliBackupDataStore>,
 
+    /// Remove backups
+    #[clap(long)]
+    pub rm: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

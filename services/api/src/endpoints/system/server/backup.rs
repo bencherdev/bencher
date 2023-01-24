@@ -10,6 +10,7 @@ use chrono::Utc;
 use diesel::connection::SimpleConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use flate2::{Compression, GzBuilder};
+use tokio::fs::remove_file;
 use tokio::io::AsyncReadExt;
 use tracing::warn;
 
@@ -120,9 +121,11 @@ async fn post_inner(
             .map_err(ApiError::BackupFile)?;
         gz.finish().map_err(ApiError::BackupFile)?;
 
+        remove_file(backup_file_path).await.unwrap();
+
         compress_file_path
     } else {
-        backup_file_path
+        backup_file_path.clone()
     };
 
     if let Some(JsonDataStore::AwsS3) = json_backup.data_store {
@@ -163,6 +166,10 @@ async fn post_inner(
             .send()
             .await
             .unwrap();
+    }
+
+    if json_backup.rm.unwrap_or_default() {
+        remove_file(db_file_path).await.unwrap();
     }
 
     Ok(JsonEmpty {})

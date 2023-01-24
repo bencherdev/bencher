@@ -15,6 +15,7 @@ const BACKUP_PATH: &str = "/v0/server/backup";
 pub struct Backup {
     pub compress: Option<bool>,
     pub data_store: Option<BackupDataStore>,
+    pub rm: Option<bool>,
     pub backend: Backend,
 }
 
@@ -30,11 +31,13 @@ impl TryFrom<CliBackup> for Backup {
         let CliBackup {
             compress,
             data_store,
+            rm,
             backend,
         } = create;
         Ok(Self {
             compress: Some(compress),
             data_store: data_store.map(Into::into),
+            rm: Some(rm),
             backend: backend.try_into()?,
         })
     }
@@ -53,10 +56,12 @@ impl From<Backup> for JsonBackup {
         let Backup {
             compress,
             data_store,
+            rm,
             ..
         } = backup;
         Self {
             compress,
+            rm,
             data_store: data_store.map(Into::into),
         }
     }
