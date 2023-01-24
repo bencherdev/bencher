@@ -434,7 +434,7 @@ checksum = "b645a089122eccb6111b4f81cbc1a49f5900ac4666bb93ac027feaecf15607bf"
 
 [[package]]
 name = "bencher_adapter"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "bencher_json",
  "criterion",
@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_api"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "async-compression",
  "aws-credential-types",
@@ -488,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_cli"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "assert_cmd",
  "async-trait",
@@ -511,7 +511,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_endpoint"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "bencher_json",
  "derive_more",
@@ -520,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_json"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "bencher_valid",
  "chrono",
@@ -538,7 +538,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rbac"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "bencher_json",
  "literally",
@@ -549,7 +549,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_valid"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "base64",
  "console_error_panic_hook",
