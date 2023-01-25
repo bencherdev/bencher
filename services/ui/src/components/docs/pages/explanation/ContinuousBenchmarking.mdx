@@ -1,10 +1,8 @@
 By now, everyone in the software industry is aware of continuous integration (CI).
-At fundimental level, CI is about detecting and preventing software feature regressions
-before they make it to production.
+At a fundimental level, CI is about detecting and preventing software feature regressions before they make it to production.
 Similarly, continuous benchmarking (CB) is about detecting and preventing software _performance_ regressions before they make it to production.
 For the same reasons that unit tests are run in CI for each code change,
 preformance tests should be run in CB for each code change.
-
 
 ## Continuous Benchmarking vs Local Benchmark Comparison
 
@@ -14,7 +12,7 @@ However, it should not be relied on to catch performance regressions on an ongoi
 Just as being able to run unit tests locally doesn't obviate the need for CI,
 being able to run and compare benchmarks locally doesn't obviate the need for CB.
 
-There are several features that Bencher offers that local benchmark comaprison tools simply cannot:
+There are several features Bencher offers that local benchmark comaprison tools cannot:
 - Comparsion of the same benchmark between different testbeds
 - Comparison of benchmarks across languages and harnesses
 - Collaboration and sharing of benchmark resuts
@@ -22,7 +20,18 @@ There are several features that Bencher offers that local benchmark comaprison t
 
 ## Continuous Benchmarking vs Application Performance Management
 
-Application Performance Management (APM) is a vital for modern sofware services.
+Application Performance Management (APM) is a vital tool for modern sofware services.
+However, APM is designed to be used in production.
+By the time a performance regression is detected, it is already impacting your customers.
+
+> Most defects end up costing more than it would have cost to prevent them. Defects are expensive when they occur, both the direct costs of fixing the defects and the indirect costs because of damaged relationships, lost business, and lost development time.
+>
+> — Kent Beck, Extreme Programming Explained
+
+There are several features Bencher offers that APM tools cannot:
+- Detect and prevent performance regressions in CI
+- Performance changes and impacts included in code review
+- No overhead in production environments
 
 ## Continuous Benchmarking
 
