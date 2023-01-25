@@ -30,6 +30,8 @@ pub enum CliError {
     Send(usize),
     #[error("Arithmetic error")]
     BadMath,
+    #[error("Error Code: {0}")]
+    ErrorCode(String),
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),
