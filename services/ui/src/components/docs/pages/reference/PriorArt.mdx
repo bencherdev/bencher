@@ -1,17 +1,3 @@
-## Why make Bencher?
-
-Before creating Bencher, we set out to find a tool that could/had:
-
-- Track benchmarks across multiple languages
-- Natively ingest language standard benchmark harness output
-- Extensible for custom benchmark harness output
-- Open source and able to self-host
-- Work with multiple CI hosts
-- User authentication and authorization
-
-Unfortunately, nothing that met all of these criteria existed.
-Below are the tools that we did find and took inspiration from.
-
 ## Benchmark Tracking Tools
 
 - General
@@ -53,6 +39,9 @@ Below are the tools that we did find and took inspiration from.
 - Apple
   - [WebKit’s no performance regression policy](https://nicoverbruggen.be/blog/webkit-no-regression-policy)
   - [WebKit Regression Testing](https://webkit.org/regression-testing/)
+- Amazon
+  - [AWS Benchmarking](https://www.amazon.jobs/en/landing_pages/AWS-benchmarking)
+  - [Performance Efficiency: Benchmark existing workloads](https://docs.aws.amazon.com/wellarchitected/latest/framework/perf_performing_architecture_benchmark.html)
 - Netflix
   - [Fixing Performance Regressions Before they Happen](https://netflixtechblog.com/fixing-performance-regressions-before-they-happen-eab2602b86fe)
 - Google
@@ -66,14 +55,11 @@ Below are the tools that we did find and took inspiration from.
 - Elastic
   - [How we perform continuous performance testing on Enterprise Search](https://www.elastic.co/blog/how-to-use-continuous-performance-testing-for-enterprise-search)
 - Academic
-
   - [Automated Detection of Performance Regressions Using Regression Models on Clustered Performance Counters](https://www.researchgate.net/publication/281117799_Automated_Detection_of_Performance_Regressions_Using_Regression_Models_on_Clustered_Performance_Counters)
   - [Search-based detection of code changes introducing performance regression](https://www.sciencedirect.com/science/article/abs/pii/S2210650222000712)
   - [Locating Performance Regression Root Causes in the Field Operations of Web-Based Systems: An Experience Report](https://ieeexplore.ieee.org/document/9629300)
   - [A Nonparametric Approach for Multiple Change Point Analysis of Multivariate Data](https://arxiv.org/pdf/1306.4933.pdf)
-
 - Other
-
   - [Towards Continuous Performance Regression Testing](https://www.morling.dev/blog/towards-continuous-performance-regression-testing)
   - [Autonomously Finding Performance Regressions In The Linux Kernel](https://www.phoronix.com/review/linux_perf_regressions)
   - [Continuous Performance Regression Testing for CI/CD](https://www.nastel.com/continuous-performance-regression-testing-for-ci-cd/)

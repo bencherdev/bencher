@@ -1,13 +1,20 @@
+Continuous Benchmarking is a software development practice where members of a team benchmark their work frequently,
+usually each person benchmarks at least daily - leading to multiple benchmarks per day.
+Each benchmark is verified by an automated build to detect performance regressions as quickly as possible.
+Many teams find that this approach leads to significantly reduced performance regressions
+and allows a team to develop performant software more rapidly.
+
 By now, everyone in the software industry is aware of continuous integration (CI).
 At a fundimental level, CI is about detecting and preventing software feature regressions before they make it to production.
 Similarly, continuous benchmarking (CB) is about detecting and preventing software _performance_ regressions before they make it to production.
 For the same reasons that unit tests are run in CI for each code change,
 preformance tests should be run in CB for each code change.
+This analogy is so apt in fact, that the first paragraph of this section is just a Mad Libs version of [Martin Fowler's 2006 intro to Continous Integration](https://martinfowler.com/articles/continuousIntegration.html).
 
 ## Continuous Benchmarking vs Local Benchmark Comparison
 
 There are several benchmark harnesses that allow you to compare results locally.
-Local comparison is great for iterating quickly when developing performance optimizations.
+Local comparison is great for iterating quickly when performance tuning.
 However, it should not be relied on to catch performance regressions on an ongoing basis.
 Just as being able to run unit tests locally doesn't obviate the need for CI,
 being able to run and compare benchmarks locally doesn't obviate the need for CB.
@@ -18,22 +25,62 @@ There are several features Bencher offers that local benchmark comaprison tools 
 - Collaboration and sharing of benchmark resuts
 - Running benchmarks on dedicated testbeds to minimize noise
 
-## Continuous Benchmarking vs Application Performance Management
+## Continuous Benchmarking vs Application Performance Management (APM)
 
 Application Performance Management (APM) is a vital tool for modern sofware services.
 However, APM is designed to be used in production.
 By the time a performance regression is detected, it is already impacting your customers.
 
-> Most defects end up costing more than it would have cost to prevent them. Defects are expensive when they occur, both the direct costs of fixing the defects and the indirect costs because of damaged relationships, lost business, and lost development time.
+> Most defects end up costing more than it would have cost to prevent them.
+> Defects are expensive when they occur, both the direct costs of fixing the defects
+> and the indirect costs because of damaged relationships, lost business, and lost development time.
 >
 > — Kent Beck, Extreme Programming Explained
 
 There are several features Bencher offers that APM tools cannot:
-- Detect and prevent performance regressions in CI
+- Detect and prevent performance regressions _before_ they make it to production
 - Performance changes and impacts included in code review
 - No overhead in production environments
 
-## Continuous Benchmarking
+## Continuous Benchmarking vs Observability
 
-Bencher is an open source continuous benchmarking tool.
-For similar tools in this space see [prior art](/docs/reference/prior-art).
+A rose by any other name would smell as sweet.
+See Continuous Benchmarking vs Application Performance Management above.
+
+## Continuous Benchmarking in Big Tech
+
+Tools like Bencher have been developed internally at
+Microsoft, Facebook (now Meta), Apple, Amazon, Netflix, and Google among countless others.
+As the titans of the indusry, they understand the importance of monitoring performance during development
+and integrating these insights into the development process through CB.
+For links to posts related to continuous benchmarking from Big Tech see [prior art](/docs/reference/prior-art).
+
+## Continuous Benchmarking Tools
+
+Before creating Bencher, we set out to find a tool that could:
+
+- Track benchmarks across multiple languages
+- Seamlessly ingest language standard benchmark harness output
+- Extensible for custom benchmark harness output
+- Open source and able to self-host
+- Work with multiple CI hosts
+- User authentication and authorization
+
+Unfortunately, nothing that met all of these criteria existed.
+See [prior art](/docs/reference/prior-art) from a comprehensive list of the existing benchmarking tools that we took inspiration from.
+
+## Continuous Benchmarking is the Future
+
+With the death of Moore's Law, workloads that can run in parallel will need to parallelized.
+However, most workloads need to run in series,
+and simply throwing more compute at the problem is quickly becoming an intractable and expensive solution.
+
+Continuous Benchmarking is a key component to developing and maintaining
+performant modern software in the face of this change.
+
+<img
+    src="https://s3.amazonaws.com/public.bencher.dev/moores_law.jpg"
+    width="2124"
+    height="1128"
+    alt="Moore's Law from https://davidwells.io/blog/rise-of-embarrassingly-parallel-serverless-compute"
+/>
