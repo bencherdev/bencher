@@ -1,5 +1,30 @@
 By now, everyone in the software industry is aware of continuous integration (CI).
-At fundimental level, CI is about detecting and preventing software feature regression
+At fundimental level, CI is about detecting and preventing software feature regressions
 before they make it to production.
-Similarly, continuous benchmarking (CB) is about detecting and preventing software _performance_ regresions before they make it to production.
+Similarly, continuous benchmarking (CB) is about detecting and preventing software _performance_ regressions before they make it to production.
+For the same reasons that unit tests are run in CI for each code change,
+preformance tests should be run in CB for each code change.
 
+
+## Continuous Benchmarking vs Local Benchmark Comparison
+
+There are several benchmark harnesses that allow you to compare results locally.
+Local comparison is great for iterating quickly when developing performance optimizations.
+However, it should not be relied on to catch performance regressions on an ongoing basis.
+Just as being able to run unit tests locally doesn't obviate the need for CI,
+being able to run and compare benchmarks locally doesn't obviate the need for CB.
+
+There are several features that Bencher offers that local benchmark comaprison tools simply cannot:
+- Comparsion of the same benchmark between different testbeds
+- Comparison of benchmarks across languages and harnesses
+- Collaboration and sharing of benchmark resuts
+- Running benchmarks on dedicated testbeds to minimize noise
+
+## Continuous Benchmarking vs Application Performance Management
+
+Application Performance Management (APM) is a vital for modern sofware services.
+
+## Continuous Benchmarking
+
+Bencher is an open source continuous benchmarking tool.
+For similar tools in this space see [prior art](/docs/reference/prior-art).
