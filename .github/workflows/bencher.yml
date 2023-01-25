@@ -52,7 +52,6 @@ jobs:
   cargo_udeps:
     name: Cargo Unused Deps
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Install nightly toolchain
@@ -453,8 +452,6 @@ jobs:
   backup_database:
     name: Backup Database
     runs-on: ubuntu-latest
-    # TODO remove after `v0.30.0` release
-    continue-on-error: true
     needs:
       - nightly_api_docker
       - build_ui
