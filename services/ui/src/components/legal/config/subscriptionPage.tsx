@@ -8,19 +8,24 @@ const licensingPage = {
 				("Customer") are unconditionally consenting to be bound by and are
 				becoming a party to these Bencher Subscription Agreement ("Agreement")
 				as of the date of Customer's first download of the Licensed Materials
-				(the "Effective Date"). Customer's continued use of the software or any
-				Licensed Materials provided by Pompeii LLC or one of its affiliates
-				and/or subsidiaries, as specified on an order form or quote ("Bencher")
-				shall also constitute assent to the terms of this agreement. If these
-				terms are considered an offer, acceptance is expressly limited to these
-				terms. If you are executing this agreement on behalf of an organization,
-				you represent that you have the authority to do so.
+				(the "Effective Date").
+			</p>
+			<p>
+				Customer's continued use of the software or any Licensed Materials
+				provided by Pompeii LLC or one of its affiliates and/or subsidiaries, as
+				specified on an order form or quote ("Bencher") shall also constitute
+				assent to the terms of this agreement.
+			</p>
+			<p>
+				If these terms are considered an offer, acceptance is expressly limited
+				to these terms. If you are executing this agreement on behalf of an
+				organization, you represent that you have the authority to do so.
 			</p>
 			<ol>
 				<li>
 					LICENSE AND SUPPORT
 					<p>
-						Subject to the terms and conditions of this Agreement, Bencher
+						1.1 Subject to the terms and conditions of this Agreement, Bencher
 						hereby grants to Customer and its Affiliates (as defined below) a
 						limited, non-exclusive, non-transferable, non-sublicensable license
 						for Customer's and its Affiliates' employees and contractors to (1)
@@ -43,7 +48,7 @@ const licensingPage = {
 						modifications and/or patches, and all such Software may only be
 						used, copied, modified, displayed, distributed, or otherwise
 						exploited in full compliance with this Agreement, and with a valid
-						Bencher Plus subscription for the correct number of Metrics.{" "}
+						Bencher Plus subscription for the correct number of Metrics.
 					</p>
 					<p>
 						The Software and Other Bencher Materials are collectively referred
@@ -57,7 +62,7 @@ const licensingPage = {
 					<p>
 						"User" means each individual end-user (person or machine) of
 						Customer and/or its Affiliates (including, without limitation,
-						employees, agents, or consultants thereof) with access to the
+						employees, agents or consultants thereof) with access to the
 						Licensed Materials hereunder.
 					</p>
 					<p>
@@ -67,8 +72,8 @@ const licensingPage = {
 						hereunder.
 					</p>
 					<p>
-						Subject to the terms hereof, Bencher will provide reasonable support
-						to Customer for the Licensed Materials as set forth at
+						1.2 Subject to the terms hereof, Bencher will provide reasonable
+						support to Customer for the Licensed Materials as set forth at
 						https://bencher.dev, for the support plan selected and paid for by
 						Customer. Notwithstanding anything to the contrary, in the event
 						that Customer does not reasonably comply with written specifications
@@ -81,49 +86,49 @@ const licensingPage = {
 						notice period.
 					</p>
 					<p>
-						Bencher will use reasonable commercial efforts to respond to support
-						questions by phone or email during the next business day. The number
-						of support questions is not limited.
+						1.2.1 Bencher will use reasonable commercial efforts to respond to
+						support questions by phone or email during the next business day.
+						The number of support questions is not limited.
 					</p>
 				</li>
 				<li>
-					RESTRICTIONS AND RESPONSIBILITIES{" "}
+					RESTRICTIONS AND RESPONSIBILITIES
 					<p>
-						Except as expressly authorized in Section 1, Customer will not, and
-						will not permit any third party to: use the Licensed Materials for
-						any purpose other than as specifically authorized in Section 1, or
-						in such a manner that would enable any unlicensed person to access
-						the Licensed Materials; use the Licensed Materials or any other
-						Bencher software for timesharing or service bureau purposes or for
-						any purpose other than its and its Affiliates' own internal use
-						(including without limitation, sublicensing, distributing, selling,
-						reselling any of the foregoing); except as expressly permitted
-						herein; use the Licensed Materials in connection with any high risk
-						or strict liability activity (including, without limitation, space
-						travel, firefighting, police operations, power plant operation,
-						military operations, rescue operations, hospital and medical
-						operations, or the like); use the Licensed Materials or software
-						other than in accordance with this Agreement and in compliance with
-						all applicable laws and regulations (including but not limited to
-						any privacy laws, and laws and regulations concerning intellectual
-						property, consumer and child protection, obscenity or defamation);
-						or use the Licensed Materials in any manner that (1) is harmful,
-						fraudulent, deceptive, threatening, abusive, harassing, tortious,
-						defamatory, vulgar, obscene, or libelous (including without
-						limitation, accessing any computer, computer system, network,
-						software, or data without authorization, breaching the security of
-						another user or system, and/or attempting to circumvent any Metric
-						or User authentication or security process), (2) impersonates any
-						person or entity, including without limitation any employee or
-						representative of Bencher, or (3) contains a virus, trojan horse,
-						worm, time bomb, unsolicited bulk, commercial, or “spam” message, or
-						other harmful computer code, file, or program (including without
-						limitation, password guessing programs, decoders, password
-						gatherers, keystroke loggers, cracking tools, packet sniffers,
-						and/or encryption circumvention programs).
+						2.1 Except as expressly authorized in Section 1.1, Customer will
+						not, and will not permit any third party to: use the Licensed
+						Materials for any purpose other than as specifically authorized in
+						Section 1, or in such a manner that would enable any unlicensed
+						person to access the Licensed Materials; use the Licensed Materials
+						or any other Bencher software for timesharing or service bureau
+						purposes or for any purpose other than its and its Affiliates' own
+						internal use (including without limitation, sublicensing,
+						distributing, selling, reselling any of the foregoing); except as
+						expressly permitted herein; use the Licensed Materials in connection
+						with any high risk or strict liability activity (including, without
+						limitation, space travel, firefighting, police operations, power
+						plant operation, military operations, rescue operations, hospital
+						and medical operations or the like); use the Licensed Materials or
+						software other than in accordance with this Agreement and in
+						compliance with all applicable laws and regulations (including but
+						not limited to any privacy laws, and laws and regulations concerning
+						intellectual property, consumer and child protection, obscenity or
+						defamation); or use the Licensed Materials in any manner that (1) is
+						harmful, fraudulent, deceptive, threatening, abusive, harassing,
+						tortious, defamatory, vulgar, obscene, or libelous (including
+						without limitation, accessing any computer, computer system,
+						network, software, or data without authorization, breaching the
+						security of another user or system, and/or attempting to circumvent
+						any Metric or User authentication or security process), (2)
+						impersonates any person or entity, including without limitation any
+						employee or representative of Bencher, or (3) contains a virus,
+						trojan horse, worm, time bomb, unsolicited bulk, commercial, or
+						“spam” message, or other harmful computer code, file, or program
+						(including without limitation, password guessing programs, decoders,
+						password gatherers, keystroke loggers, cracking tools, packet
+						sniffers, and/or encryption circumvention programs).
 					</p>
 					<p>
-						Customer will cooperate with Bencher in connection with the
+						2.2 Customer will cooperate with Bencher in connection with the
 						performance of this Agreement by making available such personnel and
 						information as may be reasonably required, and taking such other
 						actions as Bencher may reasonably request. Customer will also
@@ -141,13 +146,13 @@ const licensingPage = {
 						third party auditor to audit the Customer Records only to verify the
 						amounts payable under this Agreement. If an audit reveals
 						underpayment, then Customer shall promptly pay the deficiency to
-						Bencher plus late fees pursuant to Section 5. Bencher shall bear the
-						cost of an audit unless the audit reveals underpayment by more than
-						5% for the audited period, in which case Customer shall promptly pay
-						Bencher for the reasonable costs of the audit.
+						Bencher plus late fees pursuant to Section 5.2. Bencher shall bear
+						the cost of an audit unless the audit reveals underpayment by more
+						than 5% for the audited period, in which case Customer shall
+						promptly pay Bencher for the reasonable costs of the audit.
 					</p>
 					<p>
-						Customer will be responsible for maintaining the security of
+						2.3 Customer will be responsible for maintaining the security of
 						Customer's account, passwords (including but not limited to
 						administrative and User passwords and credentials) and files, and
 						for all uses of Customer account with or without Customer's
@@ -157,16 +162,16 @@ const licensingPage = {
 				<li>
 					CONFIDENTIALITY
 					<p>
-						Each party (the “Receiving Party”) understands that the other party
-						(the “Disclosing Party”) has disclosed or may disclose information
-						relating to the Disclosing Party's technology or business
-						(hereinafter referred to as “Proprietary Information” of the
-						Disclosing Party). Without limiting the foregoing, the Licensed
+						3.1 Each party (the “Receiving Party”) understands that the other
+						party (the “Disclosing Party”) has disclosed or may disclose
+						information relating to the Disclosing Party's technology or
+						business (hereinafter referred to as “Proprietary Information” of
+						the Disclosing Party). Without limiting the foregoing, the Licensed
 						Materials are Bencher Proprietary Information.
 					</p>
 					<p>
-						The Receiving Party agrees: (i) not to divulge to any third person
-						any such Proprietary Information, (ii) to give access to such
+						3.2 The Receiving Party agrees: (i) not to divulge to any third
+						person any such Proprietary Information, (ii) to give access to such
 						Proprietary Information solely to those employees with a need to
 						have access thereto for purposes of this Agreement, and (iii) to
 						take the same security precautions to protect against disclosure or
@@ -195,28 +200,28 @@ const licensingPage = {
 						disclosure.
 					</p>
 					<p>
-						Each party acknowledges and agrees that the other may suffer
+						3.3 Each party acknowledges and agrees that the other may suffer
 						irreparable damage in the event of a breach of the terms of Sections
-						1, 2 or 3 of this Agreement and that such party will be entitled to
-						seek injunctive relief (without the necessity of posting a bond) in
-						the event of any such breach.
+						1.1, 2.1 or 3.2 of this Agreement and that such party will be
+						entitled to seek injunctive relief (without the necessity of posting
+						a bond) in the event of any such breach.
 					</p>
 					<p>
-						Both parties will have the right to disclose the existence of the
-						relationship between the parties, but not the terms and conditions
-						of this Agreement, unless such disclosure of the Agreement terms is
-						approved in writing by both Parties prior to such disclosure, or is
-						included in a filing required to be made by a party with a
-						governmental authority (provided such party will use reasonable
-						efforts to obtain confidential treatment or a protective order) or
-						is made on a confidential basis as reasonably necessary to potential
-						investors or acquirers.
+						3.4 Both parties will have the right to disclose the existence of
+						the relationship between the parties, but not the terms and
+						conditions of this Agreement, unless such disclosure of the
+						Agreement terms is approved in writing by both Parties prior to such
+						disclosure, or is included in a filing required to be made by a
+						party with a governmental authority (provided such party will use
+						reasonable efforts to obtain confidential treatment or a protective
+						order) or is made on a confidential basis as reasonably necessary to
+						potential investors or acquirers.
 					</p>
 				</li>
 				<li>
 					INTELLECTUAL PROPERTY RIGHTS
 					<p>
-						Except as expressly set forth herein, Bencher alone (and its
+						4.1 Except as expressly set forth herein, Bencher alone (and its
 						licensors, where applicable) will retain all intellectual property
 						rights relating to the Licensed Materials and any suggestions,
 						ideas, enhancement requests, feedback, code, or other
@@ -227,8 +232,8 @@ const licensingPage = {
 						Materials, or any intellectual property rights.
 					</p>
 					<p>
-						Customer shall not remove, alter or obscure any of Bencher's (or its
-						licensors') copyright notices, proprietary legends, trademark or
+						4.2 Customer shall not remove, alter or obscure any of Bencher's (or
+						its licensors') copyright notices, proprietary legends, trademark or
 						service mark attributions, patent markings or other indicia of
 						Bencher's (or its licensors') ownership or contribution from the
 						Licensed Materials. Additionally, Customer agrees to reproduce and
@@ -243,14 +248,14 @@ const licensingPage = {
 						such source code annotations.
 					</p>
 					<p>
-						Customer and its licensors shall (and Customer hereby represents and
-						warrants that they do) have and retain all right, title and interest
-						(including, without limitation, sole ownership of) all software,
-						information, content and data provided by or on behalf of Customer
-						or made available or otherwise distributed through use of the
-						Licensed Materials (“Content”) and the intellectual property rights
-						with respect to that Content. If Bencher receives any notice or
-						claim that any Content, or Customer's activities hereunder
+						4.3 Customer and its licensors shall (and Customer hereby represents
+						and warrants that they do) have and retain all right, title and
+						interest (including, without limitation, sole ownership of) all
+						software, information, content and data provided by or on behalf of
+						Customer or made available or otherwise distributed through use of
+						the Licensed Materials (“Content”) and the intellectual property
+						rights with respect to that Content. If Bencher receives any notice
+						or claim that any Content, or Customer's activities hereunder
 						(including without limitation, with respect to any Content),
 						infringes or violates the rights of a third party or any applicable
 						law or regulation (a “Claim”), Customer will indemnify, defend and
@@ -265,7 +270,7 @@ const licensingPage = {
 						its own expense.
 					</p>
 					<p>
-						Bencher will defend, indemnify and hold Customer harmless from
+						4.4 Bencher will defend, indemnify and hold Customer harmless from
 						liability and other amounts paid or payable to unaffiliated third
 						parties resulting from (i) the infringement or violation of any
 						intellectual property or proprietary rights by the Licensed
@@ -292,23 +297,23 @@ const licensingPage = {
 				<li>
 					PAYMENT OF FEES
 					<p>
-						Unless and until Bencher and Customer have executed a quote document
-						specifically referencing this Agreement with respect to amounts due
-						on account of the Licensed Materials (a “Quote”, which is hereby
-						incorporated by reference, if applicable), and unless Customer's
-						subscription to (and payment with respect to) the Licensed Materials
-						has been made on Customer's behalf by a reseller, Customer will pay
-						Bencher the applicable fees as set forth at https://bencher.dev (the
-						“Pricing”) for the Licensed Materials selected and/or used by
-						Customer (the “Fees”) without any right of set-off or deduction. On
-						each anniversary of the Effective Date, Bencher will invoice
-						Customer (or its reseller, if applicable) with respect to any and
-						all additional Customer Metrics of the Licensed Materials beyond
-						those for whom Customer has pre-paid, as of such date (and for whom
-						the Fees due pursuant to such invoice will be the then-current
-						per-year Metric fee with respect to the year just ended, and the
-						then current per-year Metric fee with respect to all subsequent
-						years, unless otherwise agreed in writing by both parties
+						5.1 Unless and until Bencher and Customer have executed a quote
+						document specifically referencing this Agreement with respect to
+						amounts due on account of the Licensed Materials (a “Quote”, which
+						is hereby incorporated by reference, if applicable), and unless
+						Customer's subscription to (and payment with respect to) the
+						Licensed Materials has been made on Customer's behalf by a reseller,
+						Customer will pay Bencher the applicable fees as set forth at
+						https://bencher.dev (the “Pricing”) for the Licensed Materials
+						selected and/or used by Customer (the “Fees”) without any right of
+						set-off or deduction. On each anniversary of the Effective Date,
+						Bencher will invoice Customer (or its reseller, if applicable) with
+						respect to any and all additional Customer Metrics of the Licensed
+						Materials beyond those for whom Customer has pre-paid, as of such
+						date (and for whom the Fees due pursuant to such invoice will be the
+						then-current per-year Metric fee with respect to the year just
+						ended, and the then current per-year Metric fee with respect to all
+						subsequent years, unless otherwise agreed in writing by both parties
 						(collectively, a “True-Up”)). For Customers that have pre-paid all
 						Fees for multi-year subscriptions for Licensed Materials pursuant to
 						a Quote, on each anniversary of the Effective Date during the term
@@ -318,21 +323,21 @@ const licensingPage = {
 						period.
 					</p>
 					<p>
-						All payments will be made in accordance with the payment schedule
-						and the method of payment set forth in the Pricing. If not otherwise
-						specified, (a) Bencher will invoice Customer with respect to Fees
-						up-front, for each term of the Customer's subscription (as
+						5.2 All payments will be made in accordance with the payment
+						schedule and the method of payment set forth in the Pricing. If not
+						otherwise specified, (a) Bencher will invoice Customer with respect
+						to Fees up-front, for each term of the Customer's subscription (as
 						applicable), and (b) payments will be due within thirty (30) days of
 						Customer's receipt of correct invoice. Except as expressly set forth
 						in this Agreement, all Fees paid and/or due hereunder (including any
 						prepaid amounts) are non-refundable, including without limitation if
 						this Agreement is terminated in accordance with Section 6 below. If
-						Customer terminates this Agreement pursuant to Section 6 within 30
+						Customer terminates this Agreement pursuant to Section 6.2 within 30
 						calendar days from receipt of the initial invoice for the Licensed
 						Materials, Bencher will refund all Fees paid hereunder.
 					</p>
 					<p>
-						Any unpaid fees are subject to a finance charge of one percent
+						5.3 Any unpaid fees are subject to a finance charge of one percent
 						(1.0%) per month, or the maximum permitted by law, whichever is
 						lower, plus all expenses of collection, including reasonable
 						attorneys' fees. Fees under this Agreement are exclusive of all
@@ -348,39 +353,39 @@ const licensingPage = {
 				<li>
 					TERMINATION
 					<p>
-						This Agreement shall continue until terminated in accordance with
-						this Section 6. Either party may terminate this Agreement upon 15
-						days' written notice to the other party hereto in the event that
+						6.1 This Agreement shall continue until terminated in accordance
+						with this Section 6. Either party may terminate this Agreement upon
+						15 days' written notice to the other party hereto in the event that
 						Customer has no then-current subscription and license key with
 						respect to the Licensed Materials.
 					</p>
 					<p>
-						Customer may terminate this Agreement at any time upon written
+						6.2 Customer may terminate this Agreement at any time upon written
 						notice to Bencher. Either party may terminate this Agreement
 						immediately upon 15 days' written notice to the other party in the
 						event of any material breach of this Agreement (including without
-						limitation, any breach of Section 2 and/or failure to pay any
+						limitation, any breach of Section 2.2 and/or failure to pay any
 						amounts when due hereunder) by such party where such material breach
-						is not cured during such notice period.{" "}
+						is not cured during such notice period.
 					</p>
 					<p>
-						Either party may terminate this Agreement, without notice, (i) upon
-						the institution by or against the other party of insolvency,
-						receivership, or bankruptcy proceedings (provided such proceedings
+						6.3 Either party may terminate this Agreement, without notice, (i)
+						upon the institution by or against the other party of insolvency,
+						receivership or bankruptcy proceedings (provided such proceedings
 						are not dismissed within one hundred twenty (120) days of such
 						institution), (ii) upon the other party's making an assignment for
 						the benefit of creditors, or (iii) upon the other party's
-						dissolution or ceasing to do business without a successor.{" "}
+						dissolution or ceasing to do business without a successor.
 					</p>
 					<p>
-						Customer's rights to the Licensed Materials, and any licenses
+						6.4 Customer's rights to the Licensed Materials, and any licenses
 						granted hereunder, shall terminate upon any termination of this
 						Agreement. In the event that Customer terminates this Agreement
-						pursuant to the second sentence of Section 6 above, Bencher will
+						pursuant to the second sentence of Section 6.2 above, Bencher will
 						refund to Customer a pro-rated portion of pre-paid Fees for Services
 						not actually received by Customer as of the date of such
 						termination. The following Sections will survive any termination of
-						this Agreement: 2 through 6 (except for Section 4), and 8 through
+						this Agreement: 2 through 6 (except for Section 4.3), and 8 through
 						11.
 					</p>
 				</li>
@@ -423,22 +428,22 @@ const licensingPage = {
 				<li>
 					LIMITATION OF LIABILITY
 					<p>
-						EXCEPT WITH RESPECT TO BREACH(ES) OF SECTION 1 AND/OR 2, IN NO EVENT
-						WILL EITHER PARTY OR THEIR LICENSORS BE LIABLE FOR ANY INDIRECT,
-						PUNITIVE, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING OUT
-						OF OR IN ANY WAY CONNECTED WITH THE USE OF THE LICENSED MATERIALS OR
-						ANYTHING PROVIDED IN CONNECTION WITH THIS AGREEMENT, ANY DELAY OR
-						INABILITY TO USE THE LICENSED MATERIALS OR ANYTHING PROVIDED IN
-						CONNECTION WITH THIS AGREEMENT OR OTHERWISE ARISING FROM THIS
-						AGREEMENT, INCLUDING WITHOUT LIMITATION, LOSS OF REVENUE OR
+						EXCEPT WITH RESPECT TO BREACH(ES) OF SECTION 1.1 AND/OR 2.1, IN NO
+						EVENT WILL EITHER PARTY OR THEIR LICENSORS BE LIABLE FOR ANY
+						INDIRECT, PUNITIVE, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES
+						ARISING OUT OF OR IN ANY WAY CONNECTED WITH THE USE OF THE LICENSED
+						MATERIALS OR ANYTHING PROVIDED IN CONNECTION WITH THIS AGREEMENT,
+						ANY DELAY OR INABILITY TO USE THE LICENSED MATERIALS OR ANYTHING
+						PROVIDED IN CONNECTION WITH THIS AGREEMENT OR OTHERWISE ARISING FROM
+						THIS AGREEMENT, INCLUDING WITHOUT LIMITATION, LOSS OF REVENUE OR
 						ANTICIPATED PROFITS OR LOST BUSINESS OR LOST SALES, WHETHER BASED IN
 						CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY, OR
 						OTHERWISE, EVEN IF SUCH PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
-						DAMAGES. EXCEPT WITH RESPECT TO BREACH(ES) OF SECTION 1 AND/OR 2,
-						THE TOTAL LIABILITY OF EACH PARTY AND ITS LICENSORS, WHETHER BASED
-						IN CONTRACT, TORT (INCLUDING NEGLIGENCE OR STRICT LIABILITY), OR
-						OTHERWISE, WILL NOT EXCEED, IN THE AGGREGATE, THE GREATER OF (i) ONE
-						THOUSAND DOLLARS ($1,000), OR (ii) THE FEES PAID TO BENCHER
+						DAMAGES. EXCEPT WITH RESPECT TO BREACH(ES) OF SECTION 1.1 AND/OR
+						2.1, THE TOTAL LIABILITY OF EACH PARTY AND ITS LICENSORS, WHETHER
+						BASED IN CONTRACT, TORT (INCLUDING NEGLIGENCE OR STRICT LIABILITY),
+						OR OTHERWISE, WILL NOT EXCEED, IN THE AGGREGATE, THE GREATER OF (i)
+						ONE THOUSAND DOLLARS ($1,000), OR (ii) THE FEES PAID TO BENCHER
 						HEREUNDER IN ONE YEAR PERIOD ENDING ON THE DATE THAT A CLAIM OR
 						DEMAND IS FIRST ASSERTED. THE FOREGOING LIMITATIONS WILL APPLY
 						NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF ANY LIMITED
@@ -484,7 +489,7 @@ const licensingPage = {
 					</p>
 				</li>
 				<li>
-					MISCELLANEOUS{" "}
+					MISCELLANEOUS
 					<p>
 						If any provision of this Agreement is found to be unenforceable or
 						invalid, that provision will be limited or eliminated to the minimum
@@ -522,7 +527,7 @@ const licensingPage = {
 					</p>
 				</li>
 				<li>
-					DATA PRIVACY{" "}
+					DATA PRIVACY
 					<p>
 						Customer shall ensure that any and all information or data,
 						including without limitation, personal data, used by Customer in
