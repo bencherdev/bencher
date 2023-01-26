@@ -214,8 +214,8 @@ pub(crate) mod test_rust {
 
     use super::{parse_criterion, parse_panic, AdapterRustCriterion};
 
-    fn convert_rust_bench(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);
+    fn convert_rust_criterion(suffix: &str) -> AdapterResults {
+        let file_path = format!("./tool_output/rust/criterion/{}.txt", suffix);
         convert_file_path::<AdapterRustCriterion>(&file_path, Settings::default())
     }
 
@@ -294,7 +294,7 @@ pub(crate) mod test_rust {
 
     #[test]
     fn test_adapter_rust_criterion() {
-        let results = convert_rust_bench("criterion");
+        let results = convert_rust_criterion("many");
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("file").unwrap();
@@ -315,15 +315,13 @@ pub(crate) mod test_rust {
 
     #[test]
     fn test_adapter_rust_criterion_failed() {
-        let contents =
-            std::fs::read_to_string("./tool_output/rust/cargo_bench_criterion_failed.txt").unwrap();
+        let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
         assert!(AdapterRustCriterion::parse(&contents, Settings::default()).is_err());
     }
 
     #[test]
     fn test_adapter_rust_criterion_failed_allow_failure() {
-        let contents =
-            std::fs::read_to_string("./tool_output/rust/cargo_bench_criterion_failed.txt").unwrap();
+        let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
         let results = AdapterRustCriterion::parse(
             &contents,
             Settings {
@@ -336,7 +334,7 @@ pub(crate) mod test_rust {
 
     #[test]
     fn test_adapter_rust_criterion_dogfood() {
-        let results = convert_rust_bench("criterion_dogfood");
+        let results = convert_rust_criterion("dogfood");
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("JsonAdapter::Magic (JSON)").unwrap();

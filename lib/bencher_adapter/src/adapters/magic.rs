@@ -41,7 +41,7 @@ mod test {
     #[test]
     fn test_adapter_magic_rust_many() {
         let results = convert_file_path::<AdapterMagic>(
-            "./tool_output/rust/cargo_bench_many.txt",
+            "./tool_output/rust/bench/many.txt",
             Settings::default(),
         );
         test_rust::validate_adapter_rust_many(results);

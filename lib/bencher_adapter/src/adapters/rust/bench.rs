@@ -281,12 +281,12 @@ pub(crate) mod test_rust {
     use super::{parse_cargo, parse_panic, AdapterRustBench, TestMetric};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/cargo_bench_{}.txt", suffix);
+        let file_path = format!("./tool_output/rust/bench/{}.txt", suffix);
         convert_file_path::<AdapterRustBench>(&file_path, Settings::default())
     }
 
     fn convert_rust_test(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/cargo_test_{}.txt", suffix);
+        let file_path = format!("./tool_output/rust/bench/test_{}.txt", suffix);
         convert_file_path::<AdapterRustBench>(&file_path, Settings::default())
     }
 
@@ -430,15 +430,13 @@ pub(crate) mod test_rust {
 
     #[test]
     fn test_adapter_rust_failed() {
-        let contents =
-            std::fs::read_to_string("./tool_output/rust/cargo_bench_failed.txt").unwrap();
+        let contents = std::fs::read_to_string("./tool_output/rust/bench/failed.txt").unwrap();
         assert!(AdapterRustBench::parse(&contents, Settings::default()).is_err());
     }
 
     #[test]
     fn test_adapter_rust_failed_allow_failure() {
-        let contents =
-            std::fs::read_to_string("./tool_output/rust/cargo_bench_failed.txt").unwrap();
+        let contents = std::fs::read_to_string("./tool_output/rust/bench/failed.txt").unwrap();
         let results = AdapterRustBench::parse(
             &contents,
             Settings {
@@ -472,13 +470,17 @@ pub(crate) mod test_rust {
 
     #[test]
     fn test_adapter_rust_test_failed() {
-        let contents = std::fs::read_to_string("./tool_output/rust/cargo_test_failed.txt").unwrap();
+        let contents =
+            std::fs::read_to_string("./tool_output/rust/bench/test_report_time_failed.txt")
+                .unwrap();
         assert!(AdapterRustBench::parse(&contents, Settings::default()).is_err());
     }
 
     #[test]
     fn test_adapter_rust_test_failed_allow_failure() {
-        let contents = std::fs::read_to_string("./tool_output/rust/cargo_test_failed.txt").unwrap();
+        let contents =
+            std::fs::read_to_string("./tool_output/rust/bench/test_report_time_failed.txt")
+                .unwrap();
         let results = AdapterRustBench::parse(
             &contents,
             Settings {
