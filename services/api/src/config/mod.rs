@@ -4,6 +4,7 @@ use std::{
 };
 
 use bencher_json::{
+    sanitize_json,
     system::config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
     JsonConfig, Secret,
 };
@@ -53,14 +54,38 @@ static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(Default::default);
 pub struct Config(pub JsonConfig);
 
 impl Config {
-    pub fn path() -> PathBuf {
-        std::env::var(BENCHER_CONFIG_PATH)
-            .unwrap_or_else(|e| {
-                info!("Failed to find \"{BENCHER_CONFIG_PATH}\": {e}");
-                info!("Defaulting \"{BENCHER_CONFIG_PATH}\" to: {DEFAULT_CONFIG_PATH}");
-                DEFAULT_CONFIG_PATH.into()
-            })
-            .into()
+    pub async fn load_or_default() -> Self {
+        if let Ok(config) = Self::load_env().await {
+            return config;
+        }
+
+        if let Ok(config) = Self::load_file().await {
+            return config;
+        }
+
+        let config = Self::default();
+        info!("Using default config: {}", sanitize_json(&config.0));
+        config
+    }
+
+    pub async fn load_env() -> Result<Self, ApiError> {
+        let config_str = std::env::var(BENCHER_CONFIG).map_err(|e| {
+            info!("Failed to find \"{BENCHER_CONFIG}\": {e}");
+            ApiError::MissingEnvVar(BENCHER_CONFIG.into())
+        })?;
+
+        let json_config = serde_json::from_str(&config_str).map_err(|e| {
+            info!("Failed to parse config string from \"{BENCHER_CONFIG}\": {e}");
+            ApiError::ParseConfigString(config_str.clone())
+        })?;
+        info!(
+            "Loaded config from env var \"{BENCHER_CONFIG}\": {}",
+            sanitize_json(&json_config)
+        );
+
+        Self::write(config_str.as_bytes()).await?;
+
+        Ok(Self(json_config))
     }
 
     pub async fn load_file() -> Result<Self, ApiError> {
@@ -76,46 +101,12 @@ impl Config {
             ApiError::ParseConfigFile(path.clone())
         })?;
         info!(
-            "Loaded config from {}: {}",
+            "Loaded config from file {}: {}",
             path.display(),
-            serde_json::json!(json_config)
+            sanitize_json(&json_config)
         );
 
         Ok(Self(json_config))
-    }
-
-    pub async fn load_env() -> Result<Self, ApiError> {
-        let config_str = std::env::var(BENCHER_CONFIG).map_err(|e| {
-            info!("Failed to find \"{BENCHER_CONFIG}\": {e}");
-            ApiError::MissingEnvVar(BENCHER_CONFIG.into())
-        })?;
-
-        let json_config = serde_json::from_str(&config_str).map_err(|e| {
-            info!("Failed to parse config string from \"{BENCHER_CONFIG}\": {e}");
-            ApiError::ParseConfigString(config_str.clone())
-        })?;
-        info!(
-            "Loaded config from \"{BENCHER_CONFIG}\": {}",
-            serde_json::json!(json_config)
-        );
-
-        Self::write(config_str.as_bytes()).await?;
-
-        Ok(Self(json_config))
-    }
-
-    pub async fn load_or_default() -> Self {
-        if let Ok(config) = Self::load_env().await {
-            return config;
-        }
-
-        if let Ok(config) = Self::load_file().await {
-            return config;
-        }
-
-        let json_config = Self::default();
-        info!("Using default config: {}", serde_json::json!(json_config.0));
-        json_config
     }
 
     pub async fn write(config: impl AsRef<[u8]>) -> Result<(), ApiError> {
@@ -125,6 +116,16 @@ impl Config {
             error!("Failed to write config file at {}: {e}", path.display());
             ApiError::WriteConfigFile(path)
         })
+    }
+
+    pub fn path() -> PathBuf {
+        std::env::var(BENCHER_CONFIG_PATH)
+            .unwrap_or_else(|e| {
+                info!("Failed to find \"{BENCHER_CONFIG_PATH}\": {e}");
+                info!("Defaulting \"{BENCHER_CONFIG_PATH}\" to: {DEFAULT_CONFIG_PATH}");
+                DEFAULT_CONFIG_PATH.into()
+            })
+            .into()
     }
 }
 

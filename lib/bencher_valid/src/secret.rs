@@ -9,19 +9,33 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::ValidError;
+use crate::{Sanitize, ValidError};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize)]
+const SANITIZED_SECRET: &str = "************";
+
+#[derive(Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Secret(String);
+
+impl fmt::Debug for Secret {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
 
 impl fmt::Display for Secret {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if cfg!(debug_assertions) {
             write!(f, "{}", self.0)
         } else {
-            write!(f, "************")
+            write!(f, "{SANITIZED_SECRET}")
         }
+    }
+}
+
+impl Sanitize for Secret {
+    fn sanitize(&mut self) {
+        self.0 = SANITIZED_SECRET.into()
     }
 }
 

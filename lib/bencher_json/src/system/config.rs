@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, path::PathBuf};
 
-use bencher_valid::Secret;
+use bencher_valid::{Sanitize, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,9 +19,19 @@ pub struct JsonConfig {
     pub endpoint: Url,
     pub secret_key: Secret,
     pub server: JsonServer,
+    pub logging: JsonLogging,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
-    pub logging: JsonLogging,
+}
+
+impl Sanitize for JsonConfig {
+    fn sanitize(&mut self) {
+        self.secret_key.sanitize();
+        self.database.sanitize();
+        if let Some(smtp) = &mut self.smtp {
+            smtp.sanitize();
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,6 +56,14 @@ pub struct JsonDatabase {
     pub data_store: Option<DataStore>,
 }
 
+impl Sanitize for JsonDatabase {
+    fn sanitize(&mut self) {
+        if let Some(data_store) = &mut self.data_store {
+            data_store.sanitize();
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(tag = "service", rename_all = "snake_case")]
@@ -59,6 +77,16 @@ pub enum DataStore {
     },
 }
 
+impl Sanitize for DataStore {
+    fn sanitize(&mut self) {
+        match self {
+            Self::AwsS3 {
+                secret_access_key, ..
+            } => secret_access_key.sanitize(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSmtp {
@@ -67,6 +95,12 @@ pub struct JsonSmtp {
     pub secret: Secret,
     pub from_name: String,
     pub from_email: String,
+}
+
+impl Sanitize for JsonSmtp {
+    fn sanitize(&mut self) {
+        self.secret.sanitize();
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -38,6 +38,10 @@ fn is_valid_len(input: &str) -> bool {
     !input.is_empty() && input.len() <= MAX_LEN && input == input.trim()
 }
 
+pub trait Sanitize {
+    fn sanitize(&mut self);
+}
+
 #[cfg(test)]
 mod test {
 
