@@ -3,6 +3,7 @@ use nom::IResult;
 pub mod json;
 pub mod magic;
 pub mod rust;
+mod util;
 
 #[allow(dead_code, clippy::print_stdout, clippy::unnecessary_wraps)]
 fn print_ln(input: &str) -> IResult<&str, ()> {

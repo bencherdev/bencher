@@ -14,6 +14,7 @@ use nom::{
 use ordered_float::OrderedFloat;
 
 use crate::{
+    adapters::util::{parse_f64, parse_u64, parse_units, time_nanos},
     results::{
         adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, LATENCY_RESOURCE_ID,
     },
@@ -111,10 +112,10 @@ fn parse_cargo_ok(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tag("ok"),
             space1,
-            delimited(tag("<"), tuple((parse_float, parse_units)), tag(">")),
+            delimited(tag("<"), tuple((parse_f64, parse_units)), tag(">")),
         )),
         |(_, _, (duration, units))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
-            let value = to_f64(duration)? * units.as_nanos();
+            let value = duration * units.as_nanos();
             Ok(JsonMetric {
                 value: value.into(),
                 lower_bound: None,
@@ -132,18 +133,16 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tag("bench:"),
             space1,
-            parse_int,
+            parse_u64,
             space1,
             parse_units,
             tag("/iter"),
             space1,
-            delimited(tag("("), tuple((tag("+/-"), space1, parse_int)), tag(")")),
+            delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
-            let value = (to_duration(to_u64(duration)?, &units).as_nanos() as f64).into();
-            let variance = Some(OrderedFloat::from(
-                to_duration(to_u64(variance)?, &units).as_nanos() as f64,
-            ));
+            let value = time_nanos(duration, units);
+            let variance = Some(time_nanos(variance, units));
             Ok(JsonMetric {
                 value,
                 lower_bound: variance.map(|v| value - v),
@@ -153,93 +152,8 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
-pub enum Units {
-    Pico,
-    Nano,
-    Micro,
-    Milli,
-    Sec,
-}
-
-fn parse_units(input: &str) -> IResult<&str, Units> {
-    alt((
-        map(tag("ps"), |_| Units::Pico),
-        map(tag("ns"), |_| Units::Nano),
-        map(tag("\u{3bc}s"), |_| Units::Micro),
-        map(tag("\u{b5}s"), |_| Units::Micro),
-        map(tag("ms"), |_| Units::Milli),
-        map(tag("s"), |_| Units::Sec),
-    ))(input)
-}
-
-impl Units {
-    #[allow(clippy::float_arithmetic)]
-    fn as_nanos(&self) -> f64 {
-        match self {
-            Self::Pico => 1.0 / 1_000.0,
-            Self::Nano => 1.0,
-            Self::Micro => 1_000.0,
-            Self::Milli => 1_000_000.0,
-            Self::Sec => 1_000_000_000.0,
-        }
-    }
-}
-
-fn parse_int(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
-    many1(tuple((digit1, alt((tag(","), success(" "))))))(input)
-}
-
-fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
-    fold_many1(
-        alt((digit1, tag("."), tag(","))),
-        Vec::new,
-        |mut float_chars, float_char| {
-            if float_char == "," {
-                float_chars
-            } else {
-                float_chars.push(float_char);
-                float_chars
-            }
-        },
-    )(input)
-}
-
-fn to_f64(input: Vec<&str>) -> Result<f64, nom::Err<nom::error::Error<String>>> {
-    let mut number = String::new();
-    for floating_point in input {
-        number.push_str(floating_point);
-    }
-    f64::from_str(&number)
-        .map_err(|_e| nom::Err::Error(nom::error::make_error(number, nom::error::ErrorKind::Tag)))
-}
-
-fn to_u64(input: Vec<(&str, &str)>) -> Result<u64, nom::Err<nom::error::Error<String>>> {
-    let mut number = String::new();
-    for (digit, _) in input {
-        number.push_str(digit);
-    }
-    u64::from_str(&number)
-        .map_err(|_e| nom::Err::Error(nom::error::make_error(number, nom::error::ErrorKind::Tag)))
-}
-
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::float_arithmetic
-)]
-fn to_duration(time: u64, units: &Units) -> Duration {
-    match units {
-        Units::Pico => Duration::from_nanos((time as f64 * units.as_nanos()) as u64),
-        Units::Nano => Duration::from_nanos(time),
-        Units::Micro => Duration::from_micros(time),
-        Units::Milli => Duration::from_millis(time),
-        Units::Sec => Duration::from_secs(time),
-    }
-}
-
 #[cfg(test)]
-pub(crate) mod test_rust {
+pub(crate) mod test_rust_bench {
     use bencher_json::JsonMetric;
     use pretty_assertions::assert_eq;
 
