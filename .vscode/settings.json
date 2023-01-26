@@ -5,24 +5,19 @@
   "files.eol": "\n",
   "editor.wordWrap": "on",
   "editor.formatOnSave": true,
-  // "rust-analyzer.cargo.features": [
-  //   "seed"
-  // ],
+  // https://rust-analyzer.github.io/manual.html
   "rust-analyzer.imports.granularity.group": "crate",
-  // "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.command": "clippy",
   // "rust-analyzer.check.allTargets": false,
-  // "rust-analyzer.check.features": [
-  //   "all"
-  // ],
+  // https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
   "[rust]": {
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
-  "[javascript,javascriptreact,typescript,typescriptreact]": {
+  "[typescriptreact]": {
+    "editor.formatOnSave": true,
     "editor.defaultFormatter": "rome.rome"
   },
-  // "editor.codeActionsOnSave": {
-  //   "source.organizeImports.rome": true,
-  // },
   "sqltools.connections": [
     {
       "previewLimit": 50,
