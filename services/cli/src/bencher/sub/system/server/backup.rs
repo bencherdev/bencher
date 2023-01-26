@@ -80,13 +80,10 @@ impl SubCmd for Backup {
     async fn exec(&self) -> Result<(), CliError> {
         let backup: JsonBackup = self.clone().into();
         let value = self.backend.post(BACKUP_PATH, &backup).await?;
-        if let Some(error_code) = value
-            .as_object()
-            .map(|resp| resp.get("error_code").map(|error_code| error_code.as_str()))
-            .flatten()
-            .flatten()
-        {
-            Err(CliError::ErrorCode(error_code.into()))
+        if let Some(error_code) = value.as_object().and_then(|resp| resp.get("error_code")) {
+            Err(CliError::ErrorCode(
+                error_code.as_str().unwrap_or_default().into(),
+            ))
         } else {
             Ok(())
         }

@@ -35,7 +35,7 @@ impl fmt::Display for Secret {
 
 impl Sanitize for Secret {
     fn sanitize(&mut self) {
-        self.0 = SANITIZED_SECRET.into()
+        self.0 = SANITIZED_SECRET.into();
     }
 }
 
