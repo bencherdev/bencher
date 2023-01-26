@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
 use bencher_json::JsonMetric;
-use literally::hmap;
 use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
@@ -14,9 +11,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     adapters::util::{parse_f64, parse_units, time_as_nanos},
-    results::{
-        adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, LATENCY_RESOURCE_ID,
-    },
+    results::adapter_results::AdapterResults,
     Adapter, AdapterError, Settings,
 };
 
@@ -40,20 +35,7 @@ impl Adapter for AdapterRustCriterion {
             prior_line = Some(line);
         }
 
-        Ok(benchmark_metrics
-            .into_iter()
-            .filter_map(|(benchmark_name, metric)| {
-                Some((
-                    benchmark_name.as_str().parse().ok()?,
-                    AdapterMetrics {
-                        inner: hmap! {
-                            LATENCY_RESOURCE_ID.clone() => metric
-                        },
-                    },
-                ))
-            })
-            .collect::<HashMap<_, _>>()
-            .into())
+        benchmark_metrics.try_into()
     }
 }
 

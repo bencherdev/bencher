@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
 use bencher_json::JsonMetric;
-use literally::hmap;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
@@ -14,9 +11,7 @@ use nom::{
 
 use crate::{
     adapters::util::{parse_f64, parse_u64, parse_units, time_as_nanos},
-    results::{
-        adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, LATENCY_RESOURCE_ID,
-    },
+    results::adapter_results::AdapterResults,
     Adapter, AdapterError, Settings,
 };
 
@@ -50,20 +45,7 @@ impl Adapter for AdapterRustBench {
             rust_panic(line, settings)?;
         }
 
-        Ok(benchmark_metrics
-            .into_iter()
-            .filter_map(|(benchmark_name, metric)| {
-                Some((
-                    benchmark_name.as_str().parse().ok()?,
-                    AdapterMetrics {
-                        inner: hmap! {
-                            LATENCY_RESOURCE_ID.clone() => metric
-                        },
-                    },
-                ))
-            })
-            .collect::<HashMap<_, _>>()
-            .into())
+        benchmark_metrics.try_into()
     }
 }
 

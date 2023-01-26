@@ -1,9 +1,15 @@
 use std::{collections::HashMap, str::FromStr};
 
-use bencher_json::project::{benchmark::BenchmarkName, metric::Mean};
+use bencher_json::{
+    project::{benchmark::BenchmarkName, metric::Mean},
+    JsonMetric,
+};
+use literally::hmap;
 use serde::{Deserialize, Serialize};
 
-use super::{adapter_metrics::AdapterMetrics, CombinedKind};
+use crate::AdapterError;
+
+use super::{adapter_metrics::AdapterMetrics, CombinedKind, LATENCY_RESOURCE_ID};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {
@@ -16,6 +22,28 @@ pub type ResultsMap = HashMap<BenchmarkName, AdapterMetrics>;
 impl From<ResultsMap> for AdapterResults {
     fn from(inner: ResultsMap) -> Self {
         Self { inner }
+    }
+}
+
+impl TryFrom<Vec<(String, JsonMetric)>> for AdapterResults {
+    type Error = AdapterError;
+
+    fn try_from(benchmark_metrics: Vec<(String, JsonMetric)>) -> Result<Self, Self::Error> {
+        let mut results_map = HashMap::new();
+        for (benchmark_name, metric) in benchmark_metrics {
+            results_map.insert(
+                benchmark_name
+                    .as_str()
+                    .parse()
+                    .map_err(AdapterError::BenchmarkName)?,
+                AdapterMetrics {
+                    inner: hmap! {
+                        LATENCY_RESOURCE_ID.clone() => metric
+                    },
+                },
+            );
+        }
+        Ok(results_map.into())
     }
 }
 

@@ -6,6 +6,8 @@ pub enum AdapterError {
     Serde(#[from] serde_json::Error),
     #[error("Failed to parse: {0}")]
     Nom(#[from] nom::Err<nom::error::Error<String>>),
+    #[error("Failed to parse benchmark name: {0}")]
+    BenchmarkName(bencher_json::ValidError),
 
     #[error("Benchmark failed: {0}")]
     BenchmarkFailed(String),
