@@ -1,3 +1,4 @@
+use bencher_json::Secret;
 use mail_send::{mail_builder::MessageBuilder, Transport};
 
 use crate::ApiError;
@@ -8,7 +9,7 @@ use super::Message;
 pub struct Email {
     pub hostname: String,
     pub username: String,
-    pub secret: String,
+    pub secret: Secret,
     pub from_name: Option<String>,
     pub from_email: String,
 }
@@ -44,7 +45,7 @@ impl Email {
         // Connect to an SMTP relay server over TLS and
         // authenticate using the provided credentials.
         let transport = Transport::new(self.hostname.clone())
-            .credentials(self.username.clone(), self.secret.clone());
+            .credentials(self.username.clone(), String::from(self.secret.clone()));
 
         tokio::spawn(async move {
             async fn send<'x>(

@@ -5,7 +5,7 @@ use std::{
 
 use bencher_json::{
     system::config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
-    JsonConfig,
+    JsonConfig, Secret,
 };
 use once_cell::sync::Lazy;
 use tracing::{error, info};
@@ -40,9 +40,14 @@ static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
     Lazy::new(|| SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), DEFAULT_PORT));
 
 #[cfg(debug_assertions)]
-static DEFAULT_SECRET_KEY: Lazy<String> = Lazy::new(|| "DO_NOT_USE_THIS_IN_PRODUCTION".into());
+#[allow(clippy::expect_used)]
+static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
+    "DO_NOT_USE_THIS_IN_PRODUCTION"
+        .parse()
+        .expect("Invalid secret key")
+});
 #[cfg(not(debug_assertions))]
-static DEFAULT_SECRET_KEY: Lazy<String> = Lazy::new(|| uuid::Uuid::new_v4().to_string());
+static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(Default::default);
 
 #[derive(Debug, Clone)]
 pub struct Config(pub JsonConfig);
@@ -127,7 +132,7 @@ impl Default for Config {
     fn default() -> Self {
         Self(JsonConfig {
             endpoint: DEFAULT_ENDPOINT.clone(),
-            secret_key: Some(DEFAULT_SECRET_KEY.clone()),
+            secret_key: DEFAULT_SECRET_KEY.clone(),
             server: JsonServer {
                 bind_address: *DEFAULT_BIND_ADDRESS,
                 request_body_max_bytes: DEFAULT_MAX_BODY_SIZE,

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use bencher_json::system::config::DataStore as DataStoreConfig;
+use bencher_json::{system::config::DataStore as DataStoreConfig, Secret};
 
 use crate::ApiError;
 
@@ -51,7 +51,7 @@ const ACCESSPOINT: &str = ":accesspoint/";
 impl AwsS3 {
     fn new(
         access_key_id: String,
-        secret_access_key: String,
+        secret_access_key: Secret,
         access_point: &str,
     ) -> Result<Self, ApiError> {
         let credentials =

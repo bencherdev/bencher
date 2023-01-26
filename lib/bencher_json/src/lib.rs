@@ -1,5 +1,6 @@
 pub use bencher_valid::{
-    BranchName, Email, GitHash, Jwt, NonEmpty, ResourceId, Slug, Url, UserName, ValidError, MAX_LEN,
+    BranchName, Email, GitHash, Jwt, NonEmpty, ResourceId, Secret, Slug, Url, UserName, ValidError,
+    MAX_LEN,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

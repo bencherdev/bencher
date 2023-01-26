@@ -4,7 +4,7 @@ use bencher_json::{
     system::config::{
         IfExists, JsonDatabase, JsonLogging, JsonServer, JsonSmtp, JsonTls, LogLevel, ServerLog,
     },
-    JsonConfig,
+    JsonConfig, Secret,
 };
 use bencher_rbac::init_rbac;
 use diesel::{Connection, SqliteConnection};
@@ -19,7 +19,7 @@ use tracing::trace;
 use url::Url;
 
 use crate::{
-    context::{ApiContext, Context, Database, Email, Messenger, SecretKey},
+    context::{ApiContext, Context, Database, Email, Messenger},
     endpoints::Api,
     util::registrar::Registrar,
     ApiError,
@@ -68,7 +68,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
 
 fn into_private(
     endpoint: Url,
-    secret_key: Option<String>,
+    secret_key: Secret,
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
@@ -84,7 +84,7 @@ fn into_private(
     };
     Ok(Mutex::new(ApiContext {
         endpoint,
-        secret_key: into_secret_key(secret_key),
+        secret_key: secret_key.into(),
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database: Database {
@@ -115,12 +115,6 @@ fn run_migrations(database: &mut SqliteConnection) -> Result<(), ApiError> {
         .run_pending_migrations(MIGRATIONS)
         .map(|_| ())
         .map_err(ApiError::Migrations)
-}
-
-fn into_secret_key(secret_key: Option<String>) -> SecretKey {
-    secret_key
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
-        .into()
 }
 
 fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {

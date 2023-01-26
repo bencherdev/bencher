@@ -22,4 +22,6 @@ pub enum ValidError {
     Url(String),
     #[error("Failed to validate git hash: {0}")]
     GitHash(String),
+    #[error("Failed to validate secret: {0}")]
+    Secret(String),
 }

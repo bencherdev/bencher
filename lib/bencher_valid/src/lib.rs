@@ -8,6 +8,7 @@ mod git_hash;
 mod jwt;
 mod non_empty;
 mod resource_id;
+mod secret;
 mod slug;
 mod url;
 mod user_name;
@@ -22,6 +23,7 @@ use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
 pub use resource_id::ResourceId;
+pub use secret::Secret;
 pub use user_name::UserName;
 
 pub const MAX_LEN: usize = 50;
@@ -56,16 +58,16 @@ mod test {
 
     #[test]
     fn test_is_valid_len() {
-        assert_eq!(false, is_valid_len(LEN_0_STR));
         assert_eq!(true, is_valid_len(LEN_1_STR));
         assert_eq!(true, is_valid_len(LEN_2_STR));
         assert_eq!(true, is_valid_len(LEN_3_STR));
         assert_eq!(true, is_valid_len(LEN_50_STR));
-        assert_eq!(false, is_valid_len(LEN_51_STR));
+        assert_eq!(true, is_valid_len(INNER_SPACE_STR));
 
+        assert_eq!(false, is_valid_len(LEN_0_STR));
+        assert_eq!(false, is_valid_len(LEN_51_STR));
         assert_eq!(false, is_valid_len(PRE_SPACE_STR));
         assert_eq!(false, is_valid_len(POST_SPACE_STR));
         assert_eq!(false, is_valid_len(BOTH_SPACE_STR));
-        assert_eq!(true, is_valid_len(INNER_SPACE_STR));
     }
 }

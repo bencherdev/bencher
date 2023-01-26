@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, path::PathBuf};
 
+use bencher_valid::Secret;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -16,7 +17,7 @@ pub struct JsonUpdateConfig {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfig {
     pub endpoint: Url,
-    pub secret_key: Option<String>,
+    pub secret_key: Secret,
     pub server: JsonServer,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
@@ -51,7 +52,7 @@ pub struct JsonDatabase {
 pub enum DataStore {
     AwsS3 {
         access_key_id: String,
-        secret_access_key: String,
+        secret_access_key: Secret,
         // arn:aws:s3:<region>:<account-id>:accesspoint/<resource>[/backup-dir-path]
         // https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html
         access_point: String,
@@ -63,7 +64,7 @@ pub enum DataStore {
 pub struct JsonSmtp {
     pub hostname: String,
     pub username: String,
-    pub secret: String,
+    pub secret: Secret,
     pub from_name: String,
     pub from_email: String,
 }
