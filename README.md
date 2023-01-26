@@ -2,7 +2,7 @@
 
 [Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) tools designed to help catch performance regressions in CI. That is, Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
 
-It consists of:
+Bencher consists of:
 
 - `bencher` CLI
 - Bencher API Server
