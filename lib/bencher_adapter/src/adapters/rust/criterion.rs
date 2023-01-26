@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{anychar, digit1, space1},
-    combinator::{eof, map, map_res, peek},
+    combinator::{eof, map, map_res},
     multi::{fold_many1, many_till},
     sequence::{delimited, tuple},
     IResult,
@@ -19,6 +19,8 @@ use crate::{
     },
     Adapter, AdapterError, Settings,
 };
+
+use super::rust_panic;
 
 pub struct AdapterRustCriterion;
 
@@ -34,20 +36,7 @@ impl Adapter for AdapterRustCriterion {
                 }
             }
 
-            if let Ok((remainder, (thread, context, location))) = parse_panic(line) {
-                if remainder.is_empty() {
-                    if settings.allow_failure {
-                        continue;
-                    }
-
-                    return Err(AdapterError::Panic {
-                        thread,
-                        context,
-                        location,
-                    });
-                }
-            }
-
+            rust_panic(line, settings)?;
             prior_line = Some(line);
         }
 
@@ -126,26 +115,6 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     )(input)
 }
 
-fn parse_panic(input: &str) -> IResult<&str, (String, String, String)> {
-    map(
-        tuple((
-            tag("thread "),
-            delimited(tag("'"), many_till(anychar, peek(tag("'"))), tag("'")),
-            tag(" panicked at "),
-            delimited(tag("'"), many_till(anychar, peek(tag("'"))), tag("'")),
-            tag(", "),
-            many_till(anychar, eof),
-        )),
-        |(_, (thread, _), _, (context, _), _, (location, _))| {
-            (
-                thread.into_iter().collect(),
-                context.into_iter().collect(),
-                location.into_iter().collect(),
-            )
-        },
-    )(input)
-}
-
 pub enum Units {
     Pico,
     Nano,
@@ -203,7 +172,7 @@ fn to_f64(input: Vec<&str>) -> Result<f64, nom::Err<nom::error::Error<String>>> 
 }
 
 #[cfg(test)]
-pub(crate) mod test_rust {
+pub(crate) mod test_rust_criterion {
     use bencher_json::JsonMetric;
     use pretty_assertions::assert_eq;
 
@@ -212,7 +181,7 @@ pub(crate) mod test_rust {
         Adapter, AdapterResults, Settings,
     };
 
-    use super::{parse_criterion, parse_panic, AdapterRustCriterion};
+    use super::{parse_criterion, AdapterRustCriterion};
 
     fn convert_rust_criterion(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/criterion/{}.txt", suffix);
@@ -269,26 +238,6 @@ pub(crate) mod test_rust {
         .enumerate()
         {
             assert_eq!(expected, parse_criterion(None, input), "#{index}: {input}")
-        }
-    }
-
-    #[test]
-    fn test_parse_panic() {
-        for (index, (expected, input)) in [(
-            Ok((
-                "",
-                (
-                    "main".into(),
-                    "explicit panic".into(),
-                    "trace4rs/benches/trace4rs_bench.rs:42:5".into(),
-                ),
-            )),
-            "thread 'main' panicked at 'explicit panic', trace4rs/benches/trace4rs_bench.rs:42:5",
-        )]
-        .into_iter()
-        .enumerate()
-        {
-            assert_eq!(expected, parse_panic(input), "#{index}: {input}")
         }
     }
 

@@ -20,6 +20,8 @@ use crate::{
     Adapter, AdapterError, Settings,
 };
 
+use super::rust_panic;
+
 pub struct AdapterRustBench;
 
 impl Adapter for AdapterRustBench {
@@ -45,19 +47,7 @@ impl Adapter for AdapterRustBench {
                 }
             }
 
-            if let Ok((remainder, (thread, context, location))) = parse_panic(line) {
-                if remainder.is_empty() {
-                    if settings.allow_failure {
-                        continue;
-                    }
-
-                    return Err(AdapterError::Panic {
-                        thread,
-                        context,
-                        location,
-                    });
-                }
-            }
+            rust_panic(line, settings)?;
         }
 
         Ok(benchmark_metrics
@@ -163,26 +153,6 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
-fn parse_panic(input: &str) -> IResult<&str, (String, String, String)> {
-    map(
-        tuple((
-            tag("thread "),
-            delimited(tag("'"), many_till(anychar, peek(tag("'"))), tag("'")),
-            tag(" panicked at "),
-            delimited(tag("'"), many_till(anychar, peek(tag("'"))), tag("'")),
-            tag(", "),
-            many_till(anychar, eof),
-        )),
-        |(_, (thread, _), _, (context, _), _, (location, _))| {
-            (
-                thread.into_iter().collect(),
-                context.into_iter().collect(),
-                location.into_iter().collect(),
-            )
-        },
-    )(input)
-}
-
 pub enum Units {
     Pico,
     Nano,
@@ -278,7 +248,7 @@ pub(crate) mod test_rust {
         Adapter, AdapterResults, Settings,
     };
 
-    use super::{parse_cargo, parse_panic, AdapterRustBench, TestMetric};
+    use super::{parse_cargo, AdapterRustBench, TestMetric};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/bench/{}.txt", suffix);
@@ -358,26 +328,6 @@ pub(crate) mod test_rust {
         .enumerate()
         {
             assert_eq!(true, parse_cargo(input).is_err(), "#{index}: {input}")
-        }
-    }
-
-    #[test]
-    fn test_parse_panic() {
-        for (index, (expected, input)) in [(
-            Ok((
-                "",
-                (
-                    "main".into(),
-                    "explicit panic".into(),
-                    "trace4rs/benches/trace4rs_bench.rs:42:5".into(),
-                ),
-            )),
-            "thread 'main' panicked at 'explicit panic', trace4rs/benches/trace4rs_bench.rs:42:5",
-        )]
-        .into_iter()
-        .enumerate()
-        {
-            assert_eq!(expected, parse_panic(input), "#{index}: {input}")
         }
     }
 
