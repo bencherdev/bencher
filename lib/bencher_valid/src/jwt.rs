@@ -109,7 +109,7 @@ mod test {
             is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.{SIGNATURE}"))
         );
 
-        assert_eq!(false, is_valid_jwt(&format!("")));
+        assert_eq!(false, is_valid_jwt(""));
         assert_eq!(false, is_valid_jwt(&format!(".{PAYLOAD}.{SIGNATURE}")));
         assert_eq!(false, is_valid_jwt(&format!("{HEADER}..{SIGNATURE}")));
         assert_eq!(false, is_valid_jwt(&format!("{HEADER}.{PAYLOAD}.")));

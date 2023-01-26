@@ -188,7 +188,7 @@ mod test {
             .is_allowed(proj_member.clone(), OrgPerm::View, org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(proj_member.clone(), OrgPerm::Create, org.clone())
+            .is_allowed(proj_member.clone(), OrgPerm::Create, org)
             .unwrap());
 
         assert!(oso
@@ -223,7 +223,7 @@ mod test {
             .is_allowed(proj_member.clone(), ProjPerm::Create, proj.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(proj_member.clone(), ProjPerm::Manage, proj.clone())
+            .is_allowed(proj_member.clone(), ProjPerm::Manage, proj)
             .unwrap());
 
         let other_org_id = Uuid::new_v4();
@@ -260,42 +260,42 @@ mod test {
             .is_allowed(org_member.clone(), OrgPerm::View, other_org.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(org_member.clone(), OrgPerm::Create, other_org.clone())
+            .is_allowed(org_member.clone(), OrgPerm::Create, other_org)
             .unwrap());
 
         assert!(oso
             .is_allowed(admin.clone(), ProjPerm::Create, other_proj.clone())
             .unwrap());
         assert!(oso
-            .is_allowed(admin.clone(), ProjPerm::Manage, other_proj.clone())
+            .is_allowed(admin, ProjPerm::Manage, other_proj.clone())
             .unwrap());
 
         assert!(!oso
             .is_allowed(user.clone(), ProjPerm::Create, other_proj.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(user.clone(), ProjPerm::Manage, other_proj.clone())
+            .is_allowed(user, ProjPerm::Manage, other_proj.clone())
             .unwrap());
 
         assert!(!oso
             .is_allowed(org_leader.clone(), ProjPerm::Create, other_proj.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(org_leader.clone(), ProjPerm::Manage, other_proj.clone())
+            .is_allowed(org_leader, ProjPerm::Manage, other_proj.clone())
             .unwrap());
 
         assert!(!oso
             .is_allowed(org_member.clone(), ProjPerm::Create, other_proj.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(org_member.clone(), ProjPerm::Manage, other_proj.clone())
+            .is_allowed(org_member, ProjPerm::Manage, other_proj.clone())
             .unwrap());
 
         assert!(!oso
             .is_allowed(proj_member.clone(), ProjPerm::Create, other_proj.clone())
             .unwrap());
         assert!(!oso
-            .is_allowed(proj_member.clone(), ProjPerm::Manage, other_proj.clone())
+            .is_allowed(proj_member, ProjPerm::Manage, other_proj)
             .unwrap());
     }
 }

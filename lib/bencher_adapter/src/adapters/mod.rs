@@ -28,8 +28,9 @@ pub(crate) mod test_util {
         A: Adapter,
     {
         let contents = std::fs::read_to_string(file_path)
-            .expect(&format!("Failed to read test file: {file_path}"));
-        A::parse(&contents, settings).expect(&format!("Failed to convert contents: {contents}"))
+            .unwrap_or_else(|e| panic!("Failed to read test file {file_path}: {e}"));
+        A::parse(&contents, settings)
+            .unwrap_or_else(|e| panic!("Failed to convert contents {contents}: {e}"))
     }
 
     pub fn validate_metrics(
