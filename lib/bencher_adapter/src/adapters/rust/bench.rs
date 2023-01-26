@@ -1,20 +1,19 @@
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::collections::HashMap;
 
 use bencher_json::JsonMetric;
 use literally::hmap;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
-    character::complete::{anychar, digit1, space1},
-    combinator::{eof, map, map_res, peek, success},
-    multi::{fold_many1, many1, many_till},
+    character::complete::{anychar, space1},
+    combinator::{eof, map, map_res, peek},
+    multi::many_till,
     sequence::{delimited, tuple},
     IResult,
 };
-use ordered_float::OrderedFloat;
 
 use crate::{
-    adapters::util::{parse_f64, parse_u64, parse_units, time_nanos},
+    adapters::util::{parse_f64, parse_u64, parse_units, time_as_nanos},
     results::{
         adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, LATENCY_RESOURCE_ID,
     },
@@ -141,8 +140,8 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
-            let value = time_nanos(duration, units);
-            let variance = Some(time_nanos(variance, units));
+            let value = time_as_nanos(duration, units);
+            let variance = Some(time_as_nanos(variance, units));
             Ok(JsonMetric {
                 value,
                 lower_bound: variance.map(|v| value - v),

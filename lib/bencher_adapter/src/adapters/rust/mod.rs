@@ -4,11 +4,10 @@ pub mod criterion;
 use self::criterion::AdapterRustCriterion;
 use bench::AdapterRustBench;
 use nom::{
-    branch::alt,
     bytes::complete::tag,
-    character::complete::{anychar, digit1, space1},
-    combinator::{eof, map, map_res, peek},
-    multi::{fold_many1, many_till},
+    character::complete::anychar,
+    combinator::{eof, map, peek},
+    multi::many_till,
     sequence::{delimited, tuple},
     IResult,
 };

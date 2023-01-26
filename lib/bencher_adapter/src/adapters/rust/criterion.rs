@@ -1,19 +1,19 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use bencher_json::JsonMetric;
 use literally::hmap;
 use nom::{
-    branch::alt,
     bytes::complete::tag,
-    character::complete::{anychar, digit1, space1},
+    character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
-    multi::{fold_many1, many_till},
+    multi::many_till,
     sequence::{delimited, tuple},
     IResult,
 };
 use ordered_float::OrderedFloat;
 
 use crate::{
+    adapters::util::{parse_f64, parse_units, time_as_nanos},
     results::{
         adapter_metrics::AdapterMetrics, adapter_results::AdapterResults, LATENCY_RESOURCE_ID,
     },
@@ -108,67 +108,11 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
 #[allow(clippy::float_arithmetic)]
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map_res(
-        tuple((parse_float, space1, parse_units)),
+        tuple((parse_f64, space1, parse_units)),
         |(duration, _, units)| -> Result<OrderedFloat<f64>, nom::Err<nom::error::Error<String>>> {
-            Ok((to_f64(duration)? * units.as_nanos()).into())
+            Ok(time_as_nanos(duration, units))
         },
     )(input)
-}
-
-pub enum Units {
-    Pico,
-    Nano,
-    Micro,
-    Milli,
-    Sec,
-}
-
-fn parse_units(input: &str) -> IResult<&str, Units> {
-    alt((
-        map(tag("ps"), |_| Units::Pico),
-        map(tag("ns"), |_| Units::Nano),
-        map(tag("\u{3bc}s"), |_| Units::Micro),
-        map(tag("\u{b5}s"), |_| Units::Micro),
-        map(tag("ms"), |_| Units::Milli),
-        map(tag("s"), |_| Units::Sec),
-    ))(input)
-}
-
-impl Units {
-    #[allow(clippy::float_arithmetic)]
-    fn as_nanos(&self) -> f64 {
-        match self {
-            Self::Pico => 1.0 / 1_000.0,
-            Self::Nano => 1.0,
-            Self::Micro => 1_000.0,
-            Self::Milli => 1_000_000.0,
-            Self::Sec => 1_000_000_000.0,
-        }
-    }
-}
-
-fn parse_float(input: &str) -> IResult<&str, Vec<&str>> {
-    fold_many1(
-        alt((digit1, tag("."), tag(","))),
-        Vec::new,
-        |mut float_chars, float_char| {
-            if float_char == "," {
-                float_chars
-            } else {
-                float_chars.push(float_char);
-                float_chars
-            }
-        },
-    )(input)
-}
-
-fn to_f64(input: Vec<&str>) -> Result<f64, nom::Err<nom::error::Error<String>>> {
-    let mut number = String::new();
-    for floating_point in input {
-        number.push_str(floating_point);
-    }
-    f64::from_str(&number)
-        .map_err(|_e| nom::Err::Error(nom::error::make_error(number, nom::error::ErrorKind::Tag)))
 }
 
 #[cfg(test)]

@@ -1,33 +1,40 @@
-use std::{str::FromStr, time::Duration};
-
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_until1},
-    character::complete::{anychar, digit1, space1},
-    combinator::{eof, map, map_res, peek, success},
-    multi::{fold_many1, many1, many_till},
-    sequence::{delimited, tuple},
-    IResult,
+    branch::alt, bytes::complete::tag, character::complete::digit1, combinator::map,
+    multi::fold_many1, IResult,
 };
 use ordered_float::OrderedFloat;
 
-pub fn time_nanos(time: u64, units: Units) -> OrderedFloat<f64> {
-    (get_duration(time, units).as_nanos() as f64).into()
+pub fn time_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
+where
+    T: Into<Time>,
+{
+    (time.into().as_f64() * units.as_nanos()).into()
 }
 
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    clippy::float_arithmetic
-)]
-pub fn get_duration(time: u64, units: Units) -> Duration {
-    match units {
-        Units::Pico => Duration::from_nanos((time as f64 * units.as_nanos()) as u64),
-        Units::Nano => Duration::from_nanos(time),
-        Units::Micro => Duration::from_micros(time),
-        Units::Milli => Duration::from_millis(time),
-        Units::Sec => Duration::from_secs(time),
+#[derive(Clone, Copy)]
+pub enum Time {
+    UInt64(u64),
+    Float64(f64),
+}
+
+impl From<u64> for Time {
+    fn from(int: u64) -> Self {
+        Self::UInt64(int)
+    }
+}
+
+impl From<f64> for Time {
+    fn from(float: f64) -> Self {
+        Self::Float64(float)
+    }
+}
+
+impl Time {
+    fn as_f64(&self) -> f64 {
+        match self {
+            Self::UInt64(int) => *int as f64,
+            Self::Float64(float) => *float,
+        }
     }
 }
 
