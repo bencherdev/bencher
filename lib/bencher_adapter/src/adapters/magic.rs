@@ -25,7 +25,7 @@ impl Adapter for AdapterMagic {
 mod test {
     use super::AdapterMagic;
     use crate::{
-        adapters::{json::test_json, rust::test_rust, test_util::convert_file_path},
+        adapters::{json::test_json, rust::bench::test_rust, test_util::convert_file_path},
         Settings,
     };
 
