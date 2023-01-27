@@ -35,6 +35,8 @@ pub enum JsonAdapter {
     Magic,
     Json,
     Rust,
+    RustBench,
+    RustCriterion,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

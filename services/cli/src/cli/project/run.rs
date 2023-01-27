@@ -90,12 +90,16 @@ pub struct CliRunShell {
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
 pub enum CliRunAdapter {
-    /// Magic 🪄 (default)
+    /// 🪄 Magic (default)
     Magic,
-    /// JSON {...}
+    /// {...} JSON
     Json,
-    /// Rust 🦀
+    /// 🦀 Rust
     Rust,
+    /// 🦀 Rust Bench
+    RustBench,
+    /// 🦀 Rust Criterion
+    RustCriterion,
 }
 
 /// Supported Fold Operations

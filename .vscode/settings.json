@@ -60,6 +60,7 @@
     "powi",
     "preheader",
     "Punct",
+    "repr",
     "reqwest",
     "roadmap",
     "rqctx",

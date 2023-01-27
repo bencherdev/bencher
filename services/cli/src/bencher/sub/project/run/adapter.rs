@@ -7,6 +7,8 @@ pub enum RunAdapter {
     Magic,
     Json,
     Rust,
+    RustBench,
+    RustCriterion,
 }
 
 impl From<CliRunAdapter> for RunAdapter {
@@ -15,6 +17,8 @@ impl From<CliRunAdapter> for RunAdapter {
             CliRunAdapter::Magic => Self::Magic,
             CliRunAdapter::Json => Self::Json,
             CliRunAdapter::Rust => Self::Rust,
+            CliRunAdapter::RustBench => Self::RustBench,
+            CliRunAdapter::RustCriterion => Self::RustCriterion,
         }
     }
 }
@@ -25,6 +29,8 @@ impl From<RunAdapter> for JsonAdapter {
             RunAdapter::Magic => Self::Magic,
             RunAdapter::Json => Self::Json,
             RunAdapter::Rust => Self::Rust,
+            RunAdapter::RustBench => Self::RustBench,
+            RunAdapter::RustCriterion => Self::RustCriterion,
         }
     }
 }
