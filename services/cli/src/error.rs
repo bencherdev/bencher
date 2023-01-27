@@ -36,6 +36,8 @@ pub enum CliError {
     ErrorCode(String),
     #[error("Failed to run benchmark command: {0}")]
     Output(Output),
+    #[error("Mock failure")]
+    MockFailure,
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),

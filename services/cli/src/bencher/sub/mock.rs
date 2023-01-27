@@ -18,12 +18,13 @@ const DEFAULT_COUNT: usize = 5;
 #[derive(Debug, Clone)]
 pub struct Mock {
     pub count: Option<usize>,
+    pub fail: bool,
 }
 
 impl From<CliMock> for Mock {
     fn from(mock: CliMock) -> Self {
-        let CliMock { count } = mock;
-        Self { count }
+        let CliMock { count, fail } = mock;
+        Self { count, fail }
     }
 }
 
@@ -59,6 +60,10 @@ impl SubCmd for Mock {
             "{}",
             serde_json::to_string_pretty(&AdapterResults::from(results))?
         );
+
+        if self.fail {
+            return Err(CliError::MockFailure);
+        }
 
         Ok(())
     }
