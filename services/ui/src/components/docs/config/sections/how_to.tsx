@@ -1,8 +1,22 @@
 import PageKind from "../page_kind";
 import GitHubActions from "../../pages/how_to/GitHubActions.mdx";
 import GitLabCiCd from "../../pages/how_to/GitLabCiCd.mdx";
+import InstallCli from "../../pages/how_to/InstallCli.mdx";
 
 const HowTo = [
+	{
+		title: "Install CLI",
+		slug: "install-cli",
+		panel: {
+			kind: PageKind.MDX,
+			heading: (
+				<div>
+					How to Install <code>bencher</code> CLI
+				</div>
+			),
+			content: <InstallCli />,
+		},
+	},
 	{
 		title: "GitHub Actions",
 		slug: "github-actions",

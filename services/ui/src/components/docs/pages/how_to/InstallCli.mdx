@@ -1,0 +1,38 @@
+import { BENCHER_VERSION } from "../../../site/util";
+
+## Debian
+
+Bencher provides a convenient `deb` file for installing on Debian
+and Debain based distributions like Ubuntu.
+
+<pre>
+  <code>
+    {`wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
+sudo dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb`}
+  </code>
+</pre>
+
+
+## From Source
+
+For all other environments, the suggested install method is from source.
+
+<pre>
+  <code>
+    {`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git
+cd bencher
+cargo install --path services/cli --locked`}
+  </code>
+</pre>
+
+## Other Linux Distributions
+
+A standalone Linx CLI binary is also available for download
+if you know what you are doing.
+
+<pre>
+  <code>
+    {`wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher`}
+  </code>
+</pre>
+
