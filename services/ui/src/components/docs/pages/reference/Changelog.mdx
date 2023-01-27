@@ -1,3 +1,9 @@
+## Pending `v0.2.31`
+- Prevent leaking secrets by obfuscating them in the server logs (ie `************`)
+- Move run failure detection to the CLI, adapter parsing will no longer attempt error detection
+- New harness specific adapter targets (ie `rust_bech` and `rust_criterion`)
+- Add additional options to `bencher mock`, `--fail` and `--flaky` to easily test parsing failing and flaky benchmarks respectively
+
 ## `v0.2.30`
 - Added `--if-else-branch`, `--else-branch`, and `--endif-branch` flags to to `bencher run` CLI
 - Wrote a [branch management](/explanation/branch-management) explanation page for using `bencher run`
