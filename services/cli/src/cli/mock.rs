@@ -9,4 +9,8 @@ pub struct CliMock {
     /// Fail while running
     #[clap(long)]
     pub fail: bool,
+
+    /// Intermittently fail while running
+    #[clap(long, conflicts_with = "fail")]
+    pub flaky: bool,
 }
