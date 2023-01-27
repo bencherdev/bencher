@@ -24,7 +24,6 @@ pub struct JsonNewReport {
 pub struct JsonReportSettings {
     pub adapter: Option<JsonAdapter>,
     pub fold: Option<JsonFold>,
-    pub allow_failure: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]

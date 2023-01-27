@@ -58,7 +58,7 @@ impl ReportResults {
         adapter: JsonAdapter,
         settings: JsonReportSettings,
     ) -> Result<(), ApiError> {
-        let results_array = AdapterResultsArray::new(results_array, adapter, settings.into())?;
+        let results_array = AdapterResultsArray::new(results_array, adapter)?;
 
         if let Some(fold) = settings.fold {
             let results = results_array.fold(fold);

@@ -200,7 +200,6 @@ impl SubCmd for Run {
             settings: Some(JsonReportSettings {
                 adapter: self.adapter.map(Into::into),
                 fold: self.fold.map(Into::into),
-                allow_failure: Some(self.allow_failure),
             }),
         };
 

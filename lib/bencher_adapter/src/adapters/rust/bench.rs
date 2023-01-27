@@ -12,37 +12,26 @@ use nom::{
 use crate::{
     adapters::util::{parse_f64, parse_u64, parse_units, time_as_nanos},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError, Settings,
+    Adapter, AdapterError,
 };
-
-use super::rust_panic;
 
 pub struct AdapterRustBench;
 
 impl Adapter for AdapterRustBench {
-    fn parse(input: &str, settings: Settings) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
             if let Ok((remainder, (benchmark_name, test_metric))) = parse_cargo(line) {
                 if remainder.is_empty() {
                     match test_metric {
-                        TestMetric::Ignored => continue,
-                        TestMetric::Failed => {
-                            if settings.allow_failure {
-                                continue;
-                            }
-
-                            return Err(AdapterError::BenchmarkFailed(benchmark_name));
-                        },
+                        TestMetric::Ignored | TestMetric::Failed => continue,
                         TestMetric::Ok(metric) | TestMetric::Bench(metric) => {
                             benchmark_metrics.push((benchmark_name, metric));
                         },
                     }
                 }
             }
-
-            rust_panic(line, settings)?;
         }
 
         benchmark_metrics.try_into()
@@ -140,19 +129,19 @@ pub(crate) mod test_rust_bench {
 
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
-        Adapter, AdapterResults, Settings,
+        Adapter, AdapterResults,
     };
 
     use super::{parse_cargo, AdapterRustBench, TestMetric};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/bench/{}.txt", suffix);
-        convert_file_path::<AdapterRustBench>(&file_path, Settings::default())
+        convert_file_path::<AdapterRustBench>(&file_path)
     }
 
     fn convert_rust_test(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/bench/test_{}.txt", suffix);
-        convert_file_path::<AdapterRustBench>(&file_path, Settings::default())
+        convert_file_path::<AdapterRustBench>(&file_path)
     }
 
     fn validate_bench_metrics(results: &AdapterResults, key: &str) {
@@ -276,19 +265,7 @@ pub(crate) mod test_rust_bench {
     #[test]
     fn test_adapter_rust_failed() {
         let contents = std::fs::read_to_string("./tool_output/rust/bench/failed.txt").unwrap();
-        assert!(AdapterRustBench::parse(&contents, Settings::default()).is_err());
-    }
-
-    #[test]
-    fn test_adapter_rust_failed_allow_failure() {
-        let contents = std::fs::read_to_string("./tool_output/rust/bench/failed.txt").unwrap();
-        let results = AdapterRustBench::parse(
-            &contents,
-            Settings {
-                allow_failure: true,
-            },
-        )
-        .unwrap();
+        let results = AdapterRustBench::parse(&contents).unwrap();
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("tests::benchmark_a").unwrap();
@@ -318,21 +295,7 @@ pub(crate) mod test_rust_bench {
         let contents =
             std::fs::read_to_string("./tool_output/rust/bench/test_report_time_failed.txt")
                 .unwrap();
-        assert!(AdapterRustBench::parse(&contents, Settings::default()).is_err());
-    }
-
-    #[test]
-    fn test_adapter_rust_test_failed_allow_failure() {
-        let contents =
-            std::fs::read_to_string("./tool_output/rust/bench/test_report_time_failed.txt")
-                .unwrap();
-        let results = AdapterRustBench::parse(
-            &contents,
-            Settings {
-                allow_failure: true,
-            },
-        )
-        .unwrap();
+        let results = AdapterRustBench::parse(&contents).unwrap();
         assert_eq!(results.inner.len(), 3);
 
         let metrics = results.get("tests::ignored").unwrap();

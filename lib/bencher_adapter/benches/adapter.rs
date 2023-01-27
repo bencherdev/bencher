@@ -1,10 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use once_cell::sync::Lazy;
 
-use bencher_adapter::{Adapter, Settings};
+use bencher_adapter::Adapter;
 use bencher_json::project::report::JsonAdapter;
-
-static SETTINGS: Lazy<Settings> = Lazy::new(Settings::default);
 
 const JSON_RESULT: &str = r#"{
     "tests::benchmark_1": {
@@ -39,13 +36,13 @@ const JSON_RESULT: &str = r#"{
 
 fn adapter_magic_json(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Magic (JSON)", |b| {
-        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT, *SETTINGS))
+        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT))
     });
 }
 
 fn adapter_json(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Json", |b| {
-        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT, *SETTINGS))
+        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT))
     });
 }
 
@@ -63,13 +60,13 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 4 measured; 0 filtered out; fini
 
 fn adapter_magic_rust(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Magic (Rust)", |b| {
-        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT, *SETTINGS))
+        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT))
     });
 }
 
 fn adapter_rust(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Rust", |b| {
-        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT, *SETTINGS))
+        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT))
     });
 }
 

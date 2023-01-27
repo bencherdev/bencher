@@ -1,16 +1,10 @@
-use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError, Settings};
+use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError};
 
 pub struct AdapterJson;
 
 impl Adapter for AdapterJson {
-    fn parse(input: &str, settings: Settings) -> Result<AdapterResults, AdapterError> {
-        let json = serde_json::from_str(input).map_err(Into::into);
-
-        if json.is_err() && settings.allow_failure {
-            Ok(AdapterResults::default())
-        } else {
-            json
-        }
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
+        serde_json::from_str(input).map_err(Into::into)
     }
 }
 
@@ -22,17 +16,16 @@ pub(crate) mod test_json {
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
         results::adapter_results::AdapterResults,
-        Settings,
     };
 
-    fn convert_json(suffix: &str, settings: Settings) -> AdapterResults {
+    fn convert_json(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/json/report_{}.json", suffix);
-        convert_file_path::<AdapterJson>(&file_path, settings)
+        convert_file_path::<AdapterJson>(&file_path)
     }
 
     #[test]
     fn test_adapter_json_latency() {
-        let results = convert_json("latency", Settings::default());
+        let results = convert_json("latency");
         validate_adapter_json_latency(results);
     }
 

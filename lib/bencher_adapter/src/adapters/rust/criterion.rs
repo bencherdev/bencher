@@ -12,15 +12,13 @@ use ordered_float::OrderedFloat;
 use crate::{
     adapters::util::{parse_f64, parse_units, time_as_nanos},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError, Settings,
+    Adapter, AdapterError,
 };
-
-use super::rust_panic;
 
 pub struct AdapterRustCriterion;
 
 impl Adapter for AdapterRustCriterion {
-    fn parse(input: &str, settings: Settings) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         let mut benchmark_metrics = Vec::new();
 
         let mut prior_line = None;
@@ -31,7 +29,6 @@ impl Adapter for AdapterRustCriterion {
                 }
             }
 
-            rust_panic(line, settings)?;
             prior_line = Some(line);
         }
 
@@ -104,14 +101,14 @@ pub(crate) mod test_rust_criterion {
 
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
-        Adapter, AdapterResults, Settings,
+        Adapter, AdapterResults,
     };
 
     use super::{parse_criterion, AdapterRustCriterion};
 
     fn convert_rust_criterion(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/criterion/{}.txt", suffix);
-        convert_file_path::<AdapterRustCriterion>(&file_path, Settings::default())
+        convert_file_path::<AdapterRustCriterion>(&file_path)
     }
 
     #[test]
@@ -191,19 +188,7 @@ pub(crate) mod test_rust_criterion {
     #[test]
     fn test_adapter_rust_criterion_failed() {
         let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
-        assert!(AdapterRustCriterion::parse(&contents, Settings::default()).is_err());
-    }
-
-    #[test]
-    fn test_adapter_rust_criterion_failed_allow_failure() {
-        let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
-        let results = AdapterRustCriterion::parse(
-            &contents,
-            Settings {
-                allow_failure: true,
-            },
-        )
-        .unwrap();
+        let results = AdapterRustCriterion::parse(&contents).unwrap();
         assert_eq!(results.inner.len(), 4);
     }
 
