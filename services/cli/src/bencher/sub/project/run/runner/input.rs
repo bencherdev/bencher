@@ -1,28 +1,40 @@
 use std::io::BufRead;
 
-#[derive(Debug)]
-pub struct Input(String);
+use super::{output::ExitStatus, Output};
 
-impl Input {
-    pub fn new() -> Self {
-        let mut stdin_buf = String::new();
-        let stdin = std::io::stdin();
-        let mut handle = stdin.lock();
-        while let Ok(size) = handle.read_line(&mut stdin_buf) {
+#[derive(Debug)]
+pub struct Pipe(Output);
+
+impl Pipe {
+    pub fn new() -> Option<Self> {
+        let mut stdin = String::new();
+        let mut stdin_handle = std::io::stdin().lock();
+        while let Ok(size) = stdin_handle.read_line(&mut stdin) {
             if size == 0 {
                 break;
             }
         }
-        Self(stdin_buf)
+
+        let mut stderr = String::new();
+        let mut stderr_handle = std::io::stderr().lock();
+        while let Ok(size) = stderr_handle.read_line(&mut stderr) {
+            if size == 0 {
+                break;
+            }
+        }
+
+        if stdin.is_empty() && stderr.is_empty() {
+            None
+        } else {
+            Some(Self(Output {
+                status: ExitStatus::default(),
+                stdout: stdin,
+                stderr,
+            }))
+        }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-impl ToString for Input {
-    fn to_string(&self) -> String {
+    pub fn output(&self) -> Output {
         self.0.clone()
     }
 }

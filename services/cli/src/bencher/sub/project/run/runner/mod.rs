@@ -4,19 +4,19 @@ use crate::{cli::project::run::CliRunCommand, CliError};
 
 mod command;
 mod flag;
-mod input;
 mod output;
+mod pipe;
 mod shell;
 
 use command::Command;
-use input::Input;
-pub use output::Output;
+use output::Output;
+use pipe::Pipe;
 
 use super::BENCHER_CMD;
 
 #[derive(Debug)]
 pub enum Runner {
-    Input(Input),
+    Pipe(Pipe),
     Command(Command),
 }
 
@@ -26,17 +26,12 @@ impl TryFrom<CliRunCommand> for Runner {
     fn try_from(command: CliRunCommand) -> Result<Self, Self::Error> {
         if let Some(cmd) = command.cmd {
             Ok(Self::Command(Command::try_from((command.shell, cmd))?))
+        } else if let Ok(cmd) = std::env::var(BENCHER_CMD) {
+            Ok(Self::Command(Command::try_from((command.shell, cmd))?))
+        } else if Some(pipe) = Pipe::new() {
+            Ok(Self::Pipe(pipe))
         } else {
-            let input = Input::new();
-            if input.is_empty() {
-                if let Ok(cmd) = std::env::var(BENCHER_CMD) {
-                    Ok(Self::Command(Command::try_from((command.shell, cmd))?))
-                } else {
-                    Err(CliError::NoCommand)
-                }
-            } else {
-                Ok(Self::Input(input))
-            }
+            Err(CliError::NoCommand)
         }
     }
 }
