@@ -48,7 +48,7 @@ static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
         .expect("Invalid secret key")
 });
 #[cfg(not(debug_assertions))]
-static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| Uuid::new_v4().into());
+static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().into());
 
 #[derive(Debug, Clone)]
 pub struct Config(pub JsonConfig);
