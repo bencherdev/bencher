@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use super::{flag::Flag, shell::Shell};
+use super::{flag::Flag, output::Output, shell::Shell};
 use crate::{cli::project::run::CliRunShell, CliError};
 
 #[derive(Debug)]
@@ -23,19 +23,15 @@ impl TryFrom<(CliRunShell, String)> for Command {
     }
 }
 
-impl TryInto<String> for &Command {
+impl TryInto<Output> for &Command {
     type Error = CliError;
 
-    fn try_into(self) -> Result<String, Self::Error> {
-        let output = std::process::Command::new(self.shell.to_string())
+    fn try_into(self) -> Result<Output, Self::Error> {
+        std::process::Command::new(self.shell.to_string())
             .arg(self.flag.to_string())
             .arg(&self.cmd)
-            .output()?;
-
-        Ok(format!(
-            "{}{}",
-            String::from_utf8(output.stdout)?,
-            String::from_utf8(output.stderr)?
-        ))
+            .output()
+            .map(Into::into)
+            .map_err(Into::into)
     }
 }

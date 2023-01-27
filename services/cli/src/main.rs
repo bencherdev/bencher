@@ -42,3 +42,17 @@ macro_rules! cli_println {
 }
 
 pub(crate) use cli_println;
+
+macro_rules! cli_eprintln {
+    () => (print!("\n"));
+    ($fmt:expr) => ({
+        use std::io::Write;
+        let _w = writeln!(std::io::stderr(), $fmt);
+    });
+    ($fmt:expr, $($arg:tt)*) => ({
+        use std::io::Write;
+        let _w = writeln!(std::io::stderr(), $fmt, $($arg)*);
+    })
+}
+
+pub(crate) use cli_eprintln;

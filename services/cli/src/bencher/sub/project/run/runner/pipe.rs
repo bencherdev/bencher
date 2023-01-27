@@ -1,6 +1,6 @@
 use std::io::BufRead;
 
-use super::{output::ExitStatus, Output};
+use super::Output;
 
 #[derive(Debug)]
 pub struct Pipe(Output);
@@ -15,21 +15,12 @@ impl Pipe {
             }
         }
 
-        let mut stderr = String::new();
-        let mut stderr_handle = std::io::stderr().lock();
-        while let Ok(size) = stderr_handle.read_line(&mut stderr) {
-            if size == 0 {
-                break;
-            }
-        }
-
-        if stdin.is_empty() && stderr.is_empty() {
+        if stdin.is_empty() {
             None
         } else {
             Some(Self(Output {
-                status: ExitStatus::default(),
                 stdout: stdin,
-                stderr,
+                ..Default::default()
             }))
         }
     }

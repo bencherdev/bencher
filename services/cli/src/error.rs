@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::bencher::sub::Output;
+
 #[derive(Error, Debug)]
 pub enum CliError {
     #[error("Failed to find Bencher user API token. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
@@ -32,6 +34,8 @@ pub enum CliError {
     BadMath,
     #[error("Error Code: {0}")]
     ErrorCode(String),
+    #[error("Failed to run benchmark command: {0}")]
+    Output(Output),
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),

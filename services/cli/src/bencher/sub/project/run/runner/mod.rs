@@ -4,7 +4,7 @@ use crate::{cli::project::run::CliRunCommand, CliError};
 
 mod command;
 mod flag;
-mod output;
+pub mod output;
 mod pipe;
 mod shell;
 
@@ -28,7 +28,7 @@ impl TryFrom<CliRunCommand> for Runner {
             Ok(Self::Command(Command::try_from((command.shell, cmd))?))
         } else if let Ok(cmd) = std::env::var(BENCHER_CMD) {
             Ok(Self::Command(Command::try_from((command.shell, cmd))?))
-        } else if Some(pipe) = Pipe::new() {
+        } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))
         } else {
             Err(CliError::NoCommand)
@@ -38,10 +38,9 @@ impl TryFrom<CliRunCommand> for Runner {
 
 impl Runner {
     pub fn run(&self) -> Result<Output, CliError> {
-        let result = match self {
-            Self::Input(input) => input.to_string(),
+        Ok(match self {
+            Self::Pipe(pipe) => pipe.output(),
             Self::Command(command) => command.try_into()?,
-        };
-        Ok(Output { result })
+        })
     }
 }

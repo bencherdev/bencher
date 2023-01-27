@@ -14,16 +14,15 @@ use uuid::Uuid;
 use crate::{
     bencher::{backend::Backend, locality::Locality},
     cli::project::run::{CliRun, CliRunAdapter},
-    cli_println, CliError,
+    cli_eprintln, cli_println, CliError,
 };
 
 mod adapter;
 mod fold;
-mod runner;
+pub mod runner;
 
 use adapter::RunAdapter;
 use fold::Fold;
-pub use runner::Output;
 use runner::Runner;
 
 use crate::bencher::SubCmd;
@@ -174,11 +173,16 @@ impl SubCmd for Run {
         };
 
         let start_time = Utc::now();
-
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
             let output = self.runner.run()?;
-            results.push(output.result);
+            if output.success() {
+                results.push(output.stdout)
+            } else if self.allow_failure {
+                cli_eprintln!("Skipping failure:\n{}", output);
+            } else {
+                return Err(CliError::Output(output));
+            }
         }
 
         // TODO disable when quiet
