@@ -1,6 +1,7 @@
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
+use uuid::Uuid;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -39,12 +40,6 @@ impl Sanitize for Secret {
     }
 }
 
-impl Default for Secret {
-    fn default() -> Self {
-        Self(uuid::Uuid::new_v4().to_string())
-    }
-}
-
 impl FromStr for Secret {
     type Err = ValidError;
 
@@ -60,6 +55,12 @@ impl FromStr for Secret {
 impl AsRef<str> for Secret {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl From<Uuid> for Secret {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid.to_string())
     }
 }
 
