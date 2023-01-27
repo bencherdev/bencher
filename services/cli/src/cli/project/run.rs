@@ -10,26 +10,8 @@ pub struct CliRun {
     #[clap(long)]
     pub project: Option<ResourceId>,
 
-    /// Branch slug or UUID (or set BENCHER_BRANCH) (default is "main")
-    #[clap(long)]
-    pub branch: Option<ResourceId>,
-
-    /// Run iff a single instance of the branch name exists
-    #[clap(long, conflicts_with = "branch", conflicts_with = "local")]
-    pub if_branch: Option<Option<BranchName>>,
-
-    /// Create a new branch, clone data, and run iff a single instance of the start point branch name exists (requires `--if-branch`)
-    #[clap(long, requires = "if_branch")]
-    pub else_if_branch: Vec<String>,
-
-    /// Create a new branch and run if neither `--if-branch` or `--else-if-branch` exists (requires `--if-branch`)
-    #[clap(long, requires = "if_branch")]
-    pub else_branch: bool,
-
-    /// An optional marker for the end of the if branch statement.
-    /// This is useful for `--if-branch` and `--else-if-branch` to exit successfully in the case that an environment variable is empty (requires `--if-branch`)
-    #[clap(long, requires = "if_branch")]
-    pub endif_branch: bool,
+    #[clap(flatten)]
+    pub run_branch: CliRunBranch,
 
     /// Software commit hash
     #[clap(long)]
@@ -64,6 +46,30 @@ pub struct CliRun {
 
     #[clap(flatten)]
     pub locality: CliLocality,
+}
+
+#[derive(Args, Debug)]
+pub struct CliRunBranch {
+    /// Branch slug or UUID (or set BENCHER_BRANCH) (default is "main")
+    #[clap(long)]
+    pub branch: Option<ResourceId>,
+
+    /// Run iff a single instance of the branch name exists
+    #[clap(long, conflicts_with = "branch", conflicts_with = "local")]
+    pub if_branch: Option<Option<BranchName>>,
+
+    /// Create a new branch, clone data, and run iff a single instance of the start point branch name exists (requires `--if-branch`)
+    #[clap(long, requires = "if_branch")]
+    pub else_if_branch: Vec<String>,
+
+    /// Create a new branch and run if neither `--if-branch` or `--else-if-branch` exists (requires `--if-branch`)
+    #[clap(long, requires = "if_branch")]
+    pub else_branch: bool,
+
+    /// An optional marker for the end of the if branch statement.
+    /// This is useful for `--if-branch` and `--else-if-branch` to exit successfully in the case that an environment variable is empty (requires `--if-branch`)
+    #[clap(long, requires = "if_branch")]
+    pub endif_branch: bool,
 }
 
 #[derive(Args, Debug)]
