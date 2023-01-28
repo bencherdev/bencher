@@ -9,6 +9,7 @@ pub enum RunAdapter {
     Rust,
     RustBench,
     RustCriterion,
+    Cpp,
 }
 
 impl From<CliRunAdapter> for RunAdapter {
@@ -19,6 +20,7 @@ impl From<CliRunAdapter> for RunAdapter {
             CliRunAdapter::Rust => Self::Rust,
             CliRunAdapter::RustBench => Self::RustBench,
             CliRunAdapter::RustCriterion => Self::RustCriterion,
+            CliRunAdapter::Cpp => Self::Cpp,
         }
     }
 }
@@ -31,6 +33,7 @@ impl From<RunAdapter> for JsonAdapter {
             RunAdapter::Rust => Self::Rust,
             RunAdapter::RustBench => Self::RustBench,
             RunAdapter::RustCriterion => Self::RustCriterion,
+            RunAdapter::Cpp => Self::Cpp,
         }
     }
 }

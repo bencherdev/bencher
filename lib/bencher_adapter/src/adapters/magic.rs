@@ -1,5 +1,6 @@
 use crate::{
-    results::adapter_results::AdapterResults, Adapter, AdapterError, AdapterJson, AdapterRust,
+    results::adapter_results::AdapterResults, Adapter, AdapterCpp, AdapterError, AdapterJson,
+    AdapterRust,
 };
 
 pub struct AdapterMagic;
@@ -14,6 +15,11 @@ impl Adapter for AdapterMagic {
         let rust = AdapterRust::parse(input)?;
         if !rust.is_empty() {
             return Ok(rust);
+        }
+
+        let cpp = AdapterCpp::parse(input)?;
+        if !cpp.is_empty() {
+            return Ok(cpp);
         }
 
         Ok(AdapterResults::default())

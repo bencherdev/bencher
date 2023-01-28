@@ -125,6 +125,7 @@ const JSON_INT: i32 = 10;
 const RUST_INT: i32 = 20;
 const RUST_BENCH_INT: i32 = 21;
 const RUST_CRITERION_INT: i32 = 22;
+const CPP_INT: i32 = 30;
 
 #[repr(i32)]
 pub enum Adapter {
@@ -133,6 +134,7 @@ pub enum Adapter {
     Rust = RUST_INT,
     RustBench = RUST_BENCH_INT,
     RustCriterion = RUST_CRITERION_INT,
+    Cpp = CPP_INT,
 }
 
 impl TryFrom<i32> for Adapter {
@@ -145,6 +147,7 @@ impl TryFrom<i32> for Adapter {
             RUST_INT => Ok(Self::Rust),
             RUST_BENCH_INT => Ok(Self::RustBench),
             RUST_CRITERION_INT => Ok(Self::RustCriterion),
+            CPP_INT => Ok(Self::Cpp),
             _ => Err(ApiError::AdapterInt(adapter)),
         }
     }
@@ -158,6 +161,7 @@ impl From<JsonAdapter> for Adapter {
             JsonAdapter::Rust => Self::Rust,
             JsonAdapter::RustBench => Self::RustBench,
             JsonAdapter::RustCriterion => Self::RustCriterion,
+            JsonAdapter::Cpp => Self::Cpp,
         }
     }
 }
@@ -170,6 +174,7 @@ impl From<Adapter> for JsonAdapter {
             Adapter::Rust => Self::Rust,
             Adapter::RustBench => Self::RustBench,
             Adapter::RustCriterion => Self::RustCriterion,
+            Adapter::Cpp => Self::Cpp,
         }
     }
 }
