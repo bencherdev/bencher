@@ -100,16 +100,16 @@ pub enum CliRunAdapter {
     Magic,
     /// {...} JSON
     Json,
+    /// ➕ C++
+    Cpp,
+    /// ➕ C++ Google Benchmark
+    CppGoogle,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench
     RustBench,
     /// 🦀 Rust Criterion
     RustCriterion,
-    /// ➕ C++
-    Cpp,
-    /// ➕ C++ Google Benchmark
-    CppGoogle,
 }
 
 /// Supported Fold Operations

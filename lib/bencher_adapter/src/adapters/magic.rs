@@ -30,7 +30,8 @@ impl Adapter for AdapterMagic {
 mod test {
     use super::AdapterMagic;
     use crate::adapters::{
-        json::test_json, rust::bench::test_rust_bench, test_util::convert_file_path,
+        cpp::google::test_cpp_google, json::test_json, rust::bench::test_rust_bench,
+        test_util::convert_file_path,
     };
 
     #[test]
@@ -43,5 +44,11 @@ mod test {
     fn test_adapter_magic_rust_many() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/bench/many.txt");
         test_rust_bench::validate_adapter_rust_many(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_cpp_two() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/google/two.txt");
+        test_cpp_google::validate_adapter_cpp_google(results);
     }
 }

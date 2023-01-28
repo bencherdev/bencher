@@ -1,18 +1,9 @@
 use bencher_json::{JsonEmpty, JsonMetric, NonEmpty};
-use nom::{
-    bytes::complete::tag,
-    character::complete::{anychar, space1},
-    combinator::{eof, map, map_res},
-    multi::many_till,
-    sequence::{delimited, tuple},
-    IResult,
-};
-use ordered_float::OrderedFloat;
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
-    adapters::util::{parse_f64, parse_units, time_as_nanos, Units},
+    adapters::util::{time_as_nanos, Units},
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -70,13 +61,12 @@ impl TryFrom<Google> for AdapterResults {
 }
 
 #[cfg(test)]
-pub(crate) mod test_rust_criterion {
-    use bencher_json::JsonMetric;
+pub(crate) mod test_cpp_google {
     use pretty_assertions::assert_eq;
 
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
-        Adapter, AdapterResults,
+        AdapterResults,
     };
 
     use super::AdapterCppGoogle;
@@ -93,7 +83,7 @@ pub(crate) mod test_rust_criterion {
     }
 
     pub fn validate_adapter_cpp_google(results: AdapterResults) {
-        assert_eq!(results.inner.len(), 3);
+        assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("fib_10").unwrap();
         validate_metrics(metrics, 214.98980114547953, None, None);
