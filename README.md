@@ -10,7 +10,7 @@ Bencher consists of:
 
 The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start) tutorial.
 
-Though Bencher is open source, there is also a hosted SaaS version available at [bencher.dev](https://bencher.dev).
+Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev).
 
 ## Documentation
 

@@ -46,7 +46,7 @@ const PricingPage = (props) => {
             <div class="plan-price">
               <span class="plan-price-amount">
                 <small>
-                  <small>SaaS or Self-Hosted</small>
+                  <small>Cloud or Self-Hosted</small>
                 </small>
               </span>
             </div>

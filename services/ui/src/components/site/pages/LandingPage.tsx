@@ -166,7 +166,7 @@ const LandingPage = (props) => {
 							<div class="columns">
 								<div class="column">
 									<div class="content has-text-centered">
-										<h2 class="subtitle">Bencher SaaS</h2>
+										<h2 class="subtitle">Bencher Cloud</h2>
 										<br />
 										<br />
 										<br />
