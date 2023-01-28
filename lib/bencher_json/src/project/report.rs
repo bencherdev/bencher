@@ -33,11 +33,11 @@ pub enum JsonAdapter {
     #[default]
     Magic,
     Json,
+    Cpp,
+    CppGoogle,
     Rust,
     RustBench,
     RustCriterion,
-    Cpp,
-    CppGoogle,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
