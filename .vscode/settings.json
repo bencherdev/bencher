@@ -49,6 +49,7 @@
     "hmap",
     "Insertable",
     "jsonwebtoken",
+    "libtest",
     "litestream",
     "mangen",
     "Milli",

@@ -17,10 +17,12 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 - Tutorial
   - [Quick Start](https://bencher.dev/docs/tutorial/quick-start)
 - How To
+  - [Install CLI](https://bencher.dev/docs/how-to/install-cli)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
 - Explanation
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
+  - [Adapters](https://bencher.dev/docs/explanation/adapters)
   - [Branch Management](https://bencher.dev/docs/explanation/branch-management)
   - [Talks](https://bencher.dev/docs/explanation/talks)
 - Reference
@@ -29,6 +31,14 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Prior Art](https://bencher.dev/docs/reference/prior-art)
   - [Roadmap](https://bencher.dev/docs/reference/roadmap)
   - [Changelog](https://bencher.dev/docs/reference/changelog)
+
+## Supported Benchmark Harnesses
+
+- Rust
+  - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
+  - [Criterion](https://docs.rs/criterion/latest/criterion/)
+
+For more details see the [explanation of benchmark adapters](https://bencher.dev/docs/explanation/adapters).
 
 ## Contributing
 
