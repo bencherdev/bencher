@@ -9,3 +9,7 @@ pub static BENCHER_DEV_URL: Lazy<Url> = Lazy::new(|| {
         .parse()
         .unwrap_or_else(|e| panic!("Failed to parse endpoint \"{BENCHER_DEV}\": {e}"))
 });
+
+pub fn is_bencher_dev(url: &Url) -> bool {
+    *url == *BENCHER_DEV_URL
+}

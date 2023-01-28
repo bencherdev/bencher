@@ -5,8 +5,12 @@ const licensingPage = {
 		<div>
 			<p>Copyright © 2022-{new Date().getFullYear()} Pompeii LLC</p>
 			<p>
-				All content that resides under any directory named "plus" is licensed
-				under the <a href="/legal/plus">Bencher Plus License</a>.
+				All content that resides under any directory or{" "}
+				<a href="https://doc.rust-lang.org/cargo/reference/features.html">
+					feature
+				</a>{" "}
+				named "plus" is licensed under the{" "}
+				<a href="/legal/plus">Bencher Plus License</a>.
 			</p>
 			<p>
 				All other content is licensed under either of{" "}

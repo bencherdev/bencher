@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::{ApiContext, Context},
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -133,12 +133,9 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
-    // TODO private projects
-    if !auth_user.is_admin(&api_context.rbac) {
-        if let Some(false) = json_project.public {
-            return Err(ApiError::CreatePrivateProject(auth_user.id));
-        }
-    }
+    // Check to see if it is a private project
+    is_private_project(api_context, auth_user, json_project.public)?;
+
     let conn = &mut api_context.database.connection;
 
     // Create the project
@@ -191,6 +188,26 @@ async fn post_inner(
         .map_err(api_error!())?;
 
     query_project.into_json(conn)
+}
+
+// TODO private projects
+fn is_private_project(
+    api_context: &mut ApiContext,
+    auth_user: &AuthUser,
+    public: Option<bool>,
+) -> Result<(), ApiError> {
+    if let Some(false) = public {
+        #[cfg(feature = "plus")]
+        if bencher_plus::is_bencher_dev(&api_context.endpoint)
+            && auth_user.is_admin(&api_context.rbac)
+        {
+            return Ok(());
+        }
+
+        Err(ApiError::CreatePrivateProject(auth_user.id))
+    } else {
+        Ok(())
+    }
 }
 
 #[derive(Deserialize, JsonSchema)]
