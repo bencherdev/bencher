@@ -53,7 +53,7 @@ impl TryFrom<Google> for AdapterResults {
                 upper_bound: None,
             };
 
-            benchmark_metrics.push((name.to_string(), json_metric));
+            benchmark_metrics.push((name.into(), json_metric));
         }
 
         benchmark_metrics.try_into()
