@@ -16,6 +16,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 # Crate
 nom = "7.1"
+rust_decimal = { version = "1.28", features = ["serde-with-float"] }
 
 [dev-dependencies]
 # Workspace

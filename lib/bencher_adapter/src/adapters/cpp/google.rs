@@ -8,6 +8,7 @@ use nom::{
     IResult,
 };
 use ordered_float::OrderedFloat;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -20,9 +21,7 @@ pub struct AdapterCppGoogle;
 
 impl Adapter for AdapterCppGoogle {
     fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        let google: Google = serde_json::from_str(input)?;
-
-        todo!()
+        serde_json::from_str::<Google>(input)?.try_into()
     }
 }
 
@@ -40,8 +39,17 @@ pub struct Context {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Benchmark {
     pub name: NonEmpty,
-    pub real_time: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub real_time: Decimal,
     pub time_unit: String,
+}
+
+impl TryFrom<Google> for AdapterResults {
+    type Error = AdapterError;
+
+    fn try_from(google: Google) -> Result<Self, Self::Error> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
