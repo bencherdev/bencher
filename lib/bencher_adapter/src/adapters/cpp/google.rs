@@ -1,4 +1,4 @@
-use bencher_json::JsonMetric;
+use bencher_json::{JsonEmpty, JsonMetric, NonEmpty};
 use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
@@ -8,6 +8,7 @@ use nom::{
     IResult,
 };
 use ordered_float::OrderedFloat;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     adapters::util::{parse_f64, parse_units, time_as_nanos},
@@ -19,8 +20,28 @@ pub struct AdapterCppGoogle;
 
 impl Adapter for AdapterCppGoogle {
     fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        serde_json::from_str(input).map_err(Into::into)
+        let google: Google = serde_json::from_str(input)?;
+
+        todo!()
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Google {
+    pub context: Context,
+    pub benchmarks: Vec<Benchmark>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Context {
+    pub caches: Vec<JsonEmpty>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Benchmark {
+    pub name: NonEmpty,
+    pub real_time: String,
+    pub time_unit: String,
 }
 
 #[cfg(test)]
