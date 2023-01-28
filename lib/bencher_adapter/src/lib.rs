@@ -2,7 +2,10 @@ pub mod adapters;
 pub mod error;
 pub mod results;
 
-use adapters::rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion};
+use adapters::{
+    cpp::google::AdapterCppGoogle,
+    rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion},
+};
 pub use adapters::{cpp::AdapterCpp, json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
 use bencher_json::project::report::JsonAdapter;
 pub use error::AdapterError;
@@ -25,6 +28,7 @@ impl Adapter for JsonAdapter {
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),
             JsonAdapter::Cpp => AdapterCpp::parse(input),
+            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
         }
     }
 

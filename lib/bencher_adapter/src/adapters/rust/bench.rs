@@ -65,7 +65,6 @@ fn parse_cargo(input: &str) -> IResult<&str, (String, TestMetric)> {
 
 // cargo bench
 // TODO cargo test -- -Z unstable-options --format json
-#[allow(clippy::arithmetic_side_effects, clippy::cast_precision_loss)]
 fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
     map_res(
         tuple((

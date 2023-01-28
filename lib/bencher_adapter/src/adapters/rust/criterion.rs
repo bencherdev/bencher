@@ -84,7 +84,6 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
-#[allow(clippy::float_arithmetic)]
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map_res(
         tuple((parse_f64, space1, parse_units)),

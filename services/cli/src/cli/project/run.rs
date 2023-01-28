@@ -108,6 +108,8 @@ pub enum CliRunAdapter {
     RustCriterion,
     /// ➕ C++
     Cpp,
+    /// ➕ C++ Google Benchmark
+    CppGoogle,
 }
 
 /// Supported Fold Operations
