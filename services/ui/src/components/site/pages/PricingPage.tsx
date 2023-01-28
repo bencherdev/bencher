@@ -1,4 +1,4 @@
-import { useNavigate } from "solid-app-router";
+import { Link, useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
 import { BENCHER_CALENDLY_URL, pageTitle, validate_jwt } from "../util";
 
@@ -39,152 +39,152 @@ const PricingPage = (props) => {
 				</div>
 			</section>
 			<hr />
-			{/* <section class="section">
-        <div class="pricing-table is-comparative">
-          <div class="pricing-plan is-features">
-            <div class="plan-header">Features</div>
-            <div class="plan-price">
-              <span class="plan-price-amount">
-                <small>
-                  <small>Cloud or Self-Hosted</small>
-                </small>
-              </span>
-            </div>
-            <div class="plan-items">
-              <div class="plan-item">Public Projects</div>
-              <div class="plan-item">Private Projects</div>
-              <div class="plan-item">Team Roles</div>
-              <div class="plan-item">Support</div>
-              <div class="plan-item">SSO</div>
-            </div>
-            <div class="plan-footer"></div>
-          </div>
-          <div class="pricing-plan">
-            <div class="plan-header">Free</div>
-            <div class="plan-price">
-              <span class="plan-price-amount">$0</span>
-            </div>
-            <div class="plan-items">
-              <div class="plan-item" data-feature="Public Projects">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Private Projects">
-                <span class="icon is-small">
-                  <i class="fas fa-times" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Team Roles">
-                <span class="icon is-small">
-                  <i class="fas fa-times" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Support">
-                <span class="icon is-small">
-                  <i class="fas fa-times" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="SSO">
-                <span class="icon is-small">
-                  <i class="fas fa-times" aria-hidden="true"></i>
-                </span>
-              </div>
-            </div>
-            <div class="plan-footer">
-              <Link href="/docs/how-to/quick-start">
-                <button class="button is-fullwidth">Choose</button>
-              </Link>
-            </div>
-          </div>
+			<section class="section">
+				<div class="pricing-table is-comparative">
+					<div class="pricing-plan is-features">
+						<div class="plan-header">Features</div>
+						<div class="plan-price">
+							<span class="plan-price-amount">
+								<small>
+									<small>Cloud or Self-Hosted</small>
+								</small>
+							</span>
+						</div>
+						<div class="plan-items">
+							<div class="plan-item">Public Projects</div>
+							<div class="plan-item">Private Projects</div>
+							{/* <div class="plan-item">Team Roles</div> */}
+							{/* <div class="plan-item">Support</div> */}
+							{/* <div class="plan-item">SSO</div> */}
+						</div>
+						<div class="plan-footer" />
+					</div>
+					<div class="pricing-plan">
+						<div class="plan-header">Free</div>
+						<div class="plan-price">
+							<span class="plan-price-amount">$0</span>
+						</div>
+						<div class="plan-items">
+							<div class="plan-item" data-feature="Public Projects">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true" />
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Private Projects">
+								<span class="icon is-small">
+									<i class="fas fa-times" aria-hidden="true" />
+								</span>
+							</div>
+							{/* <div class="plan-item" data-feature="Team Roles">
+								<span class="icon is-small">
+									<i class="fas fa-times" aria-hidden="true" />
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Support">
+								<span class="icon is-small">
+									<i class="fas fa-times" aria-hidden="true" />
+								</span>
+							</div>
+							<div class="plan-item" data-feature="SSO">
+								<span class="icon is-small">
+									<i class="fas fa-times" aria-hidden="true" />
+								</span>
+							</div> */}
+						</div>
+						<div class="plan-footer">
+							<Link href="/docs/how-to/quick-start">
+								<button class="button is-fullwidth">Get Started</button>
+							</Link>
+						</div>
+					</div>
 
-          <div class="pricing-plan is-active">
-            <div class="plan-header">Team</div>
-            <div class="plan-price">
-              <span class="plan-price-amount">TBD</span>
-            </div>
-            <div class="plan-items">
-              <div class="plan-item" data-feature="Public Projects">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Private Projects">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Team Roles">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Support">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="SSO">
-                <span class="icon is-small">
-                  <i class="fas fa-times" aria-hidden="true"></i>
-                </span>
-              </div>
-            </div>
-            <div class="plan-footer">
-              <a
-                class="button is-fullwidth"
-                href={BENCHER_CALENDLY_URL}
-                target="_blank"
-              >
-                Contact Us
-              </a>
-            </div>
-          </div>
+					{/* <div class="pricing-plan is-active">
+						<div class="plan-header">Team</div>
+						<div class="plan-price">
+							<span class="plan-price-amount">TBD</span>
+						</div>
+						<div class="plan-items">
+							<div class="plan-item" data-feature="Public Projects">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Private Projects">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Team Roles">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Support">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="SSO">
+								<span class="icon is-small">
+									<i class="fas fa-times" aria-hidden="true"/>
+								</span>
+							</div>
+						</div>
+						<div class="plan-footer">
+							<a
+								class="button is-fullwidth"
+								href={BENCHER_CALENDLY_URL}
+								target="_blank"
+							>
+								Contact Us
+							</a>
+						</div>
+					</div> */}
 
-          <div class="pricing-plan">
-            <div class="plan-header">Enterprise</div>
-            <div class="plan-price">
-              <span class="plan-price-amount">TBD</span>
-            </div>
-            <div class="plan-items">
-              <div class="plan-item" data-feature="Public Projects">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Private Projects">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Team Roles">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="Support">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-              <div class="plan-item" data-feature="SSO">
-                <span class="icon is-small has-text-primary">
-                  <i class="fas fa-check" aria-hidden="true"></i>
-                </span>
-              </div>
-            </div>
-            <div class="plan-footer">
-              <a
-                class="button is-fullwidth"
-                href={BENCHER_CALENDLY_URL}
-                target="_blank"
-              >
-                Contact Us
-              </a>
-            </div>
-          </div>
-        </div>
-      </section> */}
+					{/* <div class="pricing-plan">
+						<div class="plan-header">Enterprise</div>
+						<div class="plan-price">
+							<span class="plan-price-amount">TBD</span>
+						</div>
+						<div class="plan-items">
+							<div class="plan-item" data-feature="Public Projects">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Private Projects">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Team Roles">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="Support">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+							<div class="plan-item" data-feature="SSO">
+								<span class="icon is-small has-text-primary">
+									<i class="fas fa-check" aria-hidden="true"/>
+								</span>
+							</div>
+						</div>
+						<div class="plan-footer">
+							<a
+								class="button is-fullwidth"
+								href={BENCHER_CALENDLY_URL}
+								target="_blank"
+							>
+								Contact Us
+							</a>
+						</div>
+					</div> */}
+				</div>
+			</section>
 		</div>
 	);
 };
