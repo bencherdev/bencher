@@ -8,6 +8,8 @@ pub enum AdapterError {
     Nom(#[from] nom::Err<nom::error::Error<String>>),
     #[error("Failed to parse benchmark name: {0}")]
     BenchmarkName(bencher_json::ValidError),
+    #[error("Failed to parse benchmark units")]
+    BenchmarkUnits,
 
     #[error("Benchmark failed: {0}")]
     BenchmarkFailed(String),

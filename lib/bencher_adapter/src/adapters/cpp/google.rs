@@ -12,7 +12,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    adapters::util::{parse_f64, parse_units, time_as_nanos},
+    adapters::util::{parse_f64, parse_units, time_as_nanos, Units},
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -25,30 +25,47 @@ impl Adapter for AdapterCppGoogle {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Google {
     pub context: Context,
     pub benchmarks: Vec<Benchmark>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Context {
     pub caches: Vec<JsonEmpty>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Benchmark {
     pub name: NonEmpty,
     #[serde(with = "rust_decimal::serde::float")]
     pub real_time: Decimal,
-    pub time_unit: String,
+    pub time_unit: Units,
 }
 
 impl TryFrom<Google> for AdapterResults {
     type Error = AdapterError;
 
     fn try_from(google: Google) -> Result<Self, Self::Error> {
-        todo!()
+        let mut benchmark_metrics = Vec::with_capacity(google.benchmarks.len());
+        for benchmark in google.benchmarks {
+            let Benchmark {
+                name,
+                real_time,
+                time_unit,
+            } = benchmark;
+            let value = time_as_nanos(real_time, time_unit);
+            let json_metric = JsonMetric {
+                value,
+                lower_bound: None,
+                upper_bound: None,
+            };
+
+            benchmark_metrics.push((name.to_string(), json_metric));
+        }
+
+        benchmark_metrics.try_into()
     }
 }
 

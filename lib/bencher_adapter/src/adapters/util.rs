@@ -1,8 +1,18 @@
+use std::fmt;
+
 use nom::{
     branch::alt, bytes::complete::tag, character::complete::digit1, combinator::map,
     multi::fold_many1, IResult,
 };
 use ordered_float::OrderedFloat;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer,
+};
+
+use crate::AdapterError;
 
 pub fn time_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
 where
@@ -15,6 +25,7 @@ where
 pub enum Time {
     UInt64(u64),
     Float64(f64),
+    Decimal(Decimal),
 }
 
 impl From<u64> for Time {
@@ -29,16 +40,23 @@ impl From<f64> for Time {
     }
 }
 
+impl From<Decimal> for Time {
+    fn from(decimal: Decimal) -> Self {
+        Self::Decimal(decimal)
+    }
+}
+
 impl Time {
     fn as_f64(&self) -> f64 {
         match self {
             Self::UInt64(int) => *int as f64,
             Self::Float64(float) => *float,
+            Self::Decimal(decimal) => decimal.to_f64().unwrap_or_default(),
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Units {
     Pico,
     Nano,
@@ -69,6 +87,37 @@ pub fn parse_units(input: &str) -> IResult<&str, Units> {
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)
+}
+
+impl<'de> Deserialize<'de> for Units {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(UnitsVisitor)
+    }
+}
+
+struct UnitsVisitor;
+
+impl<'de> Visitor<'de> for UnitsVisitor {
+    type Value = Units;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a standard unit abbreviation")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        let (remainder, units) = parse_units(value).map_err(E::custom)?;
+        if remainder.is_empty() {
+            Ok(units)
+        } else {
+            Err(E::custom(AdapterError::BenchmarkUnits))
+        }
+    }
 }
 
 pub fn parse_u64(input: &str) -> IResult<&str, u64> {
