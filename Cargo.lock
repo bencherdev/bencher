@@ -475,6 +475,7 @@ dependencies = [
  "aws-sdk-s3",
  "bencher_adapter",
  "bencher_json",
+ "bencher_plus",
  "bencher_rbac",
  "chrono",
  "css-inline",
@@ -552,6 +553,14 @@ dependencies = [
  "slug",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "bencher_plus"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "url",
 ]
 
 [[package]]

@@ -5,13 +5,17 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
+default = ["plus"]
 swagger = ["dep:literally"]
+plus = ["dep:bencher_plus"]
 
 [dependencies]
 # Local
 bencher_adapter = { path = "../../lib/bencher_adapter" }
 bencher_json = { path = "../../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../../lib/bencher_rbac" }
+# Plus
+bencher_plus = { path = "../../plus/bencher_plus", optional = true }
 # Workspace
 chrono.workspace = true
 derive_more.workspace = true
