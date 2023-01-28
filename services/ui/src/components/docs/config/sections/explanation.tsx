@@ -2,6 +2,7 @@ import PageKind from "../page_kind";
 import ContinuousBenchmarking from "../../pages/explanation/ContinuousBenchmarking.mdx";
 import BranchManagement from "../../pages/explanation/BranchManagement.mdx";
 import Talks from "../../pages/explanation/Talks.mdx";
+import Adapters from "../../pages/explanation/Adapters.mdx";
 
 const Explanation = [
 	{
@@ -11,6 +12,19 @@ const Explanation = [
 			kind: PageKind.MDX,
 			heading: "What is Continuous Benchmarking?",
 			content: <ContinuousBenchmarking />,
+		},
+	},
+	{
+		title: "Adapters",
+		slug: "adapters",
+		panel: {
+			kind: PageKind.MDX,
+			heading: (
+				<>
+					Adapters for <code>bencher run</code>
+				</>
+			),
+			content: <Adapters />,
 		},
 	},
 	{

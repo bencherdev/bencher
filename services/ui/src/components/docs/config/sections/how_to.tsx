@@ -10,9 +10,9 @@ const HowTo = [
 		panel: {
 			kind: PageKind.MDX,
 			heading: (
-				<div>
+				<>
 					How to Install <code>bencher</code> CLI
-				</div>
+				</>
 			),
 			content: <InstallCli />,
 		},

@@ -1,0 +1,45 @@
+Adapters convert benchmark harness output into standardized JSON, Bencher Metric Format (BMF).
+They are provided to the `bencher run` CLI command with the `--adapter` flag.
+In gerenal, it is best to use the most specific adapter for your use case.
+
+Example of BMF:
+
+```
+{
+    "benchmark_name": {
+        "latency": {
+            value: 88.0,
+            lower_bound: 87.42,
+            upper_bound: 88.88
+        }
+    }
+}
+```
+
+## 🪄 Magic
+
+The Magic Adapter (`magic`) is just that magic!
+It can automagically convert from any supported benchmark harness output into BMF.
+Or at least that is the goal.
+It is therefore the default adapter for `bencher run`,
+but it is best used for testing purposes.
+In CI, you should use the most specific adapter for your use case.
+
+## \{...\} JSON
+
+The JSON Adapter (`json`) expects BMF JSON.
+It is perfect for integrating a custom benchmark harnesses with Bencher.
+
+> 🐰 Note: The `bencher mock` command generates mock BMF metrics.
+
+## 🦀 Rust
+
+The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.
+
+## 🦀 Rust Bench
+
+The Rust Bench Adapter (`rust_bench`) expects [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) output.
+
+## 🦀 Rust Criterion
+
+The Rust Criterion Adapter (`rust_criterion`) expects [Criterion](https://docs.rs/criterion/latest/criterion/) output.
