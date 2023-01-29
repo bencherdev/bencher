@@ -45,12 +45,12 @@ fn parse_criterion<'i>(
     map_res(
         many_till(anychar, parse_criterion_time),
         |(name_chars, metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
-            let name = if name_chars.is_empty() {
+            let name: String = if name_chars.is_empty() {
                 prior_line.ok_or_else(|| nom_error(String::new()))?.into()
             } else {
                 name_chars.into_iter().collect()
             };
-            let benchmark_name = parse_benchmark_name(name)?;
+            let benchmark_name = parse_benchmark_name(&name)?;
             Ok((benchmark_name, metric))
         },
     )(input)
@@ -110,7 +110,7 @@ pub(crate) mod test_rust_criterion {
     use super::{parse_criterion, AdapterRustCriterion};
 
     fn convert_rust_criterion(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/criterion/{}.txt", suffix);
+        let file_path = format!("./tool_output/rust/criterion/{suffix}.txt");
         convert_file_path::<AdapterRustCriterion>(&file_path)
     }
 

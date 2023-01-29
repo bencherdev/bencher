@@ -17,8 +17,14 @@ use crate::AdapterError;
 
 pub type NomError = nom::Err<nom::error::Error<String>>;
 
-pub fn nom_error(input: String) -> NomError {
-    nom::Err::Error(nom::error::make_error(input, nom::error::ErrorKind::Tag))
+pub fn nom_error<T>(input: T) -> NomError
+where
+    T: Into<String>,
+{
+    nom::Err::Error(nom::error::make_error(
+        input.into(),
+        nom::error::ErrorKind::Tag,
+    ))
 }
 
 pub fn time_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
@@ -180,12 +186,12 @@ where
         .map_err(|_e| nom::Err::Error(nom::error::make_error("\0", nom::error::ErrorKind::Tag)))
 }
 
-pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
-    let name = name_chars.into_iter().collect();
-    parse_benchmark_name(name)
-}
+// pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
+//     let name = name_chars.into_iter().collect();
+//     parse_benchmark_name(name)
+// }
 
-pub fn parse_benchmark_name(name: String) -> Result<BenchmarkName, NomError> {
+pub fn parse_benchmark_name(name: &str) -> Result<BenchmarkName, NomError> {
     if let Ok(benchmark_name) = name.parse() {
         Ok(benchmark_name)
     } else {

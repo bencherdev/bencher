@@ -72,7 +72,7 @@ pub(crate) mod test_cpp_google {
     use super::AdapterCppGoogle;
 
     fn convert_cpp_google(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/cpp/google/{}.txt", suffix);
+        let file_path = format!("./tool_output/cpp/google/{suffix}.txt");
         convert_file_path::<AdapterCppGoogle>(&file_path)
     }
 

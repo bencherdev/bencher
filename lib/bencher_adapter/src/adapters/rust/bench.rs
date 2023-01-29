@@ -1,17 +1,14 @@
 use bencher_json::{BenchmarkName, JsonMetric};
 use nom::{
-    branch::alt,
     bytes::complete::{tag, take_until1},
     character::complete::space1,
-    combinator::{eof, map, map_res},
+    combinator::{eof, map_res},
     sequence::{delimited, tuple},
     IResult,
 };
 
 use crate::{
-    adapters::util::{
-        nom_error, parse_benchmark_name, parse_u64, parse_units, time_as_nanos, NomError,
-    },
+    adapters::util::{parse_benchmark_name, parse_u64, parse_units, time_as_nanos, NomError},
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -47,7 +44,7 @@ fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
             eof,
         )),
         |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
-            let benchmark_name = parse_benchmark_name(name.into())?;
+            let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
     )(input)
@@ -92,7 +89,7 @@ pub(crate) mod test_rust_bench {
     use super::{parse_cargo, AdapterRustBench};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/bench/{}.txt", suffix);
+        let file_path = format!("./tool_output/rust/bench/{suffix}.txt");
         convert_file_path::<AdapterRustBench>(&file_path)
     }
 
