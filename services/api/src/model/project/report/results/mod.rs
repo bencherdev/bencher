@@ -4,9 +4,9 @@ use bencher_adapter::{
     results::{adapter_metrics::AdapterMetrics, MetricKind},
     AdapterResults, AdapterResultsArray,
 };
-use bencher_json::project::{
-    benchmark::BenchmarkName,
-    report::{JsonAdapter, JsonReportSettings},
+use bencher_json::{
+    project::report::{JsonAdapter, JsonReportSettings},
+    BenchmarkName,
 };
 use diesel::{RunQueryDsl, SqliteConnection};
 

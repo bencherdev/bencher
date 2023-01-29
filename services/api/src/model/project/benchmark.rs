@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::{project::benchmark::BenchmarkName, JsonBenchmark};
+use bencher_json::{BenchmarkName, JsonBenchmark};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 

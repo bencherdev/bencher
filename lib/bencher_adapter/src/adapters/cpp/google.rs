@@ -1,4 +1,4 @@
-use bencher_json::{JsonEmpty, JsonMetric, NonEmpty};
+use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -29,7 +29,7 @@ pub struct Context {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Benchmark {
-    pub name: NonEmpty,
+    pub name: BenchmarkName,
     #[serde(with = "rust_decimal::serde::float")]
     pub real_time: Decimal,
     pub time_unit: Units,
@@ -53,7 +53,7 @@ impl TryFrom<Google> for AdapterResults {
                 upper_bound: None,
             };
 
-            benchmark_metrics.push((name.into(), json_metric));
+            benchmark_metrics.push((name, json_metric));
         }
 
         benchmark_metrics.try_into()

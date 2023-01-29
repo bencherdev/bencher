@@ -1,5 +1,6 @@
 use std::fmt;
 
+use bencher_json::BenchmarkName;
 use nom::{
     branch::alt, bytes::complete::tag, character::complete::digit1, combinator::map,
     multi::fold_many1, IResult,
@@ -13,6 +14,12 @@ use serde::{
 };
 
 use crate::AdapterError;
+
+pub type NomError = nom::Err<nom::error::Error<String>>;
+
+pub fn nom_error(input: String) -> NomError {
+    nom::Err::Error(nom::error::make_error(input, nom::error::ErrorKind::Tag))
+}
 
 pub fn time_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
 where
@@ -171,4 +178,17 @@ where
 
     T::from_str(&number)
         .map_err(|_e| nom::Err::Error(nom::error::make_error("\0", nom::error::ErrorKind::Tag)))
+}
+
+pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
+    let name = name_chars.into_iter().collect();
+    parse_benchmark_name(name)
+}
+
+pub fn parse_benchmark_name(name: String) -> Result<BenchmarkName, NomError> {
+    if let Ok(benchmark_name) = name.parse() {
+        Ok(benchmark_name)
+    } else {
+        Err(nom_error(name))
+    }
 }

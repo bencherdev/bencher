@@ -28,6 +28,7 @@
   ],
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
+    "anychar",
     "dropshot"
   ]
 }

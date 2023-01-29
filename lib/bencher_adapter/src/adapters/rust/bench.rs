@@ -1,4 +1,4 @@
-use bencher_json::JsonMetric;
+use bencher_json::{BenchmarkName, JsonMetric};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until1},
@@ -9,7 +9,9 @@ use nom::{
 };
 
 use crate::{
-    adapters::util::{parse_u64, parse_units, time_as_nanos},
+    adapters::util::{
+        nom_error, parse_benchmark_name, parse_u64, parse_units, time_as_nanos, NomError,
+    },
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -21,11 +23,9 @@ impl Adapter for AdapterRustBench {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
-            if let Ok((remainder, (benchmark_name, test_metric))) = parse_cargo(line) {
+            if let Ok((remainder, benchmark_metric)) = parse_cargo(line) {
                 if remainder.is_empty() {
-                    if let TestMetric::Bench(metric) = test_metric {
-                        benchmark_metrics.push((benchmark_name, metric));
-                    }
+                    benchmark_metrics.push(benchmark_metric);
                 }
             }
         }
@@ -34,16 +34,8 @@ impl Adapter for AdapterRustBench {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum TestMetric {
-    Ok,
-    Ignored,
-    Failed,
-    Bench(JsonMetric),
-}
-
-fn parse_cargo(input: &str) -> IResult<&str, (String, TestMetric)> {
-    map(
+fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+    map_res(
         tuple((
             tag("test"),
             space1,
@@ -51,15 +43,13 @@ fn parse_cargo(input: &str) -> IResult<&str, (String, TestMetric)> {
             space1,
             tag("..."),
             space1,
-            alt((
-                map(tag("ok"), |_| TestMetric::Ok),
-                map(tag("ignored"), |_| TestMetric::Ignored),
-                map(tag("FAILED"), |_| TestMetric::Failed),
-                map(parse_cargo_bench, TestMetric::Bench),
-            )),
+            parse_cargo_bench,
             eof,
         )),
-        |(_, _, benchmark_name, _, _, _, test_metric, _)| (benchmark_name.into(), test_metric),
+        |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            let benchmark_name = parse_benchmark_name(name.into())?;
+            Ok((benchmark_name, json_metric))
+        },
     )(input)
 }
 
@@ -77,7 +67,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
         )),
-        |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
+        |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, NomError> {
             let value = time_as_nanos(duration, units);
             let variance = Some(time_as_nanos(variance, units));
             Ok(JsonMetric {
@@ -99,7 +89,7 @@ pub(crate) mod test_rust_bench {
         Adapter, AdapterResults,
     };
 
-    use super::{parse_cargo, AdapterRustBench, TestMetric};
+    use super::{parse_cargo, AdapterRustBench};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/rust/bench/{}.txt", suffix);
@@ -119,30 +109,20 @@ pub(crate) mod test_rust_bench {
 
     #[test]
     fn test_parse_cargo() {
-        for (index, (expected, input)) in [
-            (
-                Ok(("", ("tests::is_ignored".into(), TestMetric::Ignored))),
-                "test tests::is_ignored ... ignored",
-            ),
-            (
-                Ok(("", ("tests::is_failed".into(), TestMetric::Failed))),
-                "test tests::is_failed ... FAILED",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "tests::is_bench_test".into(),
-                        TestMetric::Bench(JsonMetric {
-                            value: 5_280.0.into(),
-                            lower_bound: Some(4_947.0.into()),
-                            upper_bound: Some(5_613.0.into()),
-                        }),
-                    ),
-                )),
-                "test tests::is_bench_test ... bench:             5,280 ns/iter (+/- 333)",
-            ),
-        ]
+        for (index, (expected, input)) in [(
+            Ok((
+                "",
+                (
+                    "tests::is_bench_test".parse().unwrap(),
+                    JsonMetric {
+                        value: 5_280.0.into(),
+                        lower_bound: Some(4_947.0.into()),
+                        upper_bound: Some(5_613.0.into()),
+                    },
+                ),
+            )),
+            "test tests::is_bench_test ... bench:             5,280 ns/iter (+/- 333)",
+        )]
         .into_iter()
         .enumerate()
         {
