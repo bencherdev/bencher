@@ -1,10 +1,9 @@
 use bencher_json::{BenchmarkName, JsonMetric};
 use nom::{
-    bytes::complete::tag,
     character::complete::{anychar, space0, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
-    sequence::{delimited, tuple},
+    sequence::tuple,
     IResult,
 };
 use ordered_float::OrderedFloat;
@@ -98,6 +97,7 @@ fn parse_catch2_benchmark_name(input: &str) -> IResult<&str, BenchmarkName> {
     )(input)
 }
 
+#[allow(dead_code)]
 struct Prelude {
     samples: u64,
     iterations: u64,
@@ -128,44 +128,13 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
     )(input)
 }
 
-// fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
-//     map(
-//         delimited(
-//             tag("["),
-//             tuple((
-//                 parse_criterion_duration,
-//                 space1,
-//                 parse_criterion_duration,
-//                 space1,
-//                 parse_criterion_duration,
-//             )),
-//             tag("]"),
-//         ),
-//         |(lower_bound, _, value, _, upper_bound)| JsonMetric {
-//             value,
-//             lower_bound: Some(lower_bound),
-//             upper_bound: Some(upper_bound),
-//         },
-//     )(input)
-// }
-
-// fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-//     map_res(
-//         tuple((parse_f64, space1, parse_units)),
-//         |(duration, _, units)| -> Result<OrderedFloat<f64>, nom::Err<nom::error::Error<String>>> {
-//             Ok(time_as_nanos(duration, units))
-//         },
-//     )(input)
-// }
-
 #[cfg(test)]
 pub(crate) mod test_rust_criterion {
-    use bencher_json::JsonMetric;
     use pretty_assertions::assert_eq;
 
     use crate::{
         adapters::test_util::{convert_file_path, validate_metrics},
-        Adapter, AdapterResults,
+        AdapterResults,
     };
 
     use super::{parse_catch2_benchmark_name, AdapterCppCatch2};
@@ -224,33 +193,15 @@ pub(crate) mod test_rust_criterion {
         validate_metrics(metrics, 3789.0, Some(3734.0), Some(3888.0));
     }
 
-    // #[test]
-    // fn test_adapter_rust_criterion_failed() {
-    //     let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
-    //     let results = AdapterCppCatch2::parse(&contents).unwrap();
-    //     assert_eq!(results.inner.len(), 4);
-    // }
+    #[test]
+    fn test_adapter_cpp_catch2_two() {
+        let results = convert_cpp_catch2("two");
+        assert_eq!(results.inner.len(), 2);
 
-    // #[test]
-    // fn test_adapter_rust_criterion_dogfood() {
-    //     let results = convert_rust_criterion("dogfood");
-    //     assert_eq!(results.inner.len(), 4);
+        let metrics = results.get("Fibonacci 10").unwrap();
+        validate_metrics(metrics, 0.0, Some(0.0), Some(0.0));
 
-    //     let metrics = results.get("JsonAdapter::Magic (JSON)").unwrap();
-    //     validate_metrics(
-    //         metrics,
-    //         3463.2000000000003,
-    //         Some(3462.2999999999997),
-    //         Some(3464.1000000000003),
-    //     );
-
-    //     let metrics = results.get("JsonAdapter::Json").unwrap();
-    //     validate_metrics(metrics, 3479.6, Some(3479.2999999999997), Some(3480.0));
-
-    //     let metrics = results.get("JsonAdapter::Magic (Rust)").unwrap();
-    //     validate_metrics(metrics, 14726.0, Some(14721.0), Some(14730.0));
-
-    //     let metrics = results.get("JsonAdapter::Rust").unwrap();
-    //     validate_metrics(metrics, 14884.0, Some(14881.0), Some(14887.0));
-    // }
+        let metrics = results.get("Fibonacci 20").unwrap();
+        validate_metrics(metrics, 1.0, Some(1.0), Some(1.0));
+    }
 }

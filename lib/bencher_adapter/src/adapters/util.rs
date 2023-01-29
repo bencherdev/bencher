@@ -188,7 +188,7 @@ where
 }
 
 pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
-    let name: String = name_chars.into_iter().collect();
+    let name: String = name_chars.iter().collect();
     parse_benchmark_name(&name)
 }
 
