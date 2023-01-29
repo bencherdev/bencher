@@ -178,6 +178,10 @@ pub(crate) mod test_cpp_catch2 {
     #[test]
     fn test_adapter_cpp_catch2() {
         let results = convert_cpp_catch2("four");
+        validate_adapter_cpp_catch2(results);
+    }
+
+    pub fn validate_adapter_cpp_catch2(results: AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("Fibonacci 10").unwrap();

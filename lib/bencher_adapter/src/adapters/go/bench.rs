@@ -8,9 +8,8 @@ use nom::{
 };
 
 use crate::{
-    adapters::{
-        print_ln,
-        util::{parse_benchmark_name, parse_f64, parse_u64, parse_units, time_as_nanos, NomError},
+    adapters::util::{
+        parse_benchmark_name, parse_f64, parse_u64, parse_units, time_as_nanos, NomError,
     },
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
@@ -38,14 +37,13 @@ fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
     map_res(
         tuple((
             take_till1(|c| c == ' ' || c == '\t'),
-            print_ln,
             space1,
             parse_u64,
             space1,
             parse_go_bench,
             eof,
         )),
-        |(name, _, _, _iter, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name, _, _iter, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
             Ok((benchmark_name, json_metric))
         },
@@ -165,8 +163,12 @@ pub(crate) mod test_go_bench {
     }
 
     #[test]
-    pub fn validate_adapter_go_bench() {
+    fn test_adapter_go_bench() {
         let results = convert_go_bench("five");
+        validate_adapter_go_bench(results);
+    }
+
+    pub fn validate_adapter_go_bench(results: AdapterResults) {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("BenchmarkFib10-8").unwrap();

@@ -157,10 +157,10 @@ pub(crate) mod test_rust_bench {
     #[test]
     fn test_adapter_rust_many() {
         let results = convert_rust_bench("many");
-        validate_adapter_rust_many(results);
+        validate_adapter_rust_bench(results);
     }
 
-    pub fn validate_adapter_rust_many(results: AdapterResults) {
+    pub fn validate_adapter_rust_bench(results: AdapterResults) {
         assert_eq!(results.inner.len(), 6);
         validate_bench_metrics(&results, "tests::benchmark");
         validate_bench_metrics(&results, "tests::other_benchmark");

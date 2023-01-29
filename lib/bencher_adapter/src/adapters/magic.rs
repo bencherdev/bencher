@@ -3,6 +3,8 @@ use crate::{
     AdapterRust,
 };
 
+use super::go::AdapterGo;
+
 pub struct AdapterMagic;
 
 impl Adapter for AdapterMagic {
@@ -12,14 +14,19 @@ impl Adapter for AdapterMagic {
             return json;
         }
 
-        let rust = AdapterRust::parse(input)?;
-        if !rust.is_empty() {
-            return Ok(rust);
-        }
-
         let cpp = AdapterCpp::parse(input)?;
         if !cpp.is_empty() {
             return Ok(cpp);
+        }
+
+        let go = AdapterGo::parse(input)?;
+        if !go.is_empty() {
+            return Ok(go);
+        }
+
+        let rust = AdapterRust::parse(input)?;
+        if !rust.is_empty() {
+            return Ok(rust);
         }
 
         Ok(AdapterResults::default())
@@ -30,7 +37,10 @@ impl Adapter for AdapterMagic {
 mod test {
     use super::AdapterMagic;
     use crate::adapters::{
-        cpp::google::test_cpp_google, json::test_json, rust::bench::test_rust_bench,
+        cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
+        go::bench::test_go_bench,
+        json::test_json,
+        rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
     };
 
@@ -41,14 +51,32 @@ mod test {
     }
 
     #[test]
-    fn test_adapter_magic_rust_many() {
-        let results = convert_file_path::<AdapterMagic>("./tool_output/rust/bench/many.txt");
-        test_rust_bench::validate_adapter_rust_many(results);
+    fn test_adapter_magic_cpp_google() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/google/two.txt");
+        test_cpp_google::validate_adapter_cpp_google(results);
     }
 
     #[test]
-    fn test_adapter_magic_cpp_two() {
-        let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/google/two.txt");
-        test_cpp_google::validate_adapter_cpp_google(results);
+    fn test_adapter_magic_cpp_catch2() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/cpp/catch2/four.txt");
+        test_cpp_catch2::validate_adapter_cpp_catch2(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_go_bench() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/go/bench/five.txt");
+        test_go_bench::validate_adapter_go_bench(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_rust_bench() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/rust/bench/many.txt");
+        test_rust_bench::validate_adapter_rust_bench(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_rust_criterion() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/rust/criterion/many.txt");
+        test_rust_criterion::validate_adapter_rust_criterion(results);
     }
 }
