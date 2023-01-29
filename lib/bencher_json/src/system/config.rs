@@ -44,7 +44,7 @@ pub struct JsonServer {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum JsonTls {
     AsFile {
         cert_file: PathBuf,
