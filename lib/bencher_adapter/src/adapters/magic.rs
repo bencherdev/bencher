@@ -34,7 +34,7 @@ impl Adapter for AdapterMagic {
 }
 
 #[cfg(test)]
-mod test {
+mod test_magic {
     use super::AdapterMagic;
     use crate::adapters::{
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},

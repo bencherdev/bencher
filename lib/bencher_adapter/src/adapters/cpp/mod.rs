@@ -22,3 +22,24 @@ impl Adapter for AdapterCpp {
         Ok(AdapterResults::default())
     }
 }
+
+#[cfg(test)]
+mod test_cpp {
+    use super::AdapterCpp;
+    use crate::adapters::{
+        cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
+        test_util::convert_file_path,
+    };
+
+    #[test]
+    fn test_adapter_cpp_google() {
+        let results = convert_file_path::<AdapterCpp>("./tool_output/cpp/google/two.txt");
+        test_cpp_google::validate_adapter_cpp_google(results);
+    }
+
+    #[test]
+    fn test_adapter_cpp_catch2() {
+        let results = convert_file_path::<AdapterCpp>("./tool_output/cpp/catch2/four.txt");
+        test_cpp_catch2::validate_adapter_cpp_catch2(results);
+    }
+}
