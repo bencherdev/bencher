@@ -35,10 +35,10 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 ## Supported Benchmark Harnesses
 
 - C++
-  - [Google benchmark](https://github.com/google/benchmark)
+  - [Google Benchmark](https://github.com/google/benchmark)
   - [Catch2](https://github.com/catchorg/Catch2)
 - Go
-  - [Go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
+  - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
 - Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://docs.rs/criterion/latest/criterion/)
