@@ -2,11 +2,11 @@ pub mod adapters;
 pub mod error;
 pub mod results;
 
+pub use adapters::{cpp::AdapterCpp, json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
 use adapters::{
-    cpp::google::AdapterCppGoogle,
+    cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle},
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion},
 };
-pub use adapters::{cpp::AdapterCpp, json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
 use bencher_json::project::report::JsonAdapter;
 pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
@@ -24,11 +24,12 @@ impl Adapter for JsonAdapter {
         match self {
             JsonAdapter::Magic => AdapterMagic::parse(input),
             JsonAdapter::Json => AdapterJson::parse(input),
+            JsonAdapter::Cpp => AdapterCpp::parse(input),
+            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
+            JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),
-            JsonAdapter::Cpp => AdapterCpp::parse(input),
-            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
         }
     }
 

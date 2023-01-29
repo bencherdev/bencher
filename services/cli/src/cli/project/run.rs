@@ -104,6 +104,8 @@ pub enum CliRunAdapter {
     Cpp,
     /// ➕ C++ Google Benchmark
     CppGoogle,
+    /// ➕ C++ Catch2
+    CppCatch2,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench

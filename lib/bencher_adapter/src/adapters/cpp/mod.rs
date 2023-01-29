@@ -1,7 +1,8 @@
+pub mod catch2;
 pub mod google;
 
-// use self::criterion::AdapterRustCriterion;
 use crate::{Adapter, AdapterError, AdapterResults};
+use catch2::AdapterCppCatch2;
 use google::AdapterCppGoogle;
 
 pub struct AdapterCpp;
@@ -13,10 +14,10 @@ impl Adapter for AdapterCpp {
             return google;
         }
 
-        // let criterion = AdapterRustCriterion::parse(input)?;
-        // if !criterion.is_empty() {
-        //     return Ok(criterion);
-        // }
+        let catch2 = AdapterCppCatch2::parse(input)?;
+        if !catch2.is_empty() {
+            return Ok(catch2);
+        }
 
         Ok(AdapterResults::default())
     }
