@@ -5,6 +5,7 @@ pub mod results;
 pub use adapters::{cpp::AdapterCpp, json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
 use adapters::{
     cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle},
+    go::{bench::AdapterGoBench, AdapterGo},
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion},
 };
 use bencher_json::project::report::JsonAdapter;
@@ -27,6 +28,8 @@ impl Adapter for JsonAdapter {
             JsonAdapter::Cpp => AdapterCpp::parse(input),
             JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
             JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input),
+            JsonAdapter::Go => AdapterGo::parse(input),
+            JsonAdapter::GoBench => AdapterGoBench::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),

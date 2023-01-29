@@ -36,6 +36,8 @@ pub enum JsonAdapter {
     Cpp,
     CppGoogle,
     CppCatch2,
+    Go,
+    GoBench,
     Rust,
     RustBench,
     RustCriterion,

@@ -102,10 +102,14 @@ pub enum CliRunAdapter {
     Json,
     /// ➕ C++
     Cpp,
-    /// ➕ C++ Google Benchmark
+    /// ➕ C++ Google
     CppGoogle,
     /// ➕ C++ Catch2
     CppCatch2,
+    /// 🕳 Go
+    Go,
+    /// 🕳 Go Bench
+    GoBench,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench
