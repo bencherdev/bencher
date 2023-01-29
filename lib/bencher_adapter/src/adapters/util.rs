@@ -186,10 +186,10 @@ where
         .map_err(|_e| nom::Err::Error(nom::error::make_error("\0", nom::error::ErrorKind::Tag)))
 }
 
-// pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
-//     let name = name_chars.into_iter().collect();
-//     parse_benchmark_name(name)
-// }
+pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
+    let name: String = name_chars.into_iter().collect();
+    parse_benchmark_name(&name)
+}
 
 pub fn parse_benchmark_name(name: &str) -> Result<BenchmarkName, NomError> {
     if let Ok(benchmark_name) = name.parse() {
