@@ -12,7 +12,7 @@ use ordered_float::OrderedFloat;
 use crate::{
     adapters::util::{
         nom_error, parse_benchmark_name_chars, parse_f64, parse_u64, parse_units, time_as_nanos,
-        Units,
+        NomError, Units,
     },
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
@@ -24,27 +24,75 @@ impl Adapter for AdapterCppCatch2 {
     fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
         let mut benchmark_metrics = Vec::new();
 
-        // for line in input.lines() {
-        //     if let Ok((remainder, benchmark_metric)) = parse_criterion(prior_line, line) {
-        //         if remainder.is_empty() {
-        //             benchmark_metrics.push(benchmark_metric);
-        //         }
-        //     }
+        let mut prior_line = None;
+        for line in input.lines() {
+            if let Ok((remainder, benchmark_metric)) = parse_catch2(prior_line, line) {
+                if remainder.is_empty() {
+                    benchmark_metrics.push(benchmark_metric);
+                }
+            }
 
-        //     prior_line = Some(line);
-        // }
+            prior_line = Some(line);
+        }
 
         benchmark_metrics.try_into()
     }
+}
+
+fn parse_catch2<'i>(
+    prior_line: Option<&str>,
+    input: &'i str,
+) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
+    map_res(
+        parse_catch2_time,
+        |json_metric| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            let prior_line = prior_line.ok_or_else(|| nom_error(String::new()))?;
+
+            let (remainder, benchmark_name) =
+                parse_catch2_benchmark_name(prior_line).map_err(|_| nom_error(prior_line))?;
+
+            if remainder.is_empty() {
+                Ok((benchmark_name, json_metric))
+            } else {
+                Err(nom_error(prior_line))
+            }
+        },
+    )(input)
+}
+
+fn parse_catch2_time(input: &str) -> IResult<&str, JsonMetric> {
+    map(
+        tuple((
+            space1,
+            parse_catch2_duration,
+            space1,
+            parse_catch2_duration,
+            space1,
+            parse_catch2_duration,
+            space0,
+            eof,
+        )),
+        |(_, value, _, lower_bound, _, upper_bound, _, _)| JsonMetric {
+            value,
+            lower_bound: Some(lower_bound),
+            upper_bound: Some(upper_bound),
+        },
+    )(input)
+}
+
+fn parse_catch2_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
+    map_res(
+        tuple((parse_f64, space1, parse_units)),
+        |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
+            Ok(time_as_nanos(duration, units))
+        },
+    )(input)
 }
 
 fn parse_catch2_benchmark_name(input: &str) -> IResult<&str, BenchmarkName> {
     map_res(
         many_till(anychar, parse_catch2_prelude),
         |(name_chars, _)| -> Result<BenchmarkName, nom::Err<nom::error::Error<String>>> {
-            if name_chars.is_empty() {
-                return Err(nom_error(String::new()));
-            }
             parse_benchmark_name_chars(&name_chars)
         },
     )(input)
@@ -123,7 +171,7 @@ pub(crate) mod test_rust_criterion {
     use super::{parse_catch2_benchmark_name, AdapterCppCatch2};
 
     fn convert_cpp_catch2(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/criterion/{suffix}.txt");
+        let file_path = format!("./tool_output/cpp/catch2/{suffix}.txt");
         convert_file_path::<AdapterCppCatch2>(&file_path)
     }
 
@@ -158,26 +206,23 @@ pub(crate) mod test_rust_criterion {
         }
     }
 
-    // #[test]
-    // fn test_adapter_rust_criterion() {
-    //     let results = convert_rust_criterion("many");
-    //     assert_eq!(results.inner.len(), 5);
+    #[test]
+    fn test_adapter_cpp_catch2() {
+        let results = convert_cpp_catch2("four");
+        assert_eq!(results.inner.len(), 4);
 
-    //     let metrics = results.get("file").unwrap();
-    //     validate_metrics(metrics, 0.32389999999999997, Some(0.32062), Some(0.32755));
+        let metrics = results.get("Fibonacci 10").unwrap();
+        validate_metrics(metrics, 344.0, Some(341.0), Some(349.0));
 
-    //     let metrics = results.get("rolling_file").unwrap();
-    //     validate_metrics(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328));
+        let metrics = results.get("Fibonacci 20").unwrap();
+        validate_metrics(metrics, 41731.0, Some(41250.0), Some(42622.0));
 
-    //     let metrics = results.get("tracing_file").unwrap();
-    //     validate_metrics(metrics, 18019.0, Some(16652.0), Some(19562.0));
+        let metrics = results.get("Fibonacci~ 5!").unwrap();
+        validate_metrics(metrics, 36.0, Some(35.0), Some(37.0));
 
-    //     let metrics = results.get("tracing_rolling_file").unwrap();
-    //     validate_metrics(metrics, 20930.0, Some(18195.0), Some(24240.0));
-
-    //     let metrics = results.get("benchmark: name with spaces").unwrap();
-    //     validate_metrics(metrics, 20.930, Some(18.195), Some(24.240));
-    // }
+        let metrics = results.get("Fibonacci-15_bench").unwrap();
+        validate_metrics(metrics, 3789.0, Some(3734.0), Some(3888.0));
+    }
 
     // #[test]
     // fn test_adapter_rust_criterion_failed() {

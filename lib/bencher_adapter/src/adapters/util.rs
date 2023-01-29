@@ -97,6 +97,7 @@ pub fn parse_units(input: &str) -> IResult<&str, Units> {
         map(tag("ns"), |_| Units::Nano),
         map(tag("\u{3bc}s"), |_| Units::Micro),
         map(tag("\u{b5}s"), |_| Units::Micro),
+        map(tag("us"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)

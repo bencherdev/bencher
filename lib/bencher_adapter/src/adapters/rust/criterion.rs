@@ -44,14 +44,14 @@ fn parse_criterion<'i>(
 ) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
     map_res(
         many_till(anychar, parse_criterion_time),
-        |(name_chars, metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
             let name: String = if name_chars.is_empty() {
                 prior_line.ok_or_else(|| nom_error(String::new()))?.into()
             } else {
                 name_chars.into_iter().collect()
             };
             let benchmark_name = parse_benchmark_name(&name)?;
-            Ok((benchmark_name, metric))
+            Ok((benchmark_name, json_metric))
         },
     )(input)
 }
@@ -63,7 +63,7 @@ fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
             parse_criterion_metric,
             eof,
         )),
-        |(_, metric, _)| metric,
+        |(_, json_metric, _)| json_metric,
     )(input)
 }
 
