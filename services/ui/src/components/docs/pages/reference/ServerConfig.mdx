@@ -46,6 +46,7 @@ Example JSON configuration:
   },
   "smtp": {
     "hostname": "mailbonobo.com",
+    "port": 25,
     "username": "bencher"
     "secret": "WM3F2u9cqSNdBPLfy9sJ5kk9",
     "from_name": "Bencher",
@@ -107,6 +108,7 @@ If not specified, all messages will be sent to `logging` instead.
 | Name       | Example                    | Default | Required | Description                                                                                                           |
 |:----------:|:--------------------------:|:-------:|:--------:|:---------------------------------------------------------------------------------------------------------------------:|
 | hostname   | "mailbonobo.com"           | ---     | Yes      | Specifies the SMTP hostname.                                                                                          |
+| port       | 25                         | 587     | No       | Specifies the SMTP port.                                                                                          |
 | username   | "bencher"                  | ---     | Yes      | Specifies the username at the SMTP host.                                                                              |
 | secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" | ---     | Yes      | Specifies the secret for the username at the SMTP host. Whenever logged, it will appear obfuscated as `************`. |
 | from_name  | "Bencher"                  | ---     | Yes      | Specifies the name that will appear in the from section of all emails.                                                |

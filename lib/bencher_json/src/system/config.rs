@@ -98,6 +98,7 @@ impl Sanitize for DataStore {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSmtp {
     pub hostname: String,
+    pub port: Option<u16>,
     pub username: String,
     pub secret: Secret,
     pub from_name: String,

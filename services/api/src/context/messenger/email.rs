@@ -1,5 +1,5 @@
 use bencher_json::Secret;
-use mail_send::{mail_builder::MessageBuilder, Transport};
+use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
 
 use crate::ApiError;
 
@@ -8,6 +8,7 @@ use super::Message;
 
 pub struct Email {
     pub hostname: String,
+    pub port: u16,
     pub username: String,
     pub secret: Secret,
     pub from_name: Option<String>,
@@ -44,16 +45,16 @@ impl Email {
 
         // Connect to an SMTP relay server over TLS and
         // authenticate using the provided credentials.
-        let transport = Transport::new(self.hostname.clone())
-            .credentials(self.username.clone(), String::from(self.secret.clone()));
+        let client_builder = SmtpClientBuilder::new(self.hostname.clone(), self.port)
+            .credentials((self.username.clone(), String::from(self.secret.clone())));
 
         tokio::spawn(async move {
-            async fn send<'x>(
-                transport: Transport<'x>,
-                message_builder: MessageBuilder<'x>,
+            async fn send(
+                client_builder: SmtpClientBuilder<String>,
+                message_builder: MessageBuilder<'_>,
             ) -> Result<(), ApiError> {
-                transport
-                    .connect_tls()
+                client_builder
+                    .connect()
                     .await
                     .map_err(ApiError::MailTls)?
                     .send(message_builder)
@@ -61,7 +62,7 @@ impl Email {
                     .map_err(ApiError::MailSend)
             }
 
-            match send(transport, message_builder).await {
+            match send(client_builder, message_builder).await {
                 Ok(_) => tracing::trace!("Email sent email from {from_email} to {to_email}"),
                 Err(e) => {
                     tracing::error!("Failed to send email from {from_email} to {to_email}: {e}");
