@@ -11,7 +11,7 @@ COPY lib/bencher_rbac bencher_rbac
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/plus
-COPY lib/bencher_plus bencher_plus
+COPY plus/bencher_plus bencher_plus
 
 WORKDIR /usr/src/services
 RUN cargo init cli

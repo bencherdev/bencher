@@ -10,6 +10,9 @@ WORKDIR /usr/src/services
 RUN cargo init api
 RUN cargo init cli
 
+WORKDIR /usr/src/plus
+RUN cargo init bencher_plus --lib
+
 WORKDIR /usr/src/lib
 COPY lib/bencher_valid bencher_valid
 
