@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{system::jwt::JsonWebToken, JsonEmpty, JsonSignup};
 use bencher_rbac::organization::Role;
 use diesel::dsl::count;
@@ -35,7 +33,7 @@ const SIGNUP_RESOURCE: Resource = Resource::Signup;
     path =  "/v0/auth/signup",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -45,7 +43,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     tags = ["auth"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     body: TypedBody<JsonSignup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let endpoint = Endpoint::new(SIGNUP_RESOURCE, Method::Post);

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{organization::Permission, project::Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -46,7 +44,7 @@ pub struct DirPath {
     tags = ["organizations", "projects"]
 }]
 pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -58,7 +56,7 @@ pub async fn dir_options(
     tags = ["organizations", "projects"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -107,7 +105,7 @@ async fn get_ls_inner(
     tags = ["organizations", "projects"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
@@ -223,7 +221,7 @@ pub struct OnePath {
     tags = ["organizations", "projects"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -235,7 +233,7 @@ pub async fn one_options(
     tags = ["organizations", "projects"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

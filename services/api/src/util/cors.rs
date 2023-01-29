@@ -93,7 +93,7 @@ pub async fn get_cors_header<C: ServerContext>(
     header_name: &str,
     allowed: &[&'static str],
 ) -> Result<HeaderValue, CorsError> {
-    let request = rqctx.request.lock().await;
+    let request = &rqctx.request;
     let incoming_headers = request.headers();
 
     let req_value = incoming_headers

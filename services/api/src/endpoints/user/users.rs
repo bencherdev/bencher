@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonUser, ResourceId};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
@@ -36,7 +34,7 @@ pub struct OnePath {
     tags = ["users"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -48,7 +46,7 @@ pub async fn one_options(
     tags = ["users"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

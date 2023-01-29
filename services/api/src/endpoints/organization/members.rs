@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
@@ -48,7 +48,7 @@ pub struct DirPath {
     tags = ["organizations", "members"]
 }]
 pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -60,7 +60,7 @@ pub async fn dir_options(
     tags = ["organizations", "members"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -120,7 +120,7 @@ async fn get_ls_inner(
     tags = ["organizations", "members"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
@@ -243,7 +243,7 @@ pub struct OnePath {
     tags = ["organizations", "members"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -255,7 +255,7 @@ pub async fn one_options(
     tags = ["organizations", "members"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -292,7 +292,7 @@ async fn get_one_inner(
     tags = ["organizations", "members"]
 }]
 pub async fn patch(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
@@ -357,7 +357,7 @@ async fn patch_inner(
     tags = ["organizations", "members"]
 }]
 pub async fn delete(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

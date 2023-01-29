@@ -34,12 +34,12 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate
 async-compression = { version = "0.3", features = ["tokio", "gzip"] }
-aws-credential-types = "0.53"
-aws-sdk-s3 = "0.23"
+aws-credential-types = "0.54"
+aws-sdk-s3 = "0.24"
 css-inline = "0.8"
 diesel = { version = "2.0", features = ["sqlite", "chrono"] }
 diesel_migrations = "2.0"
-dropshot = "0.8"
+dropshot = "0.9"
 http = "0.2"
 mail-send = "0.2.3"
 rand = "0.8"

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
@@ -22,7 +20,7 @@ const PONG: &str = "PONG";
     path =  "/v0/server/ping",
     tags = ["server", "ping"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -33,7 +31,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     tags = ["server", "ping"]
 }]
 pub async fn get(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);
     pub_response_ok!(endpoint, PONG.into())

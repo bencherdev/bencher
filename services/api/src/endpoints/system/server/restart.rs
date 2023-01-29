@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonEmpty, JsonRestart};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tokio::sync::mpsc::Sender;
@@ -29,7 +27,7 @@ pub const DEFAULT_DELAY: u64 = 3;
     tags = ["server"]
 }]
 pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -41,7 +39,7 @@ pub async fn options(
     tags = ["server"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

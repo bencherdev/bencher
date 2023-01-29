@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, path::PathBuf, sync::Arc};
+use std::{ffi::OsStr, path::PathBuf};
 
 use async_compression::tokio::write::GzipEncoder;
 use bencher_json::system::backup::JsonDataStore;
@@ -35,7 +35,7 @@ const BUFFER_SIZE: usize = 1024;
     tags = ["server"]
 }]
 pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -47,7 +47,7 @@ pub async fn options(
     tags = ["server"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

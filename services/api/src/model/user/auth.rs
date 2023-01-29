@@ -78,7 +78,7 @@ impl From<ProjectId> for Project {
 
 impl AuthUser {
     pub async fn new(rqctx: &RequestContext<Context>) -> Result<Self, ApiError> {
-        let request = rqctx.request.lock().await;
+        let request = &rqctx.request;
 
         let headers = request
             .headers()

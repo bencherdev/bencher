@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{organization::JsonOrganizationPermission, JsonAllowed, ResourceId};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
@@ -33,7 +31,7 @@ pub struct GetParams {
     tags = ["organizations", "allowed"]
 }]
 pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<GetParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -45,7 +43,7 @@ pub async fn options(
     tags = ["organizations", "allowed"]
 }]
 pub async fn get(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<GetParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

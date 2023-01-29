@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{
     system::{auth::JsonConfirm, jwt::JsonWebToken},
     JsonAuthToken,
@@ -31,7 +29,7 @@ const CONFIRM_RESOURCE: Resource = Resource::Confirm;
     path =  "/v0/auth/confirm",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -41,7 +39,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     tags = ["auth"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     body: TypedBody<JsonAuthToken>,
 ) -> Result<ResponseAccepted<JsonConfirm>, HttpError> {
     let endpoint = Endpoint::new(CONFIRM_RESOURCE, Method::Post);

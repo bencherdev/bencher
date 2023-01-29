@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonProject, ResourceId};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
@@ -32,7 +30,7 @@ const PROJECT_RESOURCE: Resource = Resource::Project;
     path =  "/v0/projects",
     tags = ["projects"]
 }]
-pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn dir_options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -42,7 +40,7 @@ pub async fn dir_options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRes
     tags = ["projects"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
@@ -103,7 +101,7 @@ pub struct OnePath {
     tags = ["projects"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -115,7 +113,7 @@ pub async fn one_options(
     tags = [ "projects"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();

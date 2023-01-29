@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{system::jwt::JsonWebToken, JsonEmpty, JsonLogin};
 
 use diesel::{QueryDsl, RunQueryDsl};
@@ -32,7 +30,7 @@ const LOGIN_RESOURCE: Resource = Resource::Login;
     path =  "/v0/auth/login",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -42,7 +40,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     tags = ["auth"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let endpoint = Endpoint::new(LOGIN_RESOURCE, Method::Post);

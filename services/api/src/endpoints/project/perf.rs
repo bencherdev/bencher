@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use bencher_json::{
     project::perf::{JsonPerfMetric, JsonPerfMetrics},
@@ -46,7 +46,7 @@ pub struct DirPath {
     tags = ["projects", "perf"]
 }]
 pub async fn options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -58,7 +58,7 @@ pub async fn options(
     tags = ["projects", "perf"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonPerfQuery>,
 ) -> Result<ResponseAccepted<JsonPerf>, HttpError> {

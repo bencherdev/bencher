@@ -147,15 +147,16 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
     ConfigDropshot {
         bind_address,
         request_body_max_bytes,
-        tls: tls.map(
-            |JsonTls {
-                 cert_file,
-                 key_file,
-             }| ConfigTls {
+        tls: tls.map(|json_tls| match json_tls {
+            JsonTls::AsFile {
+                cert_file,
+                key_file,
+            } => ConfigTls::AsFile {
                 cert_file,
                 key_file,
             },
-        ),
+            JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
+        }),
     }
 }
 
@@ -171,7 +172,7 @@ fn into_log(logging: JsonLogging) -> Result<Logger, ApiError> {
             if_exists,
         } => ConfigLogging::File {
             level: into_level(&level),
-            path,
+            path: path.into(),
             if_exists: into_if_exists(&if_exists),
         },
     }
