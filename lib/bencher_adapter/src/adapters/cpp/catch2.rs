@@ -68,7 +68,7 @@ fn parse_catch2_time(input: &str) -> IResult<&str, JsonMetric> {
             parse_catch2_duration,
             space1,
             parse_catch2_duration,
-            space0,
+            space1,
             eof,
         )),
         |(_, value, _, lower_bound, _, upper_bound, _, _)| JsonMetric {
@@ -129,7 +129,7 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
 }
 
 #[cfg(test)]
-pub(crate) mod test_rust_criterion {
+pub(crate) mod test_cpp_catch2 {
     use pretty_assertions::assert_eq;
 
     use crate::{
