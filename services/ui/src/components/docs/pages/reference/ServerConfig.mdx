@@ -54,17 +54,12 @@ Example JSON configuration:
 }
 ```
 
-## `endpoint`
+## `root`
 
-This should be the URL for your Bencher UI host. (ex `"https://bencher.example.com"`)
-For Bencher Cloud this value is `"https://bencher.dev"`.
-The default value for `endpoint` is `"http://localhost:3000"`.
-
-## `secret_key`
-
-This is the key used to generate all tokens. **IT SHOULD BE VERY SECURE!**
-The default value for `secret_key` is a randomly generated secret key.
-Whenever `secret_key` is logged, it will appear obfuscated as `************`.
+| Name       | Example                                        | Default                 | Required | Description                                                                                                                                                                                                                                                                         |
+|:----------:|:----------------------------------------------:|:-----------------------:|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| endpoint   | "https://bencher.example.com"                  | "http://localhost:3000" | Yes      | Specifies the URL for your Bencher UI host.                                                                                                                                                                                                                                         |
+| secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | Random UUID v4          | Yes      | Specifies the the key used to generate all tokens. **IT SHOULD BE VERY SECURE!** The default value is a randomly generated [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)). Whenever logged, it will appear obfuscated as `************`. |
 
 # `server`
 
@@ -100,7 +95,7 @@ Whenever `secret_key` is logged, it will appear obfuscated as `************`.
 | file                         | "path/to/database.db"                                                         | "data/bencher.db" | Yes                                   | Controls where server database will go.                                                                                                                                                          |
 | data_store.service           | "aws_s3"                                                                      | ---               | No                                    | Specifies the remote data store service. Valid values are "aws_s3".                                                                                                                              |
 | data_store.access_key_id     | "ABC123DoRemMiABC123"                                                         | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the AWS access key ID. See also data_store.service.                                                                                    |
-| data_store.secret_access_key | "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7"                                 | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the AWS secret access key. See also data_store.service.                                                                                |
+| data_store.secret_access_key | "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7"                                 | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the AWS secret access key. See also data_store.service. Whenever logged, it will appear obfuscated as `************`.                  |
 | data_store.access_point      | "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir" | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the [AWS S3 accesspoint](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html). See also data_store.service. |
 
 ## `smtp`
@@ -109,10 +104,10 @@ This section specifies an [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Trans
 The entire section is optional.
 If not specified, all messages will be sent to `logging` instead.
 
-| Name       | Example                    | Default | Required | Description                                                             |
-|:----------:|:--------------------------:|:-------:|:--------:|:-----------------------------------------------------------------------:|
-| hostname   | "mailbonobo.com"           | ---     | Yes      | Specifies the SMTP hostname.                                            |
-| username   | "bencher"                  | ---     | Yes      | Specifies the username at the SMTP host.                                |
-| secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" | ---     | Yes      | Specifies the secret for the username at the SMTP host.                 |
-| from_name  | "Bencher"                  | ---     | Yes      | Specifies the name that will appear in the from section of all emails.  |
-| from_email | "info@bencher.example.com" | ---     | Yes      | Spefifies the email that will appear in the from section of all emails. |
+| Name       | Example                    | Default | Required | Description                                                                                                           |
+|:----------:|:--------------------------:|:-------:|:--------:|:---------------------------------------------------------------------------------------------------------------------:|
+| hostname   | "mailbonobo.com"           | ---     | Yes      | Specifies the SMTP hostname.                                                                                          |
+| username   | "bencher"                  | ---     | Yes      | Specifies the username at the SMTP host.                                                                              |
+| secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" | ---     | Yes      | Specifies the secret for the username at the SMTP host. Whenever logged, it will appear obfuscated as `************`. |
+| from_name  | "Bencher"                  | ---     | Yes      | Specifies the name that will appear in the from section of all emails.                                                |
+| from_email | "info@bencher.example.com" | ---     | Yes      | Spefifies the email that will appear in the from section of all emails.                                               |
