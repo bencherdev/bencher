@@ -41,7 +41,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
 - Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
-  - [Criterion](https://docs.rs/criterion/latest/criterion/)
+  - [Criterion](https://github.com/bheisler/criterion.rs)
 
 For more details see the [explanation of CLI adapters](https://bencher.dev/docs/explanation/cli-adapters).
 
