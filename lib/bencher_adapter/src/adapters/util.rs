@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use bencher_json::BenchmarkName;
 use nom::{
@@ -103,6 +103,19 @@ pub fn parse_units(input: &str) -> IResult<&str, Units> {
     ))(input)
 }
 
+impl FromStr for Units {
+    type Err = AdapterError;
+
+    fn from_str(units: &str) -> Result<Self, Self::Err> {
+        let (remainder, units) = parse_units(units).map_err(|_| Self::Err::BenchmarkUnits)?;
+        if remainder.is_empty() {
+            Ok(units)
+        } else {
+            Err(AdapterError::BenchmarkUnits)
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for Units {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -125,12 +138,7 @@ impl<'de> Visitor<'de> for UnitsVisitor {
     where
         E: de::Error,
     {
-        let (remainder, units) = parse_units(value).map_err(E::custom)?;
-        if remainder.is_empty() {
-            Ok(units)
-        } else {
-            Err(E::custom(AdapterError::BenchmarkUnits))
-        }
+        value.parse().map_err(E::custom)
     }
 }
 

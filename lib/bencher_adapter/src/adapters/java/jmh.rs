@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
 use nom::{
     bytes::complete::{tag, take_till1},
     character::complete::space1,
@@ -6,6 +6,8 @@ use nom::{
     sequence::tuple,
     IResult,
 };
+use rust_decimal::Decimal;
+use serde::Deserialize;
 
 use crate::{
     adapters::util::{
@@ -19,49 +21,65 @@ pub struct AdapterJavaJmh;
 
 impl Adapter for AdapterJavaJmh {
     fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        let mut benchmark_metrics = Vec::new();
+        serde_json::from_str::<Jmh>(input)?.try_into()
+    }
+}
 
-        for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_jmh(line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
-                }
-            }
+#[derive(Debug, Clone, Deserialize)]
+pub struct Jmh(pub Vec<Benchmark>);
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Benchmark {
+    pub benchmark: BenchmarkName,
+    pub jvm_args: Vec<String>,
+    pub primary_metric: PrimaryMetric,
+    pub secondary_metrics: JsonEmpty,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrimaryMetric {
+    pub score: Decimal,
+    pub score_error: Decimal,
+    pub score_confidence: [Decimal; 2],
+    pub score_percentiles: JsonEmpty,
+    pub score_unit: String,
+    pub raw_data: Vec<Vec<Decimal>>,
+}
+
+impl TryFrom<Jmh> for AdapterResults {
+    type Error = AdapterError;
+
+    fn try_from(jmh: Jmh) -> Result<Self, Self::Error> {
+        let mut benchmark_metrics = Vec::with_capacity(jmh.0.len());
+        for benchmark in jmh.0 {
+            let Benchmark {
+                benchmark: benchmark_name,
+                primary_metric,
+                ..
+            } = benchmark;
+            let PrimaryMetric {
+                score,
+                score_error,
+                score_unit,
+                ..
+            } = primary_metric;
+
+            let time_unit = score_unit.trim_start_matches("ops/").parse()?;
+            let value = time_as_nanos(score, time_unit);
+            let variance = time_as_nanos(score_error, time_unit);
+            let json_metric = JsonMetric {
+                value,
+                lower_bound: Some(value - variance),
+                upper_bound: Some(value + variance),
+            };
+
+            benchmark_metrics.push((benchmark_name, json_metric));
         }
 
         benchmark_metrics.try_into()
     }
-}
-
-fn parse_jmh(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
-    map_res(
-        tuple((
-            take_till1(|c| c == ' ' || c == '\t'),
-            space1,
-            parse_u64,
-            space1,
-            parse_jmh_bench,
-            eof,
-        )),
-        |(name, _, _iter, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
-            let benchmark_name = parse_benchmark_name(name)?;
-            Ok((benchmark_name, json_metric))
-        },
-    )(input)
-}
-
-fn parse_jmh_bench(input: &str) -> IResult<&str, JsonMetric> {
-    map_res(
-        tuple((parse_f64, space1, parse_units, tag("/op"))),
-        |(duration, _, units, _)| -> Result<JsonMetric, NomError> {
-            let value = time_as_nanos(duration, units);
-            Ok(JsonMetric {
-                value,
-                lower_bound: None,
-                upper_bound: None,
-            })
-        },
-    )(input)
 }
 
 #[cfg(test)]
@@ -74,92 +92,27 @@ pub(crate) mod test_java_jmh {
         AdapterResults,
     };
 
-    use super::{parse_jmh, AdapterJavaJmh};
+    use super::AdapterJavaJmh;
 
     fn convert_java_jmh(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/java/jmh/{suffix}.txt");
+        let file_path = format!("./tool_output/java/jmh/{suffix}.json");
         convert_file_path::<AdapterJavaJmh>(&file_path)
     }
 
     #[test]
-    fn test_parse_jmh() {
-        for (index, (expected, input)) in [
-            (
-                Ok((
-                    "",
-                    (
-                        "BenchmarkFib10-8".parse().unwrap(),
-                        JsonMetric {
-                            value: 325.0.into(),
-                            lower_bound: None,
-                            upper_bound: None,
-                        },
-                    ),
-                )),
-                "BenchmarkFib10-8   		 					5000000		325 ns/op",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "BenchmarkFib20".parse().unwrap(),
-                        JsonMetric {
-                            value: 40_537.123.into(),
-                            lower_bound: None,
-                            upper_bound: None,
-                        },
-                    ),
-                )),
-                "BenchmarkFib20  	 	   					30000		40537.123 ns/op",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "BenchmarkFib/my_tabled_benchmark_-_10-8".parse().unwrap(),
-                        JsonMetric {
-                            value: 325.0.into(),
-                            lower_bound: None,
-                            upper_bound: None,
-                        },
-                    ),
-                )),
-                "BenchmarkFib/my_tabled_benchmark_-_10-8    	5000000		325 ns/op",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "BenchmarkFib/my_tabled_benchmark_-_20".parse().unwrap(),
-                        JsonMetric {
-                            value: 40_537.123.into(),
-                            lower_bound: None,
-                            upper_bound: None,
-                        },
-                    ),
-                )),
-                "BenchmarkFib/my_tabled_benchmark_-_20		30000		40537.123 ns/op",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "BenchmarkFib/my/tabled/benchmark_-_20".parse().unwrap(),
-                        JsonMetric {
-                            value: 40_537.456.into(),
-                            lower_bound: None,
-                            upper_bound: None,
-                        },
-                    ),
-                )),
-                "BenchmarkFib/my/tabled/benchmark_-_20		30001		40537.456 ns/op",
-            ),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            assert_eq!(expected, parse_jmh(input), "#{index}: {input}")
-        }
+    fn test_adapter_java_jmh_one() {
+        let results = convert_java_jmh("one");
+        assert_eq!(results.inner.len(), 1);
+
+        let metrics = results
+            .get("org.openjdk.jmh.samples.JMHSample_01_HelloWorld.wellHelloThere")
+            .unwrap();
+        validate_metrics(
+            metrics,
+            3.3762388731228186e18,
+            Some(3.3619508873788826e18),
+            Some(3.3905268588667546e18),
+        );
     }
 
     #[test]
