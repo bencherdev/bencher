@@ -440,8 +440,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -505,8 +504,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -544,8 +542,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -553,8 +550,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/JsonOrganizationPermission"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -619,8 +615,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -628,8 +623,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/JsonOrganizationPermission"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -667,8 +661,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -737,8 +730,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -813,8 +805,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -852,8 +843,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -861,8 +851,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -927,8 +916,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -936,8 +924,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -973,8 +960,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -982,8 +968,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -1060,8 +1045,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1130,8 +1114,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -1206,8 +1189,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1245,8 +1227,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -1254,8 +1235,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1320,8 +1300,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -1329,8 +1308,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1452,8 +1430,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1517,8 +1494,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1556,8 +1532,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1626,8 +1601,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1666,8 +1640,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -1675,8 +1648,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1742,8 +1714,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -1751,8 +1722,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1790,8 +1760,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1860,8 +1829,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1900,8 +1868,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -1909,8 +1876,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -1976,8 +1942,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -1985,8 +1950,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2024,8 +1988,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "query",
@@ -2033,8 +1996,7 @@
             "schema": {
               "nullable": true,
               "type": "string"
-            },
-            "style": "form"
+            }
           }
         ],
         "responses": {
@@ -2103,8 +2065,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -2179,8 +2140,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "query",
@@ -2188,8 +2148,7 @@
             "schema": {
               "nullable": true,
               "type": "string"
-            },
-            "style": "form"
+            }
           }
         ],
         "responses": {
@@ -2227,8 +2186,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -2236,8 +2194,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2302,8 +2259,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -2311,8 +2267,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2350,8 +2305,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2420,8 +2374,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -2496,8 +2449,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2535,8 +2487,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -2544,8 +2495,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2610,8 +2560,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -2619,8 +2568,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2658,8 +2606,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -2734,8 +2681,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2773,8 +2719,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2843,8 +2788,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -2919,8 +2863,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -2958,8 +2901,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -2968,8 +2910,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3034,8 +2975,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3044,8 +2984,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3083,8 +3022,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3093,8 +3031,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3159,8 +3096,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3169,8 +3105,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3208,8 +3143,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3278,8 +3212,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -3354,8 +3287,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3393,8 +3325,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3402,8 +3333,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3468,8 +3398,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3477,8 +3406,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3516,8 +3444,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3586,8 +3513,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -3662,8 +3588,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3701,8 +3626,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3711,8 +3635,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -3777,8 +3700,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -3787,8 +3709,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4342,8 +4263,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4407,8 +4327,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4446,8 +4365,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4516,8 +4434,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -4592,8 +4509,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4632,8 +4548,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -4641,8 +4556,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4708,8 +4622,7 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            },
-            "style": "simple"
+            }
           },
           {
             "in": "path",
@@ -4717,8 +4630,7 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
@@ -4757,6 +4669,9 @@
       }
     },
     "schemas": {
+      "BenchmarkName": {
+        "type": "string"
+      },
       "BranchName": {
         "type": "string"
       },
@@ -4828,6 +4743,11 @@
         "enum": [
           "magic",
           "json",
+          "cpp",
+          "cpp_google",
+          "cpp_catch2",
+          "go",
+          "go_bench",
           "rust",
           "rust_bench",
           "rust_criterion"
@@ -4921,7 +4841,7 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/NonEmpty"
+            "$ref": "#/components/schemas/BenchmarkName"
           },
           "project": {
             "type": "string",
@@ -5835,6 +5755,12 @@
           "hostname": {
             "type": "string"
           },
+          "port": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0
+          },
           "secret": {
             "$ref": "#/components/schemas/Secret"
           },
@@ -5915,18 +5841,61 @@
         ]
       },
       "JsonTls": {
-        "type": "object",
-        "properties": {
-          "cert_file": {
-            "type": "string"
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "cert_file": {
+                "type": "string"
+              },
+              "key_file": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "as_file"
+                ]
+              }
+            },
+            "required": [
+              "cert_file",
+              "key_file",
+              "type"
+            ]
           },
-          "key_file": {
-            "type": "string"
+          {
+            "type": "object",
+            "properties": {
+              "certs": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0
+                }
+              },
+              "key": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "as_bytes"
+                ]
+              }
+            },
+            "required": [
+              "certs",
+              "key",
+              "type"
+            ]
           }
-        },
-        "required": [
-          "cert_file",
-          "key_file"
         ]
       },
       "JsonToken": {
