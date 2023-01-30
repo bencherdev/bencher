@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.30"
+    "version": "0.2.31"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -4772,7 +4772,7 @@
                 "type": "string"
               },
               "secret_access_key": {
-                "type": "string"
+                "$ref": "#/components/schemas/Secret"
               },
               "service": {
                 "type": "string",
@@ -4828,7 +4828,9 @@
         "enum": [
           "magic",
           "json",
-          "rust"
+          "rust",
+          "rust_bench",
+          "rust_criterion"
         ]
       },
       "JsonAlert": {
@@ -4975,8 +4977,7 @@
             "$ref": "#/components/schemas/JsonLogging"
           },
           "secret_key": {
-            "nullable": true,
-            "type": "string"
+            "$ref": "#/components/schemas/Secret"
           },
           "server": {
             "$ref": "#/components/schemas/JsonServer"
@@ -4994,6 +4995,7 @@
           "database",
           "endpoint",
           "logging",
+          "secret_key",
           "server"
         ]
       },
@@ -5702,10 +5704,6 @@
               }
             ]
           },
-          "allow_failure": {
-            "nullable": true,
-            "type": "boolean"
-          },
           "fold": {
             "nullable": true,
             "allOf": [
@@ -5838,7 +5836,7 @@
             "type": "string"
           },
           "secret": {
-            "type": "string"
+            "$ref": "#/components/schemas/Secret"
           },
           "username": {
             "type": "string"
@@ -6060,6 +6058,9 @@
         "type": "string"
       },
       "ResourceId": {
+        "type": "string"
+      },
+      "Secret": {
         "type": "string"
       },
       "ServerLog": {
