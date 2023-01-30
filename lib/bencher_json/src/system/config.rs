@@ -99,6 +99,7 @@ impl Sanitize for DataStore {
 pub struct JsonSmtp {
     pub hostname: String,
     pub port: Option<u16>,
+    pub starttls: Option<bool>,
     pub username: String,
     pub secret: Secret,
     pub from_name: String,

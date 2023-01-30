@@ -123,6 +123,7 @@ fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
         |JsonSmtp {
              hostname,
              port,
+             starttls,
              username,
              secret,
              from_name,
@@ -131,6 +132,7 @@ fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
             Messenger::Email(Email {
                 hostname,
                 port: port.unwrap_or(587),
+                starttls: starttls.unwrap_or(true),
                 username,
                 secret,
                 from_name: Some(from_name),

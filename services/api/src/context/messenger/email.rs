@@ -9,6 +9,7 @@ use super::Message;
 pub struct Email {
     pub hostname: String,
     pub port: u16,
+    pub starttls: bool,
     pub username: String,
     pub secret: Secret,
     pub from_name: Option<String>,
