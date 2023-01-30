@@ -5,6 +5,7 @@ RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml
+RUN cargo init xtask
 
 WORKDIR /usr/src/services
 RUN cargo init api
