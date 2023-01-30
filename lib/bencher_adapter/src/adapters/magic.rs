@@ -1,9 +1,7 @@
 use crate::{
-    results::adapter_results::AdapterResults, Adapter, AdapterCpp, AdapterError, AdapterJson,
-    AdapterRust,
+    results::adapter_results::AdapterResults, Adapter, AdapterCpp, AdapterError, AdapterGo,
+    AdapterJava, AdapterJson, AdapterRust,
 };
-
-use super::go::AdapterGo;
 
 pub struct AdapterMagic;
 
@@ -24,6 +22,11 @@ impl Adapter for AdapterMagic {
             return Ok(go);
         }
 
+        let java = AdapterJava::parse(input)?;
+        if !java.is_empty() {
+            return Ok(java);
+        }
+
         let rust = AdapterRust::parse(input)?;
         if !rust.is_empty() {
             return Ok(rust);
@@ -39,6 +42,7 @@ mod test_magic {
     use crate::adapters::{
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
         go::bench::test_go_bench,
+        java::jmh::test_java_jmh,
         json::test_json,
         rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
@@ -66,6 +70,12 @@ mod test_magic {
     fn test_adapter_magic_go_bench() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/go/bench/five.txt");
         test_go_bench::validate_adapter_go_bench(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_java_jmh() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/java/jmh/six.txt");
+        test_java_jmh::validate_adapter_java_jmh(results);
     }
 
     #[test]

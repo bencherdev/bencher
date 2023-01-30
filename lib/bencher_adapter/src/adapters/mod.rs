@@ -2,6 +2,7 @@ use nom::IResult;
 
 pub mod cpp;
 pub mod go;
+pub mod java;
 pub mod json;
 pub mod magic;
 pub mod rust;

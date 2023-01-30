@@ -2,10 +2,15 @@ pub mod adapters;
 pub mod error;
 pub mod results;
 
-pub use adapters::{cpp::AdapterCpp, json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
 use adapters::{
+    cpp::AdapterCpp,
     cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle},
-    go::{bench::AdapterGoBench, AdapterGo},
+    go::bench::AdapterGoBench,
+    go::AdapterGo,
+    java::AdapterJava,
+    json::AdapterJson,
+    magic::AdapterMagic,
+    rust::AdapterRust,
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion},
 };
 use bencher_json::project::report::JsonAdapter;
