@@ -1,3 +1,6 @@
+[alias]
+xtask = "run --manifest-path ./xtask/Cargo.toml --"
+
 [target.'cfg(all()']
 rustflags = [
     "-Wclippy::all",

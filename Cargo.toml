@@ -1,5 +1,5 @@
 [workspace]
-members = ["services/api", "services/cli", "lib/*", "plus/*"]
+members = ["services/api", "services/cli", "lib/*", "plus/*", "xtask"]
 
 [workspace.package]
 version = "0.2.31"
@@ -8,6 +8,7 @@ edition = "2021"
 
 [workspace.dependencies]
 chrono = "0.4"
+clap = { version = "4.0", features = ["derive"] }
 derive_more = "0.99"
 jsonwebtoken = "8.2"
 literally = "0.1"

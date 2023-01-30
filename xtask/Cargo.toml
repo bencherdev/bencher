@@ -1,0 +1,9 @@
+[package]
+name = "xtask"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Workspace
+clap.workspace = true
