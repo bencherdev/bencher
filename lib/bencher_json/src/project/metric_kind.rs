@@ -29,6 +29,30 @@ static LATENCY_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
         .expect("Failed to parse metric kind units.")
 });
 
+pub const THROUGHPUT_NAME_STR: &str = "Throughput";
+#[allow(clippy::expect_used)]
+static THROUGHPUT_NAME: Lazy<NonEmpty> = Lazy::new(|| {
+    THROUGHPUT_NAME_STR
+        .parse()
+        .expect("Failed to parse metric kind name.")
+});
+pub const THROUGHPUT_SLUG_STR: &str = "throughput";
+#[allow(clippy::expect_used)]
+static THROUGHPUT_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
+    Some(
+        THROUGHPUT_SLUG_STR
+            .parse()
+            .expect("Failed to parse metric kind slug."),
+    )
+});
+pub const THROUGHPUT_UNITS_STR: &str = "operations / nanoseconds (ops/ns)";
+#[allow(clippy::expect_used)]
+static THROUGHPUT_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
+    THROUGHPUT_UNITS_STR
+        .parse()
+        .expect("Failed to parse metric kind units.")
+});
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMetricKind {
@@ -43,6 +67,14 @@ impl JsonNewMetricKind {
             name: LATENCY_NAME.clone(),
             slug: LATENCY_SLUG.clone(),
             units: LATENCY_UNITS.clone(),
+        }
+    }
+
+    pub fn throughput() -> Self {
+        Self {
+            name: THROUGHPUT_NAME.clone(),
+            slug: THROUGHPUT_SLUG.clone(),
+            units: THROUGHPUT_UNITS.clone(),
         }
     }
 }

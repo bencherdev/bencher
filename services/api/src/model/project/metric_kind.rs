@@ -92,6 +92,10 @@ impl InsertMetricKind {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::latency())
     }
 
+    pub fn throughput(conn: &mut SqliteConnection, project_id: i32) -> Self {
+        Self::from_json_inner(conn, project_id, JsonNewMetricKind::throughput())
+    }
+
     pub fn from_json_inner(
         conn: &mut SqliteConnection,
         project_id: i32,

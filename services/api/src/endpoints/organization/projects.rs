@@ -185,6 +185,13 @@ async fn post_inner(
         .execute(conn)
         .map_err(api_error!())?;
 
+    // Add a `throughput` metric kind to the project
+    let insert_metric_kind = InsertMetricKind::throughput(conn, query_project.id);
+    diesel::insert_into(schema::metric_kind::table)
+        .values(&insert_metric_kind)
+        .execute(conn)
+        .map_err(api_error!())?;
+
     query_project.into_json(conn)
 }
 
