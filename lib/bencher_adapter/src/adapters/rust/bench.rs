@@ -1,16 +1,14 @@
-use bencher_json::JsonMetric;
+use bencher_json::{BenchmarkName, JsonMetric};
 use nom::{
-    branch::alt,
     bytes::complete::{tag, take_until1},
-    character::complete::{anychar, space1},
-    combinator::{eof, map, map_res, peek},
-    multi::many_till,
+    character::complete::space1,
+    combinator::{eof, map_res},
     sequence::{delimited, tuple},
     IResult,
 };
 
 use crate::{
-    adapters::util::{parse_f64, parse_u64, parse_units, time_as_nanos},
+    adapters::util::{parse_benchmark_name, parse_u64, parse_units, time_as_nanos, NomError},
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -22,14 +20,9 @@ impl Adapter for AdapterRustBench {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
-            if let Ok((remainder, (benchmark_name, test_metric))) = parse_cargo(line) {
+            if let Ok((remainder, benchmark_metric)) = parse_cargo(line) {
                 if remainder.is_empty() {
-                    match test_metric {
-                        TestMetric::Ignored | TestMetric::Failed => continue,
-                        TestMetric::Ok(metric) | TestMetric::Bench(metric) => {
-                            benchmark_metrics.push((benchmark_name, metric));
-                        },
-                    }
+                    benchmark_metrics.push(benchmark_metric);
                 }
             }
         }
@@ -38,16 +31,8 @@ impl Adapter for AdapterRustBench {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum TestMetric {
-    Ignored,
-    Failed,
-    Ok(JsonMetric),
-    Bench(JsonMetric),
-}
-
-fn parse_cargo(input: &str) -> IResult<&str, (String, TestMetric)> {
-    map(
+fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+    map_res(
         tuple((
             tag("test"),
             space1,
@@ -55,49 +40,18 @@ fn parse_cargo(input: &str) -> IResult<&str, (String, TestMetric)> {
             space1,
             tag("..."),
             space1,
-            alt((
-                map(tag("ignored"), |_| TestMetric::Ignored),
-                map(
-                    tuple((
-                        tag("FAILED"),
-                        // Strip trailing report time
-                        many_till(anychar, peek(eof)),
-                    )),
-                    |_| TestMetric::Failed,
-                ),
-                map(parse_cargo_ok, TestMetric::Ok),
-                map(parse_cargo_bench, TestMetric::Bench),
-            )),
+            parse_cargo_bench,
             eof,
         )),
-        |(_, _, benchmark_name, _, _, _, test_metric, _)| (benchmark_name.into(), test_metric),
-    )(input)
-}
-
-// cargo test -- -Z unstable-options --report-time
-// TODO cargo test -- -Z unstable-options --format json --report-time
-#[allow(clippy::float_arithmetic)]
-fn parse_cargo_ok(input: &str) -> IResult<&str, JsonMetric> {
-    map_res(
-        tuple((
-            tag("ok"),
-            space1,
-            delimited(tag("<"), tuple((parse_f64, parse_units)), tag(">")),
-        )),
-        |(_, _, (duration, units))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
-            let value = duration * units.as_nanos();
-            Ok(JsonMetric {
-                value: value.into(),
-                lower_bound: None,
-                upper_bound: None,
-            })
+        |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            let benchmark_name = parse_benchmark_name(name)?;
+            Ok((benchmark_name, json_metric))
         },
     )(input)
 }
 
 // cargo bench
 // TODO cargo test -- -Z unstable-options --format json
-#[allow(clippy::arithmetic_side_effects, clippy::cast_precision_loss)]
 fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
     map_res(
         tuple((
@@ -110,7 +64,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
         )),
-        |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, nom::Err<nom::error::Error<String>>> {
+        |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, NomError> {
             let value = time_as_nanos(duration, units);
             let variance = Some(time_as_nanos(variance, units));
             Ok(JsonMetric {
@@ -132,15 +86,10 @@ pub(crate) mod test_rust_bench {
         Adapter, AdapterResults,
     };
 
-    use super::{parse_cargo, AdapterRustBench, TestMetric};
+    use super::{parse_cargo, AdapterRustBench};
 
     fn convert_rust_bench(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/bench/{}.txt", suffix);
-        convert_file_path::<AdapterRustBench>(&file_path)
-    }
-
-    fn convert_rust_test(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/bench/test_{}.txt", suffix);
+        let file_path = format!("./tool_output/rust/bench/{suffix}.txt");
         convert_file_path::<AdapterRustBench>(&file_path)
     }
 
@@ -157,44 +106,20 @@ pub(crate) mod test_rust_bench {
 
     #[test]
     fn test_parse_cargo() {
-        for (index, (expected, input)) in [
-            (
-                Ok(("", ("tests::is_ignored".into(), TestMetric::Ignored))),
-                "test tests::is_ignored ... ignored",
-            ),
-            (
-                Ok(("", ("tests::is_failed".into(), TestMetric::Failed))),
-                "test tests::is_failed ... FAILED",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "tests::is_unit_test".into(),
-                        TestMetric::Ok(JsonMetric {
-                            value: 1_000_000_000.0.into(),
-                            lower_bound: None,
-                            upper_bound: None,
-                        }),
-                    ),
-                )),
-                "test tests::is_unit_test ... ok <1.000s>",
-            ),
-            (
-                Ok((
-                    "",
-                    (
-                        "tests::is_bench_test".into(),
-                        TestMetric::Bench(JsonMetric {
-                            value: 5_280.0.into(),
-                            lower_bound: Some(4_947.0.into()),
-                            upper_bound: Some(5_613.0.into()),
-                        }),
-                    ),
-                )),
-                "test tests::is_bench_test ... bench:             5,280 ns/iter (+/- 333)",
-            ),
-        ]
+        for (index, (expected, input)) in [(
+            Ok((
+                "",
+                (
+                    "tests::is_bench_test".parse().unwrap(),
+                    JsonMetric {
+                        value: 5_280.0.into(),
+                        lower_bound: Some(4_947.0.into()),
+                        upper_bound: Some(5_613.0.into()),
+                    },
+                ),
+            )),
+            "test tests::is_bench_test ... bench:             5,280 ns/iter (+/- 333)",
+        )]
         .into_iter()
         .enumerate()
         {
@@ -232,10 +157,10 @@ pub(crate) mod test_rust_bench {
     #[test]
     fn test_adapter_rust_many() {
         let results = convert_rust_bench("many");
-        validate_adapter_rust_many(results);
+        validate_adapter_rust_bench(results);
     }
 
-    pub fn validate_adapter_rust_many(results: AdapterResults) {
+    pub fn validate_adapter_rust_bench(results: AdapterResults) {
         assert_eq!(results.inner.len(), 6);
         validate_bench_metrics(&results, "tests::benchmark");
         validate_bench_metrics(&results, "tests::other_benchmark");
@@ -273,38 +198,5 @@ pub(crate) mod test_rust_bench {
 
         let metrics = results.get("tests::benchmark_c").unwrap();
         validate_metrics(metrics, 3_215.0, Some(2_859.0), Some(3_571.0));
-    }
-
-    #[test]
-    fn test_adapter_rust_test_report_time() {
-        let results = convert_rust_test("report_time");
-        assert_eq!(results.inner.len(), 3);
-
-        let metrics = results.get("tests::unit_test").unwrap();
-        validate_metrics(metrics, 0.0, None, None);
-
-        let metrics = results.get("tests::other_test").unwrap();
-        validate_metrics(metrics, 1_000_000.0, None, None);
-
-        let metrics = results.get("tests::last_test").unwrap();
-        validate_metrics(metrics, 2_000_000.0, None, None);
-    }
-
-    #[test]
-    fn test_adapter_rust_test_failed() {
-        let contents =
-            std::fs::read_to_string("./tool_output/rust/bench/test_report_time_failed.txt")
-                .unwrap();
-        let results = AdapterRustBench::parse(&contents).unwrap();
-        assert_eq!(results.inner.len(), 3);
-
-        let metrics = results.get("tests::ignored").unwrap();
-        validate_metrics(metrics, 0.0, None, None);
-
-        let metrics = results.get("tests::benchmark_a").unwrap();
-        validate_metrics(metrics, 1_000_000.0, None, None);
-
-        let metrics = results.get("tests::benchmark_b").unwrap();
-        validate_metrics(metrics, 2_000_000.0, None, None);
     }
 }

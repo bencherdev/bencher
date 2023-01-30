@@ -1,4 +1,4 @@
-use bencher_json::JsonMetric;
+use bencher_json::{BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
@@ -10,7 +10,9 @@ use nom::{
 use ordered_float::OrderedFloat;
 
 use crate::{
-    adapters::util::{parse_f64, parse_units, time_as_nanos},
+    adapters::util::{
+        nom_error, parse_benchmark_name, parse_f64, parse_units, time_as_nanos, NomError,
+    },
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -39,15 +41,17 @@ impl Adapter for AdapterRustCriterion {
 fn parse_criterion<'i>(
     prior_line: Option<&str>,
     input: &'i str,
-) -> IResult<&'i str, (String, JsonMetric)> {
-    map(
+) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
+    map_res(
         many_till(anychar, parse_criterion_time),
-        |(key_chars, metric)| {
-            let mut key: String = key_chars.into_iter().collect();
-            if key.is_empty() {
-                key = prior_line.unwrap_or_default().into();
-            }
-            (key, metric)
+        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            let name: String = if name_chars.is_empty() {
+                prior_line.ok_or_else(|| nom_error(String::new()))?.into()
+            } else {
+                name_chars.into_iter().collect()
+            };
+            let benchmark_name = parse_benchmark_name(&name)?;
+            Ok((benchmark_name, json_metric))
         },
     )(input)
 }
@@ -59,7 +63,7 @@ fn parse_criterion_time(input: &str) -> IResult<&str, JsonMetric> {
             parse_criterion_metric,
             eof,
         )),
-        |(_, metric, _)| metric,
+        |(_, json_metric, _)| json_metric,
     )(input)
 }
 
@@ -84,11 +88,10 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
     )(input)
 }
 
-#[allow(clippy::float_arithmetic)]
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map_res(
         tuple((parse_f64, space1, parse_units)),
-        |(duration, _, units)| -> Result<OrderedFloat<f64>, nom::Err<nom::error::Error<String>>> {
+        |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
             Ok(time_as_nanos(duration, units))
         },
     )(input)
@@ -107,7 +110,7 @@ pub(crate) mod test_rust_criterion {
     use super::{parse_criterion, AdapterRustCriterion};
 
     fn convert_rust_criterion(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/rust/criterion/{}.txt", suffix);
+        let file_path = format!("./tool_output/rust/criterion/{suffix}.txt");
         convert_file_path::<AdapterRustCriterion>(&file_path)
     }
 
@@ -118,7 +121,7 @@ pub(crate) mod test_rust_criterion {
                 Ok((
                     "",
                     (
-                        "criterion_benchmark".into(),
+                        "criterion_benchmark".parse().unwrap(),
                         JsonMetric {
                             value: 280.0.into(),
                             lower_bound: Some(222.2.into()),
@@ -132,7 +135,7 @@ pub(crate) mod test_rust_criterion {
                 Ok((
                     "",
                     (
-                        "criterion_benchmark".into(),
+                        "criterion_benchmark".parse().unwrap(),
                         JsonMetric {
                             value: 5.280.into(),
                             lower_bound: Some(0.222.into()),
@@ -146,7 +149,7 @@ pub(crate) mod test_rust_criterion {
                 Ok((
                     "",
                     (
-                        "criterion_benchmark".into(),
+                        "criterion_benchmark".parse().unwrap(),
                         JsonMetric {
                             value: 18_019.0.into(),
                             lower_bound: Some(16_652.0.into()),
@@ -167,6 +170,10 @@ pub(crate) mod test_rust_criterion {
     #[test]
     fn test_adapter_rust_criterion() {
         let results = convert_rust_criterion("many");
+        validate_adapter_rust_criterion(results);
+    }
+
+    pub fn validate_adapter_rust_criterion(results: AdapterResults) {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("file").unwrap();

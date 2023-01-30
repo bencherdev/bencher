@@ -100,6 +100,16 @@ pub enum CliRunAdapter {
     Magic,
     /// {...} JSON
     Json,
+    /// ➕ C++
+    Cpp,
+    /// ➕ C++ Google
+    CppGoogle,
+    /// ➕ C++ Catch2
+    CppCatch2,
+    /// 🕳 Go
+    Go,
+    /// 🕳 Go Bench
+    GoBench,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench

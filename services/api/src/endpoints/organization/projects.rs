@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{organization::Permission, project::Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -8,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::{ApiContext, Context},
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -46,7 +44,7 @@ pub struct DirPath {
     tags = ["organizations", "projects"]
 }]
 pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -58,7 +56,7 @@ pub async fn dir_options(
     tags = ["organizations", "projects"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -107,7 +105,7 @@ async fn get_ls_inner(
     tags = ["organizations", "projects"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
@@ -133,12 +131,9 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
-    // TODO private projects
-    if !auth_user.is_admin(&api_context.rbac) {
-        if let Some(false) = json_project.public {
-            return Err(ApiError::CreatePrivateProject(auth_user.id));
-        }
-    }
+    // Check to see if it is a private project
+    is_private_project(api_context, auth_user, json_project.public)?;
+
     let conn = &mut api_context.database.connection;
 
     // Create the project
@@ -193,6 +188,26 @@ async fn post_inner(
     query_project.into_json(conn)
 }
 
+// TODO private projects
+fn is_private_project(
+    api_context: &mut ApiContext,
+    auth_user: &AuthUser,
+    public: Option<bool>,
+) -> Result<(), ApiError> {
+    if let Some(false) = public {
+        #[cfg(feature = "plus")]
+        if bencher_plus::is_bencher_dev(&api_context.endpoint)
+            && auth_user.is_admin(&api_context.rbac)
+        {
+            return Ok(());
+        }
+
+        Err(ApiError::CreatePrivateProject(auth_user.id))
+    } else {
+        Ok(())
+    }
+}
+
 #[derive(Deserialize, JsonSchema)]
 pub struct OnePath {
     pub organization: ResourceId,
@@ -206,7 +221,7 @@ pub struct OnePath {
     tags = ["organizations", "projects"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -218,7 +233,7 @@ pub async fn one_options(
     tags = ["organizations", "projects"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

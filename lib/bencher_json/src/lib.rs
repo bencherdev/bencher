@@ -1,6 +1,6 @@
 pub use bencher_valid::{
-    BranchName, Email, GitHash, Jwt, NonEmpty, ResourceId, Sanitize, Secret, Slug, Url, UserName,
-    ValidError, MAX_LEN,
+    BenchmarkName, BranchName, Email, GitHash, Jwt, NonEmpty, ResourceId, Sanitize, Secret, Slug,
+    Url, UserName, ValidError, MAX_LEN,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -38,7 +38,7 @@ pub use user::{
     JsonUser,
 };
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonEmpty {}
 

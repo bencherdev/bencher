@@ -2,8 +2,12 @@ pub mod adapters;
 pub mod error;
 pub mod results;
 
-use adapters::rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion};
-pub use adapters::{json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
+pub use adapters::{cpp::AdapterCpp, json::AdapterJson, magic::AdapterMagic, rust::AdapterRust};
+use adapters::{
+    cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle},
+    go::{bench::AdapterGoBench, AdapterGo},
+    rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion},
+};
 use bencher_json::project::report::JsonAdapter;
 pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
@@ -21,6 +25,11 @@ impl Adapter for JsonAdapter {
         match self {
             JsonAdapter::Magic => AdapterMagic::parse(input),
             JsonAdapter::Json => AdapterJson::parse(input),
+            JsonAdapter::Cpp => AdapterCpp::parse(input),
+            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
+            JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input),
+            JsonAdapter::Go => AdapterGo::parse(input),
+            JsonAdapter::GoBench => AdapterGoBench::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),

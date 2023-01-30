@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::JsonVersion;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
@@ -23,7 +21,7 @@ const API_VERSION: &str = env!("CARGO_PKG_VERSION");
     path =  "/v0/server/version",
     tags = ["server", "version"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -34,7 +32,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     tags = ["server", "version"]
 }]
 pub async fn get(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonVersion>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(VERSION_RESOURCE, Method::GetOne);
     let json = JsonVersion {

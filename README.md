@@ -22,8 +22,8 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
 - Explanation
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
-  - [Adapters](https://bencher.dev/docs/explanation/adapters)
-  - [Branch Management](https://bencher.dev/docs/explanation/branch-management)
+  - [CLI Adapters](https://bencher.dev/docs/explanation/cli-adapters)
+  - [CLI Branch Selection](https://bencher.dev/docs/explanation/cli-branch-selection)
   - [Talks](https://bencher.dev/docs/explanation/talks)
 - Reference
   - [REST API](https://bencher.dev/docs/reference/api)
@@ -34,11 +34,16 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 ## Supported Benchmark Harnesses
 
+- C++
+  - [Google Benchmark](https://github.com/google/benchmark)
+  - [Catch2](https://github.com/catchorg/Catch2)
+- Go
+  - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
 - Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://docs.rs/criterion/latest/criterion/)
 
-For more details see the [explanation of benchmark adapters](https://bencher.dev/docs/explanation/adapters).
+For more details see the [explanation of CLI adapters](https://bencher.dev/docs/explanation/cli-adapters).
 
 ## Contributing
 
@@ -52,7 +57,7 @@ Once set up, both the UI and API should be built, running, and seeded at [localh
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bencherdev/bencher)
 
 ## License
-All content that resides under any directory named "plus" is licensed under the <a href="LICENSE-PLUS">Bencher Plus License</a>.
+All content that resides under any directory or <a href="https://doc.rust-lang.org/cargo/reference/features.html">feature</a> named "plus" is licensed under the <a href="LICENSE-PLUS">Bencher Plus License</a>.
 
 All other content is license under either of <a href="LICENSE-APACHE">Apache License, Version 2.0</a>
 or <a href="LICENSE-MIT">MIT license</a> at your discretion.

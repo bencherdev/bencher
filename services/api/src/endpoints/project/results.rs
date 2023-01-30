@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{JsonMetric, JsonMetrics, JsonResult, ResourceId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -38,7 +38,7 @@ pub struct OnePath {
     tags = ["projects", "results"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -50,7 +50,7 @@ pub async fn one_options(
     tags = ["projects", "results"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonResult>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();

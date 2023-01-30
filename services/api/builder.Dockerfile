@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.66.1-bullseye
+FROM rust:1.67.0-bullseye
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml
@@ -9,6 +9,9 @@ COPY lib/bencher_adapter bencher_adapter
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_rbac bencher_rbac
 COPY lib/bencher_valid bencher_valid
+
+WORKDIR /usr/src/plus
+COPY plus/bencher_plus bencher_plus
 
 WORKDIR /usr/src/services
 RUN cargo init cli

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonAlert, ResourceId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
@@ -40,7 +38,7 @@ pub struct DirPath {
     tags = ["projects", "alerts"]
 }]
 pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -52,7 +50,7 @@ pub async fn dir_options(
     tags = ["projects", "alerts"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -123,7 +121,7 @@ pub struct OnePath {
     tags = ["projects", "alerts"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -135,7 +133,7 @@ pub async fn one_options(
     tags = ["projects", "alerts"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();

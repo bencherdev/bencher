@@ -19,7 +19,7 @@ pub(crate) mod test_json {
     };
 
     fn convert_json(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/json/report_{}.json", suffix);
+        let file_path = format!("./tool_output/json/report_{suffix}.json");
         convert_file_path::<AdapterJson>(&file_path)
     }
 

@@ -70,11 +70,18 @@ fn adapter_rust(c: &mut Criterion) {
     });
 }
 
+fn adapter_rust_bench(c: &mut Criterion) {
+    c.bench_function("JsonAdapter::RustBench", |b| {
+        b.iter(|| JsonAdapter::RustBench.convert(RUST_RESULT))
+    });
+}
+
 criterion_group!(
     benches,
     adapter_magic_json,
     adapter_json,
     adapter_magic_rust,
-    adapter_rust
+    adapter_rust,
+    adapter_rust_bench
 );
 criterion_main!(benches);

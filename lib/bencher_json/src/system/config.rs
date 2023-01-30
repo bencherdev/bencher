@@ -44,9 +44,16 @@ pub struct JsonServer {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonTls {
-    pub cert_file: PathBuf,
-    pub key_file: PathBuf,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum JsonTls {
+    AsFile {
+        cert_file: PathBuf,
+        key_file: PathBuf,
+    },
+    AsBytes {
+        certs: Vec<u8>,
+        key: Vec<u8>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,6 +98,7 @@ impl Sanitize for DataStore {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSmtp {
     pub hostname: String,
+    pub port: Option<u16>,
     pub username: String,
     pub secret: Secret,
     pub from_name: String,

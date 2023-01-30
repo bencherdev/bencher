@@ -1,9 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use bencher_json::{
-    project::{benchmark::BenchmarkName, metric::Mean},
-    JsonMetric,
-};
+use bencher_json::{project::metric::Mean, BenchmarkName, JsonMetric};
 use literally::hmap;
 use serde::{Deserialize, Serialize};
 
@@ -25,17 +22,14 @@ impl From<ResultsMap> for AdapterResults {
     }
 }
 
-impl TryFrom<Vec<(String, JsonMetric)>> for AdapterResults {
+impl TryFrom<Vec<(BenchmarkName, JsonMetric)>> for AdapterResults {
     type Error = AdapterError;
 
-    fn try_from(benchmark_metrics: Vec<(String, JsonMetric)>) -> Result<Self, Self::Error> {
+    fn try_from(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Result<Self, Self::Error> {
         let mut results_map = HashMap::new();
         for (benchmark_name, metric) in benchmark_metrics {
             results_map.insert(
-                benchmark_name
-                    .as_str()
-                    .parse()
-                    .map_err(AdapterError::BenchmarkName)?,
+                benchmark_name,
                 AdapterMetrics {
                     inner: hmap! {
                         LATENCY_RESOURCE_ID.clone() => metric

@@ -1,60 +1,115 @@
+The Bencher API Server requires a JSON configuration at startup.
+The configuration can be provided three ways:
+- `BENCHER_CONFIG` environment variable: The value should be set to the JSON configuration
+- `BENCHER_CONFIG_PATH` environment variable: The value should be set to the path of a file containing the JSON configuration
+- A file containing the JSON configuration located at `./bencher.json`, relative to the server executable
+
+If no configuration is found, then a default configuration is loaded.
+
+To update the configuration while the server is running,
+an admin can use the CLI `bencher server config update` command
+which hits the [PUT `/v0/server/config`](/docs/reference/api) route.
+All updated configurations are saved to the `BENCHER_CONFIG` environment variable
+and on disk at `BENCHER_CONFIG_PATH`.
+
+Example JSON configuration:
+
 ```
 {
-  // This should be the URL for your Bencher UI
   "endpoint": "https://bencher.example.com",
-  // This is the key used to generate tokens
-  // IT SHOULD BE VERY SECURE!
-  "secret_key": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy",
   "server": {
-    // This is the default bind address
-    // This is what is expected in the Docker containers
     "bind_address": "0.0.0.0:61016",
-    // 1 megabyte or 1_048_576 bytes
     "request_body_max_bytes": 1048576,
-    // Optional: Server TLS
     "tls": {
-      "cert_file": "path/to/cert",
-      "key_file": "path/to/key"
+      "type": "as_file",
+      "cert_file": "/path/to/cert.pem",
+      "key_file": "/path/to/key.pem"
     }
   },
   "logging": {
     "name": "Bencher API",
-    // Log to either `stderr_terminal` or a `file`
     "log": {
       "stderr_terminal": {
-        // Options are: `trace`, `debug`, `info`, `warn`, `error`, and `critical`
         "level": "info"
       }
-      // OR
-      // "file": {
-      //   level: "info",
-      //   path: "path/to/file",
-      //   // Options are: `fail`, `truncate`, and `append`
-      //   if_exists: "append",
-      // }
     },
   },
   "database": {
-    // Path to the database file
     "file": "data/bencher.db",
-    // Optional: Remote data store for backups
     "data_store": {
-      // Options are only `aws_s3`
       "service": "aws_s3"
-      "access_key_id": "XXXXXXXXXXXXXXXX",
-      "secret_access_key": "XXXXXXXXXXXXXXXX",
-      // See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html
-      "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my_bucket/path/to/backup/dir"
+      "access_key_id": "ABC123DoRemMiABC123",
+      "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7",
+      "access_point": "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir"
     }
   },
-  // Optional: Configure email service
-  // Otherwise, all messages will be sent to the logs instead
   "smtp": {
-    "hostname": "emailservice.com",
-    "username": "abcdefg"
-    "secret": "XXXXXXXXXXXXXXXX",
+    "hostname": "mailbonobo.com",
+    "port": 25,
+    "username": "bencher"
+    "secret": "WM3F2u9cqSNdBPLfy9sJ5kk9",
     "from_name": "Bencher",
     "from_email": "info@bencher.example.com"
   }
 }
 ```
+
+## `root`
+
+| Name       | Example                                        | Default                 | Required | Description                                                                                                                                                                                                                                                                         |
+|:----------:|:----------------------------------------------:|:-----------------------:|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| endpoint   | "https://bencher.example.com"                  | "http://localhost:3000" | Yes      | Specifies the URL for your Bencher UI host.                                                                                                                                                                                                                                         |
+| secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | Random UUID v4          | Yes      | Specifies the the key used to generate all tokens. **IT SHOULD BE VERY SECURE!** The default value is a randomly generated [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)). Whenever logged, it will appear obfuscated as `************`. |
+
+# `server`
+
+| Name                   | Example                         | Default         | Required                    | Description                                                                                                                                                                                                                                                                                                 |
+|:----------------------:|:-------------------------------:|:---------------:|:---------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| bind_address           | "0.0.0.0:61016"                 | "0.0.0.0:61016" | Yes                         | Specifies that the server should bind to the given IP address and TCP port. In general, servers can bind to more than one IP address and port, but this is not (yet?) supported. Defaults to "127.0.0.1:0".                                                                                                 |
+| request_body_max_bytes | 1048576                         | 1048576         | Yes                         | Specifies the maximum number of bytes allowed in a request body. Larger requests will receive a 400 error. Defaults to 1024.                                                                                                                                                                                |
+| tls.type               | "as_file"                       | ---             | No                          | Specifies if and how TLS certificate and key information is provided. Valid values include "as_file" and "as_bytes".                                                                                                                                                                                          |
+| tls.cert_file          | "/path/to/cert.pem"             | ---             | Only if tls.type = as_file  | Specifies the path to a PEM file containing a  certificate chain for the server to identify itself with. The first certificate is the end-entity certificate, and the remaining are intermediate certificates on the way to a trusted CA. If specified, the server will only listen for TLS connections.    |
+| tls.key_file           | "/path/to/key.pem"              | ---             | Only if tls.type = as_file  | Specifies the path to a PEM-encoded PKCS #8 file containing the private key the server will use. If specified, the server will only listen for TLS connections.                                                                                                                                             |
+| tls.certs              | ---                             | ---             | Only if tls.type = as_bytes | Identical to tls.cert_file, but provided as an array of bytes of certificate data.                                                                                                                                                                                                                          |
+| tls.key                | ---                             | ---             | Only if tls.type = as_bytes | Identical to tls.key_file, but provided as an array of bytes of key data.                                                                                                                                                                                                                                   |
+
+[Dropshot server configuration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#dropshot-servers)
+
+
+## `logging`
+
+| Name          | Example           | Default           | Required                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|:-------------:|:-----------------:|:-----------------:|:-------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| name          | "Bencher API"     | "Bencher API"     | Yes                       | Specifies the name of the logger.                                                                                                                                                                                                                                                                                                                                                                                                |
+| log.mode      | "stderr_terminal" | "stderr_terminal" | Yes                       | Controls where server logging will go. Valid modes are "stderr-terminal" and "file". If the mode is `"stderr-terminal", human-readable output, with colors and other terminal formatting if possible, will be sent to stderr. If the mode is "file", Bunyan-format output will be sent to the filesystem path given by log.path. See also log.if_exists, which controls the behavior if the destination path already exists.     |
+| log.level     | "info"            | "info"            | Yes                       | Specifies what severity of log messages should be included in the log. Valid values include "trace", "debug", "info", "warn", "error", and "critical", which are increasing order of severity. Log messages at the specified level and more severe levels will be included in the log.                                                                                                                                           |
+| log.path      | ---               | ---               | Only if log.mode = "file" | If log.mode is "file", this property determines the path to the log file. See also log.if_exists.                                                                                                                                                                                                                                                                                                                                |
+| log.if_exists | ---               | ---               | Only if log.mode = "file" | If log.mode is "file", this property specifies what to do if the destination log file already exists. Valid values include "append" (which appends to the existing file), "truncate" (which truncates the existing file and then uses it as though it had just been created), and "fail" (which causes the server to exit immediately with an error).                                                                            |
+
+[Dropshot logging configuration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#logging)
+
+## `database`
+
+| Name                         | Example                                                                       | Default           | Required                              | Description                                                                                                                                                                                      |
+|:----------------------------:|:-----------------------------------------------------------------------------:|:-----------------:|:-------------------------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| file                         | "path/to/database.db"                                                         | "data/bencher.db" | Yes                                   | Controls where server database will go.                                                                                                                                                          |
+| data_store.service           | "aws_s3"                                                                      | ---               | No                                    | Specifies the remote data store service. Valid values are "aws_s3".                                                                                                                              |
+| data_store.access_key_id     | "ABC123DoRemMiABC123"                                                         | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the AWS access key ID. See also data_store.service.                                                                                    |
+| data_store.secret_access_key | "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7"                                 | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the AWS secret access key. See also data_store.service. Whenever logged, it will appear obfuscated as `************`.                  |
+| data_store.access_point      | "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket/path/to/backup/dir" | ---               | Only if data_store.service = "aws_s3" | If data_store.service = "aws_s3", this property specifies the [AWS S3 accesspoint](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html). See also data_store.service. |
+
+## `smtp`
+
+This section specifies an [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) service configuration.
+The entire section is optional.
+If not specified, all messages will be sent to `logging` instead.
+
+| Name       | Example                    | Default | Required | Description                                                                                                           |
+|:----------:|:--------------------------:|:-------:|:--------:|:---------------------------------------------------------------------------------------------------------------------:|
+| hostname   | "mailbonobo.com"           | ---     | Yes      | Specifies the SMTP hostname.                                                                                          |
+| port       | 25                         | 587     | No       | Specifies the SMTP port.                                                                                          |
+| username   | "bencher"                  | ---     | Yes      | Specifies the username at the SMTP host.                                                                              |
+| secret     | "WM3F2u9cqSNdBPLfy9sJ5kk9" | ---     | Yes      | Specifies the secret for the username at the SMTP host. Whenever logged, it will appear obfuscated as `************`. |
+| from_name  | "Bencher"                  | ---     | Yes      | Specifies the name that will appear in the from section of all emails.                                                |
+| from_email | "info@bencher.example.com" | ---     | Yes      | Spefifies the email that will appear in the from section of all emails.                                               |

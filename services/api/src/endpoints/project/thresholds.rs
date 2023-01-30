@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{
     project::threshold::{JsonNewThreshold, JsonThreshold},
     ResourceId,
@@ -50,7 +48,7 @@ pub struct DirPath {
     tags = ["projects", "thresholds"]
 }]
 pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -62,7 +60,7 @@ pub async fn dir_options(
     tags = ["projects", "thresholds"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonThreshold>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -120,7 +118,7 @@ async fn get_ls_inner(
     tags = ["projects", "thresholds"]
 }]
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
@@ -190,7 +188,7 @@ pub struct OnePath {
     tags = ["projects", "thresholds"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -202,7 +200,7 @@ pub async fn one_options(
     tags = ["projects", "thresholds"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();

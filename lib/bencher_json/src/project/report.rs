@@ -33,6 +33,11 @@ pub enum JsonAdapter {
     #[default]
     Magic,
     Json,
+    Cpp,
+    CppGoogle,
+    CppCatch2,
+    Go,
+    GoBench,
     Rust,
     RustBench,
     RustCriterion,

@@ -1,8 +1,31 @@
+use std::fmt;
+
+use bencher_json::BenchmarkName;
 use nom::{
     branch::alt, bytes::complete::tag, character::complete::digit1, combinator::map,
     multi::fold_many1, IResult,
 };
 use ordered_float::OrderedFloat;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer,
+};
+
+use crate::AdapterError;
+
+pub type NomError = nom::Err<nom::error::Error<String>>;
+
+pub fn nom_error<T>(input: T) -> NomError
+where
+    T: Into<String>,
+{
+    nom::Err::Error(nom::error::make_error(
+        input.into(),
+        nom::error::ErrorKind::Tag,
+    ))
+}
 
 pub fn time_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
 where
@@ -15,6 +38,7 @@ where
 pub enum Time {
     UInt64(u64),
     Float64(f64),
+    Decimal(Decimal),
 }
 
 impl From<u64> for Time {
@@ -29,16 +53,23 @@ impl From<f64> for Time {
     }
 }
 
+impl From<Decimal> for Time {
+    fn from(decimal: Decimal) -> Self {
+        Self::Decimal(decimal)
+    }
+}
+
 impl Time {
     fn as_f64(&self) -> f64 {
         match self {
             Self::UInt64(int) => *int as f64,
             Self::Float64(float) => *float,
+            Self::Decimal(decimal) => decimal.to_f64().unwrap_or_default(),
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Units {
     Pico,
     Nano,
@@ -66,9 +97,41 @@ pub fn parse_units(input: &str) -> IResult<&str, Units> {
         map(tag("ns"), |_| Units::Nano),
         map(tag("\u{3bc}s"), |_| Units::Micro),
         map(tag("\u{b5}s"), |_| Units::Micro),
+        map(tag("us"), |_| Units::Micro),
         map(tag("ms"), |_| Units::Milli),
         map(tag("s"), |_| Units::Sec),
     ))(input)
+}
+
+impl<'de> Deserialize<'de> for Units {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(UnitsVisitor)
+    }
+}
+
+struct UnitsVisitor;
+
+impl<'de> Visitor<'de> for UnitsVisitor {
+    type Value = Units;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a standard unit abbreviation")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        let (remainder, units) = parse_units(value).map_err(E::custom)?;
+        if remainder.is_empty() {
+            Ok(units)
+        } else {
+            Err(E::custom(AdapterError::BenchmarkUnits))
+        }
+    }
 }
 
 pub fn parse_u64(input: &str) -> IResult<&str, u64> {
@@ -122,4 +185,17 @@ where
 
     T::from_str(&number)
         .map_err(|_e| nom::Err::Error(nom::error::make_error("\0", nom::error::ErrorKind::Tag)))
+}
+
+pub fn parse_benchmark_name_chars(name_chars: &[char]) -> Result<BenchmarkName, NomError> {
+    let name: String = name_chars.iter().collect();
+    parse_benchmark_name(&name)
+}
+
+pub fn parse_benchmark_name(name: &str) -> Result<BenchmarkName, NomError> {
+    if let Ok(benchmark_name) = name.parse() {
+        Ok(benchmark_name)
+    } else {
+        Err(nom_error(name))
+    }
 }

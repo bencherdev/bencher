@@ -1,6 +1,6 @@
 import PageKind from "../page_kind";
 import ContinuousBenchmarking from "../../pages/explanation/ContinuousBenchmarking.mdx";
-import BranchManagement from "../../pages/explanation/BranchManagement.mdx";
+import BranchSelection from "../../pages/explanation/BranchSelection.mdx";
 import Talks from "../../pages/explanation/Talks.mdx";
 import Adapters from "../../pages/explanation/Adapters.mdx";
 
@@ -15,8 +15,8 @@ const Explanation = [
 		},
 	},
 	{
-		title: "Adapters",
-		slug: "adapters",
+		title: "CLI Adapters",
+		slug: "cli-adapters",
 		panel: {
 			kind: PageKind.MDX,
 			heading: (
@@ -28,16 +28,16 @@ const Explanation = [
 		},
 	},
 	{
-		title: "Branch Management",
-		slug: "branch-management",
+		title: "CLI Branch Selection",
+		slug: "cli-branch-selection",
 		panel: {
 			kind: PageKind.MDX,
 			heading: (
 				<>
-					Branch Management with <code>bencher run</code>
+					Branch Selection with <code>bencher run</code>
 				</>
 			),
-			content: <BranchManagement />,
+			content: <BranchSelection />,
 		},
 	},
 	{

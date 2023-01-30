@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
@@ -28,7 +26,7 @@ const CONFIG_RESOURCE: Resource = Resource::Config;
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsResponse, HttpError> {
+pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -37,9 +35,7 @@ pub async fn options(_rqctx: Arc<RequestContext<Context>>) -> Result<CorsRespons
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<ResponseOk<JsonConfig>, HttpError> {
+pub async fn get_one(rqctx: RequestContext<Context>) -> Result<ResponseOk<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::GetOne);
 
@@ -67,7 +63,7 @@ async fn get_one_inner(context: &Context, auth_user: &AuthUser) -> Result<JsonCo
     tags = ["server", "config"]
 }]
 pub async fn put(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -48,7 +46,7 @@ pub struct DirPath {
     tags = ["projects", "reports"]
 }]
 pub async fn dir_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -60,7 +58,7 @@ pub async fn dir_options(
     tags = ["projects", "reports"]
 }]
 pub async fn get_ls(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -127,7 +125,7 @@ async fn get_ls_inner(
 // already been submitted when X really happened before Y. For implementing git
 // bisect more complex logic will be required.
 pub async fn post(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
@@ -240,7 +238,7 @@ pub struct OnePath {
     tags = ["projects", "reports"]
 }]
 pub async fn one_options(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
@@ -252,7 +250,7 @@ pub async fn one_options(
     tags = ["projects", "reports"]
 }]
 pub async fn get_one(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
