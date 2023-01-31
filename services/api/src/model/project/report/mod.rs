@@ -130,6 +130,8 @@ const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
 const GO_INT: i32 = 40;
 const GO_BENCH_INT: i32 = 41;
+const JAVA_INT: i32 = 50;
+const JAVA_JMH_INT: i32 = 51;
 
 #[repr(i32)]
 pub enum Adapter {
@@ -143,6 +145,8 @@ pub enum Adapter {
     CppCatch2 = CPP_CATCH2_INT,
     Go = GO_INT,
     GoBench = GO_BENCH_INT,
+    Java = JAVA_INT,
+    JavaJmh = JAVA_JMH_INT,
 }
 
 impl TryFrom<i32> for Adapter {
@@ -160,6 +164,8 @@ impl TryFrom<i32> for Adapter {
             CPP_CATCH2_INT => Ok(Self::CppCatch2),
             GO_INT => Ok(Self::Go),
             GO_BENCH_INT => Ok(Self::GoBench),
+            JAVA_INT => Ok(Self::Java),
+            JAVA_JMH_INT => Ok(Self::JavaJmh),
             _ => Err(ApiError::AdapterInt(adapter)),
         }
     }
@@ -178,6 +184,8 @@ impl From<JsonAdapter> for Adapter {
             JsonAdapter::CppCatch2 => Self::CppCatch2,
             JsonAdapter::Go => Self::Go,
             JsonAdapter::GoBench => Self::GoBench,
+            JsonAdapter::Java => Self::Java,
+            JsonAdapter::JavaJmh => Self::JavaJmh,
         }
     }
 }
@@ -195,6 +203,8 @@ impl From<Adapter> for JsonAdapter {
             Adapter::CppCatch2 => Self::CppCatch2,
             Adapter::Go => Self::Go,
             Adapter::GoBench => Self::GoBench,
+            Adapter::Java => Self::Java,
+            Adapter::JavaJmh => Self::JavaJmh,
         }
     }
 }

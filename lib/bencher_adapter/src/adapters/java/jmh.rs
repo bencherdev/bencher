@@ -55,7 +55,6 @@ impl TryFrom<Jmh> for AdapterResults {
                 score_unit,
             } = primary_metric;
 
-            // Latency
             let metric_kind = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
                 if !slash_op.is_empty() {
                     return Err(AdapterError::BenchmarkUnits);
@@ -70,7 +69,6 @@ impl TryFrom<Jmh> for AdapterResults {
                     upper_bound: Some(value + variance),
                 };
                 AdapterMetricKind::Latency(json_metric)
-                // Throughput
             } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
                 if !ops_slash.is_empty() {
                     return Err(AdapterError::BenchmarkUnits);

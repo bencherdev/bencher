@@ -110,6 +110,10 @@ pub enum CliRunAdapter {
     Go,
     /// 🕳 Go Bench
     GoBench,
+    /// ☕️ Java
+    Java,
+    /// ☕️ Java JMH
+    JavaJmh,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench

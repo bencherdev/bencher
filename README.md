@@ -39,6 +39,8 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Catch2](https://github.com/catchorg/Catch2)
 - Go
   - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
+- Java
+  - [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh)
 - Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
