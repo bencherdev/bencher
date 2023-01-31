@@ -25,7 +25,7 @@ const AuthFormPage = (props: {
 	);
 
 	createEffect(() => {
-		if (validate_jwt(props.user().token)) {
+		if (validate_jwt(props.user.token)) {
 			navigate("/console");
 		}
 

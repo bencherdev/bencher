@@ -14,7 +14,7 @@ export interface Props {
 }
 
 export const Navbar = (props) => {
-	const is_valid_jwt = createMemo(() => validate_jwt(props.user()?.token));
+	const is_valid_jwt = createMemo(() => validate_jwt(props.user.token));
 	const [burger, setBurger] = createSignal(false);
 
 	return (
@@ -88,7 +88,7 @@ export const Navbar = (props) => {
 						<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
 						<div class="navbar-item" />
 						<div class="buttons">
-							{props.user()?.token === null ? (
+							{props.user?.token === null ? (
 								<>
 									<Link class="button is-light" href="/auth/login">
 										Log in

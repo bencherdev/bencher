@@ -178,7 +178,7 @@ const PerfPanel = (props) => {
 		return {
 			perf_query: perf_query(),
 			refresh: refresh(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 
@@ -207,7 +207,7 @@ const PerfPanel = (props) => {
 		return {
 			project_slug: props.path_params().project_slug,
 			refresh: refresh(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 

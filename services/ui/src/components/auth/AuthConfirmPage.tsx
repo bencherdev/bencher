@@ -17,7 +17,7 @@ const TOKEN_PARAM = "token";
 
 const AuthConfirmPage = (props: {
 	config: any;
-	user: Function;
+	user: any;
 	handleUser: Function;
 }) => {
 	const navigate = useNavigate();
@@ -90,7 +90,7 @@ const AuthConfirmPage = (props: {
 	};
 
 	createEffect(() => {
-		if (validate_jwt(props.user()?.token)) {
+		if (validate_jwt(props.user?.token)) {
 			navigate("/console");
 		}
 

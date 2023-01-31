@@ -12,7 +12,7 @@ const ConsoleMenu = (props) => {
 	};
 
 	const getUsersPath = (section: string) => {
-		return `/console/users/${props.user()?.user?.slug}/${section}`;
+		return `/console/users/${props.user?.user?.slug}/${section}`;
 	};
 
 	return (

@@ -25,7 +25,7 @@ const TablePanel = (props) => {
 		return {
 			refresh: refresh(),
 			page: page(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 

@@ -31,7 +31,7 @@ const ProjectSelect = (props) => {
 		};
 
 		try {
-			const token = props.user()?.token;
+			const token = props.user?.token;
 			if (!validate_jwt(token)) {
 				return [ALL_PROJECTS];
 			}

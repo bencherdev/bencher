@@ -8,19 +8,19 @@ const PlotKey = (props) => {
 	const branches_fetcher = createMemo(() => {
 		return {
 			branches: props.branches(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 	const testbeds_fetcher = createMemo(() => {
 		return {
 			testbeds: props.testbeds(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 	const benchmarks_fetcher = createMemo(() => {
 		return {
 			benchmarks: props.benchmarks(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 

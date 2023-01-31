@@ -6,7 +6,7 @@ const LandingPage = (props) => {
 	const navigate = useNavigate();
 
 	createEffect(() => {
-		if (validate_jwt(props.user().token)) {
+		if (validate_jwt(props.user.token)) {
 			navigate("/console");
 		}
 

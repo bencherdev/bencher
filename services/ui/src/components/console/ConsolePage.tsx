@@ -54,8 +54,8 @@ const ConsolePage = (props) => {
 	const fetchProject = async (project_slug: string) => {
 		const EMPTY_OBJECT = {};
 		try {
-			const token = props.user()?.token;
-			if (!validate_jwt(props.user()?.token)) {
+			const token = props.user?.token;
+			if (!validate_jwt(props.user?.token)) {
 				return EMPTY_OBJECT;
 			}
 
@@ -70,7 +70,7 @@ const ConsolePage = (props) => {
 	const [project] = createResource(props.project_slug, fetchProject);
 
 	createEffect(() => {
-		// if (!validate_jwt(props.user()?.token)) {
+		// if (!validate_jwt(props.user?.token)) {
 		//   navigate("/auth/login");
 		// }
 

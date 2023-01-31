@@ -6,7 +6,7 @@ const Radio = (props) => {
 	const radioFetcher = createMemo(() => {
 		return {
 			url: props.config?.url(props.path_params()),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 

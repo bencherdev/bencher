@@ -127,7 +127,7 @@ const UpdateCard = (props) => {
 
 	const patch = async (data) => {
 		try {
-			const token = props.user()?.token;
+			const token = props.user?.token;
 			if (!validate_jwt(token)) {
 				return;
 			}

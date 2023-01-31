@@ -45,8 +45,8 @@ const Poster = (props) => {
 
 	const post = async (data: {}) => {
 		try {
-			const token = props.user()?.token;
-			if (!validate_jwt(props.user()?.token)) {
+			const token = props.user?.token;
+			if (!validate_jwt(props.user?.token)) {
 				return;
 			}
 

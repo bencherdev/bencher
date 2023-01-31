@@ -16,7 +16,7 @@ const DeckPanel = (props) => {
 	const getOne = async () => {
 		const EMPTY_OBJECT = {};
 		try {
-			const token = props.user()?.token;
+			const token = props.user?.token;
 			if (!validate_jwt(token)) {
 				return EMPTY_OBJECT;
 			}

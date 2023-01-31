@@ -7,6 +7,7 @@ import { Navbar } from "./components/site/navbar/Navbar";
 import Footer from "./components/site/pages/Footer";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_USER_KEY, validate_user } from "./components/site/util";
+import { createStore } from "solid-js/store";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -52,7 +53,7 @@ const App: Component = () => {
 		projectSlug(pathname),
 	);
 
-	const [user, setUser] = createSignal(loadUser());
+	const [user, setUser] = createStore(loadUser());
 
 	const handleUser = (user): boolean => {
 		if (validate_user(user)) {

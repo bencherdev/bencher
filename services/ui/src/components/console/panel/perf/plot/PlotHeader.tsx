@@ -14,7 +14,7 @@ const PlotHeader = (props) => {
 	const metric_kinds_fetcher = createMemo(() => {
 		return {
 			refresh: props.refresh(),
-			token: props.user()?.token,
+			token: props.user?.token,
 		};
 	});
 

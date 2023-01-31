@@ -23,7 +23,7 @@ const LinePlot = (props) => {
 				props.path_params(),
 				perf_data.metric_kind,
 			);
-			const resp = await axios(get_options(url, props.user()?.token));
+			const resp = await axios(get_options(url, props.user?.token));
 			return resp.data?.units;
 		} catch (error) {
 			console.error(error);
