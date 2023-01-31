@@ -33,7 +33,6 @@ pub struct Jmh(pub Vec<Benchmark>);
 #[serde(rename_all = "camelCase")]
 pub struct Benchmark {
     pub benchmark: BenchmarkName,
-    pub jvm_args: Vec<String>,
     pub primary_metric: PrimaryMetric,
     pub secondary_metrics: JsonEmpty,
 }
@@ -43,16 +42,15 @@ pub struct Benchmark {
 pub struct PrimaryMetric {
     pub score: Decimal,
     pub score_error: Decimal,
-    pub score_confidence: [Decimal; 2],
-    pub score_percentiles: JsonEmpty,
     pub score_unit: String,
-    pub raw_data: Vec<Vec<Decimal>>,
 }
 
 impl TryFrom<Jmh> for AdapterResults {
     type Error = AdapterError;
 
     fn try_from(jmh: Jmh) -> Result<Self, Self::Error> {
+        println!("{jmh:#?}");
+
         let mut benchmark_metrics = Vec::with_capacity(jmh.0.len());
         for benchmark in jmh.0 {
             let Benchmark {
@@ -64,7 +62,6 @@ impl TryFrom<Jmh> for AdapterResults {
                 score,
                 score_error,
                 score_unit,
-                ..
             } = primary_metric;
 
             // Latency
@@ -126,8 +123,24 @@ pub(crate) mod test_java_jmh {
     }
 
     #[test]
-    fn test_adapter_java_jmh_one() {
-        let results = convert_java_jmh("one");
+    fn test_adapter_java_jmh_latency() {
+        let results = convert_java_jmh("latency");
+        assert_eq!(results.inner.len(), 1);
+
+        let metrics = results
+            .get("org.openjdk.jmh.samples.JMHSample_01_HelloWorld.wellHelloThere")
+            .unwrap();
+        validate_latency(
+            metrics,
+            3.3762388731228186e18,
+            Some(3.3619508873788826e18),
+            Some(3.3905268588667546e18),
+        );
+    }
+
+    #[test]
+    fn test_adapter_java_jmh_throughput() {
+        let results = convert_java_jmh("throughput");
         assert_eq!(results.inner.len(), 1);
 
         let metrics = results
@@ -142,7 +155,7 @@ pub(crate) mod test_java_jmh {
     }
 
     #[test]
-    fn test_adapter_java_jmh() {
+    fn test_adapter_java_jmh_six() {
         let results = convert_java_jmh("six");
         validate_adapter_java_jmh(results);
     }
@@ -150,25 +163,29 @@ pub(crate) mod test_java_jmh {
     pub fn validate_adapter_java_jmh(results: AdapterResults) {
         assert_eq!(results.inner.len(), 6);
 
-        let metrics = results.get("BenchmarkFib10-8").unwrap();
-        validate_latency(metrics, 325.0, None, None);
-
-        let metrics = results.get("BenchmarkFib20").unwrap();
-        validate_latency(metrics, 40_537.123, None, None);
+        let metrics = results
+            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey")
+            .unwrap();
+        validate_throughput(metrics, 325.0, None, None);
 
         let metrics = results
-            .get("BenchmarkFib/my_tabled_benchmark_-_10-8")
+            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey")
             .unwrap();
-        validate_latency(metrics, 325.0, None, None);
+        validate_throughput(metrics, 40_537.123, None, None);
 
         let metrics = results
-            .get("BenchmarkFib/my_tabled_benchmark_-_20")
+            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey")
             .unwrap();
-        validate_latency(metrics, 40_537.123, None, None);
+        validate_throughput(metrics, 325.0, None, None);
 
         let metrics = results
-            .get("BenchmarkFib/my/tabled/benchmark_-_20")
+            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread")
             .unwrap();
-        validate_latency(metrics, 40_537.456, None, None);
+        validate_throughput(metrics, 40_537.123, None, None);
+
+        let metrics = results
+            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread")
+            .unwrap();
+        validate_throughput(metrics, 40_537.456, None, None);
     }
 }
