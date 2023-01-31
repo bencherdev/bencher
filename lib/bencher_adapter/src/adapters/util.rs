@@ -34,11 +34,11 @@ where
     (time.into().as_f64() * units.as_nanos()).into()
 }
 
-pub fn throughput_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
+pub fn throughput_as_secs<T>(time: T, units: Units) -> OrderedFloat<f64>
 where
     T: Into<Time>,
 {
-    (time.into().as_f64() / units.as_nanos()).into()
+    (time.into().as_f64() / units.as_secs()).into()
 }
 
 #[derive(Clone, Copy)]
@@ -94,6 +94,17 @@ impl Units {
             Self::Micro => 1_000.0,
             Self::Milli => 1_000_000.0,
             Self::Sec => 1_000_000_000.0,
+        }
+    }
+
+    #[allow(clippy::float_arithmetic)]
+    pub fn as_secs(&self) -> f64 {
+        match self {
+            Self::Pico => 1.0 / 1_000_000_000_000.0,
+            Self::Nano => 1.0 / 1_000_000_000.0,
+            Self::Micro => 1.0 / 1_000_000.0,
+            Self::Milli => 1.0 / 1_000.0,
+            Self::Sec => 1.0,
         }
     }
 }

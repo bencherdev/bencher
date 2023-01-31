@@ -45,7 +45,7 @@ static THROUGHPUT_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
             .expect("Failed to parse metric kind slug."),
     )
 });
-pub const THROUGHPUT_UNITS_STR: &str = "operations / nanoseconds (ops/ns)";
+pub const THROUGHPUT_UNITS_STR: &str = "operations / second (ops/s)";
 #[allow(clippy::expect_used)]
 static THROUGHPUT_UNITS: Lazy<NonEmpty> = Lazy::new(|| {
     THROUGHPUT_UNITS_STR

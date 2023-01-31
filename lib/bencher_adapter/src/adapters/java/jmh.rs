@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
-    adapters::util::{latency_as_nanos, throughput_as_nanos},
+    adapters::util::{latency_as_nanos, throughput_as_secs},
     results::adapter_results::{AdapterMetricKind, AdapterResults},
     Adapter, AdapterError,
 };
@@ -77,8 +77,8 @@ impl TryFrom<Jmh> for AdapterResults {
                 }
 
                 let time_unit = unit.parse()?;
-                let value = throughput_as_nanos(score, time_unit);
-                let variance = throughput_as_nanos(score_error, time_unit);
+                let value = throughput_as_secs(score, time_unit);
+                let variance = throughput_as_secs(score_error, time_unit);
                 let json_metric = JsonMetric {
                     value,
                     lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
@@ -138,9 +138,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            3.3762388731228183,
-            Some(3.361950887378882),
-            Some(3.3905268588667545),
+            3376238873.1228185,
+            Some(3361950887.3788824),
+            Some(3390526858.8667545),
         );
     }
 
@@ -158,9 +158,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            0.15252013234402195,
-            Some(0.14899981156545883),
-            Some(0.15604045312258508),
+            152520132.34402195,
+            Some(148999811.56545883),
+            Some(156040453.12258506),
         );
 
         let metrics = results
@@ -168,9 +168,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            0.02994571861137783,
-            Some(0.02866875696203928),
-            Some(0.031222680260716378),
+            29945718.61137783,
+            Some(28668756.96203928),
+            Some(31222680.260716382),
         );
 
         let metrics = results
@@ -178,9 +178,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            0.007828947712794045,
+            7828947.712794046,
             Some(0.0),
-            Some(0.0174936806380535),
+            Some(17493680.6380535),
         );
 
         let metrics = results
@@ -188,9 +188,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            0.07581321887869738,
-            Some(0.06963289928708484),
-            Some(0.08199353847030992),
+            75813218.87869738,
+            Some(69632899.28708484),
+            Some(81993538.47030993),
         );
 
         let metrics = results
@@ -198,9 +198,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            0.03270998476377125,
-            Some(0.030019340461257937),
-            Some(0.03540062906628457),
+            32709984.76377125,
+            Some(30019340.461257935),
+            Some(35400629.06628457),
         );
 
         let metrics = results
@@ -208,9 +208,9 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            0.11364091667262992,
-            Some(0.10517632197352053),
-            Some(0.1221055113717393),
+            113640916.67262992,
+            Some(105176321.97352053),
+            Some(122105511.37173931),
         );
     }
 }
