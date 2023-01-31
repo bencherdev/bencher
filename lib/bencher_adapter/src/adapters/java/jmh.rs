@@ -57,7 +57,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
             let metric_kind = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
                 if !slash_op.is_empty() {
-                    return Err(AdapterError::BenchmarkUnits);
+                    return Err(AdapterError::BenchmarkUnits(slash_op.into()));
                 }
 
                 let time_unit = unit.parse()?;
@@ -71,7 +71,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                 AdapterMetricKind::Latency(json_metric)
             } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
                 if !ops_slash.is_empty() {
-                    return Err(AdapterError::BenchmarkUnits);
+                    return Err(AdapterError::BenchmarkUnits(ops_slash.into()));
                 }
 
                 let time_unit = unit.parse()?;
@@ -84,7 +84,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
                 };
                 AdapterMetricKind::Throughput(json_metric)
             } else {
-                return Err(AdapterError::BenchmarkUnits);
+                return Err(AdapterError::BenchmarkUnits(score_unit));
             };
 
             benchmark_metrics.push((benchmark_name, metric_kind));

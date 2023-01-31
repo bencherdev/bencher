@@ -59,10 +59,6 @@ impl TryFrom<DotNet> for Option<AdapterResults> {
             } = primary_metric;
 
             let metric_kind = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
-                if !slash_op.is_empty() {
-                    return Err(AdapterError::BenchmarkUnits);
-                }
-
                 let time_unit = unit.parse()?;
                 let value = latency_as_nanos(score, time_unit);
                 let variance = latency_as_nanos(score_error, time_unit);
@@ -73,10 +69,6 @@ impl TryFrom<DotNet> for Option<AdapterResults> {
                 };
                 AdapterMetricKind::Latency(json_metric)
             } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
-                if !ops_slash.is_empty() {
-                    return Err(AdapterError::BenchmarkUnits);
-                }
-
                 let time_unit = unit.parse()?;
                 let value = throughput_as_secs(score, time_unit);
                 let variance = throughput_as_secs(score_error, time_unit);
@@ -87,7 +79,7 @@ impl TryFrom<DotNet> for Option<AdapterResults> {
                 };
                 AdapterMetricKind::Throughput(json_metric)
             } else {
-                return Err(AdapterError::BenchmarkUnits);
+                todo!()
             };
 
             benchmark_metrics.push((benchmark_name, metric_kind));
