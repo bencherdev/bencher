@@ -1,4 +1,5 @@
 import { Link } from "solid-app-router";
+import { createMemo, createSignal } from "solid-js";
 import {
 	BENCHER_GITHUB_URL,
 	BENCHER_LOGO_URL,
@@ -13,6 +14,9 @@ export interface Props {
 }
 
 export const Navbar = (props) => {
+	const is_valid_jwt = createMemo(() => validate_jwt(props.user()?.token));
+	const [burger, setBurger] = createSignal(false);
+
 	return (
 		<nav class="navbar" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
@@ -25,49 +29,48 @@ export const Navbar = (props) => {
 					/>
 				</Link>
 
-				<a
-					role="button"
-					class="navbar-burger"
+				<button
+					class={`navbar-burger ${burger() && "is-active"}`}
 					aria-label="menu"
 					aria-expanded="false"
-					data-target="bencherNavbar"
-					onClick={() => {
-						let toggle = document.querySelector(".navbar-burger");
-						let menu = document.querySelector(".navbar-menu");
-						toggle.classList.toggle("is-active");
-						menu.classList.toggle("is-active");
-					}}
+					onClick={() => setBurger(!burger())}
 				>
 					<span aria-hidden="true" />
 					<span aria-hidden="true" />
 					<span aria-hidden="true" />
-				</a>
+				</button>
 			</div>
 
-			<div id="navbarBasicExample" class="navbar-menu">
+			<div class={`navbar-menu ${burger() && "is-active"}`}>
 				<div class="navbar-start">
-					{!validate_jwt(props.user()?.token) && (
-						<a class="navbar-item" href="/pricing">
-							Pricing
-						</a>
-					)}
 					<a class="navbar-item" href="/docs">
 						Docs
 					</a>
-					{!validate_jwt(props.user()?.token) && (
+					{is_valid_jwt() ? (
+						<a class="navbar-item" href="/perf">
+							Public Projects
+						</a>
+					) : (
 						<a class="navbar-item" href="/perf">
 							Projects
 						</a>
 					)}
-					<a
-						class="navbar-item"
-						href={BENCHER_GITHUB_URL}
-						target="_blank"
-						rel="noreferrer"
-					>
-						GitHub
-					</a>
-					{validate_jwt(props.user()?.token) && props.organization_slug() && (
+					{!is_valid_jwt() && (
+						<a class="navbar-item" href="/pricing">
+							Pricing
+						</a>
+					)}
+					{!is_valid_jwt() && (
+						<a
+							class="navbar-item"
+							href={BENCHER_GITHUB_URL}
+							target="_blank"
+							rel="noreferrer"
+						>
+							GitHub
+						</a>
+					)}
+					{is_valid_jwt() && props.organization_slug() && (
 						<div class="navbar-item">
 							<ProjectSelect
 								user={props.user}
