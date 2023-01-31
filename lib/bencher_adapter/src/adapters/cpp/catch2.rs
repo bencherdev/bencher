@@ -133,7 +133,7 @@ pub(crate) mod test_cpp_catch2 {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_metrics},
+        adapters::test_util::{convert_file_path, validate_latency},
         AdapterResults,
     };
 
@@ -185,16 +185,16 @@ pub(crate) mod test_cpp_catch2 {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("Fibonacci 10").unwrap();
-        validate_metrics(metrics, 344.0, Some(341.0), Some(349.0));
+        validate_latency(metrics, 344.0, Some(341.0), Some(349.0));
 
         let metrics = results.get("Fibonacci 20").unwrap();
-        validate_metrics(metrics, 41731.0, Some(41250.0), Some(42622.0));
+        validate_latency(metrics, 41731.0, Some(41250.0), Some(42622.0));
 
         let metrics = results.get("Fibonacci~ 5!").unwrap();
-        validate_metrics(metrics, 36.0, Some(35.0), Some(37.0));
+        validate_latency(metrics, 36.0, Some(35.0), Some(37.0));
 
         let metrics = results.get("Fibonacci-15_bench").unwrap();
-        validate_metrics(metrics, 3789.0, Some(3734.0), Some(3888.0));
+        validate_latency(metrics, 3789.0, Some(3734.0), Some(3888.0));
     }
 
     #[test]
@@ -203,9 +203,9 @@ pub(crate) mod test_cpp_catch2 {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("Fibonacci 10").unwrap();
-        validate_metrics(metrics, 0.0, Some(0.0), Some(0.0));
+        validate_latency(metrics, 0.0, Some(0.0), Some(0.0));
 
         let metrics = results.get("Fibonacci 20").unwrap();
-        validate_metrics(metrics, 1.0, Some(1.0), Some(1.0));
+        validate_latency(metrics, 1.0, Some(1.0), Some(1.0));
     }
 }

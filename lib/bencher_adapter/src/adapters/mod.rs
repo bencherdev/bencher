@@ -18,7 +18,7 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 
 #[cfg(test)]
 pub(crate) mod test_util {
-    use bencher_json::project::metric_kind::LATENCY_SLUG_STR;
+    use bencher_json::project::metric_kind::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -36,7 +36,7 @@ pub(crate) mod test_util {
         A::parse(&contents).unwrap_or_else(|e| panic!("Failed to convert contents {contents}: {e}"))
     }
 
-    pub fn validate_metrics(
+    pub fn validate_latency(
         metrics: &AdapterMetrics,
         value: f64,
         lower_bound: Option<f64>,
@@ -44,6 +44,19 @@ pub(crate) mod test_util {
     ) {
         assert_eq!(metrics.inner.len(), 1);
         let metric = metrics.get(LATENCY_SLUG_STR).unwrap();
+        assert_eq!(metric.value, OrderedFloat::from(value));
+        assert_eq!(metric.lower_bound, lower_bound.map(OrderedFloat::from));
+        assert_eq!(metric.upper_bound, upper_bound.map(OrderedFloat::from));
+    }
+
+    pub fn validate_throughput(
+        metrics: &AdapterMetrics,
+        value: f64,
+        lower_bound: Option<f64>,
+        upper_bound: Option<f64>,
+    ) {
+        assert_eq!(metrics.inner.len(), 1);
+        let metric = metrics.get(THROUGHPUT_SLUG_STR).unwrap();
         assert_eq!(metric.value, OrderedFloat::from(value));
         assert_eq!(metric.lower_bound, lower_bound.map(OrderedFloat::from));
         assert_eq!(metric.upper_bound, upper_bound.map(OrderedFloat::from));

@@ -82,7 +82,7 @@ pub(crate) mod test_rust_bench {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_metrics},
+        adapters::test_util::{convert_file_path, validate_latency},
         Adapter, AdapterResults,
     };
 
@@ -95,7 +95,7 @@ pub(crate) mod test_rust_bench {
 
     fn validate_bench_metrics(results: &AdapterResults, key: &str) {
         let metrics = results.get(key).unwrap();
-        validate_metrics(metrics, 3_161.0, Some(2_186.0), Some(4_136.0));
+        validate_latency(metrics, 3_161.0, Some(2_186.0), Some(4_136.0));
     }
 
     #[test]
@@ -168,15 +168,15 @@ pub(crate) mod test_rust_bench {
 
         let number = 1_000.0;
         let metrics = results.get("tests::one_digit").unwrap();
-        validate_metrics(metrics, number, Some(0.0), Some(2000.0));
+        validate_latency(metrics, number, Some(0.0), Some(2000.0));
 
         let number = 22_000_000.0;
         let metrics = results.get("tests::two_digit").unwrap();
-        validate_metrics(metrics, number, Some(0.0), Some(44_000_000.0));
+        validate_latency(metrics, number, Some(0.0), Some(44_000_000.0));
 
         let number = 333_000_000_000.0;
         let metrics = results.get("tests::three_digit").unwrap();
-        validate_metrics(metrics, number, Some(0.0), Some(666_000_000_000.0));
+        validate_latency(metrics, number, Some(0.0), Some(666_000_000_000.0));
     }
 
     #[test]
@@ -194,9 +194,9 @@ pub(crate) mod test_rust_bench {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("tests::benchmark_a").unwrap();
-        validate_metrics(metrics, 3_296.0, Some(2_775.0), Some(3_817.0));
+        validate_latency(metrics, 3_296.0, Some(2_775.0), Some(3_817.0));
 
         let metrics = results.get("tests::benchmark_c").unwrap();
-        validate_metrics(metrics, 3_215.0, Some(2_859.0), Some(3_571.0));
+        validate_latency(metrics, 3_215.0, Some(2_859.0), Some(3_571.0));
     }
 }

@@ -65,7 +65,7 @@ pub(crate) mod test_cpp_google {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_metrics},
+        adapters::test_util::{convert_file_path, validate_latency},
         AdapterResults,
     };
 
@@ -86,9 +86,9 @@ pub(crate) mod test_cpp_google {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("fib_10").unwrap();
-        validate_metrics(metrics, 214.98980114547953, None, None);
+        validate_latency(metrics, 214.98980114547953, None, None);
 
         let metrics = results.get("fib_20").unwrap();
-        validate_metrics(metrics, 27_455.600415007055, None, None);
+        validate_latency(metrics, 27_455.600415007055, None, None);
     }
 }

@@ -103,7 +103,7 @@ pub(crate) mod test_rust_criterion {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_metrics},
+        adapters::test_util::{convert_file_path, validate_latency},
         Adapter, AdapterResults,
     };
 
@@ -177,19 +177,19 @@ pub(crate) mod test_rust_criterion {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("file").unwrap();
-        validate_metrics(metrics, 0.32389999999999997, Some(0.32062), Some(0.32755));
+        validate_latency(metrics, 0.32389999999999997, Some(0.32062), Some(0.32755));
 
         let metrics = results.get("rolling_file").unwrap();
-        validate_metrics(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328));
+        validate_latency(metrics, 0.42966000000000004, Some(0.38179), Some(0.48328));
 
         let metrics = results.get("tracing_file").unwrap();
-        validate_metrics(metrics, 18019.0, Some(16652.0), Some(19562.0));
+        validate_latency(metrics, 18019.0, Some(16652.0), Some(19562.0));
 
         let metrics = results.get("tracing_rolling_file").unwrap();
-        validate_metrics(metrics, 20930.0, Some(18195.0), Some(24240.0));
+        validate_latency(metrics, 20930.0, Some(18195.0), Some(24240.0));
 
         let metrics = results.get("benchmark: name with spaces").unwrap();
-        validate_metrics(metrics, 20.930, Some(18.195), Some(24.240));
+        validate_latency(metrics, 20.930, Some(18.195), Some(24.240));
     }
 
     #[test]
@@ -205,7 +205,7 @@ pub(crate) mod test_rust_criterion {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("JsonAdapter::Magic (JSON)").unwrap();
-        validate_metrics(
+        validate_latency(
             metrics,
             3463.2000000000003,
             Some(3462.2999999999997),
@@ -213,12 +213,12 @@ pub(crate) mod test_rust_criterion {
         );
 
         let metrics = results.get("JsonAdapter::Json").unwrap();
-        validate_metrics(metrics, 3479.6, Some(3479.2999999999997), Some(3480.0));
+        validate_latency(metrics, 3479.6, Some(3479.2999999999997), Some(3480.0));
 
         let metrics = results.get("JsonAdapter::Magic (Rust)").unwrap();
-        validate_metrics(metrics, 14726.0, Some(14721.0), Some(14730.0));
+        validate_latency(metrics, 14726.0, Some(14721.0), Some(14730.0));
 
         let metrics = results.get("JsonAdapter::Rust").unwrap();
-        validate_metrics(metrics, 14884.0, Some(14881.0), Some(14887.0));
+        validate_latency(metrics, 14884.0, Some(14881.0), Some(14887.0));
     }
 }

@@ -70,7 +70,7 @@ pub(crate) mod test_go_bench {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_metrics},
+        adapters::test_util::{convert_file_path, validate_latency},
         AdapterResults,
     };
 
@@ -172,24 +172,24 @@ pub(crate) mod test_go_bench {
         assert_eq!(results.inner.len(), 5);
 
         let metrics = results.get("BenchmarkFib10-8").unwrap();
-        validate_metrics(metrics, 325.0, None, None);
+        validate_latency(metrics, 325.0, None, None);
 
         let metrics = results.get("BenchmarkFib20").unwrap();
-        validate_metrics(metrics, 40_537.123, None, None);
+        validate_latency(metrics, 40_537.123, None, None);
 
         let metrics = results
             .get("BenchmarkFib/my_tabled_benchmark_-_10-8")
             .unwrap();
-        validate_metrics(metrics, 325.0, None, None);
+        validate_latency(metrics, 325.0, None, None);
 
         let metrics = results
             .get("BenchmarkFib/my_tabled_benchmark_-_20")
             .unwrap();
-        validate_metrics(metrics, 40_537.123, None, None);
+        validate_latency(metrics, 40_537.123, None, None);
 
         let metrics = results
             .get("BenchmarkFib/my/tabled/benchmark_-_20")
             .unwrap();
-        validate_metrics(metrics, 40_537.456, None, None);
+        validate_latency(metrics, 40_537.456, None, None);
     }
 }

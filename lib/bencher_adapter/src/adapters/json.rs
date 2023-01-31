@@ -14,7 +14,7 @@ pub(crate) mod test_json {
 
     use super::AdapterJson;
     use crate::{
-        adapters::test_util::{convert_file_path, validate_metrics},
+        adapters::test_util::{convert_file_path, validate_latency},
         results::adapter_results::AdapterResults,
     };
 
@@ -33,12 +33,12 @@ pub(crate) mod test_json {
         assert_eq!(results.inner.len(), 3);
 
         let metrics = results.get("tests::benchmark_a").unwrap();
-        validate_metrics(metrics, 3247.0, Some(1044.0), Some(1044.0));
+        validate_latency(metrics, 3247.0, Some(1044.0), Some(1044.0));
 
         let metrics = results.get("tests::benchmark_b").unwrap();
-        validate_metrics(metrics, 3443.0, Some(2275.0), Some(2275.0));
+        validate_latency(metrics, 3443.0, Some(2275.0), Some(2275.0));
 
         let metrics = results.get("tests::benchmark_c").unwrap();
-        validate_metrics(metrics, 3361.0, Some(1093.0), Some(1093.0));
+        validate_latency(metrics, 3361.0, Some(1093.0), Some(1093.0));
     }
 }
