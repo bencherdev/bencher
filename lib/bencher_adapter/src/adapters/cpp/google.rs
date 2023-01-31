@@ -56,7 +56,7 @@ impl TryFrom<Google> for AdapterResults {
             benchmark_metrics.push((name, json_metric));
         }
 
-        benchmark_metrics.try_into()
+        AdapterResults::new_latency(benchmark_metrics)
     }
 }
 

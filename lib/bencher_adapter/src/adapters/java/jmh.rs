@@ -78,7 +78,7 @@ impl TryFrom<Jmh> for AdapterResults {
             benchmark_metrics.push((benchmark_name, json_metric));
         }
 
-        benchmark_metrics.try_into()
+        AdapterResults::new_latency(benchmark_metrics)
     }
 }
 

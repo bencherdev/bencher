@@ -34,7 +34,7 @@ impl Adapter for AdapterRustCriterion {
             prior_line = Some(line);
         }
 
-        benchmark_metrics.try_into()
+        AdapterResults::new_latency(benchmark_metrics)
     }
 }
 

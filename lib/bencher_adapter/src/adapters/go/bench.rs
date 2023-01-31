@@ -29,7 +29,7 @@ impl Adapter for AdapterGoBench {
             }
         }
 
-        benchmark_metrics.try_into()
+        AdapterResults::new_latency(benchmark_metrics)
     }
 }
 

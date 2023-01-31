@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::AdapterError;
 
-use super::{adapter_metrics::AdapterMetrics, CombinedKind, LATENCY_RESOURCE_ID};
+use super::{
+    adapter_metrics::AdapterMetrics, CombinedKind, LATENCY_RESOURCE_ID, THROUGHPUT_RESOURCE_ID,
+};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdapterResults {
@@ -22,28 +24,47 @@ impl From<ResultsMap> for AdapterResults {
     }
 }
 
-impl TryFrom<Vec<(BenchmarkName, JsonMetric)>> for AdapterResults {
-    type Error = AdapterError;
-
-    fn try_from(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Result<Self, Self::Error> {
-        let mut results_map = HashMap::new();
-        for (benchmark_name, metric) in benchmark_metrics {
-            results_map.insert(
-                benchmark_name,
-                AdapterMetrics {
-                    inner: hmap! {
-                        LATENCY_RESOURCE_ID.clone() => metric
-                    },
-                },
-            );
-        }
-        Ok(results_map.into())
-    }
+pub enum AdapterMetricKind {
+    Latency(JsonMetric),
+    Throughput(JsonMetric),
 }
 
 impl AdapterResults {
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
+    pub fn new(
+        benchmark_metrics: Vec<(BenchmarkName, AdapterMetricKind)>,
+    ) -> Result<Self, AdapterError> {
+        let mut results_map = HashMap::new();
+        for (benchmark_name, metric_kind) in benchmark_metrics {
+            let adapter_metrics = AdapterMetrics {
+                inner: match metric_kind {
+                    AdapterMetricKind::Latency(json_metric) => {
+                        hmap! {
+                            LATENCY_RESOURCE_ID.clone() => json_metric
+                        }
+                    },
+                    AdapterMetricKind::Throughput(json_metric) => {
+                        hmap! {
+                            THROUGHPUT_RESOURCE_ID.clone() => json_metric
+                        }
+                    },
+                },
+            };
+            results_map.insert(benchmark_name, adapter_metrics);
+        }
+        Ok(results_map.into())
+    }
+
+    pub fn new_latency(
+        benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>,
+    ) -> Result<Self, AdapterError> {
+        Self::new(
+            benchmark_metrics
+                .into_iter()
+                .map(|(benchmark_name, json_metric)| {
+                    (benchmark_name, AdapterMetricKind::Latency(json_metric))
+                })
+                .collect(),
+        )
     }
 
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
@@ -63,6 +84,10 @@ impl AdapterResults {
 
     pub fn get(&self, key: &str) -> Option<&AdapterMetrics> {
         self.inner.get(&BenchmarkName::from_str(key).ok()?)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
     }
 }
 
