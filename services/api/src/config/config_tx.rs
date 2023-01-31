@@ -25,7 +25,7 @@ use crate::{
     ApiError,
 };
 
-use super::Config;
+use super::{Config, DEFAULT_SMTP_PORT};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -131,7 +131,7 @@ fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
          }| {
             Messenger::Email(Email {
                 hostname,
-                port: port.unwrap_or(587),
+                port: port.unwrap_or(DEFAULT_SMTP_PORT),
                 starttls: starttls.unwrap_or(true),
                 username,
                 secret,

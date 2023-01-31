@@ -1,5 +1,5 @@
 use bencher_json::Secret;
-use mail_send::{mail_builder::MessageBuilder, SmtpClientBuilder};
+use mail_send::{mail_builder::MessageBuilder, Transport};
 
 use crate::ApiError;
 
@@ -46,16 +46,17 @@ impl Email {
 
         // Connect to an SMTP relay server over TLS and
         // authenticate using the provided credentials.
-        let client_builder = SmtpClientBuilder::new(self.hostname.clone(), self.port)
-            .credentials((self.username.clone(), String::from(self.secret.clone())));
+        let transport = Transport::new(self.hostname.clone())
+            .credentials(self.username.clone(), String::from(self.secret.clone()))
+            .port(self.port);
 
         tokio::spawn(async move {
-            async fn send(
-                client_builder: SmtpClientBuilder<String>,
-                message_builder: MessageBuilder<'_>,
+            async fn send<'x>(
+                transport: Transport<'x>,
+                message_builder: MessageBuilder<'x>,
             ) -> Result<(), ApiError> {
-                client_builder
-                    .connect()
+                transport
+                    .connect_tls()
                     .await
                     .map_err(ApiError::MailTls)?
                     .send(message_builder)
@@ -63,7 +64,7 @@ impl Email {
                     .map_err(ApiError::MailSend)
             }
 
-            match send(client_builder, message_builder).await {
+            match send(transport, message_builder).await {
                 Ok(_) => tracing::trace!("Email sent email from {from_email} to {to_email}"),
                 Err(e) => {
                     tracing::error!("Failed to send email from {from_email} to {to_email}: {e}");

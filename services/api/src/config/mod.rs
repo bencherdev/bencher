@@ -29,6 +29,7 @@ const DEFAULT_PORT: u16 = 61016;
 // 1 megabyte or 1_048_576 bytes
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
+const DEFAULT_SMTP_PORT: u16 = 587;
 
 #[allow(clippy::panic)]
 static DEFAULT_ENDPOINT: Lazy<Url> = Lazy::new(|| {

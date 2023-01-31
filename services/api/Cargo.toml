@@ -41,7 +41,7 @@ diesel = { version = "2.0", features = ["sqlite", "chrono"] }
 diesel_migrations = "2.0"
 dropshot = "0.9"
 http = "0.2"
-mail-send = "0.3"
+mail-send = "0.2"
 rand = "0.8"
 slog = "2.7"
 statrs = "0.16"
