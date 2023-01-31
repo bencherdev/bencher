@@ -74,7 +74,7 @@ mod test_magic {
 
     #[test]
     fn test_adapter_magic_java_jmh() {
-        let results = convert_file_path::<AdapterMagic>("./tool_output/java/jmh/six.txt");
+        let results = convert_file_path::<AdapterMagic>("./tool_output/java/jmh/six.json");
         test_java_jmh::validate_adapter_java_jmh(results);
     }
 

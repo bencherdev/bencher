@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion": "1.36",
-        "benchmark": "com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey",
+        "benchmark": "com.github.caffeine.caffeine.cache.ComputeBenchmark.compute_sameKey",
         "mode": "thrpt",
         "threads": 32,
         "forks": 1,
@@ -53,7 +53,7 @@
     },
     {
         "jmhVersion": "1.36",
-        "benchmark": "com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey",
+        "benchmark": "com.github.guava.caffeine.cache.ComputeBenchmark.compute_sameKey",
         "mode": "thrpt",
         "threads": 32,
         "forks": 1,
@@ -105,7 +105,7 @@
     },
     {
         "jmhVersion": "1.36",
-        "benchmark": "com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey",
+        "benchmark": "com.github.hashmap.caffeine.cache.ComputeBenchmark.compute_sameKey",
         "mode": "thrpt",
         "threads": 32,
         "forks": 1,
@@ -157,7 +157,7 @@
     },
     {
         "jmhVersion": "1.36",
-        "benchmark": "com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread",
+        "benchmark": "com.github.caffeine.caffeine.cache.ComputeBenchmark.compute_spread",
         "mode": "thrpt",
         "threads": 32,
         "forks": 1,
@@ -209,7 +209,7 @@
     },
     {
         "jmhVersion": "1.36",
-        "benchmark": "com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread",
+        "benchmark": "com.github.guava.caffeine.cache.ComputeBenchmark.compute_spread",
         "mode": "thrpt",
         "threads": 32,
         "forks": 1,
@@ -261,7 +261,7 @@
     },
     {
         "jmhVersion": "1.36",
-        "benchmark": "com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread",
+        "benchmark": "com.github.hashmap.caffeine.cache.ComputeBenchmark.compute_spread",
         "mode": "thrpt",
         "threads": 32,
         "forks": 1,

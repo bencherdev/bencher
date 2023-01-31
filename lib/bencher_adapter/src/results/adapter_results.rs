@@ -24,6 +24,7 @@ impl From<ResultsMap> for AdapterResults {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum AdapterMetricKind {
     Latency(JsonMetric),
     Throughput(JsonMetric),

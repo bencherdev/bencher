@@ -1,19 +1,10 @@
 use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
-use nom::{
-    bytes::complete::{tag, take_till1},
-    character::complete::space1,
-    combinator::{eof, map_res},
-    sequence::tuple,
-    IResult,
-};
+
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
-    adapters::util::{
-        latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units,
-        throughput_as_nanos, NomError,
-    },
+    adapters::util::{latency_as_nanos, throughput_as_nanos},
     results::adapter_results::{AdapterMetricKind, AdapterResults},
     Adapter, AdapterError,
 };
@@ -40,7 +31,9 @@ pub struct Benchmark {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PrimaryMetric {
+    #[serde(with = "rust_decimal::serde::float")]
     pub score: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
     pub score_error: Decimal,
     pub score_unit: String,
 }
@@ -49,8 +42,6 @@ impl TryFrom<Jmh> for AdapterResults {
     type Error = AdapterError;
 
     fn try_from(jmh: Jmh) -> Result<Self, Self::Error> {
-        println!("{jmh:#?}");
-
         let mut benchmark_metrics = Vec::with_capacity(jmh.0.len());
         for benchmark in jmh.0 {
             let Benchmark {
@@ -75,7 +66,7 @@ impl TryFrom<Jmh> for AdapterResults {
                 let variance = latency_as_nanos(score_error, time_unit);
                 let json_metric = JsonMetric {
                     value,
-                    lower_bound: Some(value - variance),
+                    lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
                     upper_bound: Some(value + variance),
                 };
                 AdapterMetricKind::Latency(json_metric)
@@ -90,7 +81,7 @@ impl TryFrom<Jmh> for AdapterResults {
                 let variance = throughput_as_nanos(score_error, time_unit);
                 let json_metric = JsonMetric {
                     value,
-                    lower_bound: Some(value - variance),
+                    lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
                     upper_bound: Some(value + variance),
                 };
                 AdapterMetricKind::Throughput(json_metric)
@@ -107,7 +98,6 @@ impl TryFrom<Jmh> for AdapterResults {
 
 #[cfg(test)]
 pub(crate) mod test_java_jmh {
-    use bencher_json::JsonMetric;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -164,28 +154,63 @@ pub(crate) mod test_java_jmh {
         assert_eq!(results.inner.len(), 6);
 
         let metrics = results
-            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey")
+            .get("com.github.caffeine.caffeine.cache.ComputeBenchmark.compute_sameKey")
             .unwrap();
-        validate_throughput(metrics, 325.0, None, None);
+        validate_throughput(
+            metrics,
+            0.15252013234402195,
+            Some(0.14899981156545883),
+            Some(0.15604045312258508),
+        );
 
         let metrics = results
-            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey")
+            .get("com.github.guava.caffeine.cache.ComputeBenchmark.compute_sameKey")
             .unwrap();
-        validate_throughput(metrics, 40_537.123, None, None);
+        validate_throughput(
+            metrics,
+            0.02994571861137783,
+            Some(0.02866875696203928),
+            Some(0.031222680260716378),
+        );
 
         let metrics = results
-            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_sameKey")
+            .get("com.github.hashmap.caffeine.cache.ComputeBenchmark.compute_sameKey")
             .unwrap();
-        validate_throughput(metrics, 325.0, None, None);
+        validate_throughput(
+            metrics,
+            0.007828947712794045,
+            Some(0.0),
+            Some(0.0174936806380535),
+        );
 
         let metrics = results
-            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread")
+            .get("com.github.caffeine.caffeine.cache.ComputeBenchmark.compute_spread")
             .unwrap();
-        validate_throughput(metrics, 40_537.123, None, None);
+        validate_throughput(
+            metrics,
+            0.07581321887869738,
+            Some(0.06963289928708484),
+            Some(0.08199353847030992),
+        );
 
         let metrics = results
-            .get("com.github.benmanes.caffeine.cache.ComputeBenchmark.compute_spread")
+            .get("com.github.guava.caffeine.cache.ComputeBenchmark.compute_spread")
             .unwrap();
-        validate_throughput(metrics, 40_537.456, None, None);
+        validate_throughput(
+            metrics,
+            0.03270998476377125,
+            Some(0.030019340461257937),
+            Some(0.03540062906628457),
+        );
+
+        let metrics = results
+            .get("com.github.hashmap.caffeine.cache.ComputeBenchmark.compute_spread")
+            .unwrap();
+        validate_throughput(
+            metrics,
+            0.11364091667262992,
+            Some(0.10517632197352053),
+            Some(0.1221055113717393),
+        );
     }
 }
