@@ -89,18 +89,21 @@ export const AuthForm = (props: Props) => {
 		}
 
 		let data;
+		let form_email;
 		if (props.config?.kind === FormKind.SIGNUP) {
 			const signup_form = form();
+			form_email = signup_form.email.value?.trim();
 			data = {
 				name: signup_form.username.value?.trim(),
 				slug: null,
-				email: signup_form.email.value?.trim(),
+				email: form_email,
 				invite: invite,
 			};
 		} else if (props.config?.kind === FormKind.LOGIN) {
 			const login_form = form();
+			form_email = login_form.email.value?.trim();
 			data = {
-				email: login_form.email.value?.trim(),
+				email: form_email,
 				invite: invite,
 			};
 		}
@@ -112,6 +115,7 @@ export const AuthForm = (props: Props) => {
 						props.config?.redirect,
 						NotifyKind.OK,
 						`Successful ${props.config?.kind} please confirm token.`,
+						[["email", form_email]],
 					),
 				);
 			})
@@ -121,6 +125,7 @@ export const AuthForm = (props: Props) => {
 						pathname(),
 						NotifyKind.ERROR,
 						`Failed to ${props.config?.kind} please try again.`,
+						null,
 					),
 				);
 			});

@@ -70,7 +70,12 @@ const AuthConfirmPage = (props: {
 			.then((data) => {
 				if (props.handleUser(data)) {
 					navigate(
-						notifyParams(props.config?.form?.redirect, NotifyKind.OK, "Ahoy!"),
+						notifyParams(
+							props.config?.form?.redirect,
+							NotifyKind.OK,
+							"Ahoy!",
+							null,
+						),
 					);
 				} else {
 					navigate(
@@ -78,6 +83,7 @@ const AuthConfirmPage = (props: {
 							pathname(),
 							NotifyKind.ERROR,
 							"Invalid user please try again.",
+							null,
 						),
 					);
 				}
@@ -88,6 +94,7 @@ const AuthConfirmPage = (props: {
 						pathname(),
 						NotifyKind.ERROR,
 						"Failed to confirm token please try again.",
+						null,
 					),
 				);
 			});
@@ -122,6 +129,7 @@ const AuthConfirmPage = (props: {
 						pathname(),
 						NotifyKind.OK,
 						`Successful resent email to ${email()} please confirm token.`,
+						null,
 					),
 				);
 			})
@@ -131,6 +139,7 @@ const AuthConfirmPage = (props: {
 						pathname(),
 						NotifyKind.ERROR,
 						`Failed to resend email to ${email()} please try again.`,
+						null,
 					),
 				);
 			});

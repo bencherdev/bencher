@@ -253,10 +253,16 @@ export const notifyParams = (
 	pathname,
 	notify_kind: NotifyKind,
 	notify_text: string,
+	search_params: null | Array<[string, string]>,
 ) => {
 	let params = new URLSearchParams(window.location.search);
 	params.set(NOTIFY_KIND_PARAM, notify_kind.toString());
 	params.set(NOTIFY_TEXT_PARAM, notify_text);
+	if (search_params) {
+		search_params.forEach((search_param) => {
+			params.set(search_param[0], search_param[1]);
+		});
+	}
 	let params_str = params.toString();
 	return `${pathname}?${params_str}`;
 };
