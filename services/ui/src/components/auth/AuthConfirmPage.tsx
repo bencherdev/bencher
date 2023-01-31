@@ -4,6 +4,7 @@ import { createEffect, createMemo, createSignal } from "solid-js";
 import AUTH_FIELDS from "./config/fields";
 import Field from "../field/Field";
 import {
+	BENCHER_API_URL,
 	NotifyKind,
 	notifyParams,
 	pageTitle,
@@ -14,6 +15,7 @@ import Notification from "../site/Notification";
 import FieldKind from "../field/kind";
 
 const TOKEN_PARAM = "token";
+const EMAIL_PARAM = "email";
 
 const AuthConfirmPage = (props: {
 	config: any;
@@ -32,8 +34,15 @@ const AuthConfirmPage = (props: {
 	const token = createMemo(() =>
 		searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null,
 	);
+	const email = createMemo(() =>
+		searchParams[EMAIL_PARAM] ? searchParams[EMAIL_PARAM].trim() : null,
+	);
+
 	const [submitted, setSubmitted] = createSignal();
 	const [form, setForm] = createSignal(initForm());
+
+	const [cool_down, setCoolDown] = createSignal(true);
+	setTimeout(() => setCoolDown(false), 10000);
 
 	const handleField = (key, value, valid) => {
 		setForm({
@@ -87,6 +96,48 @@ const AuthConfirmPage = (props: {
 
 	const handleFormSubmitting = (submitting) => {
 		setForm({ ...form(), submitting: submitting });
+	};
+
+	const post_resend = async (data: {
+		email: string;
+	}) => {
+		const url = `${BENCHER_API_URL()}/v0/auth/login`;
+		const no_token = null;
+		let resp = await axios(post_options(url, no_token, data));
+		return resp.data;
+	};
+
+	const handleResendEmail = (event) => {
+		event.preventDefault();
+		handleFormSubmitting(true);
+
+		const data = {
+			email: email().trim(),
+		};
+
+		post_resend(data)
+			.then((_resp) => {
+				navigate(
+					notifyParams(
+						pathname(),
+						NotifyKind.OK,
+						`Successful resent email to ${email()} please confirm token.`,
+					),
+				);
+			})
+			.catch((_e) => {
+				navigate(
+					notifyParams(
+						pathname(),
+						NotifyKind.ERROR,
+						`Failed to resend email to ${email()} please try again.`,
+					),
+				);
+			});
+
+		handleFormSubmitting(false);
+		setCoolDown(true);
+		setTimeout(() => setCoolDown(false), 30000);
 	};
 
 	createEffect(() => {
@@ -146,6 +197,22 @@ const AuthConfirmPage = (props: {
 									Submit
 								</button>
 							</form>
+
+							{email() && (
+								<>
+									<hr />
+
+									<div class="content has-text-centered">
+										<button
+											class="button is-small is-black is-inverted"
+											disabled={form()?.submitting || cool_down()}
+											onClick={handleResendEmail}
+										>
+											<div>Click to resend email to: {email()}</div>
+										</button>
+									</div>
+								</>
+							)}
 						</div>
 					</div>
 				</div>
