@@ -18,15 +18,15 @@ pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
 
 pub trait Adapter {
-    fn convert(&self, input: &str) -> Result<AdapterResults, AdapterError> {
+    fn convert(&self, input: &str) -> Option<AdapterResults> {
         Self::parse(input)
     }
 
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError>;
+    fn parse(input: &str) -> Option<AdapterResults>;
 }
 
 impl Adapter for JsonAdapter {
-    fn convert(&self, input: &str) -> Result<AdapterResults, AdapterError> {
+    fn convert(&self, input: &str) -> Option<AdapterResults> {
         match self {
             JsonAdapter::Magic => AdapterMagic::parse(input),
             JsonAdapter::Json => AdapterJson::parse(input),
@@ -43,7 +43,7 @@ impl Adapter for JsonAdapter {
         }
     }
 
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Option<AdapterResults> {
         AdapterMagic::parse(input)
     }
 }

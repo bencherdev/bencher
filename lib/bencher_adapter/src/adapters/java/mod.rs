@@ -1,18 +1,13 @@
 pub mod jmh;
 
-use crate::{Adapter, AdapterError, AdapterResults};
+use crate::{Adapter, AdapterResults};
 use jmh::AdapterJavaJmh;
 
 pub struct AdapterJava;
 
 impl Adapter for AdapterJava {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        let jmh = AdapterJavaJmh::parse(input);
-        if jmh.is_ok() {
-            return jmh;
-        }
-
-        Ok(AdapterResults::default())
+    fn parse(input: &str) -> Option<AdapterResults> {
+        AdapterJavaJmh::parse(input)
     }
 }
 

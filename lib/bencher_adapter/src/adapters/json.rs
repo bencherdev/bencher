@@ -1,10 +1,10 @@
-use crate::{results::adapter_results::AdapterResults, Adapter, AdapterError};
+use crate::{results::adapter_results::AdapterResults, Adapter};
 
 pub struct AdapterJson;
 
 impl Adapter for AdapterJson {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        serde_json::from_str(input).map_err(Into::into)
+    fn parse(input: &str) -> Option<AdapterResults> {
+        serde_json::from_str(input).ok()
     }
 }
 

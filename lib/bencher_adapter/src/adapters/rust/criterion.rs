@@ -14,13 +14,13 @@ use crate::{
         latency_as_nanos, nom_error, parse_benchmark_name, parse_f64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError,
+    Adapter,
 };
 
 pub struct AdapterRustCriterion;
 
 impl Adapter for AdapterRustCriterion {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         let mut prior_line = None;

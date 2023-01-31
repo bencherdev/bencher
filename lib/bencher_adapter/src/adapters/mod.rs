@@ -32,9 +32,17 @@ pub(crate) mod test_util {
     where
         A: Adapter,
     {
+        opt_convert_file_path::<A>(file_path)
+            .unwrap_or_else(|| panic!("Failed to convert contents of {file_path}"))
+    }
+
+    pub fn opt_convert_file_path<A>(file_path: &str) -> Option<AdapterResults>
+    where
+        A: Adapter,
+    {
         let contents = std::fs::read_to_string(file_path)
             .unwrap_or_else(|e| panic!("Failed to read test file {file_path}: {e}"));
-        A::parse(&contents).unwrap_or_else(|e| panic!("Failed to convert contents {contents}: {e}"))
+        A::parse(&contents)
     }
 
     pub fn validate_latency(

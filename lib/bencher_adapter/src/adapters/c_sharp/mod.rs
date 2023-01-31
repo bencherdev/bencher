@@ -1,18 +1,13 @@
 pub mod dotnet;
 
-use crate::{Adapter, AdapterError, AdapterResults};
+use crate::{Adapter, AdapterResults};
 use dotnet::AdapterCSharpDotNet;
 
 pub struct AdapterCSharp;
 
 impl Adapter for AdapterCSharp {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        let dotnet = AdapterCSharpDotNet::parse(input);
-        if dotnet.is_ok() {
-            return dotnet;
-        }
-
-        Ok(AdapterResults::default())
+    fn parse(input: &str) -> Option<AdapterResults> {
+        AdapterCSharpDotNet::parse(input)
     }
 }
 

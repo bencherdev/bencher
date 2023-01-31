@@ -4,8 +4,6 @@ use bencher_json::{project::metric::Mean, BenchmarkName, JsonMetric};
 use literally::hmap;
 use serde::{Deserialize, Serialize};
 
-use crate::AdapterError;
-
 use super::{
     adapter_metrics::AdapterMetrics, CombinedKind, LATENCY_RESOURCE_ID, THROUGHPUT_RESOURCE_ID,
 };
@@ -31,9 +29,11 @@ pub enum AdapterMetricKind {
 }
 
 impl AdapterResults {
-    pub fn new(
-        benchmark_metrics: Vec<(BenchmarkName, AdapterMetricKind)>,
-    ) -> Result<Self, AdapterError> {
+    pub fn new(benchmark_metrics: Vec<(BenchmarkName, AdapterMetricKind)>) -> Option<Self> {
+        if benchmark_metrics.is_empty() {
+            return None;
+        }
+
         let mut results_map = HashMap::new();
         for (benchmark_name, metric_kind) in benchmark_metrics {
             let adapter_metrics = AdapterMetrics {
@@ -52,12 +52,11 @@ impl AdapterResults {
             };
             results_map.insert(benchmark_name, adapter_metrics);
         }
-        Ok(results_map.into())
+
+        Some(results_map.into())
     }
 
-    pub fn new_latency(
-        benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>,
-    ) -> Result<Self, AdapterError> {
+    pub fn new_latency(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Option<Self> {
         Self::new(
             benchmark_metrics
                 .into_iter()

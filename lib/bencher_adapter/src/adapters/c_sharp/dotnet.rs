@@ -12,13 +12,16 @@ use crate::{
 pub struct AdapterCSharpDotNet;
 
 impl Adapter for AdapterCSharpDotNet {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        serde_json::from_str::<Jmh>(input)?.try_into()
+    fn parse(input: &str) -> Option<AdapterResults> {
+        serde_json::from_str::<DotNet>(input)
+            .ok()?
+            .try_into()
+            .ok()?
     }
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Jmh(pub Vec<Benchmark>);
+pub struct DotNet(pub Vec<Benchmark>);
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,10 +41,10 @@ pub struct PrimaryMetric {
     pub score_unit: String,
 }
 
-impl TryFrom<Jmh> for AdapterResults {
+impl TryFrom<DotNet> for Option<AdapterResults> {
     type Error = AdapterError;
 
-    fn try_from(jmh: Jmh) -> Result<Self, Self::Error> {
+    fn try_from(jmh: DotNet) -> Result<Self, Self::Error> {
         let mut benchmark_metrics = Vec::with_capacity(jmh.0.len());
         for benchmark in jmh.0 {
             let Benchmark {
@@ -90,7 +93,7 @@ impl TryFrom<Jmh> for AdapterResults {
             benchmark_metrics.push((benchmark_name, metric_kind));
         }
 
-        AdapterResults::new(benchmark_metrics)
+        Ok(AdapterResults::new(benchmark_metrics))
     }
 }
 

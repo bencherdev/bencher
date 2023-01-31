@@ -12,8 +12,8 @@ use crate::{
 pub struct AdapterJavaJmh;
 
 impl Adapter for AdapterJavaJmh {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        serde_json::from_str::<Jmh>(input)?.try_into()
+    fn parse(input: &str) -> Option<AdapterResults> {
+        serde_json::from_str::<Jmh>(input).ok()?.try_into().ok()?
     }
 }
 
@@ -38,7 +38,7 @@ pub struct PrimaryMetric {
     pub score_unit: String,
 }
 
-impl TryFrom<Jmh> for AdapterResults {
+impl TryFrom<Jmh> for Option<AdapterResults> {
     type Error = AdapterError;
 
     fn try_from(jmh: Jmh) -> Result<Self, Self::Error> {
@@ -90,7 +90,7 @@ impl TryFrom<Jmh> for AdapterResults {
             benchmark_metrics.push((benchmark_name, metric_kind));
         }
 
-        AdapterResults::new(benchmark_metrics)
+        Ok(AdapterResults::new(benchmark_metrics))
     }
 }
 

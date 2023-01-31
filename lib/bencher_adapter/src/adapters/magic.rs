@@ -1,38 +1,17 @@
 use crate::{
-    results::adapter_results::AdapterResults, Adapter, AdapterCpp, AdapterError, AdapterGo,
-    AdapterJava, AdapterJson, AdapterRust,
+    results::adapter_results::AdapterResults, Adapter, AdapterCpp, AdapterGo, AdapterJava,
+    AdapterJson, AdapterRust,
 };
 
 pub struct AdapterMagic;
 
 impl Adapter for AdapterMagic {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        let json = AdapterJson::parse(input);
-        if json.is_ok() {
-            return json;
-        }
-
-        let cpp = AdapterCpp::parse(input)?;
-        if !cpp.is_empty() {
-            return Ok(cpp);
-        }
-
-        let go = AdapterGo::parse(input)?;
-        if !go.is_empty() {
-            return Ok(go);
-        }
-
-        let java = AdapterJava::parse(input)?;
-        if !java.is_empty() {
-            return Ok(java);
-        }
-
-        let rust = AdapterRust::parse(input)?;
-        if !rust.is_empty() {
-            return Ok(rust);
-        }
-
-        Ok(AdapterResults::default())
+    fn parse(input: &str) -> Option<AdapterResults> {
+        AdapterJson::parse(input)
+            .or_else(|| AdapterCpp::parse(input))
+            .or_else(|| AdapterGo::parse(input))
+            .or_else(|| AdapterJava::parse(input))
+            .or_else(|| AdapterRust::parse(input))
     }
 }
 

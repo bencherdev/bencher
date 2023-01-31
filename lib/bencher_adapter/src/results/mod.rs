@@ -11,7 +11,6 @@ use bencher_json::{
 use once_cell::sync::Lazy;
 
 use crate::Adapter;
-use crate::AdapterError;
 
 pub mod adapter_metrics;
 pub mod adapter_results;
@@ -50,13 +49,14 @@ impl From<ResultsArray> for AdapterResultsArray {
 }
 
 impl AdapterResultsArray {
-    pub fn new(results_array: &[&str], adapter: JsonAdapter) -> Result<Self, AdapterError> {
+    pub fn new(results_array: &[&str], adapter: JsonAdapter) -> Self {
         let mut parsed_results_array = Vec::new();
         for results in results_array {
-            let parsed_results = adapter.convert(results)?;
-            parsed_results_array.push(parsed_results);
+            if let Some(parsed_results) = adapter.convert(results) {
+                parsed_results_array.push(parsed_results);
+            }
         }
-        Ok(parsed_results_array.into())
+        parsed_results_array.into()
     }
 
     pub fn min(self) -> AdapterResults {

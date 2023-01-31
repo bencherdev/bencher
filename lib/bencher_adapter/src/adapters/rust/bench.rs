@@ -10,13 +10,13 @@ use nom::{
 use crate::{
     adapters::util::{latency_as_nanos, parse_benchmark_name, parse_u64, parse_units, NomError},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError,
+    Adapter,
 };
 
 pub struct AdapterRustBench;
 
 impl Adapter for AdapterRustBench {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
@@ -82,7 +82,7 @@ pub(crate) mod test_rust_bench {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
         Adapter, AdapterResults,
     };
 
@@ -100,8 +100,8 @@ pub(crate) mod test_rust_bench {
 
     #[test]
     fn test_adapter_rust_zero() {
-        let results = convert_rust_bench("zero");
-        assert_eq!(results.inner.len(), 0);
+        let file_path = "./tool_output/rust/bench/zero.txt";
+        assert_eq!(None, opt_convert_file_path::<AdapterRustBench>(file_path))
     }
 
     #[test]

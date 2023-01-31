@@ -14,13 +14,13 @@ use crate::{
         NomError, Units,
     },
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError,
+    Adapter,
 };
 
 pub struct AdapterCppCatch2;
 
 impl Adapter for AdapterCppCatch2 {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
+    fn parse(input: &str) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         let mut prior_line = None;

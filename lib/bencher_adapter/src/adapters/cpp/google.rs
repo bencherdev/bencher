@@ -11,8 +11,11 @@ use crate::{
 pub struct AdapterCppGoogle;
 
 impl Adapter for AdapterCppGoogle {
-    fn parse(input: &str) -> Result<AdapterResults, AdapterError> {
-        serde_json::from_str::<Google>(input)?.try_into()
+    fn parse(input: &str) -> Option<AdapterResults> {
+        serde_json::from_str::<Google>(input)
+            .ok()?
+            .try_into()
+            .ok()?
     }
 }
 
@@ -35,7 +38,7 @@ pub struct Benchmark {
     pub time_unit: Units,
 }
 
-impl TryFrom<Google> for AdapterResults {
+impl TryFrom<Google> for Option<AdapterResults> {
     type Error = AdapterError;
 
     fn try_from(google: Google) -> Result<Self, Self::Error> {
@@ -56,7 +59,7 @@ impl TryFrom<Google> for AdapterResults {
             benchmark_metrics.push((name, json_metric));
         }
 
-        AdapterResults::new_latency(benchmark_metrics)
+        Ok(AdapterResults::new_latency(benchmark_metrics))
     }
 }
 
