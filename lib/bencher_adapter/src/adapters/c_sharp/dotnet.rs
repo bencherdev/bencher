@@ -4,8 +4,8 @@ use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
-    adapters::util::{latency_as_nanos, throughput_as_secs},
-    results::adapter_results::{AdapterMetricKind, AdapterResults},
+    adapters::util::{latency_as_nanos, Units},
+    results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
 
@@ -21,189 +21,137 @@ impl Adapter for AdapterCSharpDotNet {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct DotNet(pub Vec<Benchmark>);
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Benchmark {
-    pub benchmark: BenchmarkName,
-    pub primary_metric: PrimaryMetric,
-    pub secondary_metrics: JsonEmpty,
+#[serde(rename_all = "PascalCase")]
+pub struct DotNet {
+    pub host_environment_info: JsonEmpty,
+    pub benchmarks: Benchmarks,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PrimaryMetric {
+pub struct Benchmarks(pub Vec<Benchmark>);
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Benchmark {
+    pub namespace: BenchmarkName,
+    pub method: BenchmarkName,
+    pub statistics: Statistics,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Statistics {
     #[serde(with = "rust_decimal::serde::float")]
-    pub score: Decimal,
+    pub mean: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
-    pub score_error: Decimal,
-    pub score_unit: String,
+    pub standard_deviation: Decimal,
 }
 
 impl TryFrom<DotNet> for Option<AdapterResults> {
     type Error = AdapterError;
 
-    fn try_from(jmh: DotNet) -> Result<Self, Self::Error> {
-        let mut benchmark_metrics = Vec::with_capacity(jmh.0.len());
-        for benchmark in jmh.0 {
+    fn try_from(dotnet: DotNet) -> Result<Self, Self::Error> {
+        let benchmarks = dotnet.benchmarks.0;
+        let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
+        for benchmark in benchmarks {
             let Benchmark {
-                benchmark: benchmark_name,
-                primary_metric,
-                ..
+                namespace: mut benchmark_name,
+                method,
+                statistics,
             } = benchmark;
-            let PrimaryMetric {
-                score,
-                score_error,
-                score_unit,
-            } = primary_metric;
+            let Statistics {
+                mean,
+                standard_deviation,
+            } = statistics;
 
-            let metric_kind = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
-                let time_unit = unit.parse()?;
-                let value = latency_as_nanos(score, time_unit);
-                let variance = latency_as_nanos(score_error, time_unit);
-                let json_metric = JsonMetric {
-                    value,
-                    lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
-                    upper_bound: Some(value + variance),
-                };
-                AdapterMetricKind::Latency(json_metric)
-            } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
-                let time_unit = unit.parse()?;
-                let value = throughput_as_secs(score, time_unit);
-                let variance = throughput_as_secs(score_error, time_unit);
-                let json_metric = JsonMetric {
-                    value,
-                    lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
-                    upper_bound: Some(value + variance),
-                };
-                AdapterMetricKind::Throughput(json_metric)
-            } else {
-                todo!()
+            benchmark_name.push('.', &method);
+
+            // This is just an assumption
+            // https://github.com/dotnet/BenchmarkDotNet/pull/396
+            // https://benchmarkdotnet.org/articles/configs/exporters.html#csv
+            let units = Units::Nano;
+            // The `Mode` is called `Throughput` but it appears to be measuring latency
+            // https://benchmarkdotnet.org/articles/guides/choosing-run-strategy.html#throughput
+            let value = latency_as_nanos(mean, units);
+            let standard_deviation = latency_as_nanos(standard_deviation, units);
+            let json_metric = JsonMetric {
+                value,
+                lower_bound: Some(value - standard_deviation),
+                upper_bound: Some(value + standard_deviation),
             };
 
-            benchmark_metrics.push((benchmark_name, metric_kind));
+            benchmark_metrics.push((benchmark_name, json_metric));
         }
 
-        Ok(AdapterResults::new(benchmark_metrics))
+        Ok(AdapterResults::new_latency(benchmark_metrics))
     }
 }
 
-// #[cfg(test)]
-// pub(crate) mod test_c_sharp_dotnet {
-//     use pretty_assertions::assert_eq;
+#[cfg(test)]
+pub(crate) mod test_c_sharp_dotnet {
+    use pretty_assertions::assert_eq;
 
-//     use crate::{
-//         adapters::test_util::{convert_file_path, validate_latency, validate_throughput},
-//         AdapterResults,
-//     };
+    use crate::{
+        adapters::test_util::{convert_file_path, validate_latency},
+        AdapterResults,
+    };
 
-//     use super::AdapterCSharpDotNet;
+    use super::AdapterCSharpDotNet;
 
-//     fn convert_c_sharp_dotnet(suffix: &str) -> AdapterResults {
-//         let file_path = format!("./tool_output/java/jmh/{suffix}.json");
-//         convert_file_path::<AdapterCSharpDotNet>(&file_path)
-//     }
+    fn convert_c_sharp_dotnet(suffix: &str) -> AdapterResults {
+        let file_path = format!("./tool_output/c_sharp/dotnet/{suffix}.json");
+        convert_file_path::<AdapterCSharpDotNet>(&file_path)
+    }
 
-//     #[test]
-//     fn test_adapter_java_jmh_latency() {
-//         let results = convert_c_sharp_dotnet("latency");
-//         assert_eq!(results.inner.len(), 1);
+    #[test]
+    fn test_adapter_c_sharp_dotnet_two() {
+        let results = convert_c_sharp_dotnet("two");
+        validate_adapter_c_sharp_dotnet(results);
+    }
 
-//         let metrics = results
-//             .get("org.openjdk.jmh.samples.JMHSample_01_HelloWorld.wellHelloThere")
-//             .unwrap();
-//         validate_latency(
-//             metrics,
-//             3.3762388731228186e18,
-//             Some(3.3619508873788826e18),
-//             Some(3.3905268588667546e18),
-//         );
-//     }
+    pub fn validate_adapter_c_sharp_dotnet(results: AdapterResults) {
+        assert_eq!(results.inner.len(), 2);
 
-//     #[test]
-//     fn test_adapter_java_jmh_throughput() {
-//         let results = convert_c_sharp_dotnet("throughput");
-//         assert_eq!(results.inner.len(), 1);
+        let metrics = results
+            .get("BenchmarkDotNet.Samples.Intro.Sleep10")
+            .unwrap();
+        validate_latency(
+            metrics,
+            10362283.085796878,
+            Some(10316580.967427673),
+            Some(10407985.204166083),
+        );
 
-//         let metrics = results
-//             .get("org.openjdk.jmh.samples.JMHSample_01_HelloWorld.wellHelloThere")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             3376238873.1228185,
-//             Some(3361950887.3788824),
-//             Some(3390526858.8667545),
-//         );
-//     }
+        let metrics = results
+            .get("BenchmarkDotNet.Samples.Intro.Sleep20")
+            .unwrap();
+        validate_latency(
+            metrics,
+            20360791.931687497,
+            Some(20312811.199369717),
+            Some(20408772.664005276),
+        );
+    }
 
-//     #[test]
-//     fn test_adapter_java_jmh_six() {
-//         let results = convert_c_sharp_dotnet("six");
-//         validate_adapter_c_sharp_dotnet(results);
-//     }
+    #[test]
+    fn test_adapter_c_sharp_dotnet_two_more() {
+        let results = convert_c_sharp_dotnet("two_more");
+        assert_eq!(results.inner.len(), 2);
 
-//     pub fn validate_adapter_c_sharp_dotnet(results: AdapterResults) {
-//         assert_eq!(results.inner.len(), 6);
+        let metrics = results.get("Sample.Fib10").unwrap();
+        validate_latency(
+            metrics,
+            24.4202085009643,
+            Some(24.22208724788593),
+            Some(24.61832975404267),
+        );
 
-//         let metrics = results
-//             .get("com.github.caffeine.caffeine.cache.ComputeBenchmark.compute_sameKey")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             152520132.34402195,
-//             Some(148999811.56545883),
-//             Some(156040453.12258506),
-//         );
-
-//         let metrics = results
-//             .get("com.github.guava.caffeine.cache.ComputeBenchmark.compute_sameKey")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             29945718.61137783,
-//             Some(28668756.96203928),
-//             Some(31222680.260716382),
-//         );
-
-//         let metrics = results
-//             .get("com.github.hashmap.caffeine.cache.ComputeBenchmark.compute_sameKey")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             7828947.712794046,
-//             Some(0.0),
-//             Some(17493680.6380535),
-//         );
-
-//         let metrics = results
-//             .get("com.github.caffeine.caffeine.cache.ComputeBenchmark.compute_spread")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             75813218.87869738,
-//             Some(69632899.28708484),
-//             Some(81993538.47030993),
-//         );
-
-//         let metrics = results
-//             .get("com.github.guava.caffeine.cache.ComputeBenchmark.compute_spread")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             32709984.76377125,
-//             Some(30019340.461257935),
-//             Some(35400629.06628457),
-//         );
-
-//         let metrics = results
-//             .get("com.github.hashmap.caffeine.cache.ComputeBenchmark.compute_spread")
-//             .unwrap();
-//         validate_throughput(
-//             metrics,
-//             113640916.67262992,
-//             Some(105176321.97352053),
-//             Some(122105511.37173931),
-//         );
-//     }
-// }
+        let metrics = results.get("Sample.Fib20").unwrap();
+        validate_latency(
+            metrics,
+            51.52008151549559,
+            Some(50.729707813342635),
+            Some(52.310455217648546),
+        );
+    }
+}

@@ -12,9 +12,18 @@ use serde::{
 
 use crate::ValidError;
 
+const MAX_BENCHMARK_NAME_LEN: usize = 1024;
+
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct BenchmarkName(String);
+
+impl BenchmarkName {
+    pub fn push(&mut self, separator: char, other: &Self) {
+        self.0.push(separator);
+        self.0.push_str(other.as_ref());
+    }
+}
 
 impl FromStr for BenchmarkName {
     type Err = ValidError;
@@ -68,7 +77,7 @@ impl<'de> Visitor<'de> for BenchmarkNameVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_benchmark_name(benchmark_name: &str) -> bool {
-    !benchmark_name.is_empty()
+    !benchmark_name.is_empty() && benchmark_name.len() <= MAX_BENCHMARK_NAME_LEN
 }
 
 #[cfg(test)]

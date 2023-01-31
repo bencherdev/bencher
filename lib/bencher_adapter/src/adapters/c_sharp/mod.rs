@@ -11,14 +11,14 @@ impl Adapter for AdapterCSharp {
     }
 }
 
-// #[cfg(test)]
-// mod test_c_sharp {
-//     use super::AdapterCSharp;
-//     use crate::adapters::{c_sharp::dotnet::test_c_sharp_dotnet, test_util::convert_file_path};
+#[cfg(test)]
+mod test_c_sharp {
+    use super::AdapterCSharp;
+    use crate::adapters::{c_sharp::dotnet::test_c_sharp_dotnet, test_util::convert_file_path};
 
-//     #[test]
-//     fn test_adapter_c_sharp_dotnet() {
-//         let results = convert_file_path::<AdapterCSharp>("./tool_output/java/jmh/six.json");
-//         test_c_sharp_dotnet::validate_adapter_c_sharp_dotnet(results);
-//     }
-// }
+    #[test]
+    fn test_adapter_c_sharp_dotnet() {
+        let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dotnet/two.json");
+        test_c_sharp_dotnet::validate_adapter_c_sharp_dotnet(results);
+    }
+}
