@@ -27,11 +27,18 @@ where
     ))
 }
 
-pub fn time_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
+pub fn latency_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
 where
     T: Into<Time>,
 {
     (time.into().as_f64() * units.as_nanos()).into()
+}
+
+pub fn throughput_as_nanos<T>(time: T, units: Units) -> OrderedFloat<f64>
+where
+    T: Into<Time>,
+{
+    (time.into().as_f64() / units.as_nanos()).into()
 }
 
 #[derive(Clone, Copy)]

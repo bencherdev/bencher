@@ -11,9 +11,10 @@ use serde::Deserialize;
 
 use crate::{
     adapters::util::{
-        parse_benchmark_name, parse_f64, parse_u64, parse_units, time_as_nanos, NomError,
+        latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units,
+        throughput_as_nanos, NomError,
     },
-    results::adapter_results::AdapterResults,
+    results::adapter_results::{AdapterMetricKind, AdapterResults},
     Adapter, AdapterError,
 };
 
@@ -66,19 +67,44 @@ impl TryFrom<Jmh> for AdapterResults {
                 ..
             } = primary_metric;
 
-            let time_unit = score_unit.trim_start_matches("ops/").parse()?;
-            let value = time_as_nanos(score, time_unit);
-            let variance = time_as_nanos(score_error, time_unit);
-            let json_metric = JsonMetric {
-                value,
-                lower_bound: Some(value - variance),
-                upper_bound: Some(value + variance),
+            // Latency
+            let metric_kind = if let Some((unit, slash_op)) = score_unit.split_once("/op") {
+                if !slash_op.is_empty() {
+                    return Err(AdapterError::BenchmarkUnits);
+                }
+
+                let time_unit = unit.parse()?;
+                let value = latency_as_nanos(score, time_unit);
+                let variance = latency_as_nanos(score_error, time_unit);
+                let json_metric = JsonMetric {
+                    value,
+                    lower_bound: Some(value - variance),
+                    upper_bound: Some(value + variance),
+                };
+                AdapterMetricKind::Latency(json_metric)
+                // Throughput
+            } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
+                if !ops_slash.is_empty() {
+                    return Err(AdapterError::BenchmarkUnits);
+                }
+
+                let time_unit = unit.parse()?;
+                let value = throughput_as_nanos(score, time_unit);
+                let variance = throughput_as_nanos(score_error, time_unit);
+                let json_metric = JsonMetric {
+                    value,
+                    lower_bound: Some(value - variance),
+                    upper_bound: Some(value + variance),
+                };
+                AdapterMetricKind::Throughput(json_metric)
+            } else {
+                return Err(AdapterError::BenchmarkUnits);
             };
 
-            benchmark_metrics.push((benchmark_name, json_metric));
+            benchmark_metrics.push((benchmark_name, metric_kind));
         }
 
-        AdapterResults::new_latency(benchmark_metrics)
+        AdapterResults::new(benchmark_metrics)
     }
 }
 

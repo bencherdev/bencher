@@ -8,7 +8,7 @@ use nom::{
 };
 
 use crate::{
-    adapters::util::{parse_benchmark_name, parse_u64, parse_units, time_as_nanos, NomError},
+    adapters::util::{latency_as_nanos, parse_benchmark_name, parse_u64, parse_units, NomError},
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -65,8 +65,8 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
         )),
         |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, NomError> {
-            let value = time_as_nanos(duration, units);
-            let variance = Some(time_as_nanos(variance, units));
+            let value = latency_as_nanos(duration, units);
+            let variance = Some(latency_as_nanos(variance, units));
             Ok(JsonMetric {
                 value,
                 lower_bound: variance.map(|v| value - v),

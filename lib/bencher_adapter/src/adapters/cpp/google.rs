@@ -3,7 +3,7 @@ use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
-    adapters::util::{time_as_nanos, Units},
+    adapters::util::{latency_as_nanos, Units},
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
 };
@@ -46,7 +46,7 @@ impl TryFrom<Google> for AdapterResults {
                 real_time,
                 time_unit,
             } = benchmark;
-            let value = time_as_nanos(real_time, time_unit);
+            let value = latency_as_nanos(real_time, time_unit);
             let json_metric = JsonMetric {
                 value,
                 lower_bound: None,

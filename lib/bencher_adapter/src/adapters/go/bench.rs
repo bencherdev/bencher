@@ -9,7 +9,7 @@ use nom::{
 
 use crate::{
     adapters::util::{
-        parse_benchmark_name, parse_f64, parse_u64, parse_units, time_as_nanos, NomError,
+        latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
@@ -54,7 +54,7 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonMetric> {
     map_res(
         tuple((parse_f64, space1, parse_units, tag("/op"))),
         |(duration, _, units, _)| -> Result<JsonMetric, NomError> {
-            let value = time_as_nanos(duration, units);
+            let value = latency_as_nanos(duration, units);
             Ok(JsonMetric {
                 value,
                 lower_bound: None,

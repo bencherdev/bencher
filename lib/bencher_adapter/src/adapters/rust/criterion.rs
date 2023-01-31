@@ -11,7 +11,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     adapters::util::{
-        nom_error, parse_benchmark_name, parse_f64, parse_units, time_as_nanos, NomError,
+        latency_as_nanos, nom_error, parse_benchmark_name, parse_f64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
     Adapter, AdapterError,
@@ -92,7 +92,7 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map_res(
         tuple((parse_f64, space1, parse_units)),
         |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
-            Ok(time_as_nanos(duration, units))
+            Ok(latency_as_nanos(duration, units))
         },
     )(input)
 }
