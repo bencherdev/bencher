@@ -66,9 +66,7 @@ impl TryFrom<DotNet> for Option<AdapterResults> {
 
             benchmark_name.push('.', &method);
 
-            // This is just an assumption
-            // https://github.com/dotnet/BenchmarkDotNet/pull/396
-            // https://benchmarkdotnet.org/articles/configs/exporters.html#csv
+            // JSON output is always in nanos
             let units = Units::Nano;
             // The `Mode` is called `Throughput` but it appears to be measuring latency
             // https://benchmarkdotnet.org/articles/guides/choosing-run-strategy.html#throughput
