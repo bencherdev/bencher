@@ -1,6 +1,8 @@
 ## `v0.2.32`
 - Add STARTTLS option for SMTP connections
-- Add Java JMH `java_jmh` adapter and `throughput` as a new default metric kind with `operations / second (ops/s)` as units
+- Add `throughput` as a new default metric kind with `operations / second (ops/s)` as units
+- Add Java JMH and C# DotNet adapters
+- Add resend email button to UI auth confirm page
 
 ## `v0.2.31`
 - Prevent leaking secrets by obfuscating them in the server logs (ie `************`)
@@ -9,8 +11,8 @@
 - Add additional options to `bencher mock`, `--fail` and `--flaky` to easily test parsing failing and flaky benchmarks respectively
 - Wrote [continuous benchmarking](/docs/explanation/continuous-benchmarking) and [how to install the CLI](/docs/how-to/install-cli) pages
 - Update server framework, dropshot, and Rust to `1.67.0`
-- Two new C++ adapters for [Google Benchmark](https://github.com/google/benchmark) and [Catch2](https://github.com/catchorg/Catch2)
-- Add an adapter for [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
+- Two new C++ adapters for Google Benchmark and Catch2
+- Add an adapter for `go test -bench`
 
 ## `v0.2.30`
 - Added `--if-else-branch`, `--else-branch`, and `--endif-branch` flags to to `bencher run` CLI
