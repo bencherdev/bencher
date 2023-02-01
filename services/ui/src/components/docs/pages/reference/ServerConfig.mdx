@@ -65,6 +65,8 @@ Example JSON configuration:
 
 # `server`
 
+This section is based on the [Dropshot server configuration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#dropshot-servers).
+
 | Name                   | Example                         | Default         | Required                    | Description                                                                                                                                                                                                                                                                                                 |
 |:----------------------:|:-------------------------------:|:---------------:|:---------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
 | bind_address           | "0.0.0.0:61016"                 | "0.0.0.0:61016" | Yes                         | Specifies that the server should bind to the given IP address and TCP port. In general, servers can bind to more than one IP address and port, but this is not (yet?) supported. Defaults to "127.0.0.1:0".                                                                                                 |
@@ -75,10 +77,11 @@ Example JSON configuration:
 | tls.certs              | ---                             | ---             | Only if tls.type = as_bytes | Identical to tls.cert_file, but provided as an array of bytes of certificate data.                                                                                                                                                                                                                          |
 | tls.key                | ---                             | ---             | Only if tls.type = as_bytes | Identical to tls.key_file, but provided as an array of bytes of key data.                                                                                                                                                                                                                                   |
 
-[Dropshot server configuration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#dropshot-servers)
 
 
 ## `logging`
+
+This section is based on the [Dropshot logging configuration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#logging).
 
 | Name          | Example           | Default           | Required                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                      |
 |:-------------:|:-----------------:|:-----------------:|:-------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -88,7 +91,6 @@ Example JSON configuration:
 | log.path      | ---               | ---               | Only if log.mode = "file" | If log.mode is "file", this property determines the path to the log file. See also log.if_exists.                                                                                                                                                                                                                                                                                                                                |
 | log.if_exists | ---               | ---               | Only if log.mode = "file" | If log.mode is "file", this property specifies what to do if the destination log file already exists. Valid values include "append" (which appends to the existing file), "truncate" (which truncates the existing file and then uses it as though it had just been created), and "fail" (which causes the server to exit immediately with an error).                                                                            |
 
-[Dropshot logging configuration](https://github.com/oxidecomputer/dropshot/tree/v0.9.0#logging)
 
 ## `database`
 

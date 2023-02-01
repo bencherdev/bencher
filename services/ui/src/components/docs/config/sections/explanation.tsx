@@ -15,15 +15,11 @@ const Explanation = [
 		},
 	},
 	{
-		title: "CLI Adapters",
-		slug: "cli-adapters",
+		title: "Benchmark Adapters",
+		slug: "adapters",
 		panel: {
 			kind: PageKind.MDX,
-			heading: (
-				<>
-					Adapters for <code>bencher run</code>
-				</>
-			),
+			heading: "Benchmark Harness Adapters",
 			content: <Adapters />,
 		},
 	},

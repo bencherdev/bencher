@@ -1,6 +1,19 @@
 Adapters convert benchmark harness output into standardized JSON, Bencher Metric Format (BMF).
-They are provided to the `bencher run` CLI command with the `--adapter` flag.
+The adapters run on the API server when a new report is received.
+They can be specified in the `bencher run` CLI command with the optional `--adapter` flag.
 In gerenal, it is best to use the most specific adapter for your use case.
+
+## 🪄 Magic <small>(default)</small>
+
+The Magic Adapter (`magic`) is a superset of all other adapters.
+For that reason, it is the default adapter for `bencher run`,
+but it is best used for exploration only.
+In CI, you should use the most specific adapter for your use case.
+
+## \{...\} JSON
+
+The JSON Adapter (`json`) expects BMF JSON.
+It is perfect for integrating a custom benchmark harnesses with Bencher.
 
 Example of BMF:
 
@@ -16,17 +29,21 @@ Example of BMF:
 }
 ```
 
-## 🪄 Magic <small>(default)</small>
+In this example, the key `benchmark_name` would be the name of a benchmark.
+Benchmark names can be any non-empty string up to 1024 characters.
+The `benchmark_name` object contains metric kind slugs and/or UUIDs as keys.
+In this example, `latency` is the slug for the Latency metric kind.
+Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) metric kind,
+which are measured in `nanosecond (ns)` and `operations / second (ops/s)` respectively.
+The metric kind object contains up to three metrics: `value`, `lower_bound`, and `upper_bound`.
+The `lower_bound` and `upper_bound` metrics are optional,
+and their calcualtion is benchmark harness specific.
 
-The Magic Adapter (`magic`) is a superset of all other adapters.
-For that reason, it is the default adapter for `bencher run`,
-but it is best used for exploration only.
-In CI, you should use the most specific adapter for your use case.
+In this example, the `latency` metric kind object contains the following metrics:
 
-## \{...\} JSON
-
-The JSON Adapter (`json`) expects BMF JSON.
-It is perfect for integrating a custom benchmark harnesses with Bencher.
+- A `value` of `88.0`
+- A `lower_bound` of `87.42`
+- An `upper_bound` of `88.88`
 
 > 🐰 Note: The `bencher mock` command generates mock BMF metrics.
 
