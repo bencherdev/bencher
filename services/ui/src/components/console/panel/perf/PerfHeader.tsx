@@ -34,7 +34,7 @@ const PerfHeader = (props) => {
 				{project_data()?.url && (
 					<div class="level-item">
 						<a
-							class="button is-outlined"
+							class="button is-outlined is-fullwidth"
 							href={project_data()?.url}
 							rel="noreferrer nofollow"
 							target="_blank"
@@ -46,34 +46,36 @@ const PerfHeader = (props) => {
 						</a>
 					</div>
 				)}
-				<div class="level-item">
-					<button
-						class="button is-outlined"
-						onClick={(e) => {
-							e.preventDefault();
-							navigator.clipboard.writeText(window.location.href);
-						}}
-					>
-						<span class="icon">
-							<i class="fas fa-link" aria-hidden="true" />
-						</span>
-						<span>Copy Link</span>
-					</button>
-				</div>
-				<div class="level-item">
-					<button
-						class="button is-outlined"
-						onClick={(e) => {
-							e.preventDefault();
-							props.handleRefresh();
-						}}
-					>
-						<span class="icon">
-							<i class="fas fa-sync-alt" aria-hidden="true" />
-						</span>
-						<span>Refresh</span>
-					</button>
-				</div>
+				<nav class="level is-mobile">
+					<div class="level-item">
+						<button
+							class="button is-outlined is-fullwidth"
+							onClick={(e) => {
+								e.preventDefault();
+								navigator.clipboard.writeText(window.location.href);
+							}}
+						>
+							<span class="icon">
+								<i class="fas fa-link" aria-hidden="true" />
+							</span>
+							<span>Copy Link</span>
+						</button>
+					</div>
+					<div class="level-item">
+						<button
+							class="button is-outlined is-fullwidth"
+							onClick={(e) => {
+								e.preventDefault();
+								props.handleRefresh();
+							}}
+						>
+							<span class="icon">
+								<i class="fas fa-sync-alt" aria-hidden="true" />
+							</span>
+							<span>Refresh</span>
+						</button>
+					</div>
+				</nav>
 			</div>
 		</nav>
 	);
