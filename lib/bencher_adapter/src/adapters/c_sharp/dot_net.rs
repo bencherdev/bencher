@@ -64,7 +64,7 @@ impl TryFrom<DotNet> for Option<AdapterResults> {
                 standard_deviation,
             } = statistics;
 
-            benchmark_name.push('.', &method);
+            benchmark_name.try_push('.', &method)?;
 
             // JSON output is always in nanos
             let units = Units::Nano;
