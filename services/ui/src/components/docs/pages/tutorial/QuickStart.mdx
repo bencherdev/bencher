@@ -89,7 +89,7 @@ Finally, lets test that we have the `bencher` CLI installed.
 
 Run: `bencher --version`
 
-You should see something like:
+You should see:
 
 <pre>
   <code>
@@ -97,8 +97,6 @@ You should see something like:
 bencher ${BENCHER_VERSION}`}
   </code>
 </pre>
-
-As before, it is okay if your version number is different. It's just important that this command works.
 
 ## Run UI & API Servers
 
@@ -161,7 +159,7 @@ With the `bencher` CLI installed and the services running, we should now be able
 
 Run: `bencher server version --host http://localhost:61016`
 
-You should see something like:
+You should see:
 
 <pre>
   <code>
@@ -176,7 +174,7 @@ It is okay if the version number is different. It's just important that this com
 
 ## Create an Account
 
-In order to user the Bencher API server beyond a few basic commands, like checking the version number, you will need to create an account on your API server.
+In order to use the Bencher API server beyond a few basic commands, like checking the version number, you will need to create an account on your API server.
 
 <br />
 
@@ -195,7 +193,7 @@ http://localhost:61016
 
 <br />
 
-> 🐰 Note: The `bencher` CLI defaults to [https://api.bencher.dev](https://api.bencher.dev) as the host, so when using Bencher Cloud this step is not required.
+> 🐰 Note: The `bencher` CLI default host is Bencher Cloud (ie [https://api.bencher.dev](https://api.bencher.dev)).
 
 <br />
 
@@ -247,12 +245,12 @@ $ bencher auth confirm YOUR_CONFIRMATION_CODE
 {
   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc",
   "user": {
-    "admin": true,
-    "email": "saul@bettercallsaul.com",
-    "locked": false,
     "name": "Saul Goodman",
     "slug": "saul-goodman",
     "uuid": "e8938f3a-d8cb-4ba5-b09e-5b5a29169c51"
+    "email": "saul@bettercallsaul.com",
+    "admin": true,
+    "locked": false,
   }
 }
 ```
@@ -310,12 +308,12 @@ You should see something like:
 ```
 $ bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"
 {
-  "name": "Save Walter White",
   "organization": "4581feb0-6cac-40a9-bd8a-d7865183b01e",
-  "public": true,
+  "name": "Save Walter White",
   "slug": "save-walter-white",
-  "url": "http://www.savewalterwhite.com",
   "uuid": "c6c2a8e8-685e-4413-9a19-5b79053a71b1"
+  "url": "http://www.savewalterwhite.com",
+  "public": true,
 }
 ```
 
@@ -436,9 +434,13 @@ $ bencher run --project save-walter-white "bencher mock"
   }
 }
 {
-  "adapter": "magic",
-  "alerts": [],
+  "user": "e8938f3a-d8cb-4ba5-b09e-5b5a29169c51",
+  "uuid": "524b5016-87af-4484-8817-247b0e0d01c7",
+  "version": "70a228ed-eb20-42a3-89b9-3ebebc5c2593"
+  "testbed": "abb0fbe0-0550-4f80-b53f-37d89303e6b8",
+  "start_time": "2022-12-20T16:01:21.523728845Z",
   "end_time": "2022-12-20T16:01:21.526691505Z",
+  "adapter": "magic",
   "results": [
     "babf3c2c-30c2-4e2a-ada4-17c7ad0fafff",
     "3d86b33a-4505-4762-8132-830cfd0dc6d6",
@@ -446,15 +448,16 @@ $ bencher run --project save-walter-white "bencher mock"
     "d9a6e82a-2dc6-4e40-a059-6282a62e30c0",
     "2aca6972-835a-4f97-bb0d-d452ef73eac9"
   ],
-  "start_time": "2022-12-20T16:01:21.523728845Z",
-  "testbed": "abb0fbe0-0550-4f80-b53f-37d89303e6b8",
-  "user": "14a828c8-7eb4-4f78-ad0f-ea7a2b9b06e6",
-  "uuid": "524b5016-87af-4484-8817-247b0e0d01c7",
-  "version": "70a228ed-eb20-42a3-89b9-3ebebc5c2593"
+  "alerts": [],
 }
 ```
 
 Again, your output should be sligtly different than the above, as the data are pseudorandom. It's just important that this command works.
+
+<br />
+
+> 🐰 Note: Because we didn't specify a benchmark harness adapter, the `magic` adapter was used by default.
+For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
 
 <br />
 

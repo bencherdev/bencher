@@ -31,21 +31,23 @@ Example of BMF:
 
 In this example, the key `benchmark_name` would be the name of a benchmark.
 Benchmark names can be any non-empty string up to 1024 characters.
-The `benchmark_name` object contains metric kind slugs and/or UUIDs as keys.
-In this example, `latency` is the slug for the Latency metric kind.
-Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) metric kind,
+The `benchmark_name` object contains Metric Kind slugs or UUIDs as keys.
+In this example, `latency` is the slug for the Latency Metric Kind.
+Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) Metric Kind,
 which are measured in `nanosecond (ns)` and `operations / second (ops/s)` respectively.
-The metric kind object contains up to three metrics: `value`, `lower_bound`, and `upper_bound`.
-The `lower_bound` and `upper_bound` metrics are optional,
+The Metric Kind object contains up to three Metrics: `value`, `lower_bound`, and `upper_bound`.
+The `lower_bound` and `upper_bound` Metrics are optional,
 and their calcualtion is benchmark harness specific.
 
-In this example, the `latency` metric kind object contains the following metrics:
+In this example, the `latency` Metric Kind object contains the following Metrics:
 
 - A `value` of `88.0`
 - A `lower_bound` of `87.42`
 - An `upper_bound` of `88.88`
 
-> 🐰 Note: The `bencher mock` command generates mock BMF metrics.
+<br/>
+
+> 🐰 Note: The `bencher mock` CLI command generates mock BMF metrics.
 
 ## #️⃣ C#
 

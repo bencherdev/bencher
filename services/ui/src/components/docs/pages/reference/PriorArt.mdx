@@ -7,7 +7,7 @@
 - Framework Specific
   - [Phoronix Test Suite](https://www.phoronix-test-suite.com) - Open-Source, Automated Benchmarking
   - [OpenBenchmarking.org](https://openbenchmarking.org/) - Storage of Phoronix Test Suite benchmark result data (including optional system logs, etc)
-  - [chronologer](https://github.com/dandavison/chronologer) - Visualize performance benchmarks over git commit history
+  - [dandavison/chronologer](https://github.com/dandavison/chronologer) - Visualize performance benchmarks over git commit history
   - [Cybench](https://cybench.io) - Continuous performance regression testing for Java CI/CD pipelines
   - [ocurrent/current-bench](https://github.com/ocurrent/current-bench) - Experimental continuous benchmarking infrastructure using OCurrent pipelines
   - [JfrUnit](https://github.com/moditect/jfrunit) - A JUnit extension for asserting JDK Flight Recorder events
@@ -30,7 +30,7 @@
   - [Elasticsearch Benchmarks](https://elasticsearch-benchmarks.elastic.co) - The results of the Elasticsearch nightly benchmarks based on the main branch as of that point in time
 
 > 🐰 A special thank you to [Continuous Benchmark](https://github.com/marketplace/actions/continuous-benchmark)!
-> Some of their test files are used for our [CLI Adapters](https://bencher.dev/docs/explanation/cli-adapters).
+> Some of their test files are used for our [Benchmark Harness Adapters](https://bencher.dev/docs/explanation/adapters).
 
 ## Benchmark Tracking Posts
 
@@ -112,10 +112,10 @@
   - [python/pyperformance](https://github.com/python/pyperformance) - Python Performance Benchmark Suite
   - [timeit](https://docs.python.org/3/library/timeit.html) - This module provides a simple way to time small bits of Python code
 - Rust
-  - [cargo bench](https://doc.rust-lang.org/cargo/commands/cargo-bench.html) - Compile and execute benchmarks
+  - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) - The libtest harness supports running benchmarks for functions annotated with the `#[bench]` attribute. Benchmarks are currently unstable, and only available on the nightly channel.
   - [bheisler/criterion.rs](https://github.com/bheisler/criterion.rs) - Statistics-driven benchmarking library for Rust
   - [bluss/bencher](https://github.com/bluss/bencher) - bencher is just a port of the libtest (unstable) benchmark runner to Rust stable releases. `cargo bench` on stable. "Not a better bencher!" = No feature development. Go build a better stable benchmarking library.
-  - [cargo-benchcmp](https://github.com/BurntSushi/cargo-benchcmp) - A small utility to compare Rust micro-benchmarks
+  - [BurntSushi/cargo-benchcmp](https://github.com/BurntSushi/cargo-benchcmp) - A small utility to compare Rust micro-benchmarks
 - Swift
   - [apple/swift](https://github.com/apple/swift/tree/main/benchmark) - The Swift Benchmark Suite
   - [google/swift-benchmark](https://github.com/google/swift-benchmark) - A swift library to benchmark code snippets

@@ -22,7 +22,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
 - Explanation
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
-  - [CLI Adapters](https://bencher.dev/docs/explanation/cli-adapters)
+  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters)
   - [CLI Branch Selection](https://bencher.dev/docs/explanation/cli-branch-selection)
   - [Talks](https://bencher.dev/docs/explanation/talks)
 - Reference
@@ -47,7 +47,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
 
-For more details see the [explanation of CLI adapters](https://bencher.dev/docs/explanation/cli-adapters).
+For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
 
 ## Contributing
 
