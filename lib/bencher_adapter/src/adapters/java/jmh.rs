@@ -33,10 +33,16 @@ pub struct Benchmark {
 pub struct PrimaryMetric {
     #[serde(with = "rust_decimal::serde::float")]
     pub score: Decimal,
-    #[serde(with = "rust_decimal::serde::float")]
-    pub score_error: Decimal,
+    pub score_confidence: ScoreConfidence,
     pub score_unit: String,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScoreConfidence(
+    #[serde(with = "rust_decimal::serde::float")] Decimal,
+    #[serde(with = "rust_decimal::serde::float")] Decimal,
+);
 
 impl TryFrom<Jmh> for Option<AdapterResults> {
     type Error = AdapterError;
@@ -51,7 +57,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
             } = benchmark;
             let PrimaryMetric {
                 score,
-                score_error,
+                score_confidence,
                 score_unit,
             } = primary_metric;
 
@@ -62,11 +68,12 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
                 let time_unit = unit.parse()?;
                 let value = latency_as_nanos(score, time_unit);
-                let variance = latency_as_nanos(score_error, time_unit);
+                let lower_bound = latency_as_nanos(score_confidence.0, time_unit);
+                let upper_bound = latency_as_nanos(score_confidence.1, time_unit);
                 let json_metric = JsonMetric {
                     value,
-                    lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
-                    upper_bound: Some(value + variance),
+                    lower_bound: Some(lower_bound),
+                    upper_bound: Some(upper_bound),
                 };
                 AdapterMetricKind::Latency(json_metric)
             } else if let Some((ops_slash, unit)) = score_unit.split_once("ops/") {
@@ -76,11 +83,12 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
                 let time_unit = unit.parse()?;
                 let value = throughput_as_secs(score, time_unit);
-                let variance = throughput_as_secs(score_error, time_unit);
+                let lower_bound = throughput_as_secs(score_confidence.0, time_unit);
+                let upper_bound = throughput_as_secs(score_confidence.1, time_unit);
                 let json_metric = JsonMetric {
                     value,
-                    lower_bound: Some(std::cmp::max(value - variance, 0.0.into())),
-                    upper_bound: Some(value + variance),
+                    lower_bound: Some(lower_bound),
+                    upper_bound: Some(upper_bound),
                 };
                 AdapterMetricKind::Throughput(json_metric)
             } else {
@@ -177,7 +185,7 @@ pub(crate) mod test_java_jmh {
         validate_throughput(
             metrics,
             7828947.712794046,
-            Some(0.0),
+            Some(-1835785.2124654085),
             Some(17493680.6380535),
         );
 
@@ -207,8 +215,8 @@ pub(crate) mod test_java_jmh {
         validate_throughput(
             metrics,
             113640916.67262992,
-            Some(105176321.97352053),
-            Some(122105511.37173931),
+            Some(105176321.97352052),
+            Some(122105511.3717393),
         );
     }
 }
