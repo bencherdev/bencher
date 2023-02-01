@@ -20,8 +20,19 @@ pub struct BenchmarkName(String);
 
 impl BenchmarkName {
     pub fn push(&mut self, separator: char, other: &Self) {
-        self.0.push(separator);
-        self.0.push_str(other.as_ref());
+        if self.0.len() < MAX_BENCHMARK_NAME_LEN {
+            self.0.push(separator);
+        } else {
+            return;
+        }
+
+        let remaining_capacity = MAX_BENCHMARK_NAME_LEN - self.0.len();
+        if other.0.len() <= remaining_capacity {
+            self.0.push_str(other.as_ref());
+        } else {
+            self.0
+                .push_str(other.as_ref().split_at(remaining_capacity).0)
+        }
     }
 }
 
@@ -64,7 +75,7 @@ impl<'de> Visitor<'de> for BenchmarkNameVisitor {
     type Value = BenchmarkName;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a non-empty string")
+        formatter.write_str("a valid benchmark name")
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
