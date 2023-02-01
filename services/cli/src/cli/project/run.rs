@@ -100,6 +100,10 @@ pub enum CliRunAdapter {
     Magic,
     /// {...} JSON
     Json,
+    /// #️⃣ C#
+    CSharp,
+    /// #️⃣ C# DotNet
+    CSharpDotNet,
     /// ➕ C++
     Cpp,
     /// ➕ C++ Google

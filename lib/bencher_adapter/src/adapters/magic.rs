@@ -3,11 +3,14 @@ use crate::{
     AdapterJson, AdapterRust,
 };
 
+use super::c_sharp::AdapterCSharp;
+
 pub struct AdapterMagic;
 
 impl Adapter for AdapterMagic {
     fn parse(input: &str) -> Option<AdapterResults> {
         AdapterJson::parse(input)
+            .or_else(|| AdapterCSharp::parse(input))
             .or_else(|| AdapterCpp::parse(input))
             .or_else(|| AdapterGo::parse(input))
             .or_else(|| AdapterJava::parse(input))
@@ -19,6 +22,7 @@ impl Adapter for AdapterMagic {
 mod test_magic {
     use super::AdapterMagic;
     use crate::adapters::{
+        c_sharp::{dot_net::test_c_sharp_dot_net, AdapterCSharp},
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,
@@ -31,6 +35,12 @@ mod test_magic {
     fn test_adapter_magic_json_latency() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_latency.json");
         test_json::validate_adapter_json_latency(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_c_sharp_dot_net() {
+        let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dot_net/two.json");
+        test_c_sharp_dot_net::validate_adapter_c_sharp_dot_net(results);
     }
 
     #[test]

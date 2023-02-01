@@ -50,8 +50,8 @@ pub struct Statistics {
 impl TryFrom<DotNet> for Option<AdapterResults> {
     type Error = AdapterError;
 
-    fn try_from(dotnet: DotNet) -> Result<Self, Self::Error> {
-        let benchmarks = dotnet.benchmarks.0;
+    fn try_from(dot_net: DotNet) -> Result<Self, Self::Error> {
+        let benchmarks = dot_net.benchmarks.0;
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
         for benchmark in benchmarks {
             let Benchmark {
@@ -86,7 +86,7 @@ impl TryFrom<DotNet> for Option<AdapterResults> {
 }
 
 #[cfg(test)]
-pub(crate) mod test_c_sharp_dotnet {
+pub(crate) mod test_c_sharp_dot_net {
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -96,18 +96,18 @@ pub(crate) mod test_c_sharp_dotnet {
 
     use super::AdapterCSharpDotNet;
 
-    fn convert_c_sharp_dotnet(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/c_sharp/dotnet/{suffix}.json");
+    fn convert_c_sharp_dot_net(suffix: &str) -> AdapterResults {
+        let file_path = format!("./tool_output/c_sharp/dot_net/{suffix}.json");
         convert_file_path::<AdapterCSharpDotNet>(&file_path)
     }
 
     #[test]
-    fn test_adapter_c_sharp_dotnet_two() {
-        let results = convert_c_sharp_dotnet("two");
-        validate_adapter_c_sharp_dotnet(results);
+    fn test_adapter_c_sharp_dot_net_two() {
+        let results = convert_c_sharp_dot_net("two");
+        validate_adapter_c_sharp_dot_net(results);
     }
 
-    pub fn validate_adapter_c_sharp_dotnet(results: AdapterResults) {
+    pub fn validate_adapter_c_sharp_dot_net(results: AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results
@@ -132,8 +132,8 @@ pub(crate) mod test_c_sharp_dotnet {
     }
 
     #[test]
-    fn test_adapter_c_sharp_dotnet_two_more() {
-        let results = convert_c_sharp_dotnet("two_more");
+    fn test_adapter_c_sharp_dot_net_two_more() {
+        let results = convert_c_sharp_dot_net("two_more");
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("Sample.Fib10").unwrap();

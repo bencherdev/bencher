@@ -6,6 +6,8 @@ use crate::cli::project::run::CliRunAdapter;
 pub enum RunAdapter {
     Magic,
     Json,
+    CSharp,
+    CSharpDotNet,
     Cpp,
     CppGoogle,
     CppCatch2,
@@ -23,6 +25,8 @@ impl From<CliRunAdapter> for RunAdapter {
         match adapter {
             CliRunAdapter::Magic => Self::Magic,
             CliRunAdapter::Json => Self::Json,
+            CliRunAdapter::CSharp => Self::CSharp,
+            CliRunAdapter::CSharpDotNet => Self::CSharpDotNet,
             CliRunAdapter::Cpp => Self::Cpp,
             CliRunAdapter::CppGoogle => Self::CppGoogle,
             CliRunAdapter::CppCatch2 => Self::CppCatch2,
@@ -42,6 +46,8 @@ impl From<RunAdapter> for JsonAdapter {
         match adapter {
             RunAdapter::Magic => Self::Magic,
             RunAdapter::Json => Self::Json,
+            RunAdapter::CSharp => Self::CSharp,
+            RunAdapter::CSharpDotNet => Self::CSharpDotNet,
             RunAdapter::Cpp => Self::Cpp,
             RunAdapter::CppGoogle => Self::CppGoogle,
             RunAdapter::CppCatch2 => Self::CppCatch2,

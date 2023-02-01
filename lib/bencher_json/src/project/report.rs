@@ -33,6 +33,8 @@ pub enum JsonAdapter {
     #[default]
     Magic,
     Json,
+    CSharp,
+    CSharpDotNet,
     Cpp,
     CppGoogle,
     CppCatch2,

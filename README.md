@@ -34,6 +34,8 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 ## Supported Benchmark Harnesses
 
+- C#
+  - [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)
 - C++
   - [Google Benchmark](https://github.com/google/benchmark)
   - [Catch2](https://github.com/catchorg/Catch2)

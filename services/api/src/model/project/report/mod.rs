@@ -132,6 +132,8 @@ const GO_INT: i32 = 40;
 const GO_BENCH_INT: i32 = 41;
 const JAVA_INT: i32 = 50;
 const JAVA_JMH_INT: i32 = 51;
+const C_SHARP_INT: i32 = 60;
+const C_SHARP_DOT_NET_INT: i32 = 61;
 
 #[repr(i32)]
 pub enum Adapter {
@@ -147,6 +149,8 @@ pub enum Adapter {
     GoBench = GO_BENCH_INT,
     Java = JAVA_INT,
     JavaJmh = JAVA_JMH_INT,
+    CSharp = C_SHARP_INT,
+    CSharpDotNet = C_SHARP_DOT_NET_INT,
 }
 
 impl TryFrom<i32> for Adapter {
@@ -166,6 +170,8 @@ impl TryFrom<i32> for Adapter {
             GO_BENCH_INT => Ok(Self::GoBench),
             JAVA_INT => Ok(Self::Java),
             JAVA_JMH_INT => Ok(Self::JavaJmh),
+            C_SHARP_INT => Ok(Self::CSharp),
+            C_SHARP_DOT_NET_INT => Ok(Self::CSharpDotNet),
             _ => Err(ApiError::AdapterInt(adapter)),
         }
     }
@@ -186,6 +192,8 @@ impl From<JsonAdapter> for Adapter {
             JsonAdapter::GoBench => Self::GoBench,
             JsonAdapter::Java => Self::Java,
             JsonAdapter::JavaJmh => Self::JavaJmh,
+            JsonAdapter::CSharp => Self::CSharp,
+            JsonAdapter::CSharpDotNet => Self::CSharpDotNet,
         }
     }
 }
@@ -205,6 +213,8 @@ impl From<Adapter> for JsonAdapter {
             Adapter::GoBench => Self::GoBench,
             Adapter::Java => Self::Java,
             Adapter::JavaJmh => Self::JavaJmh,
+            Adapter::CSharp => Self::CSharp,
+            Adapter::CSharpDotNet => Self::CSharpDotNet,
         }
     }
 }

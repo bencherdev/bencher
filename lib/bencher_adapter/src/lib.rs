@@ -3,6 +3,7 @@ pub mod error;
 pub mod results;
 
 use adapters::{
+    c_sharp::{dot_net::AdapterCSharpDotNet, AdapterCSharp},
     cpp::AdapterCpp,
     cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle},
     go::bench::AdapterGoBench,
@@ -30,6 +31,8 @@ impl Adapter for JsonAdapter {
         match self {
             JsonAdapter::Magic => AdapterMagic::parse(input),
             JsonAdapter::Json => AdapterJson::parse(input),
+            JsonAdapter::CSharp => AdapterCSharp::parse(input),
+            JsonAdapter::CSharpDotNet => AdapterCSharpDotNet::parse(input),
             JsonAdapter::Cpp => AdapterCpp::parse(input),
             JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
             JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input),
