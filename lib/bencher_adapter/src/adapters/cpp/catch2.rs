@@ -23,15 +23,18 @@ impl Adapter for AdapterCppCatch2 {
     fn parse(input: &str) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
-        let mut prior_line = None;
+        let mut benchmark_name_line = None;
+        let mut mean_line = None;
         for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_catch2(prior_line, line) {
+            if let Ok((remainder, benchmark_metric)) =
+                parse_catch2(benchmark_name_line, mean_line, line)
+            {
                 if remainder.is_empty() {
                     benchmark_metrics.push(benchmark_metric);
                 }
             }
 
-            prior_line = Some(line);
+            benchmark_name_line = mean_line.replace(line);
         }
 
         AdapterResults::new_latency(benchmark_metrics)
@@ -39,27 +42,40 @@ impl Adapter for AdapterCppCatch2 {
 }
 
 fn parse_catch2<'i>(
-    prior_line: Option<&str>,
+    benchmark_name_line: Option<&str>,
+    mean_line: Option<&str>,
     input: &'i str,
 ) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
     map_res(
         parse_catch2_time,
-        |json_metric| -> Result<(BenchmarkName, JsonMetric), NomError> {
-            let prior_line = prior_line.ok_or_else(|| nom_error(String::new()))?;
+        |std_dev| -> Result<(BenchmarkName, JsonMetric), NomError> {
+            let benchmark_name_line =
+                benchmark_name_line.ok_or_else(|| nom_error(String::new()))?;
+            let mean_line = mean_line.ok_or_else(|| nom_error(String::new()))?;
 
-            let (remainder, benchmark_name) =
-                parse_catch2_benchmark_name(prior_line).map_err(|_| nom_error(prior_line))?;
+            let (benchmark_name_remainder, benchmark_name) =
+                parse_catch2_benchmark_name(benchmark_name_line)
+                    .map_err(|_| nom_error(benchmark_name_line))?;
 
-            if remainder.is_empty() {
+            let (mean_remainder, mean) =
+                parse_catch2_time(mean_line).map_err(|_| nom_error(mean_line))?;
+
+            if benchmark_name_remainder.is_empty() && mean_remainder.is_empty() {
+                let json_metric = JsonMetric {
+                    value: mean,
+                    lower_bound: Some(mean - std_dev),
+                    upper_bound: Some(mean + std_dev),
+                };
+
                 Ok((benchmark_name, json_metric))
             } else {
-                Err(nom_error(prior_line))
+                Err(nom_error(input))
             }
         },
     )(input)
 }
 
-fn parse_catch2_time(input: &str) -> IResult<&str, JsonMetric> {
+fn parse_catch2_time(input: &str) -> IResult<&str, OrderedFloat<f64>> {
     map(
         tuple((
             space1,
@@ -71,11 +87,7 @@ fn parse_catch2_time(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             eof,
         )),
-        |(_, value, _, lower_bound, _, upper_bound, _, _)| JsonMetric {
-            value,
-            lower_bound: Some(lower_bound),
-            upper_bound: Some(upper_bound),
-        },
+        |(_, column_one, _, _, _, _, _, _)| column_one,
     )(input)
 }
 
@@ -185,16 +197,16 @@ pub(crate) mod test_cpp_catch2 {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("Fibonacci 10").unwrap();
-        validate_latency(metrics, 344.0, Some(341.0), Some(349.0));
+        validate_latency(metrics, 344.0, Some(325.0), Some(363.0));
 
         let metrics = results.get("Fibonacci 20").unwrap();
-        validate_latency(metrics, 41731.0, Some(41250.0), Some(42622.0));
+        validate_latency(metrics, 41731.0, Some(38475.0), Some(44987.0));
 
         let metrics = results.get("Fibonacci~ 5!").unwrap();
-        validate_latency(metrics, 36.0, Some(35.0), Some(37.0));
+        validate_latency(metrics, 36.0, Some(32.0), Some(40.0));
 
         let metrics = results.get("Fibonacci-15_bench").unwrap();
-        validate_latency(metrics, 3789.0, Some(3734.0), Some(3888.0));
+        validate_latency(metrics, 3789.0, Some(3427.0), Some(4151.0));
     }
 
     #[test]
