@@ -34,16 +34,18 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 ## Supported Benchmark Harnesses
 
-- C#
+- {...} JSON
+  - [Custom benchmark harness support](https://bencher.dev/docs/explanation/adapters)
+- #️⃣ C#
   - [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)
-- C++
-  - [Google Benchmark](https://github.com/google/benchmark)
+- ➕ C++
   - [Catch2](https://github.com/catchorg/Catch2)
-- Go
+  - [Google Benchmark](https://github.com/google/benchmark)
+- 🕳 Go
   - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
-- Java
+- ☕️ Java
   - [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh)
-- Rust
+- 🦀 Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
 

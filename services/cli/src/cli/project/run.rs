@@ -106,10 +106,10 @@ pub enum CliRunAdapter {
     CSharpDotNet,
     /// ➕ C++
     Cpp,
-    /// ➕ C++ Google
-    CppGoogle,
     /// ➕ C++ Catch2
     CppCatch2,
+    /// ➕ C++ Google
+    CppGoogle,
     /// 🕳 Go
     Go,
     /// 🕳 Go Bench
