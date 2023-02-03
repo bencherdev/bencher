@@ -172,18 +172,20 @@ const MaximizeKeyButton = (props) => {
 
 const KeyResource = (props) => {
 	return (
-		<nav class="level">
-			<div class="level-left">
-				<div class="level-item">
-					<span class="icon">
-						<i class={props.icon} aria-hidden="true" />
-					</span>
-				</div>
-				<div class="level-item">
-					<p style="overflow-wrap:break-word;">{props.name}</p>
+		<div class="columns is-vcentered is-mobile">
+			<div class="column is-narrow">
+				<span class="icon">
+					<i class={props.icon} aria-hidden="true" />
+				</span>
+			</div>
+			<div class="column">
+				<div class="columns">
+					<div class="column">
+						<small style="overflow-wrap:anywhere;">{props.name}</small>
+					</div>
 				</div>
 			</div>
-		</nav>
+		</div>
 	);
 };
 

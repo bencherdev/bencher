@@ -57,11 +57,16 @@ const PlotTab = (props) => {
 						// https://www.solidjs.com/tutorial/stores_createstore
 						<a
 							class="panel-block"
-							style="overflow-wrap:break-word;"
 							onClick={(e) => handleChecked(index(), item.uuid)}
 						>
-							<input type="checkbox" checked={item.checked} />
-							{item.name}
+							<div class="columns is-vcentered is-mobile">
+								<div class="column is-narrow">
+									<input type="checkbox" checked={item.checked} />
+								</div>
+								<div class="column">
+									<small style="overflow-wrap:anywhere;">{item.name}</small>
+								</div>
+							</div>
 						</a>
 					)}
 				</For>

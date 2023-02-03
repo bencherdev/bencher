@@ -18,7 +18,7 @@ const Table = (props) => {
 						{(datum, i) => (
 							<div class="pricing-plan is-primary">
 								<div class="plan-header">
-									<p style="overflow-wrap:break-word;">
+									<p style="overflow-wrap:anywhere;">
 										{datum[props.config?.row?.key]}
 									</p>
 								</div>
@@ -26,7 +26,7 @@ const Table = (props) => {
 									<For each={props.config?.row?.items}>
 										{(item, i) => (
 											<div class="plan-item">
-												<p style="overflow-wrap:break-word;">
+												<p style="overflow-wrap:anywhere;">
 													<Switch fallback="-">
 														<Match when={item.kind === Row.TEXT}>
 															{datum[item.key]}

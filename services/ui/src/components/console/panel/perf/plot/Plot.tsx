@@ -28,7 +28,7 @@ const Plot = (props) => {
 	const plot_size = createElementSize(() => plot_ref);
 	const width = createMemo(() =>
 		props.key()
-			? plot_size.width == key_size.width
+			? plot_size.width === key_size.width
 				? plot_size.width
 				: plot_size.width - key_size.width / 4
 			: plot_size.width,
@@ -40,7 +40,7 @@ const Plot = (props) => {
 				class={`columns is-reverse-mobile ${props.key() ? "" : "is-vcentered"}`}
 			>
 				<div
-					class={`column ${props.key() ? "is-one-quarter" : "is-narrow"}`}
+					class={`column ${props.key() ? "is-one-fifth" : "is-narrow"}`}
 					ref={(e) => (key_ref = e)}
 				>
 					<PlotKey
