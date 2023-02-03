@@ -26,11 +26,15 @@ impl Adapter for AdapterCppCatch2 {
         let mut benchmark_name_line = None;
         let mut mean_line = None;
         for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) =
-                parse_catch2(benchmark_name_line, mean_line, line)
-            {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
+            if let Some(benchmark_name_line) = benchmark_name_line {
+                if let Some(mean_line) = mean_line {
+                    if let Ok((remainder, benchmark_metric)) =
+                        parse_catch2(benchmark_name_line, mean_line, line)
+                    {
+                        if remainder.is_empty() {
+                            benchmark_metrics.push(benchmark_metric);
+                        }
+                    }
                 }
             }
 
@@ -42,17 +46,13 @@ impl Adapter for AdapterCppCatch2 {
 }
 
 fn parse_catch2<'i>(
-    benchmark_name_line: Option<&str>,
-    mean_line: Option<&str>,
+    benchmark_name_line: &str,
+    mean_line: &str,
     input: &'i str,
 ) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
     map_res(
         parse_catch2_time,
         |std_dev| -> Result<(BenchmarkName, JsonMetric), NomError> {
-            let benchmark_name_line =
-                benchmark_name_line.ok_or_else(|| nom_error(String::new()))?;
-            let mean_line = mean_line.ok_or_else(|| nom_error(String::new()))?;
-
             let (benchmark_name_remainder, benchmark_name) =
                 parse_catch2_benchmark_name(benchmark_name_line)
                     .map_err(|_| nom_error(benchmark_name_line))?;
