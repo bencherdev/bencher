@@ -1,4 +1,5 @@
 pub mod asv;
+pub mod pytest;
 
 use crate::{Adapter, AdapterResults};
 use asv::AdapterPythonAsv;
