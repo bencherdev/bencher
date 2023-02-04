@@ -4,6 +4,7 @@ pub mod c_sharp;
 pub mod cpp;
 pub mod go;
 pub mod java;
+pub mod js;
 pub mod json;
 pub mod magic;
 pub mod rust;
