@@ -19,6 +19,8 @@ const C_SHARP_DOT_NET_INT: i32 = 61;
 const JS_INT: i32 = 70;
 const JS_BENCHMARK_INT: i32 = 71;
 const JS_TIME_INT: i32 = 72;
+const PYTHON_INT: i32 = 80;
+const PYTHON_ASV_INT: i32 = 81;
 
 #[repr(i32)]
 pub enum Adapter {
@@ -39,6 +41,8 @@ pub enum Adapter {
     Js = JS_INT,
     JsBenchmark = JS_BENCHMARK_INT,
     JsTime = JS_TIME_INT,
+    Python = PYTHON_INT,
+    PythonAsv = PYTHON_ASV_INT,
 }
 
 impl TryFrom<i32> for Adapter {
@@ -63,6 +67,8 @@ impl TryFrom<i32> for Adapter {
             JS_INT => Ok(Self::Js),
             JS_BENCHMARK_INT => Ok(Self::JsBenchmark),
             JS_TIME_INT => Ok(Self::JsTime),
+            PYTHON_INT => Ok(Self::Python),
+            PYTHON_ASV_INT => Ok(Self::PythonAsv),
             _ => Err(ApiError::AdapterInt(adapter)),
         }
     }
@@ -88,6 +94,8 @@ impl From<JsonAdapter> for Adapter {
             JsonAdapter::Js => Self::Js,
             JsonAdapter::JsBenchmark => Self::JsBenchmark,
             JsonAdapter::JsTime => Self::JsTime,
+            JsonAdapter::Python => Self::Python,
+            JsonAdapter::PythonAsv => Self::PythonAsv,
         }
     }
 }
@@ -112,6 +120,8 @@ impl From<Adapter> for JsonAdapter {
             Adapter::Js => Self::Js,
             Adapter::JsBenchmark => Self::JsBenchmark,
             Adapter::JsTime => Self::JsTime,
+            Adapter::Python => Self::Python,
+            Adapter::PythonAsv => Self::PythonAsv,
         }
     }
 }

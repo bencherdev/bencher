@@ -1,6 +1,6 @@
 use crate::{
     results::adapter_results::AdapterResults, Adapter, AdapterCSharp, AdapterCpp, AdapterGo,
-    AdapterJava, AdapterJs, AdapterJson, AdapterRust,
+    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRust,
 };
 
 pub struct AdapterMagic;
@@ -13,6 +13,7 @@ impl Adapter for AdapterMagic {
             .or_else(|| AdapterGo::parse(input))
             .or_else(|| AdapterJava::parse(input))
             .or_else(|| AdapterJs::parse(input))
+            .or_else(|| AdapterPython::parse(input))
             .or_else(|| AdapterRust::parse(input))
     }
 }
@@ -27,6 +28,7 @@ mod test_magic {
         java::jmh::test_java_jmh,
         js::{benchmark::test_js_benchmark, time::test_js_time},
         json::test_json,
+        python::asv::test_python_asv,
         rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
     };
@@ -77,6 +79,12 @@ mod test_magic {
     fn test_adapter_magic_js_time() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/js/time/four.txt");
         test_js_time::validate_adapter_js_time(results);
+    }
+
+    #[test]
+    fn test_adapter_python_asv() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/python/asv/six.txt");
+        test_python_asv::validate_adapter_python_asv(results);
     }
 
     #[test]

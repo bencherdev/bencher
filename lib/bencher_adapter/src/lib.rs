@@ -4,16 +4,14 @@ pub mod results;
 
 use adapters::{
     c_sharp::{dot_net::AdapterCSharpDotNet, AdapterCSharp},
-    cpp::AdapterCpp,
-    cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle},
-    go::bench::AdapterGoBench,
-    go::AdapterGo,
+    cpp::{catch2::AdapterCppCatch2, google::AdapterCppGoogle, AdapterCpp},
+    go::{bench::AdapterGoBench, AdapterGo},
     java::{jmh::AdapterJavaJmh, AdapterJava},
     js::{benchmark::AdapterJsBenchmark, time::AdapterJsTime, AdapterJs},
     json::AdapterJson,
     magic::AdapterMagic,
-    rust::AdapterRust,
-    rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion},
+    python::{asv::AdapterPythonAsv, AdapterPython},
+    rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion, AdapterRust},
 };
 use bencher_json::project::report::JsonAdapter;
 pub use error::AdapterError;
@@ -44,6 +42,8 @@ impl Adapter for JsonAdapter {
             JsonAdapter::Js => AdapterJs::parse(input),
             JsonAdapter::JsBenchmark => AdapterJsBenchmark::parse(input),
             JsonAdapter::JsTime => AdapterJsTime::parse(input),
+            JsonAdapter::Python => AdapterPython::parse(input),
+            JsonAdapter::PythonAsv => AdapterPythonAsv::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),
