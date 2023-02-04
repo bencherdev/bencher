@@ -44,6 +44,7 @@ pub enum JsonAdapter {
     JavaJmh,
     Js,
     JsBenchmark,
+    JsTime,
     Rust,
     RustBench,
     RustCriterion,

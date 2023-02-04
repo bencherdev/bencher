@@ -114,6 +114,12 @@ The JavaScript Benchmark Adapter (`js_benchmark`) expects [Benchmark.js](https:/
 The `throughput` metric kind (ie `operations / second (ops/sec)`) is gathered.
 The `lower_bound` and `upper_bound` are the relative margin of error below and above the median (ie `value`) respectively.
 
+## 🕸 JavaScript Time
+
+The JavaScript Time Adapter (`js_time`) expects [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+Only the operation time (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
+
 ## 🦀 Rust
 
 The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.

@@ -3,8 +3,7 @@ pub mod time;
 
 use crate::{Adapter, AdapterResults};
 use benchmark::AdapterJsBenchmark;
-
-use self::time::AdapterJsTime;
+use time::AdapterJsTime;
 
 pub struct AdapterJs;
 

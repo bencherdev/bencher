@@ -122,6 +122,8 @@ pub enum CliRunAdapter {
     Js,
     /// 🕸 JavaScript Benchmark
     JsBenchmark,
+    /// 🕸 JavaScript Time
+    JsTime,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench

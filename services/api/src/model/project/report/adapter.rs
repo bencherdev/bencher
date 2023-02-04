@@ -18,6 +18,7 @@ const C_SHARP_INT: i32 = 60;
 const C_SHARP_DOT_NET_INT: i32 = 61;
 const JS_INT: i32 = 70;
 const JS_BENCHMARK_INT: i32 = 71;
+const JS_TIME_INT: i32 = 72;
 
 #[repr(i32)]
 pub enum Adapter {
@@ -37,6 +38,7 @@ pub enum Adapter {
     CSharpDotNet = C_SHARP_DOT_NET_INT,
     Js = JS_INT,
     JsBenchmark = JS_BENCHMARK_INT,
+    JsTime = JS_TIME_INT,
 }
 
 impl TryFrom<i32> for Adapter {
@@ -60,6 +62,7 @@ impl TryFrom<i32> for Adapter {
             C_SHARP_DOT_NET_INT => Ok(Self::CSharpDotNet),
             JS_INT => Ok(Self::Js),
             JS_BENCHMARK_INT => Ok(Self::JsBenchmark),
+            JS_TIME_INT => Ok(Self::JsTime),
             _ => Err(ApiError::AdapterInt(adapter)),
         }
     }
@@ -84,6 +87,7 @@ impl From<JsonAdapter> for Adapter {
             JsonAdapter::CSharpDotNet => Self::CSharpDotNet,
             JsonAdapter::Js => Self::Js,
             JsonAdapter::JsBenchmark => Self::JsBenchmark,
+            JsonAdapter::JsTime => Self::JsTime,
         }
     }
 }
@@ -107,6 +111,7 @@ impl From<Adapter> for JsonAdapter {
             Adapter::CSharpDotNet => Self::CSharpDotNet,
             Adapter::Js => Self::Js,
             Adapter::JsBenchmark => Self::JsBenchmark,
+            Adapter::JsTime => Self::JsTime,
         }
     }
 }
