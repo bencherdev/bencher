@@ -25,7 +25,7 @@ mod test_magic {
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,
-        js::benchmark::test_js_benchmark,
+        js::{benchmark::test_js_benchmark, time::test_js_time},
         json::test_json,
         rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
@@ -71,6 +71,12 @@ mod test_magic {
     fn test_adapter_magic_js_benchmark() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/js/benchmark/three.txt");
         test_js_benchmark::validate_adapter_js_benchmark(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_js_time() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/js/time/four.txt");
+        test_js_time::validate_adapter_js_time(results);
     }
 
     #[test]
