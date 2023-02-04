@@ -126,9 +126,9 @@ The Python Adapter (`python`) is a superset of `python_asv` and `python_pytest`.
 
 ## 🐍 Python ASV
 
-The Python ASV Adapter (`python_asv`) expects [airspeed velocity](https://github.com/airspeed-velocity/asv) output.
+The Python ASV Adapter (`python_asv`) expects [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) output.
 The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
-The `lower_bound` and `upper_bound` are the standard deviation below and above the median (ie `value`) respectively.
+The `lower_bound` and `upper_bound` are the interquartile range below and above the median (ie `value`) respectively.
 
 ## 🐍 Python Pytest
 

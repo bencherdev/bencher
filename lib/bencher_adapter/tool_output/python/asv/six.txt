@@ -1,0 +1,18 @@
+· Running 10 total benchmarks (1 commits * 2 environments * 5 benchmarks)
+[  0.00%] · For project commit 4238c44d <master>:
+[  0.00%] ·· Building for virtualenv-py2.7.
+[  0.00%] ·· Benchmarking virtualenv-py2.7
+[ 10.00%] ··· Running (benchmarks.TimeSuite.time_iterkeys--)....
+[ 30.00%] ··· benchmarks.MemSuite.mem_list                                 2.42k
+[ 35.00%] ··· benchmarks.TimeSuite.time_iterkeys                     11.1±0.01μs
+[ 40.00%] ··· benchmarks.TimeSuite.time_keys                         11.2±0.01μs
+[ 45.00%] ··· benchmarks.TimeSuite.time_range                        32.9±0.01μs
+[ 50.00%] ··· benchmarks.TimeSuite.time_xrange                       30.3±0.01μs
+[ 50.00%] ·· Building for virtualenv-py3.6..
+[ 50.00%] ·· Benchmarking virtualenv-py3.6
+[ 60.00%] ··· Running (benchmarks.TimeSuite.time_iterkeys--)....
+[ 80.00%] ··· benchmarks.MemSuite.mem_list                                 2.11k
+[ 85.00%] ··· benchmarks.TimeSuite.time_iterkeys                          failed
+[ 90.00%] ··· benchmarks.TimeSuite.time_keys                          9.07±0.5μs
+[ 95.00%] ··· benchmarks.TimeSuite.time_range                        35.5±0.01μs
+[100.00%] ··· benchmarks.TimeSuite.time_xrange                            failed
