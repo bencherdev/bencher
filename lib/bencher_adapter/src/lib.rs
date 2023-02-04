@@ -9,6 +9,7 @@ use adapters::{
     go::bench::AdapterGoBench,
     go::AdapterGo,
     java::{jmh::AdapterJavaJmh, AdapterJava},
+    js::{benchmark::AdapterJsBenchmark, AdapterJs},
     json::AdapterJson,
     magic::AdapterMagic,
     rust::AdapterRust,

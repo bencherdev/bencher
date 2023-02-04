@@ -1,9 +1,7 @@
 use crate::{
-    results::adapter_results::AdapterResults, Adapter, AdapterCpp, AdapterGo, AdapterJava,
-    AdapterJson, AdapterRust,
+    results::adapter_results::AdapterResults, Adapter, AdapterCSharp, AdapterCpp, AdapterGo,
+    AdapterJava, AdapterJs, AdapterJson, AdapterRust,
 };
-
-use super::c_sharp::AdapterCSharp;
 
 pub struct AdapterMagic;
 
@@ -14,6 +12,7 @@ impl Adapter for AdapterMagic {
             .or_else(|| AdapterCpp::parse(input))
             .or_else(|| AdapterGo::parse(input))
             .or_else(|| AdapterJava::parse(input))
+            .or_else(|| AdapterJs::parse(input))
             .or_else(|| AdapterRust::parse(input))
     }
 }
@@ -26,6 +25,7 @@ mod test_magic {
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,
+        js::benchmark::test_js_benchmark,
         json::test_json,
         rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
@@ -65,6 +65,12 @@ mod test_magic {
     fn test_adapter_magic_java_jmh() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/java/jmh/six.json");
         test_java_jmh::validate_adapter_java_jmh(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_js_benchmark() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/js/benchmark/three.txt");
+        test_js_benchmark::validate_adapter_js_benchmark(results);
     }
 
     #[test]
