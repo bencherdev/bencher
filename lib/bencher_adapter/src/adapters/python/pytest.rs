@@ -13,7 +13,7 @@ pub struct AdapterPythonPytest;
 
 impl Adapter for AdapterPythonPytest {
     fn parse(input: &str) -> Option<AdapterResults> {
-        serde_json::from_str::<DotNet>(input)
+        serde_json::from_str::<Pytest>(input)
             .ok()?
             .try_into()
             .ok()?
@@ -21,9 +21,10 @@ impl Adapter for AdapterPythonPytest {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct DotNet {
-    pub host_environment_info: JsonEmpty,
+#[serde(rename_all = "snake_case")]
+pub struct Pytest {
+    pub machine_info: JsonEmpty,
+    pub commit_info: JsonEmpty,
     pub benchmarks: Benchmarks,
 }
 
@@ -31,51 +32,42 @@ pub struct DotNet {
 pub struct Benchmarks(pub Vec<Benchmark>);
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all = "snake_case")]
 pub struct Benchmark {
-    pub namespace: BenchmarkName,
-    pub method: BenchmarkName,
-    pub statistics: Statistics,
+    pub fullname: BenchmarkName,
+    pub stats: Stats,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Statistics {
+#[serde(rename_all = "snake_case")]
+pub struct Stats {
     #[serde(with = "rust_decimal::serde::float")]
-    pub mean: Decimal,
+    pub median: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
-    pub standard_deviation: Decimal,
+    pub iqr: Decimal,
 }
 
-impl TryFrom<DotNet> for Option<AdapterResults> {
+impl TryFrom<Pytest> for Option<AdapterResults> {
     type Error = AdapterError;
 
-    fn try_from(dot_net: DotNet) -> Result<Self, Self::Error> {
+    fn try_from(dot_net: Pytest) -> Result<Self, Self::Error> {
         let benchmarks = dot_net.benchmarks.0;
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
         for benchmark in benchmarks {
             let Benchmark {
-                namespace: mut benchmark_name,
-                method,
-                statistics,
+                fullname: benchmark_name,
+                stats,
             } = benchmark;
-            let Statistics {
-                mean,
-                standard_deviation,
-            } = statistics;
+            let Stats { median, iqr } = stats;
 
-            benchmark_name.try_push('.', &method)?;
-
-            // JSON output is always in nanos
-            let units = Units::Nano;
-            // The `Mode` is called `Throughput` but it appears to be measuring latency
-            // https://benchmarkdotnet.org/articles/guides/choosing-run-strategy.html#throughput
-            let value = latency_as_nanos(mean, units);
-            let standard_deviation = latency_as_nanos(standard_deviation, units);
+            // JSON output is always in seconds
+            let units = Units::Sec;
+            let value = latency_as_nanos(median, units);
+            let range = latency_as_nanos(iqr, units);
             let json_metric = JsonMetric {
                 value,
-                lower_bound: Some(value - standard_deviation),
-                upper_bound: Some(value + standard_deviation),
+                lower_bound: Some(value - range),
+                upper_bound: Some(value + range),
             };
 
             benchmark_metrics.push((benchmark_name, json_metric));
@@ -106,20 +98,20 @@ pub(crate) mod test_python_pytest {
         let results = convert_python_pytest("two");
         assert_eq!(results.inner.len(), 2);
 
-        let metrics = results.get("Sample.Fib10").unwrap();
+        let metrics = results.get("bench.py::test_fib_10").unwrap();
         validate_latency(
             metrics,
-            24.4202085009643,
-            Some(24.22208724788593),
-            Some(24.61832975404267),
+            22300.000000363696,
+            Some(21033.00000000363),
+            Some(23567.00000072376),
         );
 
-        let metrics = results.get("Sample.Fib20").unwrap();
+        let metrics = results.get("bench.py::test_fib_20").unwrap();
         validate_latency(
             metrics,
-            51.52008151549559,
-            Some(50.729707813342635),
-            Some(52.310455217648546),
+            2960582.5000003083,
+            Some(2740893.5000006184),
+            Some(3180271.499999998),
         );
     }
 
@@ -130,26 +122,38 @@ pub(crate) mod test_python_pytest {
     }
 
     pub fn validate_adapter_python_pytest(results: AdapterResults) {
-        assert_eq!(results.inner.len(), 2);
+        assert_eq!(results.inner.len(), 4);
 
-        let metrics = results
-            .get("BenchmarkDotNet.Samples.Intro.Sleep10")
-            .unwrap();
+        let metrics = results.get("bench.py::test_fib_1").unwrap();
         validate_latency(
             metrics,
-            10362283.085796878,
-            Some(10316580.967427673),
-            Some(10407985.204166083),
+            143.7600000020467,
+            Some(143.09000000434224),
+            Some(144.42999999975115),
         );
 
-        let metrics = results
-            .get("BenchmarkDotNet.Samples.Intro.Sleep20")
-            .unwrap();
+        let metrics = results.get("bench.py::test_sleep_2").unwrap();
         validate_latency(
             metrics,
-            20360791.931687497,
-            Some(20312811.199369717),
-            Some(20408772.664005276),
+            2005124842.999999,
+            Some(2002304321.9999988),
+            Some(2007945363.9999993),
+        );
+
+        let metrics = results.get("bench.py::test_fib_10").unwrap();
+        validate_latency(
+            metrics,
+            28052.999999861328,
+            Some(27927.999999732834),
+            Some(28177.99999998982),
+        );
+
+        let metrics = results.get("bench.py::test_fib_20").unwrap();
+        validate_latency(
+            metrics,
+            3471104.000000169,
+            Some(3369463.000000072),
+            Some(3572745.000000266),
         );
     }
 }

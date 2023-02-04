@@ -28,7 +28,7 @@ mod test_magic {
         java::jmh::test_java_jmh,
         js::{benchmark::test_js_benchmark, time::test_js_time},
         json::test_json,
-        python::asv::test_python_asv,
+        python::{asv::test_python_asv, pytest::test_python_pytest},
         rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
     };
@@ -85,6 +85,12 @@ mod test_magic {
     fn test_adapter_python_asv() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/python/asv/six.txt");
         test_python_asv::validate_adapter_python_asv(results);
+    }
+
+    #[test]
+    fn test_adapter_python_pytest() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/python/pytest/four.json");
+        test_python_pytest::validate_adapter_python_pytest(results);
     }
 
     #[test]
