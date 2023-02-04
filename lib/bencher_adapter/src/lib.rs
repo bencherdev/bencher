@@ -41,6 +41,8 @@ impl Adapter for JsonAdapter {
             JsonAdapter::GoBench => AdapterGoBench::parse(input),
             JsonAdapter::Java => AdapterJava::parse(input),
             JsonAdapter::JavaJmh => AdapterJavaJmh::parse(input),
+            JsonAdapter::Js => AdapterJs::parse(input),
+            JsonAdapter::JsBenchmark => AdapterJsBenchmark::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),

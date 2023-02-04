@@ -42,6 +42,8 @@ pub enum JsonAdapter {
     GoBench,
     Java,
     JavaJmh,
+    Js,
+    JsBenchmark,
     Rust,
     RustBench,
     RustCriterion,

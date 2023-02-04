@@ -118,6 +118,10 @@ pub enum CliRunAdapter {
     Java,
     /// ☕️ Java JMH
     JavaJmh,
+    /// 🕸 JavaScript
+    Js,
+    /// 🕸 JavaScript Benchmark
+    JsBenchmark,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench
