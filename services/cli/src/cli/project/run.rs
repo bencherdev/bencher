@@ -128,6 +128,8 @@ pub enum CliRunAdapter {
     Python,
     /// 🐍 Python ASV
     PythonAsv,
+    /// 🐍 Python Pytest
+    PythonPytest,
     /// 🦀 Rust
     Rust,
     /// 🦀 Rust Bench

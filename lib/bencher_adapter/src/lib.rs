@@ -10,7 +10,7 @@ use adapters::{
     js::{benchmark::AdapterJsBenchmark, time::AdapterJsTime, AdapterJs},
     json::AdapterJson,
     magic::AdapterMagic,
-    python::{asv::AdapterPythonAsv, AdapterPython},
+    python::{asv::AdapterPythonAsv, pytest::AdapterPythonPytest, AdapterPython},
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion, AdapterRust},
 };
 use bencher_json::project::report::JsonAdapter;
@@ -44,6 +44,7 @@ impl Adapter for JsonAdapter {
             JsonAdapter::JsTime => AdapterJsTime::parse(input),
             JsonAdapter::Python => AdapterPython::parse(input),
             JsonAdapter::PythonAsv => AdapterPythonAsv::parse(input),
+            JsonAdapter::PythonPytest => AdapterPythonPytest::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),

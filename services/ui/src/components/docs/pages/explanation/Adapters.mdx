@@ -134,7 +134,7 @@ The `lower_bound` and `upper_bound` are the interquartile range below and above 
 
 The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
 The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
-The `lower_bound` and `upper_bound` are the standard deviation below and above the median (ie `value`) respectively.
+The `lower_bound` and `upper_bound` are the interquartile range below and above the median (ie `value`) respectively.
 
 > 🐰 Note: Because this command saves to a results file, that file will need to be read and passed to `bencher run` (ie `bencher run "pytest benchmarks.py --benchmark-json results.json && cat results.json"`).
 

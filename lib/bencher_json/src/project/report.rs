@@ -45,11 +45,12 @@ pub enum JsonAdapter {
     Js,
     JsBenchmark,
     JsTime,
+    Python,
+    PythonAsv,
+    PythonPytest,
     Rust,
     RustBench,
     RustCriterion,
-    Python,
-    PythonAsv,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
