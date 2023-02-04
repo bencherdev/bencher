@@ -120,6 +120,22 @@ The JavaScript Time Adapter (`js_time`) expects [console.time](https://developer
 The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 Only the operation time (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
+## 🐍 Python
+
+The Python Adapter (`python`) is a superset of `python_asv` and `python_pytest`.
+
+## 🐍 Python ASV
+
+The Python ASV Adapter (`python_asv`) expects [airspeed velocity](https://github.com/airspeed-velocity/asv) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `lower_bound` and `upper_bound` are the standard deviation below and above the median (ie `value`) respectively.
+
+## 🐍 Python Pytest
+
+The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `lower_bound` and `upper_bound` are the standard deviation below and above the median (ie `value`) respectively.
+
 ## 🦀 Rust
 
 The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.

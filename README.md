@@ -48,6 +48,9 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 - 🕸 JavaScript
   - [Benchmark.js](https://github.com/bestiejs/benchmark.js)
   - [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)
+- 🐍 Python
+  - [airspeed velocity](https://github.com/airspeed-velocity/asv)
+  - [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark)
 - 🦀 Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
