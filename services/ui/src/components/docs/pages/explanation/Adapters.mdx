@@ -65,20 +65,23 @@ The C# Adapter (`c_sharp`) is a superset of `c_sharp_dot_net`.
 ## #️⃣ C# DotNet
 
 The C# DotNet Adapter (`c_sharp_dot_net`) expects [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) output in [JSON format (ie `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 
 ## ➕ C++
 
-The C++ Adapter (`cpp`) is a superset of `cpp_google` and `cpp_catch2`.
+The C++ Adapter (`cpp`) is a superset of `cpp_catch2` and `cpp_google`.
 
 ## ➕ C++ Catch2
 
 The C++ Catch2 Adapter (`cpp_catch2`) expects [Catch2](https://github.com/catchorg/Catch2) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 
 ## ➕ C++ Google
 
 The C++ Google Adapter (`cpp_google`) expects [Google Benchmark](https://github.com/google/benchmark) output in [JSON format (ie `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 Only the mean (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
 ## 🕳 Go
@@ -88,6 +91,7 @@ The Go Adapter (`go`) is a superset of `go_bench`.
 ## 🕳 Go Bench
 
 The Go Bench Adapter (`go_bench`) expects [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 Only the mean (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
 ## ☕️ Java
@@ -97,7 +101,18 @@ The Java Adapter (`java`) is a superset of `java_jmh`.
 ## ☕️ Java JMH
 
 The Java JMH Adapter (`java_jmh`) expects [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) output in [JSON format (ie `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Both `latency` and `throughput` metric kinds (ie `nanoseconds (ns)` and `operations / second (ops/sec)`) may be gathered.
 The `lower_bound` and `upper_bound` are the lower and upper confidence intervals for the mean (ie `value`) respectively.
+
+## 🕸 JavaScript
+
+The JavaScript Adapter (`js`) is a superset of `js_benchmark` and `js_time`.
+
+## 🕸 JavaScript Benchmark
+
+The JavaScript Benchmark Adapter (`js_benchmark`) expects [Benchmark.js](https://github.com/bestiejs/benchmark.js) output.
+The `throughput` metric kind (ie `operations / second (ops/sec)`) is gathered.
+The `lower_bound` and `upper_bound` are the relative margin of error below and above the median (ie `value`) respectively.
 
 ## 🦀 Rust
 
@@ -106,9 +121,11 @@ The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.
 ## 🦀 Rust Bench
 
 The Rust Bench Adapter (`rust_bench`) expects [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are the deviation below and above the median (ie `value`) respectively.
 
 ## 🦀 Rust Criterion
 
 The Rust Criterion Adapter (`rust_criterion`) expects [Criterion](https://github.com/bheisler/criterion.rs) output.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are the lower and upper bounds of either the slope (if available) or the mean (if not) (ie `value`) respectively.

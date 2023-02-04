@@ -1,0 +1,4 @@
+default: 7617ms - timer ended
+benchmark_1: 12714ms - timer ended
+benchmark 2: 9034ms - timer ended
+benchmark 3: The Third - timer/timerEnd: 8827ms - timer ended

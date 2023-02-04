@@ -45,6 +45,9 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)
 - ☕️ Java
   - [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh)
+- 🕸 JavaScript
+  - [Benchmark.js](https://github.com/bestiejs/benchmark.js)
+  - [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)
 - 🦀 Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
