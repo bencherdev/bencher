@@ -39,7 +39,7 @@ fn parse_asv(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
             tuple((
                 delimited(tag("["), tuple((space0, parse_f64, tag("%"))), tag("]")),
                 space1,
-                take_while1(|c| c == '.'),
+                take_while1(|c| c == '·'),
                 space1,
             )),
             take_until1(" "),
@@ -97,21 +97,21 @@ pub(crate) mod test_python_asv {
         assert_eq!(results.inner.len(), 6);
 
         let metrics = results.get("benchmarks.TimeSuite.time_iterkeys").unwrap();
-        validate_latency(metrics, 325.0, None, None);
+        validate_latency(metrics, 11100.0, Some(11090.0), Some(11110.0));
 
         let metrics = results.get("benchmarks.TimeSuite.time_keys").unwrap();
-        validate_latency(metrics, 40_537.123, None, None);
+        validate_latency(metrics, 11200.0, Some(11190.0), Some(11210.0));
 
         let metrics = results.get("benchmarks.TimeSuite.time_range").unwrap();
-        validate_latency(metrics, 325.0, None, None);
+        validate_latency(metrics, 32900.0, Some(32890.0), Some(32910.0));
 
         let metrics = results.get("benchmarks.TimeSuite.time_xrange").unwrap();
-        validate_latency(metrics, 40_537.123, None, None);
+        validate_latency(metrics, 30300.0, Some(30290.0), Some(30310.0));
 
-        let metrics = results.get("benchmarks.TimeSuite.time_keys").unwrap();
-        validate_latency(metrics, 40_537.456, None, None);
+        let metrics = results.get("benchmarks.TimeSuite.time_keys3").unwrap();
+        validate_latency(metrics, 9070.0, Some(8570.0), Some(9570.0));
 
-        let metrics = results.get("benchmarks.TimeSuite.time_range").unwrap();
-        validate_latency(metrics, 40_537.456, None, None);
+        let metrics = results.get("benchmarks.TimeSuite.time_range3").unwrap();
+        validate_latency(metrics, 35500.0, Some(35490.0), Some(35510.0));
     }
 }

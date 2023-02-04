@@ -11,8 +11,8 @@
 [ 50.00%] ·· Building for virtualenv-py3.6..
 [ 50.00%] ·· Benchmarking virtualenv-py3.6
 [ 60.00%] ··· Running (benchmarks.TimeSuite.time_iterkeys--)....
-[ 80.00%] ··· benchmarks.MemSuite.mem_list                                 2.11k
-[ 85.00%] ··· benchmarks.TimeSuite.time_iterkeys                          failed
-[ 90.00%] ··· benchmarks.TimeSuite.time_keys                          9.07±0.5μs
-[ 95.00%] ··· benchmarks.TimeSuite.time_range                        35.5±0.01μs
-[100.00%] ··· benchmarks.TimeSuite.time_xrange                            failed
+[ 80.00%] ··· benchmarks.MemSuite.mem_list3                                2.11k
+[ 85.00%] ··· benchmarks.TimeSuite.time_iterkeys3                         failed
+[ 90.00%] ··· benchmarks.TimeSuite.time_keys3                         9.07±0.5μs
+[ 95.00%] ··· benchmarks.TimeSuite.time_range3                       35.5±0.01μs
+[100.00%] ··· benchmarks.TimeSuite.time_xrange3                           failed
