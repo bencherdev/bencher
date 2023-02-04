@@ -89,11 +89,9 @@ fn parse_criterion_metric(input: &str) -> IResult<&str, JsonMetric> {
 }
 
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
-    map_res(
+    map(
         tuple((parse_f64, space1, parse_units)),
-        |(duration, _, units)| -> Result<OrderedFloat<f64>, NomError> {
-            Ok(latency_as_nanos(duration, units))
-        },
+        |(duration, _, units)| latency_as_nanos(duration, units),
     )(input)
 }
 

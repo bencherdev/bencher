@@ -1,5 +1,13 @@
 use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
 
+use nom::{
+    bytes::complete::{tag, take_till1},
+    character::complete::{anychar, space1},
+    combinator::{eof, map_res},
+    multi::many_till,
+    sequence::tuple,
+    IResult,
+};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -13,77 +21,48 @@ pub struct AdapterJsBenchmark;
 
 impl Adapter for AdapterJsBenchmark {
     fn parse(input: &str) -> Option<AdapterResults> {
-        serde_json::from_str::<DotNet>(input)
-            .ok()?
-            .try_into()
-            .ok()?
-    }
-}
+        let mut benchmark_metrics = Vec::new();
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct DotNet {
-    pub host_environment_info: JsonEmpty,
-    pub benchmarks: Benchmarks,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Benchmarks(pub Vec<Benchmark>);
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Benchmark {
-    pub namespace: BenchmarkName,
-    pub method: BenchmarkName,
-    pub statistics: Statistics,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Statistics {
-    #[serde(with = "rust_decimal::serde::float")]
-    pub mean: Decimal,
-    #[serde(with = "rust_decimal::serde::float")]
-    pub standard_deviation: Decimal,
-}
-
-impl TryFrom<DotNet> for Option<AdapterResults> {
-    type Error = AdapterError;
-
-    fn try_from(dot_net: DotNet) -> Result<Self, Self::Error> {
-        let benchmarks = dot_net.benchmarks.0;
-        let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
-        for benchmark in benchmarks {
-            let Benchmark {
-                namespace: mut benchmark_name,
-                method,
-                statistics,
-            } = benchmark;
-            let Statistics {
-                mean,
-                standard_deviation,
-            } = statistics;
-
-            benchmark_name.try_push('.', &method)?;
-
-            // JSON output is always in nanos
-            let units = Units::Nano;
-            // The `Mode` is called `Throughput` but it appears to be measuring latency
-            // https://benchmarkdotnet.org/articles/guides/choosing-run-strategy.html#throughput
-            let value = latency_as_nanos(mean, units);
-            let standard_deviation = latency_as_nanos(standard_deviation, units);
-            let json_metric = JsonMetric {
-                value,
-                lower_bound: Some(value - standard_deviation),
-                upper_bound: Some(value + standard_deviation),
-            };
-
-            benchmark_metrics.push((benchmark_name, json_metric));
+        for line in input.lines() {
+            // if let Ok((remainder, benchmark_metric)) = parse_benchmark(line) {
+            //     if remainder.is_empty() {
+            //         benchmark_metrics.push(benchmark_metric);
+            //     }
+            // }
         }
 
-        Ok(AdapterResults::new_latency(benchmark_metrics))
+        AdapterResults::new_latency(benchmark_metrics)
     }
 }
+
+// fn parse_benchmark(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
+//     map_res(
+//         many_till(anychar, parse_benchmark_time),
+//         |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
+//             let name: String = if name_chars.is_empty() {
+//                 prior_line.ok_or_else(|| nom_error(String::new()))?.into()
+//             } else {
+//                 name_chars.into_iter().collect()
+//             };
+//             let benchmark_name = parse_benchmark_name(&name)?;
+//             Ok((benchmark_name, json_metric))
+//         },
+//     )(input)
+// }
+
+// fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
+//     map_res(
+//         tuple((parse_f64, space1, parse_units, tag("/op"))),
+//         |(duration, _, units, _)| -> Result<JsonMetric, NomError> {
+//             let value = latency_as_nanos(duration, units);
+//             Ok(JsonMetric {
+//                 value,
+//                 lower_bound: None,
+//                 upper_bound: None,
+//             })
+//         },
+//     )(input)
+// }
 
 #[cfg(test)]
 pub(crate) mod test_js_benchmark {

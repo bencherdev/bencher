@@ -2,7 +2,7 @@ use bencher_json::{BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::{tag, take_until1},
     character::complete::space1,
-    combinator::{eof, map_res},
+    combinator::{eof, map, map_res},
     sequence::{delimited, tuple},
     IResult,
 };
@@ -53,7 +53,7 @@ fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
 // cargo bench
 // TODO cargo test -- -Z unstable-options --format json
 fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
-    map_res(
+    map(
         tuple((
             tag("bench:"),
             space1,
@@ -64,14 +64,14 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
             space1,
             delimited(tag("("), tuple((tag("+/-"), space1, parse_u64)), tag(")")),
         )),
-        |(_, _, duration, _, units, _, _, (_, _, variance))| -> Result<JsonMetric, NomError> {
+        |(_, _, duration, _, units, _, _, (_, _, variance))| {
             let value = latency_as_nanos(duration, units);
             let variance = Some(latency_as_nanos(variance, units));
-            Ok(JsonMetric {
+            JsonMetric {
                 value,
                 lower_bound: variance.map(|v| value - v),
                 upper_bound: variance.map(|v| value + v),
-            })
+            }
         },
     )(input)
 }
