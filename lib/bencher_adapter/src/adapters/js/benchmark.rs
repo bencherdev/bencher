@@ -1,23 +1,21 @@
-use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{BenchmarkName, JsonMetric};
 
 use nom::{
-    bytes::complete::{tag, take_till1},
+    bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
     multi::many_till,
     sequence::{delimited, tuple},
     IResult,
 };
-use rust_decimal::Decimal;
-use serde::Deserialize;
 
 use crate::{
     adapters::util::{
-        latency_as_nanos, nom_error, parse_benchmark_name, parse_benchmark_name_chars, parse_f64,
-        parse_u64, throughput_as_secs, NomError, Units,
+        nom_error, parse_benchmark_name_chars, parse_f64, parse_u64, throughput_as_secs, NomError,
+        Units,
     },
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError,
+    Adapter,
 };
 
 pub struct AdapterJsBenchmark;
@@ -34,7 +32,7 @@ impl Adapter for AdapterJsBenchmark {
             }
         }
 
-        AdapterResults::new_latency(benchmark_metrics)
+        AdapterResults::new_throughput(benchmark_metrics)
     }
 }
 
@@ -56,7 +54,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
         tuple((
             tuple((space1, tag("x"), space1)),
             parse_u64,
-            tuple((tag("ops/sec"), space1, tag("±"))),
+            tuple((space1, tag("ops/sec"), space1, tag("±"))),
             parse_f64,
             tuple((
                 tag("%"),
@@ -66,6 +64,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
                     tuple((parse_u64, space1, tag("runs"), space1, tag("sampled"))),
                     tag(")"),
                 ),
+                eof,
             )),
         )),
         |(_, throughput, _, percent_error, _)| {
@@ -109,24 +108,19 @@ pub(crate) mod test_js_benchmark {
         validate_throughput(
             metrics,
             1431759.0,
-            Some(10316580.967427673),
-            Some(10407985.204166083),
+            Some(372257.3400000001),
+            Some(2491260.66),
         );
 
         let metrics = results.get("fib(20)").unwrap();
         validate_throughput(
             metrics,
             12146.0,
-            Some(20312811.199369717),
-            Some(20408772.664005276),
+            Some(8259.279999999999),
+            Some(16032.720000000001),
         );
 
         let metrics = results.get("benchmark with x 2 many things").unwrap();
-        validate_throughput(
-            metrics,
-            50.0,
-            Some(20312811.199369717),
-            Some(20408772.664005276),
-        );
+        validate_throughput(metrics, 50.0, Some(45.0), Some(55.0));
     }
 }

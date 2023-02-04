@@ -67,6 +67,17 @@ impl AdapterResults {
         )
     }
 
+    pub fn new_throughput(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Option<Self> {
+        Self::new(
+            benchmark_metrics
+                .into_iter()
+                .map(|(benchmark_name, json_metric)| {
+                    (benchmark_name, AdapterMetricKind::Throughput(json_metric))
+                })
+                .collect(),
+        )
+    }
+
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
         let mut results_map = HashMap::new();
         for (benchmark_name, metrics) in self.inner {
