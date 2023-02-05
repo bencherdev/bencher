@@ -68,8 +68,9 @@ const LandingPage = (props) => {
 									<div class="content">
 										<p>
 											Run your benchmarks locally or in CI using your favorite
-											tools. The <code>bencher</code> CLI simply wraps your
-											existing benchmarking framework and stores its results.
+											benchmarking tools. The <code>bencher</code> CLI simply
+											wraps your existing benchmark harness and stores its
+											results.
 										</p>
 										<br />
 									</div>
