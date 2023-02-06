@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.31"
+    "version": "0.2.32"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -4743,11 +4743,23 @@
         "enum": [
           "magic",
           "json",
+          "c_sharp",
+          "c_sharp_dot_net",
           "cpp",
-          "cpp_google",
           "cpp_catch2",
+          "cpp_google",
           "go",
           "go_bench",
+          "java",
+          "java_jmh",
+          "js",
+          "js_benchmark",
+          "js_time",
+          "python",
+          "python_asv",
+          "python_pytest",
+          "ruby",
+          "ruby_benchmark",
           "rust",
           "rust_bench",
           "rust_criterion"
@@ -5763,6 +5775,10 @@
           },
           "secret": {
             "$ref": "#/components/schemas/Secret"
+          },
+          "starttls": {
+            "nullable": true,
+            "type": "boolean"
           },
           "username": {
             "type": "string"
