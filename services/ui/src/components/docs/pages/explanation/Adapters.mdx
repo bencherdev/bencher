@@ -138,6 +138,17 @@ The `lower_bound` and `upper_bound` are the interquartile range below and above 
 
 > 🐰 Note: Because this command saves to a results file, that file will need to be read and passed to `bencher run` (ie `bencher run "pytest benchmarks.py --benchmark-json results.json && cat results.json"`).
 
+## ♦️ Ruby
+
+The Ruby Adapter (`ruby`) is a superset of `ruby_benchmark`.
+
+## ♦️ Ruby Benchmark
+
+The Ruby Benchmark Adapter (`ruby_benchmark`) expects [Benchmark module](https://github.com/ruby/benchmark) output for the `#bm`, `#bmbm`, and `#benchmark` methods.
+A label is required for each benchmark.
+The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+Only the reported value (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
+
 ## 🦀 Rust
 
 The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.

@@ -48,6 +48,8 @@ pub enum JsonAdapter {
     Python,
     PythonAsv,
     PythonPytest,
+    Ruby,
+    RubyBenchmark,
     Rust,
     RustBench,
     RustCriterion,

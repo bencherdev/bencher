@@ -1,6 +1,6 @@
 use crate::{
     results::adapter_results::AdapterResults, Adapter, AdapterCSharp, AdapterCpp, AdapterGo,
-    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRust,
+    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust,
 };
 
 pub struct AdapterMagic;
@@ -14,6 +14,7 @@ impl Adapter for AdapterMagic {
             .or_else(|| AdapterJava::parse(input))
             .or_else(|| AdapterJs::parse(input))
             .or_else(|| AdapterPython::parse(input))
+            .or_else(|| AdapterRuby::parse(input))
             .or_else(|| AdapterRust::parse(input))
     }
 }
@@ -29,6 +30,7 @@ mod test_magic {
         js::{benchmark::test_js_benchmark, time::test_js_time},
         json::test_json,
         python::{asv::test_python_asv, pytest::test_python_pytest},
+        ruby::benchmark::test_ruby_benchmark,
         rust::{bench::test_rust_bench, criterion::test_rust_criterion},
         test_util::convert_file_path,
     };
@@ -91,6 +93,12 @@ mod test_magic {
     fn test_adapter_python_pytest() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/python/pytest/four.json");
         test_python_pytest::validate_adapter_python_pytest(results);
+    }
+
+    #[test]
+    fn test_adapter_ruby_benchmark() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/ruby/benchmark/five.txt");
+        test_ruby_benchmark::validate_adapter_ruby_benchmark(results);
     }
 
     #[test]

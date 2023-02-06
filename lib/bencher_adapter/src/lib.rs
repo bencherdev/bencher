@@ -11,6 +11,7 @@ use adapters::{
     json::AdapterJson,
     magic::AdapterMagic,
     python::{asv::AdapterPythonAsv, pytest::AdapterPythonPytest, AdapterPython},
+    ruby::{benchmark::AdapterRubyBenchmark, AdapterRuby},
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion, AdapterRust},
 };
 use bencher_json::project::report::JsonAdapter;
@@ -45,6 +46,8 @@ impl Adapter for JsonAdapter {
             JsonAdapter::Python => AdapterPython::parse(input),
             JsonAdapter::PythonAsv => AdapterPythonAsv::parse(input),
             JsonAdapter::PythonPytest => AdapterPythonPytest::parse(input),
+            JsonAdapter::Ruby => AdapterRuby::parse(input),
+            JsonAdapter::RubyBenchmark => AdapterRubyBenchmark::parse(input),
             JsonAdapter::Rust => AdapterRust::parse(input),
             JsonAdapter::RustBench => AdapterRustBench::parse(input),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),

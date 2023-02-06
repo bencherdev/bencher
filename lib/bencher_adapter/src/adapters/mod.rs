@@ -8,6 +8,7 @@ pub mod js;
 pub mod json;
 pub mod magic;
 pub mod python;
+pub mod ruby;
 pub mod rust;
 mod util;
 

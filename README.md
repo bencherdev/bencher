@@ -51,6 +51,8 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 - 🐍 Python
   - [airspeed velocity](https://github.com/airspeed-velocity/asv)
   - [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark)
+- ♦️ Ruby
+  - [Benchmark](https://github.com/ruby/benchmark)
 - 🦀 Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
