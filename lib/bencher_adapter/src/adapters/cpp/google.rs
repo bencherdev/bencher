@@ -5,13 +5,13 @@ use serde::Deserialize;
 use crate::{
     adapters::util::{latency_as_nanos, Units},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError,
+    Adapter, AdapterError, Settings,
 };
 
 pub struct AdapterCppGoogle;
 
 impl Adapter for AdapterCppGoogle {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         serde_json::from_str::<Google>(input)
             .ok()?
             .try_into()

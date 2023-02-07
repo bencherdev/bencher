@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use bencher_adapter::Adapter;
+use bencher_adapter::{Adapter, Settings};
 use bencher_json::project::report::JsonAdapter;
 
 const JSON_RESULT: &str = r#"{
@@ -36,13 +36,15 @@ const JSON_RESULT: &str = r#"{
 
 fn adapter_magic_json(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Magic (JSON)", |b| {
-        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT))
+        let settings = Settings::default();
+        b.iter(|| JsonAdapter::Magic.convert(JSON_RESULT, settings))
     });
 }
 
 fn adapter_json(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Json", |b| {
-        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT))
+        let settings = Settings::default();
+        b.iter(|| JsonAdapter::Json.convert(JSON_RESULT, settings))
     });
 }
 
@@ -60,19 +62,22 @@ test result: ok. 0 passed; 0 failed; 1 ignored; 4 measured; 0 filtered out; fini
 
 fn adapter_magic_rust(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Magic (Rust)", |b| {
-        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT))
+        let settings = Settings::default();
+        b.iter(|| JsonAdapter::Magic.convert(RUST_RESULT, settings))
     });
 }
 
 fn adapter_rust(c: &mut Criterion) {
     c.bench_function("JsonAdapter::Rust", |b| {
-        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT))
+        let settings = Settings::default();
+        b.iter(|| JsonAdapter::Rust.convert(RUST_RESULT, settings))
     });
 }
 
 fn adapter_rust_bench(c: &mut Criterion) {
     c.bench_function("JsonAdapter::RustBench", |b| {
-        b.iter(|| JsonAdapter::RustBench.convert(RUST_RESULT))
+        let settings = Settings::default();
+        b.iter(|| JsonAdapter::RustBench.convert(RUST_RESULT, settings))
     });
 }
 

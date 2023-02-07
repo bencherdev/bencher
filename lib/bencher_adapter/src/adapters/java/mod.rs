@@ -1,13 +1,13 @@
 pub mod jmh;
 
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use jmh::AdapterJavaJmh;
 
 pub struct AdapterJava;
 
 impl Adapter for AdapterJava {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterJavaJmh::parse(input)
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterJavaJmh::parse(input, settings)
     }
 }
 

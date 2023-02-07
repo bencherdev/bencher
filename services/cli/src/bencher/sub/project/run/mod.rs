@@ -15,11 +15,13 @@ use crate::{
 };
 
 mod adapter;
+mod average;
 mod branch;
 mod fold;
 pub mod runner;
 
 use adapter::RunAdapter;
+use average::Average;
 use branch::Branch;
 use fold::Fold;
 use runner::Runner;
@@ -41,6 +43,7 @@ pub struct Run {
     hash: Option<GitHash>,
     testbed: ResourceId,
     adapter: Option<RunAdapter>,
+    average: Option<Average>,
     iter: usize,
     fold: Option<Fold>,
     allow_failure: bool,
@@ -59,6 +62,7 @@ impl TryFrom<CliRun> for Run {
             hash,
             testbed,
             adapter,
+            average,
             iter,
             fold,
             allow_failure,
@@ -72,6 +76,7 @@ impl TryFrom<CliRun> for Run {
             hash: map_hash(hash)?,
             testbed: unwrap_testbed(testbed)?,
             adapter: map_adapter(adapter),
+            average: average.map(Into::into),
             iter: iter.unwrap_or(1),
             fold: fold.map(Into::into),
             allow_failure,
@@ -156,6 +161,7 @@ impl SubCmd for Run {
             results,
             settings: Some(JsonReportSettings {
                 adapter: self.adapter.map(Into::into),
+                average: self.average.map(Into::into),
                 fold: self.fold.map(Into::into),
             }),
         };

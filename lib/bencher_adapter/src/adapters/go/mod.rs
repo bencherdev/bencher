@@ -1,13 +1,13 @@
 pub mod bench;
 
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use bench::AdapterGoBench;
 
 pub struct AdapterGo;
 
 impl Adapter for AdapterGo {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterGoBench::parse(input)
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterGoBench::parse(input, settings)
     }
 }
 

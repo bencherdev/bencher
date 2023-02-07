@@ -1,9 +1,9 @@
-use crate::{results::adapter_results::AdapterResults, Adapter};
+use crate::{results::adapter_results::AdapterResults, Adapter, Settings};
 
 pub struct AdapterJson;
 
 impl Adapter for AdapterJson {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         serde_json::from_str(input).ok()
     }
 }

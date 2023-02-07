@@ -1,21 +1,21 @@
 use crate::{
     results::adapter_results::AdapterResults, Adapter, AdapterCSharp, AdapterCpp, AdapterGo,
-    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust,
+    AdapterJava, AdapterJs, AdapterJson, AdapterPython, AdapterRuby, AdapterRust, Settings,
 };
 
 pub struct AdapterMagic;
 
 impl Adapter for AdapterMagic {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterJson::parse(input)
-            .or_else(|| AdapterCSharp::parse(input))
-            .or_else(|| AdapterCpp::parse(input))
-            .or_else(|| AdapterGo::parse(input))
-            .or_else(|| AdapterJava::parse(input))
-            .or_else(|| AdapterJs::parse(input))
-            .or_else(|| AdapterPython::parse(input))
-            .or_else(|| AdapterRuby::parse(input))
-            .or_else(|| AdapterRust::parse(input))
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterJson::parse(input, settings)
+            .or_else(|| AdapterCSharp::parse(input, settings))
+            .or_else(|| AdapterCpp::parse(input, settings))
+            .or_else(|| AdapterGo::parse(input, settings))
+            .or_else(|| AdapterJava::parse(input, settings))
+            .or_else(|| AdapterJs::parse(input, settings))
+            .or_else(|| AdapterPython::parse(input, settings))
+            .or_else(|| AdapterRuby::parse(input, settings))
+            .or_else(|| AdapterRust::parse(input, settings))
     }
 }
 

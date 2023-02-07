@@ -12,13 +12,13 @@ use crate::{
         latency_as_nanos, parse_benchmark_name, parse_f64, parse_u64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter,
+    Adapter, Settings,
 };
 
 pub struct AdapterGoBench;
 
 impl Adapter for AdapterGoBench {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {

@@ -1,15 +1,16 @@
 pub mod asv;
 pub mod pytest;
 
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use asv::AdapterPythonAsv;
 use pytest::AdapterPythonPytest;
 
 pub struct AdapterPython;
 
 impl Adapter for AdapterPython {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterPythonAsv::parse(input).or_else(|| AdapterPythonPytest::parse(input))
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterPythonAsv::parse(input, settings)
+            .or_else(|| AdapterPythonPytest::parse(input, settings))
     }
 }
 

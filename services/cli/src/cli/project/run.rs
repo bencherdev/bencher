@@ -21,15 +21,19 @@ pub struct CliRun {
     #[clap(long)]
     pub testbed: Option<ResourceId>,
 
-    /// Benchmarking tool output adapter
-    #[clap(value_enum, long, alias = "tool")]
+    /// Benchmark harness adapter
+    #[clap(value_enum, long)]
     pub adapter: Option<CliRunAdapter>,
+
+    /// Benchmark harness suggested central tendency (ie average)
+    #[clap(value_enum, long)]
+    pub average: Option<CliRunAverage>,
 
     /// Number of run iterations (default is `1`)
     #[clap(long)]
     pub iter: Option<usize>,
 
-    /// Fold into a single result value
+    /// Fold multiple metrics into a single metric
     #[clap(value_enum, long, requires = "iter")]
     pub fold: Option<CliRunFold>,
 
@@ -140,6 +144,16 @@ pub enum CliRunAdapter {
     RustBench,
     /// 🦀 Rust Criterion
     RustCriterion,
+}
+
+/// Suggested Central Tendency (Average)
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliRunAverage {
+    /// Mean and standard deviation
+    Mean,
+    /// Median and interquartile range
+    Median,
 }
 
 /// Supported Fold Operations

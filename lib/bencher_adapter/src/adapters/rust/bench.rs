@@ -10,13 +10,13 @@ use nom::{
 use crate::{
     adapters::util::{latency_as_nanos, parse_benchmark_name, parse_u64, parse_units, NomError},
     results::adapter_results::AdapterResults,
-    Adapter,
+    Adapter, Settings,
 };
 
 pub struct AdapterRustBench;
 
 impl Adapter for AdapterRustBench {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
@@ -83,7 +83,7 @@ pub(crate) mod test_rust_bench {
 
     use crate::{
         adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
-        Adapter, AdapterResults,
+        AdapterResults, Settings,
     };
 
     use super::{parse_cargo, AdapterRustBench};
@@ -101,7 +101,10 @@ pub(crate) mod test_rust_bench {
     #[test]
     fn test_adapter_rust_zero() {
         let file_path = "./tool_output/rust/bench/zero.txt";
-        assert_eq!(None, opt_convert_file_path::<AdapterRustBench>(file_path))
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterRustBench>(file_path, Settings::default())
+        )
     }
 
     #[test]
@@ -189,8 +192,7 @@ pub(crate) mod test_rust_bench {
 
     #[test]
     fn test_adapter_rust_failed() {
-        let contents = std::fs::read_to_string("./tool_output/rust/bench/failed.txt").unwrap();
-        let results = AdapterRustBench::parse(&contents).unwrap();
+        let results = convert_rust_bench("failed");
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("tests::benchmark_a").unwrap();

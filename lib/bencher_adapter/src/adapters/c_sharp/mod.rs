@@ -1,13 +1,13 @@
 pub mod dot_net;
 
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use dot_net::AdapterCSharpDotNet;
 
 pub struct AdapterCSharp;
 
 impl Adapter for AdapterCSharp {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterCSharpDotNet::parse(input)
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterCSharpDotNet::parse(input, settings)
     }
 }
 

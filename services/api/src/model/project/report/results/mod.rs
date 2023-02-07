@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bencher_adapter::{
     results::{adapter_metrics::AdapterMetrics, MetricKind},
-    AdapterResults, AdapterResultsArray,
+    AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
 };
 use bencher_json::{
     project::report::{JsonAdapter, JsonReportSettings},
@@ -58,7 +58,8 @@ impl ReportResults {
         adapter: JsonAdapter,
         settings: JsonReportSettings,
     ) -> Result<(), ApiError> {
-        let results_array = AdapterResultsArray::new(results_array, adapter)?;
+        let adapter_settings = AdapterSettings::new(settings.average);
+        let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)?;
 
         if let Some(fold) = settings.fold {
             let results = results_array.fold(fold);

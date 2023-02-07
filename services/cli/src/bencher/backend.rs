@@ -12,8 +12,8 @@ pub const BENCHER_HOST: &str = "BENCHER_HOST";
 pub const DEFAULT_HOST: &str = "http://localhost:61016";
 #[cfg(not(debug_assertions))]
 pub const DEFAULT_HOST: &str = "https://api.bencher.dev";
-const DEFAULT_ATTEMPTS: usize = 3;
-const DEFAULT_RETRY_AFTER: u64 = 1;
+const DEFAULT_ATTEMPTS: usize = 10;
+const DEFAULT_RETRY_AFTER: u64 = 3;
 
 #[derive(Debug, Clone)]
 pub struct Backend {
@@ -121,7 +121,7 @@ impl Backend {
                     return Ok(json);
                 },
                 Err(e) => {
-                    cli_println!("Send attempt #{attempt}: {e}");
+                    cli_println!("Send attempt #{}: {e}", attempt + 1);
                     if attempt != max_attempts {
                         cli_println!("Will retry after {retry_after} second(s).");
                         sleep(Duration::from_secs(retry_after)).await;

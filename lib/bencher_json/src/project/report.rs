@@ -23,8 +23,8 @@ pub struct JsonNewReport {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportSettings {
     pub adapter: Option<JsonAdapter>,
-    pub fold: Option<JsonFold>,
     pub average: Option<JsonAverage>,
+    pub fold: Option<JsonFold>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -56,12 +56,11 @@ pub enum JsonAdapter {
     RustCriterion,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonFold {
-    Min,
-    Max,
+pub enum JsonAverage {
+    #[default]
     Mean,
     Median,
 }
@@ -69,7 +68,9 @@ pub enum JsonFold {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
-pub enum JsonAverage {
+pub enum JsonFold {
+    Min,
+    Max,
     Mean,
     Median,
 }

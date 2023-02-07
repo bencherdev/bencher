@@ -14,47 +14,58 @@ use adapters::{
     ruby::{benchmark::AdapterRubyBenchmark, AdapterRuby},
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion, AdapterRust},
 };
-use bencher_json::project::report::JsonAdapter;
+use bencher_json::project::report::{JsonAdapter, JsonAverage};
 pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
 
 pub trait Adapter {
-    fn convert(&self, input: &str) -> Option<AdapterResults> {
-        Self::parse(input)
+    fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
+        Self::parse(input, settings)
     }
 
-    fn parse(input: &str) -> Option<AdapterResults>;
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults>;
 }
 
 impl Adapter for JsonAdapter {
-    fn convert(&self, input: &str) -> Option<AdapterResults> {
+    fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
         match self {
-            JsonAdapter::Magic => AdapterMagic::parse(input),
-            JsonAdapter::Json => AdapterJson::parse(input),
-            JsonAdapter::CSharp => AdapterCSharp::parse(input),
-            JsonAdapter::CSharpDotNet => AdapterCSharpDotNet::parse(input),
-            JsonAdapter::Cpp => AdapterCpp::parse(input),
-            JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input),
-            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input),
-            JsonAdapter::Go => AdapterGo::parse(input),
-            JsonAdapter::GoBench => AdapterGoBench::parse(input),
-            JsonAdapter::Java => AdapterJava::parse(input),
-            JsonAdapter::JavaJmh => AdapterJavaJmh::parse(input),
-            JsonAdapter::Js => AdapterJs::parse(input),
-            JsonAdapter::JsBenchmark => AdapterJsBenchmark::parse(input),
-            JsonAdapter::JsTime => AdapterJsTime::parse(input),
-            JsonAdapter::Python => AdapterPython::parse(input),
-            JsonAdapter::PythonAsv => AdapterPythonAsv::parse(input),
-            JsonAdapter::PythonPytest => AdapterPythonPytest::parse(input),
-            JsonAdapter::Ruby => AdapterRuby::parse(input),
-            JsonAdapter::RubyBenchmark => AdapterRubyBenchmark::parse(input),
-            JsonAdapter::Rust => AdapterRust::parse(input),
-            JsonAdapter::RustBench => AdapterRustBench::parse(input),
-            JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input),
+            JsonAdapter::Magic => AdapterMagic::parse(input, settings),
+            JsonAdapter::Json => AdapterJson::parse(input, settings),
+            JsonAdapter::CSharp => AdapterCSharp::parse(input, settings),
+            JsonAdapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
+            JsonAdapter::Cpp => AdapterCpp::parse(input, settings),
+            JsonAdapter::CppCatch2 => AdapterCppCatch2::parse(input, settings),
+            JsonAdapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
+            JsonAdapter::Go => AdapterGo::parse(input, settings),
+            JsonAdapter::GoBench => AdapterGoBench::parse(input, settings),
+            JsonAdapter::Java => AdapterJava::parse(input, settings),
+            JsonAdapter::JavaJmh => AdapterJavaJmh::parse(input, settings),
+            JsonAdapter::Js => AdapterJs::parse(input, settings),
+            JsonAdapter::JsBenchmark => AdapterJsBenchmark::parse(input, settings),
+            JsonAdapter::JsTime => AdapterJsTime::parse(input, settings),
+            JsonAdapter::Python => AdapterPython::parse(input, settings),
+            JsonAdapter::PythonAsv => AdapterPythonAsv::parse(input, settings),
+            JsonAdapter::PythonPytest => AdapterPythonPytest::parse(input, settings),
+            JsonAdapter::Ruby => AdapterRuby::parse(input, settings),
+            JsonAdapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
+            JsonAdapter::Rust => AdapterRust::parse(input, settings),
+            JsonAdapter::RustBench => AdapterRustBench::parse(input, settings),
+            JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
         }
     }
 
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterMagic::parse(input)
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterMagic::parse(input, settings)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Settings {
+    pub average: Option<JsonAverage>,
+}
+
+impl Settings {
+    pub fn new(average: Option<JsonAverage>) -> Self {
+        Self { average }
     }
 }

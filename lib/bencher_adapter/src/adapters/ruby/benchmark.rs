@@ -11,13 +11,13 @@ use nom::{
 use crate::{
     adapters::util::{latency_as_nanos, parse_benchmark_name_chars, parse_f64, NomError, Units},
     results::adapter_results::AdapterResults,
-    Adapter,
+    Adapter, Settings,
 };
 
 pub struct AdapterRubyBenchmark;
 
 impl Adapter for AdapterRubyBenchmark {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         let mut header = false;

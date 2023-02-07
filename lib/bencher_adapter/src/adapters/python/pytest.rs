@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -6,16 +6,16 @@ use serde::Deserialize;
 use crate::{
     adapters::util::{latency_as_nanos, Units},
     results::adapter_results::AdapterResults,
-    Adapter, AdapterError,
+    Adapter, AdapterError, Settings,
 };
 
 pub struct AdapterPythonPytest;
 
 impl Adapter for AdapterPythonPytest {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         serde_json::from_str::<Pytest>(input)
             .ok()?
-            .try_into()
+            .convert(settings)
             .ok()?
     }
 }
@@ -42,32 +42,43 @@ pub struct Benchmark {
 #[serde(rename_all = "snake_case")]
 pub struct Stats {
     #[serde(with = "rust_decimal::serde::float")]
+    pub mean: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub stddev: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
     pub median: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
     pub iqr: Decimal,
 }
 
-impl TryFrom<Pytest> for Option<AdapterResults> {
-    type Error = AdapterError;
-
-    fn try_from(dot_net: Pytest) -> Result<Self, Self::Error> {
-        let benchmarks = dot_net.benchmarks.0;
+impl Pytest {
+    fn convert(self, settings: Settings) -> Result<Option<AdapterResults>, AdapterError> {
+        let benchmarks = self.benchmarks.0;
         let mut benchmark_metrics = Vec::with_capacity(benchmarks.len());
         for benchmark in benchmarks {
             let Benchmark {
                 fullname: benchmark_name,
                 stats,
             } = benchmark;
-            let Stats { median, iqr } = stats;
+            let Stats {
+                mean,
+                stddev,
+                median,
+                iqr,
+            } = stats;
 
             // JSON output is always in seconds
             let units = Units::Sec;
-            let value = latency_as_nanos(median, units);
-            let range = latency_as_nanos(iqr, units);
+            let (average, spread) = match settings.average.unwrap_or_default() {
+                JsonAverage::Mean => (mean, stddev),
+                JsonAverage::Median => (median, iqr),
+            };
+            let value = latency_as_nanos(average, units);
+            let bound = latency_as_nanos(spread, units);
             let json_metric = JsonMetric {
                 value,
-                lower_bound: Some(value - range),
-                upper_bound: Some(value + range),
+                lower_bound: Some(value - bound),
+                upper_bound: Some(value + bound),
             };
 
             benchmark_metrics.push((benchmark_name, json_metric));
@@ -82,20 +93,51 @@ pub(crate) mod test_python_pytest {
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
+        adapters::test_util::{convert_file_path, convert_file_path_median, validate_latency},
         AdapterResults,
     };
 
     use super::AdapterPythonPytest;
 
     fn convert_python_pytest(suffix: &str) -> AdapterResults {
-        let file_path = format!("./tool_output/python/pytest/{suffix}.json");
+        let file_path = file_path(suffix);
         convert_file_path::<AdapterPythonPytest>(&file_path)
+    }
+
+    fn convert_python_pytest_median(suffix: &str) -> AdapterResults {
+        let file_path = file_path(suffix);
+        convert_file_path_median::<AdapterPythonPytest>(&file_path)
+    }
+
+    fn file_path(suffix: &str) -> String {
+        format!("./tool_output/python/pytest/{suffix}.json")
     }
 
     #[test]
     fn test_adapter_python_pytest_two() {
         let results = convert_python_pytest("two");
+        assert_eq!(results.inner.len(), 2);
+
+        let metrics = results.get("bench.py::test_fib_10").unwrap();
+        validate_latency(
+            metrics,
+            24088.681333229408,
+            Some(17913.59114336808),
+            Some(30263.771523090734),
+        );
+
+        let metrics = results.get("bench.py::test_fib_20").unwrap();
+        validate_latency(
+            metrics,
+            2985030.672661863,
+            Some(2810500.507247766),
+            Some(3159560.8380759596),
+        );
+    }
+
+    #[test]
+    fn test_adapter_python_pytest_two_median() {
+        let results = convert_python_pytest_median("two");
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("bench.py::test_fib_10").unwrap();
@@ -122,6 +164,44 @@ pub(crate) mod test_python_pytest {
     }
 
     pub fn validate_adapter_python_pytest(results: AdapterResults) {
+        assert_eq!(results.inner.len(), 4);
+
+        let metrics = results.get("bench.py::test_fib_1").unwrap();
+        validate_latency(
+            metrics,
+            149.95610248628836,
+            Some(120.60437053414898),
+            Some(179.30783443842773),
+        );
+
+        let metrics = results.get("bench.py::test_sleep_2").unwrap();
+        validate_latency(
+            metrics,
+            2003843046.9999998,
+            Some(2001965388.274841),
+            Some(2005720705.7251585),
+        );
+
+        let metrics = results.get("bench.py::test_fib_10").unwrap();
+        validate_latency(
+            metrics,
+            28857.54012484424,
+            Some(23621.602642835765),
+            Some(34093.47760685271),
+        );
+
+        let metrics = results.get("bench.py::test_fib_20").unwrap();
+        validate_latency(
+            metrics,
+            3611916.368852473,
+            Some(3238118.0866346513),
+            Some(3985714.6510702944),
+        );
+    }
+
+    #[test]
+    fn test_adapter_python_pytest_four_median() {
+        let results = convert_python_pytest_median("four");
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("bench.py::test_fib_1").unwrap();

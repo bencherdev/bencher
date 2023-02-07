@@ -119,11 +119,11 @@ pub struct CliBackend {
     #[clap(long)]
     pub token: Option<Jwt>,
 
-    /// Request attempt(s) (default 3)
+    /// Request attempt(s) (default 10)
     #[clap(long)]
     pub attempts: Option<usize>,
 
-    /// Retry after second(s) (default 1)
+    /// Retry after second(s) (default 3)
     #[clap(long)]
     pub retry_after: Option<u64>,
 }

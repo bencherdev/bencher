@@ -15,13 +15,13 @@ use crate::{
         Units,
     },
     results::adapter_results::AdapterResults,
-    Adapter,
+    Adapter, Settings,
 };
 
 pub struct AdapterJsBenchmark;
 
 impl Adapter for AdapterJsBenchmark {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {

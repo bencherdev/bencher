@@ -6,13 +6,13 @@ use serde::Deserialize;
 use crate::{
     adapters::util::{latency_as_nanos, throughput_as_secs},
     results::adapter_results::{AdapterMetricKind, AdapterResults},
-    Adapter, AdapterError,
+    Adapter, AdapterError, Settings,
 };
 
 pub struct AdapterJavaJmh;
 
 impl Adapter for AdapterJavaJmh {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         serde_json::from_str::<Jmh>(input).ok()?.try_into().ok()?
     }
 }

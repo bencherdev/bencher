@@ -2,14 +2,15 @@ pub mod bench;
 pub mod criterion;
 
 use self::criterion::AdapterRustCriterion;
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use bench::AdapterRustBench;
 
 pub struct AdapterRust;
 
 impl Adapter for AdapterRust {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterRustBench::parse(input).or_else(|| AdapterRustCriterion::parse(input))
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterRustBench::parse(input, settings)
+            .or_else(|| AdapterRustCriterion::parse(input, settings))
     }
 }
 

@@ -1,13 +1,13 @@
 pub mod benchmark;
 
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use benchmark::AdapterRubyBenchmark;
 
 pub struct AdapterRuby;
 
 impl Adapter for AdapterRuby {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterRubyBenchmark::parse(input)
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterRubyBenchmark::parse(input, settings)
     }
 }
 

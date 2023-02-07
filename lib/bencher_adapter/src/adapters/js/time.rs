@@ -14,13 +14,13 @@ use crate::{
         latency_as_nanos, nom_error, parse_benchmark_name_chars, parse_u64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter,
+    Adapter, Settings,
 };
 
 pub struct AdapterJsTime;
 
 impl Adapter for AdapterJsTime {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {

@@ -1,15 +1,16 @@
 pub mod catch2;
 pub mod google;
 
-use crate::{Adapter, AdapterResults};
+use crate::{Adapter, AdapterResults, Settings};
 use catch2::AdapterCppCatch2;
 use google::AdapterCppGoogle;
 
 pub struct AdapterCpp;
 
 impl Adapter for AdapterCpp {
-    fn parse(input: &str) -> Option<AdapterResults> {
-        AdapterCppCatch2::parse(input).or_else(|| AdapterCppGoogle::parse(input))
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        AdapterCppCatch2::parse(input, settings)
+            .or_else(|| AdapterCppGoogle::parse(input, settings))
     }
 }
 

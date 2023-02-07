@@ -44,11 +44,11 @@ The `benchmark_name` object contains Metric Kind slugs or UUIDs as keys.
 In this example, `latency` is the slug for the Latency Metric Kind.
 Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) Metric Kind,
 which are measured in `nanosecond (ns)` and `operations / second (ops/s)` respectively.
-The Metric Kind object contains up to three Metrics: `value`, `lower_bound`, and `upper_bound`.
-The `lower_bound` and `upper_bound` Metrics are optional,
+The Metric Kind object contains a Metric with up to three measures: `value`, `lower_bound`, and `upper_bound`.
+The `lower_bound` and `upper_bound` measures are optional,
 and their calcualtion is benchmark harness specific.
 
-In this example, the `latency` Metric Kind object contains the following Metrics:
+In this example, the `latency` Metric Kind object contains the following measures:
 
 - A `value` of `88.0`
 - A `lower_bound` of `87.42`
@@ -56,7 +56,7 @@ In this example, the `latency` Metric Kind object contains the following Metrics
 
 <br/>
 
-> 🐰 Note: The `bencher mock` CLI command generates mock BMF metrics.
+> 🐰 Note: The `bencher mock` CLI command generates mock BMF Metrics.
 
 ## #️⃣ C#
 
@@ -65,8 +65,13 @@ The C# Adapter (`c_sharp`) is a superset of `c_sharp_dot_net`.
 ## #️⃣ C# DotNet
 
 The C# DotNet Adapter (`c_sharp_dot_net`) expects [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) output in [JSON format (ie `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
-The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+
+There are two options for the Metric:
+- `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
+
+This can be specified in the `bencher run` CLI command with the optional `--average` flag.
 
 ## ➕ C++
 
@@ -75,13 +80,13 @@ The C++ Adapter (`cpp`) is a superset of `cpp_catch2` and `cpp_google`.
 ## ➕ C++ Catch2
 
 The C++ Catch2 Adapter (`cpp_catch2`) expects [Catch2](https://github.com/catchorg/Catch2) output.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 
 ## ➕ C++ Google
 
 The C++ Google Adapter (`cpp_google`) expects [Google Benchmark](https://github.com/google/benchmark) output in [JSON format (ie `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 Only the mean (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
 ## 🕳 Go
@@ -91,7 +96,7 @@ The Go Adapter (`go`) is a superset of `go_bench`.
 ## 🕳 Go Bench
 
 The Go Bench Adapter (`go_bench`) expects [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) output.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 Only the mean (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
 ## ☕️ Java
@@ -101,7 +106,7 @@ The Java Adapter (`java`) is a superset of `java_jmh`.
 ## ☕️ Java JMH
 
 The Java JMH Adapter (`java_jmh`) expects [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) output in [JSON format (ie `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Both `latency` and `throughput` metric kinds (ie `nanoseconds (ns)` and `operations / second (ops/sec)`) may be gathered.
+Both `latency` and `throughput` Metric Kinds (ie `nanoseconds (ns)` and `operations / second (ops/sec)`) may be gathered.
 The `lower_bound` and `upper_bound` are the lower and upper confidence intervals for the mean (ie `value`) respectively.
 
 ## 🕸 JavaScript
@@ -111,13 +116,13 @@ The JavaScript Adapter (`js`) is a superset of `js_benchmark` and `js_time`.
 ## 🕸 JavaScript Benchmark
 
 The JavaScript Benchmark Adapter (`js_benchmark`) expects [Benchmark.js](https://github.com/bestiejs/benchmark.js) output.
-The `throughput` metric kind (ie `operations / second (ops/sec)`) is gathered.
+The `throughput` Metric Kind (ie `operations / second (ops/sec)`) is gathered.
 The `lower_bound` and `upper_bound` are the relative margin of error below and above the median (ie `value`) respectively.
 
 ## 🕸 JavaScript Time
 
 The JavaScript Time Adapter (`js_time`) expects [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) output.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 Only the operation time (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
 ## 🐍 Python
@@ -127,14 +132,19 @@ The Python Adapter (`python`) is a superset of `python_asv` and `python_pytest`.
 ## 🐍 Python ASV
 
 The Python ASV Adapter (`python_asv`) expects [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) output.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are the interquartile range below and above the median (ie `value`) respectively.
 
 ## 🐍 Python Pytest
 
 The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
-The `lower_bound` and `upper_bound` are the interquartile range below and above the median (ie `value`) respectively.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+
+There are two options for the Metric:
+- `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
+
+This can be specified in the `bencher run` CLI command with the optional `--average` flag.
 
 > 🐰 Note: Because this command saves to a results file, that file will need to be read and passed to `bencher run` (ie `bencher run "pytest benchmarks.py --benchmark-json results.json && cat results.json"`).
 
@@ -146,7 +156,7 @@ The Ruby Adapter (`ruby`) is a superset of `ruby_benchmark`.
 
 The Ruby Benchmark Adapter (`ruby_benchmark`) expects [Benchmark module](https://github.com/ruby/benchmark) output for the `#bm`, `#bmbm`, and `#benchmark` methods.
 A label is required for each benchmark.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 Only the reported value (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
 
 ## 🦀 Rust
@@ -156,11 +166,11 @@ The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.
 ## 🦀 Rust Bench
 
 The Rust Bench Adapter (`rust_bench`) expects [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) output.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are the deviation below and above the median (ie `value`) respectively.
 
 ## 🦀 Rust Criterion
 
 The Rust Criterion Adapter (`rust_criterion`) expects [Criterion](https://github.com/bheisler/criterion.rs) output.
-The `latency` metric kind (ie `nanoseconds (ns)`) is gathered.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are the lower and upper bounds of either the slope (if available) or the mean (if not) (ie `value`) respectively.

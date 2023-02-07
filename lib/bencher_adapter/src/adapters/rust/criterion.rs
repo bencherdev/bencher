@@ -14,13 +14,13 @@ use crate::{
         latency_as_nanos, nom_error, parse_benchmark_name, parse_f64, parse_units, NomError,
     },
     results::adapter_results::AdapterResults,
-    Adapter,
+    Adapter, Settings,
 };
 
 pub struct AdapterRustCriterion;
 
 impl Adapter for AdapterRustCriterion {
-    fn parse(input: &str) -> Option<AdapterResults> {
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let mut benchmark_metrics = Vec::new();
 
         let mut prior_line = None;
@@ -102,7 +102,7 @@ pub(crate) mod test_rust_criterion {
 
     use crate::{
         adapters::test_util::{convert_file_path, validate_latency},
-        Adapter, AdapterResults,
+        Adapter, AdapterResults, Settings,
     };
 
     use super::{parse_criterion, AdapterRustCriterion};
@@ -193,7 +193,7 @@ pub(crate) mod test_rust_criterion {
     #[test]
     fn test_adapter_rust_criterion_failed() {
         let contents = std::fs::read_to_string("./tool_output/rust/criterion/failed.txt").unwrap();
-        let results = AdapterRustCriterion::parse(&contents).unwrap();
+        let results = AdapterRustCriterion::parse(&contents, Settings::default()).unwrap();
         assert_eq!(results.inner.len(), 4);
     }
 

@@ -317,7 +317,7 @@ $ bencher project create --org saul-goodman --url http://www.savewalterwhite.com
 }
 ```
 
-Again, your output should be sligtly different than the above, as the `uuid` is pseudorandom. It's just important that this command works. Take note of the `slug` field, `save-walter-white`.
+Again, your output should be sligtly different than the above, as the `uuid` is pseudorandom. It's just important that this command works. Take note of the `slug` field (ie `save-walter-white`).
 
 ## Run a Report
 
@@ -373,6 +373,7 @@ Your output should be sligtly different than the above, as the data are pseudora
 <br />
 
 Now lets run a report using mock benchmark metric data.
+Pass the `slug` field (ie `save-walter-white`) that we noted eariler to the `--project` argument.
 
 Run: `bencher run --project save-walter-white "bencher mock"`
 
@@ -461,9 +462,30 @@ For more details see the [explanation of benchmark harness adapters](https://ben
 
 <br />
 
-Now, lets rerun this same command again to generate more data.
+Lets set our project slug as an environment variable, so we don't have to provide it with the `--project` on every single run.
 
-Rerun: `bencher run --project save-walter-white "bencher mock"`
+Run: `export BENCHER_PROJECT=save-walter-white`
+
+If you then run: `echo $BENCHER_PROJECT`
+
+You should see:
+
+```
+$ echo $BENCHER_PROJECT
+save-walter-white
+```
+
+<br />
+
+Now, lets rerun this same command again without `--project` to generate more data.
+
+Run: `bencher run "bencher mock"`
+
+<br />
+
+Finally, lets generate more data, but this time we will pipe our results into `bencher run`.
+
+Run: `bencher mock | bencher run`
 
 <br />
 
