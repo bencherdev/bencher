@@ -24,6 +24,7 @@ pub struct JsonNewReport {
 pub struct JsonReportSettings {
     pub adapter: Option<JsonAdapter>,
     pub fold: Option<JsonFold>,
+    pub average: Option<JsonAverage>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -61,6 +62,14 @@ pub enum JsonAdapter {
 pub enum JsonFold {
     Min,
     Max,
+    Mean,
+    Median,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonAverage {
     Mean,
     Median,
 }
