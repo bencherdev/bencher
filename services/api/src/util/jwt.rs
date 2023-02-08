@@ -1,4 +1,6 @@
-use bencher_valid::{Email, Jwt};
+use std::str::FromStr;
+
+use bencher_json::{organization::member::JsonOrganizationRole, Email, Jwt};
 use chrono::Utc;
 use derive_more::Display;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
@@ -9,7 +11,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::organization::member::JsonOrganizationRole;
+use crate::ApiError;
 
 const BENCHER_DEV: &str = "bencher.dev";
 
@@ -18,11 +20,17 @@ static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonWebToken(String);
+pub struct JsonWebToken(Jwt);
 
 impl AsRef<str> for JsonWebToken {
     fn as_ref(&self) -> &str {
-        &self.0
+        self.0.as_ref()
+    }
+}
+
+impl From<JsonWebToken> for Jwt {
+    fn from(jwt: JsonWebToken) -> Self {
+        jwt.0
     }
 }
 
@@ -33,32 +41,20 @@ impl JsonWebToken {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
-    ) -> Result<Self, jsonwebtoken::errors::Error> {
+    ) -> Result<Self, ApiError> {
         let claims = JsonClaims::new(audience, email, ttl, org);
-        Ok(Self(encode(&HEADER, &claims, key)?))
+        Ok(Self(Jwt::from_str(&encode(&HEADER, &claims, key)?)?))
     }
 
-    pub fn new_auth(
-        key: &EncodingKey,
-        email: Email,
-        ttl: u32,
-    ) -> Result<Self, jsonwebtoken::errors::Error> {
+    pub fn new_auth(key: &EncodingKey, email: Email, ttl: u32) -> Result<Self, ApiError> {
         Self::new(key, Audience::Auth, email, ttl, None)
     }
 
-    pub fn new_client(
-        key: &EncodingKey,
-        email: Email,
-        ttl: u32,
-    ) -> Result<Self, jsonwebtoken::errors::Error> {
+    pub fn new_client(key: &EncodingKey, email: Email, ttl: u32) -> Result<Self, ApiError> {
         Self::new(key, Audience::Client, email, ttl, None)
     }
 
-    pub fn new_api_key(
-        key: &EncodingKey,
-        email: Email,
-        ttl: u32,
-    ) -> Result<Self, jsonwebtoken::errors::Error> {
+    pub fn new_api_key(key: &EncodingKey, email: Email, ttl: u32) -> Result<Self, ApiError> {
         Self::new(key, Audience::ApiKey, email, ttl, None)
     }
 
@@ -68,7 +64,7 @@ impl JsonWebToken {
         ttl: u32,
         org_uuid: Uuid,
         role: JsonOrganizationRole,
-    ) -> Result<Self, jsonwebtoken::errors::Error> {
+    ) -> Result<Self, ApiError> {
         let org_claims = OrgClaims {
             uuid: org_uuid,
             role,

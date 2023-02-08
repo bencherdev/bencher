@@ -1,0 +1,12 @@
+[package]
+name = "bencher_license"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Local
+bencher_valid = { path = "../../lib/bencher_valid" }
+# Workspace
+jsonwebtoken = { workspace = true, features = ["use_pem"] }
+thiserror.workspace = true

@@ -1,7 +1,4 @@
-use bencher_json::{
-    system::{auth::JsonConfirm, jwt::JsonWebToken},
-    JsonAuthToken,
-};
+use bencher_json::{system::auth::JsonConfirm, JsonAuthToken};
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
@@ -15,7 +12,10 @@ use crate::{
     error::api_error,
     model::user::QueryUser,
     schema,
-    util::cors::{get_cors, CorsResponse},
+    util::{
+        cors::{get_cors, CorsResponse},
+        jwt::JsonWebToken,
+    },
     ApiError,
 };
 
@@ -70,6 +70,7 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
         token_data.claims.email().parse()?,
         CLIENT_TOKEN_TTL,
     )
+    .map(Into::into)
     .map_err(api_error!())?;
 
     Ok(JsonConfirm { user, token })

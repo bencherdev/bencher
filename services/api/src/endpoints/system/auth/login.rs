@@ -1,4 +1,4 @@
-use bencher_json::{system::jwt::JsonWebToken, JsonEmpty, JsonLogin};
+use bencher_json::{JsonEmpty, JsonLogin};
 
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
@@ -9,6 +9,7 @@ use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
 use crate::error::api_error;
 
+use crate::util::jwt::JsonWebToken;
 use crate::ApiError;
 use crate::{
     context::{Body, ButtonBody, Context, Message},

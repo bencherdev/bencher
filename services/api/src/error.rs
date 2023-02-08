@@ -122,6 +122,10 @@ pub enum ApiError {
     Valid(#[from] bencher_json::ValidError),
     #[error("Arithmetic error")]
     BadMath,
+    #[error("Failed to handle licensing: {0}")]
+    License(#[from] bencher_license::LicenseError),
+    #[error("Tried to init Bencher for endpoint: {0}")]
+    BencherDev(url::Url),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },

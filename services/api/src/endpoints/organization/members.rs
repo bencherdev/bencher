@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
-    system::jwt::JsonWebToken,
     JsonEmpty, JsonMember, ResourceId,
 };
 use bencher_rbac::organization::Permission;
@@ -25,6 +24,7 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         error::into_json,
+        jwt::JsonWebToken,
     },
     ApiError,
 };

@@ -22,6 +22,8 @@ pub struct JsonConfig {
     pub logging: JsonLogging,
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
+    #[cfg(feature = "plus")]
+    pub bencher: Option<JsonBencher>,
 }
 
 impl Sanitize for JsonConfig {
@@ -152,4 +154,11 @@ pub enum IfExists {
     Fail,
     Truncate,
     Append,
+}
+
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonBencher {
+    pub private_pem: Secret,
 }

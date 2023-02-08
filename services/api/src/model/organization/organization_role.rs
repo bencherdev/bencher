@@ -5,9 +5,10 @@ use crate::{
         QueryUser,
     },
     schema::organization_role as organization_role_table,
+    util::jwt::JsonWebToken,
     ApiError,
 };
-use bencher_json::{organization::JsonOrganizationPermission, system::jwt::JsonWebToken, Jwt};
+use bencher_json::{organization::JsonOrganizationPermission, Jwt};
 use diesel::{Insertable, Queryable, SqliteConnection};
 
 use super::QueryOrganization;

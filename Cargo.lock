@@ -545,6 +545,7 @@ dependencies = [
  "aws-sdk-s3",
  "bencher_adapter",
  "bencher_json",
+ "bencher_license",
  "bencher_plus",
  "bencher_rbac",
  "chrono",
@@ -614,7 +615,6 @@ dependencies = [
  "bencher_valid",
  "chrono",
  "derive_more",
- "jsonwebtoken",
  "once_cell",
  "ordered-float",
  "schemars",
@@ -626,8 +626,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_license"
+version = "0.2.32"
+dependencies = [
+ "bencher_valid",
+ "jsonwebtoken",
+ "thiserror",
+]
+
+[[package]]
 name = "bencher_plus"
-version = "0.1.0"
+version = "0.2.32"
 dependencies = [
  "once_cell",
  "url",

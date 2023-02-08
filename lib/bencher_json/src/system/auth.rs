@@ -3,7 +3,6 @@ use bencher_valid::{Email, Jwt, Slug, UserName};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::jwt::JsonWebToken;
 use crate::JsonUser;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,5 +31,5 @@ pub struct JsonAuthToken {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfirm {
     pub user: JsonUser,
-    pub token: JsonWebToken,
+    pub token: Jwt,
 }

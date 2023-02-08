@@ -1,7 +1,5 @@
-use bencher_json::{
-    system::jwt::{DecodingKey, EncodingKey},
-    Secret,
-};
+use bencher_json::Secret;
+use jsonwebtoken::{DecodingKey, EncodingKey};
 
 pub struct SecretKey {
     pub encoding: EncodingKey,

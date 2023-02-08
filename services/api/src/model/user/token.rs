@@ -1,13 +1,17 @@
 use std::str::FromStr;
 
-use bencher_json::{system::jwt::JsonWebToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId};
+use bencher_json::{JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId};
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
 use crate::{
-    context::ApiContext, error::api_error, schema, schema::token as token_table,
-    util::query::fn_get_id, ApiError,
+    context::ApiContext,
+    error::api_error,
+    schema,
+    schema::token as token_table,
+    util::{jwt::JsonWebToken, query::fn_get_id},
+    ApiError,
 };
 
 use super::{auth::AuthUser, QueryUser};

@@ -151,6 +151,8 @@ impl Default for Config {
                     level: LogLevel::Info,
                 },
             },
+            #[cfg(feature = "plus")]
+            bencher: None,
         })
     }
 }

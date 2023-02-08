@@ -1,4 +1,4 @@
-use bencher_json::{system::jwt::JsonWebToken, JsonEmpty, JsonSignup};
+use bencher_json::{JsonEmpty, JsonSignup};
 use bencher_rbac::organization::Role;
 use diesel::dsl::count;
 use diesel::QueryDsl;
@@ -14,6 +14,7 @@ use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
 use crate::model::user::QueryUser;
+use crate::util::jwt::JsonWebToken;
 use crate::ApiError;
 use crate::{
     context::{Body, ButtonBody, Context, Message},

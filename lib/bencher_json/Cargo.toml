@@ -6,6 +6,7 @@ edition.workspace = true
 
 [features]
 schema = ["dep:schemars", "ordered-float/schemars"]
+plus = []
 
 [dependencies]
 # Local
@@ -15,7 +16,6 @@ bencher_valid = { path = "../bencher_valid", default-features = false, features 
 # Workspace
 chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true
-jsonwebtoken.workspace = true
 once_cell.workspace = true
 ordered-float = { workspace = true, features = ["serde"] }
 schemars = { workspace = true, optional = true, features = ["chrono", "url"] }

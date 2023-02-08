@@ -1,3 +1,5 @@
+#[cfg(feature = "plus")]
+use bencher_license::Licensor;
 use tokio::sync::mpsc::Sender;
 use url::Url;
 
@@ -20,4 +22,6 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     pub restart_tx: Sender<()>,
+    #[cfg(feature = "plus")]
+    pub licensor: Licensor,
 }

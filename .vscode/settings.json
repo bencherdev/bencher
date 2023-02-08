@@ -33,6 +33,7 @@
     "fullwidth",
     "Insertable",
     "interquartile",
+    "jsonwebtoken",
     "libtest",
     "Microbenchmark",
     "nanos",
@@ -40,6 +41,7 @@
     "repr",
     "Roadmap",
     "starttls",
+    "thiserror",
     "vcentered"
   ]
 }
