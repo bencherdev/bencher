@@ -92,10 +92,7 @@ impl AuthUser {
         let jwt: Jwt = token.trim().parse()?;
 
         let api_context = &mut *rqctx.context().lock().await;
-        let token_data = api_context
-            .secret_key
-            .validate_user(&jwt)
-            .map_err(map_auth_header_error!(INVALID_JWT))?;
+        let token_data = api_context.secret_key.validate_user(&jwt)?;
 
         let conn = &mut api_context.database.connection;
         let (user_id, admin, locked) = schema::user::table

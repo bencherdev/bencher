@@ -629,9 +629,16 @@ dependencies = [
 name = "bencher_license"
 version = "0.2.32"
 dependencies = [
+ "bencher_plus",
  "bencher_valid",
+ "chrono",
  "jsonwebtoken",
+ "once_cell",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]

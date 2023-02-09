@@ -7,6 +7,16 @@ edition.workspace = true
 [dependencies]
 # Local
 bencher_valid = { path = "../../lib/bencher_valid" }
+# Plus
+bencher_plus = { path = "../bencher_plus" }
 # Workspace
+chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }
+once_cell.workspace = true
 thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+
+[dev-dependencies]
+pretty_assertions.workspace = true

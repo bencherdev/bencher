@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bencher_json::{organization::member::JsonOrganizationRole, Email, Jwt, Secret};
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
-pub use jsonwebtoken::{DecodingKey, EncodingKey};
+use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -30,27 +30,27 @@ impl From<Secret> for SecretKey {
 }
 
 impl SecretKey {
-    fn jwt(
+    fn new_jwt(
         &self,
         audience: Audience,
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Jwt, ApiError> {
-        let claims = JsonClaims::new(audience, email, ttl, org);
+        let claims = Claims::new(audience, email, ttl, org)?;
         Ok(Jwt::from_str(&encode(&HEADER, &claims, &self.encoding)?)?)
     }
 
     pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, ApiError> {
-        self.jwt(Audience::Auth, email, ttl, None)
+        self.new_jwt(Audience::Auth, email, ttl, None)
     }
 
     pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, ApiError> {
-        self.jwt(Audience::Client, email, ttl, None)
+        self.new_jwt(Audience::Client, email, ttl, None)
     }
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, ApiError> {
-        self.jwt(Audience::ApiKey, email, ttl, None)
+        self.new_jwt(Audience::ApiKey, email, ttl, None)
     }
 
     pub fn new_invite(
@@ -64,27 +64,21 @@ impl SecretKey {
             uuid: org_uuid,
             role,
         };
-        self.jwt(Audience::Invite, email, ttl, Some(org_claims))
+        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims))
     }
 
-    fn validate(
-        &self,
-        token: &Jwt,
-        audience: &[Audience],
-    ) -> Result<TokenData<JsonClaims>, ApiError> {
+    fn validate(&self, token: &Jwt, audience: &[Audience]) -> Result<TokenData<Claims>, ApiError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(audience);
         validation.set_issuer(&[BENCHER_DEV]);
-        validation.set_required_spec_claims(&["aud", "exp", "iss"]);
-        let token_data: TokenData<JsonClaims> =
-            decode(token.as_ref(), &self.decoding, &validation)?;
+        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+        let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)?;
 
         // TODO deep dive on this
         // Even though the above should validate the expiration,
         // it appears to do so statically based off of compilation
         // or something, so just double check here.
-        #[allow(clippy::cast_sign_loss)]
-        if token_data.claims.exp < Utc::now().timestamp() as u64 {
+        if token_data.claims.exp < u64::try_from(Utc::now().timestamp())? {
             Err(jsonwebtoken::errors::Error::from(
                 jsonwebtoken::errors::ErrorKind::ExpiredSignature,
             )
@@ -94,26 +88,26 @@ impl SecretKey {
         }
     }
 
-    pub fn validate_auth(&self, token: &Jwt) -> Result<TokenData<JsonClaims>, ApiError> {
+    pub fn validate_auth(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
         self.validate(token, &[Audience::Auth])
     }
 
-    pub fn validate_user(&self, token: &Jwt) -> Result<TokenData<JsonClaims>, ApiError> {
+    pub fn validate_user(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
         self.validate(token, &[Audience::Client, Audience::ApiKey])
     }
 
-    pub fn validate_api_key(&self, token: &Jwt) -> Result<TokenData<JsonClaims>, ApiError> {
+    pub fn validate_api_key(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
         self.validate(token, &[Audience::ApiKey])
     }
 
-    pub fn validate_invite(&self, token: &Jwt) -> Result<TokenData<JsonClaims>, ApiError> {
+    pub fn validate_invite(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
         self.validate(token, &[Audience::Invite])
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonClaims {
+pub struct Claims {
     pub aud: String,            // Audience
     pub exp: u64,               // Expiration time (as UTC timestamp)
     pub iat: u64,               // Issued at (as UTC timestamp)
@@ -129,22 +123,22 @@ pub struct OrgClaims {
     pub role: JsonOrganizationRole,
 }
 
-impl JsonClaims {
-    #[allow(
-        clippy::arithmetic_side_effects,
-        clippy::cast_sign_loss,
-        clippy::integer_arithmetic
-    )]
-    fn new(audience: Audience, email: Email, ttl: u32, org: Option<OrgClaims>) -> Self {
-        let now = Utc::now().timestamp() as u64;
-        Self {
+impl Claims {
+    fn new(
+        audience: Audience,
+        email: Email,
+        ttl: u32,
+        org: Option<OrgClaims>,
+    ) -> Result<Self, ApiError> {
+        let now = u64::try_from(Utc::now().timestamp())?;
+        Ok(Self {
             aud: audience.into(),
-            exp: now + u64::from(ttl),
+            exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
             iat: now,
             iss: BENCHER_DEV.into(),
             sub: email.into(),
             org,
-        }
+        })
     }
 
     pub fn email(&self) -> &str {

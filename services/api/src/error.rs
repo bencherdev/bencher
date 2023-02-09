@@ -126,6 +126,8 @@ pub enum ApiError {
     License(#[from] bencher_license::LicenseError),
     #[error("Tried to init Bencher for endpoint: {0}")]
     BencherDev(url::Url),
+    #[error("Failed to cast in: {0}")]
+    IntError(#[from] std::num::TryFromIntError),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },

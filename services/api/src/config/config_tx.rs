@@ -194,7 +194,7 @@ fn bencher_licensor(endpoint: &Url, bencher: Option<JsonBencher>) -> Result<Lice
             Err(ApiError::BencherDev(endpoint.clone()))
         }
     } else {
-        Licensor::self_host().map_err(Into::into)
+        Licensor::self_hosted().map_err(Into::into)
     }
 }
 
