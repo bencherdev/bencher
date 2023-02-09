@@ -83,5 +83,6 @@ mod test {
 
         assert_eq!(false, is_valid_url(""));
         assert_eq!(false, is_valid_url("bad"));
+        assert_eq!(false, is_valid_url("example.com"));
     }
 }

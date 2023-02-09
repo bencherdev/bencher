@@ -5,31 +5,37 @@ use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
+use url::Url;
 use uuid::Uuid;
 
 use crate::ApiError;
 
-const BENCHER_DEV: &str = "bencher.dev";
+mod audience;
+mod claims;
+
+use audience::Audience;
+use claims::{Claims, OrgClaims};
+
+const BENCHER_DOT_DEV: &str = "bencher.dev";
 
 static HEADER: Lazy<Header> = Lazy::new(Header::default);
 static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
 
 pub struct SecretKey {
+    endpoint: Url,
     pub encoding: EncodingKey,
     pub decoding: DecodingKey,
 }
 
-impl From<Secret> for SecretKey {
-    fn from(secret_key: Secret) -> Self {
+impl SecretKey {
+    pub fn new(endpoint: Url, secret_key: Secret) -> Self {
         Self {
+            endpoint,
             encoding: EncodingKey::from_secret(secret_key.as_ref().as_bytes()),
             decoding: DecodingKey::from_secret(secret_key.as_ref().as_bytes()),
         }
     }
-}
 
-impl SecretKey {
     fn new_jwt(
         &self,
         audience: Audience,
@@ -37,7 +43,7 @@ impl SecretKey {
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Jwt, ApiError> {
-        let claims = Claims::new(audience, email, ttl, org)?;
+        let claims = Claims::new(audience, self.endpoint.clone(), email, ttl, org)?;
         Ok(Jwt::from_str(&encode(&HEADER, &claims, &self.encoding)?)?)
     }
 
@@ -70,29 +76,20 @@ impl SecretKey {
     fn validate(&self, token: &Jwt, audience: &[Audience]) -> Result<TokenData<Claims>, ApiError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(audience);
-        validation.set_issuer(&[BENCHER_DEV]);
+        validation.set_issuer(&[BENCHER_DOT_DEV, self.endpoint.as_ref()]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
-        let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)?;
 
-        // TODO deep dive on this
-        // Even though the above should validate the expiration,
-        // it appears to do so statically based off of compilation
-        // or something, so just double check here.
-        if token_data.claims.exp < u64::try_from(Utc::now().timestamp())? {
-            Err(jsonwebtoken::errors::Error::from(
-                jsonwebtoken::errors::ErrorKind::ExpiredSignature,
-            )
-            .into())
-        } else {
-            Ok(token_data)
-        }
+        let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)?;
+        check_expiration(token_data.claims.exp)?;
+
+        Ok(token_data)
     }
 
     pub fn validate_auth(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
         self.validate(token, &[Audience::Auth])
     }
 
-    pub fn validate_user(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
+    pub fn validate_client(&self, token: &Jwt) -> Result<TokenData<Claims>, ApiError> {
         self.validate(token, &[Audience::Client, Audience::ApiKey])
     }
 
@@ -105,77 +102,168 @@ impl SecretKey {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct Claims {
-    pub aud: String,            // Audience
-    pub exp: u64,               // Expiration time (as UTC timestamp)
-    pub iat: u64,               // Issued at (as UTC timestamp)
-    pub iss: String,            // Issuer
-    pub sub: String,            // Subject (whom token refers to)
-    pub org: Option<OrgClaims>, // Organization (for invitation)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct OrgClaims {
-    pub uuid: Uuid,
-    pub role: JsonOrganizationRole,
-}
-
-impl Claims {
-    fn new(
-        audience: Audience,
-        email: Email,
-        ttl: u32,
-        org: Option<OrgClaims>,
-    ) -> Result<Self, ApiError> {
-        let now = u64::try_from(Utc::now().timestamp())?;
-        Ok(Self {
-            aud: audience.into(),
-            exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
-            iat: now,
-            iss: BENCHER_DEV.into(),
-            sub: email.into(),
-            org,
-        })
-    }
-
-    pub fn email(&self) -> &str {
-        &self.sub
-    }
-
-    pub fn org(&self) -> Option<&OrgClaims> {
-        self.org.as_ref()
+fn check_expiration(time: u64) -> Result<(), ApiError> {
+    let now = now()?;
+    if time < now {
+        Err(
+            jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::ExpiredSignature)
+                .into(),
+        )
+    } else {
+        Ok(())
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum Audience {
-    Auth,
-    Client,
-    ApiKey,
-    Invite,
+pub fn now() -> Result<u64, ApiError> {
+    u64::try_from(Utc::now().timestamp()).map_err(Into::into)
 }
 
-const AUDIENCE_AUTH: &str = "auth";
-const AUDIENCE_CLIENT: &str = "client";
-const AUDIENCE_API_KEY: &str = "api_key";
-const AUDIENCE_INVITE: &str = "invite";
+#[cfg(test)]
+mod test {
+    use std::{thread, time};
 
-impl ToString for Audience {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Auth => AUDIENCE_AUTH.into(),
-            Self::Client => AUDIENCE_CLIENT.into(),
-            Self::ApiKey => AUDIENCE_API_KEY.into(),
-            Self::Invite => AUDIENCE_INVITE.into(),
-        }
+    use bencher_json::{organization::member::JsonOrganizationRole, Email};
+    use once_cell::sync::Lazy;
+    use url::Url;
+    use uuid::Uuid;
+
+    use crate::{config::DEFAULT_SECRET_KEY, context::secret_key::audience::Audience};
+
+    use super::SecretKey;
+
+    const TTL: u32 = u32::MAX;
+
+    pub static BENCHER_DEV_URL: Lazy<Url> = Lazy::new(|| "https://bencher.dev".parse().unwrap());
+    static EMAIL: Lazy<Email> = Lazy::new(|| "info@bencher.dev".parse().unwrap());
+
+    fn sleep_for_a_second() {
+        let second = time::Duration::from_secs(1);
+        thread::sleep(second);
     }
-}
 
-impl From<Audience> for String {
-    fn from(audience: Audience) -> Self {
-        audience.to_string()
+    #[test]
+    fn test_jwt_auth() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
+
+        let token_data = secret_key.validate_auth(&token).unwrap();
+
+        assert_eq!(token_data.claims.aud, Audience::Auth.to_string());
+        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(
+            token_data.claims.iat,
+            token_data.claims.exp - u64::from(TTL)
+        );
+        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+    }
+
+    #[test]
+    fn test_jwt_auth_expired() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let token = secret_key.new_auth(EMAIL.clone(), 0).unwrap();
+
+        sleep_for_a_second();
+
+        assert!(secret_key.validate_auth(&token).is_err());
+    }
+
+    #[test]
+    fn test_jwt_client() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let token = secret_key.new_client(EMAIL.clone(), TTL).unwrap();
+
+        let token_data = secret_key.validate_client(&token).unwrap();
+
+        assert_eq!(token_data.claims.aud, Audience::Client.to_string());
+        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(
+            token_data.claims.iat,
+            token_data.claims.exp - u64::from(TTL)
+        );
+        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+    }
+
+    #[test]
+    fn test_jwt_client_expired() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let token = secret_key.new_client(EMAIL.clone(), 0).unwrap();
+
+        sleep_for_a_second();
+
+        assert!(secret_key.validate_client(&token).is_err());
+    }
+
+    #[test]
+    fn test_jwt_api_key() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
+
+        let token_data = secret_key.validate_api_key(&token).unwrap();
+
+        assert_eq!(token_data.claims.aud, Audience::ApiKey.to_string());
+        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(
+            token_data.claims.iat,
+            token_data.claims.exp - u64::from(TTL)
+        );
+        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+    }
+
+    #[test]
+    fn test_jwt_api_key_expired() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let token = secret_key.new_api_key(EMAIL.clone(), 0).unwrap();
+
+        sleep_for_a_second();
+
+        assert!(secret_key.validate_api_key(&token).is_err());
+    }
+
+    #[test]
+    fn test_jwt_invite() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let org_uuid = Uuid::new_v4();
+        let role = JsonOrganizationRole::Leader;
+
+        let token = secret_key
+            .new_invite(EMAIL.clone(), TTL, org_uuid, role)
+            .unwrap();
+
+        let token_data = secret_key.validate_invite(&token).unwrap();
+
+        assert_eq!(token_data.claims.aud, Audience::Invite.to_string());
+        assert_eq!(token_data.claims.iss, BENCHER_DEV_URL.to_string());
+        assert_eq!(
+            token_data.claims.iat,
+            token_data.claims.exp - u64::from(TTL)
+        );
+        assert_eq!(token_data.claims.sub, EMAIL.to_string());
+
+        let org_claims = token_data.claims.org.unwrap();
+        assert_eq!(org_claims.uuid, org_uuid);
+        assert_eq!(org_claims.role, role);
+    }
+
+    #[test]
+    fn test_jwt_invite_expired() {
+        let secret_key = SecretKey::new(BENCHER_DEV_URL.clone(), DEFAULT_SECRET_KEY.clone());
+
+        let org_uuid = Uuid::new_v4();
+        let role = JsonOrganizationRole::Leader;
+
+        let token = secret_key
+            .new_invite(EMAIL.clone(), 0, org_uuid, role)
+            .unwrap();
+
+        sleep_for_a_second();
+
+        assert!(secret_key.validate_invite(&token).is_err());
     }
 }

@@ -43,7 +43,7 @@ static DEFAULT_BIND_ADDRESS: Lazy<SocketAddr> =
 
 #[cfg(debug_assertions)]
 #[allow(clippy::expect_used)]
-static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
+pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
     "DO_NOT_USE_THIS_IN_PRODUCTION"
         .parse()
         .expect("Invalid secret key")

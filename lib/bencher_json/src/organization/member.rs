@@ -33,7 +33,7 @@ pub struct JsonUpdateMember {
     pub role: Option<JsonOrganizationRole>,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonOrganizationRole {

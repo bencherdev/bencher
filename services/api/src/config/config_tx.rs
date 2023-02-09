@@ -23,7 +23,7 @@ use tracing::trace;
 use url::Url;
 
 use crate::{
-    context::{ApiContext, Context, Database, Email, Messenger},
+    context::{ApiContext, Context, Database, Email, Messenger, SecretKey},
     endpoints::Api,
     util::registrar::Registrar,
     ApiError,
@@ -97,12 +97,13 @@ fn into_private(
     } else {
         None
     };
+    let secret_key = SecretKey::new(endpoint.clone(), secret_key);
     #[cfg(feature = "plus")]
     let licensor = bencher_licensor(&endpoint, bencher)?;
 
     Ok(Mutex::new(ApiContext {
         endpoint,
-        secret_key: secret_key.into(),
+        secret_key,
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database: Database {
