@@ -33,6 +33,10 @@ impl Sanitize for JsonConfig {
         if let Some(smtp) = &mut self.smtp {
             smtp.sanitize();
         }
+        #[cfg(feature = "plus")]
+        if let Some(bencher) = &mut self.bencher {
+            bencher.sanitize();
+        }
     }
 }
 
@@ -161,4 +165,11 @@ pub enum IfExists {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBencher {
     pub private_pem: Secret,
+}
+
+#[cfg(feature = "plus")]
+impl Sanitize for JsonBencher {
+    fn sanitize(&mut self) {
+        self.private_pem.sanitize();
+    }
 }
