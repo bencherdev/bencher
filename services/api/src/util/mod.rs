@@ -1,7 +1,6 @@
 pub mod cors;
 pub mod error;
 pub mod headers;
-pub mod jwt;
 pub mod query;
 pub mod registrar;
 pub mod resource_id;

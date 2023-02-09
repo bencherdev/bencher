@@ -24,7 +24,6 @@ use crate::{
     util::{
         cors::{get_cors, CorsResponse},
         error::into_json,
-        jwt::JsonWebToken,
     },
     ApiError,
 };
@@ -177,14 +176,12 @@ async fn post_inner(
         .map_err(api_error!())?;
 
     // Create an invite token
-    let token = JsonWebToken::new_invite(
-        &api_context.secret_key.encoding,
+    let token = api_context.secret_key.new_invite(
         json_new_member.email,
         INVITE_TOKEN_TTL,
         Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
         json_new_member.role,
-    )
-    .map_err(api_error!())?;
+    )?;
     let token_string = token.to_string();
 
     let org_name = &query_org.name;

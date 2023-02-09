@@ -12,10 +12,7 @@ use crate::{
     error::api_error,
     model::user::QueryUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        jwt::JsonWebToken,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -55,9 +52,10 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database.connection;
 
-    let token_data =
-        JsonWebToken::validate_auth(&json_token.token, &api_context.secret_key.decoding)
-            .map_err(api_error!())?;
+    let token_data = api_context
+        .secret_key
+        .validate_auth(&json_token.token)
+        .map_err(api_error!())?;
 
     let user = schema::user::table
         .filter(schema::user::email.eq(token_data.claims.email()))
@@ -65,13 +63,10 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
         .map_err(api_error!())?
         .into_json()?;
 
-    let token = JsonWebToken::new_client(
-        &api_context.secret_key.encoding,
-        token_data.claims.email().parse()?,
-        CLIENT_TOKEN_TTL,
-    )
-    .map(Into::into)
-    .map_err(api_error!())?;
+    let token = api_context
+        .secret_key
+        .new_client(token_data.claims.email().parse()?, CLIENT_TOKEN_TTL)
+        .map_err(api_error!())?;
 
     Ok(JsonConfirm { user, token })
 }

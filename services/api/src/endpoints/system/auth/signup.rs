@@ -14,7 +14,6 @@ use crate::model::organization::{
     organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
 };
 use crate::model::user::QueryUser;
-use crate::util::jwt::JsonWebToken;
 use crate::ApiError;
 use crate::{
     context::{Body, ButtonBody, Context, Message},
@@ -81,7 +80,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = &invite {
-        InsertOrganizationRole::from_jwt(conn, invite, &api_context.secret_key, user_id)?
+        InsertOrganizationRole::from_jwt(conn, &api_context.secret_key, invite, user_id)?
     } else {
         // Create an organization for the user
         let insert_org = InsertOrganization::from_user(&insert_user);
@@ -104,8 +103,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         .execute(conn)
         .map_err(api_error!())?;
 
-    let token = JsonWebToken::new_auth(&api_context.secret_key.encoding, email, AUTH_TOKEN_TTL)
-        .map_err(api_error!())?;
+    let token = api_context.secret_key.new_auth(email, AUTH_TOKEN_TTL)?;
 
     let token_string = token.to_string();
     let body = Body::Button(ButtonBody {

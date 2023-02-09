@@ -9,8 +9,6 @@ use crate::endpoints::Endpoint;
 use crate::endpoints::Method;
 use crate::error::api_error;
 
-use crate::util::jwt::JsonWebToken;
-use crate::ApiError;
 use crate::{
     context::{Body, ButtonBody, Context, Message},
     diesel::ExpressionMethods,
@@ -18,6 +16,7 @@ use crate::{
     model::user::QueryUser,
     schema,
     util::cors::{get_cors, CorsResponse},
+    ApiError,
 };
 
 use super::Resource;
@@ -69,7 +68,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
 
     if let Some(invite) = &json_login.invite {
         let insert_org_role =
-            InsertOrganizationRole::from_jwt(conn, invite, &api_context.secret_key, query_user.id)?;
+            InsertOrganizationRole::from_jwt(conn, &api_context.secret_key, invite, query_user.id)?;
 
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
@@ -77,12 +76,9 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .map_err(api_error!())?;
     }
 
-    let token = JsonWebToken::new_auth(
-        &api_context.secret_key.encoding,
-        json_login.email.clone(),
-        AUTH_TOKEN_TTL,
-    )
-    .map_err(api_error!())?;
+    let token = api_context
+        .secret_key
+        .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)?;
 
     let token_string = token.to_string();
     let body = Body::Button(ButtonBody {

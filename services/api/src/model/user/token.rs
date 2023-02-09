@@ -6,12 +6,8 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, Sq
 use uuid::Uuid;
 
 use crate::{
-    context::ApiContext,
-    error::api_error,
-    schema,
-    schema::token as token_table,
-    util::{jwt::JsonWebToken, query::fn_get_id},
-    ApiError,
+    context::ApiContext, error::api_error, schema, schema::token as token_table,
+    util::query::fn_get_id, ApiError,
 };
 
 use super::{auth::AuthUser, QueryUser};
@@ -115,18 +111,13 @@ impl InsertToken {
             max_ttl
         };
 
-        let jwt = JsonWebToken::new_api_key(
-            &api_context.secret_key.encoding,
-            query_user.email.as_str().parse()?,
-            ttl,
-        )
-        .map_err(api_error!())?;
+        let jwt = api_context
+            .secret_key
+            .new_api_key(query_user.email.as_str().parse()?, ttl)?;
 
-        let token_data = JsonWebToken::validate_api_key(
-            &jwt.as_ref().parse()?,
-            &api_context.secret_key.decoding,
-        )
-        .map_err(api_error!())?;
+        let token_data = api_context
+            .secret_key
+            .validate_api_key(&jwt.as_ref().parse()?)?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),

@@ -12,7 +12,7 @@ use crate::{
     context::{Context, Rbac},
     diesel::ExpressionMethods,
     schema,
-    util::{error::debug_error, jwt::JsonWebToken},
+    util::error::debug_error,
     ApiError,
 };
 
@@ -92,7 +92,9 @@ impl AuthUser {
         let jwt: Jwt = token.trim().parse()?;
 
         let api_context = &mut *rqctx.context().lock().await;
-        let token_data = JsonWebToken::validate_user(&jwt, &api_context.secret_key.decoding)
+        let token_data = api_context
+            .secret_key
+            .validate_user(&jwt)
             .map_err(map_auth_header_error!(INVALID_JWT))?;
 
         let conn = &mut api_context.database.connection;
