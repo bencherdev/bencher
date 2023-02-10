@@ -1,6 +1,6 @@
 use dropshot::ApiDescription;
 
-mod endpoint;
+pub mod endpoint;
 pub mod method;
 pub mod organization;
 pub mod project;
@@ -65,6 +65,11 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(organization::projects::post)?;
     api.register(organization::projects::one_options)?;
     api.register(organization::projects::get_one)?;
+    // Organization Entitlements
+    #[cfg(feature = "plus")]
+    api.register(organization::entitlements::options)?;
+    #[cfg(feature = "plus")]
+    api.register(organization::entitlements::get)?;
 
     // Projects
     // All of a projects's GET APIs and its Perf POST API

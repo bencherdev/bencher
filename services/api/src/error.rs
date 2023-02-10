@@ -122,6 +122,10 @@ pub enum ApiError {
     Valid(#[from] bencher_json::ValidError),
     #[error("Arithmetic error")]
     BadMath,
+    #[error("Bad date: {0} {1} {2}")]
+    BadDate(i32, u32, u32),
+    #[error("Bad time: {0} {1} {2}")]
+    BadTime(u32, u32, u32),
 
     #[cfg(feature = "plus")]
     #[error("Failed to handle licensing: {0}")]

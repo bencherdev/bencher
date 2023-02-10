@@ -201,13 +201,16 @@ fn perf_query(
         benchmark,
     } = uuids;
 
-    let mut query = schema::perf::table
+    let mut query = schema::metric::table
+        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+        .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
         .left_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )
         .filter(schema::benchmark::uuid.eq(benchmark.to_string()))
         .filter(schema::benchmark::project_id.eq(project_id))
         .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+        .filter(schema::report::testbed_id.eq(testbed_id))
         .into_boxed();
 
     let Times {
@@ -229,9 +232,6 @@ fn perf_query(
                 .on(schema::version::id.eq(schema::branch_version::version_id)),
         )
         .filter(schema::branch_version::branch_id.eq(branch_id))
-        .filter(schema::report::testbed_id.eq(testbed_id))
-        .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .order((
             schema::version::number,
             schema::report::start_time,

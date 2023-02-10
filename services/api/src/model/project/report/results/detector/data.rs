@@ -18,12 +18,18 @@ impl MetricsData {
         benchmark_id: i32,
         statistic: &QueryStatistic,
     ) -> Result<Self, ApiError> {
-        let mut query = schema::perf::table
+        let mut query = schema::metric::table
+            .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+            .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
             .left_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
             )
             .filter(schema::benchmark::id.eq(benchmark_id))
             .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+            .left_join(
+                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
+            )
+            .filter(schema::testbed::id.eq(testbed_id))
             .into_boxed();
 
         if let Some(window) = statistic.window {
@@ -35,10 +41,6 @@ impl MetricsData {
 
         let mut query = query
             .left_join(
-                schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)),
-            )
-            .filter(schema::testbed::id.eq(testbed_id))
-            .left_join(
                 schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
             )
             .left_join(
@@ -49,8 +51,6 @@ impl MetricsData {
                 schema::branch::table.on(schema::branch_version::branch_id.eq(schema::branch::id)),
             )
             .filter(schema::branch::id.eq(branch_id))
-            .inner_join(schema::metric::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-            .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
             .order((
                 schema::version::number.desc(),
                 schema::report::start_time.desc(),

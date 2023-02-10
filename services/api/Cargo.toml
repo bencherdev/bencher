@@ -6,8 +6,8 @@ edition.workspace = true
 
 [features]
 default = ["plus"]
-swagger = ["dep:literally"]
 plus = ["bencher_json/plus", "dep:bencher_plus", "dep:bencher_license"]
+swagger = ["dep:literally"]
 
 [dependencies]
 # Local

@@ -17,6 +17,9 @@ pub enum CliOrganization {
     View(CliOrganizationView),
     /// Check organization permission
     Allowed(CliOrganizationAllowed),
+    #[cfg(feature = "plus")]
+    /// Check organization entitlements
+    Entitlements(CliOrganizationEntitlements),
 }
 
 #[derive(Parser, Debug)]
@@ -73,4 +76,14 @@ pub enum CliOrganizationPermission {
     CreateRole,
     EditRole,
     DeleteRole,
+}
+
+#[cfg(feature = "plus")]
+#[derive(Parser, Debug)]
+pub struct CliOrganizationEntitlements {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }

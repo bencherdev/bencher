@@ -5,6 +5,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[cfg(feature = "plus")]
+pub mod entitlements;
 pub mod member;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
