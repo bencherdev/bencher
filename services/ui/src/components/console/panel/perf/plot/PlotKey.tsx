@@ -84,7 +84,6 @@ const ExpandedKey = (props) => {
 	return (
 		<>
 			<MinimizeKeyButton handleKey={props.handleKey} />
-			<br />
 			<For each={props.perf_data()?.results}>
 				{(
 					result: {
@@ -96,7 +95,7 @@ const ExpandedKey = (props) => {
 				) => (
 					<>
 						{index() !== 0 && <hr class="is-primary" />}
-						<div class="content">
+						<div class="columns is-vcentered is-gapless  is-multiline">
 							<KeyResource
 								icon="fas fa-code-branch"
 								name={props.branches()?.[result.branch]?.name}
@@ -118,7 +117,6 @@ const ExpandedKey = (props) => {
 					</>
 				)}
 			</For>
-			<br />
 			<MinimizeKeyButton handleKey={props.handleKey} />
 		</>
 	);
@@ -172,20 +170,17 @@ const MaximizeKeyButton = (props) => {
 
 const KeyResource = (props) => {
 	return (
-		<div class="columns is-vcentered is-mobile">
+		<>
 			<div class="column is-narrow">
 				<span class="icon">
 					<i class={props.icon} aria-hidden="true" />
 				</span>
 			</div>
 			<div class="column">
-				<div class="columns">
-					<div class="column">
-						<small style="overflow-wrap:anywhere;">{props.name}</small>
-					</div>
-				</div>
+				<small style="overflow-wrap:anywhere;">{props.name}</small>
 			</div>
-		</div>
+			<div class="column is-full" />
+		</>
 	);
 };
 
