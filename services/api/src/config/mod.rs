@@ -5,7 +5,7 @@ use std::{
 
 use bencher_json::{
     sanitize_json,
-    system::config::{JsonDatabase, JsonLogging, JsonServer, LogLevel, ServerLog},
+    system::config::{JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog},
     JsonConfig, Secret,
 };
 use once_cell::sync::Lazy;
@@ -30,6 +30,7 @@ const DEFAULT_PORT: u16 = 61016;
 const DEFAULT_MAX_BODY_SIZE: usize = 2 << 19;
 const DEFAULT_DB_PATH: &str = "data/bencher.db";
 const DEFAULT_SMTP_PORT: u16 = 587;
+const BENCHER_DOT_DEV: &str = "bencher.dev";
 
 #[allow(clippy::panic)]
 static DEFAULT_ENDPOINT: Lazy<Url> = Lazy::new(|| {
@@ -134,7 +135,11 @@ impl Default for Config {
     fn default() -> Self {
         Self(JsonConfig {
             endpoint: DEFAULT_ENDPOINT.clone(),
-            secret_key: DEFAULT_SECRET_KEY.clone(),
+            secret_key: None,
+            security: Some(JsonSecurity {
+                issuer: Some(BENCHER_DOT_DEV.into()),
+                secret_key: DEFAULT_SECRET_KEY.clone(),
+            }),
             server: JsonServer {
                 bind_address: *DEFAULT_BIND_ADDRESS,
                 request_body_max_bytes: DEFAULT_MAX_BODY_SIZE,

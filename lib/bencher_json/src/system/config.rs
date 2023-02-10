@@ -17,9 +17,9 @@ pub struct JsonUpdateConfig {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfig {
     pub endpoint: Url,
-    // TODO remove soon
+    // TODO Remove deprecated secret_key
     pub secret_key: Option<Secret>,
-    // TODO make mandatory
+    // TODO Remove deprecated secret_key
     pub security: Option<JsonSecurity>,
     pub server: JsonServer,
     pub logging: JsonLogging,
@@ -42,6 +42,7 @@ impl Sanitize for JsonConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSecurity {
+    pub issuer: Option<String>,
     pub secret_key: Secret,
 }
 

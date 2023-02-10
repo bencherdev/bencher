@@ -132,6 +132,8 @@ pub enum ApiError {
 
     #[error("Failed to cast in: {0}")]
     IntError(#[from] std::num::TryFromIntError),
+    #[error("Missing configuration key: {0}")]
+    MissingConfigKey(String),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },

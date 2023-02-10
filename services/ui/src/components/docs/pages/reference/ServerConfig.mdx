@@ -18,7 +18,8 @@ Example JSON configuration:
 {
   "endpoint": "https://bencher.example.com",
   "security": {
-    "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy",
+    "issuer": "https://api.bencher.example.com",
+    "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy"
   },
   "server": {
     "bind_address": "0.0.0.0:61016",
@@ -68,6 +69,7 @@ Example JSON configuration:
 
 | Name       | Example                                        | Default                 | Required | Description                                                                                                                                                                                                                                                                         |
 |:----------:|:----------------------------------------------:|:-----------------------:|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| issuer     | "https://api.bencher.example.com"              | "bencher.dev"           | No       | Specifies the JSON Web Token (JWT) issuer. **WARNING** Changing this value will cause all previously generated JWTs to no longer validate.                                                                                                                                          |
 | secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | Random UUID v4          | Yes      | Specifies the the key used to generate all tokens. **IT SHOULD BE VERY SECURE!** The default value is a randomly generated [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)). Whenever logged, it will appear obfuscated as `************`. |
 
 # `server`

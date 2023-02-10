@@ -4,9 +4,10 @@ use std::convert::TryFrom;
 use bencher_json::system::config::JsonBencher;
 use bencher_json::{
     system::config::{
-        IfExists, JsonDatabase, JsonLogging, JsonServer, JsonSmtp, JsonTls, LogLevel, ServerLog,
+        IfExists, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp, JsonTls, LogLevel,
+        ServerLog,
     },
-    JsonConfig, Secret,
+    JsonConfig,
 };
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
@@ -19,7 +20,7 @@ use dropshot::{
 };
 use slog::Logger;
 use tokio::sync::{mpsc::Sender, Mutex};
-use tracing::trace;
+use tracing::{trace, warn};
 use url::Url;
 
 use crate::{
@@ -29,7 +30,7 @@ use crate::{
     ApiError,
 };
 
-use super::{Config, DEFAULT_SMTP_PORT};
+use super::{Config, BENCHER_DOT_DEV, DEFAULT_SMTP_PORT};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -48,6 +49,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
         let Config(JsonConfig {
             endpoint,
             secret_key,
+            security,
             server,
             database,
             smtp,
@@ -56,9 +58,31 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
             bencher,
         }) = config;
 
+        // TODO Remove deprecated secret_key
+        let security = if let Some(security) = security {
+            if secret_key.is_some() {
+                warn!(
+                "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be ignored."
+                );
+            }
+
+            security
+        } else if let Some(secret_key) = secret_key {
+            warn!(
+                "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be used for now."
+            );
+
+            JsonSecurity {
+                issuer: None,
+                secret_key,
+            }
+        } else {
+            return Err(ApiError::MissingConfigKey("security.secret_key".into()));
+        };
+
         let private = into_private(
             endpoint,
-            secret_key,
+            security,
             smtp,
             database,
             restart_tx,
@@ -82,7 +106,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
 
 fn into_private(
     endpoint: Url,
-    secret_key: Secret,
+    security: JsonSecurity,
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
@@ -97,7 +121,10 @@ fn into_private(
     } else {
         None
     };
-    let secret_key = SecretKey::new(endpoint.clone(), secret_key);
+    let secret_key = SecretKey::new(
+        security.issuer.unwrap_or_else(|| BENCHER_DOT_DEV.into()),
+        security.secret_key,
+    );
     #[cfg(feature = "plus")]
     let licensor = bencher_licensor(&endpoint, bencher)?;
 

@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
-use bencher_json::{organization::member::JsonOrganizationRole, Email, Jwt, Secret};
+use bencher_json::Secret;
+use bencher_json::{organization::member::JsonOrganizationRole, Email, Jwt};
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, Header, TokenData, Validation};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
-use url::Url;
 use uuid::Uuid;
 
 use crate::ApiError;
@@ -16,21 +16,19 @@ mod claims;
 use audience::Audience;
 use claims::{Claims, OrgClaims};
 
-const BENCHER_DOT_DEV: &str = "bencher.dev";
-
 static HEADER: Lazy<Header> = Lazy::new(Header::default);
 static ALGORITHM: Lazy<Algorithm> = Lazy::new(Algorithm::default);
 
 pub struct SecretKey {
-    endpoint: Url,
+    pub issuer: String,
     pub encoding: EncodingKey,
     pub decoding: DecodingKey,
 }
 
 impl SecretKey {
-    pub fn new(endpoint: Url, secret_key: Secret) -> Self {
+    pub fn new(issuer: String, secret_key: Secret) -> Self {
         Self {
-            endpoint,
+            issuer,
             encoding: EncodingKey::from_secret(secret_key.as_ref().as_bytes()),
             decoding: DecodingKey::from_secret(secret_key.as_ref().as_bytes()),
         }
@@ -43,7 +41,7 @@ impl SecretKey {
         ttl: u32,
         org: Option<OrgClaims>,
     ) -> Result<Jwt, ApiError> {
-        let claims = Claims::new(audience, self.endpoint.clone(), email, ttl, org)?;
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org)?;
         Ok(Jwt::from_str(&encode(&HEADER, &claims, &self.encoding)?)?)
     }
 
@@ -76,7 +74,7 @@ impl SecretKey {
     fn validate(&self, token: &Jwt, audience: &[Audience]) -> Result<TokenData<Claims>, ApiError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(audience);
-        validation.set_issuer(&[BENCHER_DOT_DEV, self.endpoint.as_ref()]);
+        validation.set_issuer(&[self.issuer.as_str()]);
         validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
 
         let token_data: TokenData<Claims> = decode(token.as_ref(), &self.decoding, &validation)?;
@@ -124,7 +122,6 @@ mod test {
 
     use bencher_json::{organization::member::JsonOrganizationRole, Email};
     use once_cell::sync::Lazy;
-    use url::Url;
     use uuid::Uuid;
 
     use crate::{config::DEFAULT_SECRET_KEY, context::secret_key::audience::Audience};
@@ -133,7 +130,7 @@ mod test {
 
     const TTL: u32 = u32::MAX;
 
-    pub static BENCHER_DEV_URL: Lazy<Url> = Lazy::new(|| "https://bencher.dev".parse().unwrap());
+    pub static BENCHER_DEV_URL: Lazy<String> = Lazy::new(|| "https://bencher.dev".into());
     static EMAIL: Lazy<Email> = Lazy::new(|| "info@bencher.dev".parse().unwrap());
 
     fn sleep_for_a_second() {

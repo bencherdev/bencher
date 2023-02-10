@@ -1,6 +1,5 @@
 use bencher_json::{organization::member::JsonOrganizationRole, Email};
 use serde::{Deserialize, Serialize};
-use url::Url;
 use uuid::Uuid;
 
 use crate::ApiError;
@@ -26,7 +25,7 @@ pub struct OrgClaims {
 impl Claims {
     pub fn new(
         audience: Audience,
-        issuer: Url,
+        issuer: String,
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
@@ -36,7 +35,7 @@ impl Claims {
             aud: audience.into(),
             exp: now.checked_add(u64::from(ttl)).unwrap_or(now),
             iat: now,
-            iss: issuer.into(),
+            iss: issuer,
             sub: email.into(),
             org,
         })
