@@ -17,7 +17,10 @@ pub struct JsonUpdateConfig {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfig {
     pub endpoint: Url,
-    pub secret_key: Secret,
+    // TODO remove soon
+    pub secret_key: Option<Secret>,
+    // TODO make mandatory
+    pub security: Option<JsonSecurity>,
     pub server: JsonServer,
     pub logging: JsonLogging,
     pub database: JsonDatabase,
@@ -30,13 +33,21 @@ impl Sanitize for JsonConfig {
     fn sanitize(&mut self) {
         self.secret_key.sanitize();
         self.database.sanitize();
-        if let Some(smtp) = &mut self.smtp {
-            smtp.sanitize();
-        }
+        self.smtp.sanitize();
         #[cfg(feature = "plus")]
-        if let Some(bencher) = &mut self.bencher {
-            bencher.sanitize();
-        }
+        self.bencher.sanitize();
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonSecurity {
+    pub secret_key: Secret,
+}
+
+impl Sanitize for JsonSecurity {
+    fn sanitize(&mut self) {
+        self.secret_key.sanitize();
     }
 }
 
@@ -71,9 +82,7 @@ pub struct JsonDatabase {
 
 impl Sanitize for JsonDatabase {
     fn sanitize(&mut self) {
-        if let Some(data_store) = &mut self.data_store {
-            data_store.sanitize();
-        }
+        self.data_store.sanitize();
     }
 }
 

@@ -44,6 +44,17 @@ pub trait Sanitize {
     fn sanitize(&mut self);
 }
 
+impl<T> Sanitize for Option<T>
+where
+    T: Sanitize,
+{
+    fn sanitize(&mut self) {
+        if let Some(inner) = self {
+            inner.sanitize();
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 

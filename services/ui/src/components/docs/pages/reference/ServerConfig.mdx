@@ -17,7 +17,9 @@ Example JSON configuration:
 ```
 {
   "endpoint": "https://bencher.example.com",
-  "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy",
+  "security": {
+    "secret_key": "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy",
+  },
   "server": {
     "bind_address": "0.0.0.0:61016",
     "request_body_max_bytes": 1048576,
@@ -61,6 +63,11 @@ Example JSON configuration:
 | Name       | Example                                        | Default                 | Required | Description                                                                                                                                                                                                                                                                         |
 |:----------:|:----------------------------------------------:|:-----------------------:|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
 | endpoint   | "https://bencher.example.com"                  | "http://localhost:3000" | Yes      | Specifies the URL for your Bencher UI host.                                                                                                                                                                                                                                         |
+
+## `security`
+
+| Name       | Example                                        | Default                 | Required | Description                                                                                                                                                                                                                                                                         |
+|:----------:|:----------------------------------------------:|:-----------------------:|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
 | secret_key | "UJu7Cpxb-zFaJYqXD-3mDDSDyj-ZvfxZFZs-X58xjxPy" | Random UUID v4          | Yes      | Specifies the the key used to generate all tokens. **IT SHOULD BE VERY SECURE!** The default value is a randomly generated [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)). Whenever logged, it will appear obfuscated as `************`. |
 
 # `server`
