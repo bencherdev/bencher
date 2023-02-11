@@ -4,18 +4,18 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-#[cfg(feature = "plus")]
-mod bencher;
 mod database;
 mod logging;
+#[cfg(feature = "plus")]
+mod plus;
 mod security;
 mod server;
 mod smtp;
 
-#[cfg(feature = "plus")]
-pub use bencher::JsonBencher;
 pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
+#[cfg(feature = "plus")]
+pub use plus::JsonPlus;
 pub use security::JsonSecurity;
 pub use server::{JsonServer, JsonTls};
 pub use smtp::JsonSmtp;
@@ -40,7 +40,7 @@ pub struct JsonConfig {
     pub database: JsonDatabase,
     pub smtp: Option<JsonSmtp>,
     #[cfg(feature = "plus")]
-    pub bencher: Option<JsonBencher>,
+    pub plus: Option<JsonPlus>,
 }
 
 impl Sanitize for JsonConfig {
@@ -49,6 +49,6 @@ impl Sanitize for JsonConfig {
         self.database.sanitize();
         self.smtp.sanitize();
         #[cfg(feature = "plus")]
-        self.bencher.sanitize();
+        self.plus.sanitize();
     }
 }

@@ -7,12 +7,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonBencher {
+pub struct JsonPlus {
     pub license_pem: Secret,
     pub billing_key: Secret,
 }
 
-impl Sanitize for JsonBencher {
+impl Sanitize for JsonPlus {
     fn sanitize(&mut self) {
         self.license_pem.sanitize();
         self.billing_key.sanitize();

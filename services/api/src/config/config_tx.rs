@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 #[cfg(feature = "plus")]
-use bencher_json::system::config::JsonBencher;
+use bencher_json::system::config::JsonPlus;
 use bencher_json::{
     system::config::{
         IfExists, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp, JsonTls, LogLevel,
@@ -9,8 +9,6 @@ use bencher_json::{
     },
     JsonConfig,
 };
-#[cfg(feature = "plus")]
-use bencher_license::Licensor;
 use bencher_rbac::init_rbac;
 use diesel::{Connection, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -30,6 +28,8 @@ use crate::{
     ApiError,
 };
 
+#[cfg(feature = "plus")]
+use super::plus::Plus;
 use super::{Config, BENCHER_DOT_DEV, DEFAULT_SMTP_PORT};
 
 const DATABASE_URL: &str = "DATABASE_URL";
@@ -55,7 +55,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
             smtp,
             logging,
             #[cfg(feature = "plus")]
-            bencher,
+            plus,
         }) = config;
 
         // TODO Remove deprecated secret_key
@@ -87,7 +87,7 @@ impl TryFrom<ConfigTx> for HttpServer<Context> {
             database,
             restart_tx,
             #[cfg(feature = "plus")]
-            bencher,
+            plus,
         )?;
         let config_dropshot = into_config_dropshot(server);
         let log = into_log(logging)?;
@@ -110,7 +110,7 @@ fn into_private(
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
-    #[cfg(feature = "plus")] bencher: Option<JsonBencher>,
+    #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<Mutex<ApiContext>, ApiError> {
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(&database_path);
@@ -126,7 +126,7 @@ fn into_private(
         security.secret_key,
     );
     #[cfg(feature = "plus")]
-    let licensor = bencher_licensor(&endpoint, bencher)?;
+    let Plus { licensor } = Plus::new(&endpoint, plus)?;
 
     Ok(Mutex::new(ApiContext {
         endpoint,
@@ -209,20 +209,6 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
             },
             JsonTls::AsBytes { certs, key } => ConfigTls::AsBytes { certs, key },
         }),
-    }
-}
-
-#[cfg(feature = "plus")]
-fn bencher_licensor(endpoint: &Url, bencher: Option<JsonBencher>) -> Result<Licensor, ApiError> {
-    if let Some(bencher) = bencher {
-        // The only endpoint that should be using the `bencher` section is https://bencher.dev
-        if bencher_plus::is_bencher_dev(endpoint) {
-            Licensor::bencher_cloud(bencher.license_pem).map_err(Into::into)
-        } else {
-            Err(ApiError::BencherPlus(endpoint.clone()))
-        }
-    } else {
-        Licensor::self_hosted().map_err(Into::into)
     }
 }
 

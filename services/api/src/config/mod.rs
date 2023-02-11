@@ -15,6 +15,8 @@ use url::Url;
 use crate::ApiError;
 
 pub mod config_tx;
+#[cfg(feature = "plus")]
+mod plus;
 
 pub const API_NAME: &str = "Bencher API";
 
@@ -164,7 +166,7 @@ impl Default for Config {
                 },
             },
             #[cfg(feature = "plus")]
-            bencher: None,
+            plus: None,
         })
     }
 }
