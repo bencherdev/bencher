@@ -219,7 +219,7 @@ fn bencher_licensor(endpoint: &Url, bencher: Option<JsonBencher>) -> Result<Lice
         if bencher_plus::is_bencher_dev(endpoint) {
             Licensor::bencher_cloud(bencher.license_pem).map_err(Into::into)
         } else {
-            Err(ApiError::BencherDev(endpoint.clone()))
+            Err(ApiError::BencherPlus(endpoint.clone()))
         }
     } else {
         Licensor::self_hosted().map_err(Into::into)

@@ -133,8 +133,8 @@ pub enum ApiError {
     #[error("Failed to handle licensing: {0}")]
     License(#[from] bencher_license::LicenseError),
     #[cfg(feature = "plus")]
-    #[error("Tried to init Bencher for endpoint: {0}")]
-    BencherDev(url::Url),
+    #[error("Tried to init Bencher Plus for endpoint: {0}")]
+    BencherPlus(url::Url),
 
     #[error("Failed to cast in: {0}")]
     IntError(#[from] std::num::TryFromIntError),

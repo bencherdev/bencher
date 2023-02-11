@@ -1,6 +1,9 @@
 use once_cell::sync::Lazy;
 use url::Url;
 
+#[cfg(debug_assertions)]
+pub const BENCHER_DEV: &str = "http://localhost:3000";
+#[cfg(not(debug_assertions))]
 pub const BENCHER_DEV: &str = "https://bencher.dev";
 
 #[allow(clippy::panic)]
