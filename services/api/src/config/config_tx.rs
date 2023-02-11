@@ -217,7 +217,7 @@ fn bencher_licensor(endpoint: &Url, bencher: Option<JsonBencher>) -> Result<Lice
     if let Some(bencher) = bencher {
         // The only endpoint that should be using the `bencher` section is https://bencher.dev
         if bencher_plus::is_bencher_dev(endpoint) {
-            Licensor::bencher_cloud(bencher.private_pem).map_err(Into::into)
+            Licensor::bencher_cloud(bencher.license_pem).map_err(Into::into)
         } else {
             Err(ApiError::BencherDev(endpoint.clone()))
         }

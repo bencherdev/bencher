@@ -14,10 +14,10 @@ mod smtp;
 
 #[cfg(feature = "plus")]
 pub use bencher::JsonBencher;
-pub use database::JsonDatabase;
+pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 pub use security::JsonSecurity;
-pub use server::JsonServer;
+pub use server::{JsonServer, JsonTls};
 pub use smtp::JsonSmtp;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

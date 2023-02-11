@@ -56,18 +56,25 @@ pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().
 pub struct Config(pub JsonConfig);
 
 impl Config {
-    pub async fn load_or_default() -> Self {
+    pub async fn load_or_default() -> Result<Self, ApiError> {
         if let Ok(config) = Self::load_env().await {
-            return config;
+            return Ok(config);
         }
 
         if let Ok(config) = Self::load_file().await {
-            return config;
+            return Ok(config);
         }
 
         let config = Self::default();
         info!("Using default config: {}", sanitize_json(&config.0));
-        config
+        let config_str = if cfg!(debug_assertions) {
+            serde_json::to_string_pretty(&config.0)
+        } else {
+            serde_json::to_string(&config.0)
+        }?;
+        Self::write(config_str.as_bytes()).await?;
+
+        Ok(config)
     }
 
     pub async fn load_env() -> Result<Self, ApiError> {

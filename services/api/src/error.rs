@@ -14,6 +14,8 @@ pub enum ApiError {
     Polar(oso::OsoError),
     #[error("Failed to create database connection: {0}")]
     Connection(#[from] diesel::result::ConnectionError),
+    #[error("Failed to serialize/deserialize JSON: {0}")]
+    SerdeJson(#[from] serde_json::Error),
     #[error("Failed to run database migrations: {0}")]
     Migrations(Box<dyn std::error::Error + Send + Sync>),
     #[error("Failed to parse IP address or port number: {0}")]

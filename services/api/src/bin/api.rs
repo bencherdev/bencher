@@ -69,7 +69,7 @@ async fn run() -> Result<(), ApiError> {
     use tracing::error;
 
     loop {
-        let config = Config::load_or_default().await;
+        let config = Config::load_or_default().await?;
         let (restart_tx, mut restart_rx) = tokio::sync::mpsc::channel(1);
         let config_tx = ConfigTx { config, restart_tx };
 

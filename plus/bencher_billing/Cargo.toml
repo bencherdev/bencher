@@ -6,4 +6,4 @@ edition.workspace = true
 
 [dependencies]
 # Crate
-async-stripe = "0.18"
+async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
