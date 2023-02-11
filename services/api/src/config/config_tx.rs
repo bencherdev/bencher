@@ -126,7 +126,7 @@ fn into_private(
         security.secret_key,
     );
     #[cfg(feature = "plus")]
-    let Plus { licensor } = Plus::new(&endpoint, plus)?;
+    let Plus { biller, licensor } = Plus::new(&endpoint, plus)?;
 
     Ok(Mutex::new(ApiContext {
         endpoint,
@@ -139,6 +139,8 @@ fn into_private(
             data_store,
         },
         restart_tx,
+        #[cfg(feature = "plus")]
+        biller,
         #[cfg(feature = "plus")]
         licensor,
     }))

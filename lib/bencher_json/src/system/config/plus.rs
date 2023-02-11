@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlus {
-    pub license_pem: Secret,
     pub billing_key: Secret,
+    pub license_pem: Secret,
 }
 
 impl Sanitize for JsonPlus {
     fn sanitize(&mut self) {
-        self.license_pem.sanitize();
         self.billing_key.sanitize();
+        self.license_pem.sanitize();
     }
 }

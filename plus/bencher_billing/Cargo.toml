@@ -5,5 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+# Workspace
+thiserror.workspace = true
 # Crate
 async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }

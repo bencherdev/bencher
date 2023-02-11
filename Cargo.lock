@@ -618,6 +618,7 @@ name = "bencher_billing"
 version = "0.2.32"
 dependencies = [
  "async-stripe",
+ "thiserror",
 ]
 
 [[package]]

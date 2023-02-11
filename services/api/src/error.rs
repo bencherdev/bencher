@@ -130,6 +130,9 @@ pub enum ApiError {
     BadTime(u32, u32, u32),
 
     #[cfg(feature = "plus")]
+    #[error("Failed to handle billing: {0}")]
+    Billing(#[from] bencher_billing::BillingError),
+    #[cfg(feature = "plus")]
     #[error("Failed to handle licensing: {0}")]
     License(#[from] bencher_license::LicenseError),
     #[cfg(feature = "plus")]

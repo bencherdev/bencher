@@ -1,5 +1,6 @@
 #![cfg(feature = "plus")]
 
+use bencher_billing::Biller;
 use bencher_json::system::config::JsonPlus;
 use bencher_license::Licensor;
 use url::Url;
@@ -8,6 +9,7 @@ use crate::ApiError;
 
 pub struct Plus {
     pub licensor: Licensor,
+    pub biller: Biller,
 }
 
 impl Plus {
@@ -15,6 +17,7 @@ impl Plus {
         let Some(plus) = plus else {
             return Ok(Self {
                 licensor: Licensor::self_hosted().map_err(ApiError::License)?,
+                biller: Biller::self_hosted()
             });
         };
 
@@ -25,6 +28,8 @@ impl Plus {
 
         let licensor = Licensor::bencher_cloud(plus.license_pem).map_err(ApiError::License)?;
 
-        Ok(Self { licensor })
+        let biller = Biller::bencher_cloud()?;
+
+        Ok(Self { licensor, biller })
     }
 }
