@@ -82,8 +82,10 @@ const PlotKey = (props) => {
 
 const ExpandedKey = (props) => {
 	return (
-		<>
-			<MinimizeKeyButton handleKey={props.handleKey} />
+		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
+			<div class="column is-narrow">
+				<MinimizeKeyButton handleKey={props.handleKey} />
+			</div>
 			<For each={props.perf_data()?.results}>
 				{(
 					result: {
@@ -93,8 +95,7 @@ const ExpandedKey = (props) => {
 					},
 					index,
 				) => (
-					<>
-						{index() !== 0 && <hr class="is-primary" />}
+					<div class="column is-narrow">
 						<div class="columns is-vcentered is-gapless  is-multiline">
 							<KeyResource
 								icon="fas fa-code-branch"
@@ -114,31 +115,37 @@ const ExpandedKey = (props) => {
 							perf_active={props.perf_active}
 							handlePerfActive={props.handlePerfActive}
 						/>
-					</>
+					</div>
 				)}
 			</For>
-			<MinimizeKeyButton handleKey={props.handleKey} />
-		</>
+			<div class="column is-narrow">
+				<MinimizeKeyButton handleKey={props.handleKey} />
+			</div>
+		</div>
 	);
 };
 
 const MinimizedKey = (props) => {
 	return (
-		<>
-			<MaximizeKeyButton handleKey={props.handleKey} />
-			<br />
+		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
+			<div class="column is-narrow">
+				<MaximizeKeyButton handleKey={props.handleKey} />
+			</div>
 			<For each={props.perf_data()?.results}>
 				{(_result, index) => (
-					<KeyButton
-						index={index}
-						perf_active={props.perf_active}
-						handlePerfActive={props.handlePerfActive}
-					/>
+					<div class="column is-narrow">
+						<KeyButton
+							index={index}
+							perf_active={props.perf_active}
+							handlePerfActive={props.handlePerfActive}
+						/>
+					</div>
 				)}
 			</For>
-			<br />
-			<MaximizeKeyButton handleKey={props.handleKey} />
-		</>
+			<div class="column is-narrow">
+				<MaximizeKeyButton handleKey={props.handleKey} />
+			</div>
+		</div>
 	);
 };
 
@@ -149,7 +156,7 @@ const MinimizeKeyButton = (props) => {
 			onClick={() => props.handleKey(false)}
 		>
 			<span class="icon">
-				<i class="fas fa-less-than" aria-hidden="true" />
+				<i class="fas fa-minus" aria-hidden="true" />
 			</span>
 		</button>
 	);
@@ -162,7 +169,7 @@ const MaximizeKeyButton = (props) => {
 			onClick={() => props.handleKey(true)}
 		>
 			<span class="icon">
-				<i class="fas fa-greater-than" aria-hidden="true" />
+				<i class="fas fa-plus" aria-hidden="true" />
 			</span>
 		</button>
 	);
