@@ -1,6 +1,7 @@
-use bencher_valid::Secret;
+use bencher_valid::{Email, NonEmpty, Secret};
 use stripe::{
-    AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, Customer, PaymentMethod,
+    AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, Customer, ListCustomers,
+    PaymentMethod,
 };
 
 use crate::BillingError;
@@ -15,13 +16,41 @@ impl Biller {
         Self { client }
     }
 
-    pub async fn new_customer<'c>(
+    pub async fn new_customer(
         &self,
-        create_customer: CreateCustomer<'c>,
+        name: &NonEmpty,
+        email: &Email,
     ) -> Result<Customer, BillingError> {
+        if self.get_customer(email).await?.is_some() {
+            return Err(BillingError::EmailExists(email.clone()));
+        }
+
+        let create_customer = CreateCustomer {
+            name: Some(name.as_ref()),
+            email: Some(email.as_ref()),
+            ..Default::default()
+        };
         Customer::create(&self.client, create_customer)
             .await
             .map_err(Into::into)
+    }
+
+    pub async fn get_customer(&self, email: &Email) -> Result<Option<Customer>, BillingError> {
+        let list_customers = ListCustomers {
+            email: Some(email.as_ref()),
+            ..Default::default()
+        };
+        let mut customers = Customer::list(&self.client, &list_customers).await?;
+
+        if let Some(customer) = customers.data.pop() {
+            if customers.data.is_empty() {
+                Ok(Some(customer))
+            } else {
+                Err(BillingError::EmailCollision(customer, customers.data))
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     pub async fn new_payment_method<'c>(
@@ -52,8 +81,6 @@ impl Biller {
 
 #[cfg(test)]
 mod test {
-    use stripe::CreateCustomer;
-
     use crate::Biller;
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
@@ -67,11 +94,10 @@ mod test {
         let billing_key = test_billing_key();
         let biller = Biller::new(billing_key.parse().unwrap());
         let _customer = biller
-            .new_customer(CreateCustomer {
-                name: Some("Muriel Bagge"),
-                email: Some("muriel.bagge@nowhere.com"),
-                ..Default::default()
-            })
+            .new_customer(
+                &"Muriel Bagge".parse().unwrap(),
+                &"muriel.bagge@nowhere.com".parse().unwrap(),
+            )
             .await
             .unwrap();
     }

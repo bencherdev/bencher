@@ -1,3 +1,5 @@
+pub use stripe::Customer;
+
 mod biller;
 mod error;
 
