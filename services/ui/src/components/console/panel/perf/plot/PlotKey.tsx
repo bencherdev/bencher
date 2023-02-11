@@ -2,7 +2,7 @@ import axios from "axios";
 import { createMemo, createResource, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
-import { get_options, validate_jwt } from "../../../../site/util";
+import { get_options } from "../../../../site/util";
 
 const PlotKey = (props) => {
 	const branches_fetcher = createMemo(() => {
