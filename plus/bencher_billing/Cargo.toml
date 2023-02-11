@@ -5,3 +5,5 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+# Crate
+async-stripe = "0.18"
