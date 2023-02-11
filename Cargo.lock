@@ -544,6 +544,7 @@ dependencies = [
  "aws-credential-types",
  "aws-sdk-s3",
  "bencher_adapter",
+ "bencher_billing",
  "bencher_json",
  "bencher_license",
  "bencher_plus",
@@ -575,6 +576,10 @@ dependencies = [
  "url",
  "uuid",
 ]
+
+[[package]]
+name = "bencher_billing"
+version = "0.2.32"
 
 [[package]]
 name = "bencher_cli"

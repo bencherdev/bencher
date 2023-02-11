@@ -6,7 +6,12 @@ edition.workspace = true
 
 [features]
 default = ["plus"]
-plus = ["bencher_json/plus", "dep:bencher_plus", "dep:bencher_license"]
+plus = [
+    "bencher_json/plus",
+    "dep:bencher_billing",
+    "dep:bencher_plus",
+    "dep:bencher_license",
+]
 swagger = ["dep:literally"]
 
 [dependencies]
@@ -15,6 +20,7 @@ bencher_adapter = { path = "../../lib/bencher_adapter" }
 bencher_json = { path = "../../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../../lib/bencher_rbac" }
 # Plus
+bencher_billing = { path = "../../plus/bencher_billing", optional = true }
 bencher_plus = { path = "../../plus/bencher_plus", optional = true }
 bencher_license = { path = "../../plus/bencher_license", optional = true }
 # Workspace
