@@ -8,16 +8,16 @@ use url::Url;
 use crate::ApiError;
 
 pub struct Plus {
+    pub biller: Option<Biller>,
     pub licensor: Licensor,
-    pub biller: Biller,
 }
 
 impl Plus {
     pub fn new(endpoint: &Url, plus: Option<JsonPlus>) -> Result<Plus, ApiError> {
         let Some(plus) = plus else {
             return Ok(Self {
+                biller: None,
                 licensor: Licensor::self_hosted().map_err(ApiError::License)?,
-                biller: Biller::self_hosted()
             });
         };
 
@@ -26,10 +26,10 @@ impl Plus {
             return Err(ApiError::BencherPlus(endpoint.clone()));
         }
 
+        let biller = Some(Biller::new(plus.billing_key));
+
         let licensor = Licensor::bencher_cloud(plus.license_pem).map_err(ApiError::License)?;
 
-        let biller = Biller::bencher_cloud()?;
-
-        Ok(Self { licensor, biller })
+        Ok(Self { biller, licensor })
     }
 }

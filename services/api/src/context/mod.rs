@@ -25,7 +25,7 @@ pub struct ApiContext {
     pub database: Database,
     pub restart_tx: Sender<()>,
     #[cfg(feature = "plus")]
-    pub biller: Biller,
+    pub biller: Option<Biller>,
     #[cfg(feature = "plus")]
     pub licensor: Licensor,
 }

@@ -1,16 +1,15 @@
+use bencher_valid::Secret;
+use stripe::Client;
+
 use crate::BillingError;
 
-pub enum Biller {
-    SelfHosted,
-    BencherCloud {},
+pub struct Biller {
+    client: Client,
 }
 
 impl Biller {
-    pub fn self_hosted() -> Self {
-        Self::SelfHosted
-    }
-
-    pub fn bencher_cloud() -> Result<Self, BillingError> {
-        Ok(Self::BencherCloud {})
+    pub fn new(secret_key: Secret) -> Self {
+        let client = Client::new(secret_key);
+        Self { client }
     }
 }
