@@ -9,5 +9,6 @@ edition.workspace = true
 bencher_valid = { path = "../../lib/bencher_valid" }
 # Workspace
 thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "macros"] }
 # Crate
 async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
