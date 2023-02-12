@@ -10,11 +10,14 @@ bencher_json = { path = "../../lib/bencher_json", features = ["plus"] }
 # Workspace
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
+uuid.workspace = true
 # Crate
 async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
+futures-util = "0.3"
 
 [dev-dependencies]
 chrono.workspace = true
 literally.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
+uuid = { workspace = true, features = ["v4"] }

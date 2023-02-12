@@ -1,4 +1,4 @@
-use stripe::{Customer, PaymentMethod};
+use stripe::{Customer, PaymentMethod, Subscription};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -15,4 +15,6 @@ pub enum BillingError {
     PriceNotFound(String),
     #[error("Subscription quantity set to zero: {0}")]
     QuantityZero(u64),
+    #[error("Multiple subscriptions: {0:#?} {1:#?}")]
+    MultipleSubscriptions(Subscription, Vec<Subscription>),
 }

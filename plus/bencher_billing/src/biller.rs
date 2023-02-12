@@ -4,15 +4,19 @@ use bencher_json::{
     system::config::{JsonBilling, JsonProduct, JsonProducts},
     Email, NonEmpty,
 };
+use futures_util::stream::TryStreamExt;
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    CreateSubscription, CreateSubscriptionItems, ListCustomers, ListPaymentMethods, PaymentMethod,
-    PaymentMethodTypeFilter, Price, Product,
+    CreateSubscription, CreateSubscriptionItems, ListCustomers, ListPaymentMethods,
+    ListSubscriptions, PaymentMethod, PaymentMethodTypeFilter, Price, Product,
 };
 pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
+use uuid::Uuid;
 
 use crate::BillingError;
 
+// Organization UUID for subscription
+const METADATA_ORGANIZATION: &str = "organization";
 // Metrics are bundled by the thousand
 const METRIC_QUANTITY: u64 = 1_000;
 
@@ -190,8 +194,68 @@ impl Biller {
         .map_err(Into::into)
     }
 
-    pub async fn create_subscription(
+    pub async fn get_or_create_subscription(
         &self,
+        organization: Uuid,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        product_tier: ProductTier,
+        quantity: u64,
+    ) -> Result<Subscription, BillingError> {
+        if let Some(subscription) = self.get_subscription(organization, customer).await? {
+            Ok(subscription)
+        } else {
+            self.create_subscription(
+                organization,
+                customer,
+                payment_method,
+                product_tier,
+                quantity,
+            )
+            .await
+        }
+    }
+
+    pub async fn get_subscription(
+        &self,
+        organization: Uuid,
+        customer: &Customer,
+    ) -> Result<Option<Subscription>, BillingError> {
+        let organization_str = organization.to_string();
+        let list_subscriptions = ListSubscriptions {
+            customer: Some(customer.id.clone()),
+            ..Default::default()
+        };
+        let mut subscriptions = Subscription::list(&self.client, &list_subscriptions)
+            .await?
+            .data
+            .into_iter()
+            .filter(|subscription: &Subscription| {
+                subscription
+                    .metadata
+                    .get(METADATA_ORGANIZATION)
+                    .and_then(|org| (*org == organization_str).then_some(()))
+                    .is_some()
+            })
+            .collect::<Vec<Subscription>>();
+
+        if let Some(subscription) = subscriptions.pop() {
+            if subscriptions.is_empty() {
+                Ok(Some(subscription))
+            } else {
+                Err(BillingError::MultipleSubscriptions(
+                    subscription,
+                    subscriptions,
+                ))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn create_subscription(
+        &self,
+        organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
         product_tier: ProductTier,
@@ -225,6 +289,11 @@ impl Biller {
             ..Default::default()
         }]);
         create_subscription.default_payment_method = Some(&payment_method.id);
+        create_subscription.metadata = Some(
+            [("organization".to_string(), organization.to_string())]
+                .into_iter()
+                .collect(),
+        );
 
         Subscription::create(&self.client, create_subscription)
             .await
