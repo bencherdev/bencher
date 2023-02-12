@@ -1,5 +1,4 @@
 use bencher_valid::{Email, NonEmpty, Secret};
-use chrono::Datelike;
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
     ListCustomers, ListPaymentMethods, PaymentMethod, PaymentMethodTypeFilter,
@@ -132,7 +131,7 @@ impl Biller {
 
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
+    use chrono::{Datelike, Utc};
     use pretty_assertions::assert_eq;
 
     use super::PaymentCard;
