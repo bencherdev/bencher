@@ -1,8 +1,10 @@
 use bencher_valid::{Email, NonEmpty, Secret};
+use chrono::Datelike;
 use stripe::{
-    AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, Customer, ListCustomers,
-    PaymentMethod,
+    AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
+    ListCustomers, ListPaymentMethods, PaymentMethod, PaymentMethodTypeFilter,
 };
+pub use stripe::{CardDetailsParams as PaymentCard, Customer};
 
 use crate::BillingError;
 
@@ -63,36 +65,77 @@ impl Biller {
             .map_err(Into::into)
     }
 
-    pub async fn new_payment_method<'c>(
+    pub async fn get_or_create_payment_method(
         &self,
-        create_payment_method: CreatePaymentMethod<'c>,
+        customer: &Customer,
+        payment_card: PaymentCard,
     ) -> Result<PaymentMethod, BillingError> {
+        if let Some(payment_method) = self.get_payment_method(customer).await? {
+            Ok(payment_method)
+        } else {
+            let payment_method = self.create_payment_method(payment_card).await?;
+            PaymentMethod::attach(
+                &self.client,
+                &payment_method.id,
+                AttachPaymentMethod {
+                    customer: customer.id.clone(),
+                },
+            )
+            .await
+            .map_err(Into::into)
+        }
+    }
+
+    pub async fn get_payment_method(
+        &self,
+        customer: &Customer,
+    ) -> Result<Option<PaymentMethod>, BillingError> {
+        let list_payment_methods = ListPaymentMethods {
+            type_: Some(PaymentMethodTypeFilter::Card),
+            customer: Some(customer.id.clone()),
+            ..Default::default()
+        };
+        let mut payment_methods = PaymentMethod::list(&self.client, &list_payment_methods).await?;
+
+        if let Some(payment_method) = payment_methods.data.pop() {
+            if payment_methods.data.is_empty() {
+                Ok(Some(payment_method))
+            } else {
+                Err(BillingError::MultiplePaymentMethods(
+                    payment_method,
+                    payment_methods.data,
+                ))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    // WARNING: Use caution when calling this directly as multiple payment methods can be created
+    // Use `get_or_create_payment_method` instead!
+    async fn create_payment_method(
+        &self,
+        payment_card: PaymentCard,
+    ) -> Result<PaymentMethod, BillingError> {
+        let create_payment_method = CreatePaymentMethod {
+            type_: Some(PaymentMethodTypeFilter::Card),
+            card: Some(CreatePaymentMethodCardUnion::CardDetailsParams(
+                payment_card,
+            )),
+            ..Default::default()
+        };
         PaymentMethod::create(&self.client, create_payment_method)
             .await
             .map_err(Into::into)
-    }
-
-    pub async fn customer_payment_method(
-        &self,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
-    ) -> Result<PaymentMethod, BillingError> {
-        PaymentMethod::attach(
-            &self.client,
-            &payment_method.id,
-            AttachPaymentMethod {
-                customer: customer.id.clone(),
-            },
-        )
-        .await
-        .map_err(Into::into)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use chrono::Utc;
     use pretty_assertions::assert_eq;
 
+    use super::PaymentCard;
     use crate::Biller;
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
@@ -115,8 +158,19 @@ mod test {
         assert!(biller.get_customer(&email).await.unwrap().is_none());
         let create_customer = biller.create_customer(&name, &email).await.unwrap();
         let get_customer = biller.get_customer(&email).await.unwrap().unwrap();
-        assert_eq!(create_customer, get_customer);
+        assert_eq!(create_customer.id, get_customer.id);
         let get_or_create_customer = biller.get_or_create_customer(&name, &email).await.unwrap();
-        assert_eq!(create_customer, get_or_create_customer);
+        assert_eq!(create_customer.id, get_or_create_customer.id);
+
+        let payment_card = PaymentCard {
+            number: "4000008260000000".into(),
+            exp_year: Utc::now().year() + 1,
+            exp_month: 1,
+            cvc: Some("123".to_string()),
+        };
+        let payment_method = biller
+            .get_or_create_payment_method(&create_customer, payment_card)
+            .await
+            .unwrap();
     }
 }

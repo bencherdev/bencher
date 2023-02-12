@@ -14,5 +14,6 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
 
 [dev-dependencies]
+chrono.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true

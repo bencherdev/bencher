@@ -1,7 +1,5 @@
-pub use stripe::Customer;
-
 mod biller;
 mod error;
 
-pub use biller::Biller;
+pub use biller::{Biller, Customer, PaymentCard};
 pub use error::BillingError;
