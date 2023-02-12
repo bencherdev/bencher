@@ -85,7 +85,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: cargo check
-        run: cargo check --no-default-features
+        run: |
+          cd services/api
+          cargo check --no-default-features
 
   # Cargo Benchmark
   cargo_bench:

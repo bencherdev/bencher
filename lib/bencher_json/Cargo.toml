@@ -5,6 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
+default = []
 plus = []
 schema = ["dep:schemars", "ordered-float/schemars"]
 
