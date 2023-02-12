@@ -13,6 +13,9 @@ pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 
 use crate::BillingError;
 
+// Metrics are bundled by the thousand
+const METRIC_QUANTITY: u64 = 1_000;
+
 pub struct Biller {
     client: Client,
     products: BillerProducts,
@@ -209,9 +212,13 @@ impl Biller {
                 .get(&price_name)
                 .ok_or(BillingError::PriceNotFound(price_name))?,
         };
-        if quantity == 0 {
+
+        let quantity = if quantity == 0 {
             return Err(BillingError::QuantityZero(quantity));
-        }
+        } else {
+            quantity * METRIC_QUANTITY
+        };
+
         create_subscription.items = Some(vec![CreateSubscriptionItems {
             price: Some(price.id.to_string()),
             quantity: Some(quantity),
@@ -306,8 +313,8 @@ mod test {
         assert_eq!(payment_method.id, get_or_create_payment_method.id);
 
         let product_tier = ProductTier::Team("default".into());
-        let subscription = biller
-            .create_subscription(&customer, &payment_method, product_tier, 3)
+        let _subscription = biller
+            .create_subscription(&customer, &payment_method, product_tier, 5)
             .await
             .unwrap();
     }
