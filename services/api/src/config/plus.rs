@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
-use bencher_json::system::config::JsonPlus;
+use bencher_json::system::config::{JsonBilling, JsonPlus};
 use bencher_license::Licensor;
 use url::Url;
 
@@ -26,7 +26,8 @@ impl Plus {
             return Err(ApiError::BencherPlus(endpoint.clone()));
         }
 
-        let biller = Some(Biller::new(plus.billing_key));
+        let JsonBilling { secret_key } = plus.billing;
+        let biller = Some(Biller::new(secret_key));
 
         let licensor = Licensor::bencher_cloud(plus.license_pem).map_err(ApiError::License)?;
 
