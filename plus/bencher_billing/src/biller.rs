@@ -112,7 +112,7 @@ mod test {
             .parse()
             .unwrap();
         let biller = Biller::new(billing_key.parse().unwrap());
-        assert!(biller.get_customer(&email).await.unwrap().is_none())
+        assert!(biller.get_customer(&email).await.unwrap().is_none());
         let create_customer = biller.create_customer(&name, &email).await.unwrap();
         let get_customer = biller.get_customer(&email).await.unwrap().unwrap();
         assert_eq!(create_customer, get_customer);
