@@ -72,16 +72,7 @@ impl Biller {
         if let Some(payment_method) = self.get_payment_method(customer).await? {
             Ok(payment_method)
         } else {
-            let payment_method = self.create_payment_method(payment_card).await?;
-            PaymentMethod::attach(
-                &self.client,
-                &payment_method.id,
-                AttachPaymentMethod {
-                    customer: customer.id.clone(),
-                },
-            )
-            .await
-            .map_err(Into::into)
+            self.create_payment_method(customer, payment_card).await
         }
     }
 
@@ -114,6 +105,7 @@ impl Biller {
     // Use `get_or_create_payment_method` instead!
     async fn create_payment_method(
         &self,
+        customer: &Customer,
         payment_card: PaymentCard,
     ) -> Result<PaymentMethod, BillingError> {
         let create_payment_method = CreatePaymentMethod {
@@ -123,9 +115,17 @@ impl Biller {
             )),
             ..Default::default()
         };
-        PaymentMethod::create(&self.client, create_payment_method)
-            .await
-            .map_err(Into::into)
+        let payment_method = PaymentMethod::create(&self.client, create_payment_method).await?;
+
+        PaymentMethod::attach(
+            &self.client,
+            &payment_method.id,
+            AttachPaymentMethod {
+                customer: customer.id.clone(),
+            },
+        )
+        .await
+        .map_err(Into::into)
     }
 }
 
@@ -144,7 +144,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_biller_create_customer() {
+    async fn test_biller() {
         let Some(billing_key) = test_billing_key() else {
             return;
         };
@@ -158,8 +158,9 @@ mod test {
         let create_customer = biller.create_customer(&name, &email).await.unwrap();
         let get_customer = biller.get_customer(&email).await.unwrap().unwrap();
         assert_eq!(create_customer.id, get_customer.id);
+        let customer = create_customer;
         let get_or_create_customer = biller.get_or_create_customer(&name, &email).await.unwrap();
-        assert_eq!(create_customer.id, get_or_create_customer.id);
+        assert_eq!(customer.id, get_or_create_customer.id);
 
         let payment_card = PaymentCard {
             number: "4000008260000000".into(),
@@ -167,9 +168,22 @@ mod test {
             exp_month: 1,
             cvc: Some("123".to_string()),
         };
-        let payment_method = biller
-            .get_or_create_payment_method(&create_customer, payment_card)
+        assert!(biller
+            .get_payment_method(&customer)
+            .await
+            .unwrap()
+            .is_none());
+        let create_payment_method = biller
+            .create_payment_method(&customer, payment_card.clone())
             .await
             .unwrap();
+        let get_payment_method = biller.get_payment_method(&customer).await.unwrap().unwrap();
+        assert_eq!(create_payment_method.id, get_payment_method.id);
+        let payment_method = create_payment_method;
+        let get_or_create_payment_method = biller
+            .get_or_create_payment_method(&customer, payment_card)
+            .await
+            .unwrap();
+        assert_eq!(payment_method.id, get_or_create_payment_method.id);
     }
 }
