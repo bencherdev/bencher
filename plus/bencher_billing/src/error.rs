@@ -11,4 +11,8 @@ pub enum BillingError {
     EmailCollision(Customer, Vec<Customer>),
     #[error("Multiple payment methods: {0:#?} {1:#?}")]
     MultiplePaymentMethods(PaymentMethod, Vec<PaymentMethod>),
+    #[error("Failed to find price: {0}")]
+    PriceNotFound(String),
+    #[error("Subscription quantity set to zero: {0}")]
+    QuantityZero(u64),
 }

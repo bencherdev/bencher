@@ -6,7 +6,8 @@ use bencher_json::{
 };
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    ListCustomers, ListPaymentMethods, PaymentMethod, PaymentMethodTypeFilter, Price, Product,
+    CreateSubscription, CreateSubscriptionItems, ListCustomers, ListPaymentMethods, PaymentMethod,
+    PaymentMethodTypeFilter, Price, Product,
 };
 pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 
@@ -67,6 +68,11 @@ impl BillerProduct {
             pricing: biller_pricing,
         })
     }
+}
+
+pub enum ProductTier {
+    Team(String),
+    Enterprise(String),
 }
 
 impl Biller {
@@ -180,6 +186,43 @@ impl Biller {
         .await
         .map_err(Into::into)
     }
+
+    pub async fn create_subscription(
+        &self,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        product_tier: ProductTier,
+        quantity: u64,
+    ) -> Result<Subscription, BillingError> {
+        let mut create_subscription = CreateSubscription::new(customer.id.clone());
+        let price = match product_tier {
+            ProductTier::Team(price_name) => self
+                .products
+                .team
+                .pricing
+                .get(&price_name)
+                .ok_or(BillingError::PriceNotFound(price_name))?,
+            ProductTier::Enterprise(price_name) => self
+                .products
+                .enterprise
+                .pricing
+                .get(&price_name)
+                .ok_or(BillingError::PriceNotFound(price_name))?,
+        };
+        if quantity == 0 {
+            return Err(BillingError::QuantityZero(quantity));
+        }
+        create_subscription.items = Some(vec![CreateSubscriptionItems {
+            price: Some(price.id.to_string()),
+            quantity: Some(quantity),
+            ..Default::default()
+        }]);
+        create_subscription.default_payment_method = Some(&payment_method.id);
+
+        Subscription::create(&self.client, create_subscription)
+            .await
+            .map_err(Into::into)
+    }
 }
 
 #[cfg(test)]
@@ -190,7 +233,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     use super::PaymentCard;
-    use crate::Biller;
+    use crate::{biller::ProductTier, Biller};
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
 
@@ -261,5 +304,11 @@ mod test {
             .await
             .unwrap();
         assert_eq!(payment_method.id, get_or_create_payment_method.id);
+
+        let product_tier = ProductTier::Team("default".into());
+        let subscription = biller
+            .create_subscription(&customer, &payment_method, product_tier, 3)
+            .await
+            .unwrap();
     }
 }
