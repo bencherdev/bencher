@@ -16,23 +16,16 @@ impl Biller {
         Self { client }
     }
 
-    pub async fn new_customer(
+    pub async fn get_or_create_customer(
         &self,
         name: &NonEmpty,
         email: &Email,
     ) -> Result<Customer, BillingError> {
-        if self.get_customer(email).await?.is_some() {
-            return Err(BillingError::EmailExists(email.clone()));
+        if let Some(customer) = self.get_customer(email).await? {
+            Ok(customer)
+        } else {
+            self.create_customer(name, email).await
         }
-
-        let create_customer = CreateCustomer {
-            name: Some(name.as_ref()),
-            email: Some(email.as_ref()),
-            ..Default::default()
-        };
-        Customer::create(&self.client, create_customer)
-            .await
-            .map_err(Into::into)
     }
 
     pub async fn get_customer(&self, email: &Email) -> Result<Option<Customer>, BillingError> {
@@ -51,6 +44,23 @@ impl Biller {
         } else {
             Ok(None)
         }
+    }
+
+    // WARNING: Use caution when calling this directly as multiple users with the same email can be created
+    // Use `get_or_create_customer` instead!
+    async fn create_customer(
+        &self,
+        name: &NonEmpty,
+        email: &Email,
+    ) -> Result<Customer, BillingError> {
+        let create_customer = CreateCustomer {
+            name: Some(name.as_ref()),
+            email: Some(email.as_ref()),
+            ..Default::default()
+        };
+        Customer::create(&self.client, create_customer)
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn new_payment_method<'c>(
@@ -81,24 +91,32 @@ impl Biller {
 
 #[cfg(test)]
 mod test {
+    use pretty_assertions::assert_eq;
+
     use crate::Biller;
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
 
-    fn test_billing_key() -> String {
-        std::env::var(TEST_BILLING_KEY).unwrap()
+    fn test_billing_key() -> Option<String> {
+        std::env::var(TEST_BILLING_KEY).ok()
     }
 
     #[tokio::test]
     async fn test_biller_create_customer() {
-        let billing_key = test_billing_key();
-        let biller = Biller::new(billing_key.parse().unwrap());
-        let _customer = biller
-            .new_customer(
-                &"Muriel Bagge".parse().unwrap(),
-                &"muriel.bagge@nowhere.com".parse().unwrap(),
-            )
-            .await
+        let Some(billing_key) = test_billing_key() else {
+            return;
+        };
+
+        let name = "Muriel Bagge".parse().unwrap();
+        let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
+            .parse()
             .unwrap();
+        let biller = Biller::new(billing_key.parse().unwrap());
+        assert!(biller.get_customer(&email).await.unwrap().is_none())
+        let create_customer = biller.create_customer(&name, &email).await.unwrap();
+        let get_customer = biller.get_customer(&email).await.unwrap().unwrap();
+        assert_eq!(create_customer, get_customer);
+        let get_or_create_customer = biller.get_or_create_customer(&name, &email).await.unwrap();
+        assert_eq!(create_customer, get_or_create_customer);
     }
 }

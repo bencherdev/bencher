@@ -18,6 +18,7 @@ bencher_json = { path = "../../lib/bencher_json" }
 chrono.workspace = true
 clap.workspace = true
 literally.workspace = true
+rand.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -27,7 +28,6 @@ uuid.workspace = true
 # Crate
 async-trait = "0.1"
 clap_mangen = { version = "0.2", optional = true }
-rand = "0.8"
 reqwest = { version = "0.11", features = ["json"] }
 
 [dev-dependencies]

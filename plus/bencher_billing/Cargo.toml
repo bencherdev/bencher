@@ -12,3 +12,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 # Crate
 async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+rand.workspace = true

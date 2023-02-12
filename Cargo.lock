@@ -619,6 +619,8 @@ version = "0.2.32"
 dependencies = [
  "async-stripe",
  "bencher_valid",
+ "pretty_assertions",
+ "rand 0.8.5",
  "thiserror",
  "tokio",
 ]

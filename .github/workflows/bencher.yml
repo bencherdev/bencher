@@ -68,6 +68,8 @@ jobs:
     needs:
       - cargo_fmt
       - cargo_clippy
+    env:
+      TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v3
       - name: cargo test
