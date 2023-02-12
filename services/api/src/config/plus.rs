@@ -1,8 +1,9 @@
 #![cfg(feature = "plus")]
 
 use bencher_billing::Biller;
-use bencher_json::system::config::{JsonBilling, JsonPlus};
+use bencher_json::system::config::JsonPlus;
 use bencher_license::Licensor;
+use tokio::runtime::Handle;
 use url::Url;
 
 use crate::ApiError;
@@ -26,9 +27,9 @@ impl Plus {
             return Err(ApiError::BencherPlus(endpoint.clone()));
         }
 
-        let JsonBilling { secret_key } = plus.billing;
-        let biller = Some(Biller::new(secret_key));
-
+        let biller = Some(tokio::task::block_in_place(move || {
+            Handle::current().block_on(async { Biller::new(plus.billing).await })
+        })?);
         let licensor = Licensor::bencher_cloud(plus.license_pem).map_err(ApiError::License)?;
 
         Ok(Self { biller, licensor })

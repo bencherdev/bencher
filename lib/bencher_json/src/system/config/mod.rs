@@ -15,7 +15,7 @@ mod smtp;
 pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
-pub use plus::{JsonBilling, JsonPlus};
+pub use plus::{JsonBilling, JsonPlus, JsonProduct, JsonProducts};
 pub use security::JsonSecurity;
 pub use server::{JsonServer, JsonTls};
 pub use smtp::JsonSmtp;

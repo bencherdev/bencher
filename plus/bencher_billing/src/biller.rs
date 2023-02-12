@@ -1,22 +1,75 @@
-use bencher_valid::{Email, NonEmpty, Secret};
+use std::collections::HashMap;
+
+use bencher_json::{
+    system::config::{JsonBilling, JsonProduct, JsonProducts},
+    Email, NonEmpty,
+};
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    ListCustomers, ListPaymentMethods, PaymentMethod, PaymentMethodTypeFilter,
+    ListCustomers, ListPaymentMethods, PaymentMethod, PaymentMethodTypeFilter, Price, Product,
 };
-pub use stripe::{CardDetailsParams as PaymentCard, Customer};
+pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 
 use crate::BillingError;
 
 pub struct Biller {
     client: Client,
+    products: BillerProducts,
 }
 
 impl Biller {
-    pub fn new(secret_key: Secret) -> Self {
+    pub async fn new(billing: JsonBilling) -> Result<Self, BillingError> {
+        let JsonBilling {
+            secret_key,
+            products,
+        } = billing;
         let client = Client::new(secret_key);
-        Self { client }
-    }
+        let products = BillerProducts::new(&client, products).await?;
 
+        Ok(Self { client, products })
+    }
+}
+
+pub struct BillerProducts {
+    pub team: BillerProduct,
+    pub enterprise: BillerProduct,
+}
+
+impl BillerProducts {
+    async fn new(client: &Client, products: JsonProducts) -> Result<Self, BillingError> {
+        let JsonProducts { team, enterprise } = products;
+
+        Ok(Self {
+            team: BillerProduct::new(client, team).await?,
+            enterprise: BillerProduct::new(client, enterprise).await?,
+        })
+    }
+}
+
+pub struct BillerProduct {
+    pub product: Product,
+    pub pricing: HashMap<String, Price>,
+}
+
+impl BillerProduct {
+    async fn new(client: &Client, product: JsonProduct) -> Result<Self, BillingError> {
+        let JsonProduct { id, pricing } = product;
+        let product = Product::retrieve(client, &id.parse()?, &[]).await?;
+
+        let mut biller_pricing = HashMap::with_capacity(pricing.len());
+        for (price_name, price_id) in pricing {
+            let price = Price::retrieve(client, &price_id.parse()?, &[]).await?;
+            biller_pricing.insert(price_name, price);
+        }
+
+        Ok(Self {
+            product,
+            pricing: biller_pricing,
+        })
+    }
+}
+
+impl Biller {
     pub async fn get_or_create_customer(
         &self,
         name: &NonEmpty,
@@ -131,7 +184,9 @@ impl Biller {
 
 #[cfg(test)]
 mod test {
+    use bencher_json::system::config::{JsonBilling, JsonProduct, JsonProducts};
     use chrono::{Datelike, Utc};
+    use literally::hmap;
     use pretty_assertions::assert_eq;
 
     use super::PaymentCard;
@@ -143,17 +198,38 @@ mod test {
         std::env::var(TEST_BILLING_KEY).ok()
     }
 
+    fn test_products() -> JsonProducts {
+        JsonProducts {
+            team: JsonProduct {
+                id: "prod_NKz5B9dGhDiSY1".into(),
+                pricing: hmap! {
+                    "default".to_string() => "price_1MaJ7kKal5vzTlmh1pbQ5JYR".to_string(),
+                },
+            },
+            enterprise: JsonProduct {
+                id: "prod_NLC7fDet2C8Nmk".into(),
+                pricing: hmap! {
+                    "default".to_string() => "price_1MaViyKal5vzTlmho1MdXIpe".to_string(),
+                },
+            },
+        }
+    }
+
     #[tokio::test]
     async fn test_biller() {
         let Some(billing_key) = test_billing_key() else {
             return;
         };
+        let json_billing = JsonBilling {
+            secret_key: billing_key.parse().unwrap(),
+            products: test_products(),
+        };
+        let biller = Biller::new(json_billing).await.unwrap();
 
         let name = "Muriel Bagge".parse().unwrap();
         let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
             .parse()
             .unwrap();
-        let biller = Biller::new(billing_key.parse().unwrap());
         assert!(biller.get_customer(&email).await.unwrap().is_none());
         let create_customer = biller.create_customer(&name, &email).await.unwrap();
         let get_customer = biller.get_customer(&email).await.unwrap().unwrap();

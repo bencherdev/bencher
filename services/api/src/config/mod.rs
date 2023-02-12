@@ -94,6 +94,7 @@ impl Config {
             sanitize_json(&json_config)
         );
 
+        #[cfg(debug_assertions)]
         Self::write(config_str.as_bytes()).await?;
 
         Ok(Self(json_config))

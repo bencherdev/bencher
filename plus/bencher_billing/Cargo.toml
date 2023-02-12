@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 # Local
-bencher_valid = { path = "../../lib/bencher_valid" }
+bencher_json = { path = "../../lib/bencher_json", features = ["plus"] }
 # Workspace
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
@@ -15,5 +15,6 @@ async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
 
 [dev-dependencies]
 chrono.workspace = true
+literally.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true

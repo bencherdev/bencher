@@ -618,8 +618,9 @@ name = "bencher_billing"
 version = "0.2.32"
 dependencies = [
  "async-stripe",
- "bencher_valid",
+ "bencher_json",
  "chrono",
+ "literally",
  "pretty_assertions",
  "rand 0.8.5",
  "thiserror",
