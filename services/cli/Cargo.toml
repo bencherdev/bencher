@@ -28,7 +28,7 @@ uuid.workspace = true
 # Crate
 async-trait = "0.1"
 clap_mangen = { version = "0.2", optional = true }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
 # Workspace
