@@ -1,7 +1,4 @@
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::PathBuf,
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use bencher_json::{
     sanitize_json,
@@ -59,11 +56,11 @@ pub struct Config(pub JsonConfig);
 
 impl Config {
     pub async fn load_or_default() -> Result<Self, ApiError> {
-        if let Ok(config) = Self::load_env().await {
+        if let Some(config) = Self::load_env().await? {
             return Ok(config);
         }
 
-        if let Ok(config) = Self::load_file().await {
+        if let Some(config) = Self::load_file().await? {
             return Ok(config);
         }
 
@@ -79,14 +76,19 @@ impl Config {
         Ok(config)
     }
 
-    pub async fn load_env() -> Result<Self, ApiError> {
-        let config_str = std::env::var(BENCHER_CONFIG).map_err(|e| {
-            info!("Failed to find \"{BENCHER_CONFIG}\": {e}");
-            ApiError::MissingEnvVar(BENCHER_CONFIG.into())
-        })?;
+    pub async fn load_env() -> Result<Option<Self>, ApiError> {
+        // If the env var is set then failing to read or parse the config is an error
+        // However, if it isn't set then just return None
+        let config_str = match std::env::var(BENCHER_CONFIG) {
+            Ok(config_str) => config_str,
+            Err(e) => {
+                info!("Failed to find \"{BENCHER_CONFIG}\" environment variable: {e}");
+                return Ok(None);
+            },
+        };
 
         let json_config = serde_json::from_str(&config_str).map_err(|e| {
-            info!("Failed to parse config string from \"{BENCHER_CONFIG}\": {e}");
+            error!("Failed to parse config string from \"{BENCHER_CONFIG}\": {e}");
             ApiError::ParseConfigString(config_str.clone())
         })?;
         info!(
@@ -97,47 +99,57 @@ impl Config {
         #[cfg(debug_assertions)]
         Self::write(config_str.as_bytes()).await?;
 
-        Ok(Self(json_config))
+        Ok(Some(Self(json_config)))
     }
 
-    pub async fn load_file() -> Result<Self, ApiError> {
-        let path = Self::path();
-
-        let config_file = tokio::fs::read(&path).await.map_err(|e| {
-            info!("Failed to open config file at {}: {e}", path.display());
-            ApiError::OpenConfigFile(path.clone())
-        })?;
+    pub async fn load_file() -> Result<Option<Self>, ApiError> {
+        // If the env var is set then failing to read or parse the config is an error
+        // However, if it isn't set then just try the default path
+        // If there is a file to read at the default path, then that config is expected to parse
+        // Otherwise, just return None if there is no file to read a the default path
+        let (path, config_file) = match std::env::var(BENCHER_CONFIG_PATH) {
+            Ok(path) => {
+                let config_file = tokio::fs::read(&path).await.map_err(|e| {
+                    error!("Failed to open config file at {}: {e}", path);
+                    ApiError::OpenConfigFile(path.clone())
+                })?;
+                (path, config_file)
+            },
+            Err(e) => {
+                info!("Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
+                let config_file = match tokio::fs::read(DEFAULT_CONFIG_PATH).await {
+                    Ok(config_file) => config_file,
+                    Err(e) => {
+                        info!("Failed to open config file at default path \"{DEFAULT_CONFIG_PATH}\": {e}");
+                        return Ok(None);
+                    },
+                };
+                (DEFAULT_CONFIG_PATH.into(), config_file)
+            },
+        };
 
         let json_config = serde_json::from_slice(&config_file).map_err(|e| {
-            info!("Failed to parse config file at {}: {e}", path.display());
+            error!("Failed to parse config file at {path}: {e}");
             ApiError::ParseConfigFile(path.clone())
         })?;
         info!(
-            "Loaded config from file {}: {}",
-            path.display(),
+            "Loaded config from file {path}: {}",
             sanitize_json(&json_config)
         );
 
-        Ok(Self(json_config))
+        Ok(Some(Self(json_config)))
     }
 
     pub async fn write(config: impl AsRef<[u8]>) -> Result<(), ApiError> {
-        let path = Self::path();
+        let path = std::env::var(BENCHER_CONFIG_PATH).unwrap_or_else(|e| {
+            info!("Failed to find \"{BENCHER_CONFIG_PATH}\" environment variable defaulting to \"{DEFAULT_CONFIG_PATH}\": {e}");
+            DEFAULT_CONFIG_PATH.into()
+        });
 
         tokio::fs::write(&path, config).await.map_err(|e| {
-            error!("Failed to write config file at {}: {e}", path.display());
+            error!("Failed to write config file at {path}: {e}");
             ApiError::WriteConfigFile(path)
         })
-    }
-
-    pub fn path() -> PathBuf {
-        std::env::var(BENCHER_CONFIG_PATH)
-            .unwrap_or_else(|e| {
-                info!("Failed to find \"{BENCHER_CONFIG_PATH}\": {e}");
-                info!("Defaulting \"{BENCHER_CONFIG_PATH}\" to: {DEFAULT_CONFIG_PATH}");
-                DEFAULT_CONFIG_PATH.into()
-            })
-            .into()
     }
 }
 

@@ -54,7 +54,7 @@ async fn get_one_inner(context: &Context, auth_user: &AuthUser) -> Result<JsonCo
         return Err(ApiError::Admin(auth_user.id));
     }
 
-    Ok(Config::load_file().await.unwrap_or_default().into())
+    Ok(Config::load_file().await?.unwrap_or_default().into())
 }
 
 #[endpoint {

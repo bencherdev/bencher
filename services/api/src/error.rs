@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
@@ -42,12 +40,12 @@ pub enum ApiError {
     MissingEnvVar(String),
     #[error("Failed to parse config string: {0}")]
     ParseConfigString(String),
-    #[error("Failed to open config file: {}", _0.display())]
-    OpenConfigFile(PathBuf),
-    #[error("Failed to parse config file: {}", _0.display())]
-    ParseConfigFile(PathBuf),
-    #[error("Failed to write config file: {}", _0.display())]
-    WriteConfigFile(PathBuf),
+    #[error("Failed to open config file: {0}")]
+    OpenConfigFile(String),
+    #[error("Failed to parse config file: {0}")]
+    ParseConfigFile(String),
+    #[error("Failed to write config file: {0}")]
+    WriteConfigFile(String),
     #[error("Failed to serialize: {0}")]
     Serialize(serde_json::Error),
     #[error("Failed to deserialize: {0}")]
