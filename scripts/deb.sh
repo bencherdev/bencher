@@ -23,4 +23,4 @@ Description: Continuous Benchmarking" \
 > $DEBIAN_PATH/control
 cargo run --bin bencher --features docs -- docs --path $DEBIAN_PATH
 
-dpkg-deb --build --root-owner-group $DEB_PATH
+dpkg-deb -Zxz --build --root-owner-group $DEB_PATH
