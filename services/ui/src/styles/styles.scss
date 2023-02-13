@@ -22,6 +22,11 @@ $badoge-z-index: 5 !default;
 
 @import "./swagger-ui.css";
 
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
 .columns.is-reverse-mobile {
   @include mobile {
     flex-direction: column-reverse;
@@ -43,6 +48,7 @@ $badoge-z-index: 5 !default;
   position: relative;
   height: 0;
 }
+
 .map-responsive iframe {
   left: 0;
   top: 0;

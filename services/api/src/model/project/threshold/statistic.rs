@@ -105,6 +105,29 @@ pub struct InsertStatistic {
     pub right_side: Option<f32>,
 }
 
+impl From<QueryStatistic> for InsertStatistic {
+    fn from(query_statistic: QueryStatistic) -> Self {
+        let QueryStatistic {
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            left_side,
+            right_side,
+            ..
+        } = query_statistic;
+        Self {
+            uuid: Uuid::new_v4().to_string(),
+            test,
+            min_sample_size,
+            max_sample_size,
+            window,
+            left_side,
+            right_side,
+        }
+    }
+}
+
 impl InsertStatistic {
     pub fn from_json(json_statistic: JsonNewStatistic) -> Result<Self, ApiError> {
         let JsonNewStatistic {

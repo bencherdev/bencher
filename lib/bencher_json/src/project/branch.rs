@@ -26,7 +26,7 @@ static BRANCH_MAIN_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
 pub struct JsonNewBranch {
     pub name: BranchName,
     pub slug: Option<Slug>,
-    pub start_point: Option<ResourceId>,
+    pub start_point: Option<JsonStartPoint>,
 }
 
 impl JsonNewBranch {
@@ -37,6 +37,13 @@ impl JsonNewBranch {
             start_point: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonStartPoint {
+    pub branch: ResourceId,
+    pub thresholds: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

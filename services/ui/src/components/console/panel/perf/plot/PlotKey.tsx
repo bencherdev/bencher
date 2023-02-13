@@ -82,7 +82,7 @@ const PlotKey = (props) => {
 
 const ExpandedKey = (props) => {
 	return (
-		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
+		<div class="columns is-centered is-vcentered is-gapless is-multiline">
 			<div class="column is-narrow">
 				<MinimizeKeyButton handleKey={props.handleKey} />
 			</div>
@@ -95,21 +95,19 @@ const ExpandedKey = (props) => {
 					},
 					index,
 				) => (
-					<div class="column is-narrow">
-						<div class="columns is-vcentered is-gapless  is-multiline">
-							<KeyResource
-								icon="fas fa-code-branch"
-								name={props.branches()?.[result.branch]?.name}
-							/>
-							<KeyResource
-								icon="fas fa-server"
-								name={props.testbeds()?.[result.testbed]?.name}
-							/>
-							<KeyResource
-								icon="fas fa-tachometer-alt"
-								name={props.benchmarks()?.[result.benchmark]?.name}
-							/>
-						</div>
+					<div class="column is-2">
+						<KeyResource
+							icon="fas fa-code-branch"
+							name={props.branches()?.[result.branch]?.name}
+						/>
+						<KeyResource
+							icon="fas fa-server"
+							name={props.testbeds()?.[result.testbed]?.name}
+						/>
+						<KeyResource
+							icon="fas fa-tachometer-alt"
+							name={props.benchmarks()?.[result.benchmark]?.name}
+						/>
 						<KeyButton
 							index={index}
 							perf_active={props.perf_active}
@@ -177,17 +175,14 @@ const MaximizeKeyButton = (props) => {
 
 const KeyResource = (props) => {
 	return (
-		<>
-			<div class="column is-narrow">
-				<span class="icon">
-					<i class={props.icon} aria-hidden="true" />
-				</span>
-			</div>
-			<div class="column">
-				<small style="overflow-wrap:anywhere;">{props.name}</small>
-			</div>
-			<div class="column is-full" />
-		</>
+		<div>
+			<span class="icon">
+				<i class={props.icon} aria-hidden="true" />
+			</span>
+			<small style="overflow-wrap:anywhere;">{` ${
+				props.name ? props.name : "Loading..."
+			}`}</small>
+		</div>
 	);
 };
 

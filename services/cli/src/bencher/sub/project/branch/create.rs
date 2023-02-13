@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{BranchName, JsonNewBranch, ResourceId, Slug};
+use bencher_json::{project::branch::JsonStartPoint, BranchName, JsonNewBranch, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -14,7 +14,8 @@ pub struct Create {
     pub project: ResourceId,
     pub name: BranchName,
     pub slug: Option<Slug>,
-    pub start_point: Option<ResourceId>,
+    pub start_point_branch: Option<ResourceId>,
+    pub start_point_thresholds: bool,
     pub backend: Backend,
 }
 
@@ -26,14 +27,16 @@ impl TryFrom<CliBranchCreate> for Create {
             project,
             name,
             slug,
-            start_point,
+            start_point_branch,
+            start_point_thresholds,
             backend,
         } = create;
         Ok(Self {
             project,
             name,
             slug,
-            start_point,
+            start_point_branch,
+            start_point_thresholds,
             backend: backend.try_into()?,
         })
     }
@@ -44,9 +47,14 @@ impl From<Create> for JsonNewBranch {
         let Create {
             name,
             slug,
-            start_point,
+            start_point_branch,
+            start_point_thresholds,
             ..
         } = create;
+        let start_point = start_point_branch.map(|branch| JsonStartPoint {
+            branch,
+            thresholds: Some(start_point_thresholds),
+        });
         Self {
             name,
             slug,

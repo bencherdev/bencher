@@ -66,6 +66,25 @@ pub struct InsertThreshold {
 }
 
 impl InsertThreshold {
+    pub fn new<U>(
+        conn: &mut SqliteConnection,
+        branch_id: i32,
+        testbed_id: i32,
+        metric_kind_id: i32,
+        statistic: &U,
+    ) -> Result<Self, ApiError>
+    where
+        U: ToString,
+    {
+        Ok(Self {
+            uuid: Uuid::new_v4().to_string(),
+            branch_id,
+            testbed_id,
+            metric_kind_id,
+            statistic_id: QueryStatistic::get_id(conn, statistic)?,
+        })
+    }
+
     pub fn from_json(
         conn: &mut SqliteConnection,
         project_id: i32,
@@ -73,23 +92,21 @@ impl InsertThreshold {
         testbed_id: i32,
         json_threshold: &JsonNewThreshold,
     ) -> Result<Self, ApiError> {
+        let metric_kind_id =
+            QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
+
         let insert_statistic = InsertStatistic::from_json(json_threshold.statistic)?;
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
             .map_err(api_error!())?;
 
-        Ok(Self {
-            uuid: Uuid::new_v4().to_string(),
+        Self::new(
+            conn,
             branch_id,
             testbed_id,
-            metric_kind_id: QueryMetricKind::from_resource_id(
-                conn,
-                project_id,
-                &json_threshold.metric_kind,
-            )?
-            .id,
-            statistic_id: QueryStatistic::get_id(conn, &insert_statistic.uuid)?,
-        })
+            metric_kind_id,
+            &insert_statistic.uuid,
+        )
     }
 }

@@ -1,12 +1,19 @@
 use std::str::FromStr;
 
-use bencher_json::{BranchName, JsonBranch, JsonNewBranch, ResourceId, Slug};
+use bencher_json::{
+    project::branch::JsonStartPoint, BranchName, JsonBranch, JsonNewBranch, ResourceId, Slug,
+};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
-use super::{version::InsertBranchVersion, QueryProject};
+use super::{
+    threshold::statistic::{InsertStatistic, QueryStatistic},
+    version::InsertBranchVersion,
+    QueryProject,
+};
 use crate::{
     error::api_error,
+    model::project::threshold::{InsertThreshold, QueryThreshold},
     schema,
     schema::branch as branch_table,
     util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_child_slug},
@@ -106,10 +113,12 @@ impl InsertBranch {
     pub fn start_point(
         &self,
         conn: &mut SqliteConnection,
-        start_point: &ResourceId,
+        start_point: &JsonStartPoint,
     ) -> Result<(), ApiError> {
+        let JsonStartPoint { branch, thresholds } = start_point;
+
         let start_point_branch_id =
-            QueryBranch::from_resource_id(conn, self.project_id, start_point)?.id;
+            QueryBranch::from_resource_id(conn, self.project_id, branch)?.id;
         let new_branch_id = QueryBranch::get_id(conn, &self.uuid)?;
 
         // Get all versions for the start point branch
@@ -118,6 +127,7 @@ impl InsertBranch {
             .select(schema::branch_version::version_id)
             .load::<i32>(conn)?;
 
+        // Add new branch to all start point branch versions
         for version_id in version_ids {
             let insert_branch_version = InsertBranchVersion {
                 branch_id: new_branch_id,
@@ -128,6 +138,42 @@ impl InsertBranch {
                 .values(&insert_branch_version)
                 .execute(conn)
                 .map_err(api_error!())?;
+        }
+
+        if let Some(true) = thresholds {
+            // Get all thresholds for the start point branch
+            let query_thresholds = schema::threshold::table
+                .filter(schema::threshold::branch_id.eq(start_point_branch_id))
+                .load::<QueryThreshold>(conn)?;
+
+            // Add new branch to cloned thresholds with cloned statistics
+            for query_threshold in query_thresholds {
+                // Get the current threshold statistic
+                let query_statistic = schema::statistic::table
+                    .filter(schema::statistic::id.eq(query_threshold.statistic_id))
+                    .first::<QueryStatistic>(conn)?;
+
+                // Clone the current threshold statistic
+                let insert_statistic = InsertStatistic::from(query_statistic);
+                diesel::insert_into(schema::statistic::table)
+                    .values(&insert_statistic)
+                    .execute(conn)
+                    .map_err(api_error!())?;
+
+                // Clone the threshold for the new branch using the newly cloned statistic
+                let insert_threshold = InsertThreshold::new(
+                    conn,
+                    new_branch_id,
+                    query_threshold.testbed_id,
+                    query_threshold.metric_kind_id,
+                    &insert_statistic.uuid,
+                )?;
+
+                diesel::insert_into(schema::threshold::table)
+                    .values(&insert_threshold)
+                    .execute(conn)
+                    .map_err(api_error!())?;
+            }
         }
 
         Ok(())

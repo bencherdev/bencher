@@ -1,7 +1,8 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use bencher_json::{
-    project::branch::BRANCH_MAIN_STR, BranchName, JsonBranch, JsonNewBranch, ResourceId,
+    project::branch::{JsonStartPoint, BRANCH_MAIN_STR},
+    BranchName, JsonBranch, JsonNewBranch, ResourceId,
 };
 
 use uuid::Uuid;
@@ -180,6 +181,11 @@ async fn create_branch(
     start_point: Option<ResourceId>,
     backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
+    // Default to cloning the thresholds from the start point branch
+    let start_point = start_point.map(|branch| JsonStartPoint {
+        branch,
+        thresholds: Some(true),
+    });
     let new_branch = JsonNewBranch {
         name: branch_name.clone(),
         start_point,
