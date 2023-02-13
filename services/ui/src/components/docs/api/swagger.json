@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.32"
+    "version": "0.2.33"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -623,6 +623,109 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/JsonOrganizationPermission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/organizations/{organization}/entitlements": {
+      "get": {
+        "tags": [
+          "organizations",
+          "entitlements"
+        ],
+        "operationId": "get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEntitlements"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "entitlements"
+        ],
+        "operationId": "options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
             }
           }
         ],
@@ -4828,6 +4931,13 @@
           "token"
         ]
       },
+      "JsonAverage": {
+        "type": "string",
+        "enum": [
+          "mean",
+          "median"
+        ]
+      },
       "JsonBackup": {
         "type": "object",
         "properties": {
@@ -4870,6 +4980,21 @@
           "uuid"
         ]
       },
+      "JsonBilling": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "$ref": "#/components/schemas/JsonProducts"
+          },
+          "secret_key": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "products",
+          "secret_key"
+        ]
+      },
       "JsonBranch": {
         "type": "object",
         "properties": {
@@ -4908,8 +5033,29 @@
           "logging": {
             "$ref": "#/components/schemas/JsonLogging"
           },
+          "plus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPlus"
+              }
+            ]
+          },
           "secret_key": {
-            "$ref": "#/components/schemas/Secret"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          },
+          "security": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonSecurity"
+              }
+            ]
           },
           "server": {
             "$ref": "#/components/schemas/JsonServer"
@@ -4927,7 +5073,6 @@
           "database",
           "endpoint",
           "logging",
-          "secret_key",
           "server"
         ]
       },
@@ -4935,7 +5080,7 @@
         "type": "object",
         "properties": {
           "token": {
-            "$ref": "#/components/schemas/JsonWebToken"
+            "$ref": "#/components/schemas/Jwt"
           },
           "user": {
             "$ref": "#/components/schemas/JsonUser"
@@ -4973,6 +5118,19 @@
       },
       "JsonEmpty": {
         "type": "object"
+      },
+      "JsonEntitlements": {
+        "type": "object",
+        "properties": {
+          "metrics_used": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "metrics_used"
+        ]
       },
       "JsonFold": {
         "type": "string",
@@ -5114,7 +5272,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/ResourceId"
+                "$ref": "#/components/schemas/JsonStartPoint"
               }
             ]
           }
@@ -5525,6 +5683,54 @@
           "testbeds"
         ]
       },
+      "JsonPlus": {
+        "type": "object",
+        "properties": {
+          "billing": {
+            "$ref": "#/components/schemas/JsonBilling"
+          },
+          "license_pem": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "billing",
+          "license_pem"
+        ]
+      },
+      "JsonProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "pricing": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "pricing"
+        ]
+      },
+      "JsonProducts": {
+        "type": "object",
+        "properties": {
+          "enterprise": {
+            "$ref": "#/components/schemas/JsonProduct"
+          },
+          "team": {
+            "$ref": "#/components/schemas/JsonProduct"
+          }
+        },
+        "required": [
+          "enterprise",
+          "team"
+        ]
+      },
       "JsonProject": {
         "type": "object",
         "properties": {
@@ -5636,6 +5842,14 @@
               }
             ]
           },
+          "average": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonAverage"
+              }
+            ]
+          },
           "fold": {
             "nullable": true,
             "allOf": [
@@ -5690,6 +5904,21 @@
           "metrics",
           "report",
           "uuid"
+        ]
+      },
+      "JsonSecurity": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "nullable": true,
+            "type": "string"
+          },
+          "secret_key": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "secret_key"
         ]
       },
       "JsonServer": {
@@ -5790,6 +6019,21 @@
           "hostname",
           "secret",
           "username"
+        ]
+      },
+      "JsonStartPoint": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "$ref": "#/components/schemas/ResourceId"
+          },
+          "thresholds": {
+            "nullable": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "branch"
         ]
       },
       "JsonStatisticKind": {
@@ -6022,9 +6266,6 @@
           "version"
         ]
       },
-      "JsonWebToken": {
-        "type": "string"
-      },
       "Jwt": {
         "type": "string"
       },
@@ -6145,6 +6386,9 @@
     },
     {
       "name": "config"
+    },
+    {
+      "name": "entitlements"
     },
     {
       "name": "invites",
