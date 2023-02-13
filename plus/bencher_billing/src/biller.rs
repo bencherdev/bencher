@@ -4,7 +4,6 @@ use bencher_json::{
     system::config::{JsonBilling, JsonProduct, JsonProducts},
     Email, NonEmpty,
 };
-use futures_util::stream::TryStreamExt;
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
     CreateSubscription, CreateSubscriptionItems, ListCustomers, ListPaymentMethods,
@@ -307,6 +306,7 @@ mod test {
     use chrono::{Datelike, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
+    use uuid::Uuid;
 
     use super::PaymentCard;
     use crate::{biller::ProductTier, Biller};
@@ -381,9 +381,10 @@ mod test {
             .unwrap();
         assert_eq!(payment_method.id, get_or_create_payment_method.id);
 
+        let organization = Uuid::new_v4();
         let product_tier = ProductTier::Team("default".into());
         let _subscription = biller
-            .create_subscription(&customer, &payment_method, product_tier, 5)
+            .create_subscription(organization, &customer, &payment_method, product_tier, 5)
             .await
             .unwrap();
     }

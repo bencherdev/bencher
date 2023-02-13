@@ -620,7 +620,6 @@ dependencies = [
  "async-stripe",
  "bencher_json",
  "chrono",
- "futures-util",
  "literally",
  "pretty_assertions",
  "rand 0.8.5",

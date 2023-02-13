@@ -13,7 +13,6 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 uuid.workspace = true
 # Crate
 async-stripe = { version = "0.18", features = ["runtime-tokio-hyper"] }
-futures-util = "0.3"
 
 [dev-dependencies]
 chrono.workspace = true
