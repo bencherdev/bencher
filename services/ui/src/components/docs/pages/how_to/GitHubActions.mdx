@@ -24,7 +24,7 @@ import { BENCHER_VERSION } from "../../../site/util";
         --else-if-branch main \\
         --else-branch \\
         --err \\
-        "cargo bench"`}
+        "bencher mock"`}
   </code>
 </pre>
 
@@ -34,8 +34,8 @@ import { BENCHER_VERSION } from "../../../site/util";
 
 > The provided command uses [GitHub Action default environment variables](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) and it tries to:
 > 1. Use the current branch data if it exists in Bencher already (ex: `--if-branch $GITHUB_REF_NAME`)
-> 1. Create a clone of PR target branch data if it exists in Bencher already (ex: `--else-if-branch $GITHUB_BASE_REF`)
-> 1. Create a clone of the `main` branch data if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
+> 1. Create a clone of PR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch $GITHUB_BASE_REF`)
+> 1. Create a clone of the `main` branch data and thresholds if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
 > 1. Create a new branch with the name provided by `--if-branch $CI_COMMIT_REF_NAME` (ex: `--else-branch`)
 
 4. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: ubuntu-latest`)
@@ -45,5 +45,5 @@ import { BENCHER_VERSION } from "../../../site/util";
 8. Optional: Create an environment variable to make it easy to keep track the CLI version being used (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 9. Checkout your source code (ex: `uses: actions/checkout@v3`)
 10. Install the Bencher CLI from a `.deb`
-11. Run your benchmarks (ex: `"cargo bench"`) with the `bencher run` command (ex: `bencher run "cargo bench"`)
-12. Set the `--err` flag to fail on an alert (ex: `bencher run --err "cargo bench"`)
+11. Run your benchmarks (ex: `bencher mock`) with the `bencher run` command (ex: `bencher run "bencher mock"`)
+12. Set the `--err` flag to fail on an alert (ex: `bencher run --err "bencher mock"`)

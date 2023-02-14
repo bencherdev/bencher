@@ -1,7 +1,19 @@
 Thresholds can be created for the unique combination of a Metric Kind, Branch, and Testbed.
-These are statistical thresholds that use either the
+They are statistical significance tests that use either a
 [Z-score](https://en.wikipedia.org/wiki/Standard_score)
-or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test) in order to detect performance regressions and gerenerate Alerts.
+or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test)
+in order to detect performance regressions and gerenerate Alerts.
+When a Metric is below a Threshold's left side boundary or above a Threshold's right side boundary,
+an Alert is generated for that Metric.
+
+Thresholds work best when:
+- There are no extreme differences between benchmark runs
+- Benchmark runs are totally independent of one another
+- The number of iterations for a single benchmark run is less than 10% of the historical Metrics
+- There are at least 30 historical Metrics for the combination of Metric Kind, Branch, and Testbed
+
+If there are less than 30 historical Metrics for the combination of Metric Kind, Branch, and Testbed
+then a Student's t-test Threshold should be used and __*not*__ a Z-score Threshold.
 
 <div class="content has-text-centered">
     <figure>
@@ -11,17 +23,79 @@ or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test) in order
     height="600"
     alt="The Normal Distribution https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
 />
-<figcaption>🐰 Don't Panic! This will all make sense in a minute.</figcaption>
+<br/>
+<small>🐰 Don't Panic! This will all make sense in a minute.</small>
 </figure>
 </div>
 
-## Z-score
+## Statistical Significance Test
 
-The Z-score measures the number of [standard deviations](https://en.wikipedia.org/wiki/Standard_deviation) a given Metric is above or below the mean of historical Metrics.
-This is done using either the Left Side Boundary and/or the Right Side Boundary.
-For example, a 2σ 
+### Z-score
 
-## Student's t-test
+The Z-score measures the number of [standard deviations](https://en.wikipedia.org/wiki/Standard_deviation) (σ) a given Metric is above or below the mean of the historical Metrics.
+The standard deviation (σ) can also be expressed as a _left_ side or _right_ side cumulative percentage.
 
-There are several different kinds of Student's t-tests.
-Bencher uses a one-sample t-test.
+For example, two standard deviations (2σ) is the same as a _right_ side cumulative percentage of 97.7%, as pictured above.
+When creating Z-score Thresholds, the decimal notation of the cumulative percentage is used.
+In this example, the _right_ side cumulative percentage of 97.7% would be a Right Side Boundary of `0.977`.
+In practice, a Threshold like this would be useful for the Latency Metric Kind.
+That is, a larger value would indicate a performance regression.
+
+When a smaller value would indicate a performance regression such as with the Throughput Metric Kind,
+a _left_ side cumulative percentage should be used.
+A _left_ side cumulative percentage of 97.7% would correspond to two standard deviations below the mean (-2σ).
+This would be given in decimal notation as a Left Side Boundary of `0.977`.
+
+### Student's t-test
+
+The Student's t-test measures how likely it is that a given Metric is above or below the mean of the historical Metrics.
+This likelihood is called a confidence interval (CI).
+The confidence interval (CI) is expressed as a _left_ side or _right_ side confidence percentage.
+
+For example, a _right_ side confidence percentage of 95.0% indicates that 95.0% of Metrics should be _less_ than an expected _maximum_.
+When creating t-test Thresholds, the decimal notation of the confidence percentage is used.
+In this example, the _right_ side confidence percentage of 95.0% would be a Right Side Boundary of `0.95`.
+In practice, a Threshold like this would be useful for the Latency Metric Kind.
+That is, a larger value would indicate a performance regression.
+
+When a smaller value would indicate a performance regression such as with the Throughput Metric Kind,
+a _left_ side confidence percentage should be used.
+A _left_ side confidence percentage of 95.0% would indicate that Metrics should be _greater_ than an expected _minimum_.
+This would be given in decimal notation as a Left Side Boundary of `0.95`.
+
+## Statistical Significance Boundary
+
+The meaning of the statistical significance boundary depends on the statistical significance test:
+- Z-score: Standard deviation (σ) expressed as a decimal cumulative percentage
+- t-test: Confidence interval (CI) expressed as a decimal confidence percentage
+
+> 🐰 Tip: To fail a CI build when a boundary is violated use the `--err` flag for the `bencher run` CLI command.
+
+### Left Side Boundary
+A left side boundary can be set for a Threshold.
+It is used when a smaller value would indicate a performance regression,
+such as with the Throughput Metric Kind.
+The value must be a decimal between `0.5` and `1.0`.
+
+### Right Side Boundary
+A right side boundary can be set for a Threshold.
+It is used when a larger value would indicate a performance regression,
+such as with the Latency Metric Kind.
+The value must be a decimal between `0.5` and `1.0`.
+
+## Sample Size
+
+### Minimum Sample Size
+A minimum sample size can be set for a Threshold.
+The Threshold will only run its statistical significance test
+if the number of historical Metrics is greater than or equal to the minimum sample size.
+
+### Maximum Sample Size
+A maximum sample size can be set for a Threshold.
+The Threshold will limit itself to only the most recent historical Metrics
+capped at the maximum sample size for its statistical significance test.
+
+## Window Size
+A window size in seconds can be set for a Threshold.
+The Threshold will limit itself to only the most recent historical Metrics
+bounded by the given time window for its statistical significance test.

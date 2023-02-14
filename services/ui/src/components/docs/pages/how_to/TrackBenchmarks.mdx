@@ -1,0 +1,53 @@
+Most benchmark results are ephemeral.
+They disapear as soon as your terminal reaches its scrollback limit.
+Some benchmarking harnesses let you cache results, but most only do so locally.
+Bencher allows you to track your benchmarks from both local and CI runs and compare against historical results.
+
+Each Benchmark is tracked along with its Metric Kind, Branch, and Testbed.
+
+### Metric Kind
+A Metric Kind is a unit of measure for collected Metrics.
+By default all Projects start with a `Latency` and `Throughput` Metric Kind
+with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
+
+For all built in [benchmark harness adapter](/docs/explanation/adapters),
+the correct Metric Kind is automatically selected for you.
+
+### Branch
+A Branch is a `git` ref name for the collected Metrics.
+By default all Projects start with a `main` Branch.
+When using the `bencher run` CLI command, `main` is the default Branch if one is not provided.
+See [CLI branch selection](docs/explanation/cli-branch-selection) for a full overview.
+
+### Testbed
+A Testbed is the name of the testing environment for the collected Metrics.
+By default all Projects start with a `localhost` Branch.
+When using the `bencher run` CLI command, `localhost` is the default Testbed if one is not provided.
+
+## Historical Benchmarking
+
+```
+bencher run \\
+    --if-branch feature-branch \\
+    --else-if-branch main \\
+    --else-branch \\
+    --err \\
+    "bencher mock"`
+```
+
+1. Use the current branch if it exists in Bencher already (ex: `--if-branch $CI_COMMIT_REF_NAME`)
+1. Create a clone of MR target branch data if it exists in Bencher already (ex: `--else-if-branch $CI_MERGE_REQUEST_TARGET_BRANCH_NAME`)
+1. Create a clone of the `main` branch data if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
+1. Create a new branch with the name provided by `--if-branch $CI_COMMIT_REF_NAME` (ex: `--else-branch`)
+
+## Relative Benchmarking
+
+
+Each run would consist of:
+- Creating a var that is something like the PR branch name + current date or hash etc (ie PR_BRANCH=$GITHUB_REF_NAME-13-feb-23-12-00)
+- Checking out the target branch for the PR (ie main/$GITHUB_BASE_REF)
+- Running bencher run --if-branch $PR_BRANCH --else-branch as many times as you like using the --iter arg
+- Checking out the source/PR branch (ie $GITHUB_REF_NAME)
+- Creating a new T-Test threshold for PR_BRANCH and the current CI testbed using bencher threshold create ...  . 
+- Running bencher run --if-branch $PR_BRANCH as many times as you like using the --iter and possibly even the --fold arg.
+:tada: Relative benchmarking!

@@ -1,4 +1,5 @@
 There are a few options for setting the project branch in the `bencher` CLI `run` command (ie: `bencher run`).
+If none of these flags are used then `main` is used as the default branch.
 
 ### `--branch`
 
@@ -20,11 +21,11 @@ For example, if `main` exists then using `--if-branch main` would find it. Then 
 
 <br />
 
-Often, when working on feature branches, it would be useful to have historical data from the parent/base branch. This is where the `--else-if-branch` flag comes in. The `--else-if-branch` flag expects another branch _name_ argument. If `--if-branch` fails, then `--else-if-branch` queries to see if a single branch with that name exists. If there is exactly one branch found, then all the data from this starting point branch will be copied over to a newly created branch with the name given to `--if-branch`.
+Often, when working on feature branches, it would be useful to have historical data from the parent/base branch. This is where the `--else-if-branch` flag comes in. The `--else-if-branch` flag expects another branch _name_ argument. If `--if-branch` fails, then `--else-if-branch` queries to see if a single branch with that name exists. If there is exactly one branch found, then all the data and thresholds from this starting point branch will be copied over to a newly created branch with the name given to `--if-branch`.
 
-For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data. Then using `--if-branch feature_branch --else-if-branch main`, would create a new branch named `feature_branch`, and it would have a copy of all the data from `main`. Then `bencher run` would proceed using `feature_branch`.
+For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data. Then using `--if-branch feature_branch --else-if-branch main`, would create a new branch named `feature_branch`, and it would have a copy of all the data and thresholds from `main`. Then `bencher run` would proceed using `feature_branch`.
 
-It is also possible to use mutliple `--else-if-branch` flags. For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main` would effectively function the same as the previous example, copying all of the data from `main` and proceeding.
+It is also possible to use mutliple `--else-if-branch` flags. For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main` would effectively function the same as the previous example, copying all of the data and thresholds from `main` and proceeding.
 
 If the `--if-branch` query succeededs then `--else-if-branch` is never run, and if both `--if-branch` and `--else-if-branch` fail, `bencher run` will simply log and exit successfully.
 
@@ -34,7 +35,7 @@ If the `--if-branch` query succeededs then `--else-if-branch` is never run, and 
 
 To guarantee in all cases that the metrics from a run are stored, there is an `--else-branch` flag. The `--else-branch` flag takes no argumetns. If `--if-branch` fails, then `--else-branch` simply creates a new branch with the name given to `--if-branch`.
 
-For example, if `feature_branch` does not yet exist. Then using `--if-branch feature_branch --else-branch`, would create a new branch named `feature_branch`, and it would have no initial data. Then `bencher run` would proceed using `feature_branch`.
+For example, if `feature_branch` does not yet exist. Then using `--if-branch feature_branch --else-branch`, would create a new branch named `feature_branch`, and it would have no initial data nor thresholds. Then `bencher run` would proceed using `feature_branch`.
 
 It is also possible to chain all three flags together: `--if-branch`, `--else-if-branch`, and `--else-branch`. For example, `--if-branch feature_branch --else-if-branch main --else-branch`.
 
