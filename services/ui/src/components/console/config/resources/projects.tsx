@@ -23,6 +23,16 @@ const projectsConfig = {
 					path_params?.organization_slug
 				}/projects`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 Create your first project!</h4>
+						<p>
+							It's easy to create a project.
+							<br />
+							Tap below to get started.
+						</p>
+					</div>
+				),
 				path: addPath,
 				text: "Add a Project",
 			},

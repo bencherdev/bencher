@@ -37,6 +37,17 @@ const thresholdsConfig = {
 					path_params?.project_slug
 				}/thresholds`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 Create your first threshold!</h4>
+						<p>
+							It's easy to create a new threshold.
+							<br />
+							[Learn about thresholds](/docs/explanation/thresholds) or tap
+							below to get started.
+						</p>
+					</div>
+				),
 				path: addPath,
 				text: "Add a Threshold",
 			},

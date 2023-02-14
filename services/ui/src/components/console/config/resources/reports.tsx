@@ -13,8 +13,18 @@ const reportsConfig = {
 			url: (path_params) =>
 				`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/reports`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 No reports yet...</h4>
+						<p>
+							It's easy to run your benchmarks.
+							<br />
+							Tap below to learn how.
+						</p>
+					</div>
+				),
 				path: (_pathname) => "/docs/tutorial/quick-start",
-				text: "Run a Report",
+				text: "Run Your Benchmarks",
 			},
 			row: {
 				key: "start_time",

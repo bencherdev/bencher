@@ -23,6 +23,16 @@ const metricKindsConfig = {
 					path_params?.project_slug
 				}/metric-kinds`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 Who needs units anyway!</h4>
+						<p>
+							It's easy to create a new metric kind.
+							<br />
+							Tap below to get started.
+						</p>
+					</div>
+				),
 				path: addPath,
 				text: "Add a Metric Kind",
 			},

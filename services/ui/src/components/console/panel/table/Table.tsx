@@ -67,12 +67,15 @@ const Table = (props) => {
 
 const AddButton = (props) => {
 	return (
-		<Link
-			class="button is-primary is-fullwidth"
-			href={props.add?.path(props.pathname())}
-		>
-			{props.add?.text}
-		</Link>
+		<>
+			<div class="content has-text-centered">{props.add?.prefix}</div>
+			<Link
+				class="button is-primary is-fullwidth"
+				href={props.add?.path(props.pathname())}
+			>
+				{props.add?.text}
+			</Link>
+		</>
 	);
 };
 

@@ -16,10 +16,20 @@ const benchmarksConfig = {
 				}/benchmarks`;
 			},
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 No benchmarks yet...</h4>
+						<p>
+							It's easy to run your benchmarks.
+							<br />
+							Tap below to learn how.
+						</p>
+					</div>
+				),
 				path: (_pathname) => {
 					return "/docs/tutorial/quick-start";
 				},
-				text: "Run a Report",
+				text: "Run Your Benchmarks",
 			},
 			row: {
 				key: "name",

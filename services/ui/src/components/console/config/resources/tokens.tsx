@@ -21,6 +21,16 @@ const tokensConfig = {
 			url: (path_params) =>
 				`${BENCHER_API_URL()}/v0/users/${path_params?.user_slug}/tokens`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 Create your first API token!</h4>
+						<p>
+							It's easy to create an API token.
+							<br />
+							Tap below to get started.
+						</p>
+					</div>
+				),
 				path: addPath,
 				text: "Add an API Token",
 			},

@@ -23,6 +23,16 @@ const branchesConfig = {
 					path_params?.project_slug
 				}/branches`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 You did some pruning...</h4>
+						<p>
+							It's easy to add a new branch.
+							<br />
+							Tap below to get started.
+						</p>
+					</div>
+				),
 				path: addPath,
 				text: "Add a Branch",
 			},

@@ -23,6 +23,18 @@ const testbedsConfig = {
 					path_params?.project_slug
 				}/testbeds`,
 			add: {
+				prefix: (
+					<div>
+						<h4>
+							🐰 Goodbye, <code>localhost</code>!
+						</h4>
+						<p>
+							It's easy to add a new testbed.
+							<br />
+							Tap below to get started.
+						</p>
+					</div>
+				),
 				path: addPath,
 				text: "Add a Testbed",
 			},

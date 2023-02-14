@@ -47,6 +47,16 @@ const MembersConfig = {
 					path_params?.organization_slug
 				}/members`,
 			add: {
+				prefix: (
+					<div>
+						<h4>🐰 Who am I‽</h4>
+						<p>
+							It's easy to add a new organization member.
+							<br />
+							Tap below to get started.
+						</p>
+					</div>
+				),
 				path: invitePath,
 				text: "Invite an Organization Member",
 			},
