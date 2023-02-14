@@ -1,0 +1,27 @@
+Thresholds can be created for the unique combination of a Metric Kind, Branch, and Testbed.
+These are statistical thresholds that use either the
+[Z-score](https://en.wikipedia.org/wiki/Standard_score)
+or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test) in order to detect performance regressions and gerenerate Alerts.
+
+<div class="content has-text-centered">
+    <figure>
+<img
+    src="https://upload.wikimedia.org/wikipedia/commons/2/25/The_Normal_Distribution.svg"
+    width="800"
+    height="600"
+    alt="The Normal Distribution https://commons.wikimedia.org/wiki/File:The_Normal_Distribution.svg"
+/>
+<figcaption>🐰 Don't Panic! This will all make sense in a minute.</figcaption>
+</figure>
+</div>
+
+## Z-score
+
+The Z-score measures the number of [standard deviations](https://en.wikipedia.org/wiki/Standard_deviation) a given Metric is above or below the mean of historical Metrics.
+This is done using either the Left Side Boundary and/or the Right Side Boundary.
+For example, a 2σ 
+
+## Student's t-test
+
+There are several different kinds of Student's t-tests.
+Bencher uses a one-sample t-test.

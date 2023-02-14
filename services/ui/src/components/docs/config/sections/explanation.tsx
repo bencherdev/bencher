@@ -3,6 +3,7 @@ import ContinuousBenchmarking from "../../pages/explanation/ContinuousBenchmarki
 import BranchSelection from "../../pages/explanation/BranchSelection.mdx";
 import Talks from "../../pages/explanation/Talks.mdx";
 import Adapters from "../../pages/explanation/Adapters.mdx";
+import Thresholds from "../../pages/explanation/Thresholds.mdx";
 
 const Explanation = [
 	{
@@ -34,6 +35,15 @@ const Explanation = [
 				</>
 			),
 			content: <BranchSelection />,
+		},
+	},
+	{
+		title: "Thresholds & Alerts",
+		slug: "thresholds",
+		panel: {
+			kind: PageKind.MDX,
+			heading: "Thresholds & Alerts",
+			content: <Thresholds />,
 		},
 	},
 	{
