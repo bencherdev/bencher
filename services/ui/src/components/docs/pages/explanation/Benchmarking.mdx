@@ -1,0 +1,68 @@
+Most benchmark results are ephemeral.
+They disapear as soon as your terminal reaches its scrollback limit.
+Some benchmark harnesses let you cache results, but most only do so locally.
+Bencher allows you to track your benchmarks from both local and CI runs and compare against historical results.
+
+The easiest way to track your benchmarks is the `bencher run` CLI command.
+It wraps your existing benchmark harness output and generates a Report.
+This Report is then sent to the Bencher API server,
+where the benchmark harness output is parsed using a [benchmark harness adapter](/docs/explanation/adapters).
+The benchmark harness adapter detects all of the Benchmarks that are present and their corresponding Metrics.
+These Benchmarks and Metrics are then saved along with the Report.
+If there is a [Threshold](/docs/explanation/thresholds) set, then the new Metrics are compared against the historical Metrics for each Benchmark present in the Report. If a regression is detected, then an Alert will be generated.
+
+From here on out we will refer to your "benchmarks" as "performance regression tests" to avoid any confusion.
+
+## Benchmarks
+A Benchmark is a named performance regression test.
+If the performance regression test is new to Bencher, then a Benchmark is automatically created.
+Otherwise, the name of the performance regression test is used as the unique identifier for the Benchmark.
+
+Be careful when changing the name of your performance regression tests.
+There is currently no way for Bencher to track this change,
+so the renamed performance regression test will be considered a new Benchmark.
+This same word of caution also applies to _moving_ some performance regression tests.
+Depending on the benchmark harness, the path to the performance regression test may be a part of its name.
+
+<br />
+
+> 🐰 Let Us Know: Would like [a way to map an old Benchmark to a new Benchmark](https://github.com/bencherdev/bencher/issues/71)?
+
+### Metrics
+A Metric is a single, point-in-time performance regression test result.
+Up to three Measures may be collected for a single Metric: `value`, `lower_bound`, and `upper_bound`.
+The `value` is required for all Metrics while the `lower_bound` and `upper_bound` are independently optional.
+Which Measures are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters).
+
+### Metric Kind
+A Metric Kind is the unit of measure for a Metric.
+By default all Projects start with a `Latency` and `Throughput` Metric Kind
+with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
+The Metric Kind is determined by the [benchmark harness adapter](/docs/explanation/adapters).
+
+<br />
+
+## Report
+A Report is a collection Benchmarks and their Metrics for a particular Branch and Testbed.
+Reports are most often generated using the `bencher run` CLI command.
+See [how to track performance regression tests](/docs/how-to/track-benchmarks) for a full overview.
+
+### Branch
+A Branch is the `git` ref used when running a Report (ie branch name or tag).
+By default all Projects start with a `main` Branch.
+When using the `bencher run` CLI command, `main` is the default Branch if one is not provided.
+See [branch selection](/docs/explanation/branch-selection) for a full overview.
+
+### Testbed
+A Testbed is the name of the testing environment used when running a Report.
+By default all Projects start with a `localhost` Testbed.
+When using the `bencher run` CLI command, `localhost` is the default Testbed if one is not provided.
+
+<br />
+<br />
+
+> 🐰 Congrats! You have learned all about tracking ~~benchmarks~~ performance regression tests! 🎉
+
+<br/>
+
+<h2><a href="/docs/explanation/adapters">Keep Going: Benchmark Harness Adapters ➡</a></h2>

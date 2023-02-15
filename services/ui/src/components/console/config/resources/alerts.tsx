@@ -20,7 +20,7 @@ const alertsConfig = {
 					<div>
 						<h4>🐰 Good news, no alerts!</h4>
 						<p>
-							It's easy to run your benchmarks.
+							It's easy to track your benchmarks.
 							<br />
 							Tap below to learn how.
 						</p>
@@ -29,7 +29,7 @@ const alertsConfig = {
 				path: (_pathname) => {
 					return "/docs/tutorial/quick-start";
 				},
-				text: "Run Your Benchmarks",
+				text: "Track Your Benchmarks",
 			},
 			row: {
 				key: "uuid",

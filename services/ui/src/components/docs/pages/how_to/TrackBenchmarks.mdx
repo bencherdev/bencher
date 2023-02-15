@@ -1,47 +1,38 @@
-Most benchmark results are ephemeral.
-They disapear as soon as your terminal reaches its scrollback limit.
-Some benchmarking harnesses let you cache results, but most only do so locally.
-Bencher allows you to track your benchmarks from both local and CI runs and compare against historical results.
-
-Each Benchmark is tracked along with its Metric Kind, Branch, and Testbed.
-
-### Metric Kind
-A Metric Kind is the unit of measure for collected Metrics.
-By default all Projects start with a `Latency` and `Throughput` Metric Kind
-with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
-The Metric Kind is selected by the [benchmark harness adapter](/docs/explanation/adapters).
-
-### Branch
-A Branch is the `git` ref name for the collected Metrics.
-By default all Projects start with a `main` Branch.
-When using the `bencher run` CLI command, `main` is the default Branch if one is not provided.
-See [CLI branch selection](/docs/explanation/cli-branch-selection) for a full overview.
-
-### Testbed
-A Testbed is the name of the testing environment for the collected Metrics.
-By default all Projects start with a `localhost` Testbed.
-When using the `bencher run` CLI command, `localhost` is the default Testbed if one is not provided.
-
-## Historical Benchmarking
+The easiest way to track your benchmarks is the `bencher run` CLI command.
+See the [benchmarking overview](/docs/explanation/benchmarking) for a more in-depth explanation.
+This is an example of a `bencher run` CLI command to track benchmarks on a feature branch aptly named `feature-branch`:
 
 ```
 bencher run \
+--project save-walter-white \
+--token eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc \
+--adapter json \
 --if-branch feature-branch \
 --else-if-branch main \
 --else-branch \
+--testbed phoenix \
+--err \
 "bencher mock"`
 ```
 
-This is an example of a `bencher run` CLI command to perform historical benchmarking on a feature branch:
 
-1. Use the current branch if it exists in Bencher already (ex: `--if-branch feature-branch`)
-1. Create a clone of target branch data if it exists in Bencher already (ex: `--else-if-branch main`)
-1. Otherwise, create a new branch with the name provided by `--if-branch feature-branch` (ex: `--else-branch`)
-
-Using historical benchmarking allows you take full advantage of the[statistical Thresholds](/docs/explanation/thresholds)
-that Bencher provides.
+1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `--project save-walter-white`)
+1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ...`)
+1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `--adapter json`)
+1. There are several options for setting the project branch. See [branch selection](/docs/how-to/branch-selection) for a full overview.
+    1. Use the current branch if it already exists. (ex: `--if-branch feature-branch`)
+    1. Create a clone of target branch data if it already exists. (ex: `--else-if-branch main`)
+    1. Otherwise, create a new branch with the name provided to `--if-branch`, which would be `feature-branch`. (ex: `--else-branch`)
+1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. If this is not set, then the `localhost` Testbed will be used. (ex: `--testbed phoenix`)
+1. Set the command to fail if an Alert is generated. In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds) must already exist. (ex: `--err`)
+1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
 
 ## Relative Benchmarking
+
+Relative benchmarking runs a side-by-side comparison of two commits.
+This can be useful when dealing with noisy CI/CD environments,
+where the resource available can highly variable between runs.
+This is an example of a `bencher run` CLI command to perform relative benchmarking on a feature branch aptly named `feature-branch`:
 
 ```
 git checkout feature-branch
@@ -51,44 +42,52 @@ export FEATURE_BRANCH=feature-branch-$(git rev-parse --short HEAD)
 git checkout main
 
 bencher run \
-    --if-branch "$FEATURE_BRANCH" \
-    --else-branch \
-    --iter 3 \
-    "bencher mock"
+--if-branch "$FEATURE_BRANCH" \
+--else-branch \
+--iter 3 \
+"bencher mock"
 
 git checkout feature-branch
 
 bencher threshold create \
-    --metric-kind latency \
-    --branch "$FEATURE_BRANCH" \
-    --testbed localhost \
-    --test t \
-    --right-side 0.95
+--metric-kind latency \
+--branch "$FEATURE_BRANCH" \
+--testbed localhost \
+--test t \
+--right-side 0.95
 
 bencher run \
-    --if-branch "$FEATURE_BRANCH" \
-    --iter 3 \
-    --fold min \
-    "bencher mock"
+--if-branch "$FEATURE_BRANCH" \
+--iter 3 \
+--fold min \
+"bencher mock"
 ```
 
-This is an example of a `bencher run` CLI command to perform relative benchmarking on a feature branch.
-
-1. Checkout the feature branch (ex: `feature-branch`)
-1. Create an environment variable that is the name of the feature branch concatenated with the short git commit ID
-1. Checkout the target branch (ex: `main`)
+1. Checkout the feature branch. (ex: `feature-branch`)
+1. Create an environment variable that is the name of the feature branch concatenated with the short git commit ID. This is important! It guarantees that for each run a new branch is created.
+1. Checkout the target branch. (ex: `main`)
 1. Run `bencher run` for the target branch:
-    1. The given branch will not exist yet (ex: `--if-branch "$FEATURE_BRANCH"`)
-    1. So it will be create (ex: `--else-branch`)
-    1. Run the tests three times (ex: `--iter 3`)
-1. Checkout the feature branch (ex: `feature-branch`)
+    1. The given branch will not exist yet. (ex: `--if-branch "$FEATURE_BRANCH"`)
+    1. So it will be create. (ex: `--else-branch`)
+    1. Run the benchmarks three times. (ex: `--iter 3`)
+1. Checkout the feature branch. (ex: `feature-branch`)
 1. Create a Threshold for the feature branch:
-    1. The Metric Kind for the benchmarks is Latency (ex: `--metric-kind latency`)
-    1. The Branch is the feature branch with the appended git commit ID (ex: `--branch "$FEATURE_BRANCH"`)
-    1. The Testbed is running locally (ex: `--testbed localhost`)
-    1. There are less than 30 metrics, use a Student's t-test (ex: `--test t`)
-    1. Set a right side boundary of 95.0% because a larger Latency indicates a performance regression (ex: `--right-side 0.95`)
+    1. The Metric Kind for the benchmarks is Latency. (ex: `--metric-kind latency`)
+    1. The Branch is the feature branch with the appended git commit ID. (ex: `--branch "$FEATURE_BRANCH"`)
+    1. The Testbed is running locally. (ex: `--testbed localhost`)
+    1. There are less than 30 metrics, use a Student's t-test. (ex: `--test t`)
+    1. Set a right side boundary of 95.0% because a larger Latency indicates a performance regression. (ex: `--right-side 0.95`)
 1. Run `bencher run` for the feature branch:
-    1. The Branch will exist since it was just created (ex: `--if-branch "$FEATURE_BRANCH"`)
-    1. Run the tests three times (ex: `--iter 3`)
-    1. Fold all three Metrics into the minimum value (ex: `--fold min`)
+    1. The Branch will exist since it was just created. (ex: `--if-branch "$FEATURE_BRANCH"`)
+    1. Run the tests three times. (ex: `--iter 3`)
+    1. Fold all three Metrics into the minimum value. (ex: `--fold min`)
+
+<br/>
+<br/>
+
+> 🐰 Congrats! You have learned how to use Bencher to track benchmarks! 🎉
+
+<br/>
+
+<h2><a href="/docs/how-to/github-actions">Add Bencher to GitHub Actions ➡</a></h2>
+<h2><a href="/docs/how-to/gitlab-ci-cd">Add Bencher to GitLab CI/CD ➡</a></h2>

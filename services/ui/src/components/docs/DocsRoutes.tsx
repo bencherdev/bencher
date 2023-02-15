@@ -20,7 +20,11 @@ const DocsRoutes = (_props) => {
 			/>
 			<Route
 				path="/explanation/branch-management"
-				element={<Navigate href="/docs/explanation/cli-branch-selection" />}
+				element={<Navigate href="/docs/explanation/branch-selection" />}
+			/>
+			<Route
+				path="/explanation/cli-branch-selection"
+				element={<Navigate href="/docs/explanation/branch-selection" />}
 			/>
 			<Route path="/explanation" element={<Navigate href="/docs" />} />
 			<Route path="/reference" element={<Navigate href="/docs" />} />

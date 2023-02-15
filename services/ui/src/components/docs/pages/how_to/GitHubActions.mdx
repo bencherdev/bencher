@@ -7,9 +7,9 @@ import { BENCHER_VERSION } from "../../../site/util";
     runs-on: ubuntu-latest
     env:
       BENCHER_PROJECT: save-walter-white
-      BENCHER_TESTBED: ubuntu-latest
-      BENCHER_ADAPTER: rust
       BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
+      BENCHER_ADAPTER: json
+      BENCHER_TESTBED: ubuntu-latest
       BENCHER_VERSION: ${BENCHER_VERSION}
     steps:
       - uses: actions/checkout@v3
@@ -23,28 +23,33 @@ import { BENCHER_VERSION } from "../../../site/util";
           --if-branch "$GITHUB_REF_NAME" \\
           --else-if-branch "$GITHUB_BASE_REF" \\
           --else-if-branch main \\
-          --else-branch \\
           --err \\
           "bencher mock"`}
   </code>
 </pre>
 
 1. Create a GitHub Actions `job` (ex: `benchmark_with_bencher`)
-2. The Bencher project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
-3. There are several options for setting the project branch. See [branch selection](/docs/how-to/cli-branch-selection) for a full overview.
+1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
+1. Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
+1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
+1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: json`)
+1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: ubuntu-latest`)
+1. Optional: Create an environment variable to make it easy to keep track the CLI version being used. (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
+1. Checkout your source code. (ex: `uses: actions/checkout@v3`)
+1. Download and install the Bencher CLI from a `.deb`.
+1. [Track your benchmarks](/docs/how-to/track-benchmarks) with the `bencher run` CLI command:
+    1. There are several options for setting the project branch. See [branch selection](/docs/how-to/branch-selection) for a full overview. The provided command uses [GitHub Action default environment variables](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) and it tries to:
+        1. Use the current branch data if it already exists. (ex: `--if-branch "$GITHUB_REF_NAME"`)
+        1. Create a clone of PR target branch data and thresholds if it already exists. (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
+        1. Otherwise, create a clone of the `main` branch data and thresholds. (ex: `--else-if-branch main`)
+    1. Set the command to fail if an Alert is generated. In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds) must already exist. (ex: `--err`)
+    1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
 
-> The provided command uses [GitHub Action default environment variables](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) and it tries to:
-> 1. Use the current branch data if it exists in Bencher already (ex: `--if-branch "$GITHUB_REF_NAME"`)
-> 1. Create a clone of PR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
-> 1. Create a clone of the `main` branch data and thresholds if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
-> 1. Otherwise, create a new branch with the name provided by `--if-branch "$GITHUB_REF_NAME"` (ex: `--else-branch`)
+<br/>
+<br/>
 
-4. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: ubuntu-latest`)
-5. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: rust`)
-6. Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
-7. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
-8. Optional: Create an environment variable to make it easy to keep track the CLI version being used (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
-9. Checkout your source code (ex: `uses: actions/checkout@v3`)
-10. Install the Bencher CLI from a `.deb`
-11. Run your benchmarks (ex: `bencher mock`) with the `bencher run` command (ex: `bencher run "bencher mock"`)
-12. Set the `--err` flag to fail on an alert (ex: `bencher run --err "bencher mock"`)
+> 🐰 Congrats! You have learned how to use Bencher in GitHub Actions! 🎉
+
+<br/>
+
+<h2><a href="/docs/explanation/continuous-benchmarking">Keep Going: Learn about Continuous Benchmarking ➡</a></h2>

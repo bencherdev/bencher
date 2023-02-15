@@ -18,12 +18,15 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [Quick Start](https://bencher.dev/docs/tutorial/quick-start)
 - How To
   - [Install CLI](https://bencher.dev/docs/how-to/install-cli)
+  - [Track Benchmarks](https://bencher.dev/docs/how-to/track-benchmarks)
   - [GitHub Actions](https://bencher.dev/docs/how-to/github-actions)
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
 - Explanation
-  - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
+  - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking)
   - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters)
-  - [CLI Branch Selection](https://bencher.dev/docs/explanation/cli-branch-selection)
+  - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection)
+  - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds)
+  - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
   - [Talks](https://bencher.dev/docs/explanation/talks)
 - Reference
   - [REST API](https://bencher.dev/docs/reference/api)

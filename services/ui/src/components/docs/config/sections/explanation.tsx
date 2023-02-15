@@ -4,15 +4,16 @@ import BranchSelection from "../../pages/explanation/BranchSelection.mdx";
 import Talks from "../../pages/explanation/Talks.mdx";
 import Adapters from "../../pages/explanation/Adapters.mdx";
 import Thresholds from "../../pages/explanation/Thresholds.mdx";
+import Benchmarking from "../../pages/explanation/Benchmarking.mdx";
 
 const Explanation = [
 	{
-		title: "Continuous Benchmarking",
-		slug: "continuous-benchmarking",
+		title: "Benchmarking Overview",
+		slug: "benchmarking",
 		panel: {
 			kind: PageKind.MDX,
-			heading: "What is Continuous Benchmarking?",
-			content: <ContinuousBenchmarking />,
+			heading: "Benchmarking Overview",
+			content: <Benchmarking />,
 		},
 	},
 	{
@@ -25,8 +26,8 @@ const Explanation = [
 		},
 	},
 	{
-		title: "CLI Branch Selection",
-		slug: "cli-branch-selection",
+		title: "Branch Selection",
+		slug: "branch-selection",
 		panel: {
 			kind: PageKind.MDX,
 			heading: (
@@ -44,6 +45,15 @@ const Explanation = [
 			kind: PageKind.MDX,
 			heading: "Thresholds & Alerts",
 			content: <Thresholds />,
+		},
+	},
+	{
+		title: "Continuous Benchmarking",
+		slug: "continuous-benchmarking",
+		panel: {
+			kind: PageKind.MDX,
+			heading: "What is Continuous Benchmarking?",
+			content: <ContinuousBenchmarking />,
 		},
 	},
 	{
