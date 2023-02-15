@@ -15,7 +15,7 @@ The Metric Kind is selected by the [benchmark harness adapter](/docs/explanation
 A Branch is the `git` ref name for the collected Metrics.
 By default all Projects start with a `main` Branch.
 When using the `bencher run` CLI command, `main` is the default Branch if one is not provided.
-See [CLI branch selection](docs/explanation/cli-branch-selection) for a full overview.
+See [CLI branch selection](/docs/explanation/cli-branch-selection) for a full overview.
 
 ### Testbed
 A Testbed is the name of the testing environment for the collected Metrics.
@@ -25,14 +25,14 @@ When using the `bencher run` CLI command, `localhost` is the default Testbed if 
 ## Historical Benchmarking
 
 ```
-bencher run \\
-    --if-branch feature-branch \\
-    --else-if-branch main \\
-    --else-branch \\
-    "bencher mock"`
+bencher run \
+--if-branch feature-branch \
+--else-if-branch main \
+--else-branch \
+"bencher mock"`
 ```
 
-This is an example of a `bencher run` CLI command to perform historical benchmarking on a feature branch.
+This is an example of a `bencher run` CLI command to perform historical benchmarking on a feature branch:
 
 1. Use the current branch if it exists in Bencher already (ex: `--if-branch feature-branch`)
 1. Create a clone of target branch data if it exists in Bencher already (ex: `--else-if-branch main`)
