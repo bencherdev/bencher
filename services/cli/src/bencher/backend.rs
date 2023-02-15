@@ -63,6 +63,14 @@ impl Backend {
         self.send::<()>(Method::Get, path).await
     }
 
+    pub async fn get_query(
+        &self,
+        path: &str,
+        query: Vec<(String, String)>,
+    ) -> Result<serde_json::Value, CliError> {
+        self.send::<()>(Method::GetQuery(query), path).await
+    }
+
     pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
@@ -96,6 +104,7 @@ impl Backend {
         let url = self.host.join(path)?.to_string();
         let mut builder = match method {
             Method::Get => client.get(&url),
+            Method::GetQuery(query) => client.get(&url).query(&query),
             Method::Post(json) => client.post(&url).json(json),
             Method::Put(json) => client.put(&url).json(json),
             Method::Patch(json) => client.patch(&url).json(json),
@@ -136,6 +145,7 @@ impl Backend {
 
 enum Method<T> {
     Get,
+    GetQuery(Vec<(String, String)>),
     Post(T),
     Put(T),
     Patch(T),

@@ -154,9 +154,10 @@ async fn get_branch(
     backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
     let value = backend
-        .get(&format!(
-            "/v0/projects/{project}/branches?name={branch_name}"
-        ))
+        .get_query(
+            &format!("/v0/projects/{project}/branches"),
+            vec![("name".into(), branch_name.to_string())],
+        )
         .await?;
     let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
     let branch_count = json_branches.len();
