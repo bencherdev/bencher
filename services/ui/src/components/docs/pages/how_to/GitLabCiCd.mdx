@@ -34,7 +34,7 @@ import { BENCHER_VERSION } from "../../../site/util";
 > 1. Use the current branch if it exists in Bencher already (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
 > 1. Create a clone of MR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
 > 1. Create a clone of the `main` branch data and thresholds if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
-> 1. Create a new branch with the name provided by `--if-branch "$CI_COMMIT_REF_NAME"` (ex: `--else-branch`)
+> 1. Otherwise, create a new branch with the name provided by `--if-branch "$CI_COMMIT_REF_NAME"` (ex: `--else-branch`)
 
 5. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: bullseye`)
 6. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: rust`)
