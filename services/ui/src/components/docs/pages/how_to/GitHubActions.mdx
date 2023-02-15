@@ -18,13 +18,14 @@ import { BENCHER_VERSION } from "../../../site/util";
           wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
           sudo dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
       - name: Benchmark with Bencher
-        run: bencher run \\
-        --if-branch $GITHUB_REF_NAME \\
-        --else-if-branch $GITHUB_BASE_REF \\
-        --else-if-branch main \\
-        --else-branch \\
-        --err \\
-        "bencher mock"`}
+        run: |
+          bencher run \\
+          --if-branch "$GITHUB_REF_NAME" \\
+          --else-if-branch "$GITHUB_BASE_REF" \\
+          --else-if-branch main \\
+          --else-branch \\
+          --err \\
+          "bencher mock"`}
   </code>
 </pre>
 
@@ -33,10 +34,10 @@ import { BENCHER_VERSION } from "../../../site/util";
 3. There are several options for setting the project branch. See [branch selection](/docs/how-to/cli-branch-selection) for a full overview.
 
 > The provided command uses [GitHub Action default environment variables](https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables) and it tries to:
-> 1. Use the current branch data if it exists in Bencher already (ex: `--if-branch $GITHUB_REF_NAME`)
-> 1. Create a clone of PR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch $GITHUB_BASE_REF`)
+> 1. Use the current branch data if it exists in Bencher already (ex: `--if-branch "$GITHUB_REF_NAME"`)
+> 1. Create a clone of PR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch "$GITHUB_BASE_REF"`)
 > 1. Create a clone of the `main` branch data and thresholds if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
-> 1. Create a new branch with the name provided by `--if-branch $CI_COMMIT_REF_NAME` (ex: `--else-branch`)
+> 1. Create a new branch with the name provided by `--if-branch "$GITHUB_REF_NAME"` (ex: `--else-branch`)
 
 4. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: ubuntu-latest`)
 5. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: rust`)

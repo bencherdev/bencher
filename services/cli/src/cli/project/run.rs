@@ -70,8 +70,7 @@ pub struct CliRunBranch {
     #[clap(long, requires = "if_branch")]
     pub else_branch: bool,
 
-    /// An optional marker for the end of the if branch statement.
-    /// This is useful for `--if-branch` and `--else-if-branch` to exit successfully in the case that an environment variable is empty (requires `--if-branch`)
+    /// An optional marker for the end of the if branch statement. (requires `--if-branch`)
     #[clap(long, requires = "if_branch")]
     pub endif_branch: bool,
 }

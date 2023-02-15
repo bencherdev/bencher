@@ -3,10 +3,10 @@ import { BENCHER_VERSION } from "../../../site/util";
 <pre>
   <code>
     {`benchmark_with_bencher:
-    image: rust:1.66-bullseye
+    image: rust:bullseye
     variables:
       BENCHER_PROJECT: save-walter-white
-      BENCHER_TESTBED: rust-1-66-bullseye
+      BENCHER_TESTBED: bullseye
       BENCHER_ADAPTER: rust
       BENCHER_API_TOKEN: \${{ secrets.BENCHER_API_TOKEN }}
       BENCHER_VERSION: ${BENCHER_VERSION}
@@ -14,28 +14,29 @@ import { BENCHER_VERSION } from "../../../site/util";
       - wget https://github.com/bencherdev/bencher/releases/download/v\${BENCHER_VERSION}/bencher_\${BENCHER_VERSION}_amd64.deb
       - dpkg -i bencher_\${BENCHER_VERSION}_amd64.deb
     script:
-      - bencher run \\
-      --if-branch $CI_COMMIT_REF_NAME \\
-      --else-if-branch $CI_MERGE_REQUEST_TARGET_BRANCH_NAME \\
-      --else-if-branch main \\
-      --else-branch \\
-      --err \\
-      "bencher mock"`}
+      - |
+        bencher run \\
+        --if-branch "$CI_COMMIT_REF_NAME" \\
+        --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \\
+        --else-if-branch main \\
+        --else-branch \\
+        --err \\
+        "bencher mock"`}
   </code>
 </pre>
 
 1. Create a GitLab CI/CD `job` (ex: `benchmark_with_bencher`)
-2. Select a Docker image to run your job in (ex: `image: rust:1.66-bullseye`)
+2. Select a Docker image to run your job in (ex: `image: rust:bullseye`)
 3. The Bencher project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
 4. There are several options for setting the project branch. See [branch selection](/docs/how-to/cli-branch-selection) for a full overview.
 
 > The provided command uses [GitLab CI/CD predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) and it tries to:
-> 1. Use the current branch if it exists in Bencher already (ex: `--if-branch $CI_COMMIT_REF_NAME`)
-> 1. Create a clone of MR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch $CI_MERGE_REQUEST_TARGET_BRANCH_NAME`)
+> 1. Use the current branch if it exists in Bencher already (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
+> 1. Create a clone of MR target branch data and thresholds if it exists in Bencher already (ex: `--else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)
 > 1. Create a clone of the `main` branch data and thresholds if it exists in Bencher already. `main` exists by default in all projects. (ex: `--else-if-branch main`)
-> 1. Create a new branch with the name provided by `--if-branch $CI_COMMIT_REF_NAME` (ex: `--else-branch`)
+> 1. Create a new branch with the name provided by `--if-branch "$CI_COMMIT_REF_NAME"` (ex: `--else-branch`)
 
-5. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: rust-1-66-bullseye`)
+5. The project testbed must already exist. Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the testbed slug or UUID. (ex: `BENCHER_TESTBED: bullseye`)
 6. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: rust`)
 7. Add `BENCHER_API_TOKEN` to your project's CI/CD secrets, under `Settings -> CI / CD -> Variables -> Add Variable`
 8. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)

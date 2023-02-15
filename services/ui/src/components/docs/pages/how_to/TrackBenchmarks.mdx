@@ -6,22 +6,20 @@ Bencher allows you to track your benchmarks from both local and CI runs and comp
 Each Benchmark is tracked along with its Metric Kind, Branch, and Testbed.
 
 ### Metric Kind
-A Metric Kind is a unit of measure for collected Metrics.
+A Metric Kind is the unit of measure for collected Metrics.
 By default all Projects start with a `Latency` and `Throughput` Metric Kind
 with units of `nanoseconds (ns)` and `operations / second (ops/s)` respectively.
-
-For all built in [benchmark harness adapter](/docs/explanation/adapters),
-the correct Metric Kind is automatically selected for you.
+The Metric Kind is selected by the [benchmark harness adapter](/docs/explanation/adapters).
 
 ### Branch
-A Branch is a `git` ref name for the collected Metrics.
+A Branch is the `git` ref name for the collected Metrics.
 By default all Projects start with a `main` Branch.
 When using the `bencher run` CLI command, `main` is the default Branch if one is not provided.
 See [CLI branch selection](docs/explanation/cli-branch-selection) for a full overview.
 
 ### Testbed
 A Testbed is the name of the testing environment for the collected Metrics.
-By default all Projects start with a `localhost` Branch.
+By default all Projects start with a `localhost` Testbed.
 When using the `bencher run` CLI command, `localhost` is the default Testbed if one is not provided.
 
 ## Historical Benchmarking
