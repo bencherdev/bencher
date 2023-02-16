@@ -1,6 +1,16 @@
 import { Link, useNavigate } from "solid-app-router";
-import { createEffect } from "solid-js";
+import { createEffect, For } from "solid-js";
 import { BENCHER_TITLE, pageTitle, validate_jwt } from "../util";
+
+const LanguageIcon = (props: { icon: string }) => {
+	return (
+		<div class="column is-1">
+			<span class="icon has-text-primary is-large">
+				<i class={`${props.icon} fa-5x`} aria-hidden="true" />
+			</span>
+		</div>
+	);
+};
 
 const LandingPage = (props) => {
 	const navigate = useNavigate();
@@ -28,7 +38,7 @@ const LandingPage = (props) => {
 								class="button is-primary is-large is-responsive is-fullwidth"
 								onClick={(e) => {
 									e.preventDefault();
-									navigate("/auth/signup");
+									navigate("/pricing");
 								}}
 							>
 								Start Now
@@ -128,54 +138,20 @@ const LandingPage = (props) => {
 					<h2>Use Your Favorite Tools</h2>
 					<br />
 					<div class="columns is-centered is-vcentered is-multiline">
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-csharp-line fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-cplusplus-line fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i
-									class="devicon-go-original-wordmark fa-5x"
-									aria-hidden="true"
-								/>
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-java-plain fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-javascript-plain fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-python-plain fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-ruby-plain fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-rails-plain fa-5x" aria-hidden="true" />
-							</span>
-						</div>
-						<div class="column is-1">
-							<span class="icon has-text-primary is-large">
-								<i class="devicon-rust-plain fa-5x" aria-hidden="true" />
-							</span>
-						</div>
+						<For
+							each={[
+								"devicon-cplusplus-line",
+								"devicon-python-plain",
+								"devicon-java-plain",
+								"devicon-javascript-plain",
+								"devicon-ruby-plain",
+								"devicon-csharp-line",
+								"devicon-go-original-wordmark",
+								"devicon-rust-plain",
+							]}
+						>
+							{(icon) => <LanguageIcon icon={icon} />}
+						</For>
 					</div>
 				</div>
 			</div>
@@ -211,9 +187,15 @@ const LandingPage = (props) => {
 										</p>
 										<br />
 									</div>
-									<Link href="/docs/how-to/quick-start">
-										<button class="button is-fullwidth">Learn More</button>
-									</Link>
+									<button
+										class="button is-fullwidth"
+										onClick={(e) => {
+											e.preventDefault();
+											navigate("/docs/how-to/quick-start");
+										}}
+									>
+										Learn More
+									</button>
 								</div>
 							</div>
 						</div>
@@ -240,9 +222,15 @@ const LandingPage = (props) => {
 										</p>
 										<br />
 									</div>
-									<Link href="/docs/how-to/quick-start">
-										<button class="button is-fullwidth">Learn More</button>
-									</Link>
+									<button
+										class="button is-fullwidth"
+										onClick={(e) => {
+											e.preventDefault();
+											navigate("/pricing");
+										}}
+									>
+										Get Started
+									</button>
 								</div>
 							</div>
 						</div>

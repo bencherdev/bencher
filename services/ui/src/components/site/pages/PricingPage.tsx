@@ -41,24 +41,6 @@ const PricingPage = (props) => {
 			<hr />
 			<section class="section">
 				<div class="pricing-table is-comparative">
-					<div class="pricing-plan is-features">
-						<div class="plan-header">Features</div>
-						<div class="plan-price">
-							<span class="plan-price-amount">
-								<small>
-									<small>Cloud or Self-Hosted</small>
-								</small>
-							</span>
-						</div>
-						<div class="plan-items">
-							<div class="plan-item">Public Projects</div>
-							<div class="plan-item">Private Projects</div>
-							{/* <div class="plan-item">Team Roles</div> */}
-							{/* <div class="plan-item">Support</div> */}
-							{/* <div class="plan-item">SSO</div> */}
-						</div>
-						<div class="plan-footer" />
-					</div>
 					<div class="pricing-plan">
 						<div class="plan-header">Free</div>
 						<div class="plan-price">
@@ -66,36 +48,23 @@ const PricingPage = (props) => {
 						</div>
 						<div class="plan-items">
 							<div class="plan-item" data-feature="Public Projects">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true" />
-								</span>
+								Public Projects
 							</div>
 							<div class="plan-item" data-feature="Private Projects">
-								<span class="icon is-small">
-									<i class="fas fa-times" aria-hidden="true" />
-								</span>
+								Community Support
 							</div>
-							{/* <div class="plan-item" data-feature="Team Roles">
-								<span class="icon is-small">
-									<i class="fas fa-times" aria-hidden="true" />
-								</span>
-							</div>
-							<div class="plan-item" data-feature="Support">
-								<span class="icon is-small">
-									<i class="fas fa-times" aria-hidden="true" />
-								</span>
-							</div>
-							<div class="plan-item" data-feature="SSO">
-								<span class="icon is-small">
-									<i class="fas fa-times" aria-hidden="true" />
-								</span>
-							</div> */}
 						</div>
-						<div class="plan-footer">
-							<Link href="/docs/how-to/quick-start">
-								<button class="button is-fullwidth">Get Started</button>
-							</Link>
-						</div>
+						<Link href="/docs/how-to/quick-start">
+							<button
+								class="button is-fullwidth"
+								onClick={(e) => {
+									e.preventDefault();
+									navigate("/auth/signup");
+								}}
+							>
+								Sign up for free
+							</button>
+						</Link>
 					</div>
 
 					{/* <div class="pricing-plan is-active">
