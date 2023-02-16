@@ -123,6 +123,63 @@ const LandingPage = (props) => {
 			</section>
 
 			<hr />
+			<div class="box">
+				<div class="content has-text-centered">
+					<h2>Use Your Favorite Tools</h2>
+					<br />
+					<div class="columns is-centered is-vcentered is-multiline">
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-csharp-line fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-cplusplus-line fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i
+									class="devicon-go-original-wordmark fa-5x"
+									aria-hidden="true"
+								/>
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-java-plain fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-javascript-plain fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-python-plain fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-ruby-plain fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-rails-plain fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+						<div class="column is-1">
+							<span class="icon has-text-primary is-large">
+								<i class="devicon-rust-plain fa-5x" aria-hidden="true" />
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<hr />
 
 			<section class="section">
 				<div class="container">
