@@ -173,6 +173,7 @@ const ConsoleRoutes = (props) => {
 				path="/users/:user_slug/tokens/:token_uuid"
 				element={consolePage(config?.[Resource.TOKENS]?.[Operation.VIEW])}
 			/>
+			<Route path="/billing" element={<div>HERE</div>} />
 		</>
 	);
 };

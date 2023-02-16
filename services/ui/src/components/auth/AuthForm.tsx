@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Accessor, createMemo } from "solid-js";
+import { createSignal, createEffect, createMemo } from "solid-js";
 import axios from "axios";
 
 import Field from "../field/Field";
@@ -10,9 +10,12 @@ import {
 	notifyParams,
 	post_options,
 	validate_jwt,
+	validate_plan,
 } from "../site/util";
-import { useLocation, useNavigate } from "solid-app-router";
+import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import FieldKind from "../field/kind";
+
+export const PLAN_PARAM = "plan";
 
 export interface Props {
 	config: any;
@@ -25,7 +28,14 @@ export const AuthForm = (props: Props) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
+	const [searchParams, setSearchParams] = useSearchParams();
 
+	if (searchParams[PLAN_PARAM] && !validate_plan(searchParams[PLAN_PARAM])) {
+		setSearchParams({ [PLAN_PARAM]: null });
+	}
+	const plan = createMemo(() =>
+		searchParams[PLAN_PARAM] ? searchParams[PLAN_PARAM].trim() : null,
+	);
 	const [form, setForm] = createSignal(initForm());
 
 	const handleField = (key, value, valid) => {
@@ -97,6 +107,7 @@ export const AuthForm = (props: Props) => {
 				name: signup_form.username.value?.trim(),
 				slug: null,
 				email: form_email,
+				plan: plan(),
 				invite: invite,
 			};
 		} else if (props.config?.kind === FormKind.LOGIN) {
@@ -104,6 +115,7 @@ export const AuthForm = (props: Props) => {
 			form_email = login_form.email.value?.trim();
 			data = {
 				email: form_email,
+				plan: plan(),
 				invite: invite,
 			};
 		}

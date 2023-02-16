@@ -69,7 +69,7 @@ const PricingPage = (props) => {
 										class="button is-fullwidth"
 										onClick={(e) => {
 											e.preventDefault();
-											navigate("/auth/signup");
+											navigate("/auth/signup?plan=free");
 										}}
 									>
 										Sign up for free
@@ -105,7 +105,7 @@ const PricingPage = (props) => {
 								class="button is-fullwidth"
 								onClick={(e) => {
 									e.preventDefault();
-									navigate("/auth/signup");
+									navigate("/auth/signup?plan=team");
 								}}
 							>
 								Continue with Team
@@ -141,7 +141,7 @@ const PricingPage = (props) => {
 										class="button is-fullwidth"
 										onClick={(e) => {
 											e.preventDefault();
-											navigate("/auth/signup");
+											navigate("/auth/signup?plan=enterprise");
 										}}
 									>
 										Continue with Enterprise

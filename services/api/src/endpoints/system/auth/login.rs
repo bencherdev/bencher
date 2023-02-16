@@ -66,6 +66,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
         return Err(ApiError::Locked(query_user.id, query_user.email));
     }
 
+    let plan = json_login.plan;
     if let Some(invite) = &json_login.invite {
         let insert_org_role =
             InsertOrganizationRole::from_jwt(conn, &api_context.secret_key, invite, query_user.id)?;
@@ -93,6 +94,9 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .clone()
             .join("/auth/confirm")
             .map(|mut url| {
+                if let Some(plan) = plan {
+                    url.query_pairs_mut().append_pair("plan", plan.as_ref());
+                }
                 url.query_pairs_mut().append_pair("token", &token_string);
                 url.into()
             })

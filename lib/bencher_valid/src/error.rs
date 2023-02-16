@@ -26,4 +26,6 @@ pub enum ValidError {
     GitHash(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
+    #[error("Failed to validate plan: {0}")]
+    Plan(String),
 }

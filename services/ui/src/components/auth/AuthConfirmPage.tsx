@@ -10,9 +10,11 @@ import {
 	pageTitle,
 	post_options,
 	validate_jwt,
+	validate_plan,
 } from "../site/util";
 import Notification from "../site/Notification";
 import FieldKind from "../field/kind";
+import { PLAN_PARAM } from "./AuthForm";
 
 const TOKEN_PARAM = "token";
 const EMAIL_PARAM = "email";
@@ -30,10 +32,17 @@ const AuthConfirmPage = (props: {
 	if (searchParams[TOKEN_PARAM] && !validate_jwt(searchParams[TOKEN_PARAM])) {
 		setSearchParams({ [TOKEN_PARAM]: null });
 	}
-
 	const token = createMemo(() =>
 		searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null,
 	);
+
+	if (searchParams[PLAN_PARAM] && !validate_plan(searchParams[PLAN_PARAM])) {
+		setSearchParams({ [PLAN_PARAM]: null });
+	}
+	const plan = createMemo(() =>
+		searchParams[PLAN_PARAM] ? searchParams[PLAN_PARAM].trim() : null,
+	);
+
 	const email = createMemo(() =>
 		searchParams[EMAIL_PARAM] ? searchParams[EMAIL_PARAM].trim() : null,
 	);
@@ -68,16 +77,7 @@ const AuthConfirmPage = (props: {
 		handleFormSubmitting(true);
 		post()
 			.then((data) => {
-				if (props.handleUser(data)) {
-					navigate(
-						notifyParams(
-							props.config?.form?.redirect,
-							NotifyKind.OK,
-							"Ahoy!",
-							null,
-						),
-					);
-				} else {
+				if (!props.handleUser(data)) {
 					navigate(
 						notifyParams(
 							pathname(),
@@ -107,6 +107,7 @@ const AuthConfirmPage = (props: {
 
 	const post_resend = async (data: {
 		email: string;
+		plan: null | string;
 	}) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/login`;
 		const no_token = null;
@@ -120,6 +121,7 @@ const AuthConfirmPage = (props: {
 
 		const data = {
 			email: email().trim(),
+			plan: plan()?.trim(),
 		};
 
 		post_resend(data)
@@ -151,7 +153,14 @@ const AuthConfirmPage = (props: {
 
 	createEffect(() => {
 		if (validate_jwt(props.user?.token)) {
-			navigate("/console");
+			navigate(
+				notifyParams(
+					props.config?.form?.redirect[plan() ? plan() : "free"],
+					NotifyKind.OK,
+					"Ahoy!",
+					null,
+				),
+			);
 		}
 
 		pageTitle(props.config?.title);

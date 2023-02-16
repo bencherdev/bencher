@@ -1,5 +1,5 @@
 import axios from "axios";
-import { is_valid_jwt } from "bencher_valid";
+import { is_valid_jwt, is_valid_plan } from "bencher_valid";
 import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
 
@@ -78,6 +78,10 @@ export const validate_string = (
 
 export const validate_jwt = (token: string): boolean => {
 	return validate_string(token, is_valid_jwt);
+};
+
+export const validate_plan = (token: string): boolean => {
+	return validate_string(token, is_valid_plan);
 };
 
 // TODO improve this validation
@@ -253,7 +257,7 @@ export const notifyParams = (
 	pathname,
 	notify_kind: NotifyKind,
 	notify_text: string,
-	search_params: null | Array<[string, string]>,
+	search_params: null | string[][],
 ) => {
 	let params = new URLSearchParams(window.location.search);
 	params.set(NOTIFY_KIND_PARAM, notify_kind.toString());
@@ -264,5 +268,6 @@ export const notifyParams = (
 		});
 	}
 	let params_str = params.toString();
+	console.log(`${pathname}?${params_str}`);
 	return `${pathname}?${params_str}`;
 };

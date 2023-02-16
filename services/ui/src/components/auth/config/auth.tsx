@@ -34,7 +34,11 @@ const AUTH_CONFIG = {
 		sub: "Please check your email for a one-time token. Either click the link or paste the token here.",
 		form: {
 			path: `${BENCHER_API_URL()}/v0/auth/confirm`,
-			redirect: "/console",
+			redirect: {
+				free: "/console",
+				team: "/console/billing",
+				enterprise: "/console/billing",
+			},
 		},
 	},
 	[Auth.LOGOUT]: {

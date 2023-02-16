@@ -59,6 +59,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database.connection;
 
+    let plan = json_signup.plan;
     let invite = json_signup.invite.take();
     let email = json_signup.email.clone();
     let mut insert_user = InsertUser::from_json(conn, json_signup)?;
@@ -118,6 +119,9 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
             .clone()
             .join("/auth/confirm")
             .map(|mut url| {
+                if let Some(plan) = plan {
+                    url.query_pairs_mut().append_pair("plan", plan.as_ref());
+                }
                 url.query_pairs_mut().append_pair("token", &token_string);
                 url.into()
             })
