@@ -42,19 +42,69 @@ const PricingPage = (props) => {
 			<section class="section">
 				<div class="pricing-table is-comparative">
 					<div class="pricing-plan">
-						<div class="plan-header">Free</div>
+						<div class="plan-header">
+							<h2 class="title">Free</h2>
+						</div>
 						<div class="plan-price">
 							<span class="plan-price-amount">$0</span>
+						</div>
+						<div class="content has-text-centered">
+							<small>per metric/month</small>
+							<br />
+							<small>billed never</small>
+						</div>
+						<div class="plan-items">
+							<div class="plan-item" data-feature="Public Projects">
+								Public Projects
+							</div>
+							<div class="plan-item" data-feature="Team Roles">
+								---
+							</div>
+							<div class="plan-item" data-feature="Private Projects">
+								Community Support
+							</div>
+						</div>
+						<div class="plan-footer">
+							<div class="columns is-centered">
+								<div class="column is-four-fifths">
+									<button
+										class="button is-fullwidth"
+										onClick={(e) => {
+											e.preventDefault();
+											navigate("/auth/signup");
+										}}
+									>
+										Sign up for free
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="pricing-plan is-active">
+						<div class="plan-header">
+							<h2 class="title">Team</h2>
+						</div>
+						<div class="plan-price">
+							<span class="plan-price-amount">$0.01</span>
+						</div>
+						<div class="content has-text-centered">
+							<small>per metric/month</small>
+							<br />
+							<small>billed annually</small>
 						</div>
 						<div class="plan-items">
 							<div class="plan-item" data-feature="Public Projects">
 								Public Projects
 							</div>
 							<div class="plan-item" data-feature="Private Projects">
-								Community Support
+								Private Projects
+							</div>
+							<div class="plan-item" data-feature="Team Roles">
+								Customer Support
 							</div>
 						</div>
-						<Link href="/docs/how-to/quick-start">
+						<div class="plan-footer">
 							<button
 								class="button is-fullwidth"
 								onClick={(e) => {
@@ -62,96 +112,50 @@ const PricingPage = (props) => {
 									navigate("/auth/signup");
 								}}
 							>
-								Sign up for free
+								Continue with Team
 							</button>
-						</Link>
+						</div>
 					</div>
 
-					{/* <div class="pricing-plan is-active">
-						<div class="plan-header">Team</div>
+					<div class="pricing-plan">
+						<div class="plan-header">
+							<h2 class="title">Enterprise</h2>
+						</div>
 						<div class="plan-price">
-							<span class="plan-price-amount">TBD</span>
+							<span class="plan-price-amount">$0.05</span>
+						</div>
+						<div class="content has-text-centered">
+							<small>per metric/month</small>
+							<br />
+							<small>billed annually</small>
 						</div>
 						<div class="plan-items">
 							<div class="plan-item" data-feature="Public Projects">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
+								Public Projects
 							</div>
 							<div class="plan-item" data-feature="Private Projects">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
+								Private Projects
 							</div>
 							<div class="plan-item" data-feature="Team Roles">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
-							</div>
-							<div class="plan-item" data-feature="Support">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
-							</div>
-							<div class="plan-item" data-feature="SSO">
-								<span class="icon is-small">
-									<i class="fas fa-times" aria-hidden="true"/>
-								</span>
+								Priority Support
 							</div>
 						</div>
 						<div class="plan-footer">
-							<a
-								class="button is-fullwidth"
-								href={BENCHER_CALENDLY_URL}
-								target="_blank"
-							>
-								Contact Us
-							</a>
-						</div>
-					</div> */}
-
-					{/* <div class="pricing-plan">
-						<div class="plan-header">Enterprise</div>
-						<div class="plan-price">
-							<span class="plan-price-amount">TBD</span>
-						</div>
-						<div class="plan-items">
-							<div class="plan-item" data-feature="Public Projects">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
-							</div>
-							<div class="plan-item" data-feature="Private Projects">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
-							</div>
-							<div class="plan-item" data-feature="Team Roles">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
-							</div>
-							<div class="plan-item" data-feature="Support">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
-							</div>
-							<div class="plan-item" data-feature="SSO">
-								<span class="icon is-small has-text-primary">
-									<i class="fas fa-check" aria-hidden="true"/>
-								</span>
+							<div class="columns is-centered">
+								<div class="column is-four-fifths">
+									<button
+										class="button is-fullwidth"
+										onClick={(e) => {
+											e.preventDefault();
+											navigate("/auth/signup");
+										}}
+									>
+										Continue with Enterprise
+									</button>
+								</div>
 							</div>
 						</div>
-						<div class="plan-footer">
-							<a
-								class="button is-fullwidth"
-								href={BENCHER_CALENDLY_URL}
-								target="_blank"
-							>
-								Contact Us
-							</a>
-						</div>
-					</div> */}
+					</div>
 				</div>
 			</section>
 		</div>
