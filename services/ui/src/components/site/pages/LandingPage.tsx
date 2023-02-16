@@ -133,6 +133,7 @@ const LandingPage = (props) => {
 			</section>
 
 			<hr />
+			<br />
 			<div class="box">
 				<div class="content has-text-centered">
 					<h2>Use Your Favorite Tools</h2>
@@ -155,6 +156,7 @@ const LandingPage = (props) => {
 					</div>
 				</div>
 			</div>
+			<br />
 			<hr />
 
 			<section class="section">

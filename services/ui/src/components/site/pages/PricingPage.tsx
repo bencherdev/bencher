@@ -50,8 +50,6 @@ const PricingPage = (props) => {
 						</div>
 						<div class="content has-text-centered">
 							<small>per metric/month</small>
-							<br />
-							<small>billed never</small>
 						</div>
 						<div class="plan-items">
 							<div class="plan-item" data-feature="Public Projects">
@@ -90,8 +88,6 @@ const PricingPage = (props) => {
 						</div>
 						<div class="content has-text-centered">
 							<small>per metric/month</small>
-							<br />
-							<small>billed annually</small>
 						</div>
 						<div class="plan-items">
 							<div class="plan-item" data-feature="Public Projects">
@@ -126,8 +122,6 @@ const PricingPage = (props) => {
 						</div>
 						<div class="content has-text-centered">
 							<small>per metric/month</small>
-							<br />
-							<small>billed annually</small>
 						</div>
 						<div class="plan-items">
 							<div class="plan-item" data-feature="Public Projects">
@@ -154,6 +148,80 @@ const PricingPage = (props) => {
 									</button>
 								</div>
 							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<br />
+			<br />
+			<br />
+			<hr />
+
+			<section class="section">
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column">
+							<h2 class="title">FAQ</h2>
+						</div>
+					</div>
+					<div class="box">
+						<div class="content">
+							<h3 class="subtitle">What is a Metric?</h3>
+							<p>A Metric is a single, point-in-time benchmark result.</p>
+							<p>
+								For example, if you have five benchmarks then they would create
+								five Metrics each time they run. If you ran your benchmarks ten
+								times, you would then have fifty Metrics. (ex: 5 benchmarks x 10
+								runs = 50 Metrics)
+							</p>
+						</div>
+					</div>
+					<div class="box">
+						<div class="content">
+							<h3 class="subtitle">How are Metrics billed?</h3>
+							<p>
+								Bencher Cloud Metrics are billed monthly based on metered usage.
+							</p>
+							<p>
+								For example, if you create 5,280 Metrics in a particular month
+								then you would be billed for 5,280 Metrics that month.
+							</p>
+							<p>
+								Bencher Self-Hosted Metrics are billed annually, grouped by the
+								thousands.
+							</p>
+							<p>
+								For example, if you create at most 5,280 Metrics in any given
+								month then you would need to have a Self-Hosted limit of at
+								least 6,000 Metrics/month.
+							</p>
+						</div>
+					</div>
+					<div class="box">
+						<div class="content">
+							<h3 class="subtitle">
+								What happens if I reach my Bencher Self-Hosted limit for the
+								month?
+							</h3>
+							<p>
+								Once you reach your Self-Hosted limit, no new Metrics will be
+								accepted.
+							</p>
+							<p>
+								No need to panic though, you can always increase you limit. It
+								is best to give yourself an extra margin when setting your
+								limit.
+							</p>
+						</div>
+					</div>
+					<div class="box">
+						<div class="content">
+							<h3 class="subtitle">
+								Do excess Bencher Self-Hosted Metrics rollover to the next
+								Month?
+							</h3>
+							<p>They do not.</p>
 						</div>
 					</div>
 				</div>
