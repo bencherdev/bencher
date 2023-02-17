@@ -45,5 +45,6 @@ pub struct JsonProducts {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProduct {
     pub id: String,
-    pub pricing: HashMap<String, String>,
+    pub metered: HashMap<String, String>,
+    pub licensed: HashMap<String, String>,
 }

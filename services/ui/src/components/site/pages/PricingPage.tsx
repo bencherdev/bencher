@@ -184,25 +184,26 @@ const PricingPage = (props) => {
 								Bencher Cloud Metrics are billed monthly based on metered usage.
 							</p>
 							<p>
-								For example, if you create 5,280 Metrics in a particular month
-								then you would be billed for 5,280 Metrics that month.
+								For example, if you create 5,280 Metrics in a particular
+								calendar month then you would be billed for 5,280 Metrics that
+								month.
 							</p>
 							<p>
 								Bencher Self-Hosted Metrics are billed annually, grouped by the
-								thousands.
+								thousand.
 							</p>
 							<p>
-								For example, if you create at most 5,280 Metrics in any given
-								month then you would need to have a Self-Hosted limit of at
-								least 6,000 Metrics/month.
+								For example, if you create at most 5,280 Metrics within any
+								given 30 day period (rolling window) then you would need to have
+								a Self-Hosted limit of at least 6,000 Metrics/month.
 							</p>
 						</div>
 					</div>
 					<div class="box">
 						<div class="content">
 							<h3 class="subtitle">
-								What happens if I reach my Bencher Self-Hosted limit for the
-								month?
+								What happens if I reach my Bencher Self-Hosted limit for a 30
+								day period?
 							</h3>
 							<p>
 								Once you reach your Self-Hosted limit, no new Metrics will be
@@ -218,10 +219,13 @@ const PricingPage = (props) => {
 					<div class="box">
 						<div class="content">
 							<h3 class="subtitle">
-								Do excess Bencher Self-Hosted Metrics rollover to the next
-								Month?
+								Do excess Bencher Self-Hosted Metrics rollover to the next 30
+								day period?
 							</h3>
-							<p>They do not.</p>
+							<p>
+								Bencher Self-Hosted Metrics are calculated based on a 30 day
+								rolling window. Therefore, there's no rollover.
+							</p>
 						</div>
 					</div>
 				</div>

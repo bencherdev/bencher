@@ -1,5 +1,6 @@
-use stripe::{Customer, PaymentMethod, Subscription};
+use stripe::{Customer, CustomerId, PaymentMethod, Subscription, SubscriptionItem};
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum BillingError {
@@ -17,4 +18,10 @@ pub enum BillingError {
     QuantityZero(u64),
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]
     MultipleSubscriptions(Subscription, Vec<Subscription>),
+    #[error("No subscription for organization {0} and customer {1:#?}")]
+    NoSubscription(Uuid, CustomerId),
+    #[error("Multiple subscription items organization {0} and customer {1:#?}: {2:#?} {3:#?}")]
+    MultipleSubscriptionItems(Uuid, CustomerId, SubscriptionItem, Vec<SubscriptionItem>),
+    #[error("No subscription item for organization {0} and customer {1:#?}")]
+    NoSubscriptionItem(Uuid, CustomerId),
 }
