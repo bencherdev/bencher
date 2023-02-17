@@ -43,8 +43,8 @@ const thresholdsConfig = {
 						<p>
 							It's easy to create a new threshold.
 							<br />
-							[Learn about thresholds](/docs/explanation/thresholds) or tap
-							below to get started.
+							<a href="/docs/explanation/thresholds">Learn about thresholds</a>{" "}
+							or tap below to get started.
 						</p>
 					</div>
 				),
