@@ -186,7 +186,7 @@ async fn post_inner(
 
     let org_name = &query_org.name;
     let org_role = json_new_member.role;
-    let body = Body::Button(ButtonBody {
+    let body = Body::Button(Box::new(ButtonBody {
         title: format!("Invitation to join {org_name}"),
         preheader: "Click the provided link to join.".into(),
         greeting: if let Some(name) = name {
@@ -215,7 +215,7 @@ async fn post_inner(
             .join("/console/settings/email")
             .map(Into::into)
             .unwrap_or_default(),
-    });
+    }));
     let message = Message {
         to_name: None,
         to_email: email.to_string(),

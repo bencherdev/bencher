@@ -82,7 +82,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
         .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)?;
 
     let token_string = token.to_string();
-    let body = Body::Button(ButtonBody {
+    let body = Body::Button(Box::new(ButtonBody {
         title: "Confirm Bencher Login".into(),
         preheader: "Click the provided link to login.".into(),
         greeting: format!("Ahoy {},", query_user.name),
@@ -112,7 +112,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .join("/console/settings/email")
             .map(Into::into)
             .unwrap_or_default(),
-    });
+    }));
     let message = Message {
         to_name: Some(query_user.name),
         to_email: query_user.email,

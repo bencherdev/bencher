@@ -107,7 +107,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let token = api_context.secret_key.new_auth(email, AUTH_TOKEN_TTL)?;
 
     let token_string = token.to_string();
-    let body = Body::Button(ButtonBody {
+    let body = Body::Button(Box::new(ButtonBody {
         title: "Confirm Bencher Signup".into(),
         preheader: "Click the provided link to signup.".into(),
         greeting: format!("Ahoy {},", insert_user.name),
@@ -137,7 +137,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
             .join("/console/settings/email")
             .map(Into::into)
             .unwrap_or_default(),
-    });
+    }));
     let message = Message {
         to_name: Some(insert_user.name),
         to_email: insert_user.email,
