@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.37"
+    "version": "0.2.38"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -5169,6 +5169,14 @@
                 "$ref": "#/components/schemas/Jwt"
               }
             ]
+          },
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Plan"
+              }
+            ]
           }
         },
         "required": [
@@ -5267,6 +5275,10 @@
                 "$ref": "#/components/schemas/Slug"
               }
             ]
+          },
+          "soft": {
+            "nullable": true,
+            "type": "boolean"
           },
           "start_point": {
             "nullable": true,
@@ -5704,7 +5716,13 @@
           "id": {
             "type": "string"
           },
-          "pricing": {
+          "licensed": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "metered": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -5713,7 +5731,8 @@
         },
         "required": [
           "id",
-          "pricing"
+          "licensed",
+          "metered"
         ]
       },
       "JsonProducts": {
@@ -5969,6 +5988,14 @@
           },
           "name": {
             "$ref": "#/components/schemas/UserName"
+          },
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Plan"
+              }
+            ]
           },
           "slug": {
             "nullable": true,
@@ -6282,6 +6309,14 @@
       },
       "NonEmpty": {
         "type": "string"
+      },
+      "Plan": {
+        "type": "string",
+        "enum": [
+          "Free",
+          "Team",
+          "Enterprise"
+        ]
       },
       "ResourceId": {
         "type": "string"
