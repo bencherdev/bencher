@@ -79,7 +79,7 @@ const PricingPage = (props) => {
 						</div>
 					</div>
 
-					<div class="pricing-plan is-active">
+					{/* <div class="pricing-plan is-active">
 						<div class="plan-header">
 							<h2 class="title">Team</h2>
 						</div>
@@ -149,11 +149,11 @@ const PricingPage = (props) => {
 								</div>
 							</div>
 						</div>
-					</div>
+					</div> */}
 				</div>
 			</section>
 
-			<br />
+			{/* <br />
 			<br />
 			<br />
 			<hr />
@@ -229,7 +229,7 @@ const PricingPage = (props) => {
 						</div>
 					</div>
 				</div>
-			</section>
+			</section> */}
 		</div>
 	);
 };

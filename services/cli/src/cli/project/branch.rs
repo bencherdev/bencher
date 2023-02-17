@@ -38,6 +38,11 @@ pub struct CliBranchCreate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
+    /// Soft creation
+    /// If the new branch name already exists then return the existing branch name
+    #[clap(long)]
+    pub soft: bool,
+
     /// Branch slug or UUID to use as the new branch start point
     /// https://git-scm.com/docs/git-branch#Documentation/git-branch.txt-ltstart-pointgt
     #[clap(long)]

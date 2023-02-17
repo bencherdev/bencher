@@ -189,8 +189,9 @@ async fn create_branch(
     });
     let new_branch = JsonNewBranch {
         name: branch_name.clone(),
-        start_point,
         slug: None,
+        soft: Some(true),
+        start_point,
     };
 
     let value = backend

@@ -26,6 +26,7 @@ static BRANCH_MAIN_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
 pub struct JsonNewBranch {
     pub name: BranchName,
     pub slug: Option<Slug>,
+    pub soft: Option<bool>,
     pub start_point: Option<JsonStartPoint>,
 }
 
@@ -34,6 +35,7 @@ impl JsonNewBranch {
         Self {
             name: BRANCH_MAIN.clone(),
             slug: BRANCH_MAIN_SLUG.clone(),
+            soft: None,
             start_point: None,
         }
     }

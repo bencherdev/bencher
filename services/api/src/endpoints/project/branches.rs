@@ -145,6 +145,7 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let api_context = &mut *context.lock().await;
+    let soft = json_branch.soft.take();
     let start_point = json_branch.start_point.take();
     let insert_branch = InsertBranch::from_json(
         &mut api_context.database.connection,
@@ -160,12 +161,25 @@ async fn post_inner(
     )?;
     let conn = &mut api_context.database.connection;
 
+    // Soft creation
+    // If the new branch name already exists then return the existing branch name
+    // instead of erroring due to the unique constraint
+    // This is useful to help prevent race conditions in CI
+    if let Some(true) = soft {
+        if let Ok(branch) = schema::branch::table
+            .filter(schema::branch::name.eq(&insert_branch.name))
+            .first::<QueryBranch>(conn)
+        {
+            return branch.into_json(conn);
+        }
+    }
+
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
         .execute(conn)
         .map_err(api_error!())?;
 
-    // TODO clone the data from the start point for this branch
+    // Clone data and optionally thresholds from the start point
     if let Some(start_point) = &start_point {
         insert_branch.start_point(conn, start_point)?;
     }
