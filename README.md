@@ -1,7 +1,7 @@
 <h1>
   <a href="https://bencher.dev">
     <img
-      src="https://s3.amazonaws.com/public.bencher.dev/bencher_navbar.png"
+      src="https://s3.amazonaws.com/public.bencher.dev/bencher_rabbit_large.png"
       alt="🐰 Bencher"
     />
   </a>
