@@ -23,7 +23,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 <p align="center">
   <a href="https://discord.gg/yGEsdUh7R4">
     <img
-      src="https://s3.amazonaws.com/public.bencher.dev/discord.png"
+      src="https://s3.amazonaws.com/public.bencher.dev/discord_invite.png"
       alt="Bencher Discord Server"
     />
   </a>
