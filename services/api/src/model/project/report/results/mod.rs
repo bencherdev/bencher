@@ -92,6 +92,7 @@ impl ReportResults {
         benchmark_name: BenchmarkName,
         metrics: AdapterMetrics,
     ) -> Result<(), ApiError> {
+        let ignore_benchmark = benchmark_name.is_ignored();
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
 
         let insert_perf = InsertPerf::from_json(self.report_id, iteration, benchmark_id);
@@ -110,9 +111,11 @@ impl ReportResults {
                 .execute(conn)
                 .map_err(api_error!())?;
 
-            if let Some(detector) = self.detector(conn, metric_kind_id)? {
-                // TODO pull query to here from detector
-                detector.detect(conn, perf_id, benchmark_id, metric)?;
+            // Ignored benchmarks do not get checked against the threshold even if one exists
+            if !ignore_benchmark {
+                if let Some(detector) = self.detector(conn, metric_kind_id)? {
+                    detector.detect(conn, perf_id, benchmark_id, metric)?;
+                }
             }
         }
 

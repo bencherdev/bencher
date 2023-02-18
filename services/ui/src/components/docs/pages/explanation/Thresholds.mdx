@@ -100,6 +100,26 @@ A window size in seconds can be set for a Threshold.
 The Threshold will limit itself to only the most recent historical Metrics
 bounded by the given time window for its statistical significance test.
 
+## Alerts
+Alerts are generated when a Metric is below a Threshold's left side boundary or above a Threshold's right side boundary. To fail a CI build in the event of an Alert set the `--err` flag when using the `bencher run` CLI command.
+
+### Suppressing Alerts
+Sometimes it can be useful to supress Alerts for a particular Benchmark.
+The best way to do this is by adding one of these special suffixes to that Benchmark's name:
+
+- `_bencher_ignore`
+- `BencherIgnore`
+- `-bencher-ignore`
+
+For example, if your Benchmark was named `my_flaky_benchmark` then renaming it to `my_flaky_benchmark_bencher_ignore`
+would ignore just that particular Benchmark going forward.
+Ignored Benchmarks do not get checked against the Threshold even if one exists.
+Be careful when changing the name of your Benchmarks though.
+There is currently no way for Bencher to track this change,
+so the renamed Benchmark will be considered a brand new Benchmark.
+If you remove the suffix and return to the original Benchmark name,
+then things will pick right back up where you left off though.
+
 <br />
 <br />
 

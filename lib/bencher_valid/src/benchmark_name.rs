@@ -14,6 +14,10 @@ use crate::ValidError;
 
 const MAX_BENCHMARK_NAME_LEN: usize = 1024;
 
+const BENCHER_IGNORE_SNAKE_CASE: &str = "_bencher_ignore";
+const BENCHER_IGNORE_PASCAL_CASE: &str = "BencherIgnore";
+const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
+
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct BenchmarkName(String);
@@ -29,6 +33,13 @@ impl BenchmarkName {
         } else {
             Err(ValidError::BenchmarkName(format!("{}.{}", self.0, other.0)))
         }
+    }
+
+    /// Ignore benchmark names that end a special suffix
+    pub fn is_ignored(&self) -> bool {
+        self.0.ends_with(BENCHER_IGNORE_SNAKE_CASE)
+            || self.0.ends_with(BENCHER_IGNORE_PASCAL_CASE)
+            || self.0.ends_with(BENCHER_IGNORE_KEBAB_CASE)
     }
 }
 
@@ -89,6 +100,8 @@ pub fn is_valid_benchmark_name(benchmark_name: &str) -> bool {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use crate::BenchmarkName;
 
     use super::{is_valid_benchmark_name, MAX_BENCHMARK_NAME_LEN};
@@ -154,5 +167,28 @@ mod test {
         assert!(benchmark_name.try_push('.', &other_benchmark_name).is_err());
         assert_eq!(benchmark_name_len, benchmark_name.0.len());
         assert_eq!(other_benchmark_name_len, other_benchmark_name.0.len());
+    }
+
+    #[test]
+    fn test_benchmark_name_is_ignored() {
+        assert!(!BenchmarkName::from_str("a").unwrap().is_ignored());
+        assert!(!BenchmarkName::from_str("ab").unwrap().is_ignored());
+        assert!(!BenchmarkName::from_str("abc").unwrap().is_ignored());
+        assert!(!BenchmarkName::from_str("ABC").unwrap().is_ignored());
+        assert!(!BenchmarkName::from_str("Abc").unwrap().is_ignored());
+        assert!(!BenchmarkName::from_str("0123456789").unwrap().is_ignored());
+
+        assert!(BenchmarkName::from_str("snake_bencher_ignore")
+            .unwrap()
+            .is_ignored());
+        assert!(BenchmarkName::from_str("camelBencherIgnore")
+            .unwrap()
+            .is_ignored());
+        assert!(BenchmarkName::from_str("PascalBencherIgnore")
+            .unwrap()
+            .is_ignored());
+        assert!(BenchmarkName::from_str("kebab-bencher-ignore")
+            .unwrap()
+            .is_ignored());
     }
 }
