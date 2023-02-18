@@ -118,6 +118,8 @@ pub enum ApiError {
     CreatePrivateProject(i32),
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
+    #[error("Anonymous user tried to query private projects")]
+    PrivateProjects,
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_json::ValidError),
     #[error("Arithmetic error")]

@@ -1,6 +1,6 @@
 use bencher_json::{JsonProject, ResourceId};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -24,13 +24,21 @@ use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
+#[derive(Deserialize, JsonSchema)]
+pub struct DirQuery {
+    pub public: Option<bool>,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
     path =  "/v0/projects",
     tags = ["projects"]
 }]
-pub async fn dir_options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
+pub async fn dir_options(
+    _rqctx: RequestContext<Context>,
+    _query_params: Query<DirQuery>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
@@ -41,13 +49,19 @@ pub async fn dir_options(_rqctx: RequestContext<Context>) -> Result<CorsResponse
 }]
 pub async fn get_ls(
     rqctx: RequestContext<Context>,
+    query_params: Query<DirQuery>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
-    let json = get_ls_inner(rqctx.context(), auth_user.as_ref(), endpoint)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_ls_inner(
+        rqctx.context(),
+        auth_user.as_ref(),
+        query_params.into_inner(),
+        endpoint,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     if auth_user.is_some() {
         response_ok!(endpoint, json)
@@ -59,6 +73,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: Option<&AuthUser>,
+    query_params: DirQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -66,18 +81,17 @@ async fn get_ls_inner(
 
     let mut sql = schema::project::table.into_boxed();
 
-    if let Some(auth_user) = auth_user {
+    // All users should just see the public projects if the query is for public projects
+    if let Some(true) = query_params.public {
+        sql = sql.filter(schema::project::public.eq(true));
+    } else if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&api_context.rbac) {
             let projects =
                 auth_user.projects(&api_context.rbac, bencher_rbac::project::Permission::View);
-            sql = sql.filter(
-                schema::project::public
-                    .eq(true)
-                    .or(schema::project::id.eq_any(projects)),
-            );
+            sql = sql.filter(schema::project::public.or(schema::project::id.eq_any(projects)));
         }
     } else {
-        sql = sql.filter(schema::project::public.eq(true));
+        return Err(ApiError::PrivateProjects);
     }
 
     Ok(sql

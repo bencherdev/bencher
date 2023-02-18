@@ -30,7 +30,11 @@ pub enum CliProject {
 pub struct CliProjectList {
     /// Organization slug or UUID
     #[clap(long)]
-    pub org: ResourceId,
+    pub org: Option<ResourceId>,
+
+    ///  Public projects only
+    #[clap(long, conflicts_with = "org")]
+    pub public: bool,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -4,7 +4,7 @@ import { createEffect, createMemo, createResource, For } from "solid-js";
 import { BENCHER_API_URL, get_options, pageTitle } from "../site/util";
 
 const ProjectsPage = (props) => {
-	const url = createMemo(() => `${BENCHER_API_URL()}/v0/projects`);
+	const url = createMemo(() => `${BENCHER_API_URL()}/v0/projects?public=true`);
 
 	const fetchProjects = async (user) => {
 		const EMPTY_ARRAY = [];
