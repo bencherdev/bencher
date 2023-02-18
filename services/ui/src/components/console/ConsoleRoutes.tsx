@@ -3,6 +3,7 @@ import { Navigate, Route, useParams } from "solid-app-router";
 import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
+import Forward from "../site/Forward";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
@@ -24,7 +25,7 @@ const ConsoleRoutes = (props) => {
 	return (
 		<>
 			{/* Console Routes */}
-			<Route path="/" element={<Navigate href="/console/organizations" />} />
+			<Route path="/" element={<Forward href="/console/organizations" />} />
 			{/* Console Projects Routes */}
 			<Route
 				path="/organizations"

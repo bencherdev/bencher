@@ -10,6 +10,7 @@ import Table from "./Table";
 import TableHeader from "./TableHeader";
 import { get_options, validate_jwt } from "../../../site/util";
 import { useNavigate } from "solid-app-router";
+import Forward from "../../../site/Forward";
 
 const TablePanel = (props) => {
 	const navigate = useNavigate();
@@ -49,7 +50,7 @@ const TablePanel = (props) => {
 
 	createEffect(() => {
 		if (redirect()) {
-			navigate(redirect());
+			return <Forward href={redirect()} />;
 		}
 	});
 

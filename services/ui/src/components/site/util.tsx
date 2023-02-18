@@ -268,6 +268,6 @@ export const notifyParams = (
 		});
 	}
 	let params_str = params.toString();
-	console.log(`${pathname}?${params_str}`);
+	// console.log(`${pathname}?${params_str}`);
 	return `${pathname}?${params_str}`;
 };
