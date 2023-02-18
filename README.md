@@ -12,6 +12,17 @@ The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tu
 
 Though Bencher is open source, there is also a hosted version available [Bencher Cloud](https://bencher.dev).
 
+<br />
+<p align="center">
+  <a href="https://discord.gg/yGEsdUh7R4">
+    <img
+      src="https://s3.amazonaws.com/public.bencher.dev/discord.png"
+      alt="Bencher Discord Server"
+    />
+  </a>
+</p>
+
+
 ## Documentation
 
 - Tutorial
@@ -71,7 +82,15 @@ There is a hotkey set to tapping caps lock twice to prompt the web VS Code to cr
 For more details see the [GitPod docs here](https://www.gitpod.io/docs/references/ides-and-editors/vscode).
 Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:61016](http://localhost:61016) respectively.
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/bencherdev/bencher)
+<br />
+<p align="center">
+  <a href="https://gitpod.io/#https://github.com/bencherdev/bencher">
+    <img
+      src="https://gitpod.io/button/open-in-gitpod.svg"
+      alt="Bencher Gitpod"
+    />
+  </a>
+</p>
 
 ## License
 All content that resides under any directory or <a href="https://doc.rust-lang.org/cargo/reference/features.html">feature</a> named "plus" is licensed under the <a href="LICENSE-PLUS">Bencher Plus License</a>.
