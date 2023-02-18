@@ -1,5 +1,6 @@
 import { useSearchParams } from "solid-app-router";
 import { createMemo, createSignal, Match, Switch } from "solid-js";
+import { forward_path } from "./Forward";
 import {
 	NotifyKind,
 	NOTIFY_KIND_PARAM,
@@ -7,6 +8,21 @@ import {
 	isNotifyKind,
 	isNotifyText,
 } from "./util";
+
+export const notification_path = (
+	href: string,
+	keep_params: string[],
+	set_params: string[][],
+	notify_kind: NotifyKind,
+	notify_text: string,
+) => {
+	set_params = [
+		[NOTIFY_KIND_PARAM, notify_kind.toString()],
+		[NOTIFY_TEXT_PARAM, notify_text],
+		...set_params,
+	];
+	return forward_path(href, keep_params, set_params);
+};
 
 const Notification = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();

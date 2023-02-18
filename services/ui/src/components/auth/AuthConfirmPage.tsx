@@ -6,18 +6,16 @@ import Field from "../field/Field";
 import {
 	BENCHER_API_URL,
 	NotifyKind,
-	notifyParams,
 	pageTitle,
 	post_options,
 	validate_jwt,
 	validate_plan,
 } from "../site/util";
-import Notification from "../site/Notification";
+import Notification, { notification_path } from "../site/Notification";
 import FieldKind from "../field/kind";
-import { PLAN_PARAM } from "./AuthForm";
+import { EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./AuthForm";
 
-const TOKEN_PARAM = "token";
-const EMAIL_PARAM = "email";
+const CONFIRM_FORWARD = [EMAIL_PARAM, TOKEN_PARAM, PLAN_PARAM];
 
 const AuthConfirmPage = (props: {
 	config: any;
@@ -79,22 +77,24 @@ const AuthConfirmPage = (props: {
 			.then((data) => {
 				if (!props.handleUser(data)) {
 					navigate(
-						notifyParams(
+						notification_path(
 							pathname(),
+							CONFIRM_FORWARD,
+							[],
 							NotifyKind.ERROR,
 							"Invalid user please try again.",
-							null,
 						),
 					);
 				}
 			})
 			.catch((e) => {
 				navigate(
-					notifyParams(
+					notification_path(
 						pathname(),
+						CONFIRM_FORWARD,
+						[],
 						NotifyKind.ERROR,
 						"Failed to confirm token please try again.",
-						null,
 					),
 				);
 			});
@@ -127,21 +127,23 @@ const AuthConfirmPage = (props: {
 		post_resend(data)
 			.then((_resp) => {
 				navigate(
-					notifyParams(
+					notification_path(
 						pathname(),
+						CONFIRM_FORWARD,
+						[],
 						NotifyKind.OK,
 						`Successful resent email to ${email()} please confirm token.`,
-						null,
 					),
 				);
 			})
 			.catch((_e) => {
 				navigate(
-					notifyParams(
+					notification_path(
 						pathname(),
+						CONFIRM_FORWARD,
+						[],
 						NotifyKind.ERROR,
 						`Failed to resend email to ${email()} please try again.`,
-						null,
 					),
 				);
 			});
@@ -153,12 +155,14 @@ const AuthConfirmPage = (props: {
 
 	createEffect(() => {
 		if (validate_jwt(props.user?.token)) {
+			console.log("CONFIRM");
 			navigate(
-				notifyParams(
+				notification_path(
 					props.config?.form?.redirect[plan() ? plan() : "free"],
+					[PLAN_PARAM],
+					[],
 					NotifyKind.OK,
 					"Ahoy!",
-					null,
 				),
 			);
 		}

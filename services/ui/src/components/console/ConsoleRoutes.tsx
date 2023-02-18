@@ -4,6 +4,8 @@ import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
 import Forward from "../site/Forward";
+import { PLAN_PARAM } from "../auth/AuthForm";
+import { NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM } from "../site/util";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
@@ -25,7 +27,15 @@ const ConsoleRoutes = (props) => {
 	return (
 		<>
 			{/* Console Routes */}
-			<Route path="/" element={<Forward href="/console/organizations" />} />
+			<Route
+				path="/"
+				element={
+					<Forward
+						href="/console/organizations"
+						keep_params={[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM]}
+					/>
+				}
+			/>
 			{/* Console Projects Routes */}
 			<Route
 				path="/organizations"
@@ -186,10 +196,11 @@ const NavigateToProjects = () => {
 	const path_params = createMemo(() => params);
 
 	return (
-		<Navigate
+		<Forward
 			href={`/console/organizations/${
 				path_params().organization_slug
 			}/projects`}
+			keep_params={[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM]}
 		/>
 	);
 };

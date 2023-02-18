@@ -7,15 +7,18 @@ import { FormKind } from "./config/types";
 import {
 	BENCHER_API_URL,
 	NotifyKind,
-	notifyParams,
 	post_options,
 	validate_jwt,
 	validate_plan,
 } from "../site/util";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import FieldKind from "../field/kind";
+import { notification_path } from "../site/Notification";
 
 export const PLAN_PARAM = "plan";
+export const INVITE_PARAM = "invite";
+export const EMAIL_PARAM = "email";
+export const TOKEN_PARAM = "token";
 
 export interface Props {
 	config: any;
@@ -123,21 +126,23 @@ export const AuthForm = (props: Props) => {
 		post(data)
 			.then((_resp) => {
 				navigate(
-					notifyParams(
+					notification_path(
 						props.config?.redirect,
+						[PLAN_PARAM],
+						[[EMAIL_PARAM, form_email]],
 						NotifyKind.OK,
 						`Successful ${props.config?.kind} please confirm token.`,
-						[["email", form_email]],
 					),
 				);
 			})
 			.catch((_e) => {
 				navigate(
-					notifyParams(
+					notification_path(
 						pathname(),
+						[PLAN_PARAM, INVITE_PARAM],
+						[],
 						NotifyKind.ERROR,
 						`Failed to ${props.config?.kind} please try again.`,
-						null,
 					),
 				);
 			});
