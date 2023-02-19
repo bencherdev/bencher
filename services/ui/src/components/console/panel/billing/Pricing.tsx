@@ -4,7 +4,7 @@ export enum Plan {
 	ENTERPRISE = "enterprise",
 }
 
-export const plan_cost = (plan: Plan) => {
+export const per_metric_cost = (plan: Plan) => {
 	switch (plan) {
 		case Plan.FREE:
 			return 0;

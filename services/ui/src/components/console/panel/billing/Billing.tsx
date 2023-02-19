@@ -2,7 +2,7 @@ import { useSearchParams } from "solid-app-router";
 import { createMemo, createSignal } from "solid-js";
 import { PLAN_PARAM } from "../../../auth/AuthForm";
 import { validate_plan } from "../../../site/util";
-import Pricing, { Plan } from "./Pricing";
+import Pricing, { per_metric_cost, Plan } from "./Pricing";
 
 const HOST_PARAM = "host";
 const QUANTITY = "quantity";
@@ -48,6 +48,11 @@ const Billing = (props) => {
 	// }
 	const quantity = createMemo(() => searchParams[QUANTITY]);
 
+	const monthly_total = createMemo(
+		() => quantity() * per_metric_cost(plan()) * 10,
+	);
+	const annual_total = createMemo(() => monthly_total() * 12);
+
 	return (
 		<div class="columns is-centered">
 			<div class="column">
@@ -77,7 +82,14 @@ const Billing = (props) => {
 						valid={is_valid_quantity(quantity())}
 						quantity={quantity()}
 						setQuantity={setQuantity}
+						monthly_total={monthly_total()}
+						annual_total={annual_total()}
 					/>
+				)}
+				<br />
+				{((host() === Host.SelfHosted && is_valid_quantity(annual_total())) ||
+					(host() === Host.BencherCloud && plan() !== Plan.FREE)) && (
+					<div class="box">TODO payment</div>
 				)}
 			</div>
 		</div>
@@ -127,6 +139,8 @@ const Quantity = (props: {
 	valid: boolean;
 	quantity: null | number;
 	setQuantity: Function;
+	monthly_total: number;
+	annual_total: number;
 }) => {
 	return (
 		<div class="box">
@@ -163,6 +177,9 @@ const Quantity = (props: {
 					</p>
 				)}
 			</form>
+			<br />
+			<p>Monthly Total: ${props.monthly_total ? props.monthly_total : "0"}</p>
+			<p>Total Due: ${props.annual_total ? props.annual_total : "0"}</p>
 		</div>
 	);
 };
