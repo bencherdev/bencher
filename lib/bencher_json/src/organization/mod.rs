@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[cfg(feature = "plus")]
+pub mod billing;
+#[cfg(feature = "plus")]
 pub mod entitlements;
 pub mod member;
 

@@ -2,6 +2,8 @@ pub use bencher_valid::{
     BenchmarkName, BranchName, Email, GitHash, Jwt, NonEmpty, Plan, ResourceId, Sanitize, Secret,
     Slug, Url, UserName, ValidError, MAX_LEN,
 };
+#[cfg(feature = "plus")]
+pub use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
