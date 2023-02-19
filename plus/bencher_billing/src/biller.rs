@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    organization::billing::JsonCard,
+    organization::billing::{JsonCard, JsonPlan},
     system::config::{JsonBilling, JsonProduct, JsonProducts},
     Email, UserName,
 };
@@ -99,6 +99,24 @@ impl BillerProduct {
 pub enum ProductPlan {
     Team(ProductUsage),
     Enterprise(ProductUsage),
+}
+
+impl ProductPlan {
+    pub fn metered(json_plan: JsonPlan) -> Self {
+        match json_plan {
+            JsonPlan::Team(price) => Self::Team(ProductUsage::Metered(price.into())),
+            JsonPlan::Enterprise(price) => Self::Enterprise(ProductUsage::Metered(price.into())),
+        }
+    }
+
+    pub fn licensed(json_plan: JsonPlan, quantity: u64) -> Self {
+        match json_plan {
+            JsonPlan::Team(price) => Self::Team(ProductUsage::Licensed(price.into(), quantity)),
+            JsonPlan::Enterprise(price) => {
+                Self::Enterprise(ProductUsage::Licensed(price.into(), quantity))
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -218,20 +236,20 @@ impl Biller {
         .map_err(Into::into)
     }
 
-    pub async fn get_or_create_subscription(
-        &self,
-        organization: Uuid,
-        customer: &Customer,
-        payment_method: &PaymentMethod,
-        product_plan: ProductPlan,
-    ) -> Result<Subscription, BillingError> {
-        if let Some(subscription) = self.get_subscription(organization, customer).await? {
-            Ok(subscription)
-        } else {
-            self.create_subscription(organization, customer, payment_method, product_plan)
-                .await
-        }
-    }
+    // pub async fn get_or_create_subscription(
+    //     &self,
+    //     organization: Uuid,
+    //     customer: &Customer,
+    //     payment_method: &PaymentMethod,
+    //     product_plan: ProductPlan,
+    // ) -> Result<Subscription, BillingError> {
+    //     if let Some(subscription) = self.get_subscription(organization, customer).await? {
+    //         Ok(subscription)
+    //     } else {
+    //         self.create_subscription(organization, customer, payment_method, product_plan)
+    //             .await
+    //     }
+    // }
 
     pub async fn get_subscription(
         &self,
@@ -270,7 +288,24 @@ impl Biller {
         }
     }
 
-    async fn create_subscription(
+    pub async fn create_metered_subscription(
+        &self,
+        organization: Uuid,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        json_plan: JsonPlan,
+    ) -> Result<Subscription, BillingError> {
+        self.create_subscription(
+            organization,
+            customer,
+            payment_method,
+            ProductPlan::metered(json_plan),
+        )
+        .await
+    }
+
+    // WARNING: Use caution when calling this directly as multiple subscriptions can be created
+    pub async fn create_subscription(
         &self,
         organization: Uuid,
         customer: &Customer,
@@ -411,9 +446,8 @@ mod test {
     use stripe::{Customer, PaymentMethod};
     use uuid::Uuid;
 
-    use super::PaymentCard;
     use crate::{
-        biller::{into_payment_card, ProductPlan, ProductUsage, DEFAULT_PRICING},
+        biller::{ProductPlan, ProductUsage, DEFAULT_PRICING},
         Biller,
     };
 
@@ -468,12 +502,12 @@ mod test {
             .unwrap()
             .unwrap();
         assert_eq!(create_subscription.id, get_subscription.id);
-        let subscription = create_subscription;
-        let get_or_create_subscription = biller
-            .get_or_create_subscription(organization, customer, payment_method, product_plan)
-            .await
-            .unwrap();
-        assert_eq!(subscription.id, get_or_create_subscription.id);
+        // let subscription = create_subscription;
+        // let get_or_create_subscription = biller
+        //     .get_or_create_subscription(organization, customer, payment_method, product_plan)
+        //     .await
+        //     .unwrap();
+        // assert_eq!(subscription.id, get_or_create_subscription.id);
     }
 
     async fn test_record_usage(

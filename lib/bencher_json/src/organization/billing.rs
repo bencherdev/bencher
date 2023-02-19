@@ -1,12 +1,9 @@
 #![cfg(feature = "plus")]
 
-use bencher_valid::{
-    CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, NonEmpty, UserName,
-};
+use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, NonEmpty};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

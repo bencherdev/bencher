@@ -1,36 +1,26 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{
-    organization::billing::JsonNewMetered, JsonEmpty, JsonNewTestbed, JsonTestbed, JsonUser,
-    ResourceId,
-};
+use std::str::FromStr;
+
+use bencher_json::{organization::billing::JsonNewMetered, JsonEmpty, JsonUser, ResourceId};
 use bencher_rbac::organization::Permission;
-use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
+        endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
     },
     error::api_error,
+    model::organization::QueryOrganization,
     model::user::{auth::AuthUser, QueryUser},
-    model::{
-        organization::QueryOrganization,
-        project::{
-            testbed::{InsertTestbed, QueryTestbed},
-            QueryProject,
-        },
-    },
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        error::into_json,
-        resource_id::fn_resource_id,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -94,7 +84,7 @@ async fn post_inner(
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &api_context.biller else {
         return Err(ApiError::BencherCloudOnly(
-            "/v0/organizations/organization/plan".into(),
+            format!("/v0/organizations/{}/plan", path_params.organization),
         ));
     };
 
@@ -105,7 +95,7 @@ async fn post_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
-    // Check to make sure the organization does not already have a plan
+    // Check to make sure the organization does not already have a metered or licensed plan
     if let Some(subscription) = query_org.subscription {
         return Err(ApiError::PlanMetered(query_org.id, subscription));
     } else if let Some(license) = query_org.license {
@@ -118,38 +108,31 @@ async fn post_inner(
         .map_err(api_error!())?
         .into_json()?;
 
+    // Create a customer for the user
     let customer = biller
         .get_or_create_customer(&json_user.name, &json_user.email)
         .await?;
 
+    // Create a payment method for the user
     let payment_method = biller
         .create_payment_method(&customer, json_metered.card)
         .await?;
 
-    // let insert_testbed = InsertTestbed::from_json(
-    //     &mut api_context.database.connection,
-    //     &path_params.project,
-    //     json_testbed,
-    // )?;
-    // // Verify that the user is allowed
-    // QueryProject::is_allowed_id(
-    //     api_context,
-    //     insert_testbed.project_id,
-    //     auth_user,
-    //     Permission::Create,
-    // )?;
-    // let conn = &mut api_context.database.connection;
+    // Create a metered subscription for the organization
+    let subscription = biller
+        .create_metered_subscription(
+            Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
+            &customer,
+            &payment_method,
+            json_metered.plan,
+        )
+        .await?;
 
-    // diesel::insert_into(schema::testbed::table)
-    //     .values(&insert_testbed)
-    //     .execute(conn)
-    //     .map_err(api_error!())?;
-
-    // schema::testbed::table
-    //     .filter(schema::testbed::uuid.eq(&insert_testbed.uuid))
-    //     .first::<QueryTestbed>(conn)
-    //     .map_err(api_error!())?
-    //     .into_json(conn)
+    // Add the metered subscription to the organization
+    diesel::update(schema::organization::table.filter(schema::organization::id.eq(query_org.id)))
+        .set(schema::organization::subscription.eq(subscription.id.as_ref()))
+        .execute(conn)
+        .map_err(api_error!())?;
 
     Ok(JsonEmpty::default())
 }
