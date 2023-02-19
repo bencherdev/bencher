@@ -7,7 +7,7 @@ const organizationsConfig = {
 		operation: Operation.LIST,
 		redirect: (table_data) =>
 			table_data?.length === 1
-				? `/console/organizations/${table_data[0]?.slug}/projects`
+				? `/console/organizations/${table_data[0]?.slug}`
 				: null,
 		header: {
 			title: "Organizations",

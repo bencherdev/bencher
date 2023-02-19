@@ -46,9 +46,8 @@ const Forward = (props: {
 	set_params: null | string[][];
 }) => {
 	const navigate = useNavigate();
-	return navigate(
-		forward_path(props.href, props.keep_params, props.set_params),
-	);
+	navigate(forward_path(props.href, props.keep_params, props.set_params));
+	return <></>;
 };
 
 export default Forward;

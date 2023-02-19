@@ -36,7 +36,6 @@ export const projectSlug = (pathname) => {
 };
 
 const ConsolePage = (props) => {
-	const navigate = useNavigate();
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 

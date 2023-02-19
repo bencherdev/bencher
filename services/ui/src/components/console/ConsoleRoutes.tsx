@@ -1,11 +1,21 @@
 import { createEffect, createMemo, lazy } from "solid-js";
-import { Navigate, Route, useNavigate, useParams } from "solid-app-router";
+import {
+	Navigate,
+	Route,
+	useNavigate,
+	useParams,
+	useSearchParams,
+} from "solid-app-router";
 import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
 import Forward, { forward_path } from "../site/Forward";
 import { PLAN_PARAM } from "../auth/AuthForm";
-import { NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM } from "../site/util";
+import {
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	validate_plan,
+} from "../site/util";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
@@ -37,7 +47,7 @@ const ConsoleRoutes = (props) => {
 			/>
 			<Route
 				path="/organizations/:organization_slug"
-				element={<NavigateToProjects />}
+				element={<NavigateToOrganization />}
 			/>
 			<Route
 				path="/organizations/:organization_slug/"
@@ -75,7 +85,7 @@ const ConsoleRoutes = (props) => {
 				path="/organizations/:organization_slug/members/:member_slug"
 				element={consolePage(config?.[Resource.MEMBERS]?.[Operation.VIEW])}
 			/>
-			<Route path="/projects/:project_slug" element={<NavigateToPerf />} />
+			<Route path="/projects/:project_slug" element={<NavigateToProject />} />
 			<Route
 				path="/projects/:project_slug/settings"
 				element={consolePage(config?.[Resource.PROJECTS]?.[Operation.VIEW])}
@@ -197,14 +207,32 @@ const NavigateToOrganizations = () => {
 	return <></>;
 };
 
-const NavigateToProjects = () => {
+const NavigateToOrganization = () => {
+	const [searchParams, setSearchParams] = useSearchParams();
 	const params = useParams();
 	const path_params = createMemo(() => params);
 	const navigate = useNavigate();
+
+	if (!validate_plan(searchParams[PLAN_PARAM])) {
+		setSearchParams({ [PLAN_PARAM]: null });
+	}
+	const plan = createMemo(() => searchParams[PLAN_PARAM]);
+
+	const org_section = () => {
+		console.log(`PLAN ${plan()}`);
+		if (plan()) {
+			return "billing";
+		} else {
+			return "projects";
+		}
+	};
+
 	createEffect(() => {
 		navigate(
 			forward_path(
-				`/console/organizations/${path_params().organization_slug}/projects`,
+				`/console/organizations/${
+					path_params().organization_slug
+				}/${org_section()}`,
 				[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
 				[],
 			),
@@ -213,7 +241,7 @@ const NavigateToProjects = () => {
 	return <></>;
 };
 
-const NavigateToPerf = () => {
+const NavigateToProject = () => {
 	const params = useParams();
 	const path_params = createMemo(() => params);
 
