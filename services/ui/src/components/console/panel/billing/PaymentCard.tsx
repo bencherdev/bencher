@@ -28,6 +28,17 @@ const PaymentCard = (props) => {
 		);
 	};
 
+	const handleFormValid = () => {
+		var valid = validateForm();
+		if (valid !== form()?.valid) {
+			setForm({ ...form(), valid: valid });
+		}
+	};
+
+	const handleFormSubmitting = (submitting) => {
+		setForm({ ...form(), submitting: submitting });
+	};
+
 	return (
 		<form class="box">
 			<Field
