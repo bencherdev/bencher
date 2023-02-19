@@ -29,6 +29,7 @@
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
     "anychar",
+    "Bulma",
     "dropshot",
     "fullwidth",
     "Insertable",

@@ -5,6 +5,7 @@ import { validate_plan } from "../../../site/util";
 import Pricing, { Plan } from "./Pricing";
 
 const HOST_PARAM = "host";
+const QUANTITY = "quantity";
 
 enum Host {
 	SelfHosted = "self_hosted",
@@ -35,12 +36,23 @@ const Billing = (props) => {
 	}
 	const host = createMemo(() => searchParams[HOST_PARAM]);
 
+	const is_valid_quantity = (quantity: any) => {
+		let number = Number(quantity);
+		return number > 0 && Number.isInteger(number);
+	};
+	const setQuantity = (quantity: null | number) => {
+		setSearchParams({ [QUANTITY]: quantity });
+	};
+	// if (!is_valid_quantity(searchParams[QUANTITY])) {
+	// 	setQuantity(null);
+	// }
+	const quantity = createMemo(() => searchParams[QUANTITY]);
+
 	return (
 		<div class="columns is-centered">
 			<div class="column">
 				<HostButtons host={host()} setHost={setHost} />
 				<br />
-
 				<Pricing
 					active={plan()}
 					free_text="Choose Free"
@@ -59,6 +71,14 @@ const Billing = (props) => {
 						setPlan(Plan.ENTERPRISE);
 					}}
 				/>
+				<br />
+				{host() === Host.SelfHosted && (
+					<Quantity
+						valid={is_valid_quantity(quantity())}
+						quantity={quantity()}
+						setQuantity={setQuantity}
+					/>
+				)}
 			</div>
 		</div>
 	);
@@ -99,6 +119,50 @@ const HostButtons = (props: { host: Host; setHost: Function }) => {
 				</span>
 				<span>Bencher Cloud</span>
 			</button>
+		</div>
+	);
+};
+
+const Quantity = (props: {
+	valid: boolean;
+	quantity: null | number;
+	setQuantity: Function;
+}) => {
+	return (
+		<div class="box">
+			<form>
+				<p class="control">
+					<label class="label">Metrics</label>
+				</p>
+				<div class="field has-addons">
+					<div class="control has-icons-left has-icons-right">
+						<span class="icon is-small is-left">
+							<i class="fas fa-cubes" />
+						</span>
+						<input
+							class="input"
+							type="number"
+							placeholder="100"
+							value={props.quantity}
+							onInput={(event) => props.setQuantity(event.target?.value)}
+						/>
+						{props.valid && (
+							<span class="icon is-small is-right">
+								<i class="fas fa-check" />
+							</span>
+						)}
+					</div>
+					<p class="control">
+						{/* rome-ignore lint/a11y/useValidAnchor: Bulma */}
+						<a class="button is-static">x 1,000 / month</a>
+					</p>
+				</div>
+				{!props.valid && (
+					<p class="control help is-danger">
+						Must be an integer greater than zero
+					</p>
+				)}
+			</form>
 		</div>
 	);
 };
