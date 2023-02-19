@@ -105,6 +105,13 @@ async fn post_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
+    // Check to make sure the organization does not already have a plan
+    if let Some(subscription) = query_org.subscription {
+        return Err(ApiError::PlanMetered(query_org.id, subscription));
+    } else if let Some(license) = query_org.license {
+        return Err(ApiError::PlanLicensed(query_org.id, license));
+    }
+
     let json_user: JsonUser = schema::user::table
         .filter(schema::user::id.eq(auth_user.id))
         .first::<QueryUser>(conn)
@@ -115,7 +122,9 @@ async fn post_inner(
         .get_or_create_customer(&json_user.name, &json_user.email)
         .await?;
 
-    let payment_method = biller.create_payment_method(&customer, todo!()).await?;
+    let payment_method = biller
+        .create_payment_method(&customer, json_metered.card)
+        .await?;
 
     // let insert_testbed = InsertTestbed::from_json(
     //     &mut api_context.database.connection,

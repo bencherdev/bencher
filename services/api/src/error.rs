@@ -141,6 +141,10 @@ pub enum ApiError {
     #[cfg(feature = "plus")]
     #[error("Tried to use a Bencher Cloud route when Self-Hosted: {0}")]
     BencherCloudOnly(String),
+    #[error("Organization {0} already has a metered plan: {1}")]
+    PlanMetered(i32, String),
+    #[error("Organization {0} already has a licensed plan: {1}")]
+    PlanLicensed(i32, String),
 
     #[error("Failed to cast in: {0}")]
     IntError(#[from] std::num::TryFromIntError),

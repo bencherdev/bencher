@@ -196,12 +196,12 @@ impl Biller {
     pub async fn create_payment_method(
         &self,
         customer: &Customer,
-        payment_card: JsonCard,
+        json_card: JsonCard,
     ) -> Result<PaymentMethod, BillingError> {
         let create_payment_method = CreatePaymentMethod {
             type_: Some(PaymentMethodTypeFilter::Card),
             card: Some(CreatePaymentMethodCardUnion::CardDetailsParams(
-                into_payment_card(payment_card),
+                into_payment_card(json_card),
             )),
             ..Default::default()
         };
