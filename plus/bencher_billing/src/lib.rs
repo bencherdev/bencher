@@ -1,5 +1,5 @@
 mod biller;
 mod error;
 
-pub use biller::{Biller, Customer, PaymentCard, DEFAULT_PRICING};
+pub use biller::{Biller, Customer, PaymentCard};
 pub use error::BillingError;

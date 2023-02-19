@@ -4,6 +4,7 @@ use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::fmt;
+use std::str::FromStr;
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -27,6 +28,17 @@ impl TryFrom<i32> for ExpirationYear {
         } else {
             Err(ValidError::ExpirationYear(expiration_year))
         }
+    }
+}
+
+impl FromStr for ExpirationYear {
+    type Err = ValidError;
+
+    fn from_str(expiration_year: &str) -> Result<Self, Self::Err> {
+        expiration_year
+            .parse::<i32>()
+            .map_err(|_| ValidError::ExpirationYearStr(expiration_year.into()))?
+            .try_into()
     }
 }
 

@@ -65,6 +65,11 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(organization::projects::post)?;
     api.register(organization::projects::one_options)?;
     api.register(organization::projects::get_one)?;
+    // Organization Metered Subscription Plan
+    #[cfg(feature = "plus")]
+    api.register(organization::plan::dir_options)?;
+    #[cfg(feature = "plus")]
+    api.register(organization::plan::post)?;
     // Organization Entitlements
     #[cfg(feature = "plus")]
     api.register(organization::entitlements::options)?;

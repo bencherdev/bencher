@@ -2,7 +2,10 @@
 
 use std::str::FromStr;
 
-use bencher_json::{organization::metered::JsonNewMetered, JsonEmpty, JsonUser, ResourceId};
+use bencher_json::{
+    organization::metered::{JsonNewPlan, DEFAULT_PRICE_NAME},
+    JsonEmpty, JsonUser, ResourceId,
+};
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -54,7 +57,7 @@ pub async fn dir_options(
 pub async fn post(
     rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
-    body: TypedBody<JsonNewMetered>,
+    body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PLAN_RESOURCE, Method::Post);
@@ -74,7 +77,7 @@ pub async fn post(
 async fn post_inner(
     context: &Context,
     path_params: DirPath,
-    json_metered: JsonNewMetered,
+    json_plan: JsonNewPlan,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -115,7 +118,7 @@ async fn post_inner(
 
     // Create a payment method for the user
     let payment_method = biller
-        .create_payment_method(&customer, json_metered.card)
+        .create_payment_method(&customer, json_plan.card)
         .await?;
 
     // Create a metered subscription for the organization
@@ -124,7 +127,8 @@ async fn post_inner(
             Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
             &customer,
             &payment_method,
-            json_metered.plan,
+            json_plan.level,
+            DEFAULT_PRICE_NAME.into(),
         )
         .await?;
 

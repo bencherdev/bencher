@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    organization::metered::{JsonCard, JsonPlan},
+    organization::metered::{JsonCard, JsonLevel},
     system::config::{JsonBilling, JsonProduct, JsonProducts},
     Email, UserName,
 };
@@ -20,8 +20,6 @@ use crate::BillingError;
 const METADATA_ORGANIZATION: &str = "organization";
 // Metrics are bundled by the thousand
 const METRIC_QUANTITY: u64 = 1_000;
-
-pub const DEFAULT_PRICING: &str = "default";
 
 pub struct Biller {
     client: Client,
@@ -102,19 +100,17 @@ pub enum ProductPlan {
 }
 
 impl ProductPlan {
-    pub fn metered(json_plan: JsonPlan) -> Self {
-        match json_plan {
-            JsonPlan::Team(price) => Self::Team(ProductUsage::Metered(price.into())),
-            JsonPlan::Enterprise(price) => Self::Enterprise(ProductUsage::Metered(price.into())),
+    pub fn metered(json_level: JsonLevel, price_name: String) -> Self {
+        match json_level {
+            JsonLevel::Team => Self::Team(ProductUsage::Metered(price_name)),
+            JsonLevel::Enterprise => Self::Enterprise(ProductUsage::Metered(price_name)),
         }
     }
 
-    pub fn licensed(json_plan: JsonPlan, quantity: u64) -> Self {
-        match json_plan {
-            JsonPlan::Team(price) => Self::Team(ProductUsage::Licensed(price.into(), quantity)),
-            JsonPlan::Enterprise(price) => {
-                Self::Enterprise(ProductUsage::Licensed(price.into(), quantity))
-            },
+    pub fn licensed(json_level: JsonLevel, price_name: String, quantity: u64) -> Self {
+        match json_level {
+            JsonLevel::Team => Self::Team(ProductUsage::Licensed(price_name, quantity)),
+            JsonLevel::Enterprise => Self::Enterprise(ProductUsage::Licensed(price_name, quantity)),
         }
     }
 }
@@ -293,13 +289,14 @@ impl Biller {
         organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
-        json_plan: JsonPlan,
+        json_level: JsonLevel,
+        price_name: String,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
             customer,
             payment_method,
-            ProductPlan::metered(json_plan),
+            ProductPlan::metered(json_level, price_name),
         )
         .await
     }
@@ -437,7 +434,7 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 #[cfg(test)]
 mod test {
     use bencher_json::{
-        organization::metered::JsonCard,
+        organization::metered::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
     };
     use chrono::{Datelike, Utc};
@@ -447,7 +444,7 @@ mod test {
     use uuid::Uuid;
 
     use crate::{
-        biller::{ProductPlan, ProductUsage, DEFAULT_PRICING},
+        biller::{ProductPlan, ProductUsage},
         Biller,
     };
 
@@ -578,7 +575,7 @@ mod test {
 
         // Team Metered Plan
         let organization = Uuid::new_v4();
-        let product_plan = ProductPlan::Team(ProductUsage::Metered(DEFAULT_PRICING.into()));
+        let product_plan = ProductPlan::Team(ProductUsage::Metered(DEFAULT_PRICE_NAME.into()));
         test_subscription(
             &biller,
             organization,
@@ -591,7 +588,7 @@ mod test {
 
         // Team Licensed Plan
         let organization = Uuid::new_v4();
-        let product_plan = ProductPlan::Team(ProductUsage::Licensed(DEFAULT_PRICING.into(), 10));
+        let product_plan = ProductPlan::Team(ProductUsage::Licensed(DEFAULT_PRICE_NAME.into(), 10));
         test_subscription(
             &biller,
             organization,
@@ -603,7 +600,8 @@ mod test {
 
         // Enterprise Metered Plan
         let organization = Uuid::new_v4();
-        let product_plan = ProductPlan::Enterprise(ProductUsage::Metered(DEFAULT_PRICING.into()));
+        let product_plan =
+            ProductPlan::Enterprise(ProductUsage::Metered(DEFAULT_PRICE_NAME.into()));
         test_subscription(
             &biller,
             organization,
@@ -617,7 +615,7 @@ mod test {
         // Enterprise Licensed Plan
         let organization = Uuid::new_v4();
         let product_plan =
-            ProductPlan::Enterprise(ProductUsage::Licensed(DEFAULT_PRICING.into(), 25));
+            ProductPlan::Enterprise(ProductUsage::Licensed(DEFAULT_PRICE_NAME.into(), 25));
         test_subscription(
             &biller,
             organization,

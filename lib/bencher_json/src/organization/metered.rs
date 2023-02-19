@@ -1,15 +1,17 @@
 #![cfg(feature = "plus")]
 
-use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, NonEmpty};
+use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub const DEFAULT_PRICE_NAME: &str = "default";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewMetered {
+pub struct JsonNewPlan {
     pub card: JsonCard,
-    pub plan: JsonPlan,
+    pub level: JsonLevel,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,7 +26,7 @@ pub struct JsonCard {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename = "snake_case")]
-pub enum JsonPlan {
-    Team(NonEmpty),
-    Enterprise(NonEmpty),
+pub enum JsonLevel {
+    Team,
+    Enterprise,
 }

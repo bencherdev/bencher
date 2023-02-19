@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use crate::cli::CliBackend;
 
 pub mod member;
+pub mod plan;
 
 #[derive(Subcommand, Debug)]
 pub enum CliOrganization {

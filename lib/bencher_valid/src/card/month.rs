@@ -1,7 +1,7 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::fmt;
+use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
@@ -25,6 +25,17 @@ impl TryFrom<i32> for ExpirationMonth {
         } else {
             Err(ValidError::ExpirationMonth(expiration_month))
         }
+    }
+}
+
+impl FromStr for ExpirationMonth {
+    type Err = ValidError;
+
+    fn from_str(expiration_month: &str) -> Result<Self, Self::Err> {
+        expiration_month
+            .parse::<i32>()
+            .map_err(|_| ValidError::ExpirationMonthStr(expiration_month.into()))?
+            .try_into()
     }
 }
 
