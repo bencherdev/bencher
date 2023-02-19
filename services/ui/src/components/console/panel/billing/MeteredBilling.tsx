@@ -1,10 +1,9 @@
 import { useSearchParams } from "solid-app-router";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo } from "solid-js";
 import { PLAN_PARAM } from "../../../auth/AuthForm";
 import { validate_plan } from "../../../site/util";
-import Pricing, { per_metric_cost, Plan } from "./Pricing";
-
-const QUANTITY = "quantity";
+import PaymentCard from "./PaymentCard";
+import Pricing, { Plan } from "./Pricing";
 
 const Billing = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -39,7 +38,7 @@ const Billing = (props) => {
 					}}
 				/>
 				<br />
-				{plan() !== Plan.FREE && <div class="box">TODO payment</div>}
+				{plan() !== Plan.FREE && <PaymentCard />}
 			</div>
 		</div>
 	);
