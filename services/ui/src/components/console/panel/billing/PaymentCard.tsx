@@ -6,7 +6,7 @@ import { is_valid_email, is_valid_user_name } from "bencher_valid";
 import { validate_string } from "../../../site/util";
 
 const PaymentCard = (props) => {
-	const [form, setForm] = createSignal(initForm());
+	const [form, setForm] = createSignal(cardForm());
 	const handleField = (key, value, valid) => {
 		setForm({
 			...form(),
@@ -19,13 +19,10 @@ const PaymentCard = (props) => {
 
 	const validateForm = () => {
 		const validate_form = form();
-		return (
-			validate_form.name.valid &&
-			validate_form.card_number.valid &&
-			validate_form.card_exp_month.valid &&
-			validate_form.card_exp_year.valid &&
-			validate_form.card_cvc.valid
-		);
+		return validate_form.number.valid; //&&
+		// validate_form.card_exp_month.valid &&
+		// validate_form.card_exp_year.valid &&
+		// validate_form.card_cvc.valid
 	};
 
 	const handleFormValid = () => {
@@ -43,14 +40,14 @@ const PaymentCard = (props) => {
 		<form class="box">
 			<Field
 				kind={FieldKind.INPUT}
-				fieldKey="name"
+				fieldKey="number"
 				label={true}
-				value={form()?.name?.value}
-				valid={form()?.name?.valid}
-				config={CARD_FIELDS.name}
+				value={form()?.number?.value}
+				valid={form()?.number?.valid}
+				config={CARD_FIELDS.number}
 				handleField={handleField}
 			/>
-			<Field
+			{/* <Field
 				kind={FieldKind.INPUT}
 				fieldKey="email"
 				label={true}
@@ -58,34 +55,26 @@ const PaymentCard = (props) => {
 				valid={form()?.email?.valid}
 				config={CARD_FIELDS.email}
 				handleField={handleField}
-			/>
+			/> */}
 		</form>
 	);
 };
 
-const initForm = () => {
+export const cardForm = () => {
 	return {
-		name: {
+		number: {
 			value: "",
 			valid: null,
 		},
-		email: {
+		exp_month: {
 			value: "",
 			valid: null,
 		},
-		card_number: {
+		exp_year: {
 			value: "",
 			valid: null,
 		},
-		card_exp_month: {
-			value: "",
-			valid: null,
-		},
-		card_exp_year: {
-			value: "",
-			valid: null,
-		},
-		card_cvc: {
+		cvc: {
 			value: "",
 			valid: null,
 		},
@@ -95,22 +84,22 @@ const initForm = () => {
 };
 
 const CARD_FIELDS = {
-	name: {
-		label: "Name",
+	number: {
+		label: "Card Number",
 		type: "text",
-		placeholder: "Full Name",
-		icon: "fas fa-user",
+		placeholder: "4000-0082-6000-0000",
+		icon: "fas fa-credit-card",
 		help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
 		validate: (input) => validate_string(input, is_valid_user_name),
 	},
-	email: {
-		label: "Email",
-		type: "email",
-		placeholder: "email@example.com",
-		icon: "fas fa-envelope",
-		help: "Must be a valid email address",
-		validate: (input) => validate_string(input, is_valid_email),
-	},
+	// email: {
+	// 	label: "Email",
+	// 	type: "email",
+	// 	placeholder: "email@example.com",
+	// 	icon: "fas fa-envelope",
+	// 	help: "Must be a valid email address",
+	// 	validate: (input) => validate_string(input, is_valid_email),
+	// },
 };
 
 export default PaymentCard;
