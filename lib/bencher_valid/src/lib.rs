@@ -3,13 +3,13 @@ use wasm_bindgen::prelude::*;
 
 mod benchmark_name;
 mod branch_name;
+#[cfg(feature = "plus")]
+mod card;
 mod email;
 mod error;
 mod git_hash;
 mod jwt;
 mod non_empty;
-#[cfg(feature = "plus")]
-mod payment_card;
 mod plan;
 mod resource_id;
 mod secret;
@@ -22,13 +22,13 @@ pub use crate::slug::Slug;
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
 pub use branch_name::BranchName;
+#[cfg(feature = "plus")]
+pub use card::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
 pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
-#[cfg(feature = "plus")]
-pub use payment_card::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
 pub use plan::Plan;
 pub use resource_id::ResourceId;
 pub use secret::Secret;
