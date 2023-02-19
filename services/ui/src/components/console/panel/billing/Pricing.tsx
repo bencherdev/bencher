@@ -4,6 +4,17 @@ export enum Plan {
 	ENTERPRISE = "enterprise",
 }
 
+export const plan_cost = (plan: Plan) => {
+	switch (plan) {
+		case Plan.FREE:
+			return 0;
+		case Plan.TEAM:
+			return 1;
+		case Plan.ENTERPRISE:
+			return 5;
+	}
+};
+
 const Pricing = (props: {
 	active: string;
 	free_text: string;

@@ -1,8 +1,19 @@
-import { createSignal } from "solid-js";
+import { useSearchParams } from "solid-app-router";
+import { createMemo, createSignal } from "solid-js";
+import { PLAN_PARAM } from "../../../auth/AuthForm";
+import { validate_plan } from "../../../site/util";
 import Pricing, { Plan } from "./Pricing";
 
 const Billing = (props) => {
-	const [plan, setPlan] = createSignal(Plan.TEAM);
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	const setPlan = (plan: Plan) => {
+		setSearchParams({ [PLAN_PARAM]: plan });
+	};
+	if (!validate_plan(searchParams[PLAN_PARAM])) {
+		setPlan(Plan.TEAM);
+	}
+	const plan = createMemo(() => searchParams[PLAN_PARAM]);
 
 	return (
 		<div class="content has-text-centered">
