@@ -16,6 +16,7 @@ import {
 	NOTIFY_TEXT_PARAM,
 	validate_plan,
 } from "../site/util";
+import { Host } from "./config/resources/billing";
 
 const ConsolePage = lazy(() => import("./ConsolePage"));
 
@@ -63,7 +64,7 @@ const ConsoleRoutes = (props) => {
 			/>
 			<Route
 				path="/organizations/:organization_slug/billing"
-				element={consolePage(config?.[Resource.BILLING])}
+				element={consolePage(config?.[Resource.BILLING]?.[Host.BENCHER_CLOUD])}
 			/>
 			<Route
 				path="/organizations/:organization_slug/projects"
