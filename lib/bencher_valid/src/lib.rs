@@ -28,7 +28,7 @@ use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
-pub use payment_card::{CardNumber, ExpirationMonth, ExpirationYear};
+pub use payment_card::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
 pub use plan::Plan;
 pub use resource_id::ResourceId;
 pub use secret::Secret;
