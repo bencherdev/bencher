@@ -77,6 +77,7 @@ pub fn is_valid_card_number(card_number: &str) -> bool {
     NUMBER_REGEX.is_match(card_number) && validate_luhn(card_number)
 }
 
+// https://github.com/valeriansaliou/rs-card-validate/blob/master/src/luhn.rs
 pub fn validate_luhn(number: &str) -> bool {
     let mut checksum = 0;
 

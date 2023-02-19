@@ -30,4 +30,6 @@ pub enum ValidError {
     Plan(String),
     #[error("Failed to validate payment card number: {0}")]
     CardNumber(String),
+    #[error("Failed to validate payment card expiration year: {0}")]
+    ExpirationYear(i32),
 }

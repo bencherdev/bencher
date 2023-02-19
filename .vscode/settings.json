@@ -36,6 +36,7 @@
     "interquartile",
     "jsonwebtoken",
     "libtest",
+    "luhn",
     "Microbenchmark",
     "nanos",
     "pytest",

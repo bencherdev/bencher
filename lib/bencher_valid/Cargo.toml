@@ -11,10 +11,11 @@ crate-type = ["cdylib", "rlib"]
 default = ["wasm", "plus"]
 wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
 schema = ["dep:schemars"]
-plus = []
+plus = ["dep:chrono"]
 
 [dependencies]
 # Workspace
+chrono = { workspace = true, optional = true }
 derive_more.workspace = true
 once_cell.workspace = true
 schemars = { workspace = true, optional = true }

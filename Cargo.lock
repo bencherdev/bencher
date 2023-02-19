@@ -717,6 +717,7 @@ name = "bencher_valid"
 version = "0.2.38"
 dependencies = [
  "base64 0.13.1",
+ "chrono",
  "console_error_panic_hook",
  "derive_more",
  "email_address",
