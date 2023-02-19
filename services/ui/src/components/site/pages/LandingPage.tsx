@@ -212,7 +212,7 @@ const LandingPage = (props) => {
 										<br />
 										<br />
 										<br />
-										<span class="icon has-text-primary is-disabled">
+										<span class="icon has-text-primary">
 											<i class="fas fa-cloud fa-10x" aria-hidden="true" />
 										</span>
 									</div>
