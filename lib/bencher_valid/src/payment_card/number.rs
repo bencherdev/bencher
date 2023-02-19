@@ -51,13 +51,13 @@ impl<'de> Deserialize<'de> for CardNumber {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(NonEmptyVisitor)
+        deserializer.deserialize_str(CardNumberVisitor)
     }
 }
 
-struct NonEmptyVisitor;
+struct CardNumberVisitor;
 
-impl<'de> Visitor<'de> for NonEmptyVisitor {
+impl<'de> Visitor<'de> for CardNumberVisitor {
     type Value = CardNumber;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

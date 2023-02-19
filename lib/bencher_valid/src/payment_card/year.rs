@@ -41,13 +41,13 @@ impl<'de> Deserialize<'de> for ExpirationYear {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_i32(NonEmptyVisitor)
+        deserializer.deserialize_i32(ExpirationYearVisitor)
     }
 }
 
-struct NonEmptyVisitor;
+struct ExpirationYearVisitor;
 
-impl<'de> Visitor<'de> for NonEmptyVisitor {
+impl<'de> Visitor<'de> for ExpirationYearVisitor {
     type Value = ExpirationYear;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -66,7 +66,7 @@ impl<'de> Visitor<'de> for NonEmptyVisitor {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_expiration_year(year: i32) -> bool {
     let year_now = Utc::now().year();
-    year >= year_now && year <= year_now + 115
+    (year_now..=(year_now + 115)).contains(&year)
 }
 
 #[cfg(test)]
