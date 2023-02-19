@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bencher_json::{
     system::config::{JsonBilling, JsonProduct, JsonProducts},
-    Email, NonEmpty,
+    Email, UserName,
 };
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
@@ -109,7 +109,7 @@ pub enum ProductUsage {
 impl Biller {
     pub async fn get_or_create_customer(
         &self,
-        name: &NonEmpty,
+        name: &UserName,
         email: &Email,
     ) -> Result<Customer, BillingError> {
         if let Some(customer) = self.get_customer(email).await? {
@@ -141,7 +141,7 @@ impl Biller {
     // Use `get_or_create_customer` instead!
     async fn create_customer(
         &self,
-        name: &NonEmpty,
+        name: &UserName,
         email: &Email,
     ) -> Result<Customer, BillingError> {
         let create_customer = CreateCustomer {

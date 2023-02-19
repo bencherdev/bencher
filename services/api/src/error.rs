@@ -138,6 +138,9 @@ pub enum ApiError {
     #[cfg(feature = "plus")]
     #[error("Tried to init Bencher Plus for endpoint: {0}")]
     BencherPlus(url::Url),
+    #[cfg(feature = "plus")]
+    #[error("Tried to use a Bencher Cloud route when Self-Hosted: {0}")]
+    BencherCloudOnly(String),
 
     #[error("Failed to cast in: {0}")]
     IntError(#[from] std::num::TryFromIntError),

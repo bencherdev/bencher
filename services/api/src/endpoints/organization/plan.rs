@@ -1,5 +1,8 @@
+#![cfg(feature = "plus")]
+
 use bencher_json::{
-    organization::billing::JsonNewMetered, JsonEmpty, JsonNewTestbed, JsonTestbed, ResourceId,
+    organization::billing::JsonNewMetered, JsonEmpty, JsonNewTestbed, JsonTestbed, JsonUser,
+    ResourceId,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -14,7 +17,7 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::user::auth::AuthUser,
+    model::user::{auth::AuthUser, QueryUser},
     model::{
         organization::QueryOrganization,
         project::{
@@ -87,12 +90,30 @@ async fn post_inner(
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database.connection;
 
+    // Check to see if there is a Biller
+    // The Biller is only available on Bencher Cloud
+    let Some(biller) = &api_context.biller else {
+        return Err(ApiError::BencherCloudOnly(
+            "/v0/organizations/organization/plan".into(),
+        ));
+    };
+
     // Get the organization
     let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
     // Check to see if user has permission to manage the organization
     api_context
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
+
+    let json_user: JsonUser = schema::user::table
+        .filter(schema::user::id.eq(auth_user.id))
+        .first::<QueryUser>(conn)
+        .map_err(api_error!())?
+        .into_json()?;
+
+    let customer = biller
+        .get_or_create_customer(&json_user.name, &json_user.email)
+        .await?;
 
     // let insert_testbed = InsertTestbed::from_json(
     //     &mut api_context.database.connection,
