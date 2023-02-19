@@ -28,4 +28,6 @@ pub enum ValidError {
     Secret(String),
     #[error("Failed to validate plan: {0}")]
     Plan(String),
+    #[error("Failed to validate payment card number: {0}")]
+    CardNumber(String),
 }

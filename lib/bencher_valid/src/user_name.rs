@@ -14,6 +14,10 @@ use serde::{
 
 use crate::{is_valid_len, ValidError, REGEX_ERROR};
 
+#[allow(clippy::expect_used)]
+static NAME_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
+
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);
@@ -67,10 +71,6 @@ impl<'de> Visitor<'de> for UserNameVisitor {
         value.parse().map_err(E::custom)
     }
 }
-
-#[allow(clippy::expect_used)]
-static NAME_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {

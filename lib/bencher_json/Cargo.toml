@@ -6,7 +6,7 @@ edition.workspace = true
 
 [features]
 default = []
-plus = []
+plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 
 [dependencies]

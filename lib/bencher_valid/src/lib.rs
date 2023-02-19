@@ -8,6 +8,8 @@ mod error;
 mod git_hash;
 mod jwt;
 mod non_empty;
+#[cfg(feature = "plus")]
+mod payment_card;
 mod plan;
 mod resource_id;
 mod secret;

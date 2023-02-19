@@ -8,9 +8,10 @@ edition.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["wasm"]
+default = ["wasm", "plus"]
 wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
 schema = ["dep:schemars"]
+plus = []
 
 [dependencies]
 # Workspace
