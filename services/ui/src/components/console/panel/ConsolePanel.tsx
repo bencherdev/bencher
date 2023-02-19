@@ -5,6 +5,7 @@ import { Operation } from "../config/types";
 import PerfPanel from "./perf/PerfPanel";
 import PosterPanel from "./poster/PosterPanel";
 import { useLocation } from "solid-app-router";
+import BillingPanel from "./billing/BillingPanel";
 
 const ConsolePanel = (props) => {
 	const location = useLocation();
@@ -37,6 +38,14 @@ const ConsolePanel = (props) => {
 				<PerfPanel
 					user={props.user}
 					project_slug={props.project_slug}
+					config={props.config}
+					path_params={props.path_params}
+				/>
+			</Match>
+			<Match when={props.config?.operation === Operation.BILLING}>
+				<BillingPanel
+					user={props.user}
+					organization_slug={props.organization_slug}
 					config={props.config}
 					path_params={props.path_params}
 				/>

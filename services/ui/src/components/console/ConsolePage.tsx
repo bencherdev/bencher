@@ -99,6 +99,7 @@ const ConsolePage = (props) => {
 						<div class="column is-10">
 							<ConsolePanel
 								user={props.user}
+								organization_slug={props.organization_slug}
 								project_slug={props.project_slug}
 								operation={props.operation}
 								config={props.config}

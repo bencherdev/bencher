@@ -11,10 +11,12 @@ import metricKindsConfig from "./resources/metric_kinds";
 import usersConfig from "./resources/users";
 import tokensConfig from "./resources/tokens";
 import benchmarksConfig from "./resources/benchmarks";
+import billingConfig from "./resources/billing";
 
 const consoleConfig = {
 	[Resource.ORGANIZATIONS]: organizationsConfig,
 	[Resource.MEMBERS]: membersConfig,
+	[Resource.BILLING]: billingConfig,
 	[Resource.PROJECTS]: projectsConfig,
 	[Resource.REPORTS]: reportsConfig,
 	[Resource.METRIC_KINDS]: metricKindsConfig,

@@ -14,24 +14,24 @@ export const forward_path = (
 
 	if (Array.isArray(keep_params)) {
 		for (const [key, value] of current_params.entries()) {
-			console.log(`FOUND ${key} ${value}`);
+			// console.log(`FOUND ${key} ${value}`);
 			if (keep_params?.includes(key)) {
-				console.log(`KEEP ${key} ${value}`);
+				// console.log(`KEEP ${key} ${value}`);
 				params.set(key, value);
 			}
 		}
 	}
 
-	console.log(`SET PARAMS ${set_params}`);
+	// console.log(`SET PARAMS ${set_params}`);
 	if (Array.isArray(set_params)) {
 		for (const [key, value] of set_params) {
-			console.log(`SET ${key} ${value}`);
+			// console.log(`SET ${key} ${value}`);
 			params.set(key, value);
 		}
 	}
 
 	let params_str = params.toString();
-	console.log(`${href}?${params_str}`);
+	// console.log(`${href}?${params_str}`);
 
 	if (params_str.length === 0) {
 		return href;

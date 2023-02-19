@@ -5,6 +5,7 @@ export enum Operation {
 	EDIT,
 	DELETE,
 	PERF,
+	BILLING,
 }
 
 export enum Button {
@@ -17,6 +18,7 @@ export enum Button {
 export enum Resource {
 	ORGANIZATIONS,
 	MEMBERS,
+	BILLING,
 	PROJECTS,
 	REPORTS,
 	METRIC_KINDS,

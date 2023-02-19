@@ -62,6 +62,10 @@ const ConsoleRoutes = (props) => {
 				)}
 			/>
 			<Route
+				path="/organizations/:organization_slug/billing"
+				element={consolePage(config?.[Resource.BILLING])}
+			/>
+			<Route
 				path="/organizations/:organization_slug/projects"
 				element={consolePage(config?.[Resource.PROJECTS]?.[Operation.LIST])}
 			/>

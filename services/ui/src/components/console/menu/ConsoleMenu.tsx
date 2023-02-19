@@ -23,10 +23,16 @@ const ConsoleMenu = (props) => {
 						<p class="menu-label">Organization</p>
 						<ul class="menu-list">
 							<li>
+								<Link href={getOrganizationPath("projects")}>Projects</Link>
+							</li>
+							<li>
 								<Link href={getOrganizationPath("members")}>Members</Link>
 							</li>
 							<li>
 								<Link href={getOrganizationPath("settings")}>Settings</Link>
+							</li>
+							<li>
+								<Link href={getOrganizationPath("billing")}>Billing</Link>
 							</li>
 						</ul>
 					</>
