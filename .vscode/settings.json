@@ -40,6 +40,7 @@
     "pytest",
     "repr",
     "Roadmap",
+    "signup",
     "starttls",
     "thiserror",
     "vcentered"

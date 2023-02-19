@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
+import Pricing, { Plan } from "../../console/panel/billing/Pricing";
 import { BENCHER_CALENDLY_URL, pageTitle, validate_jwt } from "../util";
 
 const PricingPage = (props) => {
@@ -7,7 +8,7 @@ const PricingPage = (props) => {
 
 	createEffect(() => {
 		if (validate_jwt(props.user.token)) {
-			navigate("/console/");
+			navigate("/console?plan=free");
 		}
 
 		pageTitle("Pricing");
@@ -40,120 +41,27 @@ const PricingPage = (props) => {
 			</section>
 			<hr />
 			<section class="section">
-				<div class="pricing-table is-comparative">
-					<div class="pricing-plan">
-						<div class="plan-header">
-							<h2 class="title">Free</h2>
-						</div>
-						<div class="plan-price">
-							<span class="plan-price-amount">$0</span>
-						</div>
-						<div class="content has-text-centered">
-							<small>per metric/month</small>
-						</div>
-						<div class="plan-items">
-							<div class="plan-item" data-feature="Public Projects">
-								Public Projects
-							</div>
-							<div class="plan-item" data-feature="Team Roles">
-								---
-							</div>
-							<div class="plan-item" data-feature="Private Projects">
-								Community Support
-							</div>
-						</div>
-						<div class="plan-footer">
-							<div class="columns is-centered">
-								<div class="column is-four-fifths">
-									<button
-										class="button is-fullwidth"
-										onClick={(e) => {
-											e.preventDefault();
-											navigate("/auth/signup?plan=free");
-										}}
-									>
-										Sign up for free
-									</button>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* <div class="pricing-plan is-active">
-						<div class="plan-header">
-							<h2 class="title">Team</h2>
-						</div>
-						<div class="plan-price">
-							<span class="plan-price-amount">$0.01</span>
-						</div>
-						<div class="content has-text-centered">
-							<small>per metric/month</small>
-						</div>
-						<div class="plan-items">
-							<div class="plan-item" data-feature="Public Projects">
-								Public Projects
-							</div>
-							<div class="plan-item" data-feature="Private Projects">
-								Private Projects
-							</div>
-							<div class="plan-item" data-feature="Team Roles">
-								Customer Support
-							</div>
-						</div>
-						<div class="plan-footer">
-							<button
-								class="button is-fullwidth"
-								onClick={(e) => {
-									e.preventDefault();
-									navigate("/auth/signup?plan=team");
-								}}
-							>
-								Continue with Team
-							</button>
-						</div>
-					</div>
-
-					<div class="pricing-plan">
-						<div class="plan-header">
-							<h2 class="title">Enterprise</h2>
-						</div>
-						<div class="plan-price">
-							<span class="plan-price-amount">$0.05</span>
-						</div>
-						<div class="content has-text-centered">
-							<small>per metric/month</small>
-						</div>
-						<div class="plan-items">
-							<div class="plan-item" data-feature="Public Projects">
-								Public Projects
-							</div>
-							<div class="plan-item" data-feature="Private Projects">
-								Private Projects
-							</div>
-							<div class="plan-item" data-feature="Team Roles">
-								Priority Support
-							</div>
-						</div>
-						<div class="plan-footer">
-							<div class="columns is-centered">
-								<div class="column is-four-fifths">
-									<button
-										class="button is-fullwidth"
-										onClick={(e) => {
-											e.preventDefault();
-											navigate("/auth/signup?plan=enterprise");
-										}}
-									>
-										Continue with Enterprise
-									</button>
-								</div>
-							</div>
-						</div>
-					</div> */}
-				</div>
+				<Pricing
+					active={Plan.TEAM}
+					free_text="Sign up for free"
+					handleFree={(e) => {
+						e.preventDefault();
+						navigate(plan_signup(Plan.FREE));
+					}}
+					team_text="Continue with Team"
+					handleTeam={(e) => {
+						e.preventDefault();
+						navigate(plan_signup(Plan.TEAM));
+					}}
+					enterprise_text="Continue with Enterprise"
+					handleEnterprise={(e) => {
+						e.preventDefault();
+						navigate(plan_signup(Plan.ENTERPRISE));
+					}}
+				/>
 			</section>
 
-			{/* <br />
+			<br />
 			<br />
 			<br />
 			<hr />
@@ -229,9 +137,13 @@ const PricingPage = (props) => {
 						</div>
 					</div>
 				</div>
-			</section> */}
+			</section>
 		</div>
 	);
+};
+
+const plan_signup = (plan: Plan) => {
+	return `/auth/signup?plan=${plan}`;
 };
 
 export default PricingPage;
