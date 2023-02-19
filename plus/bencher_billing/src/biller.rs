@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    organization::billing::{JsonCard, JsonPlan},
+    organization::metered::{JsonCard, JsonPlan},
     system::config::{JsonBilling, JsonProduct, JsonProducts},
     Email, UserName,
 };
@@ -437,7 +437,7 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 #[cfg(test)]
 mod test {
     use bencher_json::{
-        organization::billing::JsonCard,
+        organization::metered::JsonCard,
         system::config::{JsonBilling, JsonProduct, JsonProducts},
     };
     use chrono::{Datelike, Utc};

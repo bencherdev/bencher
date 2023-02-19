@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use bencher_json::{organization::billing::JsonNewMetered, JsonEmpty, JsonUser, ResourceId};
+use bencher_json::{organization::metered::JsonNewMetered, JsonEmpty, JsonUser, ResourceId};
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
