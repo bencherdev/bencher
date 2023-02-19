@@ -4,7 +4,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use crate::cli::CliBackend;
 
 #[derive(Subcommand, Debug)]
-pub enum CliPlan {
+pub enum CliOrganizationPlan {
     /// Create a metered subscription plan
     #[clap(alias = "add")]
     Create(CliPlanCreate),
@@ -13,8 +13,7 @@ pub enum CliPlan {
 #[derive(Parser, Debug)]
 pub struct CliPlanCreate {
     /// Organization slug or UUID
-    #[clap(long)]
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
     #[clap(flatten)]
     pub card: CliPlanCard,

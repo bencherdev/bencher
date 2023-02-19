@@ -3,6 +3,8 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
 
+use self::plan::CliOrganizationPlan;
+
 pub mod member;
 pub mod plan;
 
@@ -18,6 +20,10 @@ pub enum CliOrganization {
     View(CliOrganizationView),
     /// Check organization permission
     Allowed(CliOrganizationAllowed),
+    #[cfg(feature = "plus")]
+    /// Organization metered subscription plan
+    #[clap(subcommand)]
+    Plan(CliOrganizationPlan),
     #[cfg(feature = "plus")]
     /// Check organization entitlements
     Entitlements(CliOrganizationEntitlements),

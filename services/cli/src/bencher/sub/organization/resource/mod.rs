@@ -7,6 +7,8 @@ mod create;
 #[cfg(feature = "plus")]
 mod entitlements;
 mod list;
+#[cfg(feature = "plus")]
+mod plan;
 mod view;
 
 #[derive(Debug)]
@@ -15,6 +17,8 @@ pub enum Organization {
     Create(create::Create),
     View(view::View),
     Allowed(allowed::Allowed),
+    #[cfg(feature = "plus")]
+    Plan(plan::Plan),
     #[cfg(feature = "plus")]
     Entitlements(entitlements::Entitlements),
 }
@@ -28,6 +32,8 @@ impl TryFrom<CliOrganization> for Organization {
             CliOrganization::Create(create) => Self::Create(create.try_into()?),
             CliOrganization::View(view) => Self::View(view.try_into()?),
             CliOrganization::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
+            #[cfg(feature = "plus")]
+            CliOrganization::Plan(plan) => Self::Plan(plan.try_into()?),
             #[cfg(feature = "plus")]
             CliOrganization::Entitlements(entitlements) => {
                 Self::Entitlements(entitlements.try_into()?)
@@ -44,6 +50,8 @@ impl SubCmd for Organization {
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
             Self::Allowed(allowed) => allowed.exec().await,
+            #[cfg(feature = "plus")]
+            Self::Plan(plan) => plan.exec().await,
             #[cfg(feature = "plus")]
             Self::Entitlements(entitlements) => entitlements.exec().await,
         }
