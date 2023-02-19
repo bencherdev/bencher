@@ -146,7 +146,7 @@ pub enum ApiError {
     #[error("Organization {0} already has a licensed plan: {1}")]
     PlanLicensed(i32, String),
 
-    #[error("Failed to cast in: {0}")]
+    #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
     #[error("Missing configuration key: {0}")]
     MissingConfigKey(String),

@@ -72,6 +72,20 @@ impl<'de> Visitor<'de> for ExpirationYearVisitor {
     {
         value.try_into().map_err(E::custom)
     }
+
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_i32(i32::try_from(value).map_err(E::custom)?)
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_i32(i32::try_from(value).map_err(E::custom)?)
+    }
 }
 
 // https://stackoverflow.com/questions/2500588/maximum-year-in-expiry-date-of-credit-card

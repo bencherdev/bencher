@@ -38,6 +38,8 @@ pub enum ValidError {
     ExpirationMonth(i32),
     #[error("Failed to validate payment card expiration month: {0}")]
     ExpirationMonthStr(String),
+    #[error("Failed to cast in: {0}")]
+    IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to validate payment card CVC: {0}")]
     CardCvc(String),
 }

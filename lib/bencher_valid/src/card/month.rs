@@ -69,6 +69,20 @@ impl<'de> Visitor<'de> for ExpirationMonthVisitor {
     {
         value.try_into().map_err(E::custom)
     }
+
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_i32(i32::try_from(value).map_err(E::custom)?)
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_i32(i32::try_from(value).map_err(E::custom)?)
+    }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]

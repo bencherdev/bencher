@@ -12,6 +12,6 @@ pub enum LicenseError {
     Licensor(#[from] jsonwebtoken::errors::Error),
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_valid::ValidError),
-    #[error("Failed to cast in: {0}")]
+    #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
 }
