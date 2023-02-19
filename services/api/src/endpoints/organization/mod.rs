@@ -7,6 +7,8 @@ pub mod allowed;
 pub mod entitlements;
 pub mod members;
 pub mod organizations;
+#[cfg(feature = "plus")]
+pub mod plan;
 pub mod projects;
 
 #[derive(Debug, Display, Clone, Copy)]
@@ -15,6 +17,8 @@ pub enum Resource {
     Organization,
     OrganizationPermission,
     Project,
+    #[cfg(feature = "plus")]
+    Plan,
     #[cfg(feature = "plus")]
     Entitlements,
 }
@@ -27,6 +31,8 @@ impl WordStr for Resource {
             Self::OrganizationPermission => "organization permission",
             Self::Project => "project",
             #[cfg(feature = "plus")]
+            Self::Plan => "plan",
+            #[cfg(feature = "plus")]
             Self::Entitlements => "entitlements",
         }
     }
@@ -37,6 +43,8 @@ impl WordStr for Resource {
             Self::Organization => "organizations",
             Self::OrganizationPermission => "organization permissions",
             Self::Project => "projects",
+            #[cfg(feature = "plus")]
+            Self::Plan => "plans",
             #[cfg(feature = "plus")]
             Self::Entitlements => "entitlements",
         }

@@ -6,20 +6,13 @@ use bencher_valid::{
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewMetered {
-    pub customer: JsonCustomer,
     pub card: JsonCard,
     pub plan: JsonPlan,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonCustomer {
-    pub name: UserName,
-    pub email: Email,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
