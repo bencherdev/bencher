@@ -154,8 +154,9 @@ const AuthConfirmPage = (props: {
 	};
 
 	createEffect(() => {
+		pageTitle(props.config?.title);
+
 		if (validate_jwt(props.user?.token)) {
-			console.log("CONFIRM");
 			navigate(
 				notification_path(
 					props.config?.form?.redirect[plan() ? plan() : "free"],
@@ -166,8 +167,6 @@ const AuthConfirmPage = (props: {
 				),
 			);
 		}
-
-		pageTitle(props.config?.title);
 
 		const value = form()?.token?.value;
 		if (value.length > 0) {

@@ -12,14 +12,23 @@ export const forward_path = (
 	let params = new URLSearchParams();
 	let current_params = new URLSearchParams(window.location.search);
 
-	for (const [key, value] of current_params.entries()) {
-		if (keep_params?.includes(key)) {
+	if (Array.isArray(keep_params)) {
+		for (const [key, value] of current_params.entries()) {
+			console.log(`FOUND ${key} ${value}`);
+			if (keep_params?.includes(key)) {
+				console.log(`KEEP ${key} ${value}`);
+				params.set(key, value);
+			}
+		}
+	}
+
+	console.log(`SET PARAMS ${set_params}`);
+	if (Array.isArray(set_params)) {
+		for (const [key, value] of set_params) {
+			console.log(`SET ${key} ${value}`);
 			params.set(key, value);
 		}
 	}
-	set_params?.forEach((param) => {
-		params.set(param[0], param[1]);
-	});
 
 	let params_str = params.toString();
 	console.log(`${href}?${params_str}`);

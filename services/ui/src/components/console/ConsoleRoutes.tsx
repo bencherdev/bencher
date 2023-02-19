@@ -1,9 +1,9 @@
-import { createMemo, lazy } from "solid-js";
-import { Navigate, Route, useParams } from "solid-app-router";
+import { createEffect, createMemo, lazy } from "solid-js";
+import { Navigate, Route, useNavigate, useParams } from "solid-app-router";
 import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
-import Forward from "../site/Forward";
+import Forward, { forward_path } from "../site/Forward";
 import { PLAN_PARAM } from "../auth/AuthForm";
 import { NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM } from "../site/util";
 
@@ -27,15 +27,7 @@ const ConsoleRoutes = (props) => {
 	return (
 		<>
 			{/* Console Routes */}
-			<Route
-				path="/"
-				element={
-					<Forward
-						href="/console/organizations"
-						keep_params={[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM]}
-					/>
-				}
-			/>
+			<Route path="/" element={<NavigateToOrganizations />} />
 			{/* Console Projects Routes */}
 			<Route
 				path="/organizations"
@@ -191,18 +183,34 @@ const ConsoleRoutes = (props) => {
 
 export default ConsoleRoutes;
 
+const NavigateToOrganizations = () => {
+	const navigate = useNavigate();
+	createEffect(() => {
+		navigate(
+			forward_path(
+				"/console/organizations",
+				[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
+				[],
+			),
+		);
+	});
+	return <></>;
+};
+
 const NavigateToProjects = () => {
 	const params = useParams();
 	const path_params = createMemo(() => params);
-
-	return (
-		<Forward
-			href={`/console/organizations/${
-				path_params().organization_slug
-			}/projects`}
-			keep_params={[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM]}
-		/>
-	);
+	const navigate = useNavigate();
+	createEffect(() => {
+		navigate(
+			forward_path(
+				`/console/organizations/${path_params().organization_slug}/projects`,
+				[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
+				[],
+			),
+		);
+	});
+	return <></>;
 };
 
 const NavigateToPerf = () => {

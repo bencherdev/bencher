@@ -8,9 +8,15 @@ import {
 import Table from "./Table";
 
 import TableHeader from "./TableHeader";
-import { get_options, validate_jwt } from "../../../site/util";
+import {
+	get_options,
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	validate_jwt,
+} from "../../../site/util";
 import { useNavigate } from "solid-app-router";
-import Forward from "../../../site/Forward";
+import Forward, { forward_path } from "../../../site/Forward";
+import { PLAN_PARAM } from "../../../auth/AuthForm";
 
 const TablePanel = (props) => {
 	const navigate = useNavigate();
@@ -50,7 +56,13 @@ const TablePanel = (props) => {
 
 	createEffect(() => {
 		if (redirect()) {
-			return <Forward href={redirect()} />;
+			navigate(
+				forward_path(
+					redirect(),
+					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
+					[],
+				),
+			);
 		}
 	});
 

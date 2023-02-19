@@ -1,14 +1,10 @@
 import { useLocation, useNavigate, useParams } from "solid-app-router";
 import { createEffect, createMemo, createResource, For } from "solid-js";
-import {
-	BENCHER_API_URL,
-	getToken,
-	get_options,
-	validate_jwt,
-} from "../site/util";
+import { BENCHER_API_URL, get_options, validate_jwt } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
 import ConsolePanel from "./panel/ConsolePanel";
 import axios from "axios";
+import Notification from "../site/Notification";
 
 export const organizationSlug = (pathname) => {
 	const path = pathname().split("/");
@@ -87,32 +83,36 @@ const ConsolePage = (props) => {
 	});
 
 	return (
-		<section class="section">
-			<div class="container">
-				<div class="columns is-reverse-mobile">
-					<div class="column is-narrow">
-						<ConsoleMenu
-							user={props.user}
-							organization_slug={props.organization_slug}
-							project_slug={props.project_slug}
-							handleProjectSlug={props.handleProjectSlug}
-						/>
-					</div>
-					<div class="column is-10">
-						<ConsolePanel
-							user={props.user}
-							project_slug={props.project_slug}
-							operation={props.operation}
-							config={props.config}
-							path_params={path_params}
-							handleProjectSlug={props.handleProjectSlug}
-						/>
-						<For each={[...Array(3).keys()]}>{(_k, _i) => <br />}</For>
-						<hr />
+		<>
+			<Notification />
+
+			<section class="section">
+				<div class="container">
+					<div class="columns is-reverse-mobile">
+						<div class="column is-narrow">
+							<ConsoleMenu
+								user={props.user}
+								organization_slug={props.organization_slug}
+								project_slug={props.project_slug}
+								handleProjectSlug={props.handleProjectSlug}
+							/>
+						</div>
+						<div class="column is-10">
+							<ConsolePanel
+								user={props.user}
+								project_slug={props.project_slug}
+								operation={props.operation}
+								config={props.config}
+								path_params={path_params}
+								handleProjectSlug={props.handleProjectSlug}
+							/>
+							<For each={[...Array(3).keys()]}>{(_k, _i) => <br />}</For>
+							<hr />
+						</div>
 					</div>
 				</div>
-			</div>
-		</section>
+			</section>
+		</>
 	);
 };
 
