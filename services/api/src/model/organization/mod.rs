@@ -54,6 +54,8 @@ pub struct QueryOrganization {
     pub uuid: String,
     pub name: String,
     pub slug: String,
+    pub subscription: Option<String>,
+    pub license: Option<String>,
 }
 
 impl QueryOrganization {

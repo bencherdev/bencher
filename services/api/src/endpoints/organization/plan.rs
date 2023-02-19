@@ -115,6 +115,8 @@ async fn post_inner(
         .get_or_create_customer(&json_user.name, &json_user.email)
         .await?;
 
+    let payment_method = biller.create_payment_method(&customer, todo!()).await?;
+
     // let insert_testbed = InsertTestbed::from_json(
     //     &mut api_context.database.connection,
     //     &path_params.project,

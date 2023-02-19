@@ -69,6 +69,8 @@ diesel::table! {
         uuid -> Text,
         name -> Text,
         slug -> Text,
+        subscription -> Nullable<Text>,
+        license -> Nullable<Text>,
     }
 }
 

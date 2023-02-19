@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
+    organization::billing::JsonCard,
     system::config::{JsonBilling, JsonProduct, JsonProducts},
     Email, UserName,
 };
@@ -154,17 +155,17 @@ impl Biller {
             .map_err(Into::into)
     }
 
-    pub async fn get_or_create_payment_method(
-        &self,
-        customer: &Customer,
-        payment_card: PaymentCard,
-    ) -> Result<PaymentMethod, BillingError> {
-        if let Some(payment_method) = self.get_payment_method(customer).await? {
-            Ok(payment_method)
-        } else {
-            self.create_payment_method(customer, payment_card).await
-        }
-    }
+    // pub async fn get_or_create_payment_method(
+    //     &self,
+    //     customer: &Customer,
+    //     payment_card: PaymentCard,
+    // ) -> Result<PaymentMethod, BillingError> {
+    //     if let Some(payment_method) = self.get_payment_method(customer).await? {
+    //         Ok(payment_method)
+    //     } else {
+    //         self.create_payment_method(customer, payment_card).await
+    //     }
+    // }
 
     pub async fn get_payment_method(
         &self,
@@ -192,16 +193,15 @@ impl Biller {
     }
 
     // WARNING: Use caution when calling this directly as multiple payment methods can be created
-    // Use `get_or_create_payment_method` instead!
-    async fn create_payment_method(
+    pub async fn create_payment_method(
         &self,
         customer: &Customer,
-        payment_card: PaymentCard,
+        payment_card: JsonCard,
     ) -> Result<PaymentMethod, BillingError> {
         let create_payment_method = CreatePaymentMethod {
             type_: Some(PaymentMethodTypeFilter::Card),
             card: Some(CreatePaymentMethodCardUnion::CardDetailsParams(
-                payment_card,
+                into_payment_card(payment_card),
             )),
             ..Default::default()
         };
@@ -384,9 +384,27 @@ impl Biller {
     }
 }
 
+fn into_payment_card(card: JsonCard) -> PaymentCard {
+    let JsonCard {
+        number,
+        exp_month,
+        exp_year,
+        cvc,
+    } = card;
+    PaymentCard {
+        number: number.into(),
+        exp_month: exp_month.into(),
+        exp_year: exp_year.into(),
+        cvc: Some(cvc.into()),
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use bencher_json::system::config::{JsonBilling, JsonProduct, JsonProducts};
+    use bencher_json::{
+        organization::billing::JsonCard,
+        system::config::{JsonBilling, JsonProduct, JsonProducts},
+    };
     use chrono::{Datelike, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
@@ -395,7 +413,7 @@ mod test {
 
     use super::PaymentCard;
     use crate::{
-        biller::{ProductPlan, ProductUsage, DEFAULT_PRICING},
+        biller::{into_payment_card, ProductPlan, ProductUsage, DEFAULT_PRICING},
         Biller,
     };
 
@@ -500,11 +518,11 @@ mod test {
         assert_eq!(customer.id, get_or_create_customer.id);
 
         // Payment Method
-        let payment_card = PaymentCard {
-            number: "4000008260000000".into(),
-            exp_year: Utc::now().year() + 1,
-            exp_month: 1,
-            cvc: Some("123".to_string()),
+        let json_card = JsonCard {
+            number: "3530111333300000".parse().unwrap(),
+            exp_year: (Utc::now().year() + 1).try_into().unwrap(),
+            exp_month: 1.try_into().unwrap(),
+            cvc: "123".parse().unwrap(),
         };
         assert!(biller
             .get_payment_method(&customer)
@@ -512,17 +530,17 @@ mod test {
             .unwrap()
             .is_none());
         let create_payment_method = biller
-            .create_payment_method(&customer, payment_card.clone())
+            .create_payment_method(&customer, json_card.clone())
             .await
             .unwrap();
         let get_payment_method = biller.get_payment_method(&customer).await.unwrap().unwrap();
         assert_eq!(create_payment_method.id, get_payment_method.id);
         let payment_method = create_payment_method;
-        let get_or_create_payment_method = biller
-            .get_or_create_payment_method(&customer, payment_card)
-            .await
-            .unwrap();
-        assert_eq!(payment_method.id, get_or_create_payment_method.id);
+        // let get_or_create_payment_method = biller
+        //     .get_or_create_payment_method(&customer, payment_card)
+        //     .await
+        //     .unwrap();
+        // assert_eq!(payment_method.id, get_or_create_payment_method.id);
 
         // Team Metered Plan
         let organization = Uuid::new_v4();
