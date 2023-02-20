@@ -1,26 +1,24 @@
-use std::collections::HashMap;
-
 use bencher_json::{
     organization::metered::{JsonCard, JsonLevel},
-    system::config::{JsonBilling, JsonProduct, JsonProducts},
+    system::config::JsonBilling,
     Email, UserName,
 };
 use stripe::{
-    AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, ListCustomers, PaymentMethod,
-    PaymentMethodTypeFilter, Price, Product, SubscriptionId, UsageRecord,
+    AttachPaymentMethod, Client as StripeClient, CreateCustomer, CreatePaymentMethod,
+    CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems, CreateUsageRecord,
+    ListCustomers, PaymentMethod, PaymentMethodTypeFilter, SubscriptionId, UsageRecord,
 };
 pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 use uuid::Uuid;
 
-use crate::BillingError;
+use crate::{products::Products, BillingError};
 
 // Metrics are bundled by the thousand
 const METRIC_QUANTITY: u64 = 1_000;
 
 pub struct Biller {
-    client: Client,
-    products: BillerProducts,
+    client: StripeClient,
+    products: Products,
 }
 
 impl Biller {
@@ -29,64 +27,10 @@ impl Biller {
             secret_key,
             products,
         } = billing;
-        let client = Client::new(secret_key);
-        let products = BillerProducts::new(&client, products).await?;
+        let client = StripeClient::new(secret_key);
+        let products = Products::new(&client, products).await?;
 
         Ok(Self { client, products })
-    }
-}
-
-pub struct BillerProducts {
-    pub team: BillerProduct,
-    pub enterprise: BillerProduct,
-}
-
-impl BillerProducts {
-    async fn new(client: &Client, products: JsonProducts) -> Result<Self, BillingError> {
-        let JsonProducts { team, enterprise } = products;
-
-        Ok(Self {
-            team: BillerProduct::new(client, team).await?,
-            enterprise: BillerProduct::new(client, enterprise).await?,
-        })
-    }
-}
-
-pub struct BillerProduct {
-    pub product: Product,
-    pub metered: HashMap<String, Price>,
-    pub licensed: HashMap<String, Price>,
-}
-
-impl BillerProduct {
-    async fn new(client: &Client, product: JsonProduct) -> Result<Self, BillingError> {
-        let JsonProduct {
-            id,
-            metered,
-            licensed,
-        } = product;
-
-        let product = Product::retrieve(client, &id.parse()?, &[]).await?;
-        let metered = Self::pricing(client, metered).await?;
-        let licensed = Self::pricing(client, licensed).await?;
-
-        Ok(Self {
-            product,
-            metered,
-            licensed,
-        })
-    }
-
-    async fn pricing(
-        client: &Client,
-        pricing: HashMap<String, String>,
-    ) -> Result<HashMap<String, Price>, BillingError> {
-        let mut biller_pricing = HashMap::with_capacity(pricing.len());
-        for (price_name, price_id) in pricing {
-            let price = Price::retrieve(client, &price_id.parse()?, &[]).await?;
-            biller_pricing.insert(price_name, price);
-        }
-        Ok(biller_pricing)
     }
 }
 
