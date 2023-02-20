@@ -7,17 +7,14 @@ use bencher_json::{
 };
 use stripe::{
     AttachPaymentMethod, Client, CreateCustomer, CreatePaymentMethod, CreatePaymentMethodCardUnion,
-    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, ListCustomers,
-    ListPaymentMethods, ListSubscriptions, PaymentMethod, PaymentMethodTypeFilter, Price, Product,
-    UsageRecord,
+    CreateSubscription, CreateSubscriptionItems, CreateUsageRecord, ListCustomers, PaymentMethod,
+    PaymentMethodTypeFilter, Price, Product, SubscriptionId, UsageRecord,
 };
 pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 use uuid::Uuid;
 
 use crate::BillingError;
 
-// Organization UUID for subscription
-const METADATA_ORGANIZATION: &str = "organization";
 // Metrics are bundled by the thousand
 const METRIC_QUANTITY: u64 = 1_000;
 
@@ -94,31 +91,31 @@ impl BillerProduct {
 }
 
 #[derive(Debug, Clone)]
-pub enum ProductPlan {
+enum ProductPlan {
     Team(ProductUsage),
     Enterprise(ProductUsage),
 }
 
+#[derive(Debug, Clone)]
+enum ProductUsage {
+    Metered(String),
+    Licensed(String, u64),
+}
+
 impl ProductPlan {
-    pub fn metered(json_level: JsonLevel, price_name: String) -> Self {
+    fn metered(json_level: JsonLevel, price_name: String) -> Self {
         match json_level {
             JsonLevel::Team => Self::Team(ProductUsage::Metered(price_name)),
             JsonLevel::Enterprise => Self::Enterprise(ProductUsage::Metered(price_name)),
         }
     }
 
-    pub fn licensed(json_level: JsonLevel, price_name: String, quantity: u64) -> Self {
+    fn licensed(json_level: JsonLevel, price_name: String, quantity: u64) -> Self {
         match json_level {
             JsonLevel::Team => Self::Team(ProductUsage::Licensed(price_name, quantity)),
             JsonLevel::Enterprise => Self::Enterprise(ProductUsage::Licensed(price_name, quantity)),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum ProductUsage {
-    Metered(String),
-    Licensed(String, u64),
 }
 
 impl Biller {
@@ -181,30 +178,30 @@ impl Biller {
     //     }
     // }
 
-    pub async fn get_payment_method(
-        &self,
-        customer: &Customer,
-    ) -> Result<Option<PaymentMethod>, BillingError> {
-        let list_payment_methods = ListPaymentMethods {
-            type_: Some(PaymentMethodTypeFilter::Card),
-            customer: Some(customer.id.clone()),
-            ..Default::default()
-        };
-        let mut payment_methods = PaymentMethod::list(&self.client, &list_payment_methods).await?;
+    // pub async fn get_payment_method(
+    //     &self,
+    //     customer: &Customer,
+    // ) -> Result<Option<PaymentMethod>, BillingError> {
+    //     let list_payment_methods = ListPaymentMethods {
+    //         type_: Some(PaymentMethodTypeFilter::Card),
+    //         customer: Some(customer.id.clone()),
+    //         ..Default::default()
+    //     };
+    //     let mut payment_methods = PaymentMethod::list(&self.client, &list_payment_methods).await?;
 
-        if let Some(payment_method) = payment_methods.data.pop() {
-            if payment_methods.data.is_empty() {
-                Ok(Some(payment_method))
-            } else {
-                Err(BillingError::MultiplePaymentMethods(
-                    payment_method,
-                    payment_methods.data,
-                ))
-            }
-        } else {
-            Ok(None)
-        }
-    }
+    //     if let Some(payment_method) = payment_methods.data.pop() {
+    //         if payment_methods.data.is_empty() {
+    //             Ok(Some(payment_method))
+    //         } else {
+    //             Err(BillingError::MultiplePaymentMethods(
+    //                 payment_method,
+    //                 payment_methods.data,
+    //             ))
+    //         }
+    //     } else {
+    //         Ok(None)
+    //     }
+    // }
 
     // WARNING: Use caution when calling this directly as multiple payment methods can be created
     pub async fn create_payment_method(
@@ -247,43 +244,6 @@ impl Biller {
     //     }
     // }
 
-    pub async fn get_subscription(
-        &self,
-        organization: Uuid,
-        customer: &Customer,
-    ) -> Result<Option<Subscription>, BillingError> {
-        let organization_str = organization.to_string();
-        let list_subscriptions = ListSubscriptions {
-            customer: Some(customer.id.clone()),
-            ..Default::default()
-        };
-        let mut subscriptions = Subscription::list(&self.client, &list_subscriptions)
-            .await?
-            .data
-            .into_iter()
-            .filter(|subscription: &Subscription| {
-                subscription
-                    .metadata
-                    .get(METADATA_ORGANIZATION)
-                    .and_then(|org| (*org == organization_str).then_some(()))
-                    .is_some()
-            })
-            .collect::<Vec<Subscription>>();
-
-        if let Some(subscription) = subscriptions.pop() {
-            if subscriptions.is_empty() {
-                Ok(Some(subscription))
-            } else {
-                Err(BillingError::MultipleSubscriptions(
-                    subscription,
-                    subscriptions,
-                ))
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
     pub async fn create_metered_subscription(
         &self,
         organization: Uuid,
@@ -301,8 +261,26 @@ impl Biller {
         .await
     }
 
+    pub async fn create_licensed_subscription(
+        &self,
+        organization: Uuid,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        json_level: JsonLevel,
+        price_name: String,
+        quantity: u64,
+    ) -> Result<Subscription, BillingError> {
+        self.create_subscription(
+            organization,
+            customer,
+            payment_method,
+            ProductPlan::licensed(json_level, price_name, quantity),
+        )
+        .await
+    }
+
     // WARNING: Use caution when calling this directly as multiple subscriptions can be created
-    pub async fn create_subscription(
+    async fn create_subscription(
         &self,
         organization: Uuid,
         customer: &Customer,
@@ -376,16 +354,21 @@ impl Biller {
             .map_err(Into::into)
     }
 
+    pub async fn get_subscription(
+        &self,
+        subscription_id: &SubscriptionId,
+    ) -> Result<Subscription, BillingError> {
+        Subscription::retrieve(&self.client, subscription_id, &[])
+            .await
+            .map_err(Into::into)
+    }
+
     pub async fn record_usage(
         &self,
-        organization: Uuid,
-        customer: &Customer,
+        subscription_id: &SubscriptionId,
         quantity: u64,
     ) -> Result<UsageRecord, BillingError> {
-        let subscription = self
-            .get_subscription(organization, customer)
-            .await?
-            .ok_or_else(|| BillingError::NoSubscription(organization, customer.id.clone()))?;
+        let subscription = self.get_subscription(subscription_id).await?;
         let mut subscription_items = subscription.items.data;
 
         let subscription_item = if let Some(subscription_item) = subscription_items.pop() {
@@ -393,17 +376,13 @@ impl Biller {
                 subscription_item
             } else {
                 return Err(BillingError::MultipleSubscriptionItems(
-                    organization,
-                    customer.id.clone(),
+                    subscription_id.clone(),
                     subscription_item,
                     subscription_items,
                 ));
             }
         } else {
-            return Err(BillingError::NoSubscriptionItem(
-                organization,
-                customer.id.clone(),
-            ));
+            return Err(BillingError::NoSubscriptionItem(subscription_id.clone()));
         };
 
         let create_usage_record = CreateUsageRecord {
@@ -434,19 +413,16 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 #[cfg(test)]
 mod test {
     use bencher_json::{
-        organization::metered::{JsonCard, DEFAULT_PRICE_NAME},
+        organization::metered::{JsonCard, JsonLevel, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
     };
     use chrono::{Datelike, Utc};
     use literally::hmap;
     use pretty_assertions::assert_eq;
-    use stripe::{Customer, PaymentMethod};
+    use stripe::{Customer, PaymentMethod, SubscriptionId};
     use uuid::Uuid;
 
-    use crate::{
-        biller::{ProductPlan, ProductUsage},
-        Biller,
-    };
+    use crate::Biller;
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
 
@@ -477,46 +453,71 @@ mod test {
         }
     }
 
-    async fn test_subscription(
+    async fn test_metered_subscription(
         biller: &Biller,
         organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
-        product_plan: ProductPlan,
+        json_level: JsonLevel,
+        price_name: String,
+        usage_count: usize,
     ) {
-        assert!(biller
-            .get_subscription(organization, customer)
-            .await
-            .unwrap()
-            .is_none());
         let create_subscription = biller
-            .create_subscription(organization, customer, payment_method, product_plan.clone())
+            .create_metered_subscription(
+                organization,
+                customer,
+                payment_method,
+                json_level,
+                price_name,
+            )
+            .await
+            .unwrap();
+
+        let get_subscription = biller
+            .get_subscription(&create_subscription.id)
+            .await
+            .unwrap();
+        assert_eq!(create_subscription.id, get_subscription.id);
+
+        test_record_usage(biller, &create_subscription.id, usage_count).await;
+    }
+
+    async fn test_licensed_subscription(
+        biller: &Biller,
+        organization: Uuid,
+        customer: &Customer,
+        payment_method: &PaymentMethod,
+        json_level: JsonLevel,
+        price_name: String,
+        quantity: u64,
+    ) {
+        let create_subscription = biller
+            .create_licensed_subscription(
+                organization,
+                customer,
+                payment_method,
+                json_level,
+                price_name,
+                quantity,
+            )
             .await
             .unwrap();
         let get_subscription = biller
-            .get_subscription(organization, customer)
+            .get_subscription(&create_subscription.id)
             .await
-            .unwrap()
             .unwrap();
         assert_eq!(create_subscription.id, get_subscription.id);
-        // let subscription = create_subscription;
-        // let get_or_create_subscription = biller
-        //     .get_or_create_subscription(organization, customer, payment_method, product_plan)
-        //     .await
-        //     .unwrap();
-        // assert_eq!(subscription.id, get_or_create_subscription.id);
     }
 
     async fn test_record_usage(
         biller: &Biller,
-        organization: Uuid,
-        customer: &Customer,
+        subscription_id: &SubscriptionId,
         usage_count: usize,
     ) {
         for _ in 0..usage_count {
             let quantity = rand::random::<u8>();
             biller
-                .record_usage(organization, customer, quantity as u64)
+                .record_usage(subscription_id, quantity as u64)
                 .await
                 .unwrap();
         }
@@ -555,17 +556,17 @@ mod test {
             exp_month: 1.try_into().unwrap(),
             cvc: "123".parse().unwrap(),
         };
-        assert!(biller
-            .get_payment_method(&customer)
-            .await
-            .unwrap()
-            .is_none());
+        // assert!(biller
+        //     .get_payment_method(&customer)
+        //     .await
+        //     .unwrap()
+        //     .is_none());
         let create_payment_method = biller
             .create_payment_method(&customer, json_card.clone())
             .await
             .unwrap();
-        let get_payment_method = biller.get_payment_method(&customer).await.unwrap().unwrap();
-        assert_eq!(create_payment_method.id, get_payment_method.id);
+        // let get_payment_method = biller.get_payment_method(&customer).await.unwrap().unwrap();
+        // assert_eq!(create_payment_method.id, get_payment_method.id);
         let payment_method = create_payment_method;
         // let get_or_create_payment_method = biller
         //     .get_or_create_payment_method(&customer, payment_card)
@@ -575,53 +576,53 @@ mod test {
 
         // Team Metered Plan
         let organization = Uuid::new_v4();
-        let product_plan = ProductPlan::Team(ProductUsage::Metered(DEFAULT_PRICE_NAME.into()));
-        test_subscription(
+        test_metered_subscription(
             &biller,
             organization,
             &customer,
             &payment_method,
-            product_plan,
+            JsonLevel::Team,
+            DEFAULT_PRICE_NAME.into(),
+            10,
         )
         .await;
-        test_record_usage(&biller, organization, &customer, 10).await;
 
         // Team Licensed Plan
         let organization = Uuid::new_v4();
-        let product_plan = ProductPlan::Team(ProductUsage::Licensed(DEFAULT_PRICE_NAME.into(), 10));
-        test_subscription(
+        test_licensed_subscription(
             &biller,
             organization,
             &customer,
             &payment_method,
-            product_plan,
+            JsonLevel::Team,
+            DEFAULT_PRICE_NAME.into(),
+            10,
         )
         .await;
 
         // Enterprise Metered Plan
         let organization = Uuid::new_v4();
-        let product_plan =
-            ProductPlan::Enterprise(ProductUsage::Metered(DEFAULT_PRICE_NAME.into()));
-        test_subscription(
+        test_metered_subscription(
             &biller,
             organization,
             &customer,
             &payment_method,
-            product_plan,
+            JsonLevel::Enterprise,
+            DEFAULT_PRICE_NAME.into(),
+            25,
         )
         .await;
-        test_record_usage(&biller, organization, &customer, 25).await;
 
         // Enterprise Licensed Plan
         let organization = Uuid::new_v4();
-        let product_plan =
-            ProductPlan::Enterprise(ProductUsage::Licensed(DEFAULT_PRICE_NAME.into(), 25));
-        test_subscription(
+        test_licensed_subscription(
             &biller,
             organization,
             &customer,
             &payment_method,
-            product_plan,
+            JsonLevel::Team,
+            DEFAULT_PRICE_NAME.into(),
+            25,
         )
         .await;
     }
