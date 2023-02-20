@@ -4,12 +4,22 @@ use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPlan {
+    pub card: JsonCard,
+    pub level: JsonLevel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPlan {
+    pub organization: Uuid,
+    pub user: Uuid,
     pub card: JsonCard,
     pub level: JsonLevel,
 }

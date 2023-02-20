@@ -4,11 +4,11 @@ use bencher_json::{
     Email, UserName,
 };
 use stripe::{
-    AttachPaymentMethod, Client as StripeClient, CreateCustomer, CreatePaymentMethod,
-    CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems, CreateUsageRecord,
-    ListCustomers, PaymentMethod, PaymentMethodTypeFilter, SubscriptionId, UsageRecord,
+    AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
+    CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
+    CreateUsageRecord, Customer, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
+    Subscription, SubscriptionId, UsageRecord,
 };
-pub use stripe::{CardDetailsParams as PaymentCard, Customer, Subscription};
 use uuid::Uuid;
 
 use crate::{products::Products, BillingError};

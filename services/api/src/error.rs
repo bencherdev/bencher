@@ -141,10 +141,18 @@ pub enum ApiError {
     #[cfg(feature = "plus")]
     #[error("Tried to use a Bencher Cloud route when Self-Hosted: {0}")]
     BencherCloudOnly(String),
+    #[cfg(feature = "plus")]
     #[error("Organization {0} already has a metered plan: {1}")]
     PlanMetered(i32, String),
+    #[cfg(feature = "plus")]
     #[error("Organization {0} already has a licensed plan: {1}")]
     PlanLicensed(i32, String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to parse billing ID: {0}")]
+    BillingId(#[from] bencher_billing::ParseIdError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to find metered plan for organization: {0}")]
+    NoMeteredPlan(i32),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),

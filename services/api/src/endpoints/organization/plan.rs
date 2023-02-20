@@ -2,8 +2,9 @@
 
 use std::str::FromStr;
 
+use bencher_billing::SubscriptionId;
 use bencher_json::{
-    organization::metered::{JsonNewPlan, DEFAULT_PRICE_NAME},
+    organization::metered::{JsonNewPlan, JsonPlan, DEFAULT_PRICE_NAME},
     JsonEmpty, JsonUser, ResourceId,
 };
 use bencher_rbac::organization::Permission;
@@ -16,7 +17,7 @@ use uuid::Uuid;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{response_accepted, ResponseAccepted},
+        endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -87,7 +88,7 @@ async fn post_inner(
     // The Biller is only available on Bencher Cloud
     let Some(biller) = &api_context.biller else {
         return Err(ApiError::BencherCloudOnly(
-            format!("/v0/organizations/{}/plan", path_params.organization),
+            format!("POST /v0/organizations/{}/plan", path_params.organization),
         ));
     };
 
@@ -141,70 +142,75 @@ async fn post_inner(
     Ok(JsonEmpty::default())
 }
 
-// #[derive(Deserialize, JsonSchema)]
-// pub struct OnePath {
-//     pub organization: ResourceId,
-// }
+#[derive(Deserialize, JsonSchema)]
+pub struct OnePath {
+    pub organization: ResourceId,
+}
 
-// #[allow(clippy::unused_async)]
-// #[endpoint {
-//     method = OPTIONS,
-//     path =  "/v0/organizations/{organization}/plan",
-//     tags = ["organizations", "plan"]
-// }]
-// pub async fn one_options(
-//     _rqctx: RequestContext<Context>,
-//     _path_params: Path<OnePath>,
-// ) -> Result<CorsResponse, HttpError> {
-//     Ok(get_cors::<Context>())
-// }
+#[allow(clippy::unused_async)]
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/organizations/{organization}/plan",
+    tags = ["organizations", "plan"]
+}]
+pub async fn one_options(
+    _rqctx: RequestContext<Context>,
+    _path_params: Path<OnePath>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<Context>())
+}
 
-// #[endpoint {
-//     method = GET,
-//     path =  "/v0/organizations/{organization}/plan",
-//     tags = ["organizations", "plan"]
-// }]
-// pub async fn get_one(
-//     rqctx: RequestContext<Context>,
-//     path_params: Path<OnePath>,
-// ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
-//     let auth_user = AuthUser::new(&rqctx).await.ok();
-//     let endpoint = Endpoint::new(PLAN_RESOURCE, Method::GetOne);
+#[endpoint {
+    method = GET,
+    path =  "/v0/organizations/{organization}/plan",
+    tags = ["organizations", "plan"]
+}]
+pub async fn get_one(
+    rqctx: RequestContext<Context>,
+    path_params: Path<OnePath>,
+) -> Result<ResponseOk<JsonPlan>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PLAN_RESOURCE, Method::GetOne);
 
-//     let json = get_one_inner(
-//         rqctx.context(),
-//         path_params.into_inner(),
-//         auth_user.as_ref(),
-//     )
-//     .await
-//     .map_err(|e| endpoint.err(e))?;
+    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-//     if auth_user.is_some() {
-//         response_ok!(endpoint, json)
-//     } else {
-//         pub_response_ok!(endpoint, json)
-//     }
-// }
+    response_ok!(endpoint, json)
+}
 
-// fn_resource_id!(testbed);
+async fn get_one_inner(
+    context: &Context,
+    path_params: OnePath,
+    auth_user: &AuthUser,
+) -> Result<JsonPlan, ApiError> {
+    let api_context = &mut *context.lock().await;
+    let conn = &mut api_context.database.connection;
 
-// async fn get_one_inner(
-//     context: &Context,
-//     path_params: OnePath,
-//     auth_user: Option<&AuthUser>,
-// ) -> Result<JsonTestbed, ApiError> {
-//     let api_context = &mut *context.lock().await;
-//     let query_project =
-//         QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-//     let conn = &mut api_context.database.connection;
+    // Check to see if there is a Biller
+    // The Biller is only available on Bencher Cloud
+    let Some(biller) = &api_context.biller else {
+        return Err(ApiError::BencherCloudOnly(
+            format!("GET /v0/organizations/{}/plan", path_params.organization),
+        ));
+    };
 
-//     schema::testbed::table
-//         .filter(
-//             schema::testbed::project_id
-//                 .eq(query_project.id)
-//                 .and(resource_id(&path_params.testbed)?),
-//         )
-//         .first::<QueryTestbed>(conn)
-//         .map_err(api_error!())?
-//         .into_json(conn)
-// }
+    // Get the organization
+    let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    // Check to see if user has permission to manage the organization
+    api_context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
+
+    if let Some(subscription) = &query_org.subscription {
+        let subscription_id = subscription.parse()?;
+        biller
+            .get_subscription(&subscription_id)
+            .await
+            // .map_err(Into::into)
+            ;
+        todo!()
+    } else {
+        Err(ApiError::NoMeteredPlan(query_org.id))
+    }
+}
