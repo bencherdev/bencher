@@ -82,7 +82,7 @@ const AddButton = (props) => {
 			case PerfTab.TESTBEDS:
 				return `/console/projects/${props.project_slug()}/${props.tab()}/add`;
 			case PerfTab.BENCHMARKS:
-				return "/docs/tutorial/quick-start";
+				return "/docs/how-to/track-benchmarks";
 			default:
 				return "#";
 		}
@@ -95,7 +95,7 @@ const AddButton = (props) => {
 			case PerfTab.TESTBEDS:
 				return "Create a Testbed";
 			case PerfTab.BENCHMARKS:
-				return "Run a Report";
+				return "Track Your Benchmarks";
 			default:
 				return "Ello Poppet";
 		}

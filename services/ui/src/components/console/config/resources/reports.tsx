@@ -23,7 +23,7 @@ const reportsConfig = {
 						</p>
 					</div>
 				),
-				path: (_pathname) => "/docs/tutorial/quick-start",
+				path: (_pathname) => "/docs/how-to/track-benchmarks",
 				text: "Track Your Benchmarks",
 			},
 			row: {

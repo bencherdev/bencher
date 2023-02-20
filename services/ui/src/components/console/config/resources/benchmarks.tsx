@@ -27,7 +27,7 @@ const benchmarksConfig = {
 					</div>
 				),
 				path: (_pathname) => {
-					return "/docs/tutorial/quick-start";
+					return "/docs/how-to/track-benchmarks";
 				},
 				text: "Track Your Benchmarks",
 			},
