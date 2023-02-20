@@ -7,7 +7,7 @@ use stripe::{
     AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
     CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
     CreateUsageRecord, Customer, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
-    Subscription, SubscriptionId, UsageRecord,
+    Subscription, SubscriptionId, SubscriptionItem, UsageRecord,
 };
 use uuid::Uuid;
 
@@ -302,9 +302,128 @@ impl Biller {
         &self,
         subscription_id: &SubscriptionId,
     ) -> Result<Subscription, BillingError> {
-        Subscription::retrieve(&self.client, subscription_id, &[])
+        self.get_subscription_expand(subscription_id, &[]).await
+    }
+
+    pub async fn get_subscription_expand(
+        &self,
+        subscription_id: &SubscriptionId,
+        expand: &[&str],
+    ) -> Result<Subscription, BillingError> {
+        Subscription::retrieve(&self.client, subscription_id, expand)
             .await
             .map_err(Into::into)
+    }
+
+    pub async fn get_subscription_item(
+        subscription: Subscription,
+    ) -> Result<SubscriptionItem, BillingError> {
+        let mut subscription_items = subscription.items.data;
+
+        if let Some(subscription_item) = subscription_items.pop() {
+            if subscription_items.is_empty() {
+                Ok(subscription_item)
+            } else {
+                Err(BillingError::MultipleSubscriptionItems(
+                    subscription.id,
+                    subscription_item,
+                    subscription_items,
+                ))
+            }
+        } else {
+            Err(BillingError::NoSubscriptionItem(subscription.id))
+        }
+    }
+
+    pub async fn get_plan(
+        &self,
+        subscription_id: &SubscriptionId,
+    ) -> Result<Option<Customer>, BillingError> {
+        let subscription = self
+            .get_subscription_expand(
+                subscription_id,
+                &["customer", "items", "items.data.price.product"],
+            )
+            .await?;
+        let current_period_start = subscription.current_period_start;
+        let current_period_end = subscription.current_period_end;
+
+        let Some(customer) = subscription.customer.as_object() else {
+            return Err(BillingError::NoCustomerInfo(subscription.customer.id()));
+        };
+        let Some(email) = &customer.email else {
+            return Err(BillingError::NoEmail(customer.id.clone()));
+        };
+
+        // panic!("{subscription:#?}");
+
+        let subscription_item = Self::get_subscription_item(subscription).await?;
+
+        let Some(price) = subscription_item.price else {
+            return Err(BillingError::NoPrice(subscription_item.id))
+        };
+
+        let Some(product) = price.product else {
+            return Err(BillingError::NoProduct(price.id))
+        };
+
+        let Some(product_info) = product.as_object() else {
+            return Err(BillingError::NoProductInfo(product.id()))
+        };
+
+        let product_name = &product_info.name;
+
+        todo!()
+
+        /*
+                    customer: Id(
+                    CustomerId(
+                        "cus_NOMrHVtLltfnqL",
+                    ),
+                ),
+
+
+                 default_payment_method: Some(
+                Id(
+                    PaymentMethodId(
+                        "pm_1Mda7wKal5vzTlmhjq71XB9w",
+                    ),
+                ),
+
+
+                items: List {
+            data: [
+                SubscriptionItem {
+                    id: SubscriptionItemId(
+                        "si_NOMrYIRvGxKC6g",
+                    ),
+            ),
+
+
+             plan: Some(
+                        Plan {
+                            id: PlanId(
+                                "price_1McW12Kal5vzTlmhoPltpBAW",
+                            ),
+
+                             product: Some(
+                                Id(
+                                    ProductId(
+                                        "prod_NKz5B9dGhDiSY1",
+                                    ),
+                                ),
+                            ),
+
+                             price: Some(
+                        Price {
+                            id: PriceId(
+                                "price_1McW12Kal5vzTlmhoPltpBAW",
+                            ),
+
+                            metadata: {
+            "organization": "2caa5bab-a42b-4ef8-8b59-e97822ef248d",
+        },
+                         */
     }
 
     pub async fn record_usage(
@@ -313,21 +432,7 @@ impl Biller {
         quantity: u64,
     ) -> Result<UsageRecord, BillingError> {
         let subscription = self.get_subscription(subscription_id).await?;
-        let mut subscription_items = subscription.items.data;
-
-        let subscription_item = if let Some(subscription_item) = subscription_items.pop() {
-            if subscription_items.is_empty() {
-                subscription_item
-            } else {
-                return Err(BillingError::MultipleSubscriptionItems(
-                    subscription_id.clone(),
-                    subscription_item,
-                    subscription_items,
-                ));
-            }
-        } else {
-            return Err(BillingError::NoSubscriptionItem(subscription_id.clone()));
-        };
+        let subscription_item = Self::get_subscription_item(subscription).await?;
 
         let create_usage_record = CreateUsageRecord {
             quantity,
@@ -424,6 +529,8 @@ mod test {
         assert_eq!(create_subscription.id, get_subscription.id);
 
         test_record_usage(biller, &create_subscription.id, usage_count).await;
+
+        biller.get_plan(&create_subscription.id).await;
     }
 
     async fn test_licensed_subscription(

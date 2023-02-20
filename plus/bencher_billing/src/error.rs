@@ -1,4 +1,7 @@
-use stripe::{Customer, PaymentMethod, Subscription, SubscriptionId, SubscriptionItem};
+use stripe::{
+    Customer, CustomerId, PaymentMethod, PriceId, ProductId, Subscription, SubscriptionId,
+    SubscriptionItem, SubscriptionItemId,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -21,4 +24,14 @@ pub enum BillingError {
     MultipleSubscriptionItems(SubscriptionId, SubscriptionItem, Vec<SubscriptionItem>),
     #[error("No subscription item for {0}")]
     NoSubscriptionItem(SubscriptionId),
+    #[error("No customer info for {0}")]
+    NoCustomerInfo(CustomerId),
+    #[error("No email for {0}")]
+    NoEmail(CustomerId),
+    #[error("No price for {0}")]
+    NoPrice(SubscriptionItemId),
+    #[error("No product for {0}")]
+    NoProduct(PriceId),
+    #[error("No product info for {0}")]
+    NoProductInfo(ProductId),
 }
