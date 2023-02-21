@@ -1,5 +1,5 @@
 use bencher_json::{
-    organization::metered::{JsonCard, JsonCardDetails, JsonLevel},
+    organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonLevel},
     system::config::JsonBilling,
     Email, UserName,
 };
@@ -370,11 +370,20 @@ impl Biller {
         let Some(customer) = subscription.customer.as_object() else {
             return Err(BillingError::NoCustomerInfo(subscription.customer.id()));
         };
+        let Some(uuid) = customer.metadata.get(METADATA_UUID) else {
+            return Err(BillingError::NoUuid(customer.id.clone()));
+        };
+        let Some(name) = &customer.name else {
+            return Err(BillingError::NoName(customer.id.clone()));
+        };
         let Some(email) = &customer.email else {
             return Err(BillingError::NoEmail(customer.id.clone()));
         };
-        let Some(uuid) = customer.metadata.get(METADATA_UUID) else {
-            return Err(BillingError::NoUuid(customer.id.clone()));
+
+        let json_customer = JsonCustomer {
+            uuid: uuid.parse()?,
+            name: name.parse()?,
+            email: email.parse()?,
         };
 
         let Some(default_payment_method) = &subscription.default_payment_method else {
@@ -395,11 +404,6 @@ impl Biller {
             exp_month: card.exp_month.try_into()?,
             exp_year: card.exp_year.try_into()?,
         };
-
-        let brand = &card.brand;
-        let last_four = &card.last4;
-        let exp_month = card.exp_month;
-        let exp_year = card.exp_year;
 
         // panic!("{subscription:#?}");
 

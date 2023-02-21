@@ -8,6 +8,8 @@ use thiserror::Error;
 pub enum BillingError {
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_json::ValidError),
+    #[error("Failed to parse UUID: {0}")]
+    Uuid(#[from] uuid::Error),
     #[error("Failed to send billing request: {0}")]
     Stripe(#[from] stripe::StripeError),
     #[error("Failed to parse ID: {0}")]
@@ -30,10 +32,12 @@ pub enum BillingError {
     NoOrganization(SubscriptionId),
     #[error("No customer info for {0}")]
     NoCustomerInfo(CustomerId),
-    #[error("No email for {0}")]
-    NoEmail(CustomerId),
     #[error("No UUID for {0}")]
     NoUuid(CustomerId),
+    #[error("No name for {0}")]
+    NoName(CustomerId),
+    #[error("No email for {0}")]
+    NoEmail(CustomerId),
     #[error("No default payment method for {0}")]
     NoDefaultPaymentMethod(SubscriptionId),
     #[error("No default payment method info for {0}")]
