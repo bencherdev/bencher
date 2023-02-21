@@ -203,12 +203,7 @@ async fn get_one_inner(
 
     if let Some(subscription) = &query_org.subscription {
         let subscription_id = subscription.parse()?;
-        biller
-            .get_subscription(&subscription_id)
-            .await
-            // .map_err(Into::into)
-            ;
-        todo!()
+        biller.get_plan(&subscription_id).await.map_err(Into::into)
     } else {
         Err(ApiError::NoMeteredPlan(query_org.id))
     }

@@ -59,7 +59,9 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database.connection;
 
+    #[cfg(feature = "plus")]
     let plan = json_signup.plan;
+
     let invite = json_signup.invite.take();
     let email = json_signup.email.clone();
     let mut insert_user = InsertUser::from_json(conn, json_signup)?;

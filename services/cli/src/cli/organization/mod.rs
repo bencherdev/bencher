@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
 
+#[cfg(feature = "plus")]
 use self::plan::CliOrganizationPlan;
 
 pub mod member;
