@@ -5,6 +5,7 @@ import {
 	is_valid_card_number,
 	is_valid_expiration_month,
 	is_valid_expiration_year,
+	is_valid_card_cvc,
 } from "bencher_valid";
 import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
@@ -132,6 +133,10 @@ export const validate_expiration = (expiration: string): boolean => {
 
 		return true;
 	});
+};
+
+export const validate_card_cvc = (card_cvc: string): boolean => {
+	return validate_string(card_cvc, is_valid_card_cvc);
 };
 
 // TODO improve this validation
