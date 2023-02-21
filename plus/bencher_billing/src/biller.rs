@@ -7,7 +7,7 @@ use chrono::{TimeZone, Utc};
 use stripe::{
     AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
     CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
-    CreateUsageRecord, Customer, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
+    CreateUsageRecord, Customer, Expandable, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
     Subscription, SubscriptionId, SubscriptionItem, UsageRecord,
 };
 use uuid::Uuid;
@@ -330,30 +330,10 @@ impl Biller {
             .map_err(Into::into)
     }
 
-    pub async fn get_subscription_item(
-        subscription: Subscription,
-    ) -> Result<SubscriptionItem, BillingError> {
-        let mut subscription_items = subscription.items.data;
-
-        if let Some(subscription_item) = subscription_items.pop() {
-            if subscription_items.is_empty() {
-                Ok(subscription_item)
-            } else {
-                Err(BillingError::MultipleSubscriptionItems(
-                    subscription.id,
-                    subscription_item,
-                    subscription_items,
-                ))
-            }
-        } else {
-            Err(BillingError::NoSubscriptionItem(subscription.id))
-        }
-    }
-
     pub async fn get_plan(
         &self,
         subscription_id: &SubscriptionId,
-    ) -> Result<Option<Customer>, BillingError> {
+    ) -> Result<JsonPlan, BillingError> {
         let subscription = self
             .get_subscription_expand(
                 subscription_id,
@@ -365,6 +345,12 @@ impl Biller {
                 ],
             )
             .await?;
+
+        let Some(organization) = subscription.metadata.get(METADATA_ORGANIZATION) else {
+            return Err(BillingError::NoOrganization(subscription_id.clone()));
+        };
+        let organization = organization.parse()?;
+
         let current_period_start = Utc
             .timestamp_opt(subscription.current_period_start, 0)
             .single()
@@ -378,13 +364,23 @@ impl Biller {
                 BillingError::DateTime(subscription_id.clone(), subscription.current_period_end)
             })?;
 
-        let Some(organization) = subscription.metadata.get(METADATA_ORGANIZATION) else {
-            return Err(BillingError::NoOrganization(subscription_id.clone()));
-        };
-        let organization = organization.parse()?;
+        let customer = Self::get_plan_customer(&subscription.customer)?;
+        let card = Self::get_plan_card(subscription_id, &subscription.default_payment_method)?;
+        let level = Self::get_plan_level(subscription_id, subscription.items.data)?;
 
-        let Some(customer) = subscription.customer.as_object() else {
-            return Err(BillingError::NoCustomerInfo(subscription.customer.id()));
+        Ok(JsonPlan {
+            organization,
+            customer,
+            card,
+            level,
+            current_period_start,
+            current_period_end,
+        })
+    }
+
+    fn get_plan_customer(customer: &Expandable<Customer>) -> Result<JsonCustomer, BillingError> {
+        let Some(customer) = customer.as_object() else {
+            return Err(BillingError::NoCustomerInfo(customer.id()));
         };
         let Some(uuid) = customer.metadata.get(METADATA_UUID) else {
             return Err(BillingError::NoUuid(customer.id.clone()));
@@ -395,240 +391,72 @@ impl Biller {
         let Some(email) = &customer.email else {
             return Err(BillingError::NoEmail(customer.id.clone()));
         };
-        let customer = JsonCustomer {
+        Ok(JsonCustomer {
             uuid: uuid.parse()?,
             name: name.parse()?,
             email: email.parse()?,
-        };
+        })
+    }
 
-        let Some(default_payment_method) = &subscription.default_payment_method else {
+    fn get_plan_card(
+        subscription_id: &SubscriptionId,
+        default_payment_method: &Option<Expandable<PaymentMethod>>,
+    ) -> Result<JsonCardDetails, BillingError> {
+        let Some(default_payment_method) = default_payment_method else {
             return Err(BillingError::NoDefaultPaymentMethod(subscription_id.clone()));
         };
-
         let Some(default_payment_method_info) = default_payment_method.as_object() else {
             return Err(BillingError::NoDefaultPaymentMethodInfo(default_payment_method.id()));
         };
-
         let Some(card_details) = &default_payment_method_info.card else {
             return Err(BillingError::NoCardDetails(default_payment_method.id()));
         };
-
-        let card = JsonCardDetails {
+        Ok(JsonCardDetails {
             brand: card_details.brand.parse()?,
             last_four: card_details.last4.parse()?,
             exp_month: card_details.exp_month.try_into()?,
             exp_year: card_details.exp_year.try_into()?,
-        };
+        })
+    }
 
-        // panic!("{subscription:#?}");
-
-        let subscription_item = Self::get_subscription_item(subscription).await?;
-
+    fn get_plan_level(
+        subscription_id: &SubscriptionId,
+        subscription_items: Vec<SubscriptionItem>,
+    ) -> Result<PlanLevel, BillingError> {
+        let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
         let Some(price) = subscription_item.price else {
             return Err(BillingError::NoPrice(subscription_item.id))
         };
-
         let Some(product) = price.product else {
             return Err(BillingError::NoProduct(price.id))
         };
-
         let Some(product_info) = product.as_object() else {
             return Err(BillingError::NoProductInfo(product.id()))
         };
-
-        // Bencher Team
-        // Bencher Enterprise
+        // `Bencher Team` or `Bencher Enterprise`
         let Some(product_name) = &product_info.name else {
             return Err(BillingError::NoProductName(product.id()));
         };
-        let level = product_name.parse()?;
+        product_name.parse().map_err(Into::into)
+    }
 
-        let json_plan = JsonPlan {
-            organization,
-            customer,
-            card,
-            level,
-            current_period_start,
-            current_period_end,
-        };
-
-        todo!()
-
-        /*
-            price: Some(
-                        Price {
-                            id: PriceId(
-                                "price_1McW12Kal5vzTlmhoPltpBAW",
-                            ),
-                            active: Some(
-                                true,
-                            ),
-                            billing_scheme: Some(
-                                PerUnit,
-                            ),
-                            created: Some(
-                                1676648308,
-                            ),
-                            currency: Some(
-                                USD,
-                            ),
-                            currency_options: None,
-                            custom_unit_amount: None,
-                            deleted: false,
-                            livemode: Some(
-                                false,
-                            ),
-                            lookup_key: None,
-                            metadata: {},
-                            nickname: None,
-                            product: Some(
-                                Object(
-                                    Product {
-                                        id: ProductId(
-                                            "prod_NKz5B9dGhDiSY1",
-                                        ),
-                                        active: Some(
-                                            true,
-                                        ),
-                                        attributes: Some(
-                                            [],
-                                        ),
-                                        caption: None,
-                                        created: Some(
-                                            1676122095,
-                                        ),
-                                        deactivate_on: None,
-                                        default_price: Some(
-                                            Id(
-                                                PriceId(
-                                                    "price_1McW12Kal5vzTlmhoPltpBAW",
-                                                ),
-                                            ),
-                                        ),
-                                        deleted: false,
-                                        description: None,
-                                        images: Some(
-                                            [
-                                                "https://files.stripe.com/links/MDB8YWNjdF8xSFZqd3ZLYWw1dnpUbG1ofGZsX3Rlc3RfOXZsWGhJcE85aG5yeXIxTFRoYkxQTEdr00g5SW86QL",
-                                            ],
-                                        ),
-                                        livemode: Some(
-                                            false,
-                                        ),
-                                        metadata: {},
-                                        name: Some(
-                                            "Bencher Team",
-                                        ),
-                                        package_dimensions: None,
-                                        shippable: None,
-                                        statement_descriptor: Some(
-                                            "Bencher - POMPEII LLC",
-                                        ),
-                                        tax_code: None,
-                                        type_: Some(
-                                            Service,
-                                        ),
-                                        unit_label: Some(
-                                            "metric",
-                                        ),
-                                        updated: Some(
-                                            1676648334,
-                                        ),
-                                        url: None,
-                                    },
-                                ),
-                            ),
-                            recurring: Some(
-                                Recurring {
-                                    aggregate_usage: Some(
-                                        Sum,
-                                    ),
-                                    interval: Month,
-                                    interval_count: 1,
-                                    trial_period_days: None,
-                                    usage_type: Metered,
-                                },
-                            ),
-                            tax_behavior: Some(
-                                Unspecified,
-                            ),
-                            tiers: None,
-                            tiers_mode: None,
-                            transform_quantity: None,
-                            type_: Some(
-                                Recurring,
-                            ),
-                            unit_amount: Some(
-                                1,
-                            ),
-                            unit_amount_decimal: Some(
-                                "1",
-                            ),
-                        },
-                    ),
-                    quantity: None,
-                    subscription: Some(
-                        "sub_1Mdk0tKal5vzTlmhf3O8RftA",
-                    ),
-                    tax_rates: Some(
-                        [],
-                    ),
-                },
-            ],
-            has_more: false,
-            total_count: Some(
-                1,
-            ),
-            url: "/v1/subscription_items?subscription=sub_1Mdk0tKal5vzTlmhf3O8RftA",
-        },
-                        customer: Id(
-                        CustomerId(
-                            "cus_NOMrHVtLltfnqL",
-                        ),
-                    ),
-
-
-                     default_payment_method: Some(
-                    Id(
-                        PaymentMethodId(
-                            "pm_1Mda7wKal5vzTlmhjq71XB9w",
-                        ),
-                    ),
-
-
-                    items: List {
-                data: [
-                    SubscriptionItem {
-                        id: SubscriptionItemId(
-                            "si_NOMrYIRvGxKC6g",
-                        ),
-                ),
-
-
-                 plan: Some(
-                            Plan {
-                                id: PlanId(
-                                    "price_1McW12Kal5vzTlmhoPltpBAW",
-                                ),
-
-                                 product: Some(
-                                    Id(
-                                        ProductId(
-                                            "prod_NKz5B9dGhDiSY1",
-                                        ),
-                                    ),
-                                ),
-
-                                 price: Some(
-                            Price {
-                                id: PriceId(
-                                    "price_1McW12Kal5vzTlmhoPltpBAW",
-                                ),
-
-                                metadata: {
-                "organization": "2caa5bab-a42b-4ef8-8b59-e97822ef248d",
-            },
-                             */
+    fn get_subscription_item(
+        subscription_id: &SubscriptionId,
+        mut subscription_items: Vec<SubscriptionItem>,
+    ) -> Result<SubscriptionItem, BillingError> {
+        if let Some(subscription_item) = subscription_items.pop() {
+            if subscription_items.is_empty() {
+                Ok(subscription_item)
+            } else {
+                Err(BillingError::MultipleSubscriptionItems(
+                    subscription_id.clone(),
+                    subscription_item,
+                    subscription_items,
+                ))
+            }
+        } else {
+            Err(BillingError::NoSubscriptionItem(subscription_id.clone()))
+        }
     }
 
     pub async fn record_usage(
@@ -637,7 +465,8 @@ impl Biller {
         quantity: u64,
     ) -> Result<UsageRecord, BillingError> {
         let subscription = self.get_subscription(subscription_id).await?;
-        let subscription_item = Self::get_subscription_item(subscription).await?;
+        let subscription_item =
+            Self::get_subscription_item(&subscription.id, subscription.items.data)?;
 
         let create_usage_record = CreateUsageRecord {
             quantity,
@@ -736,7 +565,7 @@ mod test {
 
         test_record_usage(biller, &create_subscription.id, usage_count).await;
 
-        biller.get_plan(&create_subscription.id).await;
+        biller.get_plan(&create_subscription.id).await.unwrap();
     }
 
     async fn test_licensed_subscription(
