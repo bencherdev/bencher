@@ -2,7 +2,11 @@ import { createSignal } from "solid-js";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import { is_valid_email, is_valid_user_name } from "bencher_valid";
-import { validate_card_number, validate_string } from "../../../site/util";
+import {
+	validate_card_number,
+	validate_expiration,
+	validate_string,
+} from "../../../site/util";
 
 const PaymentCard = (props) => {
 	const [form, setForm] = createSignal(cardForm());
@@ -46,25 +50,15 @@ const PaymentCard = (props) => {
 				config={CARD_FIELDS.number}
 				handleField={handleField}
 			/>
-			{/* <Field
+			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="expiration"
 				label={true}
-				value={form()?.number?.value}
-				valid={form()?.number?.valid}
+				value={form()?.expiration?.value}
+				valid={form()?.expiration?.valid}
 				config={CARD_FIELDS.expiration}
 				handleField={handleField}
-			/> */}
-
-			{/* <Field
-				kind={FieldKind.INPUT}
-				fieldKey="email"
-				label={true}
-				value={form()?.email?.value}
-				valid={form()?.email?.valid}
-				config={CARD_FIELDS.email}
-				handleField={handleField}
-			/> */}
+			/>
 		</form>
 	);
 };
@@ -75,11 +69,7 @@ export const cardForm = () => {
 			value: "",
 			valid: null,
 		},
-		exp_month: {
-			value: "",
-			valid: null,
-		},
-		exp_year: {
+		expiration: {
 			value: "",
 			valid: null,
 		},
@@ -103,11 +93,11 @@ const CARD_FIELDS = {
 	},
 	expiration: {
 		label: "Expiration",
-		type: "email",
+		type: "text",
 		placeholder: "MM/YY",
-		icon: "fas fa-envelope",
-		help: "Must be a valid month and year",
-		validate: (input) => validate_string(input, is_valid_email),
+		icon: "far fa-calendar-check",
+		help: "Must be a valid future month / year",
+		validate: validate_expiration,
 	},
 };
 

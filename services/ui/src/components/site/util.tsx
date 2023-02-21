@@ -3,6 +3,8 @@ import {
 	is_valid_jwt,
 	is_valid_plan_level,
 	is_valid_card_number,
+	is_valid_expiration_month,
+	is_valid_expiration_year,
 } from "bencher_valid";
 import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
@@ -92,6 +94,43 @@ export const validate_card_number = (card_number: string): boolean => {
 	return validate_string(card_number, (card_number) => {
 		const number = card_number.replace(new RegExp("-", "g"), "");
 		return is_valid_card_number(number);
+	});
+};
+
+export const validate_expiration = (expiration: string): boolean => {
+	return validate_string(expiration, (expiration) => {
+		if (!/^\d{1,2}\/\d{2,4}$/.test(expiration)) {
+			return false;
+		}
+
+		const exp = expiration.split("/");
+		if (exp.length !== 2) {
+			return false;
+		}
+
+		const exp_month = Number.parseInt(exp?.[0]);
+		if (Number.isInteger(exp_month)) {
+			if (!is_valid_expiration_month(exp_month)) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+
+		const exp_year = Number.parseInt(exp?.[1]);
+		if (Number.isInteger(exp_year)) {
+			let full_exp_year = exp_year;
+			if (full_exp_year < 100) {
+				full_exp_year = 2000 + full_exp_year;
+			}
+			if (!is_valid_expiration_year(full_exp_year)) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+
+		return true;
 	});
 };
 
