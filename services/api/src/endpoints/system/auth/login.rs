@@ -21,6 +21,7 @@ use crate::{
 
 use super::Resource;
 use super::AUTH_TOKEN_TTL;
+use super::TOKEN_ARG;
 
 const LOGIN_RESOURCE: Resource = Resource::Login;
 
@@ -98,9 +99,10 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .map(|mut url| {
                 #[cfg(feature = "plus")]
                 if let Some(plan) = plan {
-                    url.query_pairs_mut().append_pair("plan", plan.as_ref());
+                    url.query_pairs_mut()
+                        .append_pair(super::PLAN_ARG, plan.as_ref());
                 }
-                url.query_pairs_mut().append_pair("token", &token_string);
+                url.query_pairs_mut().append_pair(TOKEN_ARG, &token_string);
                 url.into()
             })
             .unwrap_or_default(),

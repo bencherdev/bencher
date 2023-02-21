@@ -24,6 +24,7 @@ use crate::{
 
 use super::Resource;
 use super::AUTH_TOKEN_TTL;
+use super::TOKEN_ARG;
 
 const SIGNUP_RESOURCE: Resource = Resource::Signup;
 
@@ -60,7 +61,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let conn = &mut api_context.database.connection;
 
     #[cfg(feature = "plus")]
-    let plan = json_signup.plan;
+    let plan = json_signup.plan.unwrap_or_default();
 
     let invite = json_signup.invite.take();
     let email = json_signup.email.clone();
@@ -122,10 +123,9 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
             .join("/auth/confirm")
             .map(|mut url| {
                 #[cfg(feature = "plus")]
-                if let Some(plan) = plan {
-                    url.query_pairs_mut().append_pair("plan", plan.as_ref());
-                }
-                url.query_pairs_mut().append_pair("token", &token_string);
+                url.query_pairs_mut()
+                    .append_pair(super::PLAN_ARG, plan.as_ref());
+                url.query_pairs_mut().append_pair(TOKEN_ARG, &token_string);
                 url.into()
             })
             .unwrap_or_default(),

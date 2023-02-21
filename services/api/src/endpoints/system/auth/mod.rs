@@ -13,6 +13,10 @@ pub const AUTH_TOKEN_TTL: u32 = 30 * 60;
 // 30 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
 pub const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
 
+#[cfg(feature = "plus")]
+const PLAN_ARG: &str = "plan";
+const TOKEN_ARG: &str = "token";
+
 #[derive(Debug, Display, Clone, Copy)]
 pub enum Resource {
     Confirm,
