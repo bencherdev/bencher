@@ -28,8 +28,12 @@ pub enum ValidError {
     Secret(String),
     #[error("Failed to validate plan: {0}")]
     Plan(String),
+    #[error("Failed to validate payment card brand: {0}")]
+    CardBrand(String),
     #[error("Failed to validate payment card number: {0}")]
     CardNumber(String),
+    #[error("Failed to validate payment card last four numbers: {0}")]
+    LastFour(String),
     #[error("Failed to validate payment card expiration year: {0}")]
     ExpirationYear(i32),
     #[error("Failed to validate payment card expiration year: {0}")]

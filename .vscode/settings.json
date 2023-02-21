@@ -45,6 +45,7 @@
     "signup",
     "starttls",
     "thiserror",
+    "UNIONPAY",
     "vcentered"
   ]
 }

@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
+use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour};
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -34,6 +34,14 @@ pub struct JsonCard {
     pub exp_month: ExpirationMonth,
     pub exp_year: ExpirationYear,
     pub cvc: CardCvc,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonCardInfo {
+    pub last_four: LastFour,
+    pub exp_month: ExpirationMonth,
+    pub exp_year: ExpirationYear,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
