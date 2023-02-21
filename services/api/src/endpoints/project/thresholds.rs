@@ -9,7 +9,6 @@ use diesel::{
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tracing::info;
 use uuid::Uuid;
 
 use crate::{

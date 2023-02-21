@@ -22,6 +22,7 @@ const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 
 #[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
 pub enum PlanLevel {
     #[default]
     Free,
