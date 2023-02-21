@@ -35,6 +35,7 @@ pub struct JsonPlan {
     pub customer: JsonCustomer,
     pub card: JsonCardDetails,
     pub level: PlanLevel,
+    pub unit_amount: u64,
     pub current_period_start: DateTime<Utc>,
     pub current_period_end: DateTime<Utc>,
 }

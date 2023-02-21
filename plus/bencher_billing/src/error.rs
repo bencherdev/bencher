@@ -10,6 +10,8 @@ pub enum BillingError {
     Valid(#[from] bencher_json::ValidError),
     #[error("Failed to parse UUID: {0}")]
     Uuid(#[from] uuid::Error),
+    #[error("Failed to cast integer: {0}")]
+    IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to send billing request: {0}")]
     Stripe(#[from] stripe::StripeError),
     #[error("Failed to parse ID: {0}")]
@@ -50,6 +52,8 @@ pub enum BillingError {
     NoCardDetails(PaymentMethodId),
     #[error("No price for {0}")]
     NoPrice(SubscriptionItemId),
+    #[error("No unit amount for {0}")]
+    NoUnitAmount(PriceId),
     #[error("No product for {0}")]
     NoProduct(PriceId),
     #[error("No product info for {0}")]

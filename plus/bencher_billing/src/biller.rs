@@ -366,13 +366,14 @@ impl Biller {
 
         let customer = Self::get_plan_customer(&subscription.customer)?;
         let card = Self::get_plan_card(subscription_id, &subscription.default_payment_method)?;
-        let level = Self::get_plan_level(subscription_id, subscription.items.data)?;
+        let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription.items.data)?;
 
         Ok(JsonPlan {
             organization,
             customer,
             card,
             level,
+            unit_amount,
             current_period_start,
             current_period_end,
         })
@@ -419,14 +420,20 @@ impl Biller {
         })
     }
 
-    fn get_plan_level(
+    fn get_plan_price(
         subscription_id: &SubscriptionId,
         subscription_items: Vec<SubscriptionItem>,
-    ) -> Result<PlanLevel, BillingError> {
+    ) -> Result<(PlanLevel, u64), BillingError> {
         let subscription_item = Self::get_subscription_item(subscription_id, subscription_items)?;
         let Some(price) = subscription_item.price else {
             return Err(BillingError::NoPrice(subscription_item.id))
         };
+
+        let Some(unit_amount) = price.unit_amount else {
+            return Err(BillingError::NoUnitAmount(price.id));
+        };
+        let unit_amount = u64::try_from(unit_amount)?;
+
         let Some(product) = price.product else {
             return Err(BillingError::NoProduct(price.id))
         };
@@ -437,7 +444,9 @@ impl Biller {
         let Some(product_name) = &product_info.name else {
             return Err(BillingError::NoProductName(product.id()));
         };
-        product_name.parse().map_err(Into::into)
+        let plan_level = product_name.parse()?;
+
+        Ok((plan_level, unit_amount))
     }
 
     fn get_subscription_item(
