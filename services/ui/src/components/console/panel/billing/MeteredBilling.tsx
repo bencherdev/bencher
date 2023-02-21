@@ -3,16 +3,16 @@ import { createMemo } from "solid-js";
 import { PLAN_PARAM } from "../../../auth/AuthForm";
 import { validate_plan } from "../../../site/util";
 import PaymentCard from "./PaymentCard";
-import Pricing, { Plan } from "./Pricing";
+import Pricing, { PlanLevel } from "./Pricing";
 
 const Billing = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const setPlan = (plan: Plan) => {
-		setSearchParams({ [PLAN_PARAM]: plan });
+	const setPlanLevel = (plan_level: PlanLevel) => {
+		setSearchParams({ [PLAN_PARAM]: plan_level });
 	};
 	if (!validate_plan(searchParams[PLAN_PARAM])) {
-		setPlan(Plan.TEAM);
+		setPlanLevel(PlanLevel.FREE);
 	}
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);
 
@@ -21,24 +21,24 @@ const Billing = (props) => {
 			<div class="column">
 				<Pricing
 					active={plan()}
-					free_text="Choose Free"
+					free_text="Stick with Free"
 					handleFree={(e) => {
 						e.preventDefault();
-						setPlan(Plan.FREE);
+						setPlanLevel(PlanLevel.FREE);
 					}}
 					team_text="Go with Team"
 					handleTeam={(e) => {
 						e.preventDefault();
-						setPlan(Plan.TEAM);
+						setPlanLevel(PlanLevel.TEAM);
 					}}
 					enterprise_text="Go with Enterprise"
 					handleEnterprise={(e) => {
 						e.preventDefault();
-						setPlan(Plan.ENTERPRISE);
+						setPlanLevel(PlanLevel.ENTERPRISE);
 					}}
 				/>
 				<br />
-				{plan() !== Plan.FREE && <PaymentCard />}
+				{plan() !== PlanLevel.FREE && <PaymentCard />}
 			</div>
 		</div>
 	);

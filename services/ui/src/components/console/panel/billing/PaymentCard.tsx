@@ -1,7 +1,6 @@
 import { createSignal } from "solid-js";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import Pricing, { Plan } from "./Pricing";
 import { is_valid_email, is_valid_user_name } from "bencher_valid";
 import { validate_string } from "../../../site/util";
 

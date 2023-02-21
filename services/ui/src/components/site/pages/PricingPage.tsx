@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
-import Pricing, { Plan } from "../../console/panel/billing/Pricing";
+import Pricing, { PlanLevel } from "../../console/panel/billing/Pricing";
 import { BENCHER_CALENDLY_URL, pageTitle, validate_jwt } from "../util";
 
 const PricingPage = (props) => {
@@ -42,21 +42,21 @@ const PricingPage = (props) => {
 			<hr />
 			<section class="section">
 				<Pricing
-					active={Plan.TEAM}
+					active={PlanLevel.TEAM}
 					free_text="Sign up for free"
 					handleFree={(e) => {
 						e.preventDefault();
-						navigate(plan_signup(Plan.FREE));
+						navigate(plan_signup(PlanLevel.FREE));
 					}}
 					team_text="Continue with Team"
 					handleTeam={(e) => {
 						e.preventDefault();
-						navigate(plan_signup(Plan.TEAM));
+						navigate(plan_signup(PlanLevel.TEAM));
 					}}
 					enterprise_text="Continue with Enterprise"
 					handleEnterprise={(e) => {
 						e.preventDefault();
-						navigate(plan_signup(Plan.ENTERPRISE));
+						navigate(plan_signup(PlanLevel.ENTERPRISE));
 					}}
 				/>
 			</section>
@@ -142,7 +142,7 @@ const PricingPage = (props) => {
 	);
 };
 
-const plan_signup = (plan: Plan) => {
+const plan_signup = (plan: PlanLevel) => {
 	return `/auth/signup?plan=${plan}`;
 };
 

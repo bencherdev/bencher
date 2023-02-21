@@ -1,16 +1,16 @@
-export enum Plan {
+export enum PlanLevel {
 	FREE = "free",
 	TEAM = "team",
 	ENTERPRISE = "enterprise",
 }
 
-export const per_metric_cost = (plan: Plan) => {
+export const per_metric_cost = (plan: PlanLevel) => {
 	switch (plan) {
-		case Plan.FREE:
+		case PlanLevel.FREE:
 			return 0;
-		case Plan.TEAM:
+		case PlanLevel.TEAM:
 			return 1;
-		case Plan.ENTERPRISE:
+		case PlanLevel.ENTERPRISE:
 			return 5;
 	}
 };
@@ -26,7 +26,9 @@ const Pricing = (props: {
 }) => {
 	return (
 		<div class="pricing-table is-comparative">
-			<div class={`pricing-plan ${props.active === Plan.FREE && "is-active"}`}>
+			<div
+				class={`pricing-plan ${props.active === PlanLevel.FREE && "is-active"}`}
+			>
 				<div class="plan-header">
 					<h2 class="title">Free</h2>
 				</div>
@@ -49,13 +51,15 @@ const Pricing = (props: {
 				</div>
 				<Footer
 					active={props.active}
-					plan={Plan.FREE}
+					plan={PlanLevel.FREE}
 					button_text={props.free_text}
-					handlePlan={props.handleFree}
+					handlePlanLevel={props.handleFree}
 				/>
 			</div>
 
-			<div class={`pricing-plan ${props.active === Plan.TEAM && "is-active"}`}>
+			<div
+				class={`pricing-plan ${props.active === PlanLevel.TEAM && "is-active"}`}
+			>
 				<div class="plan-header">
 					<h2 class="title">Team</h2>
 				</div>
@@ -78,15 +82,15 @@ const Pricing = (props: {
 				</div>
 				<Footer
 					active={props.active}
-					plan={Plan.TEAM}
+					plan={PlanLevel.TEAM}
 					button_text={props.team_text}
-					handlePlan={props.handleTeam}
+					handlePlanLevel={props.handleTeam}
 				/>
 			</div>
 
 			<div
 				class={`pricing-plan ${
-					props.active === Plan.ENTERPRISE && "is-active"
+					props.active === PlanLevel.ENTERPRISE && "is-active"
 				}`}
 			>
 				<div class="plan-header">
@@ -111,9 +115,9 @@ const Pricing = (props: {
 				</div>
 				<Footer
 					active={props.active}
-					plan={Plan.ENTERPRISE}
+					plan={PlanLevel.ENTERPRISE}
 					button_text={props.enterprise_text}
-					handlePlan={props.handleEnterprise}
+					handlePlanLevel={props.handleEnterprise}
 				/>
 			</div>
 		</div>
@@ -124,18 +128,18 @@ const Footer = (props: {
 	active: string;
 	plan: string;
 	button_text: string;
-	handlePlan: Function;
+	handlePlanLevel: Function;
 }) => {
 	return (
 		<div class="plan-footer">
 			{props.plan === props.active ? (
-				<button class="button is-fullwidth" onClick={props.handlePlan}>
+				<button class="button is-fullwidth" onClick={props.handlePlanLevel}>
 					{props.button_text}
 				</button>
 			) : (
 				<div class="columns is-centered">
 					<div class="column is-four-fifths">
-						<button class="button is-fullwidth" onClick={props.handlePlan}>
+						<button class="button is-fullwidth" onClick={props.handlePlanLevel}>
 							{props.button_text}
 						</button>
 					</div>

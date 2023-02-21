@@ -14,6 +14,7 @@ import {
 import Notification, { notification_path } from "../site/Notification";
 import FieldKind from "../field/kind";
 import { EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./AuthForm";
+import { PlanLevel } from "../console/panel/billing/Pricing";
 
 const CONFIRM_FORWARD = [EMAIL_PARAM, TOKEN_PARAM, PLAN_PARAM];
 
@@ -34,8 +35,8 @@ const AuthConfirmPage = (props: {
 		searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null,
 	);
 
-	if (searchParams[PLAN_PARAM] && !validate_plan(searchParams[PLAN_PARAM])) {
-		setSearchParams({ [PLAN_PARAM]: null });
+	if (!validate_plan(searchParams[PLAN_PARAM])) {
+		setSearchParams({ [PLAN_PARAM]: PlanLevel.FREE });
 	}
 	const plan = createMemo(() =>
 		searchParams[PLAN_PARAM] ? searchParams[PLAN_PARAM].trim() : null,

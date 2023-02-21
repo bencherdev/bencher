@@ -2,7 +2,7 @@ import { useSearchParams } from "solid-app-router";
 import { createMemo, createSignal } from "solid-js";
 import { PLAN_PARAM } from "../../../auth/AuthForm";
 import { validate_plan } from "../../../site/util";
-import Pricing, { per_metric_cost, Plan } from "./Pricing";
+import Pricing, { per_metric_cost, PlanLevel } from "./Pricing";
 
 const HOST_PARAM = "host";
 const QUANTITY = "quantity";
@@ -15,11 +15,11 @@ enum Host {
 const Billing = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const setPlan = (plan: Plan) => {
-		setSearchParams({ [PLAN_PARAM]: plan });
+	const setPlanLevel = (plan_level: PlanLevel) => {
+		setSearchParams({ [PLAN_PARAM]: plan_level });
 	};
 	if (!validate_plan(searchParams[PLAN_PARAM])) {
-		setPlan(Plan.TEAM);
+		setPlanLevel(PlanLevel.FREE);
 	}
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);
 
@@ -63,17 +63,17 @@ const Billing = (props) => {
 					free_text="Choose Free"
 					handleFree={(e) => {
 						e.preventDefault();
-						setPlan(Plan.FREE);
+						setPlanLevel(PlanLevel.FREE);
 					}}
 					team_text="Go with Team"
 					handleTeam={(e) => {
 						e.preventDefault();
-						setPlan(Plan.TEAM);
+						setPlanLevel(PlanLevel.TEAM);
 					}}
 					enterprise_text="Go with Enterprise"
 					handleEnterprise={(e) => {
 						e.preventDefault();
-						setPlan(Plan.ENTERPRISE);
+						setPlanLevel(PlanLevel.ENTERPRISE);
 					}}
 				/>
 				<br />
@@ -88,7 +88,7 @@ const Billing = (props) => {
 				)}
 				<br />
 				{((host() === Host.SelfHosted && is_valid_quantity(annual_total())) ||
-					(host() === Host.BencherCloud && plan() !== Plan.FREE)) && (
+					(host() === Host.BencherCloud && plan() !== PlanLevel.FREE)) && (
 					<div class="box">TODO payment</div>
 				)}
 			</div>
