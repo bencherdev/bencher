@@ -42,7 +42,7 @@ pub struct DirPath {
     path =  "/v0/organizations/{organization}/plan",
     tags = ["organizations", "plan"]
 }]
-pub async fn dir_options(
+pub async fn options(
     _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
@@ -146,19 +146,6 @@ pub struct OnePath {
     pub organization: ResourceId,
 }
 
-#[allow(clippy::unused_async)]
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/organizations/{organization}/plan",
-    tags = ["organizations", "plan"]
-}]
-pub async fn one_options(
-    _rqctx: RequestContext<Context>,
-    _path_params: Path<OnePath>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
-}
-
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/plan",
@@ -166,7 +153,7 @@ pub async fn one_options(
 }]
 pub async fn get_one(
     rqctx: RequestContext<Context>,
-    path_params: Path<OnePath>,
+    path_params: Path<DirPath>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PLAN_RESOURCE, Method::GetOne);
@@ -180,7 +167,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &Context,
-    path_params: OnePath,
+    path_params: DirPath,
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, ApiError> {
     let api_context = &mut *context.lock().await;

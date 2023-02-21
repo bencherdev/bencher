@@ -10,6 +10,8 @@ pub enum CliOrganizationPlan {
     /// Create a metered subscription plan
     #[clap(alias = "add")]
     Create(CliPlanCreate),
+    /// View a metered subscription plan
+    View(CliPlanView),
 }
 
 #[derive(Parser, Debug)]
@@ -23,6 +25,15 @@ pub struct CliPlanCreate {
     /// Plan level
     #[clap(value_enum, long)]
     pub level: CliPlanLevel,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliPlanView {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

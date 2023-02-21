@@ -6,10 +6,12 @@ use crate::{bencher::sub::SubCmd, cli::organization::plan::CliOrganizationPlan, 
 
 mod create;
 mod level;
+mod view;
 
 #[derive(Debug)]
 pub enum Plan {
     Create(create::Create),
+    View(view::View),
 }
 
 impl TryFrom<CliOrganizationPlan> for Plan {
@@ -18,6 +20,7 @@ impl TryFrom<CliOrganizationPlan> for Plan {
     fn try_from(plan: CliOrganizationPlan) -> Result<Self, Self::Error> {
         Ok(match plan {
             CliOrganizationPlan::Create(create) => Self::Create(create.try_into()?),
+            CliOrganizationPlan::View(view) => Self::View(view.try_into()?),
         })
     }
 }
@@ -27,6 +30,7 @@ impl SubCmd for Plan {
     async fn exec(&self) -> Result<(), CliError> {
         match self {
             Self::Create(create) => create.exec().await,
+            Self::View(view) => view.exec().await,
         }
     }
 }
