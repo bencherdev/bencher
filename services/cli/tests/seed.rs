@@ -263,6 +263,67 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
+    // cargo run -- metric-kind ls --host http://localhost:61016 --project the-computer
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "metric-kind",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    cmd.assert().success();
+
+    // cargo run -- metric-kind create --host http://localhost:61016 --project the-computer --slug screams-888 --units "screams/minute" screams-888
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let metric_kind = format!("screams-{}", rand::random::<u32>());
+    cmd.args([
+        "metric-kind",
+        "create",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        "--slug",
+        &metric_kind,
+        "--units",
+        "screams/minute",
+        &metric_kind,
+    ]);
+    cmd.assert().success();
+
+    // cargo run -- metric-kind view --host http://localhost:61016 --project the-computer screams-888
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "metric-kind",
+        "view",
+        HOST_ARG,
+        LOCALHOST,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        &metric_kind,
+    ]);
+    cmd.assert().success();
+
+    // // export BENCHER_TESTBED=[TESTBED_UUID]
+    // let metric_kind = cmd.output().unwrap().stdout;
+    // let metric_kind: JsonMetricKind = serde_json::from_slice(&metric_kind).unwrap();
+    // let metric_kind = metric_kind.uuid.to_string();
+
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "metric-kind",
+        "ls",
+        HOST_ARG,
+        LOCALHOST,
+        TOKEN_ARG,
+        TEST_BENCHER_API_TOKEN,
+        PROJECT_ARG,
+        PROJECT_SLUG,
+    ]);
+    cmd.assert().success();
+
     // cargo run -- threshold ls --host http://localhost:61016 --project the-computer
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -275,6 +336,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
     ]);
     cmd.assert().success();
 
+    // TODO: For some strange reason this always gets called twice...
     // cargo run -- threshold create --host http://localhost:61016 --metric-kind latency --branch $BENCHER_BRANCH --testbed $BENCHER_TESTBED --test z
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -285,7 +347,7 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         PROJECT_ARG,
         &project,
         "--metric-kind",
-        "latency",
+        &metric_kind,
         BRANCH_ARG,
         &branch,
         TESTBED_ARG,
@@ -319,39 +381,6 @@ fn test_cli_seed() -> Result<(), Box<dyn std::error::Error>> {
         "leader",
     ]);
     cmd.assert().success();
-
-    // let threshold = cmd.output().unwrap().stdout;
-    // // cli_println!("{}", branch);
-    // // cli_println!("{}", testbed);
-    // // cli_println!("{}", String::from_utf8_lossy(&threshold));
-    // let threshold: JsonThreshold = serde_json::from_slice(&threshold).unwrap();
-    // let threshold = threshold.uuid.to_string();
-
-    // // cargo run -- threshold view --host http://localhost:61016 --project the-computer [THRESHOLD_UUID]
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "threshold",
-    //     "view",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    //     &threshold,
-    // ]);
-    // cmd.assert().success();
-
-    // let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    // cmd.args([
-    //     "threshold",
-    //     "ls",
-    //     HOST_ARG,
-    //     LOCALHOST,
-    //     TOKEN_ARG,
-    //     TEST_BENCHER_API_TOKEN,
-    //     PROJECT_ARG,
-    //     PROJECT_SLUG,
-    // ]);
-    // cmd.assert().success();
 
     Ok(())
 }

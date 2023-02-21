@@ -29,7 +29,6 @@ impl TryFrom<CliThresholdCreate> for Create {
             metric_kind,
             branch,
             testbed,
-
             statistic,
             backend,
         } = create;
