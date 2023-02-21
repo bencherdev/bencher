@@ -84,12 +84,15 @@ export const validate_jwt = (token: string): boolean => {
 	return validate_string(token, is_valid_jwt);
 };
 
-export const validate_plan_level = (token: string): boolean => {
-	return validate_string(token, is_valid_plan_level);
+export const validate_plan_level = (plan_level: string): boolean => {
+	return validate_string(plan_level, is_valid_plan_level);
 };
 
-export const validate_card_number = (token: string): boolean => {
-	return validate_string(token, is_valid_card_number);
+export const validate_card_number = (card_number: string): boolean => {
+	return validate_string(card_number, (card_number) => {
+		const number = card_number.replace(new RegExp("-", "g"), "");
+		return is_valid_card_number(number);
+	});
 };
 
 // TODO improve this validation
