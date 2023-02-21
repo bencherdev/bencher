@@ -1,4 +1,6 @@
-use bencher_json::{Email, Jwt, Plan, Slug, UserName};
+#[cfg(feature = "plus")]
+use bencher_json::PlanLevel;
+use bencher_json::{Email, Jwt, Slug, UserName};
 use clap::{Parser, Subcommand};
 
 use crate::cli::CliBackend;
@@ -23,9 +25,10 @@ pub struct CliAuthSignup {
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    /// Pricing plan
+    #[cfg(feature = "plus")]
+    /// Plan level
     #[clap(long)]
-    pub plan: Option<Plan>,
+    pub plan: Option<PlanLevel>,
 
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]
@@ -40,9 +43,10 @@ pub struct CliAuthSignup {
 
 #[derive(Parser, Debug)]
 pub struct CliAuthLogin {
-    /// Pricing plan
+    #[cfg(feature = "plus")]
+    /// Plan level
     #[clap(long)]
-    pub plan: Option<Plan>,
+    pub plan: Option<PlanLevel>,
 
     /// User invitation JWT (JSON Web Token)
     #[clap(long)]

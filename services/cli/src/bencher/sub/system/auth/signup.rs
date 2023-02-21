@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{Email, JsonEmpty, JsonSignup, Jwt, Plan, Slug, UserName};
+#[cfg(feature = "plus")]
+use bencher_json::PlanLevel;
+use bencher_json::{Email, JsonEmpty, JsonSignup, Jwt, Slug, UserName};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -16,7 +18,8 @@ pub struct Signup {
     pub name: UserName,
     pub slug: Option<Slug>,
     pub email: Email,
-    pub plan: Option<Plan>,
+    #[cfg(feature = "plus")]
+    pub plan: Option<PlanLevel>,
     pub invite: Option<Jwt>,
     pub backend: Backend,
 }
@@ -29,6 +32,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             name,
             slug,
             email,
+            #[cfg(feature = "plus")]
             plan,
             invite,
             backend,
@@ -37,6 +41,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             name,
             slug,
             email,
+            #[cfg(feature = "plus")]
             plan,
             invite,
             backend: backend.try_into()?,
@@ -50,6 +55,7 @@ impl From<Signup> for JsonSignup {
             name,
             slug,
             email,
+            #[cfg(feature = "plus")]
             plan,
             invite,
             ..
@@ -58,6 +64,7 @@ impl From<Signup> for JsonSignup {
             name,
             slug,
             email,
+            #[cfg(feature = "plus")]
             plan,
             invite,
         }

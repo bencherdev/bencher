@@ -119,6 +119,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
             .clone()
             .join("/auth/confirm")
             .map(|mut url| {
+                #[cfg(feature = "plus")]
                 if let Some(plan) = plan {
                     url.query_pairs_mut().append_pair("plan", plan.as_ref());
                 }

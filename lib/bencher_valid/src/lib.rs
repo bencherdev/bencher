@@ -10,7 +10,7 @@ mod error;
 mod git_hash;
 mod jwt;
 mod non_empty;
-mod plan;
+mod plan_level;
 mod resource_id;
 mod secret;
 mod slug;
@@ -29,7 +29,8 @@ pub use error::ValidError;
 use error::REGEX_ERROR;
 pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
-pub use plan::Plan;
+#[cfg(feature = "plus")]
+pub use plan_level::PlanLevel;
 pub use resource_id::ResourceId;
 pub use secret::Secret;
 pub use user_name::UserName;

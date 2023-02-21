@@ -2,15 +2,17 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{
-    organization::metered::{JsonCard, JsonLevel, JsonNewPlan},
+    organization::metered::{JsonCard, JsonNewPlan},
     CardCvc, CardNumber, ExpirationMonth, ExpirationYear, ResourceId,
 };
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::plan::{CliPlanCard, CliPlanCreate, CliPlanLevel},
+    cli::organization::plan::{CliPlanCard, CliPlanCreate},
     CliError,
 };
+
+use super::level::Level;
 
 #[derive(Debug, Clone)]
 pub struct Create {
@@ -26,12 +28,6 @@ pub struct Card {
     pub exp_month: ExpirationMonth,
     pub exp_year: ExpirationYear,
     pub cvc: CardCvc,
-}
-
-#[derive(Debug, Clone)]
-pub enum Level {
-    Team,
-    Enterprise,
 }
 
 impl TryFrom<CliPlanCreate> for Create {
@@ -70,15 +66,6 @@ impl From<CliPlanCard> for Card {
     }
 }
 
-impl From<CliPlanLevel> for Level {
-    fn from(level: CliPlanLevel) -> Self {
-        match level {
-            CliPlanLevel::Team => Self::Team,
-            CliPlanLevel::Enterprise => Self::Enterprise,
-        }
-    }
-}
-
 impl From<Create> for JsonNewPlan {
     fn from(create: Create) -> Self {
         let Create { card, level, .. } = create;
@@ -102,15 +89,6 @@ impl From<Card> for JsonCard {
             exp_month,
             exp_year,
             cvc,
-        }
-    }
-}
-
-impl From<Level> for JsonLevel {
-    fn from(level: Level) -> Self {
-        match level {
-            Level::Team => Self::Team,
-            Level::Enterprise => Self::Enterprise,
         }
     }
 }

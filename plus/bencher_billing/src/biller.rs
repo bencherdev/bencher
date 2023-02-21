@@ -1,7 +1,7 @@
 use bencher_json::{
-    organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonLevel, JsonPlan},
+    organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
-    Email, UserName,
+    Email, PlanLevel, UserName,
 };
 use chrono::{TimeZone, Utc};
 use stripe::{
@@ -40,6 +40,7 @@ impl Biller {
 
 #[derive(Debug, Clone)]
 enum ProductPlan {
+    Free,
     Team(ProductUsage),
     Enterprise(ProductUsage),
 }
@@ -51,17 +52,19 @@ enum ProductUsage {
 }
 
 impl ProductPlan {
-    fn metered(json_level: JsonLevel, price_name: String) -> Self {
-        match json_level {
-            JsonLevel::Team => Self::Team(ProductUsage::Metered(price_name)),
-            JsonLevel::Enterprise => Self::Enterprise(ProductUsage::Metered(price_name)),
+    fn metered(plan_level: PlanLevel, price_name: String) -> Self {
+        match plan_level {
+            PlanLevel::Free => Self::Free,
+            PlanLevel::Team => Self::Team(ProductUsage::Metered(price_name)),
+            PlanLevel::Enterprise => Self::Enterprise(ProductUsage::Metered(price_name)),
         }
     }
 
-    fn licensed(json_level: JsonLevel, price_name: String, quantity: u64) -> Self {
-        match json_level {
-            JsonLevel::Team => Self::Team(ProductUsage::Licensed(price_name, quantity)),
-            JsonLevel::Enterprise => Self::Enterprise(ProductUsage::Licensed(price_name, quantity)),
+    fn licensed(plan_level: PlanLevel, price_name: String, quantity: u64) -> Self {
+        match plan_level {
+            PlanLevel::Free => Self::Free,
+            PlanLevel::Team => Self::Team(ProductUsage::Licensed(price_name, quantity)),
+            PlanLevel::Enterprise => Self::Enterprise(ProductUsage::Licensed(price_name, quantity)),
         }
     }
 }
@@ -204,14 +207,14 @@ impl Biller {
         organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
-        json_level: JsonLevel,
+        plan_level: PlanLevel,
         price_name: String,
     ) -> Result<Subscription, BillingError> {
         self.create_subscription(
             organization,
             customer,
             payment_method,
-            ProductPlan::metered(json_level, price_name),
+            ProductPlan::metered(plan_level, price_name),
         )
         .await
     }
@@ -221,7 +224,7 @@ impl Biller {
         organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
-        json_level: JsonLevel,
+        plan_level: PlanLevel,
         price_name: String,
         quantity: u64,
     ) -> Result<Subscription, BillingError> {
@@ -229,7 +232,7 @@ impl Biller {
             organization,
             customer,
             payment_method,
-            ProductPlan::licensed(json_level, price_name, quantity),
+            ProductPlan::licensed(plan_level, price_name, quantity),
         )
         .await
     }
@@ -244,6 +247,7 @@ impl Biller {
     ) -> Result<Subscription, BillingError> {
         let mut create_subscription = CreateSubscription::new(customer.id.clone());
         let (price, quantity) = match product_plan {
+            ProductPlan::Free => return Err(BillingError::ProductLevelFree),
             ProductPlan::Team(product_usage) => match product_usage {
                 ProductUsage::Metered(price_name) => (
                     self.products
@@ -361,12 +365,23 @@ impl Biller {
                 ],
             )
             .await?;
-        let current_period_start = subscription.current_period_start;
-        let current_period_end = subscription.current_period_end;
+        let current_period_start = Utc
+            .timestamp_opt(subscription.current_period_start, 0)
+            .single()
+            .ok_or_else(|| {
+                BillingError::DateTime(subscription_id.clone(), subscription.current_period_start)
+            })?;
+        let current_period_end = Utc
+            .timestamp_opt(subscription.current_period_end, 0)
+            .single()
+            .ok_or_else(|| {
+                BillingError::DateTime(subscription_id.clone(), subscription.current_period_end)
+            })?;
 
         let Some(organization) = subscription.metadata.get(METADATA_ORGANIZATION) else {
             return Err(BillingError::NoOrganization(subscription_id.clone()));
         };
+        let organization = organization.parse()?;
 
         let Some(customer) = subscription.customer.as_object() else {
             return Err(BillingError::NoCustomerInfo(subscription.customer.id()));
@@ -380,8 +395,7 @@ impl Biller {
         let Some(email) = &customer.email else {
             return Err(BillingError::NoEmail(customer.id.clone()));
         };
-
-        let json_customer = JsonCustomer {
+        let customer = JsonCustomer {
             uuid: uuid.parse()?,
             name: name.parse()?,
             email: email.parse()?,
@@ -395,15 +409,15 @@ impl Biller {
             return Err(BillingError::NoDefaultPaymentMethodInfo(default_payment_method.id()));
         };
 
-        let Some(card) = &default_payment_method_info.card else {
+        let Some(card_details) = &default_payment_method_info.card else {
             return Err(BillingError::NoCardDetails(default_payment_method.id()));
         };
 
-        let json_card_details = JsonCardDetails {
-            brand: card.brand.parse()?,
-            last_four: card.last4.parse()?,
-            exp_month: card.exp_month.try_into()?,
-            exp_year: card.exp_year.try_into()?,
+        let card = JsonCardDetails {
+            brand: card_details.brand.parse()?,
+            last_four: card_details.last4.parse()?,
+            exp_month: card_details.exp_month.try_into()?,
+            exp_year: card_details.exp_year.try_into()?,
         };
 
         // panic!("{subscription:#?}");
@@ -427,24 +441,15 @@ impl Biller {
         let Some(product_name) = &product_info.name else {
             return Err(BillingError::NoProductName(product.id()));
         };
+        let level = product_name.parse()?;
 
         let json_plan = JsonPlan {
-            organization: organization.parse()?,
-            customer: json_customer,
-            card: json_card_details,
-            level: product_name.parse()?,
-            current_period_start: Utc
-                .timestamp_opt(current_period_start, 0)
-                .single()
-                .ok_or_else(|| {
-                    BillingError::DateTime(subscription_id.clone(), current_period_start)
-                })?,
-            current_period_end: Utc
-                .timestamp_opt(current_period_end, 0)
-                .single()
-                .ok_or_else(|| {
-                    BillingError::DateTime(subscription_id.clone(), current_period_end)
-                })?,
+            organization,
+            customer,
+            card,
+            level,
+            current_period_start,
+            current_period_end,
         };
 
         todo!()
@@ -662,8 +667,9 @@ fn into_payment_card(card: JsonCard) -> PaymentCard {
 #[cfg(test)]
 mod test {
     use bencher_json::{
-        organization::metered::{JsonCard, JsonLevel, DEFAULT_PRICE_NAME},
+        organization::metered::{JsonCard, DEFAULT_PRICE_NAME},
         system::config::{JsonBilling, JsonProduct, JsonProducts},
+        PlanLevel,
     };
     use chrono::{Datelike, Utc};
     use literally::hmap;
@@ -707,7 +713,7 @@ mod test {
         organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
-        json_level: JsonLevel,
+        plan_level: PlanLevel,
         price_name: String,
         usage_count: usize,
     ) {
@@ -716,7 +722,7 @@ mod test {
                 organization,
                 customer,
                 payment_method,
-                json_level,
+                plan_level,
                 price_name,
             )
             .await
@@ -738,7 +744,7 @@ mod test {
         organization: Uuid,
         customer: &Customer,
         payment_method: &PaymentMethod,
-        json_level: JsonLevel,
+        plan_level: PlanLevel,
         price_name: String,
         quantity: u64,
     ) {
@@ -747,7 +753,7 @@ mod test {
                 organization,
                 customer,
                 payment_method,
-                json_level,
+                plan_level,
                 price_name,
                 quantity,
             )
@@ -839,7 +845,7 @@ mod test {
             organization,
             &customer,
             &payment_method,
-            JsonLevel::Team,
+            PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             10,
         )
@@ -852,7 +858,7 @@ mod test {
             organization,
             &customer,
             &payment_method,
-            JsonLevel::Team,
+            PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             10,
         )
@@ -865,7 +871,7 @@ mod test {
             organization,
             &customer,
             &payment_method,
-            JsonLevel::Enterprise,
+            PlanLevel::Enterprise,
             DEFAULT_PRICE_NAME.into(),
             25,
         )
@@ -878,7 +884,7 @@ mod test {
             organization,
             &customer,
             &payment_method,
-            JsonLevel::Team,
+            PlanLevel::Team,
             DEFAULT_PRICE_NAME.into(),
             25,
         )

@@ -1,7 +1,8 @@
 #![cfg(feature = "plus")]
 
 use bencher_valid::{
-    CardBrand, CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, LastFour, UserName,
+    CardBrand, CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, LastFour, PlanLevel,
+    UserName,
 };
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
@@ -15,7 +16,7 @@ pub const DEFAULT_PRICE_NAME: &str = "default";
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewPlan {
     pub card: JsonCard,
-    pub level: JsonLevel,
+    pub level: PlanLevel,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,21 +30,11 @@ pub struct JsonCard {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename = "snake_case")]
-pub enum JsonLevel {
-    #[serde(alias = "Bencher Team")]
-    Team,
-    #[serde(alias = "Bencher Enterprise")]
-    Enterprise,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlan {
     pub organization: Uuid,
     pub customer: JsonCustomer,
     pub card: JsonCardDetails,
-    pub level: JsonLevel,
+    pub level: PlanLevel,
     pub current_period_start: DateTime<Utc>,
     pub current_period_end: DateTime<Utc>,
 }

@@ -6,6 +6,7 @@ use crate::cli::CliBackend;
 use self::plan::CliOrganizationPlan;
 
 pub mod member;
+#[cfg(feature = "plus")]
 pub mod plan;
 
 #[derive(Subcommand, Debug)]

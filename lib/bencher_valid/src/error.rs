@@ -26,8 +26,8 @@ pub enum ValidError {
     GitHash(String),
     #[error("Failed to validate secret: {0}")]
     Secret(String),
-    #[error("Failed to validate plan: {0}")]
-    Plan(String),
+    #[error("Failed to validate plan level: {0}")]
+    PlanLevel(String),
     #[error("Failed to validate payment card brand: {0}")]
     CardBrand(String),
     #[error("Failed to validate payment card number: {0}")]

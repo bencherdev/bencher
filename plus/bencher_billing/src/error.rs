@@ -20,6 +20,8 @@ pub enum BillingError {
     MultiplePaymentMethods(PaymentMethod, Vec<PaymentMethod>),
     #[error("Failed to find price: {0}")]
     PriceNotFound(String),
+    #[error("Cannot create a subscription for the free tier")]
+    ProductLevelFree,
     #[error("Subscription quantity set to zero: {0}")]
     QuantityZero(u64),
     #[error("Multiple subscriptions: {0:#?} {1:#?}")]

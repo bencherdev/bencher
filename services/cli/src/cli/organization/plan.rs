@@ -1,3 +1,5 @@
+#![cfg(feature = "plus")]
+
 use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, ResourceId};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -45,10 +47,11 @@ pub struct CliPlanCard {
     pub cvc: CardCvc,
 }
 
-/// Suggested Central Tendency (Average)
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
 pub enum CliPlanLevel {
+    /// Free
+    Free,
     /// Team
     Team,
     /// Enterprise
