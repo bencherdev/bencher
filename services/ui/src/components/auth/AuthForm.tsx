@@ -9,7 +9,7 @@ import {
 	NotifyKind,
 	post_options,
 	validate_jwt,
-	validate_plan,
+	validate_plan_level,
 } from "../site/util";
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import FieldKind from "../field/kind";
@@ -33,7 +33,10 @@ export const AuthForm = (props: Props) => {
 	const pathname = createMemo(() => location.pathname);
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	if (searchParams[PLAN_PARAM] && !validate_plan(searchParams[PLAN_PARAM])) {
+	if (
+		searchParams[PLAN_PARAM] &&
+		!validate_plan_level(searchParams[PLAN_PARAM])
+	) {
 		setSearchParams({ [PLAN_PARAM]: null });
 	}
 	const plan = createMemo(() =>

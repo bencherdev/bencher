@@ -14,7 +14,7 @@ import { PLAN_PARAM } from "../auth/AuthForm";
 import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
-	validate_plan,
+	validate_plan_level,
 } from "../site/util";
 import { Host } from "./config/resources/billing";
 
@@ -218,7 +218,7 @@ const NavigateToOrganization = () => {
 	const path_params = createMemo(() => params);
 	const navigate = useNavigate();
 
-	if (!validate_plan(searchParams[PLAN_PARAM])) {
+	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
 		setSearchParams({ [PLAN_PARAM]: null });
 	}
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);

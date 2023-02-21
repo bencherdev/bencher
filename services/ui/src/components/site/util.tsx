@@ -1,5 +1,9 @@
 import axios from "axios";
-import { is_valid_jwt, is_valid_plan } from "bencher_valid";
+import {
+	is_valid_jwt,
+	is_valid_plan_level,
+	is_valid_card_number,
+} from "bencher_valid";
 import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
 
@@ -80,8 +84,12 @@ export const validate_jwt = (token: string): boolean => {
 	return validate_string(token, is_valid_jwt);
 };
 
-export const validate_plan = (token: string): boolean => {
-	return validate_string(token, is_valid_plan);
+export const validate_plan_level = (token: string): boolean => {
+	return validate_string(token, is_valid_plan_level);
+};
+
+export const validate_card_number = (token: string): boolean => {
+	return validate_string(token, is_valid_card_number);
 };
 
 // TODO improve this validation

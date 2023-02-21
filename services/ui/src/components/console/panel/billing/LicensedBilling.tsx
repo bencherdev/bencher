@@ -1,7 +1,7 @@
 import { useSearchParams } from "solid-app-router";
 import { createMemo, createSignal } from "solid-js";
 import { PLAN_PARAM } from "../../../auth/AuthForm";
-import { validate_plan } from "../../../site/util";
+import { validate_plan_level } from "../../../site/util";
 import Pricing, { per_metric_cost, PlanLevel } from "./Pricing";
 
 const HOST_PARAM = "host";
@@ -18,7 +18,7 @@ const Billing = (props) => {
 	const setPlanLevel = (plan_level: PlanLevel) => {
 		setSearchParams({ [PLAN_PARAM]: plan_level });
 	};
-	if (!validate_plan(searchParams[PLAN_PARAM])) {
+	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
 		setPlanLevel(PlanLevel.FREE);
 	}
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);

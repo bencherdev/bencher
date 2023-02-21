@@ -9,7 +9,7 @@ import {
 	pageTitle,
 	post_options,
 	validate_jwt,
-	validate_plan,
+	validate_plan_level,
 } from "../site/util";
 import Notification, { notification_path } from "../site/Notification";
 import FieldKind from "../field/kind";
@@ -35,7 +35,7 @@ const AuthConfirmPage = (props: {
 		searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null,
 	);
 
-	if (!validate_plan(searchParams[PLAN_PARAM])) {
+	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
 		setSearchParams({ [PLAN_PARAM]: PlanLevel.FREE });
 	}
 	const plan = createMemo(() =>

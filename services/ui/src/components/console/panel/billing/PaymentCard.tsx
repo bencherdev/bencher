@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import { is_valid_email, is_valid_user_name } from "bencher_valid";
-import { validate_string } from "../../../site/util";
+import { validate_card_number, validate_string } from "../../../site/util";
 
 const PaymentCard = (props) => {
 	const [form, setForm] = createSignal(cardForm());
@@ -46,6 +46,38 @@ const PaymentCard = (props) => {
 				config={CARD_FIELDS.number}
 				handleField={handleField}
 			/>
+			<div class="field is-horizontal">
+				<div class="field-label is-normal">
+					<label class="label">From</label>
+				</div>
+				<div class="field-body">
+					<div class="field">
+						<p class="control is-expanded has-icons-left">
+							<input class="input" type="text" placeholder="Name" />
+							<span class="icon is-small is-left">
+								<i class="fas fa-user"></i>
+							</span>
+						</p>
+					</div>
+					<div class="field">
+						<p class="control is-expanded has-icons-left has-icons-right">
+							<input
+								class="input is-success"
+								type="email"
+								placeholder="Email"
+								value="alex@smith.com"
+							/>
+							<span class="icon is-small is-left">
+								<i class="fas fa-envelope"></i>
+							</span>
+							<span class="icon is-small is-right">
+								<i class="fas fa-check"></i>
+							</span>
+						</p>
+					</div>
+				</div>
+			</div>
+
 			{/* <Field
 				kind={FieldKind.INPUT}
 				fieldKey="email"
@@ -86,10 +118,10 @@ const CARD_FIELDS = {
 	number: {
 		label: "Card Number",
 		type: "text",
-		placeholder: "4000-0082-6000-0000",
+		placeholder: "3530-1113-3330-0000",
 		icon: "fas fa-credit-card",
-		help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
-		validate: (input) => validate_string(input, is_valid_user_name),
+		help: "May only use numbers: NO DASHES",
+		validate: validate_card_number,
 	},
 	// email: {
 	// 	label: "Email",
