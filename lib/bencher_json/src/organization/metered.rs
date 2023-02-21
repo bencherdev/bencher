@@ -1,6 +1,7 @@
 #![cfg(feature = "plus")]
 
 use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,8 @@ pub struct JsonPlan {
     pub user: Uuid,
     pub card: JsonCard,
     pub level: JsonLevel,
+    pub current_period_start: DateTime<Utc>,
+    pub current_period_end: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -30,6 +30,8 @@ pub enum BillingError {
     NoCustomerInfo(CustomerId),
     #[error("No email for {0}")]
     NoEmail(CustomerId),
+    #[error("No UUID for {0}")]
+    NoUuid(CustomerId),
     #[error("No price for {0}")]
     NoPrice(SubscriptionItemId),
     #[error("No product for {0}")]

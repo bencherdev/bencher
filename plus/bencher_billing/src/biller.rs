@@ -16,6 +16,7 @@ use crate::{products::Products, BillingError};
 // Metrics are bundled by the thousand
 const METRIC_QUANTITY: u64 = 1_000;
 
+const METADATA_UUID: &str = "uuid";
 const METADATA_ORGANIZATION: &str = "organization";
 
 pub struct Biller {
@@ -69,11 +70,12 @@ impl Biller {
         &self,
         name: &UserName,
         email: &Email,
+        uuid: Uuid,
     ) -> Result<Customer, BillingError> {
         if let Some(customer) = self.get_customer(email).await? {
             Ok(customer)
         } else {
-            self.create_customer(name, email).await
+            self.create_customer(name, email, uuid).await
         }
     }
 
@@ -101,10 +103,16 @@ impl Biller {
         &self,
         name: &UserName,
         email: &Email,
+        uuid: Uuid,
     ) -> Result<Customer, BillingError> {
         let create_customer = CreateCustomer {
             name: Some(name.as_ref()),
             email: Some(email.as_ref()),
+            metadata: Some(
+                [(METADATA_UUID.into(), uuid.to_string())]
+                    .into_iter()
+                    .collect(),
+            ),
             ..Default::default()
         };
         Customer::create(&self.client, create_customer)
@@ -344,7 +352,12 @@ impl Biller {
         let subscription = self
             .get_subscription_expand(
                 subscription_id,
-                &["customer", "items", "items.data.price.product"],
+                &[
+                    "customer",
+                    "default_payment_method",
+                    "items",
+                    "items.data.price.product",
+                ],
             )
             .await?;
         let current_period_start = subscription.current_period_start;
@@ -359,6 +372,9 @@ impl Biller {
         };
         let Some(email) = &customer.email else {
             return Err(BillingError::NoEmail(customer.id.clone()));
+        };
+        let Some(uuid) = customer.metadata.get(METADATA_UUID) else {
+            return Err(BillingError::NoUuid(customer.id.clone()));
         };
 
         // panic!("{subscription:#?}");
@@ -728,12 +744,19 @@ mod test {
         let email = format!("muriel.bagge.{}@nowhere.com", rand::random::<u64>())
             .parse()
             .unwrap();
+        let user_uuid = Uuid::new_v4();
         assert!(biller.get_customer(&email).await.unwrap().is_none());
-        let create_customer = biller.create_customer(&name, &email).await.unwrap();
+        let create_customer = biller
+            .create_customer(&name, &email, user_uuid)
+            .await
+            .unwrap();
         let get_customer = biller.get_customer(&email).await.unwrap().unwrap();
         assert_eq!(create_customer.id, get_customer.id);
         let customer = create_customer;
-        let get_or_create_customer = biller.get_or_create_customer(&name, &email).await.unwrap();
+        let get_or_create_customer = biller
+            .get_or_create_customer(&name, &email, user_uuid)
+            .await
+            .unwrap();
         assert_eq!(customer.id, get_or_create_customer.id);
 
         // Payment Method

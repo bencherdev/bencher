@@ -114,7 +114,7 @@ async fn post_inner(
 
     // Create a customer for the user
     let customer = biller
-        .get_or_create_customer(&json_user.name, &json_user.email)
+        .get_or_create_customer(&json_user.name, &json_user.email, json_user.uuid)
         .await?;
 
     // Create a payment method for the user
