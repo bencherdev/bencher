@@ -7,6 +7,7 @@ mod month;
 mod number;
 mod year;
 
+pub use brand::CardBrand;
 pub use cvc::CardCvc;
 pub use last_four::LastFour;
 pub use month::ExpirationMonth;

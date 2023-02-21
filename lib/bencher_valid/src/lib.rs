@@ -23,7 +23,7 @@ pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
 pub use branch_name::BranchName;
 #[cfg(feature = "plus")]
-pub use card::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour};
+pub use card::{CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour};
 pub use email::Email;
 pub use error::ValidError;
 use error::REGEX_ERROR;

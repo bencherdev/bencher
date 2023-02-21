@@ -19,6 +19,14 @@ use crate::ValidError;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ExpirationYear(i32);
 
+impl TryFrom<i64> for ExpirationYear {
+    type Error = ValidError;
+
+    fn try_from(expiration_year: i64) -> Result<Self, Self::Error> {
+        Self::try_from(i32::try_from(expiration_year)?)
+    }
+}
+
 impl TryFrom<i32> for ExpirationYear {
     type Error = ValidError;
 

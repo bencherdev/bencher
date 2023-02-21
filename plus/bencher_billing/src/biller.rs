@@ -1,5 +1,5 @@
 use bencher_json::{
-    organization::metered::{JsonCard, JsonLevel},
+    organization::metered::{JsonCard, JsonCardDetails, JsonLevel},
     system::config::JsonBilling,
     Email, UserName,
 };
@@ -389,10 +389,17 @@ impl Biller {
             return Err(BillingError::NoCardDetails(default_payment_method.id()));
         };
 
+        let json_card_details = JsonCardDetails {
+            brand: card.brand.parse()?,
+            last_four: card.last4.parse()?,
+            exp_month: card.exp_month.try_into()?,
+            exp_year: card.exp_year.try_into()?,
+        };
+
         let brand = &card.brand;
+        let last_four = &card.last4;
         let exp_month = card.exp_month;
         let exp_year = card.exp_year;
-        let last4 = &card.last4;
 
         // panic!("{subscription:#?}");
 

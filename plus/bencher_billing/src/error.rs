@@ -6,6 +6,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum BillingError {
+    #[error("Failed to validate: {0}")]
+    Valid(#[from] bencher_json::ValidError),
     #[error("Failed to send billing request: {0}")]
     Stripe(#[from] stripe::StripeError),
     #[error("Failed to parse ID: {0}")]
