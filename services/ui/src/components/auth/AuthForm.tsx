@@ -1,9 +1,15 @@
-import { createSignal, createEffect, createMemo } from "solid-js";
+import {
+	createSignal,
+	createEffect,
+	createMemo,
+	Switch,
+	Match,
+} from "solid-js";
 import axios from "axios";
 
 import Field from "../field/Field";
 import AUTH_FIELDS from "./config/fields";
-import { FormKind } from "./config/types";
+import { Auth, FormKind } from "./config/types";
 import {
 	BENCHER_API_URL,
 	NotifyKind,
@@ -202,7 +208,14 @@ export const AuthForm = (props: Props) => {
 				disabled={!form()?.valid || form()?.submitting}
 				onClick={handleAuthFormSubmit}
 			>
-				Submit
+				<Switch fallback={<>Submit</>}>
+					<Match when={props.config?.kind === FormKind.SIGNUP}>
+						<>Sign up</>
+					</Match>
+					<Match when={props.config?.kind === FormKind.LOGIN}>
+						<>Log in</>
+					</Match>
+				</Switch>
 			</button>
 		</form>
 	);

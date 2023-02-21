@@ -23,10 +23,11 @@ const PaymentCard = (props) => {
 
 	const validateForm = () => {
 		const validate_form = form();
-		return validate_form.number.valid; //&&
-		// validate_form.card_exp_month.valid &&
-		// validate_form.card_exp_year.valid &&
-		// validate_form.card_cvc.valid
+		return (
+			validate_form.number.valid &&
+			validate_form.expiration.valid &&
+			validate_form.cvc.valid
+		);
 	};
 
 	const handleFormValid = () => {
@@ -69,6 +70,13 @@ const PaymentCard = (props) => {
 				config={CARD_FIELDS.cvc}
 				handleField={handleField}
 			/>
+			<button
+				class="button is-primary is-fullwidth"
+				disabled={!form()?.valid || form()?.submitting}
+				// onClick={handleFormSubmit}
+			>
+				Let's Go!
+			</button>
 		</form>
 	);
 };
