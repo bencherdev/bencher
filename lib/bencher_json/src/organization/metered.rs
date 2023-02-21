@@ -20,17 +20,6 @@ pub struct JsonNewPlan {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPlan {
-    pub organization: Uuid,
-    pub user: Uuid,
-    pub card: JsonCard,
-    pub level: JsonLevel,
-    pub current_period_start: DateTime<Utc>,
-    pub current_period_end: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCard {
     pub number: CardNumber,
     pub exp_month: ExpirationMonth,
@@ -42,8 +31,21 @@ pub struct JsonCard {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename = "snake_case")]
 pub enum JsonLevel {
+    #[serde(alias = "Bencher Team")]
     Team,
+    #[serde(alias = "Bencher Enterprise")]
     Enterprise,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPlan {
+    pub organization: Uuid,
+    pub customer: JsonCustomer,
+    pub card: JsonCardDetails,
+    pub level: JsonLevel,
+    pub current_period_start: DateTime<Utc>,
+    pub current_period_end: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

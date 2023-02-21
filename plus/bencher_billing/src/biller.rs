@@ -1,8 +1,9 @@
 use bencher_json::{
-    organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonLevel},
+    organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonLevel, JsonPlan},
     system::config::JsonBilling,
     Email, UserName,
 };
+use chrono::{TimeZone, Utc};
 use stripe::{
     AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
     CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
@@ -425,6 +426,25 @@ impl Biller {
         // Bencher Enterprise
         let Some(product_name) = &product_info.name else {
             return Err(BillingError::NoProductName(product.id()));
+        };
+
+        let json_plan = JsonPlan {
+            organization: organization.parse()?,
+            customer: json_customer,
+            card: json_card_details,
+            level: product_name.parse()?,
+            current_period_start: Utc
+                .timestamp_opt(current_period_start, 0)
+                .single()
+                .ok_or_else(|| {
+                    BillingError::DateTime(subscription_id.clone(), current_period_start)
+                })?,
+            current_period_end: Utc
+                .timestamp_opt(current_period_end, 0)
+                .single()
+                .ok_or_else(|| {
+                    BillingError::DateTime(subscription_id.clone(), current_period_end)
+                })?,
         };
 
         todo!()

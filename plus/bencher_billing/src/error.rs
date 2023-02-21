@@ -30,6 +30,8 @@ pub enum BillingError {
     NoSubscriptionItem(SubscriptionId),
     #[error("No organization for {0}")]
     NoOrganization(SubscriptionId),
+    #[error("Failed to parse date/time for {0}: {1}")]
+    DateTime(SubscriptionId, i64),
     #[error("No customer info for {0}")]
     NoCustomerInfo(CustomerId),
     #[error("No UUID for {0}")]
