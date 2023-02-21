@@ -24,6 +24,8 @@ pub enum BillingError {
     MultipleSubscriptionItems(SubscriptionId, SubscriptionItem, Vec<SubscriptionItem>),
     #[error("No subscription item for {0}")]
     NoSubscriptionItem(SubscriptionId),
+    #[error("No organization for {0}")]
+    NoOrganization(SubscriptionId),
     #[error("No customer info for {0}")]
     NoCustomerInfo(CustomerId),
     #[error("No email for {0}")]
@@ -34,4 +36,6 @@ pub enum BillingError {
     NoProduct(PriceId),
     #[error("No product info for {0}")]
     NoProductInfo(ProductId),
+    #[error("No product name for {0}")]
+    NoProductName(ProductId),
 }

@@ -16,6 +16,8 @@ use crate::{products::Products, BillingError};
 // Metrics are bundled by the thousand
 const METRIC_QUANTITY: u64 = 1_000;
 
+const METADATA_ORGANIZATION: &str = "organization";
+
 pub struct Biller {
     client: StripeClient,
     products: Products,
@@ -288,7 +290,7 @@ impl Biller {
         }]);
         create_subscription.default_payment_method = Some(&payment_method.id);
         create_subscription.metadata = Some(
-            [("organization".to_string(), organization.to_string())]
+            [(METADATA_ORGANIZATION.to_string(), organization.to_string())]
                 .into_iter()
                 .collect(),
         );
@@ -348,6 +350,10 @@ impl Biller {
         let current_period_start = subscription.current_period_start;
         let current_period_end = subscription.current_period_end;
 
+        let Some(organization) = subscription.metadata.get(METADATA_ORGANIZATION) else {
+            return Err(BillingError::NoOrganization(subscription_id.clone()));
+        };
+
         let Some(customer) = subscription.customer.as_object() else {
             return Err(BillingError::NoCustomerInfo(subscription.customer.id()));
         };
@@ -371,59 +377,189 @@ impl Biller {
             return Err(BillingError::NoProductInfo(product.id()))
         };
 
-        let product_name = &product_info.name;
+        // Bencher Team
+        // Bencher Enterprise
+        let Some(product_name) = &product_info.name else {
+            return Err(BillingError::NoProductName(product.id()));
+        };
 
         todo!()
 
         /*
-                    customer: Id(
-                    CustomerId(
-                        "cus_NOMrHVtLltfnqL",
-                    ),
-                ),
-
-
-                 default_payment_method: Some(
-                Id(
-                    PaymentMethodId(
-                        "pm_1Mda7wKal5vzTlmhjq71XB9w",
-                    ),
-                ),
-
-
-                items: List {
-            data: [
-                SubscriptionItem {
-                    id: SubscriptionItemId(
-                        "si_NOMrYIRvGxKC6g",
-                    ),
-            ),
-
-
-             plan: Some(
-                        Plan {
-                            id: PlanId(
-                                "price_1McW12Kal5vzTlmhoPltpBAW",
-                            ),
-
-                             product: Some(
-                                Id(
-                                    ProductId(
-                                        "prod_NKz5B9dGhDiSY1",
-                                    ),
-                                ),
-                            ),
-
-                             price: Some(
+            price: Some(
                         Price {
                             id: PriceId(
                                 "price_1McW12Kal5vzTlmhoPltpBAW",
                             ),
-
-                            metadata: {
-            "organization": "2caa5bab-a42b-4ef8-8b59-e97822ef248d",
+                            active: Some(
+                                true,
+                            ),
+                            billing_scheme: Some(
+                                PerUnit,
+                            ),
+                            created: Some(
+                                1676648308,
+                            ),
+                            currency: Some(
+                                USD,
+                            ),
+                            currency_options: None,
+                            custom_unit_amount: None,
+                            deleted: false,
+                            livemode: Some(
+                                false,
+                            ),
+                            lookup_key: None,
+                            metadata: {},
+                            nickname: None,
+                            product: Some(
+                                Object(
+                                    Product {
+                                        id: ProductId(
+                                            "prod_NKz5B9dGhDiSY1",
+                                        ),
+                                        active: Some(
+                                            true,
+                                        ),
+                                        attributes: Some(
+                                            [],
+                                        ),
+                                        caption: None,
+                                        created: Some(
+                                            1676122095,
+                                        ),
+                                        deactivate_on: None,
+                                        default_price: Some(
+                                            Id(
+                                                PriceId(
+                                                    "price_1McW12Kal5vzTlmhoPltpBAW",
+                                                ),
+                                            ),
+                                        ),
+                                        deleted: false,
+                                        description: None,
+                                        images: Some(
+                                            [
+                                                "https://files.stripe.com/links/MDB8YWNjdF8xSFZqd3ZLYWw1dnpUbG1ofGZsX3Rlc3RfOXZsWGhJcE85aG5yeXIxTFRoYkxQTEdr00g5SW86QL",
+                                            ],
+                                        ),
+                                        livemode: Some(
+                                            false,
+                                        ),
+                                        metadata: {},
+                                        name: Some(
+                                            "Bencher Team",
+                                        ),
+                                        package_dimensions: None,
+                                        shippable: None,
+                                        statement_descriptor: Some(
+                                            "Bencher - POMPEII LLC",
+                                        ),
+                                        tax_code: None,
+                                        type_: Some(
+                                            Service,
+                                        ),
+                                        unit_label: Some(
+                                            "metric",
+                                        ),
+                                        updated: Some(
+                                            1676648334,
+                                        ),
+                                        url: None,
+                                    },
+                                ),
+                            ),
+                            recurring: Some(
+                                Recurring {
+                                    aggregate_usage: Some(
+                                        Sum,
+                                    ),
+                                    interval: Month,
+                                    interval_count: 1,
+                                    trial_period_days: None,
+                                    usage_type: Metered,
+                                },
+                            ),
+                            tax_behavior: Some(
+                                Unspecified,
+                            ),
+                            tiers: None,
+                            tiers_mode: None,
+                            transform_quantity: None,
+                            type_: Some(
+                                Recurring,
+                            ),
+                            unit_amount: Some(
+                                1,
+                            ),
+                            unit_amount_decimal: Some(
+                                "1",
+                            ),
+                        },
+                    ),
+                    quantity: None,
+                    subscription: Some(
+                        "sub_1Mdk0tKal5vzTlmhf3O8RftA",
+                    ),
+                    tax_rates: Some(
+                        [],
+                    ),
+                },
+            ],
+            has_more: false,
+            total_count: Some(
+                1,
+            ),
+            url: "/v1/subscription_items?subscription=sub_1Mdk0tKal5vzTlmhf3O8RftA",
         },
-                         */
+                        customer: Id(
+                        CustomerId(
+                            "cus_NOMrHVtLltfnqL",
+                        ),
+                    ),
+
+
+                     default_payment_method: Some(
+                    Id(
+                        PaymentMethodId(
+                            "pm_1Mda7wKal5vzTlmhjq71XB9w",
+                        ),
+                    ),
+
+
+                    items: List {
+                data: [
+                    SubscriptionItem {
+                        id: SubscriptionItemId(
+                            "si_NOMrYIRvGxKC6g",
+                        ),
+                ),
+
+
+                 plan: Some(
+                            Plan {
+                                id: PlanId(
+                                    "price_1McW12Kal5vzTlmhoPltpBAW",
+                                ),
+
+                                 product: Some(
+                                    Id(
+                                        ProductId(
+                                            "prod_NKz5B9dGhDiSY1",
+                                        ),
+                                    ),
+                                ),
+
+                                 price: Some(
+                            Price {
+                                id: PriceId(
+                                    "price_1McW12Kal5vzTlmhoPltpBAW",
+                                ),
+
+                                metadata: {
+                "organization": "2caa5bab-a42b-4ef8-8b59-e97822ef248d",
+            },
+                             */
     }
 
     pub async fn record_usage(
