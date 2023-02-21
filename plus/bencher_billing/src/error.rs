@@ -1,6 +1,6 @@
 use stripe::{
-    Customer, CustomerId, PaymentMethod, PriceId, ProductId, Subscription, SubscriptionId,
-    SubscriptionItem, SubscriptionItemId,
+    Customer, CustomerId, PaymentMethod, PaymentMethodId, PriceId, ProductId, Subscription,
+    SubscriptionId, SubscriptionItem, SubscriptionItemId,
 };
 use thiserror::Error;
 
@@ -32,6 +32,12 @@ pub enum BillingError {
     NoEmail(CustomerId),
     #[error("No UUID for {0}")]
     NoUuid(CustomerId),
+    #[error("No default payment method for {0}")]
+    NoDefaultPaymentMethod(SubscriptionId),
+    #[error("No default payment method info for {0}")]
+    NoDefaultPaymentMethodInfo(PaymentMethodId),
+    #[error("No card details for {0}")]
+    NoCardDetails(PaymentMethodId),
     #[error("No price for {0}")]
     NoPrice(SubscriptionItemId),
     #[error("No product for {0}")]

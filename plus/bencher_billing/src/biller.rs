@@ -377,6 +377,23 @@ impl Biller {
             return Err(BillingError::NoUuid(customer.id.clone()));
         };
 
+        let Some(default_payment_method) = &subscription.default_payment_method else {
+            return Err(BillingError::NoDefaultPaymentMethod(subscription_id.clone()));
+        };
+
+        let Some(default_payment_method_info) = default_payment_method.as_object() else {
+            return Err(BillingError::NoDefaultPaymentMethodInfo(default_payment_method.id()));
+        };
+
+        let Some(card) = &default_payment_method_info.card else {
+            return Err(BillingError::NoCardDetails(default_payment_method.id()));
+        };
+
+        let brand = &card.brand;
+        let exp_month = card.exp_month;
+        let exp_year = card.exp_year;
+        let last4 = &card.last4;
+
         // panic!("{subscription:#?}");
 
         let subscription_item = Self::get_subscription_item(subscription).await?;
