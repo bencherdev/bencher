@@ -12,10 +12,13 @@ import {
 	PLAN_PARAM,
 	validate_jwt,
 	NotifyKind,
+	clean_card_number,
+	clean_expiration,
 } from "../../../site/util";
 import axios from "axios";
 import { notification_path } from "../../../site/Notification";
 import { useLocation, useNavigate } from "solid-app-router";
+import { PlanLevel } from "./Pricing";
 
 const PaymentCard = (props) => {
 	const navigate = useNavigate();
@@ -54,10 +57,13 @@ const PaymentCard = (props) => {
 	};
 
 	const post = async (data: {
-		name: null | string;
-		slug: null | string;
-		email: string;
-		invite: null | string;
+		card: {
+			number: string;
+			exp_month: number;
+			exp_year: number;
+			cvc: string;
+		};
+		level: PlanLevel;
 	}) => {
 		const token = props.user?.token;
 		if (!validate_jwt(props.user?.token)) {
@@ -72,7 +78,22 @@ const PaymentCard = (props) => {
 		event.preventDefault();
 		handleFormSubmitting(true);
 
-		const data = {};
+		const number = clean_card_number(form()?.number?.value);
+		const exp = clean_expiration(form()?.expiration?.value);
+		if (exp === null) {
+			return;
+		}
+		const cvc = form()?.cvc?.value?.trim();
+		const card = {
+			number: number,
+			exp_month: exp[0],
+			exp_year: exp[1],
+			cvc: cvc,
+		};
+		const data = {
+			card: card,
+			level: props.plan,
+		};
 
 		post(data)
 			.then((_resp) => {
@@ -110,7 +131,7 @@ const PaymentCard = (props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="number"
-				label={CARD_FIELDS.number.label}
+				label={CARD_FIELDS.number?.label}
 				value={form()?.number?.value}
 				valid={form()?.number?.valid}
 				config={CARD_FIELDS.number}
@@ -119,7 +140,7 @@ const PaymentCard = (props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="expiration"
-				label={CARD_FIELDS.expiration.label}
+				label={CARD_FIELDS.expiration?.label}
 				value={form()?.expiration?.value}
 				valid={form()?.expiration?.valid}
 				config={CARD_FIELDS.expiration}
@@ -128,7 +149,7 @@ const PaymentCard = (props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="cvc"
-				label={CARD_FIELDS.cvc.label}
+				label={CARD_FIELDS.cvc?.label}
 				value={form()?.cvc?.value}
 				valid={form()?.cvc?.valid}
 				config={CARD_FIELDS.cvc}

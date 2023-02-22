@@ -95,11 +95,15 @@ export const validate_plan_level = (plan_level: string): boolean => {
 
 export const validate_card_number = (card_number: string): boolean => {
 	return validate_string(card_number, (card_number) => {
-		const number = card_number
-			.replace(new RegExp(" ", "g"), "")
-			.replace(new RegExp("-", "g"), "");
+		const number = clean_card_number(card_number);
 		return is_valid_card_number(number);
 	});
+};
+
+export const clean_card_number = (card_number: string): string => {
+	return card_number
+		.replace(new RegExp(" ", "g"), "")
+		.replace(new RegExp("-", "g"), "");
 };
 
 export const validate_expiration = (expiration: string): boolean => {
@@ -108,35 +112,42 @@ export const validate_expiration = (expiration: string): boolean => {
 			return false;
 		}
 
-		const exp = expiration.split("/");
-		if (exp.length !== 2) {
+		if (clean_expiration(expiration) === null) {
 			return false;
-		}
-
-		const exp_month = Number.parseInt(exp?.[0]);
-		if (Number.isInteger(exp_month)) {
-			if (!is_valid_expiration_month(exp_month)) {
-				return false;
-			}
 		} else {
-			return false;
+			return true;
 		}
-
-		const exp_year = Number.parseInt(exp?.[1]);
-		if (Number.isInteger(exp_year)) {
-			let full_exp_year = exp_year;
-			if (full_exp_year < 100) {
-				full_exp_year = 2000 + full_exp_year;
-			}
-			if (!is_valid_expiration_year(full_exp_year)) {
-				return false;
-			}
-		} else {
-			return false;
-		}
-
-		return true;
 	});
+};
+
+export const clean_expiration = (expiration: string): null | number[] => {
+	const exp = expiration.split("/");
+	if (exp.length !== 2) {
+		return null;
+	}
+
+	const exp_month = Number.parseInt(exp?.[0]);
+	if (Number.isInteger(exp_month)) {
+		if (!is_valid_expiration_month(exp_month)) {
+			return null;
+		}
+	} else {
+		return null;
+	}
+
+	let exp_year = Number.parseInt(exp?.[1]);
+	if (Number.isInteger(exp_year)) {
+		if (exp_year < 100) {
+			exp_year = 2000 + exp_year;
+		}
+		if (!is_valid_expiration_year(exp_year)) {
+			return null;
+		}
+	} else {
+		return null;
+	}
+
+	return [exp_month, exp_year];
 };
 
 export const validate_card_cvc = (card_cvc: string): boolean => {

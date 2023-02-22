@@ -45,6 +45,7 @@ const Billing = (props) => {
 					<PaymentCard
 						user={props.user}
 						url={`${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/plan`}
+						plan={plan()}
 					/>
 				)}
 			</div>

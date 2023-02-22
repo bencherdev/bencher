@@ -224,7 +224,6 @@ const NavigateToOrganization = () => {
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);
 
 	const org_section = () => {
-		console.log(`PLAN ${plan()}`);
 		if (plan()) {
 			return "billing";
 		} else {
