@@ -18,7 +18,7 @@ WORKDIR /usr/src/lib
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/lib/bencher_valid
-RUN wasm-pack build --target web --no-default-features --features wasm
+RUN wasm-pack build --target web
 
 # https://hub.docker.com/_/node/
 FROM node:lts-bullseye
