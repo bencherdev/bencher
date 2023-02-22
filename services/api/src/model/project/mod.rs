@@ -150,19 +150,22 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn get_license(conn: &mut SqliteConnection, id: i32) -> Result<Option<Jwt>, ApiError> {
-        let license: Option<String> = schema::organization::table
+    pub fn get_license(
+        conn: &mut SqliteConnection,
+        id: i32,
+    ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
+        let (uuid, license): (String, Option<String>) = schema::organization::table
             .left_join(
                 schema::project::table
                     .on(schema::organization::id.eq(schema::project::organization_id)),
             )
             .filter(schema::project::id.eq(id))
-            .select(schema::organization::license)
+            .select((schema::organization::uuid, schema::organization::license))
             .first(conn)
             .map_err(api_error!())?;
 
         Ok(if let Some(license) = &license {
-            Some(Jwt::from_str(license)?)
+            Some((Uuid::from_str(&uuid)?, Jwt::from_str(license)?))
         } else {
             None
         })

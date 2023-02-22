@@ -84,6 +84,22 @@ impl Licensor {
 
         Ok(token_data)
     }
+
+    pub fn validate_organization(
+        &self,
+        license: &Jwt,
+        organization: Uuid,
+    ) -> Result<TokenData<Claims>, LicenseError> {
+        let token_data = self.validate(license)?;
+        if token_data.claims.sub == organization {
+            Ok(token_data)
+        } else {
+            Err(LicenseError::SubjectOrganization(
+                organization,
+                token_data.claims.sub,
+            ))
+        }
+    }
 }
 
 fn encoding_key(key: &str) -> Result<EncodingKey, LicenseError> {

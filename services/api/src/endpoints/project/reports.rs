@@ -186,7 +186,8 @@ async fn post_inner(
         PlanKind::None
     } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
         PlanKind::Metered(subscription)
-    } else if let Some(license) = QueryProject::get_license(conn, project_id)? {
+    } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
+        api_context.licensor.validate_organization(&license, uuid)?;
         PlanKind::Licensed(license)
     } else {
         return Err(ApiError::NoMeteredPlanProject(project_id));

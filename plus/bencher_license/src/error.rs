@@ -1,4 +1,5 @@
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum LicenseError {
@@ -14,4 +15,6 @@ pub enum LicenseError {
     Valid(#[from] bencher_valid::ValidError),
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
+    #[error("Provided organization {0} does not match license subject organization: {1}")]
+    SubjectOrganization(Uuid, Uuid),
 }
