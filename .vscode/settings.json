@@ -30,6 +30,7 @@
   "cSpell.words": [
     "anychar",
     "Bulma",
+    "chrono",
     "dropshot",
     "fullwidth",
     "Insertable",
@@ -42,6 +43,7 @@
     "pytest",
     "repr",
     "Roadmap",
+    "schemars",
     "signup",
     "starttls",
     "thiserror",
