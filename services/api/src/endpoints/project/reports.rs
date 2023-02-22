@@ -208,6 +208,9 @@ async fn post_inner(
         .first::<QueryReport>(conn)
         .map_err(api_error!())?;
 
+    #[cfg(feature = "plus")]
+    let mut usage = 0;
+
     // Process and record the report results
     let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
     report_results.process(
@@ -220,7 +223,14 @@ async fn post_inner(
             .as_ref(),
         adapter,
         json_settings,
+        #[cfg(feature = "plus")]
+        &mut usage,
     )?;
+
+    // Check to see if there is a Biller
+    // The Biller is only available on Bencher Cloud
+    #[cfg(feature = "plus")]
+    if let Some(biller) = &api_context.biller {};
 
     query_report.into_json(conn)
 }

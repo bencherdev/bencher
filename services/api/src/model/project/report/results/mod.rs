@@ -57,16 +57,17 @@ impl ReportResults {
         results_array: &[&str],
         adapter: JsonAdapter,
         settings: JsonReportSettings,
+        #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), ApiError> {
         let adapter_settings = AdapterSettings::new(settings.average);
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)?;
 
         if let Some(fold) = settings.fold {
             let results = results_array.fold(fold);
-            self.results(conn, 0, results)?;
+            self.results(conn, 0, results, usage)?;
         } else {
             for (iteration, results) in results_array.inner.into_iter().enumerate() {
-                self.results(conn, iteration, results)?;
+                self.results(conn, iteration, results, usage)?;
             }
         };
 
@@ -78,9 +79,10 @@ impl ReportResults {
         conn: &mut SqliteConnection,
         iteration: usize,
         results: AdapterResults,
+        #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), ApiError> {
         for (benchmark_name, metrics) in results.inner {
-            self.metrics(conn, iteration, benchmark_name, metrics)?;
+            self.metrics(conn, iteration, benchmark_name, metrics, usage)?;
         }
         Ok(())
     }
@@ -91,6 +93,7 @@ impl ReportResults {
         iteration: usize,
         benchmark_name: BenchmarkName,
         metrics: AdapterMetrics,
+        #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), ApiError> {
         let ignore_benchmark = benchmark_name.is_ignored();
         let benchmark_id = self.benchmark_id(conn, benchmark_name)?;
@@ -110,6 +113,12 @@ impl ReportResults {
                 .values(&insert_metric)
                 .execute(conn)
                 .map_err(api_error!())?;
+
+            #[cfg(feature = "plus")]
+            {
+                // Increment usage count
+                *usage += 1;
+            }
 
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
