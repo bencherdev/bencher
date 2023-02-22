@@ -1,23 +1,22 @@
-import { createMemo, createResource, Match, Switch } from "solid-js";
+import { createResource, Match, Switch } from "solid-js";
 import { Host } from "../../config/resources/billing";
 import MeteredBilling from "./MeteredBilling";
 import LicensedBilling from "./LicensedBilling";
 import BillingHeader from "./BillingHeader";
 import { BENCHER_API_URL, get_options, validate_jwt } from "../../../site/util";
 import axios from "axios";
+import Plan from "./Plan";
 
 const BillingPanel = (props) => {
-	const fetchOrganization = async (organization_slug: string) => {
+	const fetchPlan = async (organization_slug: string) => {
 		const EMPTY_OBJECT = {};
 		try {
 			const token = props.user?.token;
 			if (!validate_jwt(props.user?.token)) {
 				return EMPTY_OBJECT;
 			}
-
-			const url = `${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/plan`;
+			const url = `${BENCHER_API_URL()}/v0/organizations/${organization_slug}/plan`;
 			const resp = await axios(get_options(url, token));
-			console.log(resp);
 			return resp?.data;
 		} catch (error) {
 			console.error(error);
@@ -25,10 +24,7 @@ const BillingPanel = (props) => {
 		}
 	};
 
-	const [organization] = createResource(
-		props.organization_slug,
-		fetchOrganization,
-	);
+	const [plan] = createResource(props.organization_slug, fetchPlan);
 
 	return (
 		<>
@@ -42,8 +38,8 @@ const BillingPanel = (props) => {
 					/>
 				}
 			>
-				<Match when={organization()?.level}>
-					<>HERE</>
+				<Match when={plan()?.level}>
+					<Plan plan={plan} />
 				</Match>
 				<Match when={props.host === Host.SELF_HOSTED}>
 					<LicensedBilling />
