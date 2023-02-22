@@ -2,7 +2,7 @@
 
 use bencher_json::{organization::entitlements::JsonEntitlements, ResourceId};
 use bencher_rbac::organization::Permission;
-use chrono::serde::ts_seconds_option::deserialize as from_tsopt;
+use chrono::serde::ts_milliseconds_option::deserialize as from_milli_tsopt;
 use chrono::{DateTime, Utc};
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
@@ -32,9 +32,9 @@ pub struct GetParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct DirQuery {
-    #[serde(deserialize_with = "from_tsopt")]
+    #[serde(deserialize_with = "from_milli_tsopt")]
     pub start: Option<DateTime<Utc>>,
-    #[serde(deserialize_with = "from_tsopt")]
+    #[serde(deserialize_with = "from_milli_tsopt")]
     pub end: Option<DateTime<Utc>>,
 }
 

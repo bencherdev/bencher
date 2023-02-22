@@ -1,19 +1,55 @@
+import axios from "axios";
+import { createResource } from "solid-js";
+import { BENCHER_API_URL, get_options, validate_jwt } from "../../../site/util";
 import Pricing, { PlanLevel } from "./Pricing";
+
+const format_date_time = (date_str: string) => {
+	const date_ms = Date.parse(date_str);
+	if (date_ms) {
+		const date = new Date(date_ms);
+		if (date) {
+			return date.toDateString();
+		}
+	}
+
+	return null;
+};
+
+const date_time_millis = (date_str: string) => {
+	const date_ms = Date.parse(date_str);
+	if (date_ms) {
+		const date = new Date(date_ms);
+		if (date) {
+			return date.getTime();
+		}
+	}
+
+	return null;
+};
 
 const Plan = (props) => {
 	console.log(props.plan());
 
-	const format_date_time = (date_str: string) => {
-		const date_ms = Date.parse(date_str);
-		if (date_ms) {
-			const date = new Date(date_ms);
-			if (date) {
-				return date.toDateString();
+	const fetchUsage = async (organization_slug: string) => {
+		const EMPTY_OBJECT = {};
+		try {
+			const token = props.user?.token;
+			if (!validate_jwt(props.user?.token)) {
+				return EMPTY_OBJECT;
 			}
+			const start = date_time_millis(props.plan()?.current_period_start);
+			const end = date_time_millis(props.plan()?.current_period_end);
+			const url = `${BENCHER_API_URL()}/v0/organizations/${organization_slug}/usage?start=${start}&end=${end}`;
+			const resp = await axios(get_options(url, token));
+			return resp?.data;
+		} catch (error) {
+			console.error(error);
+			return EMPTY_OBJECT;
 		}
-
-		return null;
 	};
+
+	const [usage] = createResource(props.organization_slug, fetchUsage);
+
 	return (
 		<div class="columns">
 			<div class="column">

@@ -39,7 +39,11 @@ const BillingPanel = (props) => {
 				}
 			>
 				<Match when={plan()?.level}>
-					<Plan plan={plan} />
+					<Plan
+						user={props.user}
+						organization_slug={props.organization_slug}
+						plan={plan}
+					/>
 				</Match>
 				<Match when={props.host === Host.SELF_HOSTED}>
 					<LicensedBilling />
