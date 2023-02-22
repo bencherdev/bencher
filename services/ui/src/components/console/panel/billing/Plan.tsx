@@ -35,6 +35,19 @@ const date_time_millis = (date_str: string) => {
 const Plan = (props) => {
 	console.log(props.plan());
 
+	const plan_level = createMemo(() => {
+		switch (props.plan()?.level) {
+			case PlanLevel.TEAM: {
+				return "Team";
+			}
+			case PlanLevel.ENTERPRISE: {
+				return "Enterprise";
+			}
+			default:
+				return "---";
+		}
+	});
+
 	const fetchUsage = async (organization_slug: string) => {
 		const EMPTY_OBJECT = {};
 		try {
@@ -66,57 +79,34 @@ const Plan = (props) => {
 	});
 
 	return (
-		<div class="columns">
-			<div class="column">
-				<PlanLevelButtons level={props.plan()?.level} />
-				<h4 class="title">Current Billing Period</h4>
-				<h4 class="subtitle">
-					{format_date_time(props.plan()?.current_period_start)} -{" "}
-					{format_date_time(props.plan()?.current_period_end)}
-				</h4>
-				<p>Per Metric Rate: {usd_formatter.format(per_metric_rate())}</p>
-				<p>
-					Estimated Usage:{" "}
-					{Number.isInteger(usage()?.metrics_used)
-						? usage()?.metrics_used
-						: "---"}
-				</p>
-				<p>
-					Current Estimated Cost:{" "}
-					{estimated_cost() === null
-						? "---"
-						: usd_formatter.format(estimated_cost())}
-				</p>
+		<section class="section">
+			<div class="container">
+				<div class="columns">
+					<div class="column">
+						<h4 class="title">Current Billing Period</h4>
+						<h4 class="subtitle">
+							{format_date_time(props.plan()?.current_period_start)} -{" "}
+							{format_date_time(props.plan()?.current_period_end)}
+						</h4>
+						<p>Plan Level: {plan_level()}</p>
+						<p>Per Metric Rate: {usd_formatter.format(per_metric_rate())}</p>
+						<p>
+							Estimated Usage:{" "}
+							{Number.isInteger(usage()?.metrics_used)
+								? usage()?.metrics_used
+								: "---"}
+						</p>
+						<p>
+							Current Estimated Cost:{" "}
+							{estimated_cost() === null
+								? "---"
+								: usd_formatter.format(estimated_cost())}
+						</p>
+					</div>
+				</div>
 			</div>
-		</div>
+		</section>
 	);
 };
 
 export default Plan;
-
-const PlanLevelButtons = (props: { level: PlanLevel }) => {
-	return (
-		<div class="buttons has-addons is-centered">
-			<button class="button" disabled={true}>
-				<span
-					class={`icon is-small ${
-						props.level === PlanLevel.TEAM && "has-text-primary"
-					}`}
-				>
-					<i class="fas fa-users" aria-hidden="true" />
-				</span>
-				<span>Team</span>
-			</button>
-			<button class="button" disabled={true}>
-				<span
-					class={`icon is-small ${
-						props.level === PlanLevel.ENTERPRISE && "has-text-primary"
-					}`}
-				>
-					<i class="far fa-building" aria-hidden="true" />
-				</span>
-				<span>Enterprise</span>
-			</button>
-		</div>
-	);
-};
