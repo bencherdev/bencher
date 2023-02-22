@@ -3,7 +3,9 @@ pub use bencher_valid::{
     Url, UserName, ValidError, MAX_LEN,
 };
 #[cfg(feature = "plus")]
-pub use bencher_valid::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, PlanLevel};
+pub use bencher_valid::{
+    CardCvc, CardNumber, ExpirationMonth, ExpirationYear, PlanLevel, PlanStatus,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

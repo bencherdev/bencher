@@ -10,7 +10,10 @@ mod error;
 mod git_hash;
 mod jwt;
 mod non_empty;
+#[cfg(feature = "plus")]
 mod plan_level;
+#[cfg(feature = "plus")]
+mod plan_status;
 mod resource_id;
 mod secret;
 mod slug;
@@ -31,6 +34,8 @@ pub use jwt::Jwt;
 pub use non_empty::NonEmpty;
 #[cfg(feature = "plus")]
 pub use plan_level::PlanLevel;
+#[cfg(feature = "plus")]
+pub use plan_status::PlanStatus;
 pub use resource_id::ResourceId;
 pub use secret::Secret;
 pub use user_name::UserName;

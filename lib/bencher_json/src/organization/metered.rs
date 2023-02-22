@@ -2,7 +2,7 @@
 
 use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Email, ExpirationMonth, ExpirationYear, LastFour, PlanLevel,
-    UserName,
+    PlanStatus, UserName,
 };
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
@@ -38,6 +38,7 @@ pub struct JsonPlan {
     pub unit_amount: u64,
     pub current_period_start: DateTime<Utc>,
     pub current_period_end: DateTime<Utc>,
+    pub status: PlanStatus,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

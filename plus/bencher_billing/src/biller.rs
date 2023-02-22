@@ -1,14 +1,14 @@
 use bencher_json::{
     organization::metered::{JsonCard, JsonCardDetails, JsonCustomer, JsonPlan},
     system::config::JsonBilling,
-    Email, PlanLevel, UserName,
+    Email, PlanLevel, PlanStatus, UserName,
 };
 use chrono::{TimeZone, Utc};
 use stripe::{
     AttachPaymentMethod, CardDetailsParams as PaymentCard, Client as StripeClient, CreateCustomer,
     CreatePaymentMethod, CreatePaymentMethodCardUnion, CreateSubscription, CreateSubscriptionItems,
     CreateUsageRecord, Customer, Expandable, ListCustomers, PaymentMethod, PaymentMethodTypeFilter,
-    Subscription, SubscriptionId, SubscriptionItem, UsageRecord,
+    Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus, UsageRecord,
 };
 use uuid::Uuid;
 
@@ -368,6 +368,8 @@ impl Biller {
         let card = Self::get_plan_card(subscription_id, &subscription.default_payment_method)?;
         let (level, unit_amount) = Self::get_plan_price(subscription_id, subscription.items.data)?;
 
+        let status = Self::map_status(&subscription.status);
+
         Ok(JsonPlan {
             organization,
             customer,
@@ -376,6 +378,7 @@ impl Biller {
             unit_amount,
             current_period_start,
             current_period_end,
+            status,
         })
     }
 
@@ -465,6 +468,19 @@ impl Biller {
             }
         } else {
             Err(BillingError::NoSubscriptionItem(subscription_id.clone()))
+        }
+    }
+
+    fn map_status(status: &SubscriptionStatus) -> PlanStatus {
+        match status {
+            SubscriptionStatus::Active => PlanStatus::Active,
+            SubscriptionStatus::Canceled => PlanStatus::Canceled,
+            SubscriptionStatus::Incomplete => PlanStatus::Incomplete,
+            SubscriptionStatus::IncompleteExpired => PlanStatus::IncompleteExpired,
+            SubscriptionStatus::PastDue => PlanStatus::PastDue,
+            SubscriptionStatus::Paused => PlanStatus::Paused,
+            SubscriptionStatus::Trialing => PlanStatus::Trialing,
+            SubscriptionStatus::Unpaid => PlanStatus::Unpaid,
         }
     }
 

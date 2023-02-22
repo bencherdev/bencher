@@ -156,6 +156,12 @@ pub enum ApiError {
     #[cfg(feature = "plus")]
     #[error("Failed to find metered plan for project: {0}")]
     NoMeteredPlanProject(i32),
+    #[cfg(feature = "plus")]
+    #[error("No Biller but project has a subscription: {0}")]
+    NoBiller(i32),
+    #[cfg(feature = "plus")]
+    #[error("Project has an inactive plan: {0}")]
+    InactivePlan(i32),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),

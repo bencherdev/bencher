@@ -185,7 +185,16 @@ async fn post_inner(
     let plan_kind = if QueryProject::is_public(conn, project_id)? {
         PlanKind::None
     } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
-        PlanKind::Metered(subscription)
+        if let Some(biller) = &api_context.biller {
+            let plan = biller.get_plan(&subscription).await?;
+            if plan.status.is_active() {
+                PlanKind::Metered(subscription)
+            } else {
+                return Err(ApiError::InactivePlan(project_id));
+            }
+        } else {
+            return Err(ApiError::NoBiller(project_id));
+        }
     } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
         api_context.licensor.validate_organization(&license, uuid)?;
         PlanKind::Licensed(license)
