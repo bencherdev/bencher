@@ -1,7 +1,7 @@
 import axios from "axios";
-import { createResource } from "solid-js";
+import { createMemo, createResource } from "solid-js";
 import { BENCHER_API_URL, get_options, validate_jwt } from "../../../site/util";
-import Pricing, { PlanLevel } from "./Pricing";
+import { PlanLevel } from "./Pricing";
 
 const format_date_time = (date_str: string) => {
 	const date_ms = Date.parse(date_str);
@@ -50,6 +50,16 @@ const Plan = (props) => {
 
 	const [usage] = createResource(props.organization_slug, fetchUsage);
 
+	const per_metric_rate = createMemo(() => props.plan()?.unit_amount / 100);
+	const estimated_cost = createMemo(() => {
+		const metrics_used = usage()?.metrics_used;
+		if (!Number.isInteger(metrics_used)) {
+			return null;
+		}
+
+		return metrics_used * per_metric_rate();
+	});
+
 	return (
 		<div class="columns">
 			<div class="column">
@@ -59,9 +69,17 @@ const Plan = (props) => {
 					{format_date_time(props.plan()?.current_period_start)} -{" "}
 					{format_date_time(props.plan()?.current_period_end)}
 				</h4>
-				<p>Per Metric Rate: ${props.plan()?.unit_amount / 100}</p>
-				<p>Estimated Usage: x</p>
-				<p>Current Estimated Cost: y</p>
+				<p>Per Metric Rate: ${per_metric_rate()}</p>
+				<p>
+					Estimated Usage:{" "}
+					{Number.isInteger(usage()?.metrics_used)
+						? usage()?.metrics_used
+						: "---"}
+				</p>
+				<p>
+					Current Estimated Cost: $
+					{estimated_cost() === null ? "---" : estimated_cost()}
+				</p>
 			</div>
 		</div>
 	);
