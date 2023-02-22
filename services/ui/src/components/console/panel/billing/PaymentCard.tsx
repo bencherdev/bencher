@@ -92,7 +92,7 @@ const PaymentCard = (props) => {
 		};
 		const data = {
 			card: card,
-			level: props.plan,
+			level: props.plan(),
 		};
 
 		post(data)
