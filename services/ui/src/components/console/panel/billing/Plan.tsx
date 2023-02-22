@@ -1,6 +1,11 @@
 import axios from "axios";
 import { createMemo, createResource } from "solid-js";
-import { BENCHER_API_URL, get_options, validate_jwt } from "../../../site/util";
+import {
+	BENCHER_API_URL,
+	get_options,
+	usd_formatter,
+	validate_jwt,
+} from "../../../site/util";
 import { PlanLevel } from "./Pricing";
 
 const format_date_time = (date_str: string) => {
@@ -69,7 +74,7 @@ const Plan = (props) => {
 					{format_date_time(props.plan()?.current_period_start)} -{" "}
 					{format_date_time(props.plan()?.current_period_end)}
 				</h4>
-				<p>Per Metric Rate: ${per_metric_rate()}</p>
+				<p>Per Metric Rate: {usd_formatter.format(per_metric_rate())}</p>
 				<p>
 					Estimated Usage:{" "}
 					{Number.isInteger(usage()?.metrics_used)
@@ -77,8 +82,10 @@ const Plan = (props) => {
 						: "---"}
 				</p>
 				<p>
-					Current Estimated Cost: $
-					{estimated_cost() === null ? "---" : estimated_cost()}
+					Current Estimated Cost:{" "}
+					{estimated_cost() === null
+						? "---"
+						: usd_formatter.format(estimated_cost())}
 				</p>
 			</div>
 		</div>

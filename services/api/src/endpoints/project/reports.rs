@@ -120,7 +120,7 @@ async fn get_ls_inner(
     path =  "/v0/projects/{project}/reports",
     tags = ["projects", "reports"]
 }]
-// For simplicity, his query makes the assumption that all posts are perfectly
+// For simplicity, this query makes the assumption that all posts are perfectly
 // chronological. That is, a report will never be posted for X after Y has
 // already been submitted when X really happened before Y. For implementing git
 // bisect more complex logic will be required.

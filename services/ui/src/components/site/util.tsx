@@ -341,3 +341,8 @@ export const notifyParams = (
 	// console.log(`${pathname}?${params_str}`);
 	return `${pathname}?${params_str}`;
 };
+
+export const usd_formatter = new Intl.NumberFormat("en-US", {
+	style: "currency",
+	currency: "USD",
+});
