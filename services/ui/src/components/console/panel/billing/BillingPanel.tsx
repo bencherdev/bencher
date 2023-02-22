@@ -9,7 +9,14 @@ const BillingPanel = (props) => {
 		<>
 			<BillingHeader config={props.config?.header} />
 
-			<Switch fallback={<MeteredBilling />}>
+			<Switch
+				fallback={
+					<MeteredBilling
+						user={props.user}
+						organization_slug={props.organization_slug}
+					/>
+				}
+			>
 				<Match when={props.host === Host.SELF_HOSTED}>
 					<LicensedBilling />
 				</Match>

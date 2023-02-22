@@ -1,6 +1,10 @@
 import { useSearchParams } from "solid-app-router";
 import { createMemo } from "solid-js";
-import { PLAN_PARAM, validate_plan_level } from "../../../site/util";
+import {
+	BENCHER_API_URL,
+	PLAN_PARAM,
+	validate_plan_level,
+} from "../../../site/util";
 import PaymentCard from "./PaymentCard";
 import Pricing, { PlanLevel } from "./Pricing";
 
@@ -37,7 +41,12 @@ const Billing = (props) => {
 					}}
 				/>
 				<br />
-				{plan() !== PlanLevel.FREE && <PaymentCard />}
+				{plan() !== PlanLevel.FREE && (
+					<PaymentCard
+						user={props.user}
+						url={`${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/plan`}
+					/>
+				)}
 			</div>
 		</div>
 	);

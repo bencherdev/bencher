@@ -59,22 +59,18 @@ const PaymentCard = (props) => {
 		email: string;
 		invite: null | string;
 	}) => {
-		const url = `${BENCHER_API_URL()}/v0/organizations/${props.config?.kind}`;
-		const no_token = null;
-		let resp = await axios(post_options(url, no_token, data));
+		const token = props.user?.token;
+		if (!validate_jwt(props.user?.token)) {
+			return;
+		}
+
+		let resp = await axios(post_options(props.url, token, data));
 		return resp.data;
 	};
 
 	const handleFormSubmit = (event) => {
 		event.preventDefault();
 		handleFormSubmitting(true);
-		const invite_token = props.invite();
-		let invite: string | null;
-		if (validate_jwt(invite_token)) {
-			invite = invite_token;
-		} else {
-			invite = null;
-		}
 
 		const data = {};
 
@@ -82,7 +78,7 @@ const PaymentCard = (props) => {
 			.then((_resp) => {
 				navigate(
 					notification_path(
-						props.config?.redirect,
+						pathname(),
 						[],
 						[],
 						NotifyKind.OK,
