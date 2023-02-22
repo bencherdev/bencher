@@ -168,6 +168,17 @@ async fn post_inner(
     QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
     let conn = &mut api_context.database.connection;
 
+    // Check to see if the project is public or private
+    // If private, then validate that there is an active subscription
+    #[cfg(feature = "plus")]
+    let subscription = if QueryProject::is_public(conn, project_id)? {
+        None
+    } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
+        Some(subscription)
+    } else {
+        return Err(ApiError::NoMeteredPlanProject(project_id));
+    };
+
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
     // Otherwise, create a new code version for this branch with/without the hash.
@@ -230,7 +241,9 @@ async fn post_inner(
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     #[cfg(feature = "plus")]
-    if let Some(biller) = &api_context.biller {};
+    if let Some(biller) = &api_context.biller {
+        //    let subscription_id = QueryProject
+    };
 
     query_report.into_json(conn)
 }

@@ -1,8 +1,10 @@
 use std::{str::FromStr, string::ToString};
 
+#[cfg(feature = "plus")]
+use bencher_billing::SubscriptionId;
 use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
 use bencher_rbac::{Organization, Project};
-use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
 use crate::{
@@ -112,6 +114,37 @@ impl QueryProject {
             .first(conn)
             .map_err(api_error!())?;
         Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn is_public(conn: &mut SqliteConnection, id: i32) -> Result<bool, ApiError> {
+        schema::project::table
+            .filter(schema::project::id.eq(id))
+            .select(schema::project::public)
+            .first(conn)
+            .map_err(api_error!())
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn get_subscription(
+        conn: &mut SqliteConnection,
+        id: i32,
+    ) -> Result<Option<SubscriptionId>, ApiError> {
+        let subscription: Option<String> = schema::organization::table
+            .left_join(
+                schema::project::table
+                    .on(schema::organization::id.eq(schema::project::organization_id)),
+            )
+            .filter(schema::project::id.eq(id))
+            .select(schema::organization::subscription)
+            .first(conn)
+            .map_err(api_error!())?;
+
+        Ok(if let Some(subscription) = subscription {
+            Some(SubscriptionId::from_str(&subscription)?)
+        } else {
+            None
+        })
     }
 
     pub fn is_allowed_resource_id(
