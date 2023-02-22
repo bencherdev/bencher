@@ -1,7 +1,3 @@
-#[cfg(feature = "plus")]
-use bencher_billing::SubscriptionId;
-#[cfg(feature = "plus")]
-use bencher_json::Jwt;
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -148,13 +144,6 @@ pub async fn post(
     response_accepted!(endpoint, json)
 }
 
-#[cfg(feature = "plus")]
-enum PlanKind {
-    Metered(SubscriptionId),
-    Licensed(Jwt),
-    None,
-}
-
 async fn post_inner(
     context: &Context,
     path_params: DirPath,
@@ -182,25 +171,13 @@ async fn post_inner(
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
-    let plan_kind = if QueryProject::is_public(conn, project_id)? {
-        PlanKind::None
-    } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
-        if let Some(biller) = &api_context.biller {
-            let plan = biller.get_plan(&subscription).await?;
-            if plan.status.is_active() {
-                PlanKind::Metered(subscription)
-            } else {
-                return Err(ApiError::InactivePlan(project_id));
-            }
-        } else {
-            return Err(ApiError::NoBiller(project_id));
-        }
-    } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
-        api_context.licensor.validate_organization(&license, uuid)?;
-        PlanKind::Licensed(license)
-    } else {
-        return Err(ApiError::NoMeteredPlanProject(project_id));
-    };
+    let plan_kind = plan_kind::PlanKind::new(
+        conn,
+        api_context.biller.as_ref(),
+        &api_context.licensor,
+        project_id,
+    )
+    .await?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -264,11 +241,59 @@ async fn post_inner(
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
     #[cfg(feature = "plus")]
-    if let Some(biller) = &api_context.biller {
-        //    let subscription_id = QueryProject
-    };
+    match plan_kind {
+        plan_kind::PlanKind::Metered(_) => {},
+        plan_kind::PlanKind::Licensed(_) => {},
+        plan_kind::PlanKind::None => {},
+    }
 
     query_report.into_json(conn)
+}
+
+#[cfg(feature = "plus")]
+mod plan_kind {
+    use bencher_billing::{Biller, SubscriptionId};
+    use bencher_json::Jwt;
+    use bencher_license::Licensor;
+    use diesel::SqliteConnection;
+
+    use crate::{model::project::QueryProject, ApiError};
+
+    pub enum PlanKind {
+        Metered(SubscriptionId),
+        Licensed(Jwt),
+        None,
+    }
+
+    impl PlanKind {
+        pub async fn new(
+            conn: &mut SqliteConnection,
+            biller: Option<&Biller>,
+            licensor: &Licensor,
+            project_id: i32,
+        ) -> Result<Self, ApiError> {
+            if QueryProject::is_public(conn, project_id)? {
+                Ok(Self::None)
+            } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
+                if let Some(biller) = biller {
+                    let plan = biller.get_plan(&subscription).await?;
+                    if plan.status.is_active() {
+                        Ok(PlanKind::Metered(subscription))
+                    } else {
+                        Err(ApiError::InactivePlan(project_id))
+                    }
+                } else {
+                    Err(ApiError::NoBiller(project_id))
+                }
+            } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
+                let _token_data = licensor.validate_organization(&license, uuid)?;
+                // TODO check license entitlements for usage so far
+                Ok(PlanKind::Licensed(license))
+            } else {
+                Err(ApiError::NoMeteredPlanProject(project_id))
+            }
+        }
+    }
 }
 
 #[derive(Deserialize, JsonSchema)]
