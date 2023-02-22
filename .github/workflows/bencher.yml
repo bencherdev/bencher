@@ -169,7 +169,7 @@ jobs:
       - npx_rome_format
       - npx_rome_lint
     env:
-      WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features wasm"
+      WASM_PACK_BUILD: "wasm-pack build --target web"
     steps:
       - uses: actions/checkout@v3
       - uses: jetli/wasm-pack-action@v0.3.0
