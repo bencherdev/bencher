@@ -471,6 +471,14 @@ impl Biller {
         }
     }
 
+    pub async fn get_plan_status(
+        &self,
+        subscription_id: &SubscriptionId,
+    ) -> Result<PlanStatus, BillingError> {
+        let subscription = self.get_subscription(subscription_id).await?;
+        Ok(Self::map_status(&subscription.status))
+    }
+
     fn map_status(status: &SubscriptionStatus) -> PlanStatus {
         match status {
             SubscriptionStatus::Active => PlanStatus::Active,

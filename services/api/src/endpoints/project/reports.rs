@@ -276,8 +276,8 @@ mod plan_kind {
                 Ok(Self::None)
             } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
                 if let Some(biller) = biller {
-                    let plan = biller.get_plan(&subscription).await?;
-                    if plan.status.is_active() {
+                    let plan_status = biller.get_plan_status(&subscription).await?;
+                    if plan_status.is_active() {
                         Ok(PlanKind::Metered(subscription))
                     } else {
                         Err(ApiError::InactivePlan(project_id))
