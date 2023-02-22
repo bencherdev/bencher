@@ -72,11 +72,11 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(organization::plan::post)?;
     #[cfg(feature = "plus")]
     api.register(organization::plan::get_one)?;
-    // Organization Entitlements
+    // Organization Usage
     #[cfg(feature = "plus")]
-    api.register(organization::entitlements::options)?;
+    api.register(organization::usage::options)?;
     #[cfg(feature = "plus")]
-    api.register(organization::entitlements::get)?;
+    api.register(organization::usage::get)?;
 
     // Projects
     // All of a projects's GET APIs and its Perf POST API

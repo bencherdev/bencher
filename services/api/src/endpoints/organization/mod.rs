@@ -3,13 +3,13 @@ use derive_more::Display;
 use crate::WordStr;
 
 pub mod allowed;
-#[cfg(feature = "plus")]
-pub mod entitlements;
 pub mod members;
 pub mod organizations;
 #[cfg(feature = "plus")]
 pub mod plan;
 pub mod projects;
+#[cfg(feature = "plus")]
+pub mod usage;
 
 #[derive(Debug, Display, Clone, Copy)]
 pub enum Resource {
@@ -20,7 +20,7 @@ pub enum Resource {
     #[cfg(feature = "plus")]
     Plan,
     #[cfg(feature = "plus")]
-    Entitlements,
+    Usage,
 }
 
 impl WordStr for Resource {
@@ -33,7 +33,7 @@ impl WordStr for Resource {
             #[cfg(feature = "plus")]
             Self::Plan => "plan",
             #[cfg(feature = "plus")]
-            Self::Entitlements => "entitlements",
+            Self::Usage => "usage",
         }
     }
 
@@ -46,7 +46,7 @@ impl WordStr for Resource {
             #[cfg(feature = "plus")]
             Self::Plan => "plans",
             #[cfg(feature = "plus")]
-            Self::Entitlements => "entitlements",
+            Self::Usage => "usages",
         }
     }
 }

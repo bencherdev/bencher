@@ -22,7 +22,7 @@ use crate::{
     ApiError,
 };
 
-const ENTITLEMENTS_RESOURCE: Resource = Resource::Entitlements;
+const USAGE_RESOURCE: Resource = Resource::Usage;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct GetParams {
@@ -32,8 +32,8 @@ pub struct GetParams {
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/organizations/{organization}/entitlements",
-    tags = ["organizations", "entitlements"]
+    path =  "/v0/organizations/{organization}/usage",
+    tags = ["organizations", "usage"]
 }]
 pub async fn options(
     _rqctx: RequestContext<Context>,
@@ -44,15 +44,15 @@ pub async fn options(
 
 #[endpoint {
     method = GET,
-    path = "/v0/organizations/{organization}/entitlements",
-    tags = ["organizations", "entitlements"]
+    path = "/v0/organizations/{organization}/usage",
+    tags = ["organizations", "usage"]
 }]
 pub async fn get(
     rqctx: RequestContext<Context>,
     path_params: Path<GetParams>,
 ) -> Result<ResponseOk<JsonEntitlements>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ENTITLEMENTS_RESOURCE, Method::GetOne);
+    let endpoint = Endpoint::new(USAGE_RESOURCE, Method::GetOne);
 
     let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
