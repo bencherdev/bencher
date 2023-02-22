@@ -9,10 +9,11 @@ import axios from "axios";
 
 import Field from "../field/Field";
 import AUTH_FIELDS from "./config/fields";
-import { Auth, FormKind } from "./config/types";
+import { FormKind } from "./config/types";
 import {
 	BENCHER_API_URL,
 	NotifyKind,
+	PLAN_PARAM,
 	post_options,
 	validate_jwt,
 	validate_plan_level,
@@ -21,7 +22,6 @@ import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import FieldKind from "../field/kind";
 import { notification_path } from "../site/Notification";
 
-export const PLAN_PARAM = "plan";
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";

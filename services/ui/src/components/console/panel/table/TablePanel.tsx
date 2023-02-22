@@ -13,10 +13,10 @@ import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
 	validate_jwt,
+	PLAN_PARAM,
 } from "../../../site/util";
 import { useNavigate } from "solid-app-router";
 import Forward, { forward_path } from "../../../site/Forward";
-import { PLAN_PARAM } from "../../../auth/AuthForm";
 
 const TablePanel = (props) => {
 	const navigate = useNavigate();

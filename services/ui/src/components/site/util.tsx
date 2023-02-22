@@ -12,6 +12,8 @@ import googleAnalytics from "@analytics/google-analytics";
 
 import swagger from "../docs/api/swagger.json";
 
+export const PLAN_PARAM = "plan";
+
 // Either supply `VITE_BENCHER_API_URL` at build time,
 // or default to the current protocol and hostname at port `61016`.
 // If another endpoint is required, then the UI will need to be re-bundled.
@@ -21,7 +23,7 @@ export const BENCHER_API_URL: () => string = () => {
 		return api_url;
 	} else {
 		const location = window.location;
-		return location.protocol + "//" + location.hostname + ":61016";
+		return `${location.protocol}//${location.hostname}:61016`;
 	}
 };
 
@@ -93,7 +95,9 @@ export const validate_plan_level = (plan_level: string): boolean => {
 
 export const validate_card_number = (card_number: string): boolean => {
 	return validate_string(card_number, (card_number) => {
-		const number = card_number.replace(new RegExp("-", "g"), "");
+		const number = card_number
+			.replace(new RegExp(" ", "g"), "")
+			.replace(new RegExp("-", "g"), "");
 		return is_valid_card_number(number);
 	});
 };

@@ -10,8 +10,8 @@ import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
 import Forward, { forward_path } from "../site/Forward";
-import { PLAN_PARAM } from "../auth/AuthForm";
 import {
+	PLAN_PARAM,
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
 	validate_plan_level,

@@ -1,7 +1,6 @@
 import { useSearchParams } from "solid-app-router";
 import { createMemo } from "solid-js";
-import { PLAN_PARAM } from "../../../auth/AuthForm";
-import { validate_plan_level } from "../../../site/util";
+import { PLAN_PARAM, validate_plan_level } from "../../../site/util";
 import PaymentCard from "./PaymentCard";
 import Pricing, { PlanLevel } from "./Pricing";
 

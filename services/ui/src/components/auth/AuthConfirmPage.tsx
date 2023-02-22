@@ -7,13 +7,14 @@ import {
 	BENCHER_API_URL,
 	NotifyKind,
 	pageTitle,
+	PLAN_PARAM,
 	post_options,
 	validate_jwt,
 	validate_plan_level,
 } from "../site/util";
 import Notification, { notification_path } from "../site/Notification";
 import FieldKind from "../field/kind";
-import { EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./AuthForm";
+import { EMAIL_PARAM, TOKEN_PARAM } from "./AuthForm";
 import { PlanLevel } from "../console/panel/billing/Pricing";
 
 const CONFIRM_FORWARD = [EMAIL_PARAM, TOKEN_PARAM, PLAN_PARAM];
