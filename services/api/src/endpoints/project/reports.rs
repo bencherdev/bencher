@@ -1,3 +1,7 @@
+#[cfg(feature = "plus")]
+use bencher_billing::SubscriptionId;
+#[cfg(feature = "plus")]
+use bencher_json::Jwt;
 use bencher_json::{JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
@@ -144,6 +148,13 @@ pub async fn post(
     response_accepted!(endpoint, json)
 }
 
+#[cfg(feature = "plus")]
+enum PlanKind {
+    Metered(SubscriptionId),
+    Licensed(Jwt),
+    None,
+}
+
 async fn post_inner(
     context: &Context,
     path_params: DirPath,
@@ -169,12 +180,14 @@ async fn post_inner(
     let conn = &mut api_context.database.connection;
 
     // Check to see if the project is public or private
-    // If private, then validate that there is an active subscription
+    // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
-    let subscription = if QueryProject::is_public(conn, project_id)? {
-        None
+    let plan_kind = if QueryProject::is_public(conn, project_id)? {
+        PlanKind::None
     } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
-        Some(subscription)
+        PlanKind::Metered(subscription)
+    } else if let Some(license) = QueryProject::get_license(conn, project_id)? {
+        PlanKind::Licensed(license)
     } else {
         return Err(ApiError::NoMeteredPlanProject(project_id));
     };

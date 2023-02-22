@@ -2,6 +2,8 @@ use std::{str::FromStr, string::ToString};
 
 #[cfg(feature = "plus")]
 use bencher_billing::SubscriptionId;
+#[cfg(feature = "plus")]
+use bencher_json::Jwt;
 use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
 use bencher_rbac::{Organization, Project};
 use diesel::{Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
@@ -140,8 +142,27 @@ impl QueryProject {
             .first(conn)
             .map_err(api_error!())?;
 
-        Ok(if let Some(subscription) = subscription {
-            Some(SubscriptionId::from_str(&subscription)?)
+        Ok(if let Some(subscription) = &subscription {
+            Some(SubscriptionId::from_str(subscription)?)
+        } else {
+            None
+        })
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn get_license(conn: &mut SqliteConnection, id: i32) -> Result<Option<Jwt>, ApiError> {
+        let license: Option<String> = schema::organization::table
+            .left_join(
+                schema::project::table
+                    .on(schema::organization::id.eq(schema::project::organization_id)),
+            )
+            .filter(schema::project::id.eq(id))
+            .select(schema::organization::license)
+            .first(conn)
+            .map_err(api_error!())?;
+
+        Ok(if let Some(license) = &license {
+            Some(Jwt::from_str(license)?)
         } else {
             None
         })
