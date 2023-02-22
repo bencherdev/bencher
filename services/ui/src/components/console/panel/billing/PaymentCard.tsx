@@ -46,7 +46,7 @@ const PaymentCard = (props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="number"
-				label={true}
+				label={CARD_FIELDS.number.label}
 				value={form()?.number?.value}
 				valid={form()?.number?.valid}
 				config={CARD_FIELDS.number}
@@ -55,7 +55,7 @@ const PaymentCard = (props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="expiration"
-				label={true}
+				label={CARD_FIELDS.expiration.label}
 				value={form()?.expiration?.value}
 				valid={form()?.expiration?.valid}
 				config={CARD_FIELDS.expiration}
@@ -64,12 +64,13 @@ const PaymentCard = (props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="cvc"
-				label={true}
+				label={CARD_FIELDS.cvc.label}
 				value={form()?.cvc?.value}
 				valid={form()?.cvc?.valid}
 				config={CARD_FIELDS.cvc}
 				handleField={handleField}
 			/>
+			<br />
 			<button
 				class="button is-primary is-fullwidth"
 				disabled={!form()?.valid || form()?.submitting}

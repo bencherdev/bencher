@@ -169,7 +169,7 @@ export const AuthForm = (props: Props) => {
 				<Field
 					kind={FieldKind.INPUT}
 					fieldKey="username"
-					label={true}
+					label="Name"
 					value={form()?.username?.value}
 					valid={form()?.username?.valid}
 					config={AUTH_FIELDS.username}
@@ -180,7 +180,7 @@ export const AuthForm = (props: Props) => {
 			<Field
 				kind={FieldKind.INPUT}
 				fieldKey="email"
-				label={true}
+				label="Email"
 				value={form()?.email?.value}
 				valid={form()?.email?.valid}
 				config={AUTH_FIELDS.email}
@@ -195,7 +195,7 @@ export const AuthForm = (props: Props) => {
 					<Field
 						kind={FieldKind.CHECKBOX}
 						fieldKey="consent"
-						label={false}
+						label=""
 						value={form()?.consent?.value}
 						valid={form()?.consent?.valid}
 						config={AUTH_FIELDS.consent}
