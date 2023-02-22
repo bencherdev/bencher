@@ -108,7 +108,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - cargo_check_minus
+      - cargo_check_api_minus
+      - cargo_check_cli_minus
     env:
       BENCHER_PROJECT: bencher
       BENCHER_TESTBED: ubuntu-latest
