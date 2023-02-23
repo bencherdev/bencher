@@ -19,6 +19,9 @@ const BillingPanel = (props) => {
 		refresh: number;
 	}) => {
 		const EMPTY_OBJECT = {};
+		if (!plan_fetcher.organization) {
+			return EMPTY_OBJECT;
+		}
 		const token = props.user?.token;
 		if (!validate_jwt(props.user?.token)) {
 			return EMPTY_OBJECT;
@@ -27,8 +30,14 @@ const BillingPanel = (props) => {
 			plan_fetcher?.organization
 		}/plan`;
 		return await axios(get_options(url, token))
-			.then((resp) => resp?.data)
-			.catch((_error) => EMPTY_OBJECT);
+			.then((resp) => {
+				setNewBilling(false);
+				return resp?.data;
+			})
+			.catch((_error) => {
+				setNewBilling(true);
+				return EMPTY_OBJECT;
+			});
 	};
 
 	// Refresh plan query
@@ -43,6 +52,7 @@ const BillingPanel = (props) => {
 		};
 	});
 	const [plan] = createResource(plan_fetcher, fetchPlan);
+	const [newBilling, setNewBilling] = createSignal(false);
 
 	return (
 		<>
@@ -50,13 +60,24 @@ const BillingPanel = (props) => {
 
 			<Switch
 				fallback={
+					<section class="section">
+						<div class="container">
+							<div class="columns">
+								<div class="column">
+									<h4 class="title">Loading...</h4>
+								</div>
+							</div>
+						</div>
+					</section>
+				}
+			>
+				<Match when={!plan()?.level && newBilling() === true}>
 					<MeteredBilling
 						user={props.user}
 						organization_slug={props.organization_slug}
 						handleRefresh={handleRefresh}
 					/>
-				}
-			>
+				</Match>
 				<Match when={plan()?.level}>
 					<Plan
 						user={props.user}
