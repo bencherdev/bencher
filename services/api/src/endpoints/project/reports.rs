@@ -224,7 +224,7 @@ async fn post_inner(
 
     // Process and record the report results
     let mut report_results = ReportResults::new(project_id, branch_id, testbed_id, query_report.id);
-    report_results.process(
+    let processed_report = report_results.process(
         conn,
         json_report
             .results
@@ -236,16 +236,20 @@ async fn post_inner(
         json_settings,
         #[cfg(feature = "plus")]
         &mut usage,
-    )?;
+    );
 
-    // Check to see if there is a Biller
-    // The Biller is only available on Bencher Cloud
     #[cfg(feature = "plus")]
     match plan_kind {
+        // TODO add usage to subscription
         plan_kind::PlanKind::Metered(_) => {},
+        // TODO check usage overage
         plan_kind::PlanKind::Licensed(_) => {},
         plan_kind::PlanKind::None => {},
     }
+
+    // Don't return the error from processing the report
+    // until after the metrics usage has had a chance to be counted
+    processed_report?;
 
     query_report.into_json(conn)
 }
@@ -253,7 +257,6 @@ async fn post_inner(
 #[cfg(feature = "plus")]
 mod plan_kind {
     use bencher_billing::{Biller, SubscriptionId};
-    use bencher_json::Jwt;
     use bencher_license::Licensor;
     use diesel::SqliteConnection;
 
@@ -261,7 +264,7 @@ mod plan_kind {
 
     pub enum PlanKind {
         Metered(SubscriptionId),
-        Licensed(Jwt),
+        Licensed(u64),
         None,
     }
 
@@ -288,7 +291,7 @@ mod plan_kind {
             } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
                 let _token_data = licensor.validate_organization(&license, uuid)?;
                 // TODO check license entitlements for usage so far
-                Ok(PlanKind::Licensed(license))
+                Ok(PlanKind::Licensed(0))
             } else {
                 Err(ApiError::NoMeteredPlanProject(project_id))
             }
