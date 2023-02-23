@@ -50,6 +50,7 @@ const Billing = (props) => {
 						plan={plan}
 						form={form}
 						handleForm={setForm}
+						handleRefresh={props.handleRefresh}
 					/>
 				)}
 			</div>

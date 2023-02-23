@@ -59,7 +59,6 @@ const Plan = (props) => {
 			const end = date_time_millis(props.plan()?.current_period_end);
 			const url = `${BENCHER_API_URL()}/v0/organizations/${organization_slug}/usage?start=${start}&end=${end}`;
 			const resp = await axios(get_options(url, token));
-			props.handleRefresh();
 			return resp?.data;
 		} catch (error) {
 			console.error(error);

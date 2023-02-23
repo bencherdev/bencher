@@ -57,6 +57,7 @@ const BillingPanel = (props) => {
 					<MeteredBilling
 						user={props.user}
 						organization_slug={props.organization_slug}
+						handleRefresh={handleRefresh}
 					/>
 				}
 			>
@@ -65,7 +66,6 @@ const BillingPanel = (props) => {
 						user={props.user}
 						organization_slug={props.organization_slug}
 						plan={plan}
-						handleRefresh={handleRefresh}
 					/>
 				</Match>
 				<Match when={props.host === Host.SELF_HOSTED}>

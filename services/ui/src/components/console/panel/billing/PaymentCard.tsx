@@ -97,6 +97,7 @@ const PaymentCard = (props) => {
 
 		post(data)
 			.then((_resp) => {
+				props.handleRefresh();
 				navigate(
 					notification_path(
 						pathname(),
