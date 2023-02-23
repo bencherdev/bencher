@@ -23,17 +23,17 @@ const PlotHeader = (props) => {
 			name: "Metric Kind",
 			slug: BENCHER_METRIC_KIND,
 		};
-
-		try {
-			const url = props.config?.metric_kinds_url(props.path_params());
-			const resp = await axios(get_options(url, fetcher.token));
-			let data = resp?.data;
-			data.push(SELECT_METRIC_KIND);
-			return data;
-		} catch (error) {
-			console.error(error);
-			return [SELECT_METRIC_KIND];
-		}
+		const url = props.config?.metric_kinds_url(props.path_params());
+		return await axios(get_options(url, fetcher.token))
+			.then((resp) => {
+				let data = resp?.data;
+				data.push(SELECT_METRIC_KIND);
+				return data;
+			})
+			.catch((error) => {
+				console.error(error);
+				return [SELECT_METRIC_KIND];
+			});
 	};
 
 	const [metric_kinds] = createResource(metric_kinds_fetcher, getMetricKinds);

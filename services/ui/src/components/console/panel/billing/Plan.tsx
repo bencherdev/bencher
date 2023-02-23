@@ -70,20 +70,19 @@ const plan_level = (level: PlanLevel) => {
 const Plan = (props) => {
 	const fetchUsage = async (organization_slug: string) => {
 		const EMPTY_OBJECT = {};
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(props.user?.token)) {
-				return EMPTY_OBJECT;
-			}
-			const start = date_time_millis(props.plan()?.current_period_start);
-			const end = date_time_millis(props.plan()?.current_period_end);
-			const url = `${BENCHER_API_URL()}/v0/organizations/${organization_slug}/usage?start=${start}&end=${end}`;
-			const resp = await axios(get_options(url, token));
-			return resp?.data;
-		} catch (error) {
-			console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(props.user?.token)) {
 			return EMPTY_OBJECT;
 		}
+		const start = date_time_millis(props.plan()?.current_period_start);
+		const end = date_time_millis(props.plan()?.current_period_end);
+		const url = `${BENCHER_API_URL()}/v0/organizations/${organization_slug}/usage?start=${start}&end=${end}`;
+		return await axios(get_options(url, token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_OBJECT;
+			});
 	};
 	const [usage] = createResource(props.organization_slug, fetchUsage);
 

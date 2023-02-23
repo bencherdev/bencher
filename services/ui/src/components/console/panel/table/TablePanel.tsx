@@ -38,17 +38,15 @@ const TablePanel = (props) => {
 
 	const getLs = async (fetcher) => {
 		const EMPTY_ARRAY = [];
-		try {
-			if (!validate_jwt(fetcher.token)) {
-				return EMPTY_ARRAY;
-			}
-
-			const resp = await axios(get_options(url(), fetcher.token));
-			return resp.data;
-		} catch (error) {
-			console.error(error);
+		if (!validate_jwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
+		return await axios(get_options(url(), fetcher.token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_ARRAY;
+			});
 	};
 	const [table_data] = createResource(fetcher, getLs);
 

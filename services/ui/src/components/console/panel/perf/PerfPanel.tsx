@@ -204,21 +204,17 @@ const PerfPanel = (props) => {
 
 	const postQuery = async (fetcher) => {
 		const EMPTY_OBJECT = {};
-		try {
-			// Don't even send query if there isn't at least one: branch, testbed, and benchmark
-			if (isPlotInit()) {
-				return EMPTY_OBJECT;
-			}
-
-			const url = props.config?.plot?.url(props.path_params());
-			const resp = await axios(
-				post_options(url, fetcher.token, fetcher.perf_query),
-			);
-			return resp.data;
-		} catch (error) {
-			console.error(error);
+		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
+		if (isPlotInit()) {
 			return EMPTY_OBJECT;
 		}
+		const url = props.config?.plot?.url(props.path_params());
+		return await axios(post_options(url, fetcher.token, fetcher.perf_query))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_OBJECT;
+			});
 	};
 
 	const [perf_data] = createResource(perf_query_fetcher, postQuery);
@@ -232,14 +228,13 @@ const PerfPanel = (props) => {
 	});
 
 	const getPerfTab = async (perf_tab: PerfTab, token: null | string) => {
-		try {
-			const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
-			const resp = await axios(get_options(url, token));
-			return resp.data;
-		} catch (error) {
-			console.error(error);
-			return [];
-		}
+		const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
+		return await axios(get_options(url, token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return [];
+			});
 	};
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks

@@ -15,18 +15,16 @@ const DeckPanel = (props) => {
 
 	const getOne = async () => {
 		const EMPTY_OBJECT = {};
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(token)) {
-				return EMPTY_OBJECT;
-			}
-
-			let reports = await axios(get_options(url(), token));
-			return reports.data;
-		} catch (error) {
-			console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(token)) {
 			return EMPTY_OBJECT;
 		}
+		return await axios(get_options(url(), token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_OBJECT;
+			});
 	};
 
 	const [deck_data] = createResource(refresh, getOne);

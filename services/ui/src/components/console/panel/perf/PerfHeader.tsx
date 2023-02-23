@@ -4,14 +4,13 @@ import { get_options, pageTitle } from "../../../site/util";
 
 const PerfHeader = (props) => {
 	const getProject = async (fetcher) => {
-		try {
-			const url = props.config?.url(fetcher.project_slug);
-			const resp = await axios(get_options(url, fetcher.token));
-			return resp.data;
-		} catch (error) {
-			console.error(error);
-			return [];
-		}
+		const url = props.config?.url(fetcher.project_slug);
+		return await axios(get_options(url, fetcher.token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return [];
+			});
 	};
 
 	const [project_data] = createResource(props.project_fetcher, getProject);

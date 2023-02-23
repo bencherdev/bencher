@@ -11,13 +11,12 @@ const Radio = (props) => {
 	});
 
 	const getRadio = async (fetcher) => {
-		try {
-			const resp = await axios(get_options(fetcher.url, fetcher.token));
-			return resp.data;
-		} catch (error) {
-			console.error(error);
-			return [];
-		}
+		return await axios(get_options(fetcher.url, fetcher.token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return [];
+			});
 	};
 
 	const [data] = createResource(radioFetcher, getRadio);

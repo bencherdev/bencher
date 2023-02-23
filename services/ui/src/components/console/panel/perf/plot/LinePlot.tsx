@@ -13,22 +13,19 @@ const LinePlot = (props) => {
 
 	const getUnits = async (perf_data) => {
 		const default_units = "UNITS";
-
 		if (!perf_data.metric_kind) {
 			return default_units;
 		}
-
-		try {
-			const url = props.config?.metric_kind_url(
-				props.path_params(),
-				perf_data.metric_kind,
-			);
-			const resp = await axios(get_options(url, props.user?.token));
-			return resp.data?.units;
-		} catch (error) {
-			console.error(error);
-			return default_units;
-		}
+		const url = props.config?.metric_kind_url(
+			props.path_params(),
+			perf_data.metric_kind,
+		);
+		return await axios(get_options(url, props.user?.token))
+			.then((resp) => resp?.data?.units)
+			.catch((error) => {
+				console.error(error);
+				return default_units;
+			});
 	};
 
 	const [units] = createResource(props.perf_data, getUnits);

@@ -29,21 +29,20 @@ const ProjectSelect = (props) => {
 			name: "All Projects",
 			slug: BENCHER_ALL_PROJECTS,
 		};
-
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(token)) {
-				return [ALL_PROJECTS];
-			}
-
-			const resp = await axios(get_options(url(), token));
-			let data = resp?.data;
-			data.push(ALL_PROJECTS);
-			return data;
-		} catch (error) {
-			console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(token)) {
 			return [ALL_PROJECTS];
 		}
+		return await axios(get_options(url(), token))
+			.then((resp) => {
+				let data = resp?.data;
+				data.push(ALL_PROJECTS);
+				return data;
+			})
+			.catch((error) => {
+				console.error(error);
+				return [ALL_PROJECTS];
+			});
 	};
 
 	const getSelected = () => {

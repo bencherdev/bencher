@@ -42,24 +42,16 @@ const ConsolePage = (props) => {
 	const params = useParams();
 	const path_params = createMemo(() => params);
 
-	const url = createMemo(
-		() => `${BENCHER_API_URL()}/v0/projects/${props.project_slug()}`,
-	);
-
 	const fetchProject = async (project_slug: string) => {
 		const EMPTY_OBJECT = {};
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(props.user?.token)) {
-				return EMPTY_OBJECT;
-			}
-
-			const resp = await axios(get_options(url(), token));
-			return resp?.data;
-		} catch (error) {
-			console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(props.user?.token)) {
 			return EMPTY_OBJECT;
 		}
+		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}`;
+		return await axios(get_options(url, token))
+			.then((resp) => resp?.data)
+			.catch(console.log);
 	};
 
 	const [project] = createResource(props.project_slug, fetchProject);

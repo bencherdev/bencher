@@ -7,14 +7,12 @@ const ProjectsPage = (props) => {
 	const url = createMemo(() => `${BENCHER_API_URL()}/v0/projects?public=true`);
 
 	const fetchProjects = async (user) => {
-		const EMPTY_ARRAY = [];
-		try {
-			const resp = await axios(get_options(url(), user?.token));
-			return resp.data;
-		} catch (error) {
-			console.error(error);
-			return EMPTY_ARRAY;
-		}
+		return await axios(get_options(url(), user?.token))
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return [];
+			});
 	};
 
 	const [projects] = createResource(props.user, fetchProjects);

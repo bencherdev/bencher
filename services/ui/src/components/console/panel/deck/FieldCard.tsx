@@ -131,8 +131,9 @@ const UpdateCard = (props) => {
 			return;
 		}
 		const url = props.url();
-		const resp = await axios(patch_options(url, token, data));
-		return resp.data;
+		return await axios(patch_options(url, token, data))
+			.then((resp) => resp?.data)
+			.catch(console.error);
 	};
 
 	function sendForm(e) {

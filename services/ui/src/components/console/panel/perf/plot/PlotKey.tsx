@@ -29,17 +29,12 @@ const PlotKey = (props) => {
 
 		await Promise.all(
 			fetcher[perf_tab]?.map(async (uuid: string) => {
-				try {
-					const url = props.config?.key_url(
-						props.path_params(),
-						perf_tab,
-						uuid,
-					);
-					const resp = await axios(get_options(url, fetcher.token));
-					key_data[uuid] = resp.data;
-				} catch (error) {
-					console.error(error);
-				}
+				const url = props.config?.key_url(props.path_params(), perf_tab, uuid);
+				await axios(get_options(url, fetcher.token))
+					.then((resp) => {
+						key_data[uuid] = resp.data;
+					})
+					.catch(console.error);
 			}),
 		);
 

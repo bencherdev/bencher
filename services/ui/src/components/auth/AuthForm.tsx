@@ -93,8 +93,9 @@ export const AuthForm = (props: Props) => {
 	}) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`;
 		const no_token = null;
-		let resp = await axios(post_options(url, no_token, data));
-		return resp.data;
+		return await axios(post_options(url, no_token, data))
+			.then((resp) => resp?.data)
+			.catch(console.error);
 	};
 
 	const handleAuthFormSubmit = (event) => {

@@ -286,18 +286,16 @@ export const isAllowedProject = async (
 };
 
 export const isAllowed = async (url: string) => {
-	try {
-		const token = getToken();
-		if (!validate_jwt(token)) {
-			return false;
-		}
-
-		const resp = await axios(get_options(url, token));
-		return resp?.data?.allowed;
-	} catch (error) {
-		console.error(error);
+	const token = getToken();
+	if (!validate_jwt(token)) {
 		return false;
 	}
+	return await axios(get_options(url, token))
+		.then((resp) => resp?.data?.allowed)
+		.catch((error) => {
+			console.error(error);
+			return false;
+		});
 };
 
 export const NOTIFY_KIND_PARAM = "notify_kind";

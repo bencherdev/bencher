@@ -19,20 +19,16 @@ const BillingPanel = (props) => {
 		refresh: number;
 	}) => {
 		const EMPTY_OBJECT = {};
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(props.user?.token)) {
-				return EMPTY_OBJECT;
-			}
-			const url = `${BENCHER_API_URL()}/v0/organizations/${
-				plan_fetcher?.organization
-			}/plan`;
-			const resp = await axios(get_options(url, token));
-			return resp?.data;
-		} catch (error) {
-			// console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(props.user?.token)) {
 			return EMPTY_OBJECT;
 		}
+		const url = `${BENCHER_API_URL()}/v0/organizations/${
+			plan_fetcher?.organization
+		}/plan`;
+		return await axios(get_options(url, token))
+			.then((resp) => resp?.data)
+			.catch((_error) => EMPTY_OBJECT);
 	};
 
 	// Refresh plan query

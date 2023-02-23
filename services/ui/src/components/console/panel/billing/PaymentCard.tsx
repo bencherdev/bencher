@@ -69,9 +69,9 @@ const PaymentCard = (props) => {
 		if (!validate_jwt(props.user?.token)) {
 			return;
 		}
-
-		let resp = await axios(post_options(props.url, token, data));
-		return resp.data;
+		return await axios(post_options(props.url, token, data))
+			.then((resp) => resp?.data)
+			.catch(console.error);
 	};
 
 	const handleFormSubmit = (event) => {

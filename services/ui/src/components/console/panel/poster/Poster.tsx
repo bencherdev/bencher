@@ -49,8 +49,9 @@ const Poster = (props) => {
 			return;
 		}
 		const url = props.config?.url?.(props.path_params());
-		const resp = await axios(post_options(url, token, data));
-		return resp.data;
+		return await axios(post_options(url, token, data))
+			.then((resp) => resp?.data)
+			.catch(console.log);
 	};
 
 	function sendForm(e) {

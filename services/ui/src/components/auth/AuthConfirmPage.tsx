@@ -68,8 +68,9 @@ const AuthConfirmPage = (props: {
 		const data = {
 			token: token(),
 		};
-		const resp = await axios(post_options(url, no_token, data));
-		return resp.data;
+		return await axios(post_options(url, no_token, data))
+			.then((resp) => resp?.data)
+			.catch(console.error);
 	};
 
 	const handleFormSubmit = () => {
@@ -114,8 +115,9 @@ const AuthConfirmPage = (props: {
 	}) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/login`;
 		const no_token = null;
-		let resp = await axios(post_options(url, no_token, data));
-		return resp.data;
+		return await axios(post_options(url, no_token, data))
+			.then((resp) => resp?.data)
+			.catch(console.error);
 	};
 
 	const handleResendEmail = (event) => {
