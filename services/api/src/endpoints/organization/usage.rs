@@ -2,7 +2,7 @@
 
 use bencher_json::{organization::entitlements::JsonEntitlements, ResourceId};
 use bencher_rbac::organization::Permission;
-use chrono::serde::ts_milliseconds_option::deserialize as from_milli_tsopt;
+use chrono::serde::ts_milliseconds::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
@@ -32,10 +32,10 @@ pub struct GetParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct DirQuery {
-    #[serde(deserialize_with = "from_milli_tsopt")]
-    pub start: Option<DateTime<Utc>>,
-    #[serde(deserialize_with = "from_milli_tsopt")]
-    pub end: Option<DateTime<Utc>>,
+    #[serde(deserialize_with = "from_milli_ts")]
+    pub start: DateTime<Utc>,
+    #[serde(deserialize_with = "from_milli_ts")]
+    pub end: DateTime<Utc>,
 }
 
 #[allow(clippy::unused_async)]
@@ -93,7 +93,11 @@ async fn get_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
-    let mut query = schema::metric::table
+    let DirQuery { start, end } = query_params;
+    let start_time = start.timestamp_nanos();
+    let end_time = end.timestamp_nanos();
+
+    let metrics_used = schema::metric::table
         .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
         .left_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -101,21 +105,8 @@ async fn get_inner(
         .left_join(schema::project::table.on(schema::benchmark::project_id.eq(schema::project::id)))
         .filter(schema::project::organization_id.eq(query_org.id))
         .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-        .into_boxed();
-
-    let DirQuery { start, end } = query_params;
-
-    let start_time_nanos = start.as_ref().map(chrono::DateTime::timestamp_nanos);
-    if let Some(start_time) = start_time_nanos {
-        query = query.filter(schema::report::end_time.ge(start_time));
-    }
-
-    let end_time_nanos = end.as_ref().map(chrono::DateTime::timestamp_nanos);
-    if let Some(end_time) = end_time_nanos {
-        query = query.filter(schema::report::end_time.le(end_time));
-    }
-
-    let metrics_used = query
+        .filter(schema::report::end_time.ge(start_time))
+        .filter(schema::report::end_time.le(end_time))
         .select(count(schema::metric::value))
         .first::<i64>(conn)
         .map_err(api_error!())?;

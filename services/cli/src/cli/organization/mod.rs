@@ -3,12 +3,14 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
 
-#[cfg(feature = "plus")]
-use self::plan::CliOrganizationPlan;
-
 pub mod member;
 #[cfg(feature = "plus")]
 pub mod plan;
+#[cfg(feature = "plus")]
+pub mod usage;
+
+#[cfg(feature = "plus")]
+use self::{plan::CliOrganizationPlan, usage::CliOrganizationUsage};
 
 #[derive(Subcommand, Debug)]
 pub enum CliOrganization {
@@ -87,14 +89,4 @@ pub enum CliOrganizationPermission {
     CreateRole,
     EditRole,
     DeleteRole,
-}
-
-#[cfg(feature = "plus")]
-#[derive(Parser, Debug)]
-pub struct CliOrganizationUsage {
-    /// Organization slug or UUID
-    pub organization: ResourceId,
-
-    #[clap(flatten)]
-    pub backend: CliBackend,
 }

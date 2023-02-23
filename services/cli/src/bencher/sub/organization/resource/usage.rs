@@ -4,16 +4,19 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::ResourceId;
+use chrono::{DateTime, Utc};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::CliOrganizationUsage,
+    cli::organization::usage::CliOrganizationUsage,
     CliError,
 };
 
 #[derive(Debug)]
 pub struct Usage {
     pub organization: ResourceId,
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
     pub backend: Backend,
 }
 
@@ -23,10 +26,14 @@ impl TryFrom<CliOrganizationUsage> for Usage {
     fn try_from(usage: CliOrganizationUsage) -> Result<Self, Self::Error> {
         let CliOrganizationUsage {
             organization,
+            start,
+            end,
             backend,
         } = usage;
         Ok(Self {
             organization,
+            start,
+            end,
             backend: backend.try_into()?,
         })
     }
@@ -35,8 +42,15 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 #[async_trait]
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
+        let query = vec![
+            ("start".into(), self.start.timestamp_millis().to_string()),
+            ("end".into(), self.end.timestamp_millis().to_string()),
+        ];
         self.backend
-            .get(&format!("/v0/organizations/{}/usage", self.organization))
+            .get_query(
+                &format!("/v0/organizations/{}/usage", self.organization),
+                query,
+            )
             .await?;
         Ok(())
     }
