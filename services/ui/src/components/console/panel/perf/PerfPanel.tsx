@@ -47,21 +47,41 @@ const arrayFromString = (array_str: undefined | string) => {
 };
 const arrayToString = (array: any[]) => array.join();
 
-const dateToISO = (date_str: undefined | string) => {
-	if (typeof date_str === "string") {
-		const date_ms = Date.parse(date_str);
-		if (date_ms) {
-			const date = new Date(date_ms);
+const time_to_date = (time_str: undefined | string): Date => {
+	if (typeof time_str === "string") {
+		const time = parseInt(time_str);
+		if (Number.isInteger(time)) {
+			const date = new Date(time);
 			if (date) {
-				return date.toISOString();
+				return date;
 			}
 		}
 	}
 	return null;
 };
-const ISOToDate = (iso_str: undefined | string) => {
-	if (typeof iso_str === "string") {
-		return iso_str.split("T")?.[0];
+
+const time_to_date_iso = (time_str: undefined | string): string => {
+	const date = time_to_date(time_str);
+	if (date) {
+		return date.toISOString();
+	}
+	return null;
+};
+
+const time_to_date_only_iso = (time_str: undefined | string): string => {
+	const iso_date = time_to_date_iso(time_str);
+	if (iso_date) {
+		return iso_date.split("T")?.[0];
+	}
+	return null;
+};
+
+const date_to_time = (date_str: undefined | string): string => {
+	if (typeof date_str === "string") {
+		const time = Date.parse(date_str);
+		if (time) {
+			return `${time}`;
+		}
 	}
 	return null;
 };
@@ -91,10 +111,10 @@ const PerfPanel = (props) => {
 	if (!validate_string(searchParams[METRIC_KIND_PARAM], is_valid_slug)) {
 		setSearchParams({ [METRIC_KIND_PARAM]: null });
 	}
-	if (!dateToISO(searchParams[START_TIME_PARAM])) {
+	if (!time_to_date(searchParams[START_TIME_PARAM])) {
 		setSearchParams({ [START_TIME_PARAM]: null });
 	}
-	if (!dateToISO(searchParams[END_TIME_PARAM])) {
+	if (!time_to_date(searchParams[END_TIME_PARAM])) {
 		setSearchParams({ [END_TIME_PARAM]: null });
 	}
 
@@ -124,8 +144,8 @@ const PerfPanel = (props) => {
 	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
 	const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
 	// start/end_date is used for the GUI selector
-	const start_date = createMemo(() => ISOToDate(start_time()));
-	const end_date = createMemo(() => ISOToDate(end_time()));
+	const start_date = createMemo(() => time_to_date_only_iso(start_time()));
+	const end_date = createMemo(() => time_to_date_only_iso(end_time()));
 
 	const tab = createMemo(() => {
 		// This check is required for the initial load
@@ -157,8 +177,8 @@ const PerfPanel = (props) => {
 			testbeds: testbeds(),
 			benchmarks: benchmarks(),
 			metric_kind: metric_kind(),
-			start_time: start_time(),
-			end_time: end_time(),
+			start_time: time_to_date_iso(start_time()),
+			end_time: time_to_date_iso(end_time()),
 		};
 	});
 
@@ -299,9 +319,9 @@ const PerfPanel = (props) => {
 		});
 	};
 	const handleStartTime = (date: string) =>
-		setSearchParams({ [START_TIME_PARAM]: dateToISO(date) });
+		setSearchParams({ [START_TIME_PARAM]: date_to_time(date) });
 	const handleEndTime = (date: string) =>
-		setSearchParams({ [END_TIME_PARAM]: dateToISO(date) });
+		setSearchParams({ [END_TIME_PARAM]: date_to_time(date) });
 
 	const handleTab = (tab: PerfTab) => {
 		if (isPerfTab(tab)) {
