@@ -206,28 +206,48 @@ const ErrStatus = (props) => {
 const FmtCardBrand = (props) => {
 	switch (props.brand) {
 		case CardBrand.AMEX: {
-			return <FmtCardBrandInner brand={branded_card("cc-amex")} />;
+			return (
+				<FmtCardBrandInner
+					brand={branded_card("cc-amex")}
+					name="American Express"
+				/>
+			);
 		}
 		case CardBrand.DINERS: {
-			return <FmtCardBrandInner brand={branded_card("cc-diners-club")} />;
+			return (
+				<FmtCardBrandInner
+					brand={branded_card("cc-diners-club")}
+					name="Diners Club"
+				/>
+			);
 		}
 		case CardBrand.DISCOVER: {
-			return <FmtCardBrandInner brand={branded_card("cc-discover")} />;
+			return (
+				<FmtCardBrandInner
+					brand={branded_card("cc-discover")}
+					name="Discover"
+				/>
+			);
 		}
 		case CardBrand.JCB: {
-			return <FmtCardBrandInner brand={branded_card("cc-jcb")} />;
+			return <FmtCardBrandInner brand={branded_card("cc-jcb")} name="JCB" />;
 		}
 		case CardBrand.MASTERCARD: {
-			return <FmtCardBrandInner brand={branded_card("cc-mastercard")} />;
+			return (
+				<FmtCardBrandInner
+					brand={branded_card("cc-mastercard")}
+					name="Mastercard"
+				/>
+			);
 		}
 		case CardBrand.UNIONPAY: {
-			return <FmtCardBrandInner brand={generic_card()} />;
+			return <FmtCardBrandInner brand={generic_card()} name="Unionpay" />;
 		}
 		case CardBrand.VISA: {
-			return <FmtCardBrandInner brand={branded_card("visa")} />;
+			return <FmtCardBrandInner brand={branded_card("visa")} name="Visa" />;
 		}
 		case CardBrand.UNKNOWN: {
-			return <FmtCardBrandInner brand={generic_card()} />;
+			return <FmtCardBrandInner brand={generic_card()} name="Credit Card" />;
 		}
 		default:
 			return <FmtCardBrandInner brand={generic_card()} />;
@@ -240,6 +260,7 @@ const FmtCardBrandInner = (props) => {
 			<span class="icon">
 				<i class={props.brand} aria-hidden="true" />
 			</span>
+			{props.name}
 		</h4>
 	);
 };
