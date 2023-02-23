@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createMemo, createResource } from "solid-js";
+import { createMemo, createResource, For } from "solid-js";
 import {
 	BENCHER_API_URL,
 	get_options,
@@ -127,6 +127,7 @@ const Plan = (props) => {
 								? "---"
 								: usd_formatter.format(estimated_cost())}
 						</p>
+						{/* TODO if plan_level === PlanLevel.TEAM then Upgrade Plan button */}
 						<br />
 
 						<h4 class="title">Payment Method</h4>
@@ -136,7 +137,22 @@ const Plan = (props) => {
 						<p>
 							Expiration: {card()?.exp_month}/{card()?.exp_year}
 						</p>
+						{/* <br />
+						<button
+							class="button"
+							onClick={(e) => {
+								e.preventDefault();
+							}}
+						>
+							Update Card
+						</button> */}
 						<br />
+
+						<For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
+						<p>
+							To update or cancel your subscription please email{" "}
+							<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>
+						</p>
 					</div>
 				</div>
 			</div>
