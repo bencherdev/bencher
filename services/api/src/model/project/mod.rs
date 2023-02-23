@@ -212,26 +212,25 @@ impl QueryProject {
         project: &ResourceId,
         auth_user: Option<&AuthUser>,
     ) -> Result<Self, ApiError> {
-        // If there is an `AuthUser` then validate access
-        // Otherwise, check to see if the project is public
-        if let Some(auth_user) = auth_user {
+        // Get the project
+        let project =
+            QueryProject::from_resource_id(&mut api_context.database.connection, project)?;
+
+        // Check to see if the project is public
+        // If so, anyone can access it
+        if project.public {
+            Ok(project)
+        } else if let Some(auth_user) = auth_user {
+            // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
-            QueryProject::is_allowed_resource_id(
+            QueryProject::is_allowed_id(
                 api_context,
-                project,
+                project.id,
                 auth_user,
                 bencher_rbac::project::Permission::View,
             )
         } else {
-            // Get the project
-            let project =
-                QueryProject::from_resource_id(&mut api_context.database.connection, project)?;
-            // See if the project is public or not
-            if project.public {
-                Ok(project)
-            } else {
-                Err(ApiError::PrivateProject(project.id))
-            }
+            Err(ApiError::PrivateProject(project.id))
         }
     }
 }
