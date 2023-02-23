@@ -44,18 +44,13 @@ const Poster = (props) => {
 	};
 
 	const post = async (data: {}) => {
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(props.user?.token)) {
-				return;
-			}
-
-			const url = props.config?.url?.(props.path_params());
-			await axios(post_options(url, token, data));
-			navigate(props.config?.path?.(pathname()));
-		} catch (error) {
-			console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(props.user?.token)) {
+			return;
 		}
+		const url = props.config?.url?.(props.path_params());
+		const resp = await axios(post_options(url, token, data));
+		return resp.data;
 	};
 
 	function sendForm(e) {
@@ -92,8 +87,16 @@ const Poster = (props) => {
 					}
 			}
 		}
-		delete data.submitting;
-		post(data).then(() => handleFormSubmitting(false));
+
+		post(data)
+			.then((_data) => {
+				handleFormSubmitting(false);
+				navigate(props.config?.path?.(pathname()));
+			})
+			.catch((error) => {
+				handleFormSubmitting(false);
+				console.error(error);
+			});
 	}
 
 	const handleFormSubmitting = (submitting) => {

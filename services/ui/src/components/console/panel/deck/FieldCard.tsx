@@ -126,18 +126,13 @@ const UpdateCard = (props) => {
 	};
 
 	const patch = async (data) => {
-		try {
-			const token = props.user?.token;
-			if (!validate_jwt(token)) {
-				return;
-			}
-
-			const url = props.url();
-			await axios(patch_options(url, token, data));
-			props.handleRefresh();
-		} catch (error) {
-			console.error(error);
+		const token = props.user?.token;
+		if (!validate_jwt(token)) {
+			return;
 		}
+		const url = props.url();
+		const resp = await axios(patch_options(url, token, data));
+		return resp.data;
 	};
 
 	function sendForm(e) {
@@ -175,8 +170,16 @@ const UpdateCard = (props) => {
 					}
 			}
 		}
-		delete data.submitting;
-		patch(data).then(() => handleFormSubmitting(false));
+
+		patch(data)
+			.then((_data) => {
+				handleFormSubmitting(false);
+				props.handleRefresh();
+			})
+			.catch((error) => {
+				handleFormSubmitting(false);
+				console.error(error);
+			});
 	}
 
 	const is_value_unchanged = () => {

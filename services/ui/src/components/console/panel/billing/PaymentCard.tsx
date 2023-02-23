@@ -96,7 +96,8 @@ const PaymentCard = (props) => {
 		};
 
 		post(data)
-			.then((_resp) => {
+			.then((_data) => {
+				handleFormSubmitting(false);
 				props.handleRefresh();
 				navigate(
 					notification_path(
@@ -108,7 +109,8 @@ const PaymentCard = (props) => {
 					),
 				);
 			})
-			.catch((_e) => {
+			.catch((_error) => {
+				handleFormSubmitting(false);
 				navigate(
 					notification_path(
 						pathname(),
@@ -119,8 +121,6 @@ const PaymentCard = (props) => {
 					),
 				);
 			});
-
-		handleFormSubmitting(false);
 	};
 
 	createEffect(() => {

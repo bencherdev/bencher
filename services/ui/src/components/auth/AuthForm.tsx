@@ -135,7 +135,8 @@ export const AuthForm = (props: Props) => {
 		}
 
 		post(data)
-			.then((_resp) => {
+			.then((_data) => {
+				handleFormSubmitting(false);
 				navigate(
 					notification_path(
 						props.config?.redirect,
@@ -146,7 +147,8 @@ export const AuthForm = (props: Props) => {
 					),
 				);
 			})
-			.catch((_e) => {
+			.catch((_error) => {
+				handleFormSubmitting(false);
 				navigate(
 					notification_path(
 						pathname(),
@@ -157,8 +159,6 @@ export const AuthForm = (props: Props) => {
 					),
 				);
 			});
-
-		handleFormSubmitting(false);
 	};
 
 	createEffect(() => {

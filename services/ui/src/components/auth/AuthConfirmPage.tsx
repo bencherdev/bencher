@@ -74,8 +74,10 @@ const AuthConfirmPage = (props: {
 
 	const handleFormSubmit = () => {
 		handleFormSubmitting(true);
+
 		post()
 			.then((data) => {
+				handleFormSubmitting(false);
 				if (!props.handleUser(data)) {
 					navigate(
 						notification_path(
@@ -88,7 +90,8 @@ const AuthConfirmPage = (props: {
 					);
 				}
 			})
-			.catch((e) => {
+			.catch((_error) => {
+				handleFormSubmitting(false);
 				navigate(
 					notification_path(
 						pathname(),
@@ -99,7 +102,6 @@ const AuthConfirmPage = (props: {
 					),
 				);
 			});
-		handleFormSubmitting(false);
 	};
 
 	const handleFormSubmitting = (submitting) => {
@@ -126,7 +128,8 @@ const AuthConfirmPage = (props: {
 		};
 
 		post_resend(data)
-			.then((_resp) => {
+			.then((_data) => {
+				handleFormSubmitting(false);
 				navigate(
 					notification_path(
 						pathname(),
@@ -137,7 +140,8 @@ const AuthConfirmPage = (props: {
 					),
 				);
 			})
-			.catch((_e) => {
+			.catch((_error) => {
+				handleFormSubmitting(false);
 				navigate(
 					notification_path(
 						pathname(),
@@ -149,7 +153,6 @@ const AuthConfirmPage = (props: {
 				);
 			});
 
-		handleFormSubmitting(false);
 		setCoolDown(true);
 		setTimeout(() => setCoolDown(false), 30000);
 	};
