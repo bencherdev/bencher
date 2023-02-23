@@ -86,6 +86,7 @@ const ConsolePage = (props) => {
 								organization_slug={props.organization_slug}
 								project_slug={props.project_slug}
 								handleProjectSlug={props.handleProjectSlug}
+								path_params={path_params}
 							/>
 						</div>
 						<div class="column is-10">

@@ -1,7 +1,7 @@
 import FieldKind from "../../../field/kind";
 import {
 	BENCHER_API_URL,
-	isAllowedOrganization,
+	is_allowed_organization,
 	OrganizationPermission,
 } from "../../../site/util";
 import MEMBER_FIELDS from "./fields/member";
@@ -33,7 +33,7 @@ const MembersConfig = {
 					kind: Button.INVITE,
 					path: invitePath,
 					is_allowed: (path_params) =>
-						isAllowedOrganization(
+						is_allowed_organization(
 							path_params,
 							OrganizationPermission.CREATE_ROLE,
 						),
@@ -169,7 +169,7 @@ const MembersConfig = {
 					key: "role",
 					display: Display.SELECT,
 					is_allowed: (path_params) =>
-						isAllowedOrganization(
+						is_allowed_organization(
 							path_params,
 							OrganizationPermission.EDIT_ROLE,
 						),

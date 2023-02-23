@@ -236,7 +236,7 @@ export const getToken = () =>
 	JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY))?.token;
 
 // export const isAllowedAdmin = async () => {
-//   return isAllowed(`${BENCHER_API_URL()}/v0/admin/allowed`);
+//   return is_allowed(`${BENCHER_API_URL()}/v0/admin/allowed`);
 // };
 
 export enum OrganizationPermission {
@@ -251,11 +251,11 @@ export enum OrganizationPermission {
 	DELETE_ROLE = "delete_role",
 }
 
-export const isAllowedOrganization = async (
+export const is_allowed_organization = async (
 	path_params,
 	permission: OrganizationPermission,
 ) => {
-	return isAllowed(
+	return is_allowed(
 		`${BENCHER_API_URL()}/v0/organizations/${
 			path_params?.organization_slug
 		}/allowed/${permission}`,
@@ -278,14 +278,14 @@ export const isAllowedProject = async (
 	path_params,
 	permission: ProjectPermission,
 ) => {
-	return isAllowed(
+	return is_allowed(
 		`${BENCHER_API_URL()}/v0/projects/${
 			path_params?.project_slug
 		}/allowed/${permission}`,
 	);
 };
 
-export const isAllowed = async (url: string) => {
+export const is_allowed = async (url: string) => {
 	const token = getToken();
 	if (!validate_jwt(token)) {
 		return false;

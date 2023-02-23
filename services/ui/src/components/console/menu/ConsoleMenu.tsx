@@ -1,4 +1,8 @@
 import { Link, useNavigate } from "solid-app-router";
+import {
+	is_allowed_organization,
+	OrganizationPermission,
+} from "../../site/util";
 
 const ConsoleMenu = (props) => {
 	const navigate = useNavigate();
@@ -31,9 +35,14 @@ const ConsoleMenu = (props) => {
 							<li>
 								<Link href={getOrganizationPath("settings")}>Settings</Link>
 							</li>
-							<li>
-								<Link href={getOrganizationPath("billing")}>Billing</Link>
-							</li>
+							{is_allowed_organization(
+								props.path_params(),
+								OrganizationPermission.MANAGE,
+							) && (
+								<li>
+									<Link href={getOrganizationPath("billing")}>Billing</Link>
+								</li>
+							)}
 						</ul>
 					</>
 				)}
