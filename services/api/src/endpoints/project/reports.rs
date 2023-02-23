@@ -239,16 +239,12 @@ async fn post_inner(
     );
 
     #[cfg(feature = "plus")]
-    match plan_kind {
-        // TODO add usage to subscription
-        plan_kind::PlanKind::Metered(_) => {},
-        // TODO check usage overage
-        plan_kind::PlanKind::Licensed(_) => {},
-        plan_kind::PlanKind::None => {},
-    }
+    plan_kind
+        .check_usage(api_context.biller.as_ref(), project_id, usage)
+        .await?;
 
     // Don't return the error from processing the report
-    // until after the metrics usage has had a chance to be counted
+    // until after the metrics usage has been checked
     processed_report?;
 
     query_report.into_json(conn)
@@ -295,6 +291,27 @@ mod plan_kind {
             } else {
                 Err(ApiError::NoMeteredPlanProject(project_id))
             }
+        }
+
+        pub async fn check_usage(
+            &self,
+            biller: Option<&Biller>,
+            project_id: i32,
+            usage: u64,
+        ) -> Result<(), ApiError> {
+            match self {
+                Self::Metered(subscription) => {
+                    let Some(biller) = biller else {
+                        return Err(ApiError::NoBiller(project_id));
+                    };
+                    biller.record_usage(subscription, usage).await?;
+                },
+                // TODO check for usage overage
+                Self::Licensed(_) => {},
+                Self::None => {},
+            }
+
+            Ok(())
         }
     }
 }

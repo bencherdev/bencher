@@ -33,8 +33,6 @@ const date_time_millis = (date_str: string) => {
 };
 
 const Plan = (props) => {
-	console.log(props.plan());
-
 	const plan_level = createMemo(() => {
 		switch (props.plan()?.level) {
 			case PlanLevel.TEAM: {

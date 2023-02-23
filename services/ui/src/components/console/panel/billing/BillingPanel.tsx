@@ -30,7 +30,7 @@ const BillingPanel = (props) => {
 			const resp = await axios(get_options(url, token));
 			return resp?.data;
 		} catch (error) {
-			console.error(error);
+			// console.error(error);
 			return EMPTY_OBJECT;
 		}
 	};
