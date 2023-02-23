@@ -64,10 +64,22 @@ impl ReportResults {
 
         if let Some(fold) = settings.fold {
             let results = results_array.fold(fold);
-            self.results(conn, 0, results, usage)?;
+            self.results(
+                conn,
+                0,
+                results,
+                #[cfg(feature = "plus")]
+                usage,
+            )?;
         } else {
             for (iteration, results) in results_array.inner.into_iter().enumerate() {
-                self.results(conn, iteration, results, usage)?;
+                self.results(
+                    conn,
+                    iteration,
+                    results,
+                    #[cfg(feature = "plus")]
+                    usage,
+                )?;
             }
         };
 
@@ -82,7 +94,14 @@ impl ReportResults {
         #[cfg(feature = "plus")] usage: &mut u64,
     ) -> Result<(), ApiError> {
         for (benchmark_name, metrics) in results.inner {
-            self.metrics(conn, iteration, benchmark_name, metrics, usage)?;
+            self.metrics(
+                conn,
+                iteration,
+                benchmark_name,
+                metrics,
+                #[cfg(feature = "plus")]
+                usage,
+            )?;
         }
         Ok(())
     }

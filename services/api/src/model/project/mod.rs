@@ -6,7 +6,9 @@ use bencher_billing::SubscriptionId;
 use bencher_json::Jwt;
 use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
 use bencher_rbac::{Organization, Project};
-use diesel::{Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+#[cfg(feature = "plus")]
+use diesel::JoinOnDsl;
+use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
 use uuid::Uuid;
 
 use crate::{
