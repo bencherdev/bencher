@@ -37,7 +37,7 @@ const AuthConfirmPage = (props: {
 	);
 
 	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
-		setSearchParams({ [PLAN_PARAM]: PlanLevel.FREE });
+		setSearchParams({ [PLAN_PARAM]: null });
 	}
 	const plan = createMemo(() =>
 		searchParams[PLAN_PARAM] ? searchParams[PLAN_PARAM].trim() : null,

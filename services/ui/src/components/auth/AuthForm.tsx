@@ -21,6 +21,7 @@ import {
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import FieldKind from "../field/kind";
 import { notification_path } from "../site/Notification";
+import { PlanLevel } from "../console/panel/billing/Pricing";
 
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
@@ -39,10 +40,7 @@ export const AuthForm = (props: Props) => {
 	const pathname = createMemo(() => location.pathname);
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	if (
-		searchParams[PLAN_PARAM] &&
-		!validate_plan_level(searchParams[PLAN_PARAM])
-	) {
+	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
 		setSearchParams({ [PLAN_PARAM]: null });
 	}
 	const plan = createMemo(() =>
@@ -122,6 +120,10 @@ export const AuthForm = (props: Props) => {
 				plan: plan(),
 				invite: invite,
 			};
+
+			if (!plan()) {
+				setSearchParams({ [PLAN_PARAM]: PlanLevel.FREE });
+			}
 		} else if (props.config?.kind === FormKind.LOGIN) {
 			const login_form = form();
 			form_email = login_form.email.value?.trim();
