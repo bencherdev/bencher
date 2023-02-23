@@ -19,6 +19,17 @@ export enum PlanStatus {
 	UNPAID = "unpaid",
 }
 
+export enum CardBrand {
+	AMEX = "amex",
+	DINERS = "diners",
+	DISCOVER = "discover",
+	JCB = "jcb",
+	MASTERCARD = "mastercard",
+	UNIONPAY = "unionpay",
+	VISA = "visa",
+	UNKNOWN = "unknown",
+}
+
 const format_date_time = (date_str: string) => {
 	const date_ms = Date.parse(date_str);
 	if (date_ms) {
@@ -85,6 +96,9 @@ const Plan = (props) => {
 		return metrics_used * per_metric_rate();
 	});
 
+	const customer = createMemo(() => props.plan()?.customer);
+	const card = createMemo(() => props.plan()?.card);
+
 	return (
 		<section class="section">
 			<div class="container">
@@ -116,14 +130,12 @@ const Plan = (props) => {
 						<br />
 
 						<h4 class="title">Payment Method</h4>
-						<h4 class="subtitle">
-							<span class="icon">
-								<i class="fas fa-chevron-left" aria-hidden="true" />
-							</span>
-						</h4>
-						<p>Name:</p>
-						<p>Last Four:</p>
-						<p>Expiration:</p>
+						<FmtCardBrand brand={card()?.brand} />
+						<p>Name: {customer()?.name}</p>
+						<p>Last Four: {card()?.last_four}</p>
+						<p>
+							Expiration: {card()?.exp_month}/{card()?.exp_year}
+						</p>
 						<br />
 					</div>
 				</div>
@@ -173,6 +185,55 @@ const WarnStatus = (props) => {
 
 const ErrStatus = (props) => {
 	return <h4 class="subtitle has-text-danger">{props.status}</h4>;
+};
+
+const FmtCardBrand = (props) => {
+	switch (props.brand) {
+		case CardBrand.AMEX: {
+			return <FmtCardBrandInner brand={branded_card("cc-amex")} />;
+		}
+		case CardBrand.DINERS: {
+			return <FmtCardBrandInner brand={branded_card("cc-diners-club")} />;
+		}
+		case CardBrand.DISCOVER: {
+			return <FmtCardBrandInner brand={branded_card("cc-discover")} />;
+		}
+		case CardBrand.JCB: {
+			return <FmtCardBrandInner brand={branded_card("cc-jcb")} />;
+		}
+		case CardBrand.MASTERCARD: {
+			return <FmtCardBrandInner brand={branded_card("cc-mastercard")} />;
+		}
+		case CardBrand.UNIONPAY: {
+			return <FmtCardBrandInner brand={generic_card()} />;
+		}
+		case CardBrand.VISA: {
+			return <FmtCardBrandInner brand={branded_card("visa")} />;
+		}
+		case CardBrand.UNKNOWN: {
+			return <FmtCardBrandInner brand={generic_card()} />;
+		}
+		default:
+			return <FmtCardBrandInner brand={generic_card()} />;
+	}
+};
+
+const FmtCardBrandInner = (props) => {
+	return (
+		<h4 class="subtitle">
+			<span class="icon">
+				<i class={props.brand} aria-hidden="true" />
+			</span>
+		</h4>
+	);
+};
+
+const branded_card = (brand) => {
+	return `fab fa-${brand}`;
+};
+
+const generic_card = () => {
+	return "fas fa-credit-card";
 };
 
 export default Plan;
