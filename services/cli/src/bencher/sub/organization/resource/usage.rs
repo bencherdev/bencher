@@ -7,24 +7,24 @@ use bencher_json::ResourceId;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::CliOrganizationEntitlements,
+    cli::organization::CliOrganizationUsage,
     CliError,
 };
 
 #[derive(Debug)]
-pub struct Entitlements {
+pub struct Usage {
     pub organization: ResourceId,
     pub backend: Backend,
 }
 
-impl TryFrom<CliOrganizationEntitlements> for Entitlements {
+impl TryFrom<CliOrganizationUsage> for Usage {
     type Error = CliError;
 
-    fn try_from(entitlements: CliOrganizationEntitlements) -> Result<Self, Self::Error> {
-        let CliOrganizationEntitlements {
+    fn try_from(usage: CliOrganizationUsage) -> Result<Self, Self::Error> {
+        let CliOrganizationUsage {
             organization,
             backend,
-        } = entitlements;
+        } = usage;
         Ok(Self {
             organization,
             backend: backend.try_into()?,
@@ -33,13 +33,10 @@ impl TryFrom<CliOrganizationEntitlements> for Entitlements {
 }
 
 #[async_trait]
-impl SubCmd for Entitlements {
+impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/organizations/{}/entitlements",
-                self.organization
-            ))
+            .get(&format!("/v0/organizations/{}/usage", self.organization))
             .await?;
         Ok(())
     }

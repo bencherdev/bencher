@@ -4,11 +4,11 @@ use crate::{bencher::sub::SubCmd, cli::organization::CliOrganization, CliError};
 
 mod allowed;
 mod create;
-#[cfg(feature = "plus")]
-mod entitlements;
 mod list;
 #[cfg(feature = "plus")]
 mod plan;
+#[cfg(feature = "plus")]
+mod usage;
 mod view;
 
 #[derive(Debug)]
@@ -20,7 +20,7 @@ pub enum Organization {
     #[cfg(feature = "plus")]
     Plan(plan::Plan),
     #[cfg(feature = "plus")]
-    Entitlements(entitlements::Entitlements),
+    Usage(usage::Usage),
 }
 
 impl TryFrom<CliOrganization> for Organization {
@@ -35,9 +35,7 @@ impl TryFrom<CliOrganization> for Organization {
             #[cfg(feature = "plus")]
             CliOrganization::Plan(plan) => Self::Plan(plan.try_into()?),
             #[cfg(feature = "plus")]
-            CliOrganization::Entitlements(entitlements) => {
-                Self::Entitlements(entitlements.try_into()?)
-            },
+            CliOrganization::Usage(usage) => Self::Usage(usage.try_into()?),
         })
     }
 }
@@ -53,7 +51,7 @@ impl SubCmd for Organization {
             #[cfg(feature = "plus")]
             Self::Plan(plan) => plan.exec().await,
             #[cfg(feature = "plus")]
-            Self::Entitlements(entitlements) => entitlements.exec().await,
+            Self::Usage(usage) => usage.exec().await,
         }
     }
 }

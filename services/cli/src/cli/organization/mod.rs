@@ -22,13 +22,15 @@ pub enum CliOrganization {
     View(CliOrganizationView),
     /// Check organization permission
     Allowed(CliOrganizationAllowed),
+
     #[cfg(feature = "plus")]
     /// Organization metered subscription plan
     #[clap(subcommand)]
     Plan(CliOrganizationPlan),
+
     #[cfg(feature = "plus")]
-    /// Check organization entitlements
-    Entitlements(CliOrganizationEntitlements),
+    /// Check organization metrics usage
+    Usage(CliOrganizationUsage),
 }
 
 #[derive(Parser, Debug)]
@@ -89,7 +91,7 @@ pub enum CliOrganizationPermission {
 
 #[cfg(feature = "plus")]
 #[derive(Parser, Debug)]
-pub struct CliOrganizationEntitlements {
+pub struct CliOrganizationUsage {
     /// Organization slug or UUID
     pub organization: ResourceId,
 
