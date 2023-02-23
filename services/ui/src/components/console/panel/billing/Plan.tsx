@@ -256,10 +256,12 @@ const FmtCardBrand = (props) => {
 const FmtCardBrandInner = (props) => {
 	return (
 		<h4 class="subtitle">
-			<span class="icon">
-				<i class={props.brand} aria-hidden="true" />
+			<span class="icon-text">
+				<span class="icon">
+					<i class={props.brand} aria-hidden="true" />
+				</span>
+				<span>{props.name}</span>
 			</span>
-			{props.name}
 		</h4>
 	);
 };
