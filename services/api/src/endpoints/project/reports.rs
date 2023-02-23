@@ -271,9 +271,7 @@ mod plan_kind {
             licensor: &Licensor,
             project_id: i32,
         ) -> Result<Self, ApiError> {
-            if QueryProject::is_public(conn, project_id)? {
-                Ok(Self::None)
-            } else if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
+            if let Some(subscription) = QueryProject::get_subscription(conn, project_id)? {
                 if let Some(biller) = biller {
                     let plan_status = biller.get_plan_status(&subscription).await?;
                     if plan_status.is_active() {
@@ -288,6 +286,8 @@ mod plan_kind {
                 let _token_data = licensor.validate_organization(&license, uuid)?;
                 // TODO check license entitlements for usage so far
                 Ok(PlanKind::Licensed(0))
+            } else if QueryProject::is_public(conn, project_id)? {
+                Ok(Self::None)
             } else {
                 Err(ApiError::NoMeteredPlanProject(project_id))
             }

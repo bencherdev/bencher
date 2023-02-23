@@ -141,11 +141,6 @@ async fn post_inner(
     Ok(JsonEmpty::default())
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
-    pub organization: ResourceId,
-}
-
 #[endpoint {
     method = GET,
     path =  "/v0/organizations/{organization}/plan",

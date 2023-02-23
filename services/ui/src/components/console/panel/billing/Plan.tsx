@@ -8,6 +8,17 @@ import {
 } from "../../../site/util";
 import { PlanLevel } from "./Pricing";
 
+export enum PlanStatus {
+	ACTIVE = "active",
+	CANCELED = "canceled",
+	INCOMPLETE = "incomplete",
+	INCOMPLETE_EXPIRED = "incomplete_expired",
+	PAST_DUE = "past_due",
+	PAUSED = "paused",
+	TRIALING = "trialing",
+	UNPAID = "unpaid",
+}
+
 const format_date_time = (date_str: string) => {
 	const date_ms = Date.parse(date_str);
 	if (date_ms) {
@@ -32,20 +43,20 @@ const date_time_millis = (date_str: string) => {
 	return null;
 };
 
-const Plan = (props) => {
-	const plan_level = createMemo(() => {
-		switch (props.plan()?.level) {
-			case PlanLevel.TEAM: {
-				return "Team";
-			}
-			case PlanLevel.ENTERPRISE: {
-				return "Enterprise";
-			}
-			default:
-				return "---";
+const plan_level = (level: PlanLevel) => {
+	switch (level) {
+		case PlanLevel.TEAM: {
+			return "Team";
 		}
-	});
+		case PlanLevel.ENTERPRISE: {
+			return "Enterprise";
+		}
+		default:
+			return "---";
+	}
+};
 
+const Plan = (props) => {
 	const fetchUsage = async (organization_slug: string) => {
 		const EMPTY_OBJECT = {};
 		try {
@@ -63,7 +74,6 @@ const Plan = (props) => {
 			return EMPTY_OBJECT;
 		}
 	};
-
 	const [usage] = createResource(props.organization_slug, fetchUsage);
 
 	const per_metric_rate = createMemo(() => props.plan()?.unit_amount / 100);
@@ -72,7 +82,6 @@ const Plan = (props) => {
 		if (!Number.isInteger(metrics_used)) {
 			return null;
 		}
-
 		return metrics_used * per_metric_rate();
 	});
 
@@ -81,12 +90,16 @@ const Plan = (props) => {
 			<div class="container">
 				<div class="columns">
 					<div class="column">
+						<h4 class="title">Status</h4>
+						<FmtPlanStatus status={props.plan()?.status} />
+						<br />
+
 						<h4 class="title">Current Billing Period</h4>
 						<h4 class="subtitle">
 							{format_date_time(props.plan()?.current_period_start)} -{" "}
 							{format_date_time(props.plan()?.current_period_end)}
 						</h4>
-						<p>Plan Level: {plan_level()}</p>
+						<p>Plan Level: {plan_level(props.plan().level)}</p>
 						<p>Per Metric Rate: {usd_formatter.format(per_metric_rate())}</p>
 						<p>
 							Estimated Usage:{" "}
@@ -100,11 +113,66 @@ const Plan = (props) => {
 								? "---"
 								: usd_formatter.format(estimated_cost())}
 						</p>
+						<br />
+
+						<h4 class="title">Payment Method</h4>
+						<h4 class="subtitle">
+							<span class="icon">
+								<i class="fas fa-chevron-left" aria-hidden="true" />
+							</span>
+						</h4>
+						<p>Name:</p>
+						<p>Last Four:</p>
+						<p>Expiration:</p>
+						<br />
 					</div>
 				</div>
 			</div>
 		</section>
 	);
+};
+
+const FmtPlanStatus = (props) => {
+	switch (props.status) {
+		case PlanStatus.ACTIVE: {
+			return <OkStatus status="Active" />;
+		}
+		case PlanStatus.CANCELED: {
+			return <ErrStatus status="Canceled" />;
+		}
+		case PlanStatus.INCOMPLETE: {
+			return <ErrStatus status="Incomplete" />;
+		}
+		case PlanStatus.INCOMPLETE_EXPIRED: {
+			return <ErrStatus status="Incomplete Expired" />;
+		}
+		case PlanStatus.PAST_DUE: {
+			return <ErrStatus status="Past Due" />;
+		}
+		case PlanStatus.PAUSED: {
+			return <ErrStatus status="Paused" />;
+		}
+		case PlanStatus.TRIALING: {
+			return <OkStatus status="Trialing" />;
+		}
+		case PlanStatus.UNPAID: {
+			return <ErrStatus status="Unpaid" />;
+		}
+		default:
+			return <WarnStatus status="---" />;
+	}
+};
+
+const OkStatus = (props) => {
+	return <h4 class="subtitle has-text-success">{props.status}</h4>;
+};
+
+const WarnStatus = (props) => {
+	return <h4 class="subtitle has-text-warning">{props.status}</h4>;
+};
+
+const ErrStatus = (props) => {
+	return <h4 class="subtitle has-text-danger">{props.status}</h4>;
 };
 
 export default Plan;
