@@ -1,11 +1,11 @@
 import { useSearchParams } from "solid-app-router";
-import { createMemo } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
 import {
 	BENCHER_API_URL,
 	PLAN_PARAM,
 	validate_plan_level,
 } from "../../../site/util";
-import PaymentCard from "./PaymentCard";
+import PaymentCard, { cardForm } from "./PaymentCard";
 import Pricing, { PlanLevel } from "./Pricing";
 
 const Billing = (props) => {
@@ -18,6 +18,8 @@ const Billing = (props) => {
 		setPlanLevel(PlanLevel.FREE);
 	}
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);
+
+	const [form, setForm] = createSignal(cardForm());
 
 	return (
 		<div class="columns is-centered">
@@ -46,6 +48,8 @@ const Billing = (props) => {
 						user={props.user}
 						url={`${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/plan`}
 						plan={plan}
+						form={form}
+						handleForm={setForm}
 					/>
 				)}
 			</div>

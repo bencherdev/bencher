@@ -25,9 +25,9 @@ const PaymentCard = (props) => {
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
-	const [form, setForm] = createSignal(cardForm());
+	const form = createMemo(() => props.form());
 	const handleField = (key, value, valid) => {
-		setForm({
+		props.handleForm({
 			...form(),
 			[key]: {
 				value: value,
@@ -48,12 +48,12 @@ const PaymentCard = (props) => {
 	const handleFormValid = () => {
 		var valid = validateForm();
 		if (valid !== form()?.valid) {
-			setForm({ ...form(), valid: valid });
+			props.handleForm({ ...form(), valid: valid });
 		}
 	};
 
 	const handleFormSubmitting = (submitting) => {
-		setForm({ ...form(), submitting: submitting });
+		props.handleForm({ ...form(), submitting: submitting });
 	};
 
 	const post = async (data: {

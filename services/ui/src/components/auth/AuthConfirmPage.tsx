@@ -15,7 +15,6 @@ import {
 import Notification, { notification_path } from "../site/Notification";
 import FieldKind from "../field/kind";
 import { EMAIL_PARAM, TOKEN_PARAM } from "./AuthForm";
-import { PlanLevel } from "../console/panel/billing/Pricing";
 
 const CONFIRM_FORWARD = [EMAIL_PARAM, TOKEN_PARAM, PLAN_PARAM];
 
