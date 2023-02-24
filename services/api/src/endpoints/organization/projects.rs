@@ -134,12 +134,12 @@ async fn post_inner(
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
-    project_visibility(json_project.public)?;
+    project_visibility(json_project.visibility)?;
     #[cfg(feature = "plus")]
     project_visibility::project_visibility(
         api_context,
         &path_params.organization,
-        json_project.public,
+        json_project.visibility,
     )
     .await?;
 
@@ -205,18 +205,20 @@ async fn post_inner(
 }
 
 #[cfg(not(feature = "plus"))]
-fn project_visibility(public: Option<bool>) -> Result<(), ApiError> {
-    if let Some(false) = public {
-        Err(ApiError::CreatePrivateProject)
-    } else {
-        Ok(())
-    }
+fn project_visibility(
+    visibility: Option<bencher_json::project::JsonVisibility>,
+) -> Result<(), ApiError> {
+    visibility
+        .unwrap_or_default()
+        .is_public()
+        .then_some(())
+        .ok_or(ApiError::CreatePrivateProject)
 }
 
 #[cfg(feature = "plus")]
 mod project_visibility {
     use bencher_billing::Biller;
-    use bencher_json::ResourceId;
+    use bencher_json::{project::JsonVisibility, ResourceId};
     use bencher_license::Licensor;
     use diesel::SqliteConnection;
 
@@ -225,9 +227,11 @@ mod project_visibility {
     pub async fn project_visibility(
         api_context: &mut ApiContext,
         organization: &ResourceId,
-        public: Option<bool>,
+        visibility: Option<JsonVisibility>,
     ) -> Result<(), ApiError> {
-        if let Some(false) = public {
+        if visibility.unwrap_or_default().is_public() {
+            Ok(())
+        } else {
             check_plan(
                 &mut api_context.database.connection,
                 api_context.biller.as_ref(),
@@ -235,8 +239,6 @@ mod project_visibility {
                 organization,
             )
             .await
-        } else {
-            Ok(())
         }
     }
 

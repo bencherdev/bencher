@@ -1,5 +1,5 @@
 use bencher_json::{JsonProject, ResourceId};
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -11,7 +11,10 @@ use crate::{
         Endpoint, Method,
     },
     error::api_error,
-    model::{project::QueryProject, user::auth::AuthUser},
+    model::{
+        project::{visibility::Visibility, QueryProject},
+        user::auth::AuthUser,
+    },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
@@ -79,22 +82,22 @@ async fn get_ls_inner(
     let api_context = &mut *context.lock().await;
     let conn = &mut api_context.database.connection;
 
-    let mut sql = schema::project::table.into_boxed();
+    let mut query = schema::project::table.into_boxed();
 
     // All users should just see the public projects if the query is for public projects
     if let Some(true) = query_params.public {
-        sql = sql.filter(schema::project::public.eq(true));
+        query = query.filter(schema::project::visibility.eq(Visibility::Public as i32));
     } else if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&api_context.rbac) {
             let projects =
                 auth_user.projects(&api_context.rbac, bencher_rbac::project::Permission::View);
-            sql = sql.filter(schema::project::public.or(schema::project::id.eq_any(projects)));
+            query = query.filter(schema::project::id.eq_any(projects));
         }
     } else {
         return Err(ApiError::PrivateProjects);
     }
 
-    Ok(sql
+    Ok(query
         .order((schema::project::name, schema::project::slug))
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
