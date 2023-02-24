@@ -21,7 +21,7 @@ pub struct JsonNewProject {
     pub name: NonEmpty,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
-    pub public: Option<bool>,
+    pub visibility: Option<JsonVisibility>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,5 +32,21 @@ pub struct JsonProject {
     pub name: NonEmpty,
     pub slug: Slug,
     pub url: Option<Url>,
-    pub public: bool,
+    pub visibility: JsonVisibility,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonVisibility {
+    #[default]
+    Public,
+    #[cfg(feature = "plus")]
+    Private,
+}
+
+impl JsonVisibility {
+    pub fn is_public(&self) -> bool {
+        matches!(self, Self::Public)
+    }
 }

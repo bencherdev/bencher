@@ -4,7 +4,9 @@ use std::{str::FromStr, string::ToString};
 use bencher_billing::SubscriptionId;
 #[cfg(feature = "plus")]
 use bencher_json::Jwt;
-use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{
+    project::JsonVisibility, JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
+};
 use bencher_rbac::{Organization, Project};
 #[cfg(feature = "plus")]
 use diesel::JoinOnDsl;
@@ -21,6 +23,8 @@ use crate::{
     ApiError,
 };
 
+use self::visibility::Visibility;
+
 pub mod benchmark;
 pub mod branch;
 pub mod metric;
@@ -31,6 +35,7 @@ pub mod report;
 pub mod testbed;
 pub mod threshold;
 pub mod version;
+pub mod visibility;
 
 #[derive(Insertable)]
 #[diesel(table_name = project_table)]
@@ -40,7 +45,7 @@ pub struct InsertProject {
     pub name: String,
     pub slug: String,
     pub url: Option<String>,
-    pub public: bool,
+    pub visibility: i32,
 }
 
 impl InsertProject {
@@ -53,7 +58,7 @@ impl InsertProject {
             name,
             slug,
             url,
-            public,
+            visibility,
         } = project;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
         Ok(Self {
@@ -62,7 +67,7 @@ impl InsertProject {
             name: name.into(),
             slug,
             url: url.map(|u| u.to_string()),
-            public: public.unwrap_or(true),
+            visibility: Visibility::from(visibility.unwrap_or_default()) as i32,
         })
     }
 }
@@ -77,7 +82,7 @@ pub struct QueryProject {
     pub name: String,
     pub slug: String,
     pub url: Option<String>,
-    pub public: bool,
+    pub visibility: i32,
 }
 
 impl QueryProject {
@@ -88,7 +93,7 @@ impl QueryProject {
             name,
             slug,
             url,
-            public,
+            visibility,
             ..
         } = self;
         Ok(JsonProject {
@@ -97,7 +102,7 @@ impl QueryProject {
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
             url: ok_url(url.as_deref())?,
-            public,
+            visibility: Visibility::try_from(visibility)?.into(),
         })
     }
 
@@ -122,11 +127,12 @@ impl QueryProject {
 
     #[cfg(feature = "plus")]
     pub fn is_public(conn: &mut SqliteConnection, id: i32) -> Result<bool, ApiError> {
-        schema::project::table
-            .filter(schema::project::id.eq(id))
-            .select(schema::project::public)
-            .first(conn)
-            .map_err(api_error!())
+        is_public(
+            schema::project::table
+                .filter(schema::project::id.eq(id))
+                .select(schema::project::visibility)
+                .first::<i32>(conn)?,
+        )
     }
 
     #[cfg(feature = "plus")]
@@ -218,7 +224,7 @@ impl QueryProject {
 
         // Check to see if the project is public
         // If so, anyone can access it
-        if project.public {
+        if is_public(project.visibility)? {
             Ok(project)
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
@@ -241,6 +247,12 @@ fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {
     } else {
         None
     })
+}
+
+fn is_public(visibility: i32) -> Result<bool, ApiError> {
+    Visibility::try_from(visibility)
+        .map(From::from)
+        .map(|v: JsonVisibility| v.is_public())
 }
 
 impl From<&InsertProject> for Organization {

@@ -196,6 +196,8 @@ pub enum ApiError {
     AdapterInt(i32),
     #[error("Failed to load statistic kind: {0}")]
     StatisticKind(i32),
+    #[error("Failed to recognize visibility integer: {0}")]
+    VisibilityInt(i32),
 }
 
 impl From<ApiError> for HttpError {
