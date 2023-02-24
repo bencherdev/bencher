@@ -23,9 +23,8 @@ const PROJECT_FIELDS = {
 		help: "Must be a valid URL",
 		validate: (input) => validate_string(input, is_valid_url),
 	},
-	public: {
-		type: "checkbox",
-		disabled: true,
+	visibility: {
+		icon: "fas fa-eye",
 	},
 };
 

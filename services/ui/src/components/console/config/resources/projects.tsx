@@ -1,8 +1,26 @@
 import PROJECT_FIELDS from "./fields/project";
-import { BENCHER_API_URL } from "../../../site/util";
+import {
+	BENCHER_API_URL,
+	is_allowed_organization,
+	OrganizationPermission,
+} from "../../../site/util";
 import { Button, Card, Display, Operation, PerfTab, Row } from "../types";
 import { parentPath, addPath } from "../util";
 import FieldKind from "../../../field/kind";
+
+const VISIBILITY_VALUE = {
+	selected: "public",
+	options: [
+		{
+			value: "public",
+			option: "Public",
+		},
+		{
+			value: "private",
+			option: "Private",
+		},
+	],
+};
 
 const projectsConfig = {
 	[Operation.LIST]: {
@@ -45,9 +63,8 @@ const projectsConfig = {
 					},
 					{},
 					{
-						kind: Row.BOOL,
-						key: "owner_default",
-						text: "Default",
+						kind: Row.TEXT,
+						key: "visibility",
 					},
 					{},
 				],
@@ -90,13 +107,12 @@ const projectsConfig = {
 					config: PROJECT_FIELDS.url,
 				},
 				{
-					kind: FieldKind.SWITCH,
-					label: "Public Project",
-					key: "public",
-					type: "switch",
-					value: true,
+					kind: FieldKind.SELECT,
+					label: "Visibility",
+					key: "visibility",
+					value: VISIBILITY_VALUE,
 					validate: false,
-					config: PROJECT_FIELDS.public,
+					config: PROJECT_FIELDS.visibility,
 				},
 			],
 			path: parentPath,
@@ -132,9 +148,18 @@ const projectsConfig = {
 				},
 				{
 					kind: Card.FIELD,
-					label: "Public Project",
-					key: "public",
-					display: Display.SWITCH,
+					label: "Visibility",
+					key: "visibility",
+					display: Display.SELECT,
+					is_allowed: (path_params) =>
+						is_allowed_organization(path_params, OrganizationPermission.EDIT),
+					field: {
+						kind: FieldKind.SELECT,
+						key: "visibility",
+						value: VISIBILITY_VALUE,
+						validate: false,
+						config: PROJECT_FIELDS.visibility,
+					},
 				},
 			],
 		},
