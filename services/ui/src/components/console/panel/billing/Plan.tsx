@@ -136,18 +136,9 @@ const Plan = (props) => {
 						<p>
 							Expiration: {card()?.exp_month}/{card()?.exp_year}
 						</p>
-						{/* <br />
-						<button
-							class="button"
-							onClick={(e) => {
-								e.preventDefault();
-							}}
-						>
-							Update Card
-						</button> */}
 						<br />
 
-						<For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
+						<For each={[...Array(5).keys()]}>{(_k, _i) => <br />}</For>
 						<p>
 							To update or cancel your subscription please email{" "}
 							<a href="mailto:everett@bencher.dev">everett@bencher.dev</a>

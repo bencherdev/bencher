@@ -1,5 +1,5 @@
-import { useSearchParams } from "solid-app-router";
-import { createMemo, createSignal, Match, Switch } from "solid-js";
+import { useLocation, useSearchParams } from "solid-app-router";
+import { createMemo, Match, Switch } from "solid-js";
 import { forward_path } from "./Forward";
 import {
 	NotifyKind,
@@ -24,7 +24,9 @@ export const notification_path = (
 	return forward_path(href, keep_params, set_params);
 };
 
-const Notification = (props) => {
+const Notification = (_props) => {
+	const location = useLocation();
+	const pathname = createMemo(() => location.pathname);
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	if (!isNotifyKind(searchParams[NOTIFY_KIND_PARAM])) {
@@ -42,10 +44,14 @@ const Notification = (props) => {
 	const notify_text = createMemo(() => searchParams[NOTIFY_TEXT_PARAM]);
 
 	const removeNotification = () => {
-		setSearchParams({
-			[NOTIFY_KIND_PARAM]: null,
-			[NOTIFY_TEXT_PARAM]: null,
-		});
+		// Check to see if the pathname is still the same
+		// Otherwise, this whiplashes the user back to the page that generated the notification
+		if (pathname() === window.location.pathname) {
+			setSearchParams({
+				[NOTIFY_KIND_PARAM]: null,
+				[NOTIFY_TEXT_PARAM]: null,
+			});
+		}
 	};
 
 	const getNotification = () => {
