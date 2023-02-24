@@ -1,11 +1,11 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewProject, NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{project::JsonVisibility, JsonNewProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::CliProjectCreate,
+    cli::project::{CliProjectCreate, CliProjectVisibility},
     CliError,
 };
 
@@ -15,8 +15,15 @@ pub struct Create {
     pub name: NonEmpty,
     pub slug: Option<Slug>,
     pub url: Option<Url>,
-    pub public: Option<bool>,
+    pub visibility: Option<Visibility>,
     pub backend: Backend,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Visibility {
+    Public,
+    #[cfg(feature = "plus")]
+    Private,
 }
 
 impl TryFrom<CliProjectCreate> for Create {
@@ -28,8 +35,7 @@ impl TryFrom<CliProjectCreate> for Create {
             name,
             slug,
             url,
-            public,
-            private,
+            visibility,
             backend,
         } = create;
         Ok(Self {
@@ -37,9 +43,19 @@ impl TryFrom<CliProjectCreate> for Create {
             name,
             slug,
             url,
-            public: Some(if public { true } else { !private }),
+            visibility: visibility.map(Into::into),
             backend: backend.try_into()?,
         })
+    }
+}
+
+impl From<CliProjectVisibility> for Visibility {
+    fn from(visibility: CliProjectVisibility) -> Self {
+        match visibility {
+            CliProjectVisibility::Public => Self::Public,
+            #[cfg(feature = "plus")]
+            CliProjectVisibility::Private => Self::Private,
+        }
     }
 }
 
@@ -49,14 +65,24 @@ impl From<Create> for JsonNewProject {
             name,
             slug,
             url,
-            public,
+            visibility,
             ..
         } = create;
         Self {
             name,
             slug,
             url,
-            public,
+            visibility: visibility.map(Into::into),
+        }
+    }
+}
+
+impl From<Visibility> for JsonVisibility {
+    fn from(visibility: Visibility) -> Self {
+        match visibility {
+            Visibility::Public => Self::Public,
+            #[cfg(feature = "plus")]
+            Visibility::Private => Self::Private,
         }
     }
 }
