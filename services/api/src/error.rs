@@ -157,11 +157,11 @@ pub enum ApiError {
     #[error("Failed to find metered plan for organization: {0}")]
     NoMeteredPlan(i32),
     #[cfg(feature = "plus")]
-    #[error("Failed to find metered plan for organization: {0}")]
-    NoMeteredPlanOrganization(ResourceId),
+    #[error("Failed to find plan for organization: {0}")]
+    NoPlanOrganization(ResourceId),
     #[cfg(feature = "plus")]
-    #[error("Failed to find metered plan for project: {0}")]
-    NoMeteredPlanProject(i32),
+    #[error("Failed to find plan for project: {0}")]
+    NoPlanProject(i32),
     #[cfg(feature = "plus")]
     #[error("No Biller but organization has a subscription: {0}")]
     NoBillerOrganization(ResourceId),

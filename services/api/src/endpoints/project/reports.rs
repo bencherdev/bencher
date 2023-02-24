@@ -289,7 +289,7 @@ mod plan_kind {
             } else if QueryProject::is_public(conn, project_id)? {
                 Ok(Self::None)
             } else {
-                Err(ApiError::NoMeteredPlanProject(project_id))
+                Err(ApiError::NoPlanProject(project_id))
             }
         }
 

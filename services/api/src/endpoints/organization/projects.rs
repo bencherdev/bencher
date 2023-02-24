@@ -262,7 +262,7 @@ mod project_visibility {
             // TODO check license entitlements for usage so far
             Ok(())
         } else {
-            Err(ApiError::NoMeteredPlanOrganization(organization.clone()))
+            Err(ApiError::NoPlanOrganization(organization.clone()))
         }
     }
 }
