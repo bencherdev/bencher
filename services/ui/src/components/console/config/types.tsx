@@ -6,6 +6,7 @@ export enum Operation {
 	DELETE,
 	PERF,
 	BILLING,
+	HELP,
 }
 
 export enum Button {
@@ -29,6 +30,7 @@ export enum Resource {
 	ALERTS,
 	USERS,
 	TOKENS,
+	HELP,
 }
 
 export enum Row {

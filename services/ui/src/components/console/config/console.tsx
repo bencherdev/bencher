@@ -12,6 +12,7 @@ import usersConfig from "./resources/users";
 import tokensConfig from "./resources/tokens";
 import benchmarksConfig from "./resources/benchmarks";
 import billingConfig from "./resources/billing";
+import helpConfig from "./resources/help";
 
 const consoleConfig = {
 	[Resource.ORGANIZATIONS]: organizationsConfig,
@@ -27,6 +28,7 @@ const consoleConfig = {
 	[Resource.ALERTS]: alertsConfig,
 	[Resource.USERS]: usersConfig,
 	[Resource.TOKENS]: tokensConfig,
+	[Resource.HELP]: helpConfig,
 };
 
 export default consoleConfig;

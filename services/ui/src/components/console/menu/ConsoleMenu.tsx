@@ -98,6 +98,9 @@ const ConsoleMenu = (props) => {
 				<li>
 					<Link href={getUsersPath("settings")}>Settings</Link>
 				</li>
+				<li>
+					<Link href={getUsersPath("help")}>Help</Link>
+				</li>
 			</ul>
 		</aside>
 	);
