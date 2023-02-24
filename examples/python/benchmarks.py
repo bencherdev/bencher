@@ -23,3 +23,13 @@ def test_run_v3(benchmark):
 def test_run_v4(benchmark):
     result = benchmark(fbf.run_v4)
     assert result == FIZZ_BUZZ_FIBONACCI_RESULT
+
+
+def test_fibonacci(benchmark):
+    result = benchmark(fbf.fibonacci, 7)
+    assert result == 13
+
+
+def test_fibonacci_memo(benchmark):
+    result = benchmark(fbf.fibonacci_memo, 7)
+    assert result == 13
