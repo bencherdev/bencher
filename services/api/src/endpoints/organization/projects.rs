@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::{ApiContext, Context},
+    context::Context,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -131,13 +131,17 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
+
     // Check project visibility
-    project_visibility(
+    #[cfg(not(feature = "plus"))]
+    project_visibility(json_project.public)?;
+    #[cfg(feature = "plus")]
+    project_visibility::project_visibility(
         api_context,
-        auth_user,
         &path_params.organization,
         json_project.public,
-    )?;
+    )
+    .await?;
 
     let conn = &mut api_context.database.connection;
 
@@ -200,69 +204,65 @@ async fn post_inner(
     query_project.into_json(conn)
 }
 
-// TODO private projects
-fn project_visibility(
-    api_context: &mut ApiContext,
-    auth_user: &AuthUser,
-    organization: &ResourceId,
-    public: Option<bool>,
-) -> Result<(), ApiError> {
+#[cfg(not(feature = "plus"))]
+fn project_visibility(public: Option<bool>) -> Result<(), ApiError> {
     if let Some(false) = public {
-        #[cfg(feature = "plus")]
-        if bencher_plus::is_bencher_dev(&api_context.endpoint)
-            && auth_user.is_admin(&api_context.rbac)
-        {
-            return Ok(());
-        }
-
-        Err(ApiError::CreatePrivateProject(auth_user.id))
+        Err(ApiError::CreatePrivateProject)
     } else {
         Ok(())
     }
 }
 
 #[cfg(feature = "plus")]
-mod plan_kind {
+mod project_visibility {
     use bencher_billing::Biller;
     use bencher_json::ResourceId;
     use bencher_license::Licensor;
     use diesel::SqliteConnection;
 
-    use crate::{model::organization::QueryOrganization, ApiError};
+    use crate::{context::ApiContext, model::organization::QueryOrganization, ApiError};
 
-    pub enum PlanKind {
-        Metered,
-        Licensed,
-        None,
+    pub async fn project_visibility(
+        api_context: &mut ApiContext,
+        organization: &ResourceId,
+        public: Option<bool>,
+    ) -> Result<(), ApiError> {
+        if let Some(false) = public {
+            check_plan(
+                &mut api_context.database.connection,
+                api_context.biller.as_ref(),
+                &api_context.licensor,
+                organization,
+            )
+            .await
+        } else {
+            Ok(())
+        }
     }
 
-    impl PlanKind {
-        pub async fn new(
-            conn: &mut SqliteConnection,
-            biller: Option<&Biller>,
-            licensor: &Licensor,
-            organization: &ResourceId,
-        ) -> Result<Self, ApiError> {
-            if let Some(subscription) = QueryOrganization::get_subscription(conn, organization)? {
-                if let Some(biller) = biller {
-                    let plan_status = biller.get_plan_status(&subscription).await?;
-                    if plan_status.is_active() {
-                        Ok(PlanKind::Metered)
-                    } else {
-                        Err(ApiError::InactivePlanOrganization(organization.clone()))
-                    }
+    async fn check_plan(
+        conn: &mut SqliteConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
+        organization: &ResourceId,
+    ) -> Result<(), ApiError> {
+        if let Some(subscription) = QueryOrganization::get_subscription(conn, organization)? {
+            if let Some(biller) = biller {
+                let plan_status = biller.get_plan_status(&subscription).await?;
+                if plan_status.is_active() {
+                    Ok(())
                 } else {
-                    Err(ApiError::NoBillerOrganization(organization.clone()))
+                    Err(ApiError::InactivePlanOrganization(organization.clone()))
                 }
-            } else if let Some((uuid, license)) =
-                QueryOrganization::get_license(conn, organization)?
-            {
-                let _token_data = licensor.validate_organization(&license, uuid)?;
-                // TODO check license entitlements for usage so far
-                Ok(PlanKind::Licensed)
             } else {
-                Err(ApiError::NoMeteredPlanOrganization(organization.clone()))
+                Err(ApiError::NoBillerOrganization(organization.clone()))
             }
+        } else if let Some((uuid, license)) = QueryOrganization::get_license(conn, organization)? {
+            let _token_data = licensor.validate_organization(&license, uuid)?;
+            // TODO check license entitlements for usage so far
+            Ok(())
+        } else {
+            Err(ApiError::NoMeteredPlanOrganization(organization.clone()))
         }
     }
 }

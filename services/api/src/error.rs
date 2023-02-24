@@ -116,8 +116,6 @@ pub enum ApiError {
         testbed_id: i32,
         testbed_project_id: i32,
     },
-    #[error("Tried to create a private project: {0}")]
-    CreatePrivateProject(i32),
     #[error("Tried to query a private project: {0}")]
     PrivateProject(i32),
     #[error("Anonymous user tried to query private projects")]
@@ -131,6 +129,9 @@ pub enum ApiError {
     #[error("Bad time: {0} {1} {2}")]
     BadTime(u32, u32, u32),
 
+    #[cfg(not(feature = "plus"))]
+    #[error("Tried to create a private project")]
+    CreatePrivateProject,
     #[cfg(feature = "plus")]
     #[error("Failed to handle billing: {0}")]
     Billing(#[from] bencher_billing::BillingError),
