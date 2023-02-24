@@ -93,9 +93,7 @@ export const AuthForm = (props: Props) => {
 	}) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`;
 		const no_token = null;
-		return await axios(post_options(url, no_token, data))
-			.then((resp) => resp?.data)
-			.catch(console.error);
+		return await axios(post_options(url, no_token, data));
 	};
 
 	const handleAuthFormSubmit = (event) => {
@@ -136,7 +134,7 @@ export const AuthForm = (props: Props) => {
 		}
 
 		post(data)
-			.then((_data) => {
+			.then((_resp) => {
 				handleFormSubmitting(false);
 				navigate(
 					notification_path(
@@ -148,8 +146,9 @@ export const AuthForm = (props: Props) => {
 					),
 				);
 			})
-			.catch((_error) => {
+			.catch((error) => {
 				handleFormSubmitting(false);
+				console.error(error);
 				navigate(
 					notification_path(
 						pathname(),

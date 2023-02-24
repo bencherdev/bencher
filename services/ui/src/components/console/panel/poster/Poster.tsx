@@ -50,24 +50,7 @@ const Poster = (props) => {
 			return;
 		}
 		const url = props.config?.url?.(props.path_params());
-		return await axios(post_options(url, token, data))
-			.then((_resp) => {
-				handleFormSubmitting(false);
-				navigate(props.config?.path?.(pathname()));
-			})
-			.catch((error) => {
-				handleFormSubmitting(false);
-				console.error(error);
-				navigate(
-					notification_path(
-						pathname(),
-						[],
-						[],
-						NotifyKind.ERROR,
-						"Failed to create please try again.",
-					),
-				);
-			});
+		return await axios(post_options(url, token, data));
 	};
 
 	function sendForm(e) {
@@ -105,7 +88,24 @@ const Poster = (props) => {
 			}
 		}
 
-		post(data);
+		post(data)
+			.then((_resp) => {
+				handleFormSubmitting(false);
+				navigate(props.config?.path?.(pathname()));
+			})
+			.catch((error) => {
+				handleFormSubmitting(false);
+				console.error(error);
+				navigate(
+					notification_path(
+						pathname(),
+						[],
+						[],
+						NotifyKind.ERROR,
+						"Failed to create please try again.",
+					),
+				);
+			});
 	}
 
 	const handleFormSubmitting = (submitting) => {

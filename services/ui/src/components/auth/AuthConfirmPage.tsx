@@ -68,18 +68,16 @@ const AuthConfirmPage = (props: {
 		const data = {
 			token: token(),
 		};
-		return await axios(post_options(url, no_token, data))
-			.then((resp) => resp?.data)
-			.catch(console.error);
+		return await axios(post_options(url, no_token, data));
 	};
 
 	const handleFormSubmit = () => {
 		handleFormSubmitting(true);
 
 		post()
-			.then((data) => {
+			.then((resp) => {
 				handleFormSubmitting(false);
-				if (!props.handleUser(data)) {
+				if (!props.handleUser(resp?.data)) {
 					navigate(
 						notification_path(
 							pathname(),
@@ -91,8 +89,9 @@ const AuthConfirmPage = (props: {
 					);
 				}
 			})
-			.catch((_error) => {
+			.catch((error) => {
 				handleFormSubmitting(false);
+				console.error(error);
 				navigate(
 					notification_path(
 						pathname(),
@@ -115,9 +114,7 @@ const AuthConfirmPage = (props: {
 	}) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/login`;
 		const no_token = null;
-		return await axios(post_options(url, no_token, data))
-			.then((resp) => resp?.data)
-			.catch(console.error);
+		return await axios(post_options(url, no_token, data));
 	};
 
 	const handleResendEmail = (event) => {
@@ -130,7 +127,7 @@ const AuthConfirmPage = (props: {
 		};
 
 		post_resend(data)
-			.then((_data) => {
+			.then((_resp) => {
 				handleFormSubmitting(false);
 				navigate(
 					notification_path(
@@ -142,8 +139,9 @@ const AuthConfirmPage = (props: {
 					),
 				);
 			})
-			.catch((_error) => {
+			.catch((error) => {
 				handleFormSubmitting(false);
+				console.error(error);
 				navigate(
 					notification_path(
 						pathname(),

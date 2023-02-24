@@ -131,9 +131,7 @@ const UpdateCard = (props) => {
 			return;
 		}
 		const url = props.url();
-		return await axios(patch_options(url, token, data))
-			.then((resp) => resp?.data)
-			.catch(console.error);
+		return await axios(patch_options(url, token, data));
 	};
 
 	function sendForm(e) {
@@ -173,7 +171,7 @@ const UpdateCard = (props) => {
 		}
 
 		patch(data)
-			.then((_data) => {
+			.then((_resp) => {
 				handleFormSubmitting(false);
 				props.handleRefresh();
 			})

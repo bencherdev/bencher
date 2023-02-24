@@ -69,9 +69,7 @@ const PaymentCard = (props) => {
 		if (!validate_jwt(props.user?.token)) {
 			return;
 		}
-		return await axios(post_options(props.url, token, data))
-			.then((resp) => resp?.data)
-			.catch(console.error);
+		return await axios(post_options(props.url, token, data));
 	};
 
 	const handleFormSubmit = (event) => {
@@ -96,7 +94,7 @@ const PaymentCard = (props) => {
 		};
 
 		post(data)
-			.then((_data) => {
+			.then((_resp) => {
 				handleFormSubmitting(false);
 				props.handleRefresh();
 				navigate(
@@ -109,8 +107,9 @@ const PaymentCard = (props) => {
 					),
 				);
 			})
-			.catch((_error) => {
+			.catch((error) => {
 				handleFormSubmitting(false);
+				console.error(error);
 				navigate(
 					notification_path(
 						pathname(),
