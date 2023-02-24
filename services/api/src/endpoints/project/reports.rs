@@ -277,10 +277,10 @@ mod plan_kind {
                     if plan_status.is_active() {
                         Ok(PlanKind::Metered(subscription))
                     } else {
-                        Err(ApiError::InactivePlan(project_id))
+                        Err(ApiError::InactivePlanProject(project_id))
                     }
                 } else {
-                    Err(ApiError::NoBiller(project_id))
+                    Err(ApiError::NoBillerProject(project_id))
                 }
             } else if let Some((uuid, license)) = QueryProject::get_license(conn, project_id)? {
                 let _token_data = licensor.validate_organization(&license, uuid)?;
@@ -302,7 +302,7 @@ mod plan_kind {
             match self {
                 Self::Metered(subscription) => {
                     let Some(biller) = biller else {
-                        return Err(ApiError::NoBiller(project_id));
+                        return Err(ApiError::NoBillerProject(project_id));
                     };
                     biller.record_usage(subscription, usage).await?;
                 },

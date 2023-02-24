@@ -1,3 +1,5 @@
+#[cfg(feature = "plus")]
+use bencher_json::ResourceId;
 use bencher_rbac::{Organization, Project};
 use dropshot::HttpError;
 use thiserror::Error;
@@ -154,14 +156,23 @@ pub enum ApiError {
     #[error("Failed to find metered plan for organization: {0}")]
     NoMeteredPlan(i32),
     #[cfg(feature = "plus")]
+    #[error("Failed to find metered plan for organization: {0}")]
+    NoMeteredPlanOrganization(ResourceId),
+    #[cfg(feature = "plus")]
     #[error("Failed to find metered plan for project: {0}")]
     NoMeteredPlanProject(i32),
     #[cfg(feature = "plus")]
+    #[error("No Biller but organization has a subscription: {0}")]
+    NoBillerOrganization(ResourceId),
+    #[cfg(feature = "plus")]
     #[error("No Biller but project has a subscription: {0}")]
-    NoBiller(i32),
+    NoBillerProject(i32),
+    #[cfg(feature = "plus")]
+    #[error("Organization has an inactive plan: {0}")]
+    InactivePlanOrganization(ResourceId),
     #[cfg(feature = "plus")]
     #[error("Project has an inactive plan: {0}")]
-    InactivePlan(i32),
+    InactivePlanProject(i32),
 
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),

@@ -1,6 +1,10 @@
 use std::str::FromStr;
 use std::string::ToString;
 
+#[cfg(feature = "plus")]
+use bencher_billing::SubscriptionId;
+#[cfg(feature = "plus")]
+use bencher_json::Jwt;
 use bencher_json::{JsonNewOrganization, JsonOrganization, NonEmpty, ResourceId, Slug};
 use bencher_rbac::Organization;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
@@ -78,6 +82,34 @@ impl QueryOrganization {
             .filter(resource_id(organization)?)
             .first::<QueryOrganization>(conn)
             .map_err(api_error!())
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn get_subscription(
+        conn: &mut SqliteConnection,
+        resource_id: &ResourceId,
+    ) -> Result<Option<SubscriptionId>, ApiError> {
+        let organization = Self::from_resource_id(conn, resource_id)?;
+
+        Ok(if let Some(subscription) = &organization.subscription {
+            Some(SubscriptionId::from_str(subscription)?)
+        } else {
+            None
+        })
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn get_license(
+        conn: &mut SqliteConnection,
+        resource_id: &ResourceId,
+    ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
+        let organization = Self::from_resource_id(conn, resource_id)?;
+
+        Ok(if let Some(license) = &organization.license {
+            Some((Uuid::from_str(&organization.uuid)?, Jwt::from_str(license)?))
+        } else {
+            None
+        })
     }
 
     pub fn is_allowed_resource_id(

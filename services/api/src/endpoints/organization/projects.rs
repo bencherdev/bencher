@@ -131,8 +131,13 @@ async fn post_inner(
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let api_context = &mut *context.lock().await;
-    // Check to see if it is a private project
-    is_private_project(api_context, auth_user, json_project.public)?;
+    // Check project visibility
+    project_visibility(
+        api_context,
+        auth_user,
+        &path_params.organization,
+        json_project.public,
+    )?;
 
     let conn = &mut api_context.database.connection;
 
@@ -196,9 +201,10 @@ async fn post_inner(
 }
 
 // TODO private projects
-fn is_private_project(
+fn project_visibility(
     api_context: &mut ApiContext,
     auth_user: &AuthUser,
+    organization: &ResourceId,
     public: Option<bool>,
 ) -> Result<(), ApiError> {
     if let Some(false) = public {
@@ -212,6 +218,52 @@ fn is_private_project(
         Err(ApiError::CreatePrivateProject(auth_user.id))
     } else {
         Ok(())
+    }
+}
+
+#[cfg(feature = "plus")]
+mod plan_kind {
+    use bencher_billing::Biller;
+    use bencher_json::ResourceId;
+    use bencher_license::Licensor;
+    use diesel::SqliteConnection;
+
+    use crate::{model::organization::QueryOrganization, ApiError};
+
+    pub enum PlanKind {
+        Metered,
+        Licensed,
+        None,
+    }
+
+    impl PlanKind {
+        pub async fn new(
+            conn: &mut SqliteConnection,
+            biller: Option<&Biller>,
+            licensor: &Licensor,
+            organization: &ResourceId,
+        ) -> Result<Self, ApiError> {
+            if let Some(subscription) = QueryOrganization::get_subscription(conn, organization)? {
+                if let Some(biller) = biller {
+                    let plan_status = biller.get_plan_status(&subscription).await?;
+                    if plan_status.is_active() {
+                        Ok(PlanKind::Metered)
+                    } else {
+                        Err(ApiError::InactivePlanOrganization(organization.clone()))
+                    }
+                } else {
+                    Err(ApiError::NoBillerOrganization(organization.clone()))
+                }
+            } else if let Some((uuid, license)) =
+                QueryOrganization::get_license(conn, organization)?
+            {
+                let _token_data = licensor.validate_organization(&license, uuid)?;
+                // TODO check license entitlements for usage so far
+                Ok(PlanKind::Licensed)
+            } else {
+                Err(ApiError::NoMeteredPlanOrganization(organization.clone()))
+            }
+        }
     }
 }
 
