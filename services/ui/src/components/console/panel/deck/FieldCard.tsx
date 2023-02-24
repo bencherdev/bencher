@@ -186,6 +186,15 @@ const UpdateCard = (props) => {
 			.then((_resp) => {
 				handleFormSubmitting(false);
 				props.handleRefresh();
+				navigate(
+					notification_path(
+						pathname(),
+						[],
+						[],
+						NotifyKind.OK,
+						"Update successful!",
+					),
+				);
 			})
 			.catch((error) => {
 				handleFormSubmitting(false);
@@ -196,7 +205,7 @@ const UpdateCard = (props) => {
 						[],
 						[],
 						NotifyKind.ERROR,
-						"Failed to update please try again.",
+						"Failed to update. Please, try again.",
 					),
 				);
 			});

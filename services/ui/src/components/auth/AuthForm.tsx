@@ -142,7 +142,7 @@ export const AuthForm = (props: Props) => {
 						[PLAN_PARAM],
 						[[EMAIL_PARAM, form_email]],
 						NotifyKind.OK,
-						`Successful ${props.config?.kind} please confirm token.`,
+						`Successful ${props.config?.kind}! Please confirm token.`,
 					),
 				);
 			})
@@ -155,7 +155,7 @@ export const AuthForm = (props: Props) => {
 						[PLAN_PARAM, INVITE_PARAM],
 						[],
 						NotifyKind.ERROR,
-						`Failed to ${props.config?.kind} please try again.`,
+						`Failed to ${props.config?.kind}. Please, try again.`,
 					),
 				);
 			});

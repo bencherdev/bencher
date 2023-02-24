@@ -91,7 +91,15 @@ const Poster = (props) => {
 		post(data)
 			.then((_resp) => {
 				handleFormSubmitting(false);
-				navigate(props.config?.path?.(pathname()));
+				navigate(
+					notification_path(
+						props.config?.path?.(pathname()),
+						[],
+						[],
+						NotifyKind.OK,
+						"Creation successful!",
+					),
+				);
 			})
 			.catch((error) => {
 				handleFormSubmitting(false);
@@ -102,7 +110,7 @@ const Poster = (props) => {
 						[],
 						[],
 						NotifyKind.ERROR,
-						"Failed to create please try again.",
+						"Failed to create. Please, try again.",
 					),
 				);
 			});

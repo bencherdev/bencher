@@ -84,7 +84,7 @@ const AuthConfirmPage = (props: {
 							CONFIRM_FORWARD,
 							[],
 							NotifyKind.ERROR,
-							"Invalid user please try again.",
+							"Invalid user. Please, try again.",
 						),
 					);
 				}
@@ -98,7 +98,7 @@ const AuthConfirmPage = (props: {
 						CONFIRM_FORWARD,
 						[],
 						NotifyKind.ERROR,
-						"Failed to confirm token please try again.",
+						"Failed to confirm token. Please, try again.",
 					),
 				);
 			});
@@ -148,7 +148,7 @@ const AuthConfirmPage = (props: {
 						CONFIRM_FORWARD,
 						[],
 						NotifyKind.ERROR,
-						`Failed to resend email to ${email()} please try again.`,
+						`Failed to resend email to ${email()}. Please, try again.`,
 					),
 				);
 			});

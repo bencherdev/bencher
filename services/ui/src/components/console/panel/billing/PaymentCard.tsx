@@ -116,7 +116,7 @@ const PaymentCard = (props) => {
 						[PLAN_PARAM],
 						[],
 						NotifyKind.ERROR,
-						"Failed to enroll, please try again.",
+						"Failed to enroll. Please, try again.",
 					),
 				);
 			});
