@@ -14,7 +14,7 @@ CREATE TABLE up_project (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     url TEXT,
-    public BOOLEAN NOT NULL,
+    visibility INTEGER NOT NULL,
     FOREIGN KEY (organization_id) REFERENCES organization (id) ON DELETE CASCADE,
     UNIQUE(organization_id, name)
 );
@@ -25,7 +25,7 @@ INSERT INTO up_project(
         name,
         slug,
         url,
-        public
+        visibility
     )
 SELECT id,
     uuid,
@@ -33,7 +33,7 @@ SELECT id,
     name,
     slug,
     url,
-    public
+    0
 FROM project;
 DROP TABLE project;
 ALTER TABLE up_project

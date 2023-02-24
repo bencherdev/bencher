@@ -24,7 +24,7 @@ SELECT id,
     name,
     slug,
     url,
-    public
+    TRUE
 FROM project;
 DROP TABLE project;
 ALTER TABLE down_project

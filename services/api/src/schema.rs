@@ -101,7 +101,7 @@ diesel::table! {
         name -> Text,
         slug -> Text,
         url -> Nullable<Text>,
-        public -> Bool,
+        visibility -> Integer,
     }
 }
 
