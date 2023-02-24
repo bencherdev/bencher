@@ -124,6 +124,7 @@ const MembersConfig = {
 					config: MEMBER_FIELDS.role,
 				},
 			],
+			button: "Invite",
 			path: parentPath,
 		},
 	},

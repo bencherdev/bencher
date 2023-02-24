@@ -167,7 +167,7 @@ const Poster = (props) => {
 						disabled={!is_sendable()}
 						onClick={sendForm}
 					>
-						Save
+						{props.config?.button ? props.config?.button : "Save"}
 					</button>
 				</form>
 			</div>
