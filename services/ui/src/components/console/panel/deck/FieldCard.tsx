@@ -1,9 +1,17 @@
-import { createResource, createSignal, Match, Switch } from "solid-js";
+import {
+	createMemo,
+	createResource,
+	createSignal,
+	Match,
+	Switch,
+} from "solid-js";
 import Field from "../../../field/Field";
-import { patch_options, validate_jwt } from "../../../site/util";
+import { NotifyKind, patch_options, validate_jwt } from "../../../site/util";
 import { Display } from "../../config/types";
 import axios from "axios";
 import FieldKind from "../../../field/kind";
+import { useLocation, useNavigate } from "solid-app-router";
+import { notification_path } from "../../../site/Notification";
 
 const FieldCard = (props) => {
 	const [update, setUpdate] = createSignal(false);
@@ -116,6 +124,10 @@ const initForm = (field, value) => {
 };
 
 const UpdateCard = (props) => {
+	const navigate = useNavigate();
+	const location = useLocation();
+	const pathname = createMemo(() => location.pathname);
+
 	const [form, setForm] = createSignal(
 		initForm(props.card?.field, props.value),
 	);
@@ -178,6 +190,15 @@ const UpdateCard = (props) => {
 			.catch((error) => {
 				handleFormSubmitting(false);
 				console.error(error);
+				navigate(
+					notification_path(
+						pathname(),
+						[],
+						[],
+						NotifyKind.ERROR,
+						"Failed to update please try again.",
+					),
+				);
 			});
 	}
 
