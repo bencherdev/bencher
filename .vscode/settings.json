@@ -40,6 +40,7 @@
     "luhn",
     "Microbenchmark",
     "nanos",
+    "pipenv",
     "pytest",
     "repr",
     "Roadmap",
