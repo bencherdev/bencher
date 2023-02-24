@@ -6,6 +6,12 @@ def fizz(n):
     return None
 
 
+def run_v1():
+    """v1"""
+
+    return run(fizz)
+
+
 def fizz_buzz(n):
     """v2"""
 
@@ -15,6 +21,12 @@ def fizz_buzz(n):
     if not n % 5:
         response += 'Buzz'
     return response if response else None
+
+
+def run_v2():
+    """v2"""
+
+    return run(fizz_buzz)
 
 
 def fizz_buzz_fibonacci(n):
@@ -40,7 +52,7 @@ def fibonacci(n):
         return fibonacci(n-1) + fibonacci(n-2)
 
 
-def run_naive():
+def run_v3():
     """v3"""
 
     return run(fizz_buzz_fibonacci)
@@ -72,7 +84,7 @@ def fibonacci_memo(n):
     return func(n)
 
 
-def run_memo():
+def run_v4():
     """v4"""
 
     return run(fizz_buzz_fibonacci_memo)
@@ -85,5 +97,4 @@ def run(fbf):
     return result
 
 
-print(run_naive())
-print(run_memo())
+print(run_v1())
