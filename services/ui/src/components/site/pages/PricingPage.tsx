@@ -75,6 +75,37 @@ const PricingPage = (props) => {
 					</div>
 					<div class="box">
 						<div class="content">
+							<h3 class="subtitle">What is a Public Project?</h3>
+							<p>
+								A Public Project is visible to anyone who has access to your
+								Bencher instance.
+							</p>
+							<p>
+								On Bencher Cloud,{" "}
+								<a href="/perf" target="_blank" rel="noreferrer">
+									all Public Projects are available here
+								</a>
+								. If you are using Bencher Self-Hosted, then anyone with access
+								to your virtual private cloud (VPC) will likewise be able to see
+								all Public Projects.
+							</p>
+						</div>
+					</div>
+					<div class="box">
+						<div class="content">
+							<h3 class="subtitle">What is a Private Project?</h3>
+							<p>
+								A Private Project is only visible to members of your
+								organization.
+							</p>
+							<p>
+								In order to create and use Private Projects, your organization
+								must have an active Bencher Plus plan.
+							</p>
+						</div>
+					</div>
+					<div class="box">
+						<div class="content">
 							<h3 class="subtitle">What is a Metric?</h3>
 							<p>A Metric is a single, point-in-time benchmark result.</p>
 							<p>
@@ -96,7 +127,7 @@ const PricingPage = (props) => {
 								calendar month then you would be billed for 5,280 Metrics that
 								month.
 							</p>
-							<p>
+							{/* <p>
 								Bencher Self-Hosted Metrics are billed annually, grouped by the
 								thousand.
 							</p>
@@ -104,10 +135,19 @@ const PricingPage = (props) => {
 								For example, if you create at most 5,280 Metrics within any
 								given 30 day period (rolling window) then you would need to have
 								a Self-Hosted limit of at least 6,000 Metrics/month.
-							</p>
+							</p> */}
 						</div>
 					</div>
 					<div class="box">
+						<div class="content">
+							<h3 class="subtitle">Are Metrics for Public Projects counted?</h3>
+							<p>
+								Yes, if you have a valid Bencher Plus plan then Metrics from
+								both your Public Projects and Private Projects are counted.
+							</p>
+						</div>
+					</div>
+					{/* <div class="box">
 						<div class="content">
 							<h3 class="subtitle">
 								What happens if I reach my Bencher Self-Hosted limit for a 30
@@ -135,7 +175,7 @@ const PricingPage = (props) => {
 								rolling window. Therefore, there's no rollover.
 							</p>
 						</div>
-					</div>
+					</div> */}
 				</div>
 			</section>
 		</div>
