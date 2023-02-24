@@ -12,6 +12,7 @@ import { NotifyKind, post_options, validate_jwt } from "../../../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
 import FieldKind from "../../../field/kind";
 import { notification_path } from "../../../site/Notification";
+import { createStore } from "solid-js/store";
 
 const initForm = (fields) => {
 	let newForm = {};
@@ -35,13 +36,11 @@ const Poster = (props) => {
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
-	const [form, setForm] = createSignal(initForm(props.config?.fields));
+	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [valid, setValid] = createSignal(false);
 
-	// setInterval(() => console.log(form()), 3000);
-
 	const is_sendable = (): boolean => {
-		return !form()?.submitting && valid();
+		return !form?.submitting && valid();
 	};
 
 	const post = async (data: {}) => {
@@ -61,23 +60,23 @@ const Poster = (props) => {
 
 		handleFormSubmitting(true);
 		let data = {};
-		for (let key of Object.keys(form())) {
-			const value = form()?.[key]?.value;
-			switch (form()?.[key]?.kind) {
+		for (let key of Object.keys(form)) {
+			const value = form?.[key]?.value;
+			switch (form?.[key]?.kind) {
 				case FieldKind.SELECT:
-					if (form()?.[key]?.nullable && !value?.selected) {
+					if (form?.[key]?.nullable && !value?.selected) {
 						continue;
 					}
 					data[key] = value?.selected;
 					break;
 				case FieldKind.NUMBER:
-					if (form()?.[key]?.nullable && !value) {
+					if (form?.[key]?.nullable && !value) {
 						continue;
 					}
 					data[key] = Number(value);
 					break;
 				default:
-					if (form()?.[key]?.nullable && !value) {
+					if (form?.[key]?.nullable && !value) {
 						continue;
 					}
 					if (typeof value === "string") {
@@ -117,20 +116,20 @@ const Poster = (props) => {
 	}
 
 	const handleFormSubmitting = (submitting) => {
-		setForm({ ...form(), submitting: submitting });
+		setForm({ ...form, submitting: submitting });
 	};
 
 	const handleField = (key, value, valid) => {
-		if (key && form()?.[key]) {
-			if (form()?.[key]?.nullable && !value) {
+		if (key && form?.[key]) {
+			if (form?.[key]?.nullable && !value) {
 				value = null;
 				valid = true;
 			}
 
 			setForm({
-				...form(),
+				...form,
 				[key]: {
-					...form()?.[key],
+					...form?.[key],
 					value: value,
 					valid: valid,
 				},
@@ -140,7 +139,7 @@ const Poster = (props) => {
 	};
 
 	function isValid() {
-		const form_values = Object.values(form());
+		const form_values = Object.values(form);
 		for (let i = 0; i < form_values.length; i++) {
 			if (form_values[i]?.validate && !form_values[i]?.valid) {
 				return false;
@@ -158,10 +157,10 @@ const Poster = (props) => {
 							<Field
 								key={i}
 								kind={field?.kind}
-								label={form()?.[field?.key]?.label}
+								label={form?.[field?.key]?.label}
 								fieldKey={field?.key}
-								value={form()?.[field?.key]?.value}
-								valid={form()?.[field?.key]?.valid}
+								value={form?.[field?.key]?.value}
+								valid={form?.[field?.key]?.valid}
 								config={field?.config}
 								user={props.user}
 								path_params={props.path_params}

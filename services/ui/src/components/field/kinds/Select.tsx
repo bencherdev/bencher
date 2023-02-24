@@ -3,7 +3,7 @@ const Select = (props) => {
 		let selected = props.value.options.find((option) => {
 			return props.value.selected === option.value;
 		});
-		if (selected && selected.status) {
+		if (selected?.status) {
 			return (
 				<div class="level-right">
 					<div class="level-item">{selected.status}</div>
@@ -18,12 +18,14 @@ const Select = (props) => {
 				<div class="level-item">
 					<div class="control has-icons-left">
 						<div class="icon is-small is-left">
-							<i class={props.config.icon}></i>
+							<i class={props.config.icon} />
 						</div>
 						<div class="select">
 							<select
 								value={props.value.selected}
-								onInput={(event) => props.handleField(event.target?.value)}
+								onChange={(event) =>
+									props.handleField(event.currentTarget?.value)
+								}
 							>
 								{props.value.options.map((option) => {
 									return (
