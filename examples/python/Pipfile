@@ -7,6 +7,7 @@ name = "pypi"
 
 [dev-packages]
 pytest = "*"
+pytest-benchmark = "*"
 
 [requires]
 python_version = "3.8"
