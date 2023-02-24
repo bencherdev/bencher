@@ -8,9 +8,10 @@ import {
 	Switch,
 } from "solid-js";
 import Field from "../../../field/Field";
-import { post_options, validate_jwt } from "../../../site/util";
+import { NotifyKind, post_options, validate_jwt } from "../../../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
 import FieldKind from "../../../field/kind";
+import { notification_path } from "../../../site/Notification";
 
 const initForm = (fields) => {
 	let newForm = {};
@@ -50,8 +51,23 @@ const Poster = (props) => {
 		}
 		const url = props.config?.url?.(props.path_params());
 		return await axios(post_options(url, token, data))
-			.then((resp) => resp?.data)
-			.catch(console.log);
+			.then((_resp) => {
+				handleFormSubmitting(false);
+				navigate(props.config?.path?.(pathname()));
+			})
+			.catch((error) => {
+				handleFormSubmitting(false);
+				console.error(error);
+				navigate(
+					notification_path(
+						pathname(),
+						[],
+						[],
+						NotifyKind.ERROR,
+						"Failed to create please try again.",
+					),
+				);
+			});
 	};
 
 	function sendForm(e) {
@@ -89,15 +105,7 @@ const Poster = (props) => {
 			}
 		}
 
-		post(data)
-			.then((_data) => {
-				handleFormSubmitting(false);
-				navigate(props.config?.path?.(pathname()));
-			})
-			.catch((error) => {
-				handleFormSubmitting(false);
-				console.error(error);
-			});
+		post(data);
 	}
 
 	const handleFormSubmitting = (submitting) => {
