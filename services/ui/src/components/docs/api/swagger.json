@@ -647,109 +647,6 @@
         }
       }
     },
-    "/v0/organizations/{organization}/entitlements": {
-      "get": {
-        "tags": [
-          "organizations",
-          "entitlements"
-        ],
-        "operationId": "get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonEntitlements"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "entitlements"
-        ],
-        "operationId": "options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/organizations/{organization}/members": {
       "get": {
         "tags": [
@@ -1134,6 +1031,184 @@
         }
       }
     },
+    "/v0/organizations/{organization}/plan": {
+      "get": {
+        "tags": [
+          "organizations",
+          "plan"
+        ],
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlan"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "organizations",
+          "plan"
+        ],
+        "operationId": "post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewPlan"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEmpty"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "plan"
+        ],
+        "operationId": "options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations/{organization}/projects": {
       "get": {
         "tags": [
@@ -1435,12 +1510,161 @@
         }
       }
     },
+    "/v0/organizations/{organization}/usage": {
+      "get": {
+        "tags": [
+          "organizations",
+          "usage"
+        ],
+        "operationId": "get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEntitlements"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "organizations",
+          "usage"
+        ],
+        "operationId": "options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects": {
       "get": {
         "tags": [
           "projects"
         ],
         "operationId": "get_ls",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "public",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "successful operation",
@@ -1499,6 +1723,16 @@
           "projects"
         ],
         "operationId": "dir_options",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "public",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4778,6 +5012,25 @@
       "BranchName": {
         "type": "string"
       },
+      "CardBrand": {
+        "type": "string",
+        "enum": [
+          "amex",
+          "diners",
+          "discover",
+          "jcb",
+          "mastercard",
+          "unionpay",
+          "visa",
+          "unknown"
+        ]
+      },
+      "CardCvc": {
+        "type": "string"
+      },
+      "CardNumber": {
+        "type": "string"
+      },
       "DataStore": {
         "oneOf": [
           {
@@ -4829,6 +5082,14 @@
           "message",
           "request_id"
         ]
+      },
+      "ExpirationMonth": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "ExpirationYear": {
+        "type": "integer",
+        "format": "int32"
       },
       "GitHash": {
         "type": "string"
@@ -5020,6 +5281,52 @@
           "uuid"
         ]
       },
+      "JsonCard": {
+        "type": "object",
+        "properties": {
+          "cvc": {
+            "$ref": "#/components/schemas/CardCvc"
+          },
+          "exp_month": {
+            "$ref": "#/components/schemas/ExpirationMonth"
+          },
+          "exp_year": {
+            "$ref": "#/components/schemas/ExpirationYear"
+          },
+          "number": {
+            "$ref": "#/components/schemas/CardNumber"
+          }
+        },
+        "required": [
+          "cvc",
+          "exp_month",
+          "exp_year",
+          "number"
+        ]
+      },
+      "JsonCardDetails": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/CardBrand"
+          },
+          "exp_month": {
+            "$ref": "#/components/schemas/ExpirationMonth"
+          },
+          "exp_year": {
+            "$ref": "#/components/schemas/ExpirationYear"
+          },
+          "last_four": {
+            "$ref": "#/components/schemas/LastFour"
+          }
+        },
+        "required": [
+          "brand",
+          "exp_month",
+          "exp_year",
+          "last_four"
+        ]
+      },
       "JsonConfig": {
         "type": "object",
         "properties": {
@@ -5089,6 +5396,26 @@
         "required": [
           "token",
           "user"
+        ]
+      },
+      "JsonCustomer": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "$ref": "#/components/schemas/Email"
+          },
+          "name": {
+            "$ref": "#/components/schemas/UserName"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "uuid"
         ]
       },
       "JsonDataStore": {
@@ -5174,7 +5501,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/Plan"
+                "$ref": "#/components/schemas/PlanLevel"
               }
             ]
           }
@@ -5358,15 +5685,26 @@
           "name"
         ]
       },
+      "JsonNewPlan": {
+        "type": "object",
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/JsonCard"
+          },
+          "level": {
+            "$ref": "#/components/schemas/PlanLevel"
+          }
+        },
+        "required": [
+          "card",
+          "level"
+        ]
+      },
       "JsonNewProject": {
         "type": "object",
         "properties": {
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
-          },
-          "public": {
-            "nullable": true,
-            "type": "boolean"
           },
           "slug": {
             "nullable": true,
@@ -5381,6 +5719,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
+          "visibility": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVisibility"
               }
             ]
           }
@@ -5695,6 +6041,50 @@
           "testbeds"
         ]
       },
+      "JsonPlan": {
+        "type": "object",
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/JsonCardDetails"
+          },
+          "current_period_end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "current_period_start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/JsonCustomer"
+          },
+          "level": {
+            "$ref": "#/components/schemas/PlanLevel"
+          },
+          "organization": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanStatus"
+          },
+          "unit_amount": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "card",
+          "current_period_end",
+          "current_period_start",
+          "customer",
+          "level",
+          "organization",
+          "status",
+          "unit_amount"
+        ]
+      },
       "JsonPlus": {
         "type": "object",
         "properties": {
@@ -5760,9 +6150,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "public": {
-            "type": "boolean"
-          },
           "slug": {
             "$ref": "#/components/schemas/Slug"
           },
@@ -5777,14 +6164,17 @@
           "uuid": {
             "type": "string",
             "format": "uuid"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/JsonVisibility"
           }
         },
         "required": [
           "name",
           "organization",
-          "public",
           "slug",
-          "uuid"
+          "uuid",
+          "visibility"
         ]
       },
       "JsonReport": {
@@ -5993,7 +6383,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/Plan"
+                "$ref": "#/components/schemas/PlanLevel"
               }
             ]
           },
@@ -6293,7 +6683,17 @@
           "version"
         ]
       },
+      "JsonVisibility": {
+        "type": "string",
+        "enum": [
+          "public",
+          "private"
+        ]
+      },
       "Jwt": {
+        "type": "string"
+      },
+      "LastFour": {
         "type": "string"
       },
       "LogLevel": {
@@ -6310,12 +6710,25 @@
       "NonEmpty": {
         "type": "string"
       },
-      "Plan": {
+      "PlanLevel": {
         "type": "string",
         "enum": [
-          "Free",
-          "Team",
-          "Enterprise"
+          "free",
+          "team",
+          "enterprise"
+        ]
+      },
+      "PlanStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "canceled",
+          "incomplete",
+          "incomplete_expired",
+          "past_due",
+          "paused",
+          "trialing",
+          "unpaid"
         ]
       },
       "ResourceId": {
@@ -6423,9 +6836,6 @@
       "name": "config"
     },
     {
-      "name": "entitlements"
-    },
-    {
       "name": "invites",
       "description": "Organization Invitations"
     },
@@ -6446,6 +6856,9 @@
     {
       "name": "ping",
       "description": "Ping"
+    },
+    {
+      "name": "plan"
     },
     {
       "name": "projects",
@@ -6471,6 +6884,9 @@
     },
     {
       "name": "tokens"
+    },
+    {
+      "name": "usage"
     },
     {
       "name": "users"
