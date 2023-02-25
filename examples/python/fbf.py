@@ -90,10 +90,10 @@ def run_v4():
     return run(fizz_buzz_fibonacci_memo)
 
 
-def run(fbf):
+def run():
     result = ''
-    for n in range(0, 42):
-        result += f'{fbf(n)}'
+    for n in range(0, 31):
+        result += f'{fizz_buzz_fibonacci(n)}'
     return result
 
 

@@ -26,10 +26,10 @@ def test_run_v4(benchmark):
 
 
 def test_fibonacci(benchmark):
-    result = benchmark(fbf.fibonacci, 7)
-    assert result == 13
+    result = benchmark(fbf.fibonacci, 28)
+    assert result == 317811
 
 
 def test_fibonacci_memo(benchmark):
-    result = benchmark(fbf.fibonacci_memo, 7)
-    assert result == 13
+    result = benchmark(fbf.fibonacci_memo, 28)
+    assert result == 317811
