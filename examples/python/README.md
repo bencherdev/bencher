@@ -1,18 +1,12 @@
-To run sample app:
+To run benchmarks:
 
 ```bash
 pipenv shell
-python fbf.py
+pytest fun_notification.py
 ```
 
 or
 
 ```bash
-pipenv run python fbf.py
-```
-
-To benchmark sample app:
-
-```bash
-pytest benchmarks.py
+pipenv run pytest fun_notification.py
 ```

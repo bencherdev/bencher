@@ -71,3 +71,9 @@ def test_fibonacci(benchmark):
         for n in range(7, 29, 7):
             fibonacci_memo(n)
     benchmark(fibonacci_month)
+
+def test_fun_notification(benchmark):
+    def days_in_month():
+        for n in range(1, 32):
+            fizz_buzz_fibonacci(n)
+    benchmark(days_in_month)
