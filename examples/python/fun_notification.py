@@ -68,6 +68,6 @@ def fibonacci_memo(n):
 
 def test_fibonacci(benchmark):
     def fibonacci_month():
-        for n in range(1, 32, 7):
+        for n in range(7, 29, 7):
             fibonacci(n)
     benchmark(fibonacci_month)
