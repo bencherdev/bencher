@@ -59,15 +59,15 @@ def fibonacci_memo(n):
 
     pad = {0: 0, 1: 1}
 
-    def func(n):
+    def memo(n):
         if n not in pad:
-            pad[n] = func(n-1) + func(n-2)
+            pad[n] = memo(n-1) + memo(n-2)
         return pad[n]
-    return func(n)
+    return memo(n)
 
 
 def test_fibonacci(benchmark):
     def fibonacci_month():
         for n in range(7, 29, 7):
-            fibonacci(n)
+            fibonacci_memo(n)
     benchmark(fibonacci_month)
