@@ -6,12 +6,6 @@ def fizz(n):
     return None
 
 
-def run_v1():
-    """v1"""
-
-    return run(fizz)
-
-
 def fizz_buzz(n):
     """v2"""
 
@@ -21,12 +15,6 @@ def fizz_buzz(n):
     if not n % 5:
         response += 'Buzz'
     return response if response else None
-
-
-def run_v2():
-    """v2"""
-
-    return run(fizz_buzz)
 
 
 def fizz_buzz_fibonacci(n):
@@ -50,12 +38,6 @@ def fibonacci(n):
         return n
     else:
         return fibonacci(n-1) + fibonacci(n-2)
-
-
-def run_v3():
-    """v3"""
-
-    return run(fizz_buzz_fibonacci)
 
 
 def fizz_buzz_fibonacci_memo(n):
@@ -84,17 +66,8 @@ def fibonacci_memo(n):
     return func(n)
 
 
-def run_v4():
-    """v4"""
-
-    return run(fizz_buzz_fibonacci_memo)
-
-
-def run():
-    result = ''
-    for n in range(0, 31):
-        result += f'{fizz_buzz_fibonacci(n)}'
-    return result
-
-
-print(run_v4())
+def test_fibonacci(benchmark):
+    def fibonacci_month():
+        for n in range(1, 32, 7):
+            fibonacci(n)
+    benchmark(fibonacci_month)
