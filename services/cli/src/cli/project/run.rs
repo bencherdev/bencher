@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bencher_json::{BranchName, ResourceId};
 use clap::{Args, Parser, ValueEnum};
 
@@ -79,6 +81,10 @@ pub struct CliRunBranch {
 pub struct CliRunCommand {
     #[clap(flatten)]
     pub shell: CliRunShell,
+
+    /// Benchmark command output file path
+    #[clap(long, requires = "cmd")]
+    pub file: Option<PathBuf>,
 
     /// Benchmark command
     pub cmd: Option<String>,
