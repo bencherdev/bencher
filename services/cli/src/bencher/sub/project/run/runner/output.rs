@@ -1,5 +1,9 @@
 use std::{fmt, process};
 
+use crate::CliError;
+
+use super::command::Command;
+
 #[derive(Debug, Clone, Default)]
 pub struct Output {
     pub status: ExitStatus,
@@ -9,6 +13,19 @@ pub struct Output {
 
 #[derive(Debug, Clone, Default)]
 pub struct ExitStatus(i32);
+
+impl TryFrom<&Command> for Output {
+    type Error = CliError;
+
+    fn try_from(command: &Command) -> Result<Self, Self::Error> {
+        std::process::Command::new(command.shell.to_string())
+            .arg(command.flag.to_string())
+            .arg(&command.cmd)
+            .output()
+            .map(Into::into)
+            .map_err(Into::into)
+    }
+}
 
 impl From<process::Output> for Output {
     fn from(output: process::Output) -> Self {

@@ -4,6 +4,8 @@ use crate::bencher::sub::Output;
 
 #[derive(Error, Debug)]
 pub enum CliError {
+    #[error("Failed to cast integer: {0}")]
+    IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to find Bencher user API token. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable.")]
     TokenNotFound,
     #[error("Invalid resource ID. Must be a valid slug or UUID: {0}")]

@@ -10,7 +10,7 @@ For example if you are parsing Rust
 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
 output, you should use the `rust_bencher` adapter, and not the `magic` or `rust` adapter.
 See our
-[Bencher perf page](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&start_time=2023-01-30T00%3A00%3A00.000Z&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5)
+[Bencher perf page](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
 for a good comparison.
 
 ## 🪄 Magic <small>(default)</small>
@@ -138,7 +138,8 @@ The `lower_bound` and `upper_bound` are the interquartile range below and above 
 
 ## 🐍 Python Pytest
 
-The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
+The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` argument to specify that file path (ie `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
 The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 
 There are two options for the Metric:
@@ -146,8 +147,6 @@ There are two options for the Metric:
 - `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
 
 This can be specified in the `bencher run` CLI command with the optional `--average` flag.
-
-> 🐰 Note: Because this command saves to a results file, that file will need to be read and passed to `bencher run` (ie `bencher run "pytest benchmarks.py --benchmark-json results.json && cat results.json"`).
 
 ## ♦️ Ruby
 
