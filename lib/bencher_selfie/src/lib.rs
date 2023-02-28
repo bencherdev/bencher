@@ -8,8 +8,7 @@ use headless_chrome::{Browser, LaunchOptions};
 const PERF_ID: &str = "#perf";
 
 pub fn screenshot() {
-    let launch_options = LaunchOptions::default();
-    let browser = Browser::new(launch_options).unwrap();
+    let browser = Browser::default().unwrap();
 
     let tab = browser.new_tab().unwrap();
 
