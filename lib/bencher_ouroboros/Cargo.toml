@@ -1,0 +1,7 @@
+[package]
+name = "bencher_ouroboros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+headless_chrome = { version = "1.0", features = ["fetch"] }

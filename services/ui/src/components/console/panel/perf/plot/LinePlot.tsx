@@ -4,6 +4,8 @@ import * as d3 from "d3";
 import { createResource, createSignal } from "solid-js";
 import { get_options } from "../../../../site/util";
 
+const PERF_ID = "perf";
+
 const LinePlot = (props) => {
 	const [max_units, setMaxUnits] = createSignal(1);
 
@@ -66,24 +68,30 @@ const LinePlot = (props) => {
 		});
 
 		if (metrics_found) {
-			return Plot.plot({
-				y: {
-					grid: true,
-					label: `↑ ${units()}`,
-				},
-				marks: plot_arrays,
-				width: props.width(),
-				nice: true,
-				// https://github.com/observablehq/plot/blob/main/README.md#layout-options
-				// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-				marginLeft: max_units() * 10 + 10,
-			});
+			return (
+				<div id={PERF_ID}>
+					{Plot.plot({
+						y: {
+							grid: true,
+							label: `↑ ${units()}`,
+						},
+						marks: plot_arrays,
+						width: props.width(),
+						nice: true,
+						// https://github.com/observablehq/plot/blob/main/README.md#layout-options
+						// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
+						marginLeft: max_units() * 10 + 10,
+					})}
+				</div>
+			);
 		} else {
 			return (
 				<section class="section">
 					<div class="container">
 						<div class="content">
-							<h3>No data found</h3>
+							<div id={PERF_ID}>
+								<h3>No data found</h3>
+							</div>
 						</div>
 					</div>
 				</section>
