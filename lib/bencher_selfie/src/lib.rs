@@ -2,12 +2,13 @@ use std::fs::File;
 use std::io::Write;
 
 use headless_chrome::protocol::cdp::Page;
-use headless_chrome::Browser;
+use headless_chrome::{Browser, FetcherOptions, LaunchOptions};
 
 const PERF_ID: &str = "#perf";
 
 pub fn screenshot() {
-    let browser = Browser::default().unwrap();
+    let launch_options = LaunchOptions::default();
+    let browser = Browser::new(launch_options).unwrap();
 
     let tab = browser.new_tab().unwrap();
 
