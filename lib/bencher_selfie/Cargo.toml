@@ -3,5 +3,8 @@ name = "bencher_selfie"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+browser = []
+
 [dependencies]
 headless_chrome = { version = "1.0", features = ["fetch"] }
