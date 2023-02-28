@@ -6,7 +6,6 @@ edition.workspace = true
 
 [dependencies]
 # Workspace
+anyhow.workspace = true
 clap.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
-# Crate
-anyhow = "1.0"

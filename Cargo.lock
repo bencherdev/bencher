@@ -730,7 +730,9 @@ dependencies = [
 name = "bencher_selfie"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "headless_chrome",
+ "thiserror",
 ]
 
 [[package]]
