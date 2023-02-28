@@ -3,11 +3,15 @@ xtask = "run --manifest-path ./xtask/Cargo.toml --"
 
 [target.'cfg(all()']
 rustflags = [
+    # https://github.com/rust-lang/rust-clippy
+    # warn
     "-Wclippy::all",
     "-Wclippy::pedantic",
-    "-Wclippy::cargo",
     "-Wclippy::restriction",
-    # https://rust-lang.github.io/rust-clippy/master/
+    "-Wclippy::cargo",
+    "-Wclippy::print_stdout",
+    "-Wclippy::print_stderr",
+    # allow
     "-Aclippy::as_conversions",
     "-Aclippy::cargo_common_metadata",
     "-Aclippy::default_numeric_fallback",

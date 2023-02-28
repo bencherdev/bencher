@@ -6,7 +6,9 @@ use headless_chrome::protocol::cdp::Page;
 use headless_chrome::Browser;
 
 // TODO move over to actual id for selector
-// const PERF_ID: &str = "#perf";
+#[cfg(debug_assertions)]
+const PERF_ID: &str = "#perf";
+#[cfg(not(debug_assertions))]
 const PERF_ID: &str = "svg";
 
 pub fn screenshot() {
@@ -44,6 +46,7 @@ mod test {
 
     #[test]
     fn test_screenshot() {
+        println!("Test");
         screenshot();
     }
 }
