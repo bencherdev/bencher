@@ -72,6 +72,8 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v3
+      - name: Install Chromium
+        run: apt install -y chromium-browser
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
 

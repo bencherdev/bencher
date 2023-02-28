@@ -3,9 +3,9 @@ use std::io::Write;
 use std::time::Duration;
 
 use headless_chrome::protocol::cdp::Page;
-use headless_chrome::{Browser, LaunchOptions};
+use headless_chrome::Browser;
 
-const PERF_ID: &str = "#perf";
+// const PERF_ID: &str = "#perf";
 
 pub fn screenshot() {
     let browser = Browser::default().unwrap();
@@ -13,12 +13,12 @@ pub fn screenshot() {
     let tab = browser.new_tab().unwrap();
 
     // Navigate to Bencher
-    tab.navigate_to("http://localhost:3000/perf/the-computer?key=true&branches=d73c01e5-c54b-4481-b2bf-3191c791caa7&tab=benchmarks&testbeds=6ea3ec62-d2c2-4ac1-853a-47e74c0e63c7&benchmarks=25e3855f-f760-4539-ab85-ed9571bfd3cd%2C22b18f5f-faa9-4e0c-8559-f50b37824d92&metric_kind=latency").unwrap();
+    tab.navigate_to("https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&start_time=2023-01-30T00%3A00%3A00.000Z&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5").unwrap();
 
     let timeout = Duration::from_secs(15);
     // Wait for perf plot element to load
     let _perf_element = tab
-        .wait_for_element_with_custom_timeout(PERF_ID, timeout)
+        .wait_for_element_with_custom_timeout("svg", timeout)
         .unwrap();
 
     // Take a screenshot of the entire browser window
