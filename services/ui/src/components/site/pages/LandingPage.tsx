@@ -1,6 +1,11 @@
-import { Link, useNavigate } from "solid-app-router";
+import { useNavigate } from "solid-app-router";
 import { createEffect, For } from "solid-js";
-import { BENCHER_TITLE, pageTitle, validate_jwt } from "../util";
+import {
+	BENCHER_CALENDLY_URL,
+	BENCHER_TITLE,
+	pageTitle,
+	validate_jwt,
+} from "../util";
 
 const LanguageIcon = (props: { icon: string }) => {
 	return (
@@ -33,7 +38,9 @@ const LandingPage = (props) => {
 						production
 					</h4>
 					<div class="columns is-centered">
-						<div class="column is-half">
+						<div class="column is-one-fourth" />
+
+						<div class="column is-one-fourth">
 							<button
 								class="button is-primary is-large is-responsive is-fullwidth"
 								onClick={(e) => {
@@ -44,6 +51,19 @@ const LandingPage = (props) => {
 								Start Now
 							</button>
 						</div>
+
+						<div class="column is-one-fourth">
+							<a
+								class="button is-inverted is-large is-responsive is-fullwidth"
+								href={BENCHER_CALENDLY_URL}
+								target="_blank"
+								rel="noreferrer"
+							>
+								Talk to an engineer
+							</a>
+						</div>
+
+						<div class="column is-one-fourth" />
 					</div>
 				</div>
 			</div>

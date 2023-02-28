@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "solid-app-router";
+import { useNavigate } from "solid-app-router";
 import { createEffect } from "solid-js";
 import Pricing, { PlanLevel } from "../../console/panel/billing/Pricing";
 import { BENCHER_CALENDLY_URL, pageTitle, validate_jwt } from "../util";
@@ -86,8 +86,8 @@ const PricingPage = (props) => {
 									all Public Projects are available here
 								</a>
 								. If you are using Bencher Self-Hosted, then anyone with access
-								to your virtual private cloud (VPC) will likewise be able to see
-								all Public Projects.
+								to your network will likewise be able to see all Public
+								Projects.
 							</p>
 						</div>
 					</div>

@@ -1,10 +1,11 @@
 <h1>
   <a href="https://bencher.dev">
     <img
-      src="https://s3.amazonaws.com/public.bencher.dev/bencher_rabbit_large_white.png"
+      src="https://bencher.dev/favicon/favicon.ico"
       alt="🐰 Bencher"
     />
   </a>
+  Bencher
 </h1>
 
 [Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) tools designed to catch performance regressions in CI. That is, Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
