@@ -1,5 +1,5 @@
 [package]
-name = "bencher_ouroboros"
+name = "bencher_selfie"
 version = "0.1.0"
 edition = "2021"
 

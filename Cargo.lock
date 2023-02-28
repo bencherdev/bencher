@@ -708,13 +708,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_ouroboros"
-version = "0.1.0"
-dependencies = [
- "headless_chrome",
-]
-
-[[package]]
 name = "bencher_plus"
 version = "0.2.39"
 dependencies = [
@@ -731,6 +724,13 @@ dependencies = [
  "once_cell",
  "oso",
  "uuid 1.3.0",
+]
+
+[[package]]
+name = "bencher_selfie"
+version = "0.1.0"
+dependencies = [
+ "headless_chrome",
 ]
 
 [[package]]
