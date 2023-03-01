@@ -22,6 +22,7 @@ export const Navbar = (props) => {
 			<div class="navbar-brand">
 				<Link class="navbar-item" href="/" aria-label="home">
 					<img
+						id="wordmark"
 						src={BENCHER_LOGO_URL}
 						width="152"
 						height="28"

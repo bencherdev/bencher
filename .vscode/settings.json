@@ -49,6 +49,7 @@
     "starttls",
     "thiserror",
     "UNIONPAY",
-    "vcentered"
+    "vcentered",
+    "wordmark"
   ]
 }
