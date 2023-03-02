@@ -63,12 +63,12 @@ impl Backend {
         self.send::<()>(Method::Get, path).await
     }
 
-    pub async fn get_query(
+    pub async fn get_query<T: Serialize + ?Sized>(
         &self,
         path: &str,
-        query: Vec<(String, String)>,
+        query: &T,
     ) -> Result<serde_json::Value, CliError> {
-        self.send::<()>(Method::GetQuery(query), path).await
+        self.send(Method::GetQuery(query), path).await
     }
 
     pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
@@ -145,7 +145,7 @@ impl Backend {
 
 enum Method<T> {
     Get,
-    GetQuery(Vec<(String, String)>),
+    GetQuery(T),
     Post(T),
     Put(T),
     Patch(T),

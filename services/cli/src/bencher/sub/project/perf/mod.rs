@@ -75,7 +75,7 @@ impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
         self.backend
-            .post(&format!("/v0/projects/{}/perf", self.project), &perf)
+            .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;
         Ok(())
     }

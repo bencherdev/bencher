@@ -43,13 +43,16 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
         let query = vec![
-            ("start".into(), self.start.timestamp_millis().to_string()),
-            ("end".into(), self.end.timestamp_millis().to_string()),
+            (
+                "start".to_string(),
+                self.start.timestamp_millis().to_string(),
+            ),
+            ("end".to_string(), self.end.timestamp_millis().to_string()),
         ];
         self.backend
             .get_query(
                 &format!("/v0/organizations/{}/usage", self.organization),
-                query,
+                &query,
             )
             .await?;
         Ok(())

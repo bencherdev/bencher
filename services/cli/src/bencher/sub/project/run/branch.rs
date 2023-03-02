@@ -156,7 +156,7 @@ async fn get_branch(
     let value = backend
         .get_query(
             &format!("/v0/projects/{project}/branches"),
-            vec![("name".into(), branch_name.to_string())],
+            &[("name".to_string(), branch_name.to_string())],
         )
         .await?;
     let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;

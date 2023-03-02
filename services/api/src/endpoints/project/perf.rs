@@ -5,7 +5,7 @@ use bencher_json::{
     JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;

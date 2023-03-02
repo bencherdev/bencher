@@ -44,7 +44,7 @@ impl SubCmd for List {
             self.backend
                 .get_query(
                     "/v0/projects",
-                    vec![("public".into(), self.public.to_string())],
+                    &[("public".to_string(), self.public.to_string())],
                 )
                 .await?;
         }
