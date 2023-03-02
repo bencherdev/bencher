@@ -62,12 +62,18 @@ impl Selfie {
             })?;
         }
 
-        map_err!(tab.capture_screenshot(
+        let jpg = map_err!(tab.capture_screenshot(
             Page::CaptureScreenshotFormatOption::Jpeg,
             None,
             None,
             true
-        ))
+        ))?;
+
+        if map_err!(tab.close_with_unload())? {
+            Ok(jpg)
+        } else {
+            Err(SelfieError::CloseTab(url.into()))
+        }
     }
 }
 

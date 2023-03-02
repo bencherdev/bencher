@@ -24,4 +24,6 @@ pub(crate) use map_err;
 pub enum SelfieError {
     #[error("Failed to take screenshot: {0}")]
     HeadlessChrome(HeadlessChromeError),
+    #[error("Failed to close tab for: {0}")]
+    CloseTab(String),
 }
