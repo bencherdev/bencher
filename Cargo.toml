@@ -8,6 +8,7 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = "1.0"
+async-trait = "0.1"
 chrono = "0.4"
 clap = { version = "4.1", features = ["derive"] }
 derive_more = "0.99"
