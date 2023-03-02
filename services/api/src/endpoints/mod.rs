@@ -87,7 +87,7 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(project::projects::get_one)?;
     // Perf
     api.register(project::perf::options)?;
-    api.register(project::perf::post)?;
+    api.register(project::perf::get)?;
     // Reports
     api.register(project::reports::dir_options)?;
     api.register(project::reports::get_ls)?;

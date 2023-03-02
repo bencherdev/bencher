@@ -179,6 +179,8 @@ pub enum ApiError {
     IntError(#[from] std::num::TryFromIntError),
     #[error("Missing configuration key: {0}")]
     MissingConfigKey(String),
+    #[error("Failed to parse integer: {0}")]
+    BadInt(i64),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },

@@ -5,7 +5,7 @@ use bencher_json::{
     JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -39,6 +39,52 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct DirQuery {
+    pub metric_kind: ResourceId,
+    pub branches: Vec<Uuid>,
+    pub testbeds: Vec<Uuid>,
+    pub benchmarks: Vec<Uuid>,
+    pub start_time: Option<i64>,
+    pub end_time: Option<i64>,
+}
+
+// TODO Figure out why
+// For some reason the chrono::serde helper does not honor the optionality of an Option<DateTime<Utc>>
+// So a second round of marshaling is required
+impl TryFrom<DirQuery> for JsonPerfQuery {
+    type Error = ApiError;
+
+    fn try_from(path_params: DirQuery) -> Result<Self, Self::Error> {
+        let DirQuery {
+            metric_kind,
+            branches,
+            testbeds,
+            benchmarks,
+            start_time,
+            end_time,
+        } = path_params;
+        let start_time = if let Some(start_time) = start_time {
+            Some(serde_json::from_value(serde_json::json!(start_time))?)
+        } else {
+            None
+        };
+        let end_time = if let Some(end_time) = end_time {
+            Some(serde_json::from_value(serde_json::json!(end_time))?)
+        } else {
+            None
+        };
+        Ok(Self {
+            metric_kind,
+            branches,
+            testbeds,
+            benchmarks,
+            start_time,
+            end_time,
+        })
+    }
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -48,27 +94,29 @@ pub struct DirPath {
 pub async fn options(
     _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
+    _query_params: Query<DirQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
 
 #[endpoint {
-    method = POST,
+    method = GET,
     path =  "/v0/projects/{project}/perf",
     tags = ["projects", "perf"]
 }]
-pub async fn post(
+pub async fn get(
     rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
-    body: TypedBody<JsonPerfQuery>,
+    query_params: Query<DirQuery>,
 ) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
+    let json_perf_query = query_params.into_inner().try_into()?;
     let auth_user = AuthUser::new(&rqctx).await.ok();
-    let endpoint = Endpoint::new(PERF_RESOURCE, Method::Post);
+    let endpoint = Endpoint::new(PERF_RESOURCE, Method::GetLs);
 
-    let json = post_inner(
+    let json = get_inner(
         rqctx.context(),
         path_params.into_inner(),
-        body.into_inner(),
+        json_perf_query,
         auth_user.as_ref(),
     )
     .await
@@ -102,7 +150,7 @@ struct Times {
     end_time_nanos: Option<i64>,
 }
 
-async fn post_inner(
+async fn get_inner(
     context: &Context,
     path_params: DirPath,
     json_perf_query: JsonPerfQuery,
