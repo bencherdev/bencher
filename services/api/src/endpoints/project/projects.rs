@@ -1,4 +1,4 @@
-use bencher_json::{JsonProject, ResourceId};
+use bencher_json::{project::JsonProjects, JsonProject, ResourceId};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -27,11 +27,6 @@ use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
-#[derive(Deserialize, JsonSchema)]
-pub struct DirQuery {
-    pub public: Option<bool>,
-}
-
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -40,7 +35,7 @@ pub struct DirQuery {
 }]
 pub async fn dir_options(
     _rqctx: RequestContext<Context>,
-    _query_params: Query<DirQuery>,
+    _query_params: Query<JsonProjects>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -52,7 +47,7 @@ pub async fn dir_options(
 }]
 pub async fn get_ls(
     rqctx: RequestContext<Context>,
-    query_params: Query<DirQuery>,
+    query_params: Query<JsonProjects>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
@@ -76,7 +71,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &Context,
     auth_user: Option<&AuthUser>,
-    query_params: DirQuery,
+    json_projects: JsonProjects,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -85,7 +80,7 @@ async fn get_ls_inner(
     let mut query = schema::project::table.into_boxed();
 
     // All users should just see the public projects if the query is for public projects
-    if let Some(true) = query_params.public {
+    if let Some(true) = json_projects.public {
         query = query.filter(schema::project::visibility.eq(Visibility::Public as i32));
     } else if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&api_context.rbac) {

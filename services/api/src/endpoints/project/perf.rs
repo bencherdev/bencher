@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::perf::{JsonPerfMetric, JsonPerfMetrics},
+    project::perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::{
     context::Context,
     endpoints::{
-        endpoint::{pub_response_accepted, response_accepted, ResponseAccepted},
+        endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -39,52 +39,6 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct DirQuery {
-    pub metric_kind: ResourceId,
-    pub branches: Vec<Uuid>,
-    pub testbeds: Vec<Uuid>,
-    pub benchmarks: Vec<Uuid>,
-    pub start_time: Option<i64>,
-    pub end_time: Option<i64>,
-}
-
-// TODO Figure out why
-// For some reason the chrono::serde helper does not honor the optionality of an Option<DateTime<Utc>>
-// So a second round of marshaling is required
-impl TryFrom<DirQuery> for JsonPerfQuery {
-    type Error = ApiError;
-
-    fn try_from(path_params: DirQuery) -> Result<Self, Self::Error> {
-        let DirQuery {
-            metric_kind,
-            branches,
-            testbeds,
-            benchmarks,
-            start_time,
-            end_time,
-        } = path_params;
-        let start_time = if let Some(start_time) = start_time {
-            Some(serde_json::from_value(serde_json::json!(start_time))?)
-        } else {
-            None
-        };
-        let end_time = if let Some(end_time) = end_time {
-            Some(serde_json::from_value(serde_json::json!(end_time))?)
-        } else {
-            None
-        };
-        Ok(Self {
-            metric_kind,
-            branches,
-            testbeds,
-            benchmarks,
-            start_time,
-            end_time,
-        })
-    }
-}
-
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -94,7 +48,7 @@ impl TryFrom<DirQuery> for JsonPerfQuery {
 pub async fn options(
     _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
-    _query_params: Query<DirQuery>,
+    _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -107,9 +61,14 @@ pub async fn options(
 pub async fn get(
     rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
-    query_params: Query<DirQuery>,
-) -> Result<ResponseAccepted<JsonPerf>, HttpError> {
-    let json_perf_query = query_params.into_inner().try_into()?;
+    query_params: Query<JsonPerfQueryParams>,
+) -> Result<ResponseOk<JsonPerf>, HttpError> {
+    // Second round of marshaling
+    let json_perf_query = query_params
+        .into_inner()
+        .try_into()
+        .map_err(ApiError::from)?;
+
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PERF_RESOURCE, Method::GetLs);
 
@@ -123,9 +82,9 @@ pub async fn get(
     .map_err(|e| endpoint.err(e))?;
 
     if auth_user.is_some() {
-        response_accepted!(endpoint, json)
+        response_ok!(endpoint, json)
     } else {
-        pub_response_accepted!(endpoint, json)
+        pub_response_ok!(endpoint, json)
     }
 }
 
@@ -213,7 +172,6 @@ async fn get_inner(
     })
 }
 
-// #[allow(clippy::type_complexity)]
 type PerfQuery = (
     String,
     i32,
@@ -312,7 +270,6 @@ fn perf_query(
     Ok(())
 }
 
-#[allow(clippy::cast_sign_loss)]
 fn perf_metric(
     (
         uuid,
@@ -328,10 +285,10 @@ fn perf_metric(
 ) -> Option<JsonPerfMetric> {
     Some(JsonPerfMetric {
         uuid: Uuid::from_str(&uuid).map_err(api_error!()).ok()?,
-        iteration: iteration as u32,
+        iteration: u32::try_from(iteration).ok()?,
         start_time: to_date_time(start_time).ok()?,
         end_time: to_date_time(end_time).ok()?,
-        version_number: version_number as u32,
+        version_number: u32::try_from(version_number).ok()?,
         version_hash,
         metric: JsonMetric {
             value: value.into(),

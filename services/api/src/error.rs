@@ -1,3 +1,4 @@
+use bencher_json::project::perf::UrlEncodedError;
 #[cfg(feature = "plus")]
 use bencher_json::ResourceId;
 use bencher_rbac::{Organization, Project};
@@ -181,6 +182,8 @@ pub enum ApiError {
     MissingConfigKey(String),
     #[error("Failed to parse integer: {0}")]
     BadInt(i64),
+    #[error("Failed to parse URL encoding: {0}")]
+    UrlEncoded(#[from] UrlEncodedError),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },

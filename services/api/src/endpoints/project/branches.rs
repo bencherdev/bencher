@@ -1,4 +1,4 @@
-use bencher_json::{JsonBranch, JsonNewBranch, ResourceId};
+use bencher_json::{project::branch::JsonBranches, JsonBranch, JsonNewBranch, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -35,11 +35,6 @@ pub struct DirPath {
     pub project: ResourceId,
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct DirQuery {
-    pub name: Option<String>,
-}
-
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -49,7 +44,7 @@ pub struct DirQuery {
 pub async fn dir_options(
     _rqctx: RequestContext<Context>,
     _path_params: Path<DirPath>,
-    _query_params: Query<DirQuery>,
+    _query_params: Query<JsonBranches>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -62,7 +57,7 @@ pub async fn dir_options(
 pub async fn get_ls(
     rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
-    query_params: Query<DirQuery>,
+    query_params: Query<JsonBranches>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
@@ -88,7 +83,7 @@ async fn get_ls_inner(
     context: &Context,
     auth_user: Option<&AuthUser>,
     path_params: DirPath,
-    query_params: DirQuery,
+    json_branches: JsonBranches,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -100,7 +95,7 @@ async fn get_ls_inner(
         .filter(schema::branch::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = query_params.name {
+    if let Some(name) = json_branches.name {
         query = query.filter(schema::branch::name.eq(name));
     }
 

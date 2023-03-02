@@ -23,5 +23,8 @@ schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true
 serde_json.workspace = true
 slug.workspace = true
+thiserror.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
+# Create
+serde_urlencoded = "0.7"

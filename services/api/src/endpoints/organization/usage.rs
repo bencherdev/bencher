@@ -1,9 +1,8 @@
 #![cfg(feature = "plus")]
 
+use bencher_json::organization::usage::JsonUsage;
 use bencher_json::{organization::entitlements::JsonEntitlements, ResourceId};
 use bencher_rbac::organization::Permission;
-use chrono::serde::ts_milliseconds::deserialize as from_milli_ts;
-use chrono::{DateTime, Utc};
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -30,14 +29,6 @@ pub struct GetParams {
     pub organization: ResourceId,
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct DirQuery {
-    #[serde(deserialize_with = "from_milli_ts")]
-    pub start: DateTime<Utc>,
-    #[serde(deserialize_with = "from_milli_ts")]
-    pub end: DateTime<Utc>,
-}
-
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -47,7 +38,7 @@ pub struct DirQuery {
 pub async fn options(
     _rqctx: RequestContext<Context>,
     _path_params: Path<GetParams>,
-    _query_params: Query<DirQuery>,
+    _query_params: Query<JsonUsage>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<Context>())
 }
@@ -60,7 +51,7 @@ pub async fn options(
 pub async fn get(
     rqctx: RequestContext<Context>,
     path_params: Path<GetParams>,
-    query_params: Query<DirQuery>,
+    query_params: Query<JsonUsage>,
 ) -> Result<ResponseOk<JsonEntitlements>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(USAGE_RESOURCE, Method::GetOne);
@@ -80,7 +71,7 @@ pub async fn get(
 async fn get_inner(
     context: &Context,
     path_params: GetParams,
-    query_params: DirQuery,
+    json_usage: JsonUsage,
     auth_user: &AuthUser,
 ) -> Result<JsonEntitlements, ApiError> {
     let api_context = &mut *context.lock().await;
@@ -93,7 +84,7 @@ async fn get_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
-    let DirQuery { start, end } = query_params;
+    let JsonUsage { start, end } = json_usage;
     let start_time = start.timestamp_nanos();
     let end_time = end.timestamp_nanos();
 

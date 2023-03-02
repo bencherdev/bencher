@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use bencher_json::{
-    project::branch::{JsonStartPoint, BRANCH_MAIN_STR},
+    project::branch::{JsonBranches, JsonStartPoint, BRANCH_MAIN_STR},
     BranchName, JsonBranch, JsonNewBranch, ResourceId,
 };
 
@@ -156,7 +156,9 @@ async fn get_branch(
     let value = backend
         .get_query(
             &format!("/v0/projects/{project}/branches"),
-            &[("name".to_string(), branch_name.to_string())],
+            &JsonBranches {
+                name: Some(branch_name.to_string()),
+            },
         )
         .await?;
     let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;

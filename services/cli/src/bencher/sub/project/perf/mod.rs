@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_json::project::perf::JsonPerfQueryParams;
 use bencher_json::{JsonPerfQuery, ResourceId};
+use chrono::serde::ts_milliseconds_option::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -41,8 +43,8 @@ impl TryFrom<CliPerf> for Perf {
             branches,
             testbeds,
             benchmarks,
-            start_time,
-            end_time,
+            start_time: from_milli_ts(serde_json::json!(start_time))?,
+            end_time: from_milli_ts(serde_json::json!(end_time))?,
             backend: backend.try_into()?,
         })
     }
@@ -73,7 +75,7 @@ impl From<Perf> for JsonPerfQuery {
 #[async_trait]
 impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
-        let perf: JsonPerfQuery = self.clone().into();
+        let perf: JsonPerfQueryParams = JsonPerfQuery::from(self.clone()).try_into()?;
         self.backend
             .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;

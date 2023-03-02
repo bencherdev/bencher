@@ -1,3 +1,4 @@
+use bencher_json::project::perf::UrlEncodedError;
 use thiserror::Error;
 
 use crate::bencher::sub::Output;
@@ -28,8 +29,6 @@ pub enum CliError {
     BranchName(String, String, usize),
     #[error("Alerts detected.")]
     Alerts,
-    #[error("Failed to clone backend")]
-    CloneBackend,
     #[error("Failed to send after {0} attempt(s)")]
     Send(usize),
     #[error("Arithmetic error")]
@@ -57,4 +56,6 @@ pub enum CliError {
     Adapter(#[from] bencher_adapter::AdapterError),
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_json::ValidError),
+    #[error("Failed to parse URL encoding: {0}")]
+    UrlEncoded(#[from] UrlEncodedError),
 }

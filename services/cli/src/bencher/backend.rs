@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use bencher_json::{Jwt, Url};
+use reqwest::{Client, RequestBuilder};
 use serde::Serialize;
 use tokio::time::{sleep, Duration};
 
@@ -68,6 +69,7 @@ impl Backend {
         path: &str,
         query: &T,
     ) -> Result<serde_json::Value, CliError> {
+        println!("{}", serde_json::to_string(query).unwrap());
         self.send(Method::GetQuery(query), path).await
     }
 
@@ -102,28 +104,13 @@ impl Backend {
     {
         let client = reqwest::Client::new();
         let url = self.host.join(path)?.to_string();
-        let mut builder = match method {
-            Method::Get => client.get(&url),
-            Method::GetQuery(query) => client.get(&url).query(&query),
-            Method::Post(json) => client.post(&url).json(json),
-            Method::Put(json) => client.put(&url).json(json),
-            Method::Patch(json) => client.patch(&url).json(json),
-            Method::Delete => client.delete(&url),
-        };
-        if let Some(token) = &self.token {
-            builder = builder.header("Authorization", format!("Bearer {token}"));
-        }
 
         let attempts = self.attempts.unwrap_or(DEFAULT_ATTEMPTS);
         let max_attempts = attempts.checked_sub(1).ok_or(CliError::BadMath)?;
         let retry_after = self.retry_after.unwrap_or(DEFAULT_RETRY_AFTER);
+
         for attempt in 0..attempts {
-            match builder
-                .try_clone()
-                .ok_or(CliError::CloneBackend)?
-                .send()
-                .await
-            {
+            match self.builder(&client, &method, &url).send().await {
                 Ok(res) => {
                     let json = res.json().await?;
                     cli_println!("{}", serde_json::to_string_pretty(&json)?);
@@ -140,6 +127,24 @@ impl Backend {
         }
 
         Err(CliError::Send(attempts))
+    }
+
+    fn builder<T>(&self, client: &Client, method: &Method<T>, url: &str) -> RequestBuilder
+    where
+        T: Serialize,
+    {
+        let mut builder = match method {
+            Method::Get => client.get(url),
+            Method::GetQuery(query) => client.get(url).query(&query),
+            Method::Post(json) => client.post(url).json(json),
+            Method::Put(json) => client.put(url).json(json),
+            Method::Patch(json) => client.patch(url).json(json),
+            Method::Delete => client.delete(url),
+        };
+        if let Some(token) = &self.token {
+            builder = builder.header("Authorization", format!("Bearer {token}"));
+        }
+        builder
     }
 }
 

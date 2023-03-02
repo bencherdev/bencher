@@ -3,7 +3,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::ResourceId;
+use bencher_json::{organization::usage::JsonUsage, ResourceId};
+use chrono::serde::ts_milliseconds::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
     CliError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Usage {
     pub organization: ResourceId,
     pub start: DateTime<Utc>,
@@ -30,29 +31,31 @@ impl TryFrom<CliOrganizationUsage> for Usage {
             end,
             backend,
         } = usage;
+
         Ok(Self {
             organization,
-            start,
-            end,
+            start: from_milli_ts(serde_json::json!(start))?,
+            end: from_milli_ts(serde_json::json!(end))?,
             backend: backend.try_into()?,
         })
+    }
+}
+
+impl From<Usage> for JsonUsage {
+    fn from(usage: Usage) -> Self {
+        let Usage { start, end, .. } = usage;
+        Self { start, end }
     }
 }
 
 #[async_trait]
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
-        let query = vec![
-            (
-                "start".to_string(),
-                self.start.timestamp_millis().to_string(),
-            ),
-            ("end".to_string(), self.end.timestamp_millis().to_string()),
-        ];
+        let json_usage: JsonUsage = self.clone().into();
         self.backend
             .get_query(
                 &format!("/v0/organizations/{}/usage", self.organization),
-                &query,
+                &json_usage,
             )
             .await?;
         Ok(())

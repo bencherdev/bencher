@@ -1,5 +1,4 @@
 use bencher_json::ResourceId;
-use chrono::{DateTime, Utc};
 use clap::Parser;
 use uuid::Uuid;
 
@@ -29,11 +28,11 @@ pub struct CliPerf {
 
     /// Start time
     #[clap(long)]
-    pub start_time: Option<DateTime<Utc>>,
+    pub start_time: Option<i64>,
 
     /// End time
     #[clap(long)]
-    pub end_time: Option<DateTime<Utc>>,
+    pub end_time: Option<i64>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

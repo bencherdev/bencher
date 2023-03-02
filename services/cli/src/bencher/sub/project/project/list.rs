@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::ResourceId;
+use bencher_json::{project::JsonProjects, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -9,7 +9,7 @@ use crate::{
     CliError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct List {
     pub org: Option<ResourceId>,
     pub public: bool,
@@ -33,6 +33,15 @@ impl TryFrom<CliProjectList> for List {
     }
 }
 
+impl From<List> for JsonProjects {
+    fn from(list: List) -> Self {
+        let List { public, .. } = list;
+        Self {
+            public: Some(public),
+        }
+    }
+}
+
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
@@ -41,11 +50,9 @@ impl SubCmd for List {
                 .get(&format!("/v0/organizations/{org}/projects"))
                 .await?;
         } else {
+            let json_projects: JsonProjects = self.clone().into();
             self.backend
-                .get_query(
-                    "/v0/projects",
-                    &[("public".to_string(), self.public.to_string())],
-                )
+                .get_query("/v0/projects", &json_projects)
                 .await?;
         }
 

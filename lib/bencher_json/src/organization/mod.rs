@@ -10,6 +10,8 @@ pub mod entitlements;
 pub mod member;
 #[cfg(feature = "plus")]
 pub mod metered;
+#[cfg(feature = "plus")]
+pub mod usage;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
