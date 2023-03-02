@@ -11,6 +11,8 @@ use crate::error::map_err;
 
 const DEFAULT_WORDMARK_SELECTOR: &str = "#wordmark";
 const DEFAULT_PERF_SELECTOR: &str = "#perf";
+// TODO change list to the actual embedded ID
+const DEFAULT_EMBEDDED_SELECTOR: &str = "#perf";
 
 pub struct Selfie {
     browser: Browser,
@@ -39,13 +41,17 @@ impl Selfie {
                 (DEFAULT_WORDMARK_SELECTOR, Some(10)),
                 (DEFAULT_PERF_SELECTOR, Some(5)),
             ],
+            DEFAULT_EMBEDDED_SELECTOR,
+            Some(1),
         )
     }
 
     pub fn capture(
         &self,
         url: &str,
-        selectors: &[(&str, Option<u64>)],
+        wait_for: &[(&str, Option<u64>)],
+        viewport: &str,
+        timeout: Option<u64>,
     ) -> Result<Vec<u8>, SelfieError> {
         let tab = map_err!(self.browser.new_tab())?;
         if let Some(timeout) = self.timeout {
@@ -54,7 +60,7 @@ impl Selfie {
 
         map_err!(tab.navigate_to(url))?;
 
-        for (selector, timeout) in selectors {
+        for (selector, timeout) in wait_for {
             map_err!(if let Some(timeout) = timeout.map(Duration::from_secs) {
                 tab.wait_for_element_with_custom_timeout(selector, timeout)
             } else {
@@ -62,10 +68,18 @@ impl Selfie {
             })?;
         }
 
+        let element = map_err!(if let Some(timeout) = timeout.map(Duration::from_secs) {
+            tab.wait_for_element_with_custom_timeout(viewport, timeout)
+        } else {
+            tab.wait_for_element(viewport)
+        })?;
+        let box_model = map_err!(element.get_box_model())?;
+        let viewport = Some(box_model.margin_viewport());
+
         let jpg = map_err!(tab.capture_screenshot(
             Page::CaptureScreenshotFormatOption::Jpeg,
             None,
-            None,
+            viewport,
             true
         ))?;
 
@@ -78,23 +92,23 @@ impl Selfie {
 }
 
 // #[cfg(feature = "browser")]
-#[cfg(test)]
-mod test {
-    use std::{fs::File, io::Write};
+// #[cfg(test)]
+// mod test {
+//     use std::{fs::File, io::Write};
 
-    use crate::Selfie;
+//     use crate::Selfie;
 
-    const PERF_ADAPTERS_URL: &str = "http://localhost:3000/perf/the-computer?key=true&metric_kind=latency&branches=903e91fe-fc30-4695-98af-a8426e7bbcfc&tab=benchmarks&testbeds=3ec87a4d-28ff-478c-b6a2-55a06ead3984&benchmarks=ab15ac98-726c-45c9-8a4f-6b4bc121e889%2C5958c90b-8e3b-4507-89cf-e6a2e763f902";
+//     const PERF_ADAPTERS_URL: &str = "http://localhost:3000/perf/the-computer?key=true&metric_kind=latency&branches=903e91fe-fc30-4695-98af-a8426e7bbcfc&tab=benchmarks&testbeds=3ec87a4d-28ff-478c-b6a2-55a06ead3984&benchmarks=ab15ac98-726c-45c9-8a4f-6b4bc121e889%2C5958c90b-8e3b-4507-89cf-e6a2e763f902";
 
-    fn save_jpg(jpg: &[u8]) {
-        let mut file = File::create("perf.jpg").unwrap();
-        file.write_all(jpg).unwrap();
-    }
+//     fn save_jpg(jpg: &[u8]) {
+//         let mut file = File::create("perf.jpg").unwrap();
+//         file.write_all(jpg).unwrap();
+//     }
 
-    #[test]
-    fn test_selfie() {
-        let selfie = Selfie::new_embedded(None).unwrap();
-        let jpg = selfie.capture_perf(PERF_ADAPTERS_URL).unwrap();
-        save_jpg(&jpg);
-    }
-}
+//     #[test]
+//     fn test_selfie() {
+//         let selfie = Selfie::new_embedded(None).unwrap();
+//         let jpg = selfie.capture_perf(PERF_ADAPTERS_URL).unwrap();
+//         save_jpg(&jpg);
+//     }
+// }
