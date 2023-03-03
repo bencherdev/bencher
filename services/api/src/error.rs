@@ -1,4 +1,4 @@
-use bencher_json::project::perf::UrlEncodedError;
+use bencher_json::urlencoded::UrlEncodedError;
 #[cfg(feature = "plus")]
 use bencher_json::ResourceId;
 use bencher_rbac::{Organization, Project};

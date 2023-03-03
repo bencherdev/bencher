@@ -4,9 +4,11 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use uuid::Uuid;
 
+use crate::urlencoded::comma_separated_list;
+use crate::urlencoded::urlencoded_list;
+use crate::urlencoded::UrlEncodedError;
 use crate::ResourceId;
 
 use super::metric::JsonMetric;
@@ -39,18 +41,6 @@ pub struct JsonPerfQuery {
     #[serde(serialize_with = "to_milli_ts")]
     #[serde(deserialize_with = "from_milli_ts")]
     pub end_time: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Error)]
-pub enum UrlEncodedError {
-    #[error("{0}")]
-    SerdeJson(#[from] serde_json::Error),
-    #[error("{0}")]
-    Serialize(#[from] serde_urlencoded::ser::Error),
-    #[error("{0}")]
-    Deserialize(#[from] serde_urlencoded::de::Error),
-    #[error("{0}")]
-    Uuid(#[from] uuid::Error),
 }
 
 impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
@@ -121,46 +111,6 @@ impl TryFrom<JsonPerfQuery> for JsonPerfQueryParams {
             end_time,
         })
     }
-}
-
-const COMMA: &str = "%2C";
-
-fn comma_separated_list(list: &str) -> Result<Vec<Uuid>, UrlEncodedError> {
-    let mut values = Vec::new();
-    for value in list.split(COMMA) {
-        values.push(value.parse()?);
-    }
-    Ok(values)
-}
-
-fn urlencoded_list<T>(values: &[T]) -> Result<String, UrlEncodedError>
-where
-    T: Serialize,
-{
-    let mut list: Option<String> = None;
-    for value in values {
-        let element = urlencoded(value)?;
-        if let Some(list) = list.as_mut() {
-            list.push_str(COMMA);
-            list.push_str(&element);
-        } else {
-            list = Some(element);
-        }
-    }
-
-    Ok(list.unwrap_or_default())
-}
-
-fn urlencoded<T>(value: T) -> Result<String, UrlEncodedError>
-where
-    T: Serialize,
-{
-    const KEY: &str = "_x";
-    const KEY_EQUAL: &str = "_x=";
-    Ok(serde_urlencoded::to_string([(KEY, value)])?
-        .strip_prefix(KEY_EQUAL)
-        .unwrap_or_default()
-        .to_string())
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

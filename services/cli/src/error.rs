@@ -1,4 +1,4 @@
-use bencher_json::project::perf::UrlEncodedError;
+use bencher_json::urlencoded::UrlEncodedError;
 use thiserror::Error;
 
 use crate::bencher::sub::Output;
