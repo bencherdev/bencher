@@ -2,8 +2,6 @@ use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
-const COMMA: &str = "%2C";
-
 #[derive(Debug, Error)]
 pub enum UrlEncodedError {
     #[error("JSON: {0}")]
@@ -33,7 +31,7 @@ where
     for value in values {
         let element = urlencoded(value)?;
         if let Some(list) = list.as_mut() {
-            list.push_str(COMMA);
+            list.push(',');
             list.push_str(&element);
         } else {
             list = Some(element);

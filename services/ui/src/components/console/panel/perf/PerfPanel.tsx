@@ -217,7 +217,6 @@ const PerfPanel = (props) => {
 		const url = `${props.config?.plot?.url(
 			props.path_params(),
 		)}?${search_params.toString()}`;
-		console.log(url);
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => resp?.data)
 			.catch((error) => {
