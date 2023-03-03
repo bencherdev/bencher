@@ -60,16 +60,8 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         let testbeds = comma_separated_list(&testbeds)?;
         let benchmarks = comma_separated_list(&benchmarks)?;
 
-        let start_time = if let Some(start_time) = start_time {
-            Some(serde_json::from_value(serde_json::json!(start_time))?)
-        } else {
-            None
-        };
-        let end_time = if let Some(end_time) = end_time {
-            Some(serde_json::from_value(serde_json::json!(end_time))?)
-        } else {
-            None
-        };
+        let start_time = from_milli_ts(serde_json::json!(start_time))?;
+        let end_time = from_milli_ts(serde_json::json!(end_time))?;
 
         Ok(Self {
             metric_kind,
