@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::project::perf::JsonPerfQueryParams;
 use bencher_json::{JsonPerfQuery, ResourceId};
 use chrono::serde::ts_milliseconds_option::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
@@ -75,7 +74,7 @@ impl From<Perf> for JsonPerfQuery {
 #[async_trait]
 impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
-        let perf: JsonPerfQueryParams = JsonPerfQuery::from(self.clone()).try_into()?;
+        let perf: JsonPerfQuery = self.clone().into();
         self.backend
             .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;

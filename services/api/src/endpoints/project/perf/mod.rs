@@ -32,6 +32,8 @@ use crate::{
 
 use super::Resource;
 
+pub mod img;
+
 const PERF_RESOURCE: Resource = Resource::Perf;
 
 #[derive(Deserialize, JsonSchema)]

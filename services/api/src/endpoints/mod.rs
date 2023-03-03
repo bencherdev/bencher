@@ -79,8 +79,7 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(organization::usage::get)?;
 
     // Projects
-    // All of a projects's GET APIs and its Perf POST API
-    // are public if the project is public
+    // All of a projects's GET APIs are public if the project is public
     api.register(project::projects::dir_options)?;
     api.register(project::projects::get_ls)?;
     api.register(project::projects::one_options)?;
@@ -88,6 +87,9 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Perf
     api.register(project::perf::options)?;
     api.register(project::perf::get)?;
+    // Perf Image
+    api.register(project::perf::img::options)?;
+    api.register(project::perf::img::get)?;
     // Reports
     api.register(project::reports::dir_options)?;
     api.register(project::reports::get_ls)?;
@@ -97,6 +99,12 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     // Results
     api.register(project::results::one_options)?;
     api.register(project::results::get_one)?;
+    // Metric Kinds
+    api.register(project::metric_kinds::dir_options)?;
+    api.register(project::metric_kinds::get_ls)?;
+    api.register(project::metric_kinds::post)?;
+    api.register(project::metric_kinds::one_options)?;
+    api.register(project::metric_kinds::get_one)?;
     // Branches
     api.register(project::branches::dir_options)?;
     api.register(project::branches::get_ls)?;
@@ -114,12 +122,6 @@ fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
     api.register(project::benchmarks::get_ls)?;
     api.register(project::benchmarks::one_options)?;
     api.register(project::benchmarks::get_one)?;
-    // Metric Kinds
-    api.register(project::metric_kinds::dir_options)?;
-    api.register(project::metric_kinds::get_ls)?;
-    api.register(project::metric_kinds::post)?;
-    api.register(project::metric_kinds::one_options)?;
-    api.register(project::metric_kinds::get_one)?;
     // Thresholds
     api.register(project::thresholds::dir_options)?;
     api.register(project::thresholds::get_ls)?;

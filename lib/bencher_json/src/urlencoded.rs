@@ -1,6 +1,5 @@
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use thiserror::Error;
-use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum UrlEncodedError {
@@ -12,24 +11,43 @@ pub enum UrlEncodedError {
     Deserialize(#[from] serde_urlencoded::de::Error),
     #[error("UUID: {0}")]
     Uuid(#[from] uuid::Error),
+    #[error("URL: {0}")]
+    Url(#[from] url::ParseError),
+    #[error("Vec: {0:#?}")]
+    Vec(Vec<(&'static str, Option<String>)>),
+    #[error("urlencoded: {0}")]
+    Urlencoded(String),
 }
 
-pub fn comma_separated_list(list: &str) -> Result<Vec<Uuid>, UrlEncodedError> {
+pub fn from_urlencoded_list<T>(list: &str) -> Result<Vec<T>, UrlEncodedError>
+where
+    T: DeserializeOwned,
+{
     let mut values = Vec::new();
     for value in list.split(',') {
-        println!("{value}");
-        values.push(value.parse()?);
+        values.push(from_urlencoded(value)?);
     }
     Ok(values)
 }
 
-pub fn urlencoded_list<T>(values: &[T]) -> Result<String, UrlEncodedError>
+pub fn from_urlencoded<T>(input: &str) -> Result<T, UrlEncodedError>
+where
+    T: DeserializeOwned,
+{
+    let urlencoded = format!("{input}=");
+    Ok(serde_urlencoded::from_str::<Vec<(T, String)>>(&urlencoded)?
+        .pop()
+        .ok_or_else(|| UrlEncodedError::Urlencoded(input.into()))?
+        .0)
+}
+
+pub fn to_urlencoded_list<T>(values: &[T]) -> Result<String, UrlEncodedError>
 where
     T: Serialize,
 {
     let mut list: Option<String> = None;
     for value in values {
-        let element = urlencoded(value)?;
+        let element = to_urlencoded(value)?;
         if let Some(list) = list.as_mut() {
             list.push(',');
             list.push_str(&element);
@@ -40,14 +58,12 @@ where
     Ok(list.unwrap_or_default())
 }
 
-fn urlencoded<T>(value: T) -> Result<String, UrlEncodedError>
+pub fn to_urlencoded<T>(value: &T) -> Result<String, UrlEncodedError>
 where
     T: Serialize,
 {
-    const KEY: &str = "_x";
-    const KEY_EQUAL: &str = "_x=";
-    Ok(serde_urlencoded::to_string([(KEY, value)])?
-        .strip_prefix(KEY_EQUAL)
+    Ok(serde_urlencoded::to_string([(value, "")])?
+        .strip_suffix('=')
         .unwrap_or_default()
         .to_string())
 }
