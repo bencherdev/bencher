@@ -49,6 +49,8 @@ pub enum UrlEncodedError {
     Serialize(#[from] serde_urlencoded::ser::Error),
     #[error("{0}")]
     Deserialize(#[from] serde_urlencoded::de::Error),
+    #[error("{0}")]
+    Uuid(#[from] uuid::Error),
 }
 
 impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
@@ -64,9 +66,9 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             end_time,
         } = query_params;
 
-        let branches = serde_urlencoded::from_str(&branches)?;
-        let testbeds = serde_urlencoded::from_str(&testbeds)?;
-        let benchmarks = serde_urlencoded::from_str(&benchmarks)?;
+        let branches = comma_separated_list(&branches)?;
+        let testbeds = comma_separated_list(&testbeds)?;
+        let benchmarks = comma_separated_list(&benchmarks)?;
 
         let start_time = if let Some(start_time) = start_time {
             Some(serde_json::from_value(serde_json::json!(start_time))?)
@@ -122,6 +124,14 @@ impl TryFrom<JsonPerfQuery> for JsonPerfQueryParams {
 }
 
 const COMMA: &str = "%2C";
+
+fn comma_separated_list(list: &str) -> Result<Vec<Uuid>, UrlEncodedError> {
+    let mut values = Vec::new();
+    for value in list.split(COMMA) {
+        values.push(value.parse()?);
+    }
+    Ok(values)
+}
 
 fn urlencoded_list<T>(values: &[T]) -> Result<String, UrlEncodedError>
 where
