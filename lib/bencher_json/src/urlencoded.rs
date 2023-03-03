@@ -6,19 +6,20 @@ const COMMA: &str = "%2C";
 
 #[derive(Debug, Error)]
 pub enum UrlEncodedError {
-    #[error("{0}")]
+    #[error("JSON: {0}")]
     SerdeJson(#[from] serde_json::Error),
-    #[error("{0}")]
+    #[error("Serialize urlencoded: {0}")]
     Serialize(#[from] serde_urlencoded::ser::Error),
-    #[error("{0}")]
+    #[error("Deserialize urlencoded: {0}")]
     Deserialize(#[from] serde_urlencoded::de::Error),
-    #[error("{0}")]
+    #[error("UUID: {0}")]
     Uuid(#[from] uuid::Error),
 }
 
 pub fn comma_separated_list(list: &str) -> Result<Vec<Uuid>, UrlEncodedError> {
     let mut values = Vec::new();
-    for value in list.split(COMMA) {
+    for value in list.split(',') {
+        println!("{value}");
         values.push(value.parse()?);
     }
     Ok(values)

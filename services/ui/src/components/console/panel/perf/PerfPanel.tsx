@@ -177,8 +177,8 @@ const PerfPanel = (props) => {
 			testbeds: testbeds(),
 			benchmarks: benchmarks(),
 			metric_kind: metric_kind(),
-			start_time: time_to_date_iso(start_time()),
-			end_time: time_to_date_iso(end_time()),
+			start_time: start_time(),
+			end_time: end_time(),
 		};
 	});
 
@@ -202,14 +202,23 @@ const PerfPanel = (props) => {
 		};
 	});
 
-	const postQuery = async (fetcher) => {
+	const get_perf = async (fetcher) => {
 		const EMPTY_OBJECT = {};
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
 			return EMPTY_OBJECT;
 		}
-		const url = props.config?.plot?.url(props.path_params());
-		return await axios(post_options(url, fetcher.token, fetcher.perf_query))
+		const search_params = new URLSearchParams();
+		for (const [key, value] of Object.entries(fetcher.perf_query)) {
+			if (value) {
+				search_params.set(key, value);
+			}
+		}
+		const url = `${props.config?.plot?.url(
+			props.path_params(),
+		)}?${search_params.toString()}`;
+		console.log(url);
+		return await axios(get_options(url, fetcher.token))
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
@@ -217,7 +226,7 @@ const PerfPanel = (props) => {
 			});
 	};
 
-	const [perf_data] = createResource(perf_query_fetcher, postQuery);
+	const [perf_data] = createResource(perf_query_fetcher, get_perf);
 
 	const project_fetcher = createMemo(() => {
 		return {
