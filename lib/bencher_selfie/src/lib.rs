@@ -9,10 +9,10 @@ pub use error::{HeadlessChromeError, SelfieError};
 
 use crate::error::map_err;
 
-const DEFAULT_WORDMARK_SELECTOR: &str = "#wordmark";
-const DEFAULT_PERF_SELECTOR: &str = "#perf";
+const DEFAULT_WORDMARK_SELECTOR: &str = "img";
+const DEFAULT_PERF_SELECTOR: &str = "svg";
 // TODO change list to the actual embedded ID
-const DEFAULT_EMBEDDED_SELECTOR: &str = "#perf";
+const DEFAULT_EMBEDDED_SELECTOR: &str = "svg";
 
 pub struct Selfie {
     browser: Browser,
