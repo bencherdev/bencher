@@ -56,7 +56,7 @@ pub async fn get(
 
     let endpoint = Endpoint::new(PERF_IMG_RESOURCE, Method::GetLs);
 
-    let jpg = get_inner(rqctx.context(), path_params.into_inner(), json_perf_query)
+    let jpeg = get_inner(rqctx.context(), path_params.into_inner(), json_perf_query)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -64,7 +64,7 @@ pub async fn get(
         .status(StatusCode::OK)
         .header(http::header::CONTENT_TYPE, "image/jpeg")
         .header(http::header::CACHE_CONTROL, "private, max-age=0, no-cache")
-        .body(jpg.into())
+        .body(jpeg.into())
         .map_err(Into::into)
 }
 

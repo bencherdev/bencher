@@ -9,7 +9,7 @@ COPY --from=builder /usr/src/target/release/api /api
 RUN mkdir -p /data
 
 RUN apt-get update \
-    && apt-get install -y sqlite3 chromium wget sudo systemctl
+    && apt-get install -y sqlite3 chromium-browser wget sudo systemctl
 
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64.deb
 RUN dpkg -i litestream-v0.3.9-linux-amd64.deb

@@ -95,12 +95,12 @@ impl Selfie {
             tab.wait_for_element(viewport)
         })?;
         let box_model = map_err!(element.get_box_model())?;
-        let viewport = Some(box_model.margin_viewport());
+        let _viewport = Some(box_model.margin_viewport());
 
         map_err!(tab.capture_screenshot(
             Page::CaptureScreenshotFormatOption::Jpeg,
             None,
-            viewport,
+            None,
             true
         ))
     }
