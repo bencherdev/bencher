@@ -607,6 +607,7 @@ dependencies = [
  "diesel_migrations",
  "dropshot",
  "http",
+ "hyper",
  "jsonwebtoken",
  "literally",
  "mail-send",

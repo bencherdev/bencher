@@ -1,17 +1,16 @@
-use bencher_json::{project::perf::JsonPerfQueryParams, JsonEmpty, JsonPerfQuery, ResourceId};
+use bencher_json::{project::perf::JsonPerfQueryParams, JsonPerfQuery, ResourceId};
 
+use bencher_selfie::Selfie;
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use http::{Response, StatusCode};
+use hyper::Body;
 use schemars::JsonSchema;
 use serde::Deserialize;
+use tracing::info;
 
 use crate::{
     context::Context,
-    endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
-        Endpoint, Method,
-    },
-    model::project::QueryProject,
-    model::user::auth::AuthUser,
+    endpoints::{Endpoint, Method},
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
@@ -48,46 +47,39 @@ pub async fn get(
     rqctx: RequestContext<Context>,
     path_params: Path<DirPath>,
     query_params: Query<JsonPerfQueryParams>,
-) -> Result<ResponseOk<JsonEmpty>, HttpError> {
+) -> Result<Response<Body>, HttpError> {
     // Second round of marshaling
     let json_perf_query = query_params
         .into_inner()
         .try_into()
         .map_err(ApiError::from)?;
 
-    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PERF_IMG_RESOURCE, Method::GetLs);
 
-    let json = get_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        json_perf_query,
-        auth_user.as_ref(),
-    )
-    .await
-    .map_err(|e| endpoint.err(e))?;
+    let jpg = get_inner(rqctx.context(), path_params.into_inner(), json_perf_query)
+        .await
+        .map_err(|e| endpoint.err(e))?;
 
-    if auth_user.is_some() {
-        response_ok!(endpoint, json)
-    } else {
-        pub_response_ok!(endpoint, json)
-    }
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(http::header::CONTENT_TYPE, "image/jpeg")
+        .header(http::header::CACHE_CONTROL, "private, max-age=0, no-cache")
+        .body(jpg.into())
+        .map_err(Into::into)
 }
 
 async fn get_inner(
     context: &Context,
     path_params: DirPath,
     json_perf_query: JsonPerfQuery,
-    auth_user: Option<&AuthUser>,
-) -> Result<JsonEmpty, ApiError> {
+) -> Result<Vec<u8>, ApiError> {
     let api_context = &mut *context.lock().await;
-    let _project_id =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
 
-    let path = format!("/v0/projects/{}/perf", path_params.project);
-    let _url = json_perf_query.to_url(api_context.endpoint.as_ref(), &path)?;
+    let path = format!("/perf/{}", path_params.project);
+    let url = json_perf_query.to_url(api_context.endpoint.as_ref(), &path)?;
+    info!("{url}");
 
-    // TODO call Selfie.capture_perf
-
-    Ok(JsonEmpty {})
+    Selfie::new_embedded()?
+        .capture_perf(url.as_ref())
+        .map_err(Into::into)
 }

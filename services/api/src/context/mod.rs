@@ -2,7 +2,6 @@
 use bencher_billing::Biller;
 #[cfg(feature = "plus")]
 use bencher_license::Licensor;
-use bencher_selfie::Selfie;
 use tokio::sync::mpsc::Sender;
 use url::Url;
 
@@ -25,7 +24,6 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     pub restart_tx: Sender<()>,
-    pub selfie: Selfie,
     #[cfg(feature = "plus")]
     pub biller: Option<Biller>,
     #[cfg(feature = "plus")]

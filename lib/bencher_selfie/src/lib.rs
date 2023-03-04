@@ -38,8 +38,8 @@ impl Selfie {
         self.capture(
             url,
             &[
-                (DEFAULT_WORDMARK_SELECTOR, Some(10)),
-                (DEFAULT_PERF_SELECTOR, Some(5)),
+                (DEFAULT_WORDMARK_SELECTOR, Some(20)),
+                (DEFAULT_PERF_SELECTOR, Some(10)),
             ],
             DEFAULT_EMBEDDED_SELECTOR,
             Some(1),
@@ -113,7 +113,7 @@ impl Selfie {
 
 //     use crate::Selfie;
 
-//     const PERF_ADAPTERS_URL: &str = "http://localhost:3000/perf/the-computer?key=true&metric_kind=latency&branches=903e91fe-fc30-4695-98af-a8426e7bbcfc&tab=benchmarks&testbeds=3ec87a4d-28ff-478c-b6a2-55a06ead3984&benchmarks=ab15ac98-726c-45c9-8a4f-6b4bc121e889%2C5958c90b-8e3b-4507-89cf-e6a2e763f902";
+//     const PERF_ADAPTERS_URL: &str = "http://localhost:3000/perf/the-computer?metric_kind=latency&branches=903e91fe-fc30-4695-98af-a8426e7bbcfc&testbeds=3ec87a4d-28ff-478c-b6a2-55a06ead3984&benchmarks=ab15ac98-726c-45c9-8a4f-6b4bc121e889%2C5958c90b-8e3b-4507-89cf-e6a2e763f902&start_time=1677628800000&end_time=1677888000000";
 
 //     fn save_jpg(jpg: &[u8]) {
 //         let mut file = File::create("perf.jpg").unwrap();
