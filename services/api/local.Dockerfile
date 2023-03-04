@@ -9,7 +9,7 @@ COPY --from=builder /usr/src/target/release/api /api
 RUN mkdir -p /data
 
 RUN apt-get update \
-    && apt-get install -y sqlite3 chromium-browser
+    && apt-get install -y sqlite3 chromium
 
 ENV PORT 61016
 
