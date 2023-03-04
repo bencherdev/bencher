@@ -72,23 +72,10 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v3
-      - name: cargo test
-        run: RUST_BACKTRACE=1 cargo test -- --nocapture
-
-  cargo_test_selfie:
-    name: Cargo Test Selfie
-    runs-on: ubuntu-latest
-    # needs:
-    #   - cargo_fmt
-    #   - cargo_clippy
-    steps:
-      - uses: actions/checkout@v3
       - name: Install Chromium
         run: sudo apt-get install -y chromium-browser
-      - name: cargo test bencher_selfie
-        run: |
-          cd lib/bencher_selfie
-          RUST_BACKTRACE=1 cargo test --features browser -- --nocapture
+      - name: cargo test
+        run: RUST_BACKTRACE=1 cargo test -- --nocapture
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v3
         with:
@@ -263,7 +250,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - cargo_test_selfie
       - cargo_check_api_minus
       - cargo_check_cli_minus
       - cargo_bench
@@ -302,7 +288,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - cargo_test_selfie
       - cargo_check_api_minus
       - cargo_check_cli_minus
       - cargo_bench
@@ -441,7 +426,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - cargo_test_selfie
       - cargo_check_api_minus
       - cargo_check_cli_minus
       - cargo_bench
@@ -473,7 +457,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - cargo_test_selfie
       - cargo_check_api_minus
       - cargo_check_cli_minus
       - cargo_bench
