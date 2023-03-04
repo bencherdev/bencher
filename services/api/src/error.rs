@@ -2,6 +2,7 @@ use bencher_json::urlencoded::UrlEncodedError;
 #[cfg(feature = "plus")]
 use bencher_json::ResourceId;
 use bencher_rbac::{Organization, Project};
+use bencher_selfie::SelfieError;
 use dropshot::HttpError;
 use thiserror::Error;
 
@@ -184,6 +185,8 @@ pub enum ApiError {
     BadInt(i64),
     #[error("Failed to parse URL encoding: {0}")]
     UrlEncoded(#[from] UrlEncodedError),
+    #[error("Failed to take selfie: {0}")]
+    Selfie(#[from] SelfieError),
 
     #[error("Requested TTL ({requested}) is greater than max ({max})")]
     MaxTtl { requested: u32, max: u32 },

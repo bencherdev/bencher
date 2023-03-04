@@ -10,6 +10,7 @@ use bencher_json::{
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
+use bencher_selfie::Selfie;
 use diesel::{Connection, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
@@ -139,6 +140,7 @@ fn into_private(
             data_store,
         },
         restart_tx,
+        selfie: Selfie::new_embedded()?,
         #[cfg(feature = "plus")]
         biller,
         #[cfg(feature = "plus")]

@@ -20,8 +20,8 @@ pub struct Selfie {
 }
 
 impl Selfie {
-    pub fn new_embedded(timeout: Option<u64>) -> Result<Self, SelfieError> {
-        Self::new(1200, 800, timeout)
+    pub fn new_embedded() -> Result<Self, SelfieError> {
+        Self::new(1200, 800, None)
     }
 
     pub fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
@@ -122,7 +122,7 @@ impl Selfie {
 
 //     #[test]
 //     fn test_selfie() {
-//         let selfie = Selfie::new_embedded(None).unwrap();
+//         let selfie = Selfie::new_embedded().unwrap();
 //         let jpg = selfie.capture_perf(PERF_ADAPTERS_URL).unwrap();
 //         save_jpg(&jpg);
 //     }
