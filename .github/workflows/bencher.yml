@@ -122,10 +122,8 @@ jobs:
     name: Cargo Bench
     runs-on: ubuntu-latest
     needs:
-      - cargo_test
-      - cargo_test_selfie
-      - cargo_check_api_minus
-      - cargo_check_cli_minus
+      - cargo_fmt
+      - cargo_clippy
     env:
       BENCHER_PROJECT: bencher
       BENCHER_TESTBED: ubuntu-latest
@@ -143,7 +141,9 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     name: Cargo Audit
     runs-on: ubuntu-latest
-    needs: cargo_test
+    needs:
+      - cargo_fmt
+      - cargo_clippy
     continue-on-error: true
     steps:
       - uses: actions/checkout@v3
@@ -181,7 +181,8 @@ jobs:
     name: Build `bencher_valid` WASM
     runs-on: ubuntu-latest
     needs:
-      - cargo_test
+      - cargo_fmt
+      - cargo_clippy
       - npx_rome_format
       - npx_rome_lint
     env:
@@ -224,7 +225,9 @@ jobs:
     if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
     name: Build API (Linux)
     runs-on: ubuntu-latest
-    needs: cargo_test
+    needs:
+      - cargo_fmt
+      - cargo_clippy
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
@@ -253,7 +256,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Build API and Release Nightly (Linux)
     runs-on: ubuntu-latest
-    needs: cargo_test
+    needs:
+      - cargo_test
+      - cargo_test_selfie
+      - cargo_check_api_minus
+      - cargo_check_cli_minus
+      - cargo_bench
     steps:
       - uses: actions/checkout@v3
       - name: Login to Docker Hub
@@ -287,7 +295,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     name: Build API and Release Latest (Linux)
     runs-on: ubuntu-latest
-    needs: cargo_test
+    needs:
+      - cargo_test
+      - cargo_test_selfie
+      - cargo_check_api_minus
+      - cargo_check_cli_minus
+      - cargo_bench
     steps:
       - uses: actions/checkout@v3
       - name: Export LOCAL_TAGS
@@ -330,7 +343,9 @@ jobs:
   build_cli_bin:
     name: Build CLI (Linux)
     runs-on: ubuntu-20.04
-    needs: cargo_test
+    needs:
+      - cargo_fmt
+      - cargo_clippy
     steps:
       - uses: actions/checkout@v3
       - name: cargo build CLI
@@ -370,7 +385,6 @@ jobs:
       - build_cli_deb
       - latest_api_docker
       - latest_ui_docker
-      - cargo_bench
     steps:
       - uses: actions/checkout@v3
       - name: export DEB_FILE
@@ -396,8 +410,10 @@ jobs:
     name: Build UI (Linux)
     runs-on: ubuntu-latest
     needs:
-      - cargo_test
-      - npx_vitest
+      - cargo_fmt
+      - cargo_clippy
+      - npx_rome_format
+      - npx_rome_lint
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
@@ -420,6 +436,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
+      - cargo_test_selfie
+      - cargo_check_api_minus
+      - cargo_check_cli_minus
+      - cargo_bench
       - npx_vitest
     steps:
       - uses: actions/checkout@v3
@@ -448,6 +468,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
+      - cargo_test_selfie
+      - cargo_check_api_minus
+      - cargo_check_cli_minus
+      - cargo_bench
       - npx_vitest
     steps:
       - uses: actions/checkout@v3
@@ -478,7 +502,10 @@ jobs:
   build_ui:
     name: Build UI
     runs-on: ubuntu-latest
-    needs: npx_vitest
+    needs:
+      - cargo_fmt
+      - cargo_clippy
+      - build_bencher_valid_wasm
     steps:
       - uses: actions/checkout@v3
       - name: Download `bencher_valid` Artifact
@@ -503,8 +530,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - nightly_api_docker
+      - npx_vitest
       - build_ui
-      - cargo_bench
     env:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN_ADMIN }}
     steps:
