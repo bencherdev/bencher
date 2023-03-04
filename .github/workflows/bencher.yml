@@ -89,6 +89,11 @@ jobs:
         run: |
           cd lib/bencher_selfie
           RUST_BACKTRACE=1 cargo test --features browser -- --nocapture
+      - name: Upload Perf JPEG
+        uses: actions/upload-artifact@v3
+        with:
+          name: perf.jpeg
+          path: ./lib/bencher_selfie/perf.jpeg
 
   # Cargo Check (Minus)
   cargo_check_api_minus:
