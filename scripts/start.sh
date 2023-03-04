@@ -9,7 +9,7 @@ sudo apt-get install -y gconf-service libasound2 libatk1.0-0 libcairo2 libcups2 
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo dpkg -i google-chrome-stable_current_amd64.deb
 sudo apt-get -fy install
-# rm google-chrome-stable_current_amd64.deb
+rm google-chrome-stable_current_amd64.deb
 
 curl -L https://fly.io/install.sh | sh
 echo "export FLYCTL_INSTALL=\"/home/gitpod/.fly\"" >> $HOME/.bash_profile
