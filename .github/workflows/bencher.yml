@@ -78,9 +78,9 @@ jobs:
   cargo_test_selfie:
     name: Cargo Test Selfie
     runs-on: ubuntu-latest
-    needs:
-      - cargo_fmt
-      - cargo_clippy
+    # needs:
+    #   - cargo_fmt
+    #   - cargo_clippy
     steps:
       - uses: actions/checkout@v3
       - name: Install Chromium
