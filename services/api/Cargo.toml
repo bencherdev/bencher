@@ -19,6 +19,7 @@ swagger = ["dep:literally"]
 bencher_adapter = { path = "../../lib/bencher_adapter" }
 bencher_json = { path = "../../lib/bencher_json", features = ["schema"] }
 bencher_rbac = { path = "../../lib/bencher_rbac" }
+bencher_selfie = { path = "../../lib/bencher_selfie" }
 # Plus
 bencher_billing = { path = "../../plus/bencher_billing", optional = true }
 bencher_plus = { path = "../../plus/bencher_plus", optional = true }

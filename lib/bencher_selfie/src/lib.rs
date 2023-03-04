@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use headless_chrome::protocol::cdp::Page;
-use headless_chrome::{Browser, LaunchOptionsBuilder};
+use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
 
 mod error;
 
@@ -54,6 +54,27 @@ impl Selfie {
         timeout: Option<u64>,
     ) -> Result<Vec<u8>, SelfieError> {
         let tab = map_err!(self.browser.new_tab())?;
+
+        let jpg = self.capture_inner(&tab, url, wait_for, viewport, timeout);
+
+        // Always try to close the tab
+        if map_err!(tab.close_with_unload())? {
+            jpg
+        } else if let Err(e) = jpg {
+            Err(e)
+        } else {
+            Err(SelfieError::CloseTab(url.into()))
+        }
+    }
+
+    fn capture_inner(
+        &self,
+        tab: &Tab,
+        url: &str,
+        wait_for: &[(&str, Option<u64>)],
+        viewport: &str,
+        timeout: Option<u64>,
+    ) -> Result<Vec<u8>, SelfieError> {
         if let Some(timeout) = self.timeout {
             tab.set_default_timeout(timeout);
         }
@@ -76,18 +97,12 @@ impl Selfie {
         let box_model = map_err!(element.get_box_model())?;
         let viewport = Some(box_model.margin_viewport());
 
-        let jpg = map_err!(tab.capture_screenshot(
+        map_err!(tab.capture_screenshot(
             Page::CaptureScreenshotFormatOption::Jpeg,
             None,
             viewport,
             true
-        ))?;
-
-        if map_err!(tab.close_with_unload())? {
-            Ok(jpg)
-        } else {
-            Err(SelfieError::CloseTab(url.into()))
-        }
+        ))
     }
 }
 

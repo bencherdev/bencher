@@ -8,6 +8,7 @@ WORKDIR /usr/src/lib
 COPY lib/bencher_adapter bencher_adapter
 COPY lib/bencher_json bencher_json
 COPY lib/bencher_rbac bencher_rbac
+COPY lib/bencher_selfie bencher_selfie
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/plus

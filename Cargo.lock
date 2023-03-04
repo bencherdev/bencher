@@ -599,6 +599,7 @@ dependencies = [
  "bencher_license",
  "bencher_plus",
  "bencher_rbac",
+ "bencher_selfie",
  "chrono",
  "css-inline",
  "derive_more",
