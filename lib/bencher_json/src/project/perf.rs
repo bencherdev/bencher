@@ -1,4 +1,3 @@
-use chrono::serde::ts_milliseconds_option::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -8,7 +7,8 @@ use url::Url;
 use uuid::Uuid;
 
 use crate::urlencoded::{
-    from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list, UrlEncodedError,
+    from_millis, from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list,
+    UrlEncodedError,
 };
 use crate::ResourceId;
 
@@ -28,7 +28,7 @@ const QUERY_KEYS: [&str; 6] = [
 /// Arrays are represented as comma separated lists.
 /// Optional date times are simply stored as their millisecond representation.
 /// `JsonPerfQueryParams` should always be converted into `JsonPerfQuery` for full type level validation.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
     pub metric_kind: String,
@@ -41,16 +41,13 @@ pub struct JsonPerfQueryParams {
 
 /// `JsonPerfQuery` is the full, strongly typed version of `JsonPerfQueryParams`.
 /// It should always be used to validate `JsonPerfQueryParams`.
-#[derive(Debug, Clone, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[derive(Debug, Clone)]
 pub struct JsonPerfQuery {
     pub metric_kind: ResourceId,
     pub branches: Vec<Uuid>,
     pub testbeds: Vec<Uuid>,
     pub benchmarks: Vec<Uuid>,
-    #[serde(deserialize_with = "from_milli_ts")]
     pub start_time: Option<DateTime<Utc>>,
-    #[serde(deserialize_with = "from_milli_ts")]
     pub end_time: Option<DateTime<Utc>>,
 }
 
@@ -73,8 +70,16 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         let testbeds = from_urlencoded_list(&testbeds)?;
         let benchmarks = from_urlencoded_list(&benchmarks)?;
 
-        let start_time = from_milli_ts(serde_json::json!(start_time))?;
-        let end_time = from_milli_ts(serde_json::json!(end_time))?;
+        let start_time = if let Some(start_time) = start_time {
+            Some(from_millis(start_time)?)
+        } else {
+            None
+        };
+        let end_time = if let Some(end_time) = end_time {
+            Some(from_millis(end_time)?)
+        } else {
+            None
+        };
 
         Ok(Self {
             metric_kind,

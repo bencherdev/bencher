@@ -1,3 +1,4 @@
+use chrono::{DateTime, TimeZone, Utc};
 use serde::{de::DeserializeOwned, Serialize};
 use thiserror::Error;
 
@@ -17,6 +18,10 @@ pub enum UrlEncodedError {
     Vec(Vec<(&'static str, Option<String>)>),
     #[error("urlencoded: {0}")]
     Urlencoded(String),
+    #[error("Integer: {0}")]
+    IntError(#[from] std::num::TryFromIntError),
+    #[error("Failed to convert milliseconds to timestamp: {0}")]
+    Timestamp(i64),
 }
 
 pub fn from_urlencoded_list<T>(list: &str) -> Result<Vec<T>, UrlEncodedError>
@@ -39,6 +44,18 @@ where
         .pop()
         .ok_or_else(|| UrlEncodedError::Urlencoded(input.into()))?
         .0)
+}
+
+pub fn from_millis(millis: i64) -> Result<DateTime<Utc>, UrlEncodedError> {
+    const MILLIS_PER_SECOND: i64 = 1_000;
+    const MILLIS_PER_NANO: i64 = 1_000_000;
+
+    Utc.timestamp_opt(
+        millis / MILLIS_PER_SECOND,
+        u32::try_from((millis % MILLIS_PER_SECOND) * MILLIS_PER_NANO)?,
+    )
+    .single()
+    .ok_or_else(|| UrlEncodedError::Timestamp(millis))
 }
 
 pub fn to_urlencoded_list<T>(values: &[T]) -> Result<String, UrlEncodedError>
