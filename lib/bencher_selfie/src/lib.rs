@@ -9,10 +9,10 @@ pub use error::{HeadlessChromeError, SelfieError};
 
 use crate::error::map_err;
 
-const DEFAULT_WORDMARK_SELECTOR: &str = "img";
-const DEFAULT_PERF_SELECTOR: &str = "svg";
+const DEFAULT_WORDMARK_SELECTOR: &str = "#wordmark";
+const DEFAULT_PERF_SELECTOR: &str = "#perf";
 // TODO change list to the actual embedded ID
-const DEFAULT_EMBEDDED_SELECTOR: &str = "svg";
+const DEFAULT_EMBEDDED_SELECTOR: &str = "#perf";
 
 pub struct Selfie {
     browser: Browser,
@@ -38,11 +38,11 @@ impl Selfie {
         self.capture(
             url,
             &[
-                (DEFAULT_WORDMARK_SELECTOR, Some(20)),
-                (DEFAULT_PERF_SELECTOR, Some(10)),
+                // (DEFAULT_WORDMARK_SELECTOR, Some(20)),
+                // (DEFAULT_PERF_SELECTOR, Some(10)),
             ],
             DEFAULT_EMBEDDED_SELECTOR,
-            Some(1),
+            Some(30),
         )
     }
 
@@ -113,7 +113,6 @@ mod test {
 
     use crate::Selfie;
 
-    // const PERF_ADAPTERS_URL: &str = "http://localhost:3000/perf/the-computer?metric_kind=latency&branches=903e91fe-fc30-4695-98af-a8426e7bbcfc&testbeds=3ec87a4d-28ff-478c-b6a2-55a06ead3984&benchmarks=ab15ac98-726c-45c9-8a4f-6b4bc121e889%2C5958c90b-8e3b-4507-89cf-e6a2e763f902&start_time=1677628800000&end_time=1677888000000";
     const PERF_ADAPTERS_URL: &str = "https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&start_time=2023-01-30T00%3A00%3A00.000Z&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5";
 
     fn save_jpeg(jpeg: &[u8]) {
