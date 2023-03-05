@@ -90,7 +90,8 @@ const LinePlot = (props) => {
 					<div class="container">
 						<div class="content">
 							<div id={PERF_ID}>
-								<h3>No data found</h3>
+								<h3 class="title is-3"> No data found</h3>
+								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
 							</div>
 						</div>
 					</div>
