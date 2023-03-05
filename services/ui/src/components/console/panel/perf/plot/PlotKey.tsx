@@ -47,33 +47,27 @@ const PlotKey = (props) => {
 		testbeds: false,
 		benchmarks: false,
 	});
-
-	const perf_key = () => {
+	const perf_key = createMemo(() => {
 		if (dimensions.branches && dimensions.testbeds && dimensions.benchmarks) {
 			return "perf_key";
 		} else {
 			return "loading_key";
 		}
+	});
+	const dimension_fetcher = async (tab: PerfTab, fetcher) => {
+		const dimension = await getLs(tab, fetcher);
+		setDimensions({ ...dimensions, [tab]: true });
+		return dimension;
 	};
-
-	const [branches] = createResource(branches_fetcher, async (fetcher) => {
-		const tab = PerfTab.BRANCHES;
-		const dimension = await getLs(tab, fetcher);
-		setDimensions({ [tab]: true, ...dimensions });
-		return dimension;
-	});
-	const [testbeds] = createResource(testbeds_fetcher, async (fetcher) => {
-		const tab = PerfTab.TESTBEDS;
-		const dimension = await getLs(tab, fetcher);
-		setDimensions({ [tab]: true, ...dimensions });
-		return dimension;
-	});
-	const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) => {
-		const tab = PerfTab.BENCHMARKS;
-		const dimension = await getLs(tab, fetcher);
-		setDimensions({ [tab]: true, ...dimensions });
-		return dimension;
-	});
+	const [branches] = createResource(branches_fetcher, async (fetcher) =>
+		dimension_fetcher(PerfTab.BRANCHES, fetcher),
+	);
+	const [testbeds] = createResource(testbeds_fetcher, async (fetcher) =>
+		dimension_fetcher(PerfTab.TESTBEDS, fetcher),
+	);
+	const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) =>
+		dimension_fetcher(PerfTab.BENCHMARKS, fetcher),
+	);
 
 	return (
 		<>
