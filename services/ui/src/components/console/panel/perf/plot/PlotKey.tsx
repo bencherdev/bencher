@@ -1,8 +1,9 @@
 import axios from "axios";
-import { createMemo, createResource, For } from "solid-js";
+import { createMemo, createResource, createSignal, For } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import * as d3 from "d3";
 import { get_options } from "../../../../site/util";
+import { createStore } from "solid-js/store";
 
 const PlotKey = (props) => {
 	const branches_fetcher = createMemo(() => {
@@ -24,7 +25,7 @@ const PlotKey = (props) => {
 		};
 	});
 
-	const getOne = async (perf_tab: PerfTab, fetcher) => {
+	const getLs = async (perf_tab: PerfTab, fetcher) => {
 		const key_data = {};
 
 		await Promise.all(
@@ -41,27 +42,37 @@ const PlotKey = (props) => {
 		return key_data;
 	};
 
-	const [branches] = createResource(branches_fetcher, async (fetcher) => {
-		return getOne(PerfTab.BRANCHES, fetcher);
-	});
-	const [testbeds] = createResource(testbeds_fetcher, async (fetcher) => {
-		return getOne(PerfTab.TESTBEDS, fetcher);
-	});
-	const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) => {
-		return getOne(PerfTab.BENCHMARKS, fetcher);
+	const [dimensions, setDimensions] = createStore({
+		branches: false,
+		testbeds: false,
+		benchmarks: false,
 	});
 
-	const key_fetcher = {
-		branches: branches,
-		testbeds: testbeds,
-		benchmarks: benchmarks,
-	};
-	const [perf_key] = createResource(key_fetcher, async (fetcher) => {
-		if (fetcher.branches() && fetcher.testbeds() && fetcher.benchmarks()) {
+	const perf_key = () => {
+		if (dimensions.branches && dimensions.testbeds && dimensions.benchmarks) {
 			return "perf_key";
 		} else {
 			return "loading_key";
 		}
+	};
+
+	const [branches] = createResource(branches_fetcher, async (fetcher) => {
+		const tab = PerfTab.BRANCHES;
+		const dimension = await getLs(tab, fetcher);
+		setDimensions({ [tab]: true, ...dimensions });
+		return dimension;
+	});
+	const [testbeds] = createResource(testbeds_fetcher, async (fetcher) => {
+		const tab = PerfTab.TESTBEDS;
+		const dimension = await getLs(tab, fetcher);
+		setDimensions({ [tab]: true, ...dimensions });
+		return dimension;
+	});
+	const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) => {
+		const tab = PerfTab.BENCHMARKS;
+		const dimension = await getLs(tab, fetcher);
+		setDimensions({ [tab]: true, ...dimensions });
+		return dimension;
 	});
 
 	return (
