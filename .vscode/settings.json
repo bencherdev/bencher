@@ -45,6 +45,7 @@
     "pipenv",
     "pytest",
     "repr",
+    "reqwest",
     "Roadmap",
     "schemars",
     "signup",
