@@ -38,11 +38,11 @@ impl Selfie {
         self.capture(
             url,
             &[
-                // (DEFAULT_WORDMARK_SELECTOR, Some(20)),
-                // (DEFAULT_PERF_SELECTOR, Some(10)),
+                (DEFAULT_WORDMARK_SELECTOR, Some(20)),
+                (DEFAULT_PERF_SELECTOR, Some(10)),
             ],
             DEFAULT_EMBEDDED_SELECTOR,
-            Some(30),
+            Some(2),
         )
     }
 
@@ -95,12 +95,12 @@ impl Selfie {
             tab.wait_for_element(viewport)
         })?;
         let box_model = map_err!(element.get_box_model())?;
-        let _viewport = Some(box_model.margin_viewport());
+        let viewport = Some(box_model.margin_viewport());
 
         map_err!(tab.capture_screenshot(
             Page::CaptureScreenshotFormatOption::Jpeg,
             None,
-            None,
+            viewport,
             true
         ))
     }
@@ -113,7 +113,7 @@ mod test {
 
     use crate::Selfie;
 
-    const PERF_ADAPTERS_URL: &str = "https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&start_time=2023-01-30T00%3A00%3A00.000Z&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5";
+    const PERF_ADAPTERS_URL: &str = "https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000";
 
     fn save_jpeg(jpeg: &[u8]) {
         let mut file = File::create("perf.jpeg").unwrap();
