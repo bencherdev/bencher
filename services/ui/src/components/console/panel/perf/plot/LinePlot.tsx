@@ -4,7 +4,7 @@ import * as d3 from "d3";
 import { createResource, createSignal } from "solid-js";
 import { get_options } from "../../../../site/util";
 
-const PERF_ID = "perf";
+const PLOT_ID = "perf_plot";
 
 const LinePlot = (props) => {
 	const [max_units, setMaxUnits] = createSignal(1);
@@ -14,7 +14,7 @@ const LinePlot = (props) => {
 	};
 
 	const getUnits = async (perf_data) => {
-		const default_units = "UNITS";
+		const default_units = "units";
 		if (!perf_data.metric_kind) {
 			return default_units;
 		}
@@ -69,7 +69,7 @@ const LinePlot = (props) => {
 
 		if (metrics_found) {
 			return (
-				<div id={PERF_ID}>
+				<div id={PLOT_ID}>
 					{Plot.plot({
 						y: {
 							grid: true,
@@ -89,8 +89,8 @@ const LinePlot = (props) => {
 				<section class="section">
 					<div class="container">
 						<div class="content">
-							<div id={PERF_ID}>
-								<h3 class="title is-3"> No data found</h3>
+							<div id={PLOT_ID}>
+								<h3 class="title is-3">No data found</h3>
 								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
 							</div>
 						</div>

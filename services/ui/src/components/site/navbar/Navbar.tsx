@@ -17,15 +17,11 @@ export const Navbar = (props) => {
 	const is_valid_jwt = createMemo(() => validate_jwt(props.user.token));
 	const [burger, setBurger] = createSignal(false);
 
-	const [wordmarkId, setWordmarkId] = createSignal("loading_wordmark");
-
 	return (
 		<nav class="navbar" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
 				<Link class="navbar-item" href="/" aria-label="home">
 					<img
-						id={wordmarkId()}
-						onLoad={(_e) => setWordmarkId("wordmark")}
 						src={BENCHER_LOGO_URL}
 						width="152"
 						height="28"

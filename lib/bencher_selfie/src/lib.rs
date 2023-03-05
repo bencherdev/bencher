@@ -9,10 +9,11 @@ pub use error::{HeadlessChromeError, SelfieError};
 
 use crate::error::map_err;
 
-const DEFAULT_WORDMARK_SELECTOR: &str = "#wordmark";
-const DEFAULT_PERF_SELECTOR: &str = "#perf";
+const DEFAULT_WORDMARK_SELECTOR: &str = "#perf_wordmark";
+const DEFAULT_PLOT_SELECTOR: &str = "#perf_plot";
+const DEFAULT_KEY_SELECTOR: &str = "#perf_key";
 // TODO change list to the actual embedded ID
-const DEFAULT_EMBEDDED_SELECTOR: &str = "#perf";
+const DEFAULT_VIEWPORT_SELECTOR: &str = "#perf_viewport";
 
 pub struct Selfie {
     browser: Browser,
@@ -39,10 +40,11 @@ impl Selfie {
             url,
             &[
                 (DEFAULT_WORDMARK_SELECTOR, Some(20)),
-                (DEFAULT_PERF_SELECTOR, Some(10)),
+                (DEFAULT_PLOT_SELECTOR, Some(10)),
+                (DEFAULT_KEY_SELECTOR, Some(10)),
             ],
-            DEFAULT_EMBEDDED_SELECTOR,
-            Some(2),
+            DEFAULT_VIEWPORT_SELECTOR,
+            Some(1),
         )
     }
 
@@ -106,7 +108,8 @@ impl Selfie {
     }
 }
 
-#[cfg(feature = "browser")]
+// TODO reenable once in production
+#[cfg(not(feature = "browser"))]
 #[cfg(test)]
 mod test {
     use std::{fs::File, io::Write};

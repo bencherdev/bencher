@@ -51,10 +51,24 @@ const PlotKey = (props) => {
 		return getOne(PerfTab.BENCHMARKS, fetcher);
 	});
 
+	const key_fetcher = {
+		branches: branches,
+		testbeds: testbeds,
+		benchmarks: benchmarks,
+	};
+	const [perf_key] = createResource(key_fetcher, async (fetcher) => {
+		if (fetcher.branches() && fetcher.testbeds() && fetcher.benchmarks()) {
+			return "perf_key";
+		} else {
+			return "loading_key";
+		}
+	});
+
 	return (
 		<>
 			{props.key() ? (
 				<ExpandedKey
+					perf_key={perf_key}
 					branches={branches}
 					testbeds={testbeds}
 					benchmarks={benchmarks}
@@ -77,7 +91,10 @@ const PlotKey = (props) => {
 
 const ExpandedKey = (props) => {
 	return (
-		<div class="columns is-centered is-vcentered is-gapless is-multiline">
+		<div
+			class="columns is-centered is-vcentered is-gapless is-multiline"
+			id={props.perf_key()}
+		>
 			<div class="column is-narrow">
 				<MinimizeKeyButton handleKey={props.handleKey} />
 			</div>
