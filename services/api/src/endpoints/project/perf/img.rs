@@ -78,6 +78,15 @@ async fn get_inner(
     let url = json_perf_query.to_url(endpoint.as_ref(), &path)?;
     info!("{url}");
 
+    // I have no idea why this helps, but it does...
+    let body = reqwest::get("http://example.com")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    println!("number {body}");
+
     Selfie::new_embedded()?
         .capture_perf(url.as_ref())
         .map_err(Into::into)
