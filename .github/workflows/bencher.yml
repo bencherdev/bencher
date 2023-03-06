@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install Chromium
-        run: sudo apt-get install -y chromium-browser
+        run: ./scripts/chrome.sh
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
       - name: Upload Perf JPEG
