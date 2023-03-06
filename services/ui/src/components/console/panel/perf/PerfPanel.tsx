@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { isPerfTab, PerfTab } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
-import { get_options, post_options, validate_string } from "../../../site/util";
+import { get_options, validate_string } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
@@ -22,9 +22,11 @@ const END_TIME_PARAM = "end_time";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
+const IMG_PARAM = "img";
 
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
+const DEFAULT_PERF_IMG = false;
 
 const addToArray = (array: any[], add: any) => {
 	array.push(add);
@@ -95,6 +97,10 @@ const resourcesToCheckable = (resources, params) =>
 		};
 	});
 
+const is_bool_param = (param: string): boolean => {
+	return param === "false" || param === "true";
+};
+
 const PerfPanel = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -122,11 +128,11 @@ const PerfPanel = (props) => {
 	if (!isPerfTab(searchParams[TAB_PARAM])) {
 		setSearchParams({ [TAB_PARAM]: null });
 	}
-	if (
-		searchParams[KEY_PARAM] !== "false" &&
-		searchParams[KEY_PARAM] !== "true"
-	) {
+	if (!is_bool_param(searchParams[KEY_PARAM])) {
 		setSearchParams({ [KEY_PARAM]: DEFAULT_PERF_KEY });
+	}
+	if (!is_bool_param(searchParams[IMG_PARAM])) {
+		setSearchParams({ [IMG_PARAM]: null });
 	}
 
 	// Create marshalized memos of all query params
@@ -160,13 +166,20 @@ const PerfPanel = (props) => {
 	const key = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (
-			searchParams[KEY_PARAM] === "false" ||
-			searchParams[KEY_PARAM] === "true"
-		) {
+		if (is_bool_param(searchParams[KEY_PARAM])) {
 			return searchParams[KEY_PARAM] === "true";
 		} else {
 			return DEFAULT_PERF_KEY;
+		}
+	});
+
+	const img = createMemo(() => {
+		// This check is required for the initial load
+		// before the query params have been sanitized
+		if (is_bool_param(searchParams[IMG_PARAM])) {
+			return searchParams[IMG_PARAM] === "true";
+		} else {
+			return DEFAULT_PERF_IMG;
 		}
 	});
 
@@ -362,6 +375,7 @@ const PerfPanel = (props) => {
 				perf_data={perf_data}
 				tab={tab}
 				key={key}
+				img={img}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}

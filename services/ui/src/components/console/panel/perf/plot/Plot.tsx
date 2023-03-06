@@ -31,16 +31,20 @@ const Plot = (props) => {
 
 	return (
 		<div class="container">
-			<img
-				id={wordmarkId()}
-				onLoad={(_e) => setWordmarkId("perf_wordmark")}
-				src={BENCHER_LOGO_URL}
-				width="152"
-				height="28"
-				alt="🐰 Bencher"
-			/>
-			<br />
-			<br />
+			{props.img() && (
+				<>
+					<img
+						id={wordmarkId()}
+						onLoad={(_e) => setWordmarkId("perf_wordmark")}
+						src={BENCHER_LOGO_URL}
+						width="152"
+						height="28"
+						alt="🐰 Bencher"
+					/>
+					<br />
+					<br />
+				</>
+			)}
 			<div ref={(e) => (plot_ref = e)}>
 				<LinePlot
 					user={props.user}

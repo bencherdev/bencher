@@ -39,6 +39,7 @@ const PerfPlot = (props) => {
 								benchmarks={props.benchmarks}
 								perf_data={props.perf_data}
 								key={props.key}
+								img={props.img}
 								handleKey={props.handleKey}
 							/>
 						)}

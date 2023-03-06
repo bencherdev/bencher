@@ -107,16 +107,25 @@ impl Serialize for JsonPerfQuery {
 }
 
 impl JsonPerfQuery {
-    pub fn to_url(&self, endpoint: &str, path: &str) -> Result<Url, UrlEncodedError> {
+    pub fn to_url(
+        &self,
+        endpoint: &str,
+        path: &str,
+        query: &[(&str, Option<String>)],
+    ) -> Result<Url, UrlEncodedError> {
         let mut url = Url::parse(endpoint)?;
         url.set_path(path);
-        url.set_query(Some(&self.to_query_string()?));
+        url.set_query(Some(&self.to_query_string(query)?));
         Ok(url)
     }
 
-    pub fn to_query_string(&self) -> Result<String, UrlEncodedError> {
+    pub fn to_query_string(
+        &self,
+        query: &[(&str, Option<String>)],
+    ) -> Result<String, UrlEncodedError> {
         let urlencoded = self.urlencoded()?;
-        serde_urlencoded::to_string(urlencoded).map_err(Into::into)
+        let query = urlencoded.iter().chain(query).collect::<Vec<_>>();
+        serde_urlencoded::to_string(query).map_err(Into::into)
     }
 
     fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 6], UrlEncodedError> {

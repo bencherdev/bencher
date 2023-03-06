@@ -75,7 +75,7 @@ async fn get_inner(
 ) -> Result<Vec<u8>, ApiError> {
     let endpoint = context.lock().await.endpoint.clone();
     let path = format!("/perf/{}", path_params.project);
-    let url = json_perf_query.to_url(endpoint.as_ref(), &path)?;
+    let url = json_perf_query.to_url(endpoint.as_ref(), &path, &[("img", Some("true".into()))])?;
     info!("{url}");
 
     // I have no idea why this helps, but it does...
