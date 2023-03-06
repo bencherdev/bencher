@@ -108,14 +108,14 @@ impl Selfie {
 }
 
 // TODO reenable once in production
-#[cfg(not(feature = "browser"))]
+#[cfg(feature = "browser")]
 #[cfg(test)]
 mod test {
     use std::{fs::File, io::Write};
 
     use crate::Selfie;
 
-    const PERF_ADAPTERS_URL: &str = "https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000";
+    const PERF_ADAPTERS_URL: &str = "https://bencher.dev/perf/bencher?img=true&key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000";
 
     fn save_jpeg(jpeg: &[u8]) {
         let mut file = File::create("perf.jpeg").unwrap();
