@@ -79,6 +79,7 @@ const PlotKey = (props) => {
 					benchmarks={benchmarks}
 					perf_data={props.perf_data}
 					perf_active={props.perf_active}
+					img={props.img}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
 				/>
@@ -86,6 +87,7 @@ const PlotKey = (props) => {
 				<MinimizedKey
 					perf_data={props.perf_data}
 					perf_active={props.perf_active}
+					img={props.img}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
 				/>
@@ -97,12 +99,14 @@ const PlotKey = (props) => {
 const ExpandedKey = (props) => {
 	return (
 		<div
-			class="columns is-centered is-vcentered is-gapless is-multiline"
+			class="columns is-centered is-gapless is-multiline"
 			id={props.perf_key()}
 		>
-			<div class="column is-narrow">
-				<MinimizeKeyButton handleKey={props.handleKey} />
-			</div>
+			{!props.img() && (
+				<div class="column is-narrow">
+					<MinimizeKeyButton handleKey={props.handleKey} />
+				</div>
+			)}
 			<For each={props.perf_data()?.results}>
 				{(
 					result: {
@@ -113,6 +117,11 @@ const ExpandedKey = (props) => {
 					index,
 				) => (
 					<div class="column is-2">
+						<KeyButton
+							index={index}
+							perf_active={props.perf_active}
+							handlePerfActive={props.handlePerfActive}
+						/>
 						<KeyResource
 							icon="fas fa-code-branch"
 							name={props.branches()?.[result.branch]?.name}
@@ -125,17 +134,9 @@ const ExpandedKey = (props) => {
 							icon="fas fa-tachometer-alt"
 							name={props.benchmarks()?.[result.benchmark]?.name}
 						/>
-						<KeyButton
-							index={index}
-							perf_active={props.perf_active}
-							handlePerfActive={props.handlePerfActive}
-						/>
 					</div>
 				)}
 			</For>
-			<div class="column is-narrow">
-				<MinimizeKeyButton handleKey={props.handleKey} />
-			</div>
 		</div>
 	);
 };
@@ -143,9 +144,11 @@ const ExpandedKey = (props) => {
 const MinimizedKey = (props) => {
 	return (
 		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
-			<div class="column is-narrow">
-				<MaximizeKeyButton handleKey={props.handleKey} />
-			</div>
+			{!props.img() && (
+				<div class="column is-narrow">
+					<MaximizeKeyButton handleKey={props.handleKey} />
+				</div>
+			)}
 			<For each={props.perf_data()?.results}>
 				{(_result, index) => (
 					<div class="column is-narrow">
@@ -157,9 +160,6 @@ const MinimizedKey = (props) => {
 					</div>
 				)}
 			</For>
-			<div class="column is-narrow">
-				<MaximizeKeyButton handleKey={props.handleKey} />
-			</div>
 		</div>
 	);
 };
@@ -171,7 +171,7 @@ const MinimizeKeyButton = (props) => {
 			onClick={() => props.handleKey(false)}
 		>
 			<span class="icon">
-				<i class="fas fa-minus" aria-hidden="true" />
+				<i class="far fa-minus-square fa-2x" aria-hidden="true" />
 			</span>
 		</button>
 	);
@@ -184,7 +184,7 @@ const MaximizeKeyButton = (props) => {
 			onClick={() => props.handleKey(true)}
 		>
 			<span class="icon">
-				<i class="fas fa-plus" aria-hidden="true" />
+				<i class="far fa-plus-square fa-2x" aria-hidden="true" />
 			</span>
 		</button>
 	);

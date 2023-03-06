@@ -55,6 +55,7 @@ const Plot = (props) => {
 					width={width}
 				/>
 			</div>
+			<br />
 			<PlotKey
 				user={props.user}
 				config={props.config}
@@ -64,6 +65,7 @@ const Plot = (props) => {
 				benchmarks={props.benchmarks}
 				perf_data={props.perf_data}
 				key={props.key}
+				img={props.img}
 				perf_active={perf_active}
 				handleKey={props.handleKey}
 				handlePerfActive={handlePerfActive}
