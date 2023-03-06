@@ -38,7 +38,7 @@ impl Selfie {
         self.capture(
             url,
             &[
-                (DEFAULT_WORDMARK_SELECTOR, Some(20)),
+                (DEFAULT_WORDMARK_SELECTOR, Some(10)),
                 (DEFAULT_PLOT_SELECTOR, Some(10)),
                 (DEFAULT_KEY_SELECTOR, Some(10)),
             ],
