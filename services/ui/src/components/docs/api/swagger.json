@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.39"
+    "version": "0.2.40"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -2930,12 +2930,12 @@
       }
     },
     "/v0/projects/{project}/perf": {
-      "post": {
+      "get": {
         "tags": [
           "projects",
           "perf"
         ],
-        "operationId": "post",
+        "operationId": "get",
         "parameters": [
           {
             "in": "path",
@@ -2944,21 +2944,61 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonPerfQuery"
-              }
+          },
+          {
+            "in": "query",
+            "name": "benchmarks",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "in": "query",
+            "name": "branches",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_kind",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbeds",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
+          "200": {
+            "description": "successful operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -3018,6 +3058,221 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "benchmarks",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branches",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_kind",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbeds",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/perf/img": {
+      "get": {
+        "tags": [
+          "projects",
+          "perf"
+        ],
+        "operationId": "get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "benchmarks",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branches",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_kind",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbeds",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "projects",
+          "perf"
+        ],
+        "operationId": "options",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "benchmarks",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branches",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_kind",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_time",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbeds",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -5994,51 +6249,6 @@
           "branch",
           "metrics",
           "testbed"
-        ]
-      },
-      "JsonPerfQuery": {
-        "type": "object",
-        "properties": {
-          "benchmarks": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "branches": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "end_time": {
-            "nullable": true,
-            "type": "string",
-            "format": "date-time"
-          },
-          "metric_kind": {
-            "$ref": "#/components/schemas/ResourceId"
-          },
-          "start_time": {
-            "nullable": true,
-            "type": "string",
-            "format": "date-time"
-          },
-          "testbeds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "benchmarks",
-          "branches",
-          "metric_kind",
-          "testbeds"
         ]
       },
       "JsonPlan": {
