@@ -12,7 +12,6 @@ use crate::error::map_err;
 const DEFAULT_WORDMARK_SELECTOR: &str = "#perf_wordmark";
 const DEFAULT_PLOT_SELECTOR: &str = "#perf_plot";
 const DEFAULT_KEY_SELECTOR: &str = "#perf_key";
-// TODO change list to the actual embedded ID
 const DEFAULT_VIEWPORT_SELECTOR: &str = "#perf_viewport";
 
 pub struct Selfie {
@@ -22,7 +21,7 @@ pub struct Selfie {
 
 impl Selfie {
     pub fn new_embedded() -> Result<Self, SelfieError> {
-        Self::new(1200, 800, None)
+        Self::new(1200, 1200, None)
     }
 
     pub fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
