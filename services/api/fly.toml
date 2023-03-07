@@ -34,3 +34,11 @@ port = 443
 # interval = "15s"
 # restart_limit = 0
 # timeout = "2s"
+
+# Headless Chrome
+[[services]]
+protocol = "tcp"
+internal_port = 8118
+
+[[services.ports]]
+port = 8118
