@@ -11,6 +11,9 @@ browser = []
 # Workspace
 anyhow.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["rt"] }
 # Crate
 headless_chrome = "1.0"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
