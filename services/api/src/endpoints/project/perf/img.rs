@@ -80,7 +80,7 @@ async fn get_inner(
 
     // I have no idea why this helps, but it does...
     // Without it the headless chrome request just hangs.
-    let _lens_cap = reqwest::get("http://example.com").await;
+    let _lens_cap = reqwest::get("http://localhost:61016/v0/server/ping").await;
 
     Selfie::new_embedded()?
         .capture_perf(url.as_ref())

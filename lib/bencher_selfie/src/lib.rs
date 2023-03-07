@@ -27,6 +27,7 @@ impl Selfie {
     pub fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
         let window_size = Some((width, height));
         let launch_options = map_err!(LaunchOptionsBuilder::default()
+            .port(Some(8118))
             .window_size(window_size)
             .build())?;
         let browser = map_err!(Browser::new(launch_options))?;
@@ -56,12 +57,12 @@ impl Selfie {
     ) -> Result<Vec<u8>, SelfieError> {
         let tab = map_err!(self.browser.new_tab())?;
 
-        let jpg = self.capture_inner(&tab, url, wait_for, viewport, timeout);
+        let jpeg = self.capture_inner(&tab, url, wait_for, viewport, timeout);
 
         // Always try to close the tab
         if map_err!(tab.close_with_unload())? {
-            jpg
-        } else if let Err(e) = jpg {
+            jpeg
+        } else if let Err(e) = jpeg {
             Err(e)
         } else {
             Err(SelfieError::CloseTab(url.into()))
