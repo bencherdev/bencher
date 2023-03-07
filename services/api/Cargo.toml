@@ -36,7 +36,6 @@ serde_json.workspace = true
 ordered-float.workspace = true
 oso.workspace = true
 rand.workspace = true
-reqwest.workspace = true
 slug.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
