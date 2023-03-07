@@ -738,6 +738,7 @@ dependencies = [
  "anyhow",
  "headless_chrome",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

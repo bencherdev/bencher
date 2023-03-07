@@ -11,5 +11,6 @@ browser = []
 # Workspace
 anyhow.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 # Crate
 headless_chrome = "1.0"

@@ -39,7 +39,7 @@ rand.workspace = true
 reqwest.workspace = true
 slug.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["fs"] }
+tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
 url.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 # Crate

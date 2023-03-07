@@ -79,13 +79,10 @@ async fn get_inner(
         &path,
         &[("img", Some("true".into()))],
     )?;
-    info!("{url}");
-
-    // I have no idea why this helps, but it does...
-    // Without it the headless chrome request just hangs.
-    let _lens_cap = reqwest::get("http://localhost:61016/v0/server/ping").await;
+    info!("Taking a screenshot of: {url}");
 
     Selfie::new_embedded()?
         .capture_perf(url.as_ref())
+        .await
         .map_err(Into::into)
 }

@@ -36,7 +36,7 @@ impl Selfie {
         Ok(Self { browser, timeout })
     }
 
-    pub fn capture_perf(&self, url: &str) -> Result<Vec<u8>, SelfieError> {
+    pub async fn capture_perf(&self, url: &str) -> Result<Vec<u8>, SelfieError> {
         self.capture(
             url,
             &[
@@ -47,9 +47,10 @@ impl Selfie {
             DEFAULT_VIEWPORT_SELECTOR,
             Some(1),
         )
+        .await
     }
 
-    pub fn capture(
+    pub async fn capture(
         &self,
         url: &str,
         wait_for: &[(&str, Option<u64>)],
@@ -58,7 +59,9 @@ impl Selfie {
     ) -> Result<Vec<u8>, SelfieError> {
         let tab = map_err!(self.browser.new_tab())?;
 
-        let jpeg = self.capture_inner(&tab, url, wait_for, viewport, timeout);
+        let jpeg = self
+            .capture_inner(&tab, url, wait_for, viewport, timeout)
+            .await;
 
         // Always try to close the tab
         if map_err!(tab.close_with_unload())? {
@@ -70,7 +73,7 @@ impl Selfie {
         }
     }
 
-    fn capture_inner(
+    async fn capture_inner(
         &self,
         tab: &Tab,
         url: &str,
@@ -83,6 +86,9 @@ impl Selfie {
         }
 
         map_err!(tab.navigate_to(url))?;
+
+        // This signals to the runtime to poll the other tasks that need to run
+        tokio::task::yield_now().await;
 
         for (selector, timeout) in wait_for {
             map_err!(if let Some(timeout) = timeout.map(Duration::from_secs) {
@@ -124,10 +130,10 @@ mod test {
         file.write_all(jpeg).unwrap();
     }
 
-    #[test]
-    fn test_selfie() {
+    #[tokio::test]
+    async fn test_selfie() {
         let selfie = Selfie::new_embedded().unwrap();
-        let jpeg = selfie.capture_perf(PERF_ADAPTERS_URL).unwrap();
+        let jpeg = selfie.capture_perf(PERF_ADAPTERS_URL).await.unwrap();
         save_jpeg(&jpeg);
     }
 }
