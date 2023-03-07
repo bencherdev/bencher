@@ -122,8 +122,6 @@ async fn post_inner(context: &ApiContext, json_login: JsonLogin) -> Result<JsonE
         subject: Some("Confirm Bencher Login".into()),
         body: Some(body),
     };
-    // Drop database connection mutex before async await
-    drop(conn);
     context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())

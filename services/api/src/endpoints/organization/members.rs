@@ -222,8 +222,6 @@ async fn post_inner(
         subject: Some(format!("Invitation to join {org_name}")),
         body: Some(body),
     };
-    // Drop database connection mutex before async await
-    drop(conn);
     context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())

@@ -149,8 +149,6 @@ async fn post_inner(
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
     };
-    // Drop database connection mutex before async await
-    drop(conn);
     context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())
