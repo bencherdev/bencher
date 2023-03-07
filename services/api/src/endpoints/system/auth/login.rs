@@ -1,6 +1,6 @@
 use bencher_json::{JsonEmpty, JsonLogin};
 
-use diesel::{QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::endpoints::endpoint::pub_response_accepted;
@@ -10,8 +10,7 @@ use crate::endpoints::Method;
 use crate::error::api_error;
 
 use crate::{
-    context::{Body, ButtonBody, Context, Message},
-    diesel::ExpressionMethods,
+    context::{ApiContext, Body, ButtonBody, Message},
     model::organization::organization_role::InsertOrganizationRole,
     model::user::QueryUser,
     schema,
@@ -31,8 +30,8 @@ const LOGIN_RESOURCE: Resource = Resource::Login;
     path =  "/v0/auth/login",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -41,7 +40,7 @@ pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, Ht
     tags = ["auth"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let endpoint = Endpoint::new(LOGIN_RESOURCE, Method::Post);
@@ -53,9 +52,8 @@ pub async fn post(
     pub_response_accepted!(endpoint, json)
 }
 
-async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+async fn post_inner(context: &ApiContext, json_login: JsonLogin) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
 
     let query_user = schema::user::table
         .filter(schema::user::email.eq(json_login.email.as_ref()))
@@ -72,7 +70,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
 
     if let Some(invite) = &json_login.invite {
         let insert_org_role =
-            InsertOrganizationRole::from_jwt(conn, &api_context.secret_key, invite, query_user.id)?;
+            InsertOrganizationRole::from_jwt(conn, &context.secret_key, invite, query_user.id)?;
 
         diesel::insert_into(schema::organization_role::table)
             .values(&insert_org_role)
@@ -80,7 +78,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
             .map_err(api_error!())?;
     }
 
-    let token = api_context
+    let token = context
         .secret_key
         .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)?;
 
@@ -92,7 +90,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
         pre_body: "Please, click the button below or use the provided code to login to Bencher."
             .into(),
         button_text: "Confirm Login".into(),
-        button_url: api_context
+        button_url: context
             .endpoint
             .clone()
             .join("/auth/confirm")
@@ -111,7 +109,7 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
         post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
-        settings_url: api_context
+        settings_url: context
             .endpoint
             .clone()
             .join("/console/settings/email")
@@ -124,7 +122,9 @@ async fn post_inner(context: &Context, json_login: JsonLogin) -> Result<JsonEmpt
         subject: Some("Confirm Bencher Login".into()),
         body: Some(body),
     };
-    api_context.messenger.send(message).await;
+    // Drop database connection mutex before async await
+    drop(conn);
+    context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())
 }

@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
-use diesel::{Insertable, Queryable, SqliteConnection};
+use diesel::{Insertable, Queryable};
 use uuid::Uuid;
 
 use crate::{
+    context::DbConnection,
     diesel::{ExpressionMethods, QueryDsl, RunQueryDsl},
     error::api_error,
     schema,
@@ -24,7 +25,7 @@ pub struct QueryPerf {
 impl QueryPerf {
     fn_get_id!(perf);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::perf::table
             .filter(schema::perf::id.eq(id))
             .select(schema::perf::uuid)

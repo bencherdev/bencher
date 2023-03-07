@@ -9,7 +9,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -46,10 +46,10 @@ pub struct DirPath {
     tags = ["projects", "reports"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -58,7 +58,7 @@ pub async fn dir_options(
     tags = ["projects", "reports"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -81,15 +81,15 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonReport>, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     Ok(schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
@@ -125,7 +125,7 @@ async fn get_ls_inner(
 // already been submitted when X really happened before Y. For implementing git
 // bisect more complex logic will be required.
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
@@ -145,12 +145,12 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     mut json_report: JsonNewReport,
     auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
     // Verify that the branch and testbed are part of the same project
     let SameProject {
@@ -158,26 +158,27 @@ async fn post_inner(
         branch_id,
         testbed_id,
     } = SameProject::validate(
-        &mut api_context.database.connection,
+        conn,
         &path_params.project,
         &json_report.branch,
         &json_report.testbed,
     )?;
 
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
-    let conn = &mut api_context.database.connection;
+    QueryProject::is_allowed_id(
+        conn,
+        &context.rbac,
+        project_id,
+        auth_user,
+        Permission::Create,
+    )?;
 
     // Check to see if the project is public or private
     // If private, then validate that there is an active subscription or license
     #[cfg(feature = "plus")]
-    let plan_kind = plan_kind::PlanKind::new(
-        conn,
-        api_context.biller.as_ref(),
-        &api_context.licensor,
-        project_id,
-    )
-    .await?;
+    let plan_kind =
+        plan_kind::PlanKind::new(conn, context.biller.as_ref(), &context.licensor, project_id)
+            .await?;
 
     // If there is a hash then try to see if there is already a code version for
     // this branch with that particular hash.
@@ -240,7 +241,7 @@ async fn post_inner(
 
     #[cfg(feature = "plus")]
     plan_kind
-        .check_usage(api_context.biller.as_ref(), project_id, usage)
+        .check_usage(context.biller.as_ref(), project_id, usage)
         .await?;
 
     // Don't return the error from processing the report
@@ -254,9 +255,8 @@ async fn post_inner(
 mod plan_kind {
     use bencher_billing::{Biller, SubscriptionId};
     use bencher_license::Licensor;
-    use diesel::SqliteConnection;
 
-    use crate::{model::project::QueryProject, ApiError};
+    use crate::{context::DbConnection, model::project::QueryProject, ApiError};
 
     pub enum PlanKind {
         Metered(SubscriptionId),
@@ -266,7 +266,7 @@ mod plan_kind {
 
     impl PlanKind {
         pub async fn new(
-            conn: &mut SqliteConnection,
+            conn: &mut DbConnection,
             biller: Option<&Biller>,
             licensor: &Licensor,
             project_id: i32,
@@ -329,10 +329,10 @@ pub struct OnePath {
     tags = ["projects", "reports"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -341,7 +341,7 @@ pub async fn one_options(
     tags = ["projects", "reports"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -363,14 +363,14 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonReport, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))

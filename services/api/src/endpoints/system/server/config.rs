@@ -3,7 +3,7 @@ use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
     config::{Config, BENCHER_CONFIG},
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -26,8 +26,8 @@ const CONFIG_RESOURCE: Resource = Resource::Config;
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -35,7 +35,9 @@ pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, Ht
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn get_one(rqctx: RequestContext<Context>) -> Result<ResponseOk<JsonConfig>, HttpError> {
+pub async fn get_one(
+    rqctx: RequestContext<ApiContext>,
+) -> Result<ResponseOk<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::GetOne);
 
@@ -47,10 +49,8 @@ pub async fn get_one(rqctx: RequestContext<Context>) -> Result<ResponseOk<JsonCo
     response_ok!(endpoint, json)
 }
 
-async fn get_one_inner(context: &Context, auth_user: &AuthUser) -> Result<JsonConfig, ApiError> {
-    let api_context = &mut *context.lock().await;
-
-    if !auth_user.is_admin(&api_context.rbac) {
+async fn get_one_inner(context: &ApiContext, auth_user: &AuthUser) -> Result<JsonConfig, ApiError> {
+    if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
 
@@ -63,7 +63,7 @@ async fn get_one_inner(context: &Context, auth_user: &AuthUser) -> Result<JsonCo
     tags = ["server", "config"]
 }]
 pub async fn put(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -79,13 +79,11 @@ pub async fn put(
 }
 
 async fn put_inner(
-    context: &Context,
+    context: &ApiContext,
     json_update_config: JsonUpdateConfig,
     auth_user: &AuthUser,
 ) -> Result<JsonConfig, ApiError> {
-    let api_context = &mut *context.lock().await;
-
-    if !auth_user.is_admin(&api_context.rbac) {
+    if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
 
@@ -98,7 +96,7 @@ async fn put_inner(
     let json_config = serde_json::from_str(&config_str).map_err(ApiError::Deserialize)?;
 
     countdown(
-        api_context.restart_tx.clone(),
+        context.restart_tx.clone(),
         delay.unwrap_or(DEFAULT_DELAY),
         auth_user.id,
     )

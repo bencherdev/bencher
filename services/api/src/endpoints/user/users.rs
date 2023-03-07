@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
         Endpoint, Method,
@@ -34,10 +34,10 @@ pub struct OnePath {
     tags = ["users"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -46,7 +46,7 @@ pub async fn one_options(
     tags = ["users"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -62,15 +62,14 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonUser, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, api_context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.id);
 
     query_user.into_json().map_err(api_error!())
 }

@@ -8,7 +8,7 @@ pub type DbConnection = diesel::SqliteConnection;
 
 pub struct Database {
     pub path: PathBuf,
-    pub connection: DbConnection,
+    pub connection: tokio::sync::Mutex<DbConnection>,
     pub data_store: Option<DataStore>,
 }
 

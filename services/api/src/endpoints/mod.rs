@@ -12,17 +12,17 @@ pub use endpoint::Endpoint;
 pub use method::Method;
 pub use resource::Resource;
 
-use crate::{context::Context, util::registrar::Registrar, ApiError};
+use crate::{context::ApiContext, util::registrar::Registrar, ApiError};
 
 pub struct Api;
 
-impl Registrar<Context> for Api {
-    fn register(api: &mut ApiDescription<Context>) -> Result<(), ApiError> {
+impl Registrar<ApiContext> for Api {
+    fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), ApiError> {
         register(api).map_err(ApiError::Register)
     }
 }
 
-fn register(api: &mut ApiDescription<Context>) -> Result<(), String> {
+fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     // Server
     api.register(system::server::ping::options)?;
     api.register(system::server::ping::get)?;

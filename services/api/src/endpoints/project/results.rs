@@ -8,7 +8,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
@@ -38,10 +38,10 @@ pub struct OnePath {
     tags = ["projects", "results"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -50,7 +50,7 @@ pub async fn one_options(
     tags = ["projects", "results"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonResult>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -73,14 +73,14 @@ pub async fn get_one(
 
 #[allow(clippy::cast_sign_loss)]
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonResult, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let project_id =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?.id;
 
     let perf = schema::perf::table
         .filter(schema::perf::uuid.eq(path_params.result.to_string()))

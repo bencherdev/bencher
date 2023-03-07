@@ -2,12 +2,16 @@ use std::str::FromStr;
 
 use bencher_json::{JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId};
 use chrono::{DateTime, TimeZone, Utc};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    context::ApiContext, error::api_error, schema, schema::token as token_table,
-    util::query::fn_get_id, ApiError,
+    context::{DbConnection, Rbac, SecretKey},
+    error::api_error,
+    schema,
+    schema::token as token_table,
+    util::query::fn_get_id,
+    ApiError,
 };
 
 use super::{auth::AuthUser, QueryUser};
@@ -36,7 +40,7 @@ pub struct QueryToken {
 impl QueryToken {
     fn_get_id!(token);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::token::table
             .filter(schema::token::id.eq(id))
             .select(schema::token::uuid)
@@ -45,7 +49,7 @@ impl QueryToken {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonToken, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, ApiError> {
         let Self {
             uuid,
             user_id,
@@ -86,15 +90,17 @@ pub struct InsertToken {
 impl InsertToken {
     #[allow(clippy::cast_possible_wrap)]
     pub fn from_json(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        rbac: &Rbac,
+        secret_key: &SecretKey,
         user: &ResourceId,
         token: JsonNewToken,
         auth_user: &AuthUser,
     ) -> Result<Self, ApiError> {
         let JsonNewToken { name, ttl } = token;
 
-        let query_user = QueryUser::from_resource_id(&mut api_context.database.connection, user)?;
-        same_user!(auth_user, api_context.rbac, query_user.id);
+        let query_user = QueryUser::from_resource_id(conn, user)?;
+        same_user!(auth_user, rbac, query_user.id);
 
         // TODO Custom max TTL
         let max_ttl = u32::MAX;
@@ -111,13 +117,9 @@ impl InsertToken {
             max_ttl
         };
 
-        let jwt = api_context
-            .secret_key
-            .new_api_key(query_user.email.as_str().parse()?, ttl)?;
+        let jwt = secret_key.new_api_key(query_user.email.as_str().parse()?, ttl)?;
 
-        let token_data = api_context
-            .secret_key
-            .validate_api_key(&jwt.as_ref().parse()?)?;
+        let token_data = secret_key.validate_api_key(&jwt.as_ref().parse()?)?;
 
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),

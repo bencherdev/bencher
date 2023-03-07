@@ -5,14 +5,14 @@ use bencher_json::{
     JsonEmpty, JsonMember, ResourceId,
 };
 use bencher_rbac::organization::Permission;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::{Body, ButtonBody, Context, Message},
+    context::{ApiContext, Body, ButtonBody, DbConnection, Message},
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -47,10 +47,10 @@ pub struct DirPath {
     tags = ["organizations", "members"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -59,7 +59,7 @@ pub async fn dir_options(
     tags = ["organizations", "members"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -78,19 +78,20 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: &AuthUser,
     path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMember>, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        api_context,
+        conn,
+        &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::ViewRole,
     )?;
-    let conn = &mut api_context.database.connection;
 
     Ok(schema::user::table
         .inner_join(
@@ -119,7 +120,7 @@ async fn get_ls_inner(
     tags = ["organizations", "members"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
@@ -139,19 +140,18 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     // Get the organization
     let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
 
     // Check to see if user has permission to create a project within the organization
-    api_context
+    context
         .rbac
         .is_allowed_organization(auth_user, Permission::CreateRole, &query_org)?;
 
@@ -176,7 +176,7 @@ async fn post_inner(
         .map_err(api_error!())?;
 
     // Create an invite token
-    let token = api_context.secret_key.new_invite(
+    let token = context.secret_key.new_invite(
         json_new_member.email,
         INVITE_TOKEN_TTL,
         Uuid::from_str(&query_org.uuid).map_err(api_error!())?,
@@ -195,7 +195,7 @@ async fn post_inner(
             "Please, click the button below or use the provided code to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
         ),
         button_text: format!("Join {org_name}"),
-        button_url: api_context
+        button_url: context
             .endpoint
             .clone()
             .join(route)
@@ -209,7 +209,7 @@ async fn post_inner(
         post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
-        settings_url: api_context
+        settings_url: context
             .endpoint
             .clone()
             .join("/console/settings/email")
@@ -222,7 +222,9 @@ async fn post_inner(
         subject: Some(format!("Invitation to join {org_name}")),
         body: Some(body),
     };
-    api_context.messenger.send(message).await;
+    // Drop database connection mutex before async await
+    drop(conn);
+    context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())
 }
@@ -240,10 +242,10 @@ pub struct OnePath {
     tags = ["organizations", "members"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -252,7 +254,7 @@ pub async fn one_options(
     tags = ["organizations", "members"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -266,18 +268,19 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        api_context,
+        conn,
+        &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::ViewRole,
     )?;
-    let conn = &mut api_context.database.connection;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     json_member(conn, query_user.id, query_organization.id)
@@ -289,7 +292,7 @@ async fn get_one_inner(
     tags = ["organizations", "members"]
 }]
 pub async fn patch(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
@@ -309,24 +312,21 @@ pub async fn patch(
 }
 
 async fn patch_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     json_update: JsonUpdateMember,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
-    let query_organization = QueryOrganization::from_resource_id(
-        &mut api_context.database.connection,
-        &path_params.organization,
-    )?;
-    let query_user =
-        QueryUser::from_resource_id(&mut api_context.database.connection, &path_params.user)?;
+    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     if let Some(role) = json_update.role {
         // Verify that the user is allowed to update member role
         QueryOrganization::is_allowed_id(
-            api_context,
+            conn,
+            &context.rbac,
             query_organization.id,
             auth_user,
             Permission::EditRole,
@@ -337,15 +337,11 @@ async fn patch_inner(
                 .filter(schema::organization_role::organization_id.eq(query_organization.id)),
         )
         .set(schema::organization_role::role.eq(role.to_string()))
-        .execute(&mut api_context.database.connection)
+        .execute(conn)
         .map_err(api_error!())?;
     }
 
-    json_member(
-        &mut api_context.database.connection,
-        query_user.id,
-        query_organization.id,
-    )
+    json_member(conn, query_user.id, query_organization.id)
 }
 
 #[endpoint {
@@ -354,7 +350,7 @@ async fn patch_inner(
     tags = ["organizations", "members"]
 }]
 pub async fn delete(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -368,18 +364,19 @@ pub async fn delete(
 }
 
 async fn delete_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        api_context,
+        conn,
+        &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::DeleteRole,
     )?;
-    let conn = &mut api_context.database.connection;
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
 
     let json_member = json_member(conn, query_user.id, query_organization.id)?;
@@ -389,14 +386,14 @@ async fn delete_inner(
             .filter(schema::organization_role::user_id.eq(query_user.id))
             .filter(schema::organization_role::organization_id.eq(query_organization.id)),
     )
-    .execute(&mut api_context.database.connection)
+    .execute(conn)
     .map_err(api_error!())?;
 
     Ok(json_member)
 }
 
 fn json_member(
-    conn: &mut SqliteConnection,
+    conn: &mut DbConnection,
     user_id: i32,
     organization_id: i32,
 ) -> Result<JsonMember, ApiError> {

@@ -1,5 +1,5 @@
 use crate::{
-    context::SecretKey,
+    context::{DbConnection, SecretKey},
     model::user::{
         auth::{auth_header_error, INVALID_JWT},
         QueryUser,
@@ -8,7 +8,7 @@ use crate::{
     ApiError,
 };
 use bencher_json::{organization::JsonOrganizationPermission, Jwt};
-use diesel::{Insertable, Queryable, SqliteConnection};
+use diesel::{Insertable, Queryable};
 
 use super::QueryOrganization;
 
@@ -22,7 +22,7 @@ pub struct InsertOrganizationRole {
 
 impl InsertOrganizationRole {
     pub fn from_jwt(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         secret_key: &SecretKey,
         invite: &Jwt,
         user_id: i32,

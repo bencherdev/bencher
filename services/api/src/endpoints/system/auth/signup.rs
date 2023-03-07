@@ -16,7 +16,7 @@ use crate::model::organization::{
 use crate::model::user::QueryUser;
 use crate::ApiError;
 use crate::{
-    context::{Body, ButtonBody, Context, Message},
+    context::{ApiContext, Body, ButtonBody, Message},
     model::user::InsertUser,
     schema,
     util::cors::{get_cors, CorsResponse},
@@ -34,8 +34,8 @@ const SIGNUP_RESOURCE: Resource = Resource::Signup;
     path =  "/v0/auth/signup",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -44,7 +44,7 @@ pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, Ht
     tags = ["auth"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let endpoint = Endpoint::new(SIGNUP_RESOURCE, Method::Post);
@@ -56,9 +56,11 @@ pub async fn post(
     pub_response_accepted!(endpoint, json)
 }
 
-async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<JsonEmpty, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+async fn post_inner(
+    context: &ApiContext,
+    mut json_signup: JsonSignup,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
 
     #[cfg(feature = "plus")]
     let plan = json_signup.plan.unwrap_or_default();
@@ -84,7 +86,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
     let user_id = QueryUser::get_id(conn, &insert_user.uuid)?;
 
     let insert_org_role = if let Some(invite) = &invite {
-        InsertOrganizationRole::from_jwt(conn, &api_context.secret_key, invite, user_id)?
+        InsertOrganizationRole::from_jwt(conn, &context.secret_key, invite, user_id)?
     } else {
         // Create an organization for the user
         let insert_org = InsertOrganization::from_user(&insert_user);
@@ -107,7 +109,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         .execute(conn)
         .map_err(api_error!())?;
 
-    let token = api_context.secret_key.new_auth(email, AUTH_TOKEN_TTL)?;
+    let token = context.secret_key.new_auth(email, AUTH_TOKEN_TTL)?;
 
     let token_string = token.to_string();
     let body = Body::Button(Box::new(ButtonBody {
@@ -117,7 +119,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         pre_body: "Please, click the button below or use the provided code to signup for Bencher."
             .into(),
         button_text: "Confirm Email".into(),
-        button_url: api_context
+        button_url: context
             .endpoint
             .clone()
             .join("/auth/confirm")
@@ -134,7 +136,7 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
-        settings_url: api_context
+        settings_url: context
             .endpoint
             .clone()
             .join("/console/settings/email")
@@ -147,7 +149,9 @@ async fn post_inner(context: &Context, mut json_signup: JsonSignup) -> Result<Js
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
     };
-    api_context.messenger.send(message).await;
+    // Drop database connection mutex before async await
+    drop(conn);
+    context.messenger.send(message).await;
 
     Ok(JsonEmpty::default())
 }

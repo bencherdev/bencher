@@ -3,7 +3,7 @@ use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     diesel::ExpressionMethods,
     endpoints::{
         endpoint::{pub_response_accepted, ResponseAccepted},
@@ -26,8 +26,8 @@ const CONFIRM_RESOURCE: Resource = Resource::Confirm;
     path =  "/v0/auth/confirm",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -36,7 +36,7 @@ pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, Ht
     tags = ["auth"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonAuthToken>,
 ) -> Result<ResponseAccepted<JsonConfirm>, HttpError> {
     let endpoint = Endpoint::new(CONFIRM_RESOURCE, Method::Post);
@@ -48,11 +48,13 @@ pub async fn post(
     pub_response_accepted!(endpoint, json)
 }
 
-async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<JsonConfirm, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+async fn post_inner(
+    context: &ApiContext,
+    json_token: JsonAuthToken,
+) -> Result<JsonConfirm, ApiError> {
+    let conn = &mut *context.conn().await;
 
-    let token_data = api_context
+    let token_data = context
         .secret_key
         .validate_auth(&json_token.token)
         .map_err(api_error!())?;
@@ -63,7 +65,7 @@ async fn post_inner(context: &Context, json_token: JsonAuthToken) -> Result<Json
         .map_err(api_error!())?
         .into_json()?;
 
-    let token = api_context
+    let token = context
         .secret_key
         .new_client(token_data.claims.email().parse()?, CLIENT_TOKEN_TTL)
         .map_err(api_error!())?;

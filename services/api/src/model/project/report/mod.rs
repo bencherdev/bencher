@@ -5,15 +5,14 @@ use bencher_json::{
     JsonNewReport, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
-use diesel::{
-    ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection,
-};
+use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use self::adapter::Adapter;
 
 use super::{testbed::QueryTestbed, version::QueryVersion};
 use crate::{
+    context::DbConnection,
     error::api_error,
     model::user::QueryUser,
     schema,
@@ -40,7 +39,7 @@ pub struct QueryReport {
 impl QueryReport {
     fn_get_id!(report);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::report::table
             .filter(schema::report::id.eq(id))
             .select(schema::report::uuid)
@@ -49,7 +48,7 @@ impl QueryReport {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonReport, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
         let results = self.get_results(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {
@@ -75,7 +74,7 @@ impl QueryReport {
         })
     }
 
-    fn get_results(&self, conn: &mut SqliteConnection) -> Result<JsonReportResults, ApiError> {
+    fn get_results(&self, conn: &mut DbConnection) -> Result<JsonReportResults, ApiError> {
         Ok(schema::perf::table
             .inner_join(
                 schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
@@ -92,7 +91,7 @@ impl QueryReport {
             .collect())
     }
 
-    fn get_alerts(&self, conn: &mut SqliteConnection) -> Result<JsonReportAlerts, ApiError> {
+    fn get_alerts(&self, conn: &mut DbConnection) -> Result<JsonReportAlerts, ApiError> {
         Ok(schema::alert::table
             .left_join(schema::perf::table.on(schema::perf::id.eq(schema::alert::perf_id)))
             .filter(schema::perf::report_id.eq(self.id))

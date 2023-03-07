@@ -14,7 +14,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -43,10 +43,10 @@ pub struct DirPath {
     tags = ["organizations", "plan"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -55,7 +55,7 @@ pub async fn options(
     tags = ["organizations", "plan"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
@@ -75,26 +75,24 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_plan: JsonNewPlan,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
-
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
-    let Some(biller) = &api_context.biller else {
+    let Some(biller) = &context.biller else {
         return Err(ApiError::BencherCloudOnly(
             format!("POST /v0/organizations/{}/plan", path_params.organization),
         ));
     };
+    let conn = &mut *context.conn().await;
 
     // Get the organization
     let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
     // Check to see if user has permission to manage the organization
-    api_context
+    context
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
@@ -147,7 +145,7 @@ async fn post_inner(
     tags = ["organizations", "plan"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -161,25 +159,23 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
-
     // Check to see if there is a Biller
     // The Biller is only available on Bencher Cloud
-    let Some(biller) = &api_context.biller else {
+    let Some(biller) = &context.biller else {
         return Err(ApiError::BencherCloudOnly(
             format!("GET /v0/organizations/{}/plan", path_params.organization),
         ));
     };
+    let conn = &mut *context.conn().await;
 
     // Get the organization
     let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
     // Check to see if user has permission to manage the organization
-    api_context
+    context
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 

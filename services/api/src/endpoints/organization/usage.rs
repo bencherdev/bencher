@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
         organization::Resource,
@@ -36,11 +36,11 @@ pub struct GetParams {
     tags = ["organizations", "usage"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<GetParams>,
     _query_params: Query<JsonUsage>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -49,7 +49,7 @@ pub async fn options(
     tags = ["organizations", "usage"]
 }]
 pub async fn get(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<GetParams>,
     query_params: Query<JsonUsage>,
 ) -> Result<ResponseOk<JsonEntitlements>, HttpError> {
@@ -69,18 +69,17 @@ pub async fn get(
 }
 
 async fn get_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: GetParams,
     json_usage: JsonUsage,
     auth_user: &AuthUser,
 ) -> Result<JsonEntitlements, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     // Get the organization
     let query_org = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
     // Check to see if user has permission to manage a project within the organization
-    api_context
+    context
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 

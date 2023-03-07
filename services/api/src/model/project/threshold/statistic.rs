@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
 use bencher_json::project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    error::api_error, schema, schema::statistic as statistic_table, util::query::fn_get_id,
-    ApiError,
+    context::DbConnection, error::api_error, schema, schema::statistic as statistic_table,
+    util::query::fn_get_id, ApiError,
 };
 
 #[derive(Queryable, Debug, Clone)]
@@ -24,7 +24,7 @@ pub struct QueryStatistic {
 impl QueryStatistic {
     fn_get_id!(statistic);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::statistic::table
             .filter(schema::statistic::id.eq(id))
             .select(schema::statistic::uuid)

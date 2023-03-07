@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -43,10 +43,10 @@ pub struct DirPath {
     tags = ["users", "tokens"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -55,7 +55,7 @@ pub async fn dir_options(
     tags = ["users", "tokens"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonToken>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -71,16 +71,15 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonToken>, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, api_context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.id);
 
     Ok(schema::token::table
         .filter(schema::token::user_id.eq(query_user.id))
@@ -98,7 +97,7 @@ async fn get_ls_inner(
     tags = ["users", "tokens"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
@@ -115,15 +114,21 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_token: JsonNewToken,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let insert_token =
-        InsertToken::from_json(api_context, &path_params.user, json_token, auth_user)?;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
+
+    let insert_token = InsertToken::from_json(
+        conn,
+        &context.rbac,
+        &context.secret_key,
+        &path_params.user,
+        json_token,
+        auth_user,
+    )?;
 
     diesel::insert_into(schema::token::table)
         .values(&insert_token)
@@ -151,10 +156,10 @@ pub struct OnePath {
     tags = ["users", "tokens"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -163,7 +168,7 @@ pub async fn one_options(
     tags = ["users", "tokens"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -179,15 +184,14 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
-    same_user!(auth_user, api_context.rbac, query_user.id);
+    same_user!(auth_user, context.rbac, query_user.id);
 
     schema::token::table
         .filter(

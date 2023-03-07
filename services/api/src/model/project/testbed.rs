@@ -1,11 +1,12 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use super::QueryProject;
 use crate::{
+    context::DbConnection,
     error::api_error,
     schema,
     schema::testbed as testbed_table,
@@ -27,7 +28,7 @@ pub struct QueryTestbed {
 impl QueryTestbed {
     fn_get_id!(testbed);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::testbed::table
             .filter(schema::testbed::id.eq(id))
             .select(schema::testbed::uuid)
@@ -37,7 +38,7 @@ impl QueryTestbed {
     }
 
     pub fn from_resource_id(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         testbed: &ResourceId,
     ) -> Result<Self, ApiError> {
@@ -48,7 +49,7 @@ impl QueryTestbed {
             .map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonTestbed, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonTestbed, ApiError> {
         let Self {
             uuid,
             project_id,
@@ -76,7 +77,7 @@ pub struct InsertTestbed {
 
 impl InsertTestbed {
     pub fn from_json(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project: &ResourceId,
         testbed: JsonNewTestbed,
     ) -> Result<Self, ApiError> {
@@ -84,12 +85,12 @@ impl InsertTestbed {
         Ok(Self::from_json_inner(conn, project_id, testbed))
     }
 
-    pub fn localhost(conn: &mut SqliteConnection, project_id: i32) -> Self {
+    pub fn localhost(conn: &mut DbConnection, project_id: i32) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewTestbed::localhost())
     }
 
     pub fn from_json_inner(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         testbed: JsonNewTestbed,
     ) -> Self {

@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{Endpoint, Method},
     util::cors::{get_cors, CorsResponse},
     ApiError,
@@ -31,11 +31,11 @@ pub struct DirPath {
     tags = ["projects", "perf"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -44,7 +44,7 @@ pub async fn options(
     tags = ["projects", "perf"]
 }]
 pub async fn get(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<Response<Body>, HttpError> {
@@ -69,13 +69,16 @@ pub async fn get(
 }
 
 async fn get_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_perf_query: JsonPerfQuery,
 ) -> Result<Vec<u8>, ApiError> {
-    let endpoint = context.lock().await.endpoint.clone();
     let path = format!("/perf/{}", path_params.project);
-    let url = json_perf_query.to_url(endpoint.as_ref(), &path, &[("img", Some("true".into()))])?;
+    let url = json_perf_query.to_url(
+        context.endpoint.as_ref(),
+        &path,
+        &[("img", Some("true".into()))],
+    )?;
     info!("{url}");
 
     // I have no idea why this helps, but it does...

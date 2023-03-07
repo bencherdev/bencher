@@ -1,12 +1,13 @@
 use std::str::FromStr;
 
 use bencher_json::GitHash;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    error::api_error, schema, schema::branch_version as branch_version_table,
-    schema::version as version_table, util::query::fn_get_id, ApiError,
+    context::DbConnection, error::api_error, schema,
+    schema::branch_version as branch_version_table, schema::version as version_table,
+    util::query::fn_get_id, ApiError,
 };
 
 #[derive(Queryable)]
@@ -27,7 +28,7 @@ pub struct QueryBranchVersion {
 impl QueryVersion {
     fn_get_id!(version);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::version::table
             .filter(schema::version::id.eq(id))
             .select(schema::version::uuid)
@@ -54,7 +55,7 @@ pub struct InsertBranchVersion {
 
 impl InsertVersion {
     pub fn increment(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         branch_id: i32,
         hash: Option<GitHash>,
     ) -> Result<i32, ApiError> {

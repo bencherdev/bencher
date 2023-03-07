@@ -4,14 +4,14 @@ use bencher_json::{
     project::perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
 };
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::Context,
+    context::{ApiContext, DbConnection},
     endpoints::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
@@ -48,11 +48,11 @@ pub struct DirPath {
     tags = ["projects", "perf"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -61,7 +61,7 @@ pub async fn options(
     tags = ["projects", "perf"]
 }]
 pub async fn get(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<ResponseOk<JsonPerf>, HttpError> {
@@ -112,15 +112,15 @@ struct Times {
 }
 
 async fn get_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let project_id =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?.id;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?.id;
 
     let JsonPerfQuery {
         branches,
@@ -187,7 +187,7 @@ type PerfQuery = (
 );
 
 fn perf_query(
-    conn: &mut SqliteConnection,
+    conn: &mut DbConnection,
     ids: Ids,
     uuids: Uuids,
     times: Times,

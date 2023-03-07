@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_ok, ResponseOk},
         Endpoint, Method,
@@ -34,10 +34,10 @@ const PROJECT_RESOURCE: Resource = Resource::Project;
     tags = ["projects"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _query_params: Query<JsonProjects>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -46,7 +46,7 @@ pub async fn dir_options(
     tags = ["projects"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     query_params: Query<JsonProjects>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -69,13 +69,12 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: Option<&AuthUser>,
     json_projects: JsonProjects,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     let mut query = schema::project::table.into_boxed();
 
@@ -83,9 +82,9 @@ async fn get_ls_inner(
     if let Some(true) = json_projects.public {
         query = query.filter(schema::project::visibility.eq(Visibility::Public as i32));
     } else if let Some(auth_user) = auth_user {
-        if !auth_user.is_admin(&api_context.rbac) {
+        if !auth_user.is_admin(&context.rbac) {
             let projects =
-                auth_user.projects(&api_context.rbac, bencher_rbac::project::Permission::View);
+                auth_user.projects(&context.rbac, bencher_rbac::project::Permission::View);
             query = query.filter(schema::project::id.eq_any(projects));
         }
     } else {
@@ -113,10 +112,10 @@ pub struct OnePath {
     tags = ["projects"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -125,7 +124,7 @@ pub async fn one_options(
     tags = [ "projects"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -147,11 +146,12 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonProject, ApiError> {
-    let api_context = &mut *context.lock().await;
-    QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?
-        .into_json(&mut api_context.database.connection)
+    let conn = &mut *context.conn().await;
+
+    QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?
+        .into_json(conn)
 }
