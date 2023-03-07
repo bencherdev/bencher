@@ -87,22 +87,28 @@ impl Selfie {
 
         map_err!(tab.navigate_to(url))?;
 
-        // This signals to the runtime to poll the other tasks that need to run
-        tokio::task::yield_now().await;
-
         for (selector, timeout) in wait_for {
-            map_err!(if let Some(timeout) = timeout.map(Duration::from_secs) {
-                tab.wait_for_element_with_custom_timeout(selector, timeout)
-            } else {
-                tab.wait_for_element(selector)
-            })?;
+            // This signals to the runtime to poll the other tasks that need to run
+            tokio::task::yield_now().await;
+
+            map_err!(
+                if let Some(timeout) = timeout.map(Duration::from_secs) {
+                    tab.wait_for_element_with_custom_timeout(selector, timeout)
+                } else {
+                    tab.wait_for_element(selector)
+                },
+                selector
+            )?;
         }
 
-        let element = map_err!(if let Some(timeout) = timeout.map(Duration::from_secs) {
-            tab.wait_for_element_with_custom_timeout(viewport, timeout)
-        } else {
-            tab.wait_for_element(viewport)
-        })?;
+        let element = map_err!(
+            if let Some(timeout) = timeout.map(Duration::from_secs) {
+                tab.wait_for_element_with_custom_timeout(viewport, timeout)
+            } else {
+                tab.wait_for_element(viewport)
+            },
+            viewport
+        )?;
         let box_model = map_err!(element.get_box_model())?;
         let viewport = Some(box_model.margin_viewport());
 

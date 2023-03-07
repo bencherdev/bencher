@@ -16,6 +16,11 @@ macro_rules! map_err {
         $headless_chrome
             .map_err(|e| SelfieError::HeadlessChrome(HeadlessChromeError(anyhow::anyhow!(e))))
     };
+    ($headless_chrome:expr, $arg:ident) => {{
+        $headless_chrome.map_err(|e| {
+            SelfieError::HeadlessChrome(HeadlessChromeError(anyhow::anyhow!("{}: {}", $arg, e)))
+        })
+    }};
 }
 
 pub(crate) use map_err;
