@@ -1,7 +1,8 @@
 use bencher_json::ResourceId;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
+    context::DbConnection,
     error::api_error,
     model::project::{branch::QueryBranch, testbed::QueryTestbed, QueryProject},
     schema, ApiError,
@@ -15,7 +16,7 @@ pub struct SameProject {
 
 impl SameProject {
     pub fn validate(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project: &ResourceId,
         branch: &ResourceId,
         testbed: &ResourceId,
@@ -32,7 +33,7 @@ impl SameProject {
     }
 
     pub fn validate_ids(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,

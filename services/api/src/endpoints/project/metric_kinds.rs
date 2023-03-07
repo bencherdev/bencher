@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -42,10 +42,10 @@ pub struct DirPath {
     tags = ["projects", "metric kinds"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -54,7 +54,7 @@ pub async fn dir_options(
     tags = ["projects", "metric kinds"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonMetricKind>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -77,15 +77,15 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMetricKind>, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     Ok(schema::metric_kind::table
         .filter(schema::metric_kind::project_id.eq(query_project.id))
@@ -103,7 +103,7 @@ async fn get_ls_inner(
     tags = ["projects", "metric kinds"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewMetricKind>,
 ) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
@@ -123,25 +123,23 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_metric_kind: JsonNewMetricKind,
     auth_user: &AuthUser,
 ) -> Result<JsonMetricKind, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let insert_metric_kind = InsertMetricKind::from_json(
-        &mut api_context.database.connection,
-        &path_params.project,
-        json_metric_kind,
-    )?;
+    let conn = &mut *context.conn().await;
+
+    let insert_metric_kind =
+        InsertMetricKind::from_json(conn, &path_params.project, json_metric_kind)?;
     // Verify that the user is allowed
     QueryProject::is_allowed_id(
-        api_context,
+        conn,
+        &context.rbac,
         insert_metric_kind.project_id,
         auth_user,
         Permission::Create,
     )?;
-    let conn = &mut api_context.database.connection;
 
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
@@ -168,10 +166,10 @@ pub struct OnePath {
     tags = ["projects", "metric kinds"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -180,7 +178,7 @@ pub async fn one_options(
     tags = ["projects", "metric kinds"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -204,14 +202,14 @@ pub async fn get_one(
 fn_resource_id!(metric_kind);
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonMetricKind, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::metric_kind::table
         .filter(

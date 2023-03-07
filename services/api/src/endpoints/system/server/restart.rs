@@ -4,7 +4,7 @@ use tokio::sync::mpsc::Sender;
 use tracing::{error, warn};
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
@@ -27,10 +27,10 @@ pub const DEFAULT_DELAY: u64 = 3;
     tags = ["server"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -39,7 +39,7 @@ pub async fn options(
     tags = ["server"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -55,18 +55,16 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     json_restart: JsonRestart,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
-    let api_context = &mut *context.lock().await;
-
-    if !auth_user.is_admin(&api_context.rbac) {
+    if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
 
     countdown(
-        api_context.restart_tx.clone(),
+        context.restart_tx.clone(),
         json_restart.delay.unwrap_or(DEFAULT_DELAY),
         auth_user.id,
     )

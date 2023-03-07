@@ -1,8 +1,9 @@
 use chrono::offset::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 
 use crate::{
-    error::api_error, model::project::threshold::statistic::QueryStatistic, schema, ApiError,
+    context::DbConnection, error::api_error, model::project::threshold::statistic::QueryStatistic,
+    schema, ApiError,
 };
 
 pub struct MetricsData {
@@ -11,7 +12,7 @@ pub struct MetricsData {
 
 impl MetricsData {
     pub fn new(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         branch_id: i32,
         testbed_id: i32,
         metric_kind_id: i32,

@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
 use bencher_json::{BenchmarkName, JsonBenchmark};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use super::QueryProject;
 use crate::{
-    error::api_error, schema, schema::benchmark as benchmark_table, util::query::fn_get_id,
-    ApiError,
+    context::DbConnection, error::api_error, schema, schema::benchmark as benchmark_table,
+    util::query::fn_get_id, ApiError,
 };
 
 #[derive(Queryable)]
@@ -22,7 +22,7 @@ impl QueryBenchmark {
     fn_get_id!(benchmark);
 
     pub fn get_id_from_name(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         name: &str,
     ) -> Result<i32, ApiError> {
@@ -34,7 +34,7 @@ impl QueryBenchmark {
             .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::benchmark::table
             .filter(schema::benchmark::id.eq(id))
             .select(schema::benchmark::uuid)
@@ -43,7 +43,7 @@ impl QueryBenchmark {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBenchmark, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
         let QueryBenchmark {
             uuid,
             project_id,
@@ -58,7 +58,7 @@ impl QueryBenchmark {
     }
 
     pub fn get_or_create(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         name: &str,
     ) -> Result<i32, ApiError> {

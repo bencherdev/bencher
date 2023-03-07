@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -36,8 +36,8 @@ const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
     path =  "/v0/organizations",
     tags = ["organizations"]
 }]
-pub async fn dir_options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+pub async fn dir_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -46,7 +46,7 @@ pub async fn dir_options(_rqctx: RequestContext<Context>) -> Result<CorsResponse
     tags = ["organizations"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<Vec<JsonOrganization>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
@@ -59,17 +59,16 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonOrganization>, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
     let mut sql = schema::organization::table.into_boxed();
 
-    if !auth_user.is_admin(&api_context.rbac) {
-        let organizations = auth_user.organizations(&api_context.rbac, Permission::View);
+    if !auth_user.is_admin(&context.rbac) {
+        let organizations = auth_user.organizations(&context.rbac, Permission::View);
         sql = sql.filter(schema::organization::id.eq_any(organizations));
     }
 
@@ -88,7 +87,7 @@ async fn get_ls_inner(
     tags = ["organizations"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -102,14 +101,13 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     json_organization: JsonNewOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
-    let api_context = &mut *context.lock().await;
-    let conn = &mut api_context.database.connection;
+    let conn = &mut *context.conn().await;
 
-    if !auth_user.is_admin(&api_context.rbac) {
+    if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::CreateOrganization(auth_user.id));
     }
 
@@ -150,10 +148,10 @@ pub struct OnePath {
     tags = ["organizations"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -162,7 +160,7 @@ pub async fn one_options(
     tags = ["organizations"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -176,14 +174,15 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
     QueryOrganization::is_allowed_resource_id(
-        api_context,
+        conn,
+        &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::View,

@@ -4058,18 +4058,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple"
-version = "0.1.0"
-dependencies = [
- "bencher_selfie",
- "dropshot",
- "reqwest",
- "schemars",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "simple_asn1"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

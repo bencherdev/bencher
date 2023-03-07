@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -44,10 +44,10 @@ pub struct DirPath {
     tags = ["organizations", "projects"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -56,7 +56,7 @@ pub async fn dir_options(
     tags = ["organizations", "projects"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -75,19 +75,20 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_organization = QueryOrganization::is_allowed_resource_id(
-        api_context,
+        conn,
+        &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::View,
     )?;
-    let conn = &mut api_context.database.connection;
 
     Ok(schema::project::table
         .filter(schema::project::organization_id.eq(query_organization.id))
@@ -105,7 +106,7 @@ async fn get_ls_inner(
     tags = ["organizations", "projects"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
@@ -125,31 +126,31 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_project: JsonNewProject,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
     project_visibility(json_project.visibility)?;
     #[cfg(feature = "plus")]
     project_visibility::project_visibility(
-        api_context,
+        conn,
+        context.biller.as_ref(),
+        &context.licensor,
         &path_params.organization,
         json_project.visibility,
     )
     .await?;
 
-    let conn = &mut api_context.database.connection;
-
     // Create the project
     let insert_project = InsertProject::from_json(conn, &path_params.organization, json_project)?;
 
     // Check to see if user has permission to create a project within the organization
-    api_context
+    context
         .rbac
         .is_allowed_organization(auth_user, Permission::Create, &insert_project)?;
 
@@ -220,30 +221,25 @@ mod project_visibility {
     use bencher_billing::Biller;
     use bencher_json::{project::JsonVisibility, ResourceId};
     use bencher_license::Licensor;
-    use diesel::SqliteConnection;
 
-    use crate::{context::ApiContext, model::organization::QueryOrganization, ApiError};
+    use crate::{context::DbConnection, model::organization::QueryOrganization, ApiError};
 
     pub async fn project_visibility(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        biller: Option<&Biller>,
+        licensor: &Licensor,
         organization: &ResourceId,
         visibility: Option<JsonVisibility>,
     ) -> Result<(), ApiError> {
         if visibility.unwrap_or_default().is_public() {
             Ok(())
         } else {
-            check_plan(
-                &mut api_context.database.connection,
-                api_context.biller.as_ref(),
-                &api_context.licensor,
-                organization,
-            )
-            .await
+            check_plan(conn, biller, licensor, organization).await
         }
     }
 
     async fn check_plan(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         biller: Option<&Biller>,
         licensor: &Licensor,
         organization: &ResourceId,
@@ -282,10 +278,10 @@ pub struct OnePath {
     tags = ["organizations", "projects"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -294,7 +290,7 @@ pub async fn one_options(
     tags = ["organizations", "projects"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -308,19 +304,19 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
     QueryOrganization::is_allowed_resource_id(
-        api_context,
+        conn,
+        &context.rbac,
         &path_params.organization,
         auth_user,
         Permission::View,
     )?;
 
-    let conn = &mut api_context.database.connection;
     QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
 }

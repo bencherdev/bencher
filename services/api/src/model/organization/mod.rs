@@ -7,11 +7,11 @@ use bencher_billing::SubscriptionId;
 use bencher_json::Jwt;
 use bencher_json::{JsonNewOrganization, JsonOrganization, NonEmpty, ResourceId, Slug};
 use bencher_rbac::Organization;
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    context::ApiContext,
+    context::{DbConnection, Rbac},
     error::api_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
@@ -31,7 +31,7 @@ pub struct InsertOrganization {
 }
 
 impl InsertOrganization {
-    pub fn from_json(conn: &mut SqliteConnection, organization: JsonNewOrganization) -> Self {
+    pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
         Self {
@@ -65,7 +65,7 @@ pub struct QueryOrganization {
 impl QueryOrganization {
     fn_get_id!(organization);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::organization::table
             .filter(schema::organization::id.eq(id))
             .select(schema::organization::uuid)
@@ -75,7 +75,7 @@ impl QueryOrganization {
     }
 
     pub fn from_resource_id(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         organization: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::organization::table
@@ -86,7 +86,7 @@ impl QueryOrganization {
 
     #[cfg(feature = "plus")]
     pub fn get_subscription(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         resource_id: &ResourceId,
     ) -> Result<Option<SubscriptionId>, ApiError> {
         let organization = Self::from_resource_id(conn, resource_id)?;
@@ -100,7 +100,7 @@ impl QueryOrganization {
 
     #[cfg(feature = "plus")]
     pub fn get_license(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         resource_id: &ResourceId,
     ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
         let organization = Self::from_resource_id(conn, resource_id)?;
@@ -113,37 +113,32 @@ impl QueryOrganization {
     }
 
     pub fn is_allowed_resource_id(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        rbac: &Rbac,
         organization: &ResourceId,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, ApiError> {
-        let query_organization = QueryOrganization::from_resource_id(
-            &mut api_context.database.connection,
-            organization,
-        )?;
+        let query_organization = QueryOrganization::from_resource_id(conn, organization)?;
 
-        api_context
-            .rbac
-            .is_allowed_organization(auth_user, permission, &query_organization)?;
+        rbac.is_allowed_organization(auth_user, permission, &query_organization)?;
 
         Ok(query_organization)
     }
 
     pub fn is_allowed_id(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        rbac: &Rbac,
         organization_id: i32,
         auth_user: &AuthUser,
         permission: bencher_rbac::organization::Permission,
     ) -> Result<Self, ApiError> {
         let query_organization = schema::organization::table
             .filter(schema::organization::id.eq(organization_id))
-            .first(&mut api_context.database.connection)
+            .first(conn)
             .map_err(api_error!())?;
 
-        api_context
-            .rbac
-            .is_allowed_organization(auth_user, permission, &query_organization)?;
+        rbac.is_allowed_organization(auth_user, permission, &query_organization)?;
 
         Ok(query_organization)
     }

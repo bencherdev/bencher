@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -48,10 +48,10 @@ pub struct DirPath {
     tags = ["projects", "thresholds"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -60,7 +60,7 @@ pub async fn dir_options(
     tags = ["projects", "thresholds"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
 ) -> Result<ResponseOk<Vec<JsonThreshold>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -83,15 +83,15 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: DirPath,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonThreshold>, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     Ok(schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
@@ -118,7 +118,7 @@ async fn get_ls_inner(
     tags = ["projects", "thresholds"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
@@ -138,12 +138,12 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     json_threshold: &JsonNewThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
     // Verify that the branch and testbed are part of the same project
     let SameProject {
@@ -151,15 +151,20 @@ async fn post_inner(
         branch_id,
         testbed_id,
     } = SameProject::validate(
-        &mut api_context.database.connection,
+        conn,
         &path_params.project,
         &json_threshold.branch,
         &json_threshold.testbed,
     )?;
 
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(api_context, project_id, auth_user, Permission::Create)?;
-    let conn = &mut api_context.database.connection;
+    QueryProject::is_allowed_id(
+        conn,
+        &context.rbac,
+        project_id,
+        auth_user,
+        Permission::Create,
+    )?;
 
     let insert_threshold =
         InsertThreshold::from_json(conn, project_id, branch_id, testbed_id, json_threshold)?;
@@ -188,10 +193,10 @@ pub struct OnePath {
     tags = ["projects", "thresholds"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -200,7 +205,7 @@ pub async fn one_options(
     tags = ["projects", "thresholds"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -222,14 +227,14 @@ pub async fn get_one(
 }
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonThreshold, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::threshold::table
         .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))

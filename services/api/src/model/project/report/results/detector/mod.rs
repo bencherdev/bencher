@@ -1,9 +1,10 @@
 use bencher_json::JsonMetric;
-use diesel::{RunQueryDsl, SqliteConnection};
+use diesel::RunQueryDsl;
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use uuid::Uuid;
 
 use crate::{
+    context::DbConnection,
     error::api_error,
     model::project::threshold::{
         alert::{InsertAlert, Side},
@@ -28,7 +29,7 @@ pub struct Detector {
 
 impl Detector {
     pub fn new(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         branch_id: i32,
         testbed_id: i32,
         metric_kind_id: i32,
@@ -61,7 +62,7 @@ impl Detector {
     )]
     pub fn detect(
         &self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         perf_id: i32,
         benchmark_id: i32,
         metric: JsonMetric,
@@ -124,7 +125,7 @@ impl Detector {
     #[allow(clippy::cast_possible_truncation)]
     fn alert(
         &self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         perf_id: i32,
         side: Side,
         boundary: f32,

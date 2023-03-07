@@ -1,14 +1,14 @@
 use std::str::FromStr;
 
 use bencher_json::project::threshold::{JsonNewThreshold, JsonThreshold};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed};
 use crate::{
-    error::api_error, schema, schema::threshold as threshold_table, util::query::fn_get_id,
-    ApiError,
+    context::DbConnection, error::api_error, schema, schema::threshold as threshold_table,
+    util::query::fn_get_id, ApiError,
 };
 
 pub mod alert;
@@ -27,7 +27,7 @@ pub struct QueryThreshold {
 impl QueryThreshold {
     fn_get_id!(threshold);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::threshold::table
             .filter(schema::threshold::id.eq(id))
             .select(schema::threshold::uuid)
@@ -36,7 +36,7 @@ impl QueryThreshold {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonThreshold, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, ApiError> {
         let Self {
             uuid,
             branch_id,
@@ -67,7 +67,7 @@ pub struct InsertThreshold {
 
 impl InsertThreshold {
     pub fn new<U>(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         branch_id: i32,
         testbed_id: i32,
         metric_kind_id: i32,
@@ -86,7 +86,7 @@ impl InsertThreshold {
     }
 
     pub fn from_json(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         branch_id: i32,
         testbed_id: i32,

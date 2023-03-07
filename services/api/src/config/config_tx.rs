@@ -10,19 +10,19 @@ use bencher_json::{
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
-use diesel::{Connection, SqliteConnection};
+use diesel::Connection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
 };
 use slog::Logger;
-use tokio::sync::{mpsc::Sender, Mutex};
+use tokio::sync::mpsc::Sender;
 use tracing::{trace, warn};
 use url::Url;
 
 use crate::{
-    context::{ApiContext, Context, Database, Email, Messenger, SecretKey},
+    context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
     endpoints::Api,
     util::registrar::Registrar,
     ApiError,
@@ -40,7 +40,7 @@ pub struct ConfigTx {
     pub restart_tx: Sender<()>,
 }
 
-impl TryFrom<ConfigTx> for HttpServer<Context> {
+impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
     type Error = ApiError;
 
     fn try_from(config_tx: ConfigTx) -> Result<Self, Self::Error> {
@@ -111,10 +111,10 @@ fn into_private(
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
-) -> Result<Mutex<ApiContext>, ApiError> {
+) -> Result<ApiContext, ApiError> {
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(&database_path);
-    let mut database_connection = SqliteConnection::establish(&database_path)?;
+    let mut database_connection = DbConnection::establish(&database_path)?;
     run_migrations(&mut database_connection)?;
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into()?)
@@ -128,14 +128,14 @@ fn into_private(
     #[cfg(feature = "plus")]
     let Plus { biller, licensor } = Plus::new(&endpoint, plus)?;
 
-    Ok(Mutex::new(ApiContext {
+    Ok(ApiContext {
         endpoint,
         secret_key,
         rbac: init_rbac().map_err(ApiError::Polar)?.into(),
         messenger: into_messenger(smtp),
         database: Database {
             path: json_database.file,
-            connection: database_connection,
+            connection: tokio::sync::Mutex::new(database_connection),
             data_store,
         },
         restart_tx,
@@ -143,7 +143,7 @@ fn into_private(
         biller,
         #[cfg(feature = "plus")]
         licensor,
-    }))
+    })
 }
 
 // Set the diesel `DATABASE_URL` env var to the database path
@@ -160,7 +160,7 @@ fn diesel_database_url(database_path: &str) {
     std::env::set_var(DATABASE_URL, database_path);
 }
 
-fn run_migrations(database: &mut SqliteConnection) -> Result<(), ApiError> {
+fn run_migrations(database: &mut DbConnection) -> Result<(), ApiError> {
     database
         .run_pending_migrations(MIGRATIONS)
         .map(|_| ())

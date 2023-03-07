@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
 use bencher_json::{Email, JsonSignup, JsonUser, ResourceId, Slug, UserName};
-use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    diesel::ExpressionMethods,
+    context::DbConnection,
     error::api_error,
     schema::{self, user as user_table},
     util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug},
@@ -27,7 +27,7 @@ pub struct InsertUser {
 }
 
 impl InsertUser {
-    pub fn from_json(conn: &mut SqliteConnection, signup: JsonSignup) -> Result<Self, ApiError> {
+    pub fn from_json(conn: &mut DbConnection, signup: JsonSignup) -> Result<Self, ApiError> {
         let JsonSignup {
             name, slug, email, ..
         } = signup;
@@ -59,7 +59,7 @@ pub struct QueryUser {
 impl QueryUser {
     fn_get_id!(user);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::uuid)
@@ -68,7 +68,7 @@ impl QueryUser {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn get_id_from_email(conn: &mut SqliteConnection, email: &str) -> Result<i32, ApiError> {
+    pub fn get_id_from_email(conn: &mut DbConnection, email: &str) -> Result<i32, ApiError> {
         schema::user::table
             .filter(schema::user::email.eq(email))
             .select(schema::user::id)
@@ -76,7 +76,7 @@ impl QueryUser {
             .map_err(api_error!())
     }
 
-    pub fn get_email_from_id(conn: &mut SqliteConnection, id: i32) -> Result<String, ApiError> {
+    pub fn get_email_from_id(conn: &mut DbConnection, id: i32) -> Result<String, ApiError> {
         schema::user::table
             .filter(schema::user::id.eq(id))
             .select(schema::user::email)
@@ -84,10 +84,7 @@ impl QueryUser {
             .map_err(api_error!())
     }
 
-    pub fn from_resource_id(
-        conn: &mut SqliteConnection,
-        user: &ResourceId,
-    ) -> Result<Self, ApiError> {
+    pub fn from_resource_id(conn: &mut DbConnection, user: &ResourceId) -> Result<Self, ApiError> {
         schema::user::table
             .filter(resource_id(user)?)
             .first(conn)

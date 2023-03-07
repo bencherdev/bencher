@@ -1,7 +1,7 @@
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{endpoint::pub_response_ok, Endpoint, Method},
     util::{
         cors::{get_cors, CorsResponse},
@@ -20,8 +20,8 @@ const PONG: &str = "PONG";
     path =  "/v0/server/ping",
     tags = ["server", "ping"]
 }]
-pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
 }
 
 #[allow(clippy::unused_async)]
@@ -31,7 +31,7 @@ pub async fn options(_rqctx: RequestContext<Context>) -> Result<CorsResponse, Ht
     tags = ["server", "ping"]
 }]
 pub async fn get(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);
     pub_response_ok!(endpoint, PONG.into())

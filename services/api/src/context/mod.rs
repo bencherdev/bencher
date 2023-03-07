@@ -15,8 +15,6 @@ pub use messenger::{Body, ButtonBody, Email, Message, Messenger};
 pub use rbac::Rbac;
 pub use secret_key::SecretKey;
 
-pub type Context = tokio::sync::Mutex<ApiContext>;
-
 pub struct ApiContext {
     pub endpoint: Url,
     pub secret_key: SecretKey,
@@ -28,4 +26,10 @@ pub struct ApiContext {
     pub biller: Option<Biller>,
     #[cfg(feature = "plus")]
     pub licensor: Licensor,
+}
+
+impl ApiContext {
+    pub async fn conn(&self) -> tokio::sync::MutexGuard<DbConnection> {
+        self.database.connection.lock().await
+    }
 }

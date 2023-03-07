@@ -27,6 +27,7 @@ impl Selfie {
     pub fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
         let window_size = Some((width, height));
         let launch_options = map_err!(LaunchOptionsBuilder::default()
+            .sandbox(false)
             .port(Some(8118))
             .window_size(window_size)
             .build())?;

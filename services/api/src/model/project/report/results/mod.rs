@@ -8,9 +8,10 @@ use bencher_json::{
     project::report::{JsonAdapter, JsonReportSettings},
     BenchmarkName,
 };
-use diesel::{RunQueryDsl, SqliteConnection};
+use diesel::RunQueryDsl;
 
 use crate::{
+    context::DbConnection,
     error::api_error,
     model::project::{
         benchmark::QueryBenchmark,
@@ -53,7 +54,7 @@ impl ReportResults {
 
     pub fn process(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         results_array: &[&str],
         adapter: JsonAdapter,
         settings: JsonReportSettings,
@@ -88,7 +89,7 @@ impl ReportResults {
 
     fn results(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         iteration: usize,
         results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u64,
@@ -108,7 +109,7 @@ impl ReportResults {
 
     fn metrics(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         iteration: usize,
         benchmark_name: BenchmarkName,
         metrics: AdapterMetrics,
@@ -152,7 +153,7 @@ impl ReportResults {
 
     fn benchmark_id(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         benchmark_name: BenchmarkName,
     ) -> Result<i32, ApiError> {
         Ok(
@@ -169,7 +170,7 @@ impl ReportResults {
 
     fn metric_kind_id(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         metric_kind_key: MetricKind,
     ) -> Result<i32, ApiError> {
         Ok(
@@ -188,7 +189,7 @@ impl ReportResults {
 
     fn detector(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         metric_kind_id: MetricKindId,
     ) -> Result<Option<Detector>, ApiError> {
         Ok(

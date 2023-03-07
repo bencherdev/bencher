@@ -4,13 +4,12 @@ use bencher_rbac::{
 };
 
 use bencher_json::Jwt;
-use diesel::{JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::RequestContext;
 use oso::{PolarValue, ToPolar};
 
 use crate::{
-    context::{Context, Rbac},
-    diesel::ExpressionMethods,
+    context::{ApiContext, DbConnection, Rbac},
     schema,
     util::error::debug_error,
     ApiError,
@@ -77,7 +76,7 @@ impl From<ProjectId> for Project {
 }
 
 impl AuthUser {
-    pub async fn new(rqctx: &RequestContext<Context>) -> Result<Self, ApiError> {
+    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, ApiError> {
         let request = &rqctx.request;
 
         let headers = request
@@ -91,10 +90,10 @@ impl AuthUser {
             .ok_or_else(auth_header_error!("Missing \"Authorization\" Bearer"))?;
         let jwt: Jwt = token.trim().parse()?;
 
-        let api_context = &mut *rqctx.context().lock().await;
-        let token_data = api_context.secret_key.validate_client(&jwt)?;
+        let context = rqctx.context();
+        let conn = &mut *context.conn().await;
+        let token_data = context.secret_key.validate_client(&jwt)?;
 
-        let conn = &mut api_context.database.connection;
         let (user_id, admin, locked) = schema::user::table
             .filter(schema::user::email.eq(token_data.claims.email()))
             .select((schema::user::id, schema::user::admin, schema::user::locked))
@@ -123,7 +122,7 @@ impl AuthUser {
     }
 
     fn organization_roles(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         user_id: i32,
     ) -> Result<(Vec<OrganizationId>, OrganizationRoles), ApiError> {
         let roles = schema::organization_role::table
@@ -155,7 +154,7 @@ impl AuthUser {
     }
 
     fn project_roles(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         user_id: i32,
     ) -> Result<(Vec<ProjectId>, ProjectRoles), ApiError> {
         let roles = schema::project_role::table

@@ -5,14 +5,13 @@ use bencher_json::system::backup::JsonDataStore;
 use bencher_json::{JsonBackup, JsonEmpty, JsonRestart};
 use chrono::Utc;
 use diesel::connection::SimpleConnection;
-use diesel::SqliteConnection;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 use tokio::fs::remove_file;
 use tokio::io::{AsyncReadExt, BufWriter};
 use tokio::io::{AsyncWriteExt, BufReader};
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_accepted, ResponseAccepted},
         Endpoint, Method,
@@ -35,10 +34,10 @@ const BUFFER_SIZE: usize = 1024;
     tags = ["server"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -47,7 +46,7 @@ pub async fn options(
     tags = ["server"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -63,19 +62,16 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     json_backup: JsonBackup,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
-    let api_context = &mut *context.lock().await;
-    if !auth_user.is_admin(&api_context.rbac) {
+    if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
-    let conn = &mut api_context.database.connection;
 
     // Create a database backup
-    let (backup_file_path, backup_file_name) =
-        backup_database(conn, api_context.database.path.clone())?;
+    let (backup_file_path, backup_file_name) = backup_database(context).await?;
 
     // Compress the database backup
     let (source_path, file_name) = if json_backup.compress.unwrap_or_default() {
@@ -86,7 +82,7 @@ async fn post_inner(
 
     // Store the database backup in AWS S3
     if let Some(JsonDataStore::AwsS3) = json_backup.data_store {
-        if let Some(data_store) = &api_context.database.data_store {
+        if let Some(data_store) = &context.database.data_store {
             data_store.backup(&source_path, &file_name).await?;
         } else {
             return Err(ApiError::AwsS3("No data store".into()));
@@ -103,10 +99,10 @@ async fn post_inner(
     Ok(JsonEmpty {})
 }
 
-fn backup_database(
-    conn: &mut SqliteConnection,
-    mut file_path: PathBuf,
-) -> Result<(PathBuf, String), ApiError> {
+async fn backup_database(context: &ApiContext) -> Result<(PathBuf, String), ApiError> {
+    let conn = &mut *context.conn().await;
+    let mut file_path = context.database.path.clone();
+
     let file_stem = file_path
         .file_stem()
         .unwrap_or_else(|| OsStr::new("bencher"))

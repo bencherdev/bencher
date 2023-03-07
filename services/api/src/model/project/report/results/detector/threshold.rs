@@ -1,10 +1,8 @@
 use diesel::{
-    expression_methods::BoolExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SqliteConnection,
+    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
 
-use crate::{
-    diesel::ExpressionMethods, model::project::threshold::statistic::QueryStatistic, schema,
-};
+use crate::{context::DbConnection, model::project::threshold::statistic::QueryStatistic, schema};
 
 #[derive(Debug, Clone)]
 pub struct MetricsThreshold {
@@ -14,7 +12,7 @@ pub struct MetricsThreshold {
 
 impl MetricsThreshold {
     pub fn new(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         branch_id: i32,
         testbed_id: i32,
         metric_kind_id: i32,

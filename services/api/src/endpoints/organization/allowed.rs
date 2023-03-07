@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{response_ok, ResponseOk},
         Endpoint, Method,
@@ -31,10 +31,10 @@ pub struct GetParams {
     tags = ["organizations", "allowed"]
 }]
 pub async fn options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<GetParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -43,7 +43,7 @@ pub async fn options(
     tags = ["organizations", "allowed"]
 }]
 pub async fn get(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<GetParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -57,15 +57,16 @@ pub async fn get(
 }
 
 async fn get_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: GetParams,
     auth_user: &AuthUser,
 ) -> Result<JsonAllowed, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
 
     Ok(JsonAllowed {
         allowed: QueryOrganization::is_allowed_resource_id(
-            api_context,
+            conn,
+            &context.rbac,
             &path_params.organization,
             auth_user,
             crate::model::organization::organization_role::Permission::from(path_params.permission)

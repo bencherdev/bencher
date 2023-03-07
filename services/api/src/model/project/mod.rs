@@ -10,12 +10,11 @@ use bencher_json::{
 use bencher_rbac::{Organization, Project};
 #[cfg(feature = "plus")]
 use diesel::JoinOnDsl;
-use diesel::{Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    context::ApiContext,
-    diesel::ExpressionMethods,
+    context::{DbConnection, Rbac},
     error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
@@ -50,7 +49,7 @@ pub struct InsertProject {
 
 impl InsertProject {
     pub fn from_json(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         organization: &ResourceId,
         project: JsonNewProject,
     ) -> Result<Self, ApiError> {
@@ -86,7 +85,7 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonProject, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
         let Self {
             uuid,
             organization_id,
@@ -107,7 +106,7 @@ impl QueryProject {
     }
 
     pub fn from_resource_id(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project: &ResourceId,
     ) -> Result<Self, ApiError> {
         schema::project::table
@@ -116,7 +115,7 @@ impl QueryProject {
             .map_err(api_error!())
     }
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::project::table
             .filter(schema::project::id.eq(id))
             .select(schema::project::uuid)
@@ -126,7 +125,7 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn is_public(conn: &mut SqliteConnection, id: i32) -> Result<bool, ApiError> {
+    pub fn is_public(conn: &mut DbConnection, id: i32) -> Result<bool, ApiError> {
         is_public(
             schema::project::table
                 .filter(schema::project::id.eq(id))
@@ -137,7 +136,7 @@ impl QueryProject {
 
     #[cfg(feature = "plus")]
     pub fn get_subscription(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         id: i32,
     ) -> Result<Option<SubscriptionId>, ApiError> {
         let subscription: Option<String> = schema::organization::table
@@ -158,10 +157,7 @@ impl QueryProject {
     }
 
     #[cfg(feature = "plus")]
-    pub fn get_license(
-        conn: &mut SqliteConnection,
-        id: i32,
-    ) -> Result<Option<(Uuid, Jwt)>, ApiError> {
+    pub fn get_license(conn: &mut DbConnection, id: i32) -> Result<Option<(Uuid, Jwt)>, ApiError> {
         let (uuid, license): (String, Option<String>) = schema::organization::table
             .left_join(
                 schema::project::table
@@ -180,47 +176,44 @@ impl QueryProject {
     }
 
     pub fn is_allowed_resource_id(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        rbac: &Rbac,
         project: &ResourceId,
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
     ) -> Result<Self, ApiError> {
-        let query_project =
-            QueryProject::from_resource_id(&mut api_context.database.connection, project)?;
+        let query_project = QueryProject::from_resource_id(conn, project)?;
 
-        api_context
-            .rbac
-            .is_allowed_project(auth_user, permission, &query_project)?;
+        rbac.is_allowed_project(auth_user, permission, &query_project)?;
 
         Ok(query_project)
     }
 
     pub fn is_allowed_id(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        rbac: &Rbac,
         project_id: i32,
         auth_user: &AuthUser,
         permission: bencher_rbac::project::Permission,
     ) -> Result<Self, ApiError> {
         let query_project = schema::project::table
             .filter(schema::project::id.eq(project_id))
-            .first(&mut api_context.database.connection)
+            .first(conn)
             .map_err(api_error!())?;
 
-        api_context
-            .rbac
-            .is_allowed_project(auth_user, permission, &query_project)?;
+        rbac.is_allowed_project(auth_user, permission, &query_project)?;
 
         Ok(query_project)
     }
 
     pub fn is_allowed_public(
-        api_context: &mut ApiContext,
+        conn: &mut DbConnection,
+        rbac: &Rbac,
         project: &ResourceId,
         auth_user: Option<&AuthUser>,
     ) -> Result<Self, ApiError> {
         // Get the project
-        let project =
-            QueryProject::from_resource_id(&mut api_context.database.connection, project)?;
+        let project = QueryProject::from_resource_id(conn, project)?;
 
         // Check to see if the project is public
         // If so, anyone can access it
@@ -230,7 +223,8 @@ impl QueryProject {
             // If there is an `AuthUser` then validate access
             // Verify that the user is allowed
             QueryProject::is_allowed_id(
-                api_context,
+                conn,
+                rbac,
                 project.id,
                 auth_user,
                 bencher_rbac::project::Permission::View,

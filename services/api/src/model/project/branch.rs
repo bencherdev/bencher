@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bencher_json::{
     project::branch::JsonStartPoint, BranchName, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use super::{
@@ -12,6 +12,7 @@ use super::{
     QueryProject,
 };
 use crate::{
+    context::DbConnection,
     error::api_error,
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema,
@@ -34,7 +35,7 @@ pub struct QueryBranch {
 impl QueryBranch {
     fn_get_id!(branch);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::branch::table
             .filter(schema::branch::id.eq(id))
             .select(schema::branch::uuid)
@@ -44,7 +45,7 @@ impl QueryBranch {
     }
 
     pub fn from_resource_id(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         branch: &ResourceId,
     ) -> Result<Self, ApiError> {
@@ -55,7 +56,7 @@ impl QueryBranch {
             .map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonBranch, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, ApiError> {
         let Self {
             uuid,
             project_id,
@@ -83,7 +84,7 @@ pub struct InsertBranch {
 
 impl InsertBranch {
     pub fn from_json(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project: &ResourceId,
         branch: JsonNewBranch,
     ) -> Result<Self, ApiError> {
@@ -91,12 +92,12 @@ impl InsertBranch {
         Ok(Self::from_json_inner(conn, project_id, branch))
     }
 
-    pub fn main(conn: &mut SqliteConnection, project_id: i32) -> Self {
+    pub fn main(conn: &mut DbConnection, project_id: i32) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewBranch::main())
     }
 
     pub fn from_json_inner(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         branch: JsonNewBranch,
     ) -> Self {
@@ -112,7 +113,7 @@ impl InsertBranch {
 
     pub fn start_point(
         &self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         start_point: &JsonStartPoint,
     ) -> Result<(), ApiError> {
         let JsonStartPoint { branch, thresholds } = start_point;

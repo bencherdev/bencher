@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use bencher_json::{Slug, MAX_LEN};
-use diesel::SqliteConnection;
 
 macro_rules! unwrap_slug {
     ($conn:expr, $name:expr, $slug:expr, $table:ident, $query:ident) => {
@@ -31,11 +30,11 @@ macro_rules! unwrap_child_slug {
 
 pub(crate) use unwrap_child_slug;
 
-pub type SlugExistsFn = dyn FnOnce(&mut SqliteConnection, Option<i32>, &str) -> bool;
+pub type SlugExistsFn = dyn FnOnce(&mut DbConnection, Option<i32>, &str) -> bool;
 
 #[allow(clippy::expect_used)]
 pub fn validate_slug(
-    conn: &mut SqliteConnection,
+    conn: &mut DbConnection,
     parent: Option<i32>,
     name: &str,
     slug: Option<Slug>,
@@ -89,3 +88,5 @@ macro_rules! child_slug_exists {
 }
 
 pub(crate) use child_slug_exists;
+
+use crate::context::DbConnection;

@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    context::Context,
+    context::ApiContext,
     endpoints::{
         endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
@@ -42,11 +42,11 @@ pub struct DirPath {
     tags = ["projects", "branches"]
 }]
 pub async fn dir_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<DirPath>,
     _query_params: Query<JsonBranches>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -55,7 +55,7 @@ pub async fn dir_options(
     tags = ["projects", "branches"]
 }]
 pub async fn get_ls(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     query_params: Query<JsonBranches>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
@@ -80,16 +80,16 @@ pub async fn get_ls(
 }
 
 async fn get_ls_inner(
-    context: &Context,
+    context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: DirPath,
     json_branches: JsonBranches,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let mut query = schema::branch::table
         .filter(schema::branch::project_id.eq(&query_project.id))
@@ -114,7 +114,7 @@ async fn get_ls_inner(
     tags = ["projects", "branches"]
 }]
 pub async fn post(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<DirPath>,
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
@@ -134,18 +134,17 @@ pub async fn post(
 }
 
 async fn post_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: DirPath,
     mut json_branch: JsonNewBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
     // Soft creation
     // If the new branch name already exists then return the existing branch name
     // instead of erroring due to the unique constraint
     // This is useful to help prevent race conditions in CI
     if let Some(true) = json_branch.soft {
-        let conn = &mut api_context.database.connection;
         if let Ok(branch) = schema::branch::table
             .filter(schema::branch::name.eq(json_branch.name.as_ref()))
             .first::<QueryBranch>(conn)
@@ -154,19 +153,15 @@ async fn post_inner(
         }
     }
     let start_point = json_branch.start_point.take();
-    let insert_branch = InsertBranch::from_json(
-        &mut api_context.database.connection,
-        &path_params.project,
-        json_branch,
-    )?;
+    let insert_branch = InsertBranch::from_json(conn, &path_params.project, json_branch)?;
     // Verify that the user is allowed
     QueryProject::is_allowed_id(
-        api_context,
+        conn,
+        &context.rbac,
         insert_branch.project_id,
         auth_user,
         Permission::Create,
     )?;
-    let conn = &mut api_context.database.connection;
 
     diesel::insert_into(schema::branch::table)
         .values(&insert_branch)
@@ -198,10 +193,10 @@ pub struct OnePath {
     tags = ["projects", "branches"]
 }]
 pub async fn one_options(
-    _rqctx: RequestContext<Context>,
+    _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OnePath>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<Context>())
+    Ok(get_cors::<ApiContext>())
 }
 
 #[endpoint {
@@ -210,7 +205,7 @@ pub async fn one_options(
     tags = ["projects", "branches"]
 }]
 pub async fn get_one(
-    rqctx: RequestContext<Context>,
+    rqctx: RequestContext<ApiContext>,
     path_params: Path<OnePath>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -234,14 +229,14 @@ pub async fn get_one(
 fn_resource_id!(branch);
 
 async fn get_one_inner(
-    context: &Context,
+    context: &ApiContext,
     path_params: OnePath,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBranch, ApiError> {
-    let api_context = &mut *context.lock().await;
+    let conn = &mut *context.conn().await;
+
     let query_project =
-        QueryProject::is_allowed_public(api_context, &path_params.project, auth_user)?;
-    let conn = &mut api_context.database.connection;
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::branch::table
         .filter(

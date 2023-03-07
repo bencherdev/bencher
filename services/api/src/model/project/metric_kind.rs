@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl, SqliteConnection};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
+    context::DbConnection,
     error::api_error,
     model::project::QueryProject,
     schema,
@@ -28,7 +29,7 @@ pub struct QueryMetricKind {
 impl QueryMetricKind {
     fn_get_id!(metric_kind);
 
-    pub fn get_uuid(conn: &mut SqliteConnection, id: i32) -> Result<Uuid, ApiError> {
+    pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
         let uuid: String = schema::metric_kind::table
             .filter(schema::metric_kind::id.eq(id))
             .select(schema::metric_kind::uuid)
@@ -38,7 +39,7 @@ impl QueryMetricKind {
     }
 
     pub fn from_resource_id(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         metric_kind: &ResourceId,
     ) -> Result<Self, ApiError> {
@@ -49,7 +50,7 @@ impl QueryMetricKind {
             .map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut SqliteConnection) -> Result<JsonMetricKind, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonMetricKind, ApiError> {
         let Self {
             uuid,
             project_id,
@@ -80,7 +81,7 @@ pub struct InsertMetricKind {
 
 impl InsertMetricKind {
     pub fn from_json(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project: &ResourceId,
         metric_kind: JsonNewMetricKind,
     ) -> Result<Self, ApiError> {
@@ -88,16 +89,16 @@ impl InsertMetricKind {
         Ok(Self::from_json_inner(conn, project_id, metric_kind))
     }
 
-    pub fn latency(conn: &mut SqliteConnection, project_id: i32) -> Self {
+    pub fn latency(conn: &mut DbConnection, project_id: i32) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::latency())
     }
 
-    pub fn throughput(conn: &mut SqliteConnection, project_id: i32) -> Self {
+    pub fn throughput(conn: &mut DbConnection, project_id: i32) -> Self {
         Self::from_json_inner(conn, project_id, JsonNewMetricKind::throughput())
     }
 
     pub fn from_json_inner(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         project_id: i32,
         metric_kind: JsonNewMetricKind,
     ) -> Self {
