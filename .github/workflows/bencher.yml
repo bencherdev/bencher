@@ -113,9 +113,6 @@ jobs:
   cargo_bench:
     name: Cargo Bench
     runs-on: ubuntu-latest
-    needs:
-      - cargo_fmt
-      - cargo_clippy
     env:
       BENCHER_PROJECT: bencher
       BENCHER_TESTBED: ubuntu-latest
