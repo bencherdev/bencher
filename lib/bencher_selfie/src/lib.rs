@@ -87,8 +87,11 @@ impl Selfie {
 
         map_err!(tab.navigate_to(url))?;
 
+        // This gives the runtime a chance to poll the other tasks that need to run while things load
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
         for (selector, timeout) in wait_for {
-            // This signals to the runtime to poll the other tasks that need to run
+            // This signals to the runtime to poll the other tasks that still need to run
             tokio::task::yield_now().await;
 
             map_err!(
