@@ -20,11 +20,11 @@ pub struct Selfie {
 }
 
 impl Selfie {
-    pub fn new_embedded() -> Result<Self, SelfieError> {
-        Self::new(1200, 1200, None)
+    pub async fn new_embedded() -> Result<Self, SelfieError> {
+        Self::new(1200, 1200, None).await
     }
 
-    pub fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
+    pub async fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
         let window_size = Some((width, height));
         let launch_options = map_err!(LaunchOptionsBuilder::default()
             .sandbox(false)
@@ -141,7 +141,7 @@ mod test {
 
     #[tokio::test]
     async fn test_selfie() {
-        let selfie = Selfie::new_embedded().unwrap();
+        let selfie = Selfie::new_embedded().await.unwrap();
         let jpeg = selfie.capture_perf(PERF_ADAPTERS_URL).await.unwrap();
         save_jpeg(&jpeg);
     }

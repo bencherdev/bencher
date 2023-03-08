@@ -88,7 +88,9 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(project::perf::options)?;
     api.register(project::perf::get)?;
     // Perf Image
+    #[cfg(feature = "browser")]
     api.register(project::perf::img::options)?;
+    #[cfg(feature = "browser")]
     api.register(project::perf::img::get)?;
     // Reports
     api.register(project::reports::dir_options)?;

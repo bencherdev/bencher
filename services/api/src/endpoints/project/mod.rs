@@ -20,6 +20,7 @@ pub enum Resource {
     Branch,
     MetricKind,
     Perf,
+    #[cfg(feature = "browser")]
     PerfImg,
     Project,
     Report,
@@ -36,6 +37,7 @@ impl WordStr for Resource {
             Self::Branch => "branch",
             Self::MetricKind => "metric kind",
             Self::Perf => "benchmark perf",
+            #[cfg(feature = "browser")]
             Self::PerfImg => "benchmark perf image",
             Self::Project => "project",
             Self::Report => "report",
@@ -52,6 +54,7 @@ impl WordStr for Resource {
             Self::Branch => "branches",
             Self::MetricKind => "metric kinds",
             Self::Perf => "benchmark perfs",
+            #[cfg(feature = "browser")]
             Self::PerfImg => "benchmark perfs image",
             Self::Project => "projects",
             Self::Report => "reports",

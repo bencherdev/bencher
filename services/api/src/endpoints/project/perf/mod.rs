@@ -32,6 +32,7 @@ use crate::{
 
 use super::Resource;
 
+#[cfg(feature = "browser")]
 pub mod img;
 
 const PERF_RESOURCE: Resource = Resource::Perf;
