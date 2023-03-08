@@ -1,11 +1,13 @@
 use std::time::Duration;
 
-pub use bencher_chrome::ChromeError;
-use bencher_chrome::{protocol::cdp::Page, Browser, LaunchOptionsBuilder, Tab};
+use headless_chrome::protocol::cdp::Page;
+use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
 
 mod error;
 
-pub use error::SelfieError;
+pub use error::{HeadlessChromeError, SelfieError};
+
+use crate::error::map_err;
 
 const DEFAULT_WORDMARK_SELECTOR: &str = "#perf_wordmark";
 const DEFAULT_PLOT_SELECTOR: &str = "#perf_plot";
@@ -18,18 +20,18 @@ pub struct Selfie {
 }
 
 impl Selfie {
-    pub async fn new_embedded() -> Result<Self, SelfieError> {
-        Self::new(1200, 1200, None).await
+    pub fn new_embedded() -> Result<Self, SelfieError> {
+        Self::new(1200, 1200, None)
     }
 
-    pub async fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
+    pub fn new(width: u32, height: u32, timeout: Option<u64>) -> Result<Self, SelfieError> {
         let window_size = Some((width, height));
-        let launch_options = LaunchOptionsBuilder::default()
+        let launch_options = map_err!(LaunchOptionsBuilder::default()
             .sandbox(false)
             .port(Some(8118))
             .window_size(window_size)
-            .build()?;
-        let browser = Browser::new(launch_options)?;
+            .build())?;
+        let browser = map_err!(Browser::new(launch_options))?;
         let timeout = timeout.map(Duration::from_secs);
         Ok(Self { browser, timeout })
     }
@@ -55,14 +57,14 @@ impl Selfie {
         viewport: &str,
         timeout: Option<u64>,
     ) -> Result<Vec<u8>, SelfieError> {
-        let tab = self.browser.new_tab().await?;
+        let tab = map_err!(self.browser.new_tab())?;
 
         let jpeg = self
             .capture_inner(&tab, url, wait_for, viewport, timeout)
             .await;
 
         // Always try to close the tab
-        if tab.close_with_unload()? {
+        if map_err!(tab.close_with_unload())? {
             jpeg
         } else if let Err(e) = jpeg {
             Err(e)
@@ -83,7 +85,7 @@ impl Selfie {
             tab.set_default_timeout(timeout);
         }
 
-        tab.navigate_to(url)?;
+        map_err!(tab.navigate_to(url))?;
 
         // This gives the runtime a chance to poll the other tasks that need to run while things load
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -92,19 +94,25 @@ impl Selfie {
             // This signals to the runtime to poll the other tasks that still need to run
             tokio::task::yield_now().await;
 
-            if let Some(timeout) = timeout.map(Duration::from_secs) {
-                tab.wait_for_element_with_custom_timeout(selector, timeout)?
-            } else {
-                tab.wait_for_element(selector)?
-            }
+            map_err!(
+                if let Some(timeout) = timeout.map(Duration::from_secs) {
+                    tab.wait_for_element_with_custom_timeout(selector, timeout)
+                } else {
+                    tab.wait_for_element(selector)
+                },
+                selector
+            )?;
         }
 
-        let element = if let Some(timeout) = timeout.map(Duration::from_secs) {
-            tab.wait_for_element_with_custom_timeout(viewport, timeout)?
-        } else {
-            tab.wait_for_element(viewport)?
-        };
-        let box_model = element.get_box_model()?;
+        let element = map_err!(
+            if let Some(timeout) = timeout.map(Duration::from_secs) {
+                tab.wait_for_element_with_custom_timeout(viewport, timeout)
+            } else {
+                tab.wait_for_element(viewport)
+            },
+            viewport
+        )?;
+        let box_model = map_err!(element.get_box_model())?;
         let viewport = Some(box_model.margin_viewport());
 
         map_err!(tab.capture_screenshot(
@@ -133,7 +141,7 @@ mod test {
 
     #[tokio::test]
     async fn test_selfie() {
-        let selfie = Selfie::new_embedded().await.unwrap();
+        let selfie = Selfie::new_embedded().unwrap();
         let jpeg = selfie.capture_perf(PERF_ADAPTERS_URL).await.unwrap();
         save_jpeg(&jpeg);
     }

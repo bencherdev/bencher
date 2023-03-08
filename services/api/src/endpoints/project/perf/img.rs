@@ -82,8 +82,7 @@ async fn get_inner(
     )?;
     info!("Taking a screenshot of: {url}");
 
-    Selfie::new_embedded()
-        .await?
+    Selfie::new_embedded()?
         .capture_perf(url.as_ref())
         .await
         .map_err(Into::into)
