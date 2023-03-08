@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use headless_chrome::protocol::cdp::Page;
-use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
+use bencher_chrome::protocol::cdp::Page;
+use bencher_chrome::{Browser, LaunchOptionsBuilder, Tab};
 
 mod error;
 

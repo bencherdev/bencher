@@ -1,0 +1,48 @@
+[package]
+name = "bencher_chrome"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow = "1"
+base64 = "0.21"
+derive_builder = "0.12"
+directories = { version = "4.0", optional = true }
+log = "0.4"
+rand = "0.8"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+thiserror = "1"
+ureq = { version = "2.5", optional = true }
+walkdir = { version = "2", optional = true }
+tungstenite = "0.18"
+url = "2.3"
+which = "4.0"
+zip = { version = "0.6.3", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.10"
+
+[dev-dependencies]
+chrono = { version = "0.4", default_features = false, features = ["clock"] }
+env_logger = "0.10"
+filepath = "0.1.1"
+jpeg-decoder = { version = "0.3", default_features = false }
+png = { version = "0.17" }
+tiny_http = "0.12"
+
+[build-dependencies]
+auto_generate_cdp = "0.4.1"
+
+[lib]
+name = "bencher_chrome"
+path = "src/lib.rs"
+
+[features]
+fetch = ["ureq", "directories", "zip", "walkdir"]
+nightly = []
+rustls = ["tungstenite/rustls"]
+native-tls = ["tungstenite/native-tls"]

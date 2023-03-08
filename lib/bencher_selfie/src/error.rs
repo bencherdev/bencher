@@ -12,12 +12,12 @@ impl fmt::Display for HeadlessChromeError {
 }
 
 macro_rules! map_err {
-    ($headless_chrome:expr) => {
-        $headless_chrome
+    ($bencher_chrome:expr) => {
+        $bencher_chrome
             .map_err(|e| SelfieError::HeadlessChrome(HeadlessChromeError(anyhow::anyhow!(e))))
     };
-    ($headless_chrome:expr, $arg:ident) => {{
-        $headless_chrome.map_err(|e| {
+    ($bencher_chrome:expr, $arg:ident) => {{
+        $bencher_chrome.map_err(|e| {
             SelfieError::HeadlessChrome(HeadlessChromeError(anyhow::anyhow!("{}: {}", $arg, e)))
         })
     }};
