@@ -29,7 +29,7 @@ impl std::fmt::Debug for WebSocketConnection {
 }
 
 impl WebSocketConnection {
-    pub fn new(
+    pub async fn new(
         ws_url: &Url,
         process_id: Option<u32>,
         messages_tx: mpsc::Sender<Message>,
@@ -40,11 +40,12 @@ impl WebSocketConnection {
 
         let thread = {
             let sender = connection.clone();
-            std::thread::spawn(move || {
+            tokio::task::spawn(move || {
                 trace!("Starting msg dispatching loop");
                 Self::dispatch_incoming_messages(sender, messages_tx, process_id);
                 trace!("Quit loop msg dispatching loop");
             })
+            .await
         };
 
         Ok(Self {
@@ -138,11 +139,6 @@ impl WebSocketConnection {
         // this should be handled in tungstenite
         let stream = match stream {
             MaybeTlsStream::Plain(s) => s,
-            #[cfg(features = "native-tls")]
-            MaybeTlsStream::NativeTls(s) => s.get_mut(),
-            #[cfg(features = "rustls")]
-            MaybeTlsStream::Rustls(s) => &mut s.sock,
-
             _ => todo!(),
         };
         stream.set_read_timeout(Some(READ_TIMEOUT_DURATION))?;

@@ -1,59 +1,26 @@
 use anyhow::{Error, Result};
 use tokio::time::{sleep, Duration, Instant};
 
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-#[error("The event waited for never came")]
-pub struct Timeout;
+use crate::ChromeError;
 
 /// A helper to wait until some event has passed.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Wait {
     timeout: Duration,
     sleep: Duration,
 }
 
-impl Default for Wait {
-    fn default() -> Self {
-        Self {
-            timeout: Duration::from_secs(10),
-            sleep: Duration::from_millis(100),
-        }
-    }
-}
-
 impl Wait {
+    /// Wait `timeout` and `sleep`
     pub fn new(timeout: Duration, sleep: Duration) -> Self {
         Self { timeout, sleep }
-    }
-
-    pub fn with_timeout(timeout: Duration) -> Self {
-        Self {
-            timeout,
-            ..Self::default()
-        }
-    }
-
-    pub fn with_sleep(sleep: Duration) -> Self {
-        Self {
-            sleep,
-            ..Self::default()
-        }
-    }
-
-    pub fn forever() -> Self {
-        Self {
-            timeout: Duration::from_secs(u64::max_value()),
-            ..Self::default()
-        }
     }
 
     /// Wait until the given predicate returns `Some(G)` or timeout arrives.
     ///
     /// Note: If your predicate function shadows potential unexpected
     ///   errors you should consider using `#strict_until`.
-    pub async fn until<F, G>(&self, predicate: F) -> Result<G, Timeout>
+    pub async fn until<F, G>(&self, predicate: F) -> Result<G, ChromeError>
     where
         F: FnMut() -> Option<G>,
     {
@@ -64,7 +31,7 @@ impl Wait {
                 return Ok(v);
             }
             if start.elapsed() > self.timeout {
-                return Err(Timeout);
+                return Err(ChromeError::Timeout(self.timeout));
             }
             sleep(self.sleep).await;
         }
@@ -79,10 +46,14 @@ impl Wait {
     /// You can use `failure::Error::downcast::<YourStructName>` out-of-the-box,
     /// if you need to ignore one expected error, or you can implement a matching closure
     /// that responds to multiple error types.
-    pub async fn strict_until<F, D, E, G>(&self, predicate: F, downcast: D) -> Result<G>
+    pub async fn strict_until<F, D, E, G>(
+        &self,
+        predicate: F,
+        downcast: D,
+    ) -> Result<G, ChromeError>
     where
-        F: FnMut() -> Result<G>,
-        D: FnMut(Error) -> Result<E>,
+        F: FnMut() -> Result<G, ChromeError>,
+        D: FnMut(Error) -> Result<E, ChromeError>,
     {
         let mut predicate = predicate;
         let mut downcast = downcast;
@@ -92,9 +63,8 @@ impl Wait {
                 Ok(value) => return Ok(value),
                 Err(error) => downcast(error)?,
             };
-
             if start.elapsed() > self.timeout {
-                return Err(Timeout.into());
+                return Err(ChromeError::Timeout(self.timeout));
             }
             sleep(self.sleep).await;
         }

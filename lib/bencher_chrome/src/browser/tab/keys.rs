@@ -1,8 +1,7 @@
 use crate::protocol::cdp::types::JsUInt;
 use crate::protocol::cdp::Input::{DispatchKeyEvent, DispatchKeyEventTypeOption};
+use crate::ChromeError;
 use anyhow::Result;
-
-use thiserror::Error;
 
 pub struct KeyDefinition {
     pub key: &'static str,
@@ -1528,22 +1527,13 @@ pub const USKEYBOARD_LAYOUT: [KeyDefinition; 244] = [
     },
 ];
 
-#[derive(Debug, Error)]
-#[error("Key not found: {}", key)]
-pub struct KeyNotFoundError {
-    key: String,
-}
-
-pub fn get_key_definition(key: &str) -> Result<&KeyDefinition> {
+pub fn get_key_definition(key: &str) -> Result<&KeyDefinition, ChromeError> {
     if let Some(definition) = USKEYBOARD_LAYOUT
         .iter()
         .find(|key_definition| key_definition.key == key)
     {
         Ok(definition)
     } else {
-        Err(KeyNotFoundError {
-            key: key.to_string(),
-        }
-        .into())
+        Err(ChromeError::KeyNotFound(key.into()))
     }
 }

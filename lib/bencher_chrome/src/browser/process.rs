@@ -15,18 +15,14 @@ use log::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use regex::Regex;
-use thiserror::Error;
 use url::Url;
-#[cfg(windows)]
-use winreg::{enums::HKEY_LOCAL_MACHINE, RegKey};
 
-#[cfg(not(feature = "fetch"))]
 use crate::browser::default_executable;
 use crate::wait;
 
-#[cfg(feature = "fetch")]
-use super::fetcher::{Fetcher, FetcherOptions};
 use std::collections::HashMap;
+
+use crate::ChromeError;
 
 #[cfg(test)]
 struct ForTesting;
@@ -40,25 +36,6 @@ impl ForTesting {
 pub struct Process {
     child_process: TemporaryProcess,
     pub debug_ws_url: Url,
-}
-
-#[derive(Debug, Error)]
-enum ChromeLaunchError {
-    #[error("Chrome launched, but didn't give us a WebSocket URL before we timed out")]
-    PortOpenTimeout,
-    #[error("There are no available ports between 8000 and 9000 for debugging")]
-    NoAvailablePorts,
-    #[error("The chosen debugging port is already in use")]
-    DebugPortInUse,
-}
-
-#[cfg(windows)]
-pub(crate) fn get_chrome_path_from_registry() -> Option<std::path::PathBuf> {
-    RegKey::predef(HKEY_LOCAL_MACHINE)
-        .open_subkey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe")
-        .and_then(|key| key.get_value::<String, _>(""))
-        .map(std::path::PathBuf::from)
-        .ok()
 }
 
 struct TemporaryProcess(Child, Option<tempfile::TempDir>);
@@ -131,17 +108,9 @@ pub struct LaunchOptions<'a> {
     #[builder(default)]
     pub disable_default_args: bool,
 
-    /// The options to use for fetching a version of chrome when `path` is None.
-    ///
-    /// By default, we'll use a revision guaranteed to work with our API and will
-    /// download and install that revision of chrome the first time a Process is created.
-    #[cfg_attr(feature = "fetch", builder(default))]
-    #[cfg(feature = "fetch")]
-    pub fetcher_options: FetcherOptions,
-
     /// How long to keep the WebSocket to the browser for after not receiving any events from it
-    /// Defaults to 30 seconds
-    #[builder(default = "Duration::from_secs(30)")]
+    /// Defaults to u64::MAX
+    #[builder(default = "Duration::from_secs(u64::MAX)")]
     pub idle_browser_timeout: Duration,
 
     /// Environment variables to set for the Chromium process.
@@ -152,6 +121,17 @@ pub struct LaunchOptions<'a> {
     /// Setup the proxy server for headless chrome instance
     #[builder(default = "None")]
     pub proxy_server: Option<&'a str>,
+
+    /// Channel buffer size
+    pub channel_buffer: usize,
+
+    /// Timeout
+    #[builder(default = "Duration::from_millis(5_000)")]
+    pub timeout: Duration,
+
+    /// Sleep
+    #[builder(default = "Duration::from_millis(1)")]
+    pub sleep: Duration,
 }
 
 impl<'a> Default for LaunchOptions<'a> {
@@ -159,7 +139,7 @@ impl<'a> Default for LaunchOptions<'a> {
         LaunchOptions {
             headless: true,
             sandbox: true,
-            idle_browser_timeout: Duration::from_secs(30),
+            idle_browser_timeout: Duration::from_secs(u64::MAX),
             window_size: None,
             path: None,
             user_data_dir: None,
@@ -167,11 +147,12 @@ impl<'a> Default for LaunchOptions<'a> {
             ignore_certificate_errors: true,
             extensions: Vec::new(),
             process_envs: None,
-            #[cfg(feature = "fetch")]
-            fetcher_options: Default::default(),
             args: Vec::new(),
             disable_default_args: false,
             proxy_server: None,
+            channel_buffer: 1024,
+            timeout: Duration::from_millis(5_000),
+            sleep: Duration::from_millis(1),
         }
     }
 }
@@ -212,17 +193,9 @@ pub static DEFAULT_ARGS: [&str; 23] = [
 ];
 
 impl Process {
-    pub fn new(mut launch_options: LaunchOptions) -> Result<Self> {
+    pub async fn new(mut launch_options: LaunchOptions<'static>) -> Result<Self, ChromeError> {
         if launch_options.path.is_none() {
-            #[cfg(feature = "fetch")]
-            {
-                let fetch = Fetcher::new(launch_options.fetcher_options.clone())?;
-                launch_options.path = Some(fetch.fetch()?);
-            }
-            #[cfg(not(feature = "fetch"))]
-            {
-                launch_options.path = Some(default_executable().map_err(|e| anyhow!("{}", e))?);
-            }
+            launch_options.path = Some(default_executable()?);
         }
 
         let mut process = Self::start_process(&launch_options)?;
@@ -233,7 +206,7 @@ impl Process {
         let mut attempts = 0;
         loop {
             if attempts > 10 {
-                return Err(ChromeLaunchError::NoAvailablePorts {}.into());
+                return Err(ChromeError::NoAvailablePorts);
             }
 
             match Self::ws_url_from_output(process.0.borrow_mut()) {
@@ -449,11 +422,6 @@ fn port_is_available(port: u16) -> bool {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "fetch")]
-    use std::fs;
-    #[cfg(feature = "fetch")]
-    use std::path::PathBuf;
-
     use std::sync::Once;
     use std::thread;
 
@@ -469,53 +437,16 @@ mod tests {
         });
     }
 
-    #[test]
-    fn can_launch_chrome_and_get_ws_url() {
+    #[tokio::test]
+    async fn can_launch_chrome_and_get_ws_url() {
         setup();
         let chrome = super::Process::new(
             LaunchOptions::default_builder()
-                .path(Some(default_executable().unwrap()))
+                .path(Some(default_executable().await.unwrap()))
                 .build()
                 .unwrap(),
         )
-        .unwrap();
-        info!("{:?}", chrome.debug_ws_url);
-    }
-
-    #[test]
-    #[cfg(feature = "fetch")]
-    fn can_install_chrome_to_dir_and_launch() {
-        use crate::browser::fetcher::CUR_REV;
-        #[cfg(target_os = "linux")]
-        const PLATFORM: &str = "linux";
-        #[cfg(target_os = "macos")]
-        const PLATFORM: &str = "mac";
-        #[cfg(windows)]
-        const PLATFORM: &str = "win";
-
-        let tests_temp_dir = [env!("CARGO_MANIFEST_DIR"), "tests", "temp"]
-            .iter()
-            .collect::<PathBuf>();
-
-        setup();
-
-        // clean up any artifacts from a previous run of this test.
-        // if we do this after it fails on windows because chrome can stay running
-        // for a bit.
-        let mut installed_dir = tests_temp_dir.clone();
-        installed_dir.push(format!("{}-{}", PLATFORM, CUR_REV));
-
-        if installed_dir.exists() {
-            info!("Deleting pre-existing install at {:?}", &installed_dir);
-            fs::remove_dir_all(&installed_dir).expect("Could not delete pre-existing install");
-        }
-
-        let chrome = super::Process::new(
-            LaunchOptions::default_builder()
-                .fetcher_options(FetcherOptions::default().with_install_dir(Some(&tests_temp_dir)))
-                .build()
-                .unwrap(),
-        )
+        .await
         .unwrap();
         info!("{:?}", chrome.debug_ws_url);
     }
@@ -557,17 +488,18 @@ mod tests {
             .collect()
     }
 
-    #[test]
+    #[tokio::test]
     #[cfg(target_os = "linux")]
-    fn kills_process_on_drop() {
+    async fn kills_process_on_drop() {
         setup();
         {
             let _chrome = &mut super::Process::new(
                 LaunchOptions::default_builder()
-                    .path(Some(default_executable().unwrap()))
+                    .path(Some(default_executable().await.unwrap()))
                     .build()
                     .unwrap(),
             )
+            .await
             .unwrap();
         }
 
@@ -575,8 +507,8 @@ mod tests {
         assert!(child_pids.is_empty());
     }
 
-    #[test]
-    fn launch_multiple_non_headless_instances() {
+    #[tokio::test]
+    async fn launch_multiple_non_headless_instances() {
         setup();
         let mut handles = Vec::new();
 
@@ -586,10 +518,11 @@ mod tests {
                 std::thread::sleep(std::time::Duration::from_millis(10));
                 let chrome = super::Process::new(
                     LaunchOptions::default_builder()
-                        .path(Some(default_executable().unwrap()))
+                        .path(Some(default_executable().await.unwrap()))
                         .build()
                         .unwrap(),
                 )
+                .await
                 .unwrap();
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 chrome.debug_ws_url
@@ -602,8 +535,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn no_instance_sharing() {
+    #[tokio::test]
+    async fn no_instance_sharing() {
         setup();
 
         let mut handles = Vec::new();
@@ -611,18 +544,19 @@ mod tests {
         for _ in 0..10 {
             let chrome = super::Process::new(
                 LaunchOptions::default_builder()
-                    .path(Some(default_executable().unwrap()))
+                    .path(Some(default_executable().await.unwrap()))
                     .headless(true)
                     .build()
                     .unwrap(),
             )
+            .await
             .unwrap();
             handles.push(chrome);
         }
     }
 
-    #[test]
-    fn test_temporary_user_data_dir_is_removed_automatically() {
+    #[tokio::test]
+    async fn test_temporary_user_data_dir_is_removed_automatically() {
         setup();
 
         let options = LaunchOptions::default_builder().build().unwrap();
@@ -632,7 +566,7 @@ mod tests {
         assert_eq!(None, temp_dir);
 
         let user_data_dir = {
-            let _chrome = &mut super::Process::new(options).unwrap();
+            let _chrome = &mut super::Process::new(options).await.unwrap();
 
             ForTesting::USER_DATA_DIR.with(|dir| dir.borrow_mut().take())
         };

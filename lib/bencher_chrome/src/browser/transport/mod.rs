@@ -1,13 +1,9 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::mpsc;
-use std::sync::mpsc::Sender;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, TryRecvError};
+
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
-
-use anyhow::Result;
 
 use thiserror::Error;
 
@@ -21,10 +17,17 @@ use crate::protocol::cdp::{types::Event, types::Method, Target};
 
 use crate::types::{parse_raw_message, parse_response, CallId, Message};
 
-use crate::wait;
+use crate::{wait, ChromeError};
 
 mod waiting_call_registry;
 mod web_socket_connection;
+
+// New
+use tokio::sync::{
+    mpsc,
+    mpsc::Sender,
+    mpsc::{Receiver, RecvTimeoutError, TryRecvError},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SessionId(String);
@@ -61,21 +64,18 @@ pub struct Transport {
     listeners: Listeners,
     open: Arc<AtomicBool>,
     call_id_counter: Arc<AtomicU32>,
-    loop_shutdown_tx: Mutex<mpsc::SyncSender<()>>,
+    loop_shutdown_tx: Mutex<mpsc::Sender<()>>,
     idle_browser_timeout: Duration,
 }
-
-#[derive(Debug, Error)]
-#[error("Unable to make method calls because underlying connection is closed")]
-pub struct ConnectionClosed {}
 
 impl Transport {
     pub fn new(
         ws_url: Url,
         process_id: Option<u32>,
         idle_browser_timeout: Duration,
-    ) -> Result<Self> {
-        let (messages_tx, messages_rx) = mpsc::channel();
+        channel_buffer: usize,
+    ) -> Result<Self, ChromeError> {
+        let (messages_tx, messages_rx) = mpsc::channel(channel_buffer);
         let web_socket_connection =
             Arc::new(WebSocketConnection::new(&ws_url, process_id, messages_tx)?);
 
@@ -85,7 +85,7 @@ impl Transport {
 
         let open = Arc::new(AtomicBool::new(true));
 
-        let (shutdown_tx, shutdown_rx) = mpsc::sync_channel(100);
+        let (shutdown_tx, shutdown_rx) = mpsc::channel(128);
 
         let guarded_shutdown_tx = Mutex::new(shutdown_tx);
 
@@ -117,11 +117,11 @@ impl Transport {
         self.call_id_counter.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn call_method<C>(
+    pub async fn call_method<C>(
         &self,
         method: C,
         destination: MethodDestination,
-    ) -> Result<C::ReturnObject>
+    ) -> Result<C::ReturnObject, ChromeError>
     where
         C: Method + serde::Serialize,
     {
@@ -177,27 +177,27 @@ impl Transport {
         parse_response::<C::ReturnObject>((response_result?)?)
     }
 
-    pub fn call_method_on_target<C>(
+    pub async fn call_method_on_target<C>(
         &self,
         session_id: SessionId,
         method: C,
-    ) -> Result<C::ReturnObject>
+    ) -> Result<C::ReturnObject, ChromeError>
     where
         C: Method + serde::Serialize,
     {
-        // TODO: remove clone
         self.call_method(method, MethodDestination::Target(session_id))
+            .await
     }
 
-    pub fn call_method_on_browser<C>(&self, method: C) -> Result<C::ReturnObject>
+    pub async fn call_method_on_browser<C>(&self, method: C) -> Result<C::ReturnObject, ChromeError>
     where
         C: Method + serde::Serialize,
     {
-        self.call_method(method, MethodDestination::Browser)
+        self.call_method(method, MethodDestination::Browser).await
     }
 
-    pub fn listen_to_browser_events(&self) -> Receiver<Event> {
-        let (events_tx, events_rx) = mpsc::channel();
+    pub fn listen_to_browser_events(&self, channel_buffer: usize) -> Receiver<Event> {
+        let (events_tx, events_rx) = mpsc::channel(channel_buffer);
 
         let mut listeners = self.listeners.lock().unwrap();
         listeners.insert(ListenerId::Browser, events_tx);
@@ -205,8 +205,12 @@ impl Transport {
         events_rx
     }
 
-    pub fn listen_to_target_events(&self, session_id: SessionId) -> Receiver<Event> {
-        let (events_tx, events_rx) = mpsc::channel();
+    pub fn listen_to_target_events(
+        &self,
+        session_id: SessionId,
+        channel_buffer: usize,
+    ) -> Receiver<Event> {
+        let (events_tx, events_rx) = mpsc::channel(channel_buffer);
 
         let mut listeners = self.listeners.lock().unwrap();
         listeners.insert(ListenerId::SessionId(session_id), events_tx);
@@ -221,7 +225,7 @@ impl Transport {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn handle_incoming_messages(
+    async fn handle_incoming_messages(
         messages_rx: Receiver<Message>,
         waiting_call_registry: Arc<WaitingCallRegistry>,
         listeners: Listeners,
@@ -232,7 +236,7 @@ impl Transport {
         idle_browser_timeout: Duration,
     ) {
         trace!("Starting handle_incoming_messages");
-        std::thread::spawn(move || {
+        tokio::task::spawn(move || {
             trace!("Inside handle_incoming_messages thread");
             // this iterator calls .recv() under the hood, so can block thread forever
             // hence need for Connection Shutdown
@@ -292,6 +296,7 @@ impl Transport {
                                                 .get(&ListenerId::SessionId(session_id))
                                             {
                                                 tx.send(target_event)
+                                                    .await
                                                     .expect("Couldn't send event to listener");
                                             }
                                         },
@@ -344,7 +349,7 @@ impl Transport {
             let mut listeners = listeners.lock().unwrap();
             *listeners = HashMap::new();
             info!("cleared listeners, I think");
-        });
+        }).await;
     }
 }
 

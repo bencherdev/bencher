@@ -10,14 +10,14 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(
+    pub async fn new(
         mut responder: impl FnMut(tiny_http::Request) -> Result<(), io::Error> + Send + 'static,
     ) -> Self {
         let server = Arc::new(tiny_http::Server::http("127.0.0.1:0")?);
         let shall_exit = Arc::new(atomic::AtomicBool::new(false));
         let srv = server.clone();
         let exit = shall_exit.clone();
-        let handler = std::thread::spawn(move || {
+        let handler = tokio::task::spawn(move || {
             loop {
                 if let Some(r) = srv.recv_timeout(Duration::from_millis(1000))? {
                     responder(r)?;
@@ -27,7 +27,8 @@ impl Server {
                 }
             }
             Ok(())
-        });
+        })
+        .await;
         Server {
             server,
             handler: Some(handler),
@@ -40,9 +41,10 @@ impl Server {
         let responder = move |r: tiny_http::Request| {
             let response = tiny_http::Response::new(
                 200.into(),
-                vec![
-                    tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"text/html"[..])?,
-                ],
+                vec![tiny_http::Header::from_bytes(
+                    &b"Content-Type"[..],
+                    &b"text/html"[..],
+                )?],
                 io::Cursor::new(data),
                 Some(data.len()),
                 None,
@@ -82,7 +84,10 @@ fn basic_http_response<'a>(
 ) -> tiny_http::Response<&'a [u8]> {
     tiny_http::Response::new(
         200.into(),
-        vec![tiny_http::Header::from_bytes(&b"Content-Type"[..], content_type.as_bytes())?],
+        vec![tiny_http::Header::from_bytes(
+            &b"Content-Type"[..],
+            content_type.as_bytes(),
+        )?],
         body.as_bytes(),
         Some(body.len()),
         None,

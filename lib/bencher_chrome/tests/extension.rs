@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use bencher_chrome::{browser::default_executable, Browser, LaunchOptions};
 
-#[test]
+#[tokio::test]
 fn test_extension() -> Result<()> {
     Browser::new(
         LaunchOptions::default_builder()
@@ -13,6 +13,7 @@ fn test_extension() -> Result<()> {
             .build()
             .unwrap(),
     )
+    .await
     .unwrap();
     // if there is popup like missing manifest.json
     // that could probably mean that extension didn't load successfully

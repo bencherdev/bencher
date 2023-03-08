@@ -1,14 +1,8 @@
 use std::sync::{Arc, Mutex, RwLock, Weak};
-use std::thread;
-use std::time::Duration;
 use std::{
     collections::HashMap,
     sync::atomic::{AtomicBool, Ordering},
 };
-
-use anyhow::{Error, Result};
-
-use thiserror::Error;
 
 use log::{debug, error, info, trace, warn};
 
@@ -18,11 +12,13 @@ use serde_json::{json, Value as Json};
 
 use element::Element;
 use point::Point;
+use tokio::time::{sleep, Duration};
 
 use crate::protocol::cdp::{
     types::{Event, Method},
     Browser, Debugger, Emulation, Fetch, Input, Log, Network, Page, Profiler, Runtime, Target, DOM,
 };
+use crate::wait::Wait;
 
 use Runtime::AddBinding;
 
@@ -50,13 +46,12 @@ use Network::{
     GetResponseBodyReturnObject, SetExtraHTTPHeaders, SetUserAgentOverride,
 };
 
-use crate::wait;
+use crate::{wait, ChromeError};
 
 use crate::types::{Bounds, CurrentBounds, PrintToPdfOptions, RemoteError};
 
 use super::transport::SessionId;
 use crate::browser::transport::Transport;
-use std::thread::sleep;
 
 pub mod element;
 mod keys;
@@ -154,29 +149,11 @@ pub struct Tab {
     response_handler: Arc<Mutex<HashMap<String, ResponseHandler>>>,
     loading_failed_handler: Arc<Mutex<HashMap<String, LoadingFailedHandler>>>,
     auth_handler: Arc<Mutex<AuthChallengeResponse>>,
-    default_timeout: Arc<RwLock<Duration>>,
+    default_wait: Arc<RwLock<Wait>>,
     page_bindings: Arc<Mutex<FunctionBinding>>,
     event_listeners: Arc<Mutex<Vec<Arc<SyncSendEvent>>>>,
     slow_motion_multiplier: Arc<RwLock<f64>>, // there's no AtomicF64, otherwise would use that
 }
-
-#[derive(Debug, Error)]
-#[error("No element found")]
-pub struct NoElementFound {}
-
-#[derive(Debug, Error)]
-#[error("Navigate failed: {}", error_text)]
-pub struct NavigationFailed {
-    error_text: String,
-}
-
-#[derive(Debug, Error)]
-#[error("No LocalStorage item was found")]
-pub struct NoLocalStorageItemFound {}
-
-#[derive(Debug, Error)]
-#[error("No UserAgent evaluated")]
-pub struct NoUserAgentEvaluated {}
 
 impl NoElementFound {
     pub fn map(error: Error) -> Error {
@@ -198,14 +175,20 @@ impl NoElementFound {
 }
 
 impl Tab {
-    pub fn new(target_info: TargetInfo, transport: Arc<Transport>) -> Result<Self> {
+    pub async fn new(
+        target_info: TargetInfo,
+        transport: Arc<Transport>,
+        timeout: Duration,
+        sleep: Duration,
+    ) -> Result<Self, ChromeError> {
         let target_id = target_info.target_id.clone();
 
         let session_id = transport
             .call_method_on_browser(AttachToTarget {
                 target_id: target_id.clone(),
                 flatten: None,
-            })?
+            })
+            .await?
             .session_id
             .into();
 
@@ -230,7 +213,7 @@ impl Tab {
                 username: None,
                 password: None,
             })),
-            default_timeout: Arc::new(RwLock::new(Duration::from_secs(20))),
+            default_wait: Arc::new(RwLock::new(Wait::new(timeout, sleep))),
             event_listeners: Arc::new(Mutex::new(Vec::new())),
             slow_motion_multiplier: Arc::new(RwLock::new(0.0)),
         };
@@ -253,16 +236,17 @@ impl Tab {
     }
 
     /// Fetches the most recent info about this target
-    pub fn get_target_info(&self) -> Result<TargetInfo> {
+    pub async fn get_target_info(&self) -> Result<TargetInfo, ChromeError> {
         Ok(self
             .call_method(Target::GetTargetInfo {
                 target_id: Some(self.get_target_id().to_string()),
-            })?
+            })
+            .await?
             .target_info)
     }
 
-    pub fn get_browser_context_id(&self) -> Result<Option<String>> {
-        Ok(self.get_target_info()?.browser_context_id)
+    pub async fn get_browser_context_id(&self) -> Result<Option<String>, ChromeError> {
+        Ok(self.get_target_info().await?.browser_context_id)
     }
 
     pub fn get_url(&self) -> String {
@@ -271,22 +255,23 @@ impl Tab {
     }
 
     /// Allows overriding user agent with the given string.
-    pub fn set_user_agent(
+    pub async fn set_user_agent(
         &self,
         user_agent: &str,
         accept_language: Option<&str>,
         platform: Option<&str>,
-    ) -> Result<()> {
+    ) -> Result<(), ChromeError> {
         self.call_method(SetUserAgentOverride {
             user_agent: user_agent.to_string(),
             accept_language: accept_language.map(std::string::ToString::to_string),
             platform: platform.map(std::string::ToString::to_string),
             user_agent_metadata: None,
         })
+        .await
         .map(|_| ())
     }
 
-    fn start_event_handler_thread(&self) {
+    async fn start_event_handler_thread(&self) {
         let transport: Arc<Transport> = Arc::clone(&self.transport);
         let incoming_events_rx = self
             .transport
@@ -345,6 +330,7 @@ impl Tab {
                                 if let Some(continue_request) = continue_request {
                                     transport
                                         .call_method_on_target(session_id.clone(), continue_request)
+                                        .await
                                         .map(|_| ())
                                 } else {
                                     transport
@@ -359,14 +345,17 @@ impl Tab {
                                                 intercept_response: None,
                                             },
                                         )
+                                        .await
                                         .map(|_| ())
                                 }
                             },
                             RequestPausedDecision::Fulfill(fulfill_request) => transport
                                 .call_method_on_target(session_id.clone(), fulfill_request)
+                                .await
                                 .map(|_| ()),
                             RequestPausedDecision::Fail(fail_request) => transport
                                 .call_method_on_target(session_id.clone(), fail_request)
+                                .await
                                 .map(|_| ()),
                         };
                         if result.is_err() {
@@ -381,7 +370,9 @@ impl Tab {
                             request_id,
                             auth_challenge_response,
                         };
-                        let result = transport.call_method_on_target(session_id.clone(), method);
+                        let result = transport
+                            .call_method_on_target(session_id.clone(), method)
+                            .await;
                         if result.is_err() {
                             warn!("Tried to handle request after connection was closed");
                         }
@@ -441,7 +432,7 @@ impl Tab {
         });
     }
 
-    pub fn expose_function(&self, name: &str, func: Arc<SafeBinding>) -> Result<()> {
+    pub fn expose_function(&self, name: &str, func: Arc<SafeBinding>) -> Result<(), ChromeError> {
         let bindings_mutex = Arc::clone(&self.page_bindings);
 
         let mut bindings = bindings_mutex.lock().unwrap();
@@ -482,7 +473,7 @@ impl Tab {
         Ok(())
     }
 
-    pub fn remove_function(&self, name: &str) -> Result<()> {
+    pub fn remove_function(&self, name: &str) -> Result<(), ChromeError> {
         let bindings_mutex = Arc::clone(&self.page_bindings);
 
         let mut bindings = bindings_mutex.lock().unwrap();
@@ -492,50 +483,54 @@ impl Tab {
         Ok(())
     }
 
-    pub fn call_method<C>(&self, method: C) -> Result<C::ReturnObject>
+    pub async fn call_method<C>(&self, method: C) -> Result<C::ReturnObject, ChromeError>
     where
         C: Method + serde::Serialize + std::fmt::Debug,
     {
         trace!("Calling method: {:?}", method);
         let result = self
             .transport
-            .call_method_on_target(self.session_id.clone(), method);
+            .call_method_on_target(self.session_id.clone(), method)
+            .await;
         let result_string = format!("{result:?}");
         trace!("Got result: {:?}", result_string.chars().take(70));
         result
     }
 
-    pub fn wait_until_navigated(&self) -> Result<&Self> {
+    pub async fn wait_until_navigated(&self) -> Result<&Self, ChromeError> {
         let navigating = Arc::clone(&self.navigating);
-        let timeout = *self.default_timeout.read().unwrap();
+        let wait = *self.default_wait.read().unwrap();
 
-        wait::Wait::with_timeout(timeout).until(|| {
+        wait.until(|| {
             if navigating.load(Ordering::SeqCst) {
                 None
             } else {
                 Some(true)
             }
-        })?;
+        })
+        .await?;
         debug!("A tab finished navigating");
 
         Ok(self)
     }
 
     // Pulls focus to this tab
-    pub fn bring_to_front(&self) -> Result<Page::BringToFrontReturnObject> {
-        self.call_method(Page::BringToFront(None))
+    pub async fn bring_to_front(&self) -> Result<Page::BringToFrontReturnObject, ChromeError> {
+        self.call_method(Page::BringToFront(None)).await
     }
 
-    pub fn navigate_to(&self, url: &str) -> Result<&Self> {
-        let return_object = self.call_method(Navigate {
-            url: url.to_string(),
-            referrer: None,
-            transition_Type: None,
-            frame_id: None,
-            referrer_policy: None,
-        })?;
+    pub async fn navigate_to(&self, url: &str) -> Result<&Self, ChromeError> {
+        let return_object = self
+            .call_method(Navigate {
+                url: url.to_string(),
+                referrer: None,
+                transition_Type: None,
+                frame_id: None,
+                referrer_policy: None,
+            })
+            .await?;
         if let Some(error_text) = return_object.error_text {
-            return Err(NavigationFailed { error_text }.into());
+            return Err(ChromeError::NavigationFailed(error_text));
         }
 
         let navigating = Arc::clone(&self.navigating);
@@ -546,25 +541,12 @@ impl Tab {
         Ok(self)
     }
 
-    /// Set default timeout for the tab
+    /// Set default wait for the tab
     ///
     /// This will be applied to all [wait_for_element](Tab::wait_for_element) and [wait_for_elements](Tab::wait_for_elements) calls for this tab
-    ///
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # fn main() -> Result<()> {
-    /// # use bencher_chrome::Browser;
-    /// # let browser = Browser::default()?;
-    /// let tab = browser.new_tab()?;
-    /// tab.set_default_timeout(std::time::Duration::from_secs(5));
-    /// #
-    /// # Ok(())
-    /// # }
-
-    /// ```
-    pub fn set_default_timeout(&self, timeout: Duration) -> &Self {
-        let mut current_timeout = self.default_timeout.write().unwrap();
-        *current_timeout = timeout;
+    pub fn set_default_wait(&self, timeout: Duration, sleep: Duration) -> &Self {
+        let mut current_wait = self.default_wait.write().unwrap();
+        *current_wait = Wait::new(timeout, sleep);
         self
     }
 
@@ -594,56 +576,53 @@ impl Tab {
         self
     }
 
-    fn optional_slow_motion_sleep(&self, millis: u64) {
+    async fn optional_slow_motion_sleep(&self, millis: u64) {
         let multiplier = self.slow_motion_multiplier.read().unwrap();
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let scaled_millis = millis * *multiplier as u64;
         sleep(Duration::from_millis(scaled_millis));
     }
 
-    pub fn wait_for_element(&self, selector: &str) -> Result<Element<'_>> {
-        self.wait_for_element_with_custom_timeout(selector, *self.default_timeout.read().unwrap())
-    }
-
-    pub fn wait_for_xpath(&self, selector: &str) -> Result<Element<'_>> {
-        self.wait_for_xpath_with_custom_timeout(selector, *self.default_timeout.read().unwrap())
-    }
-
-    pub fn wait_for_element_with_custom_timeout(
+    pub async fn wait_for_element(
         &self,
         selector: &str,
-        timeout: std::time::Duration,
-    ) -> Result<Element<'_>> {
+        wait: Wait,
+    ) -> Result<Element<'_>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(timeout).strict_until(
+        wait.strict_until(
             || self.find_element(selector),
             Error::downcast::<NoElementFound>,
         )
+        .await
     }
 
-    pub fn wait_for_xpath_with_custom_timeout(
+    pub async fn wait_for_xpath(
         &self,
         selector: &str,
-        timeout: std::time::Duration,
-    ) -> Result<Element<'_>> {
+        wait: Wait,
+    ) -> Result<Element<'_>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(timeout).strict_until(
+        wait.strict_until(
             || self.find_element_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )
+        .await
     }
 
-    pub fn wait_for_elements(&self, selector: &str) -> Result<Vec<Element<'_>>> {
+    pub async fn wait_for_elements(&self, selector: &str) -> Result<Vec<Element<'_>>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(*self.default_timeout.read().unwrap()).strict_until(
+        *self.default_wait.read().unwrap().strict_until(
             || self.find_elements(selector),
             Error::downcast::<NoElementFound>,
         )
     }
 
-    pub fn wait_for_elements_by_xpath(&self, selector: &str) -> Result<Vec<Element<'_>>> {
+    pub async fn wait_for_elements_by_xpath(
+        &self,
+        selector: &str,
+    ) -> Result<Vec<Element<'_>>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(*self.default_timeout.read().unwrap()).strict_until(
+        *self.default_wait.read().unwrap().strict_until(
             || self.find_elements_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -656,89 +635,68 @@ impl Tab {
     /// ```js
     /// document.querySelector(selector)
     /// ```
-    ///
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # // Awful hack to get access to testing utils common between integration, doctest, and unit tests
-    /// # mod server {
-    /// #     include!("../../testing_utils/server.rs");
-    /// # }
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::Browser;
-    ///
-    /// let browser = Browser::default()?;
-    /// let initial_tab = browser.new_tab()?;
-    ///
-    /// let file_server = server::Server::with_dumb_html(include_str!("../../../tests/simple.html"));
-    /// let element = initial_tab.navigate_to(&file_server.url())?
-    ///     .wait_until_navigated()?
-    ///     .find_element("div#foobar")?;
-    /// let attrs = element.get_attributes()?.unwrap();
-    /// assert_eq!(attrs["id"], "foobar");
-    /// #
-    /// # Ok(())
-    /// # }z
-    /// ```
-    pub fn find_element(&self, selector: &str) -> Result<Element<'_>> {
-        let root_node_id = self.get_document()?.node_id;
+    pub async fn find_element(&self, selector: &str) -> Result<Element<'_>, ChromeError> {
+        let root_node_id = self.get_document().await?.node_id;
         trace!("Looking up element via selector: {}", selector);
 
         self.run_query_selector_on_node(root_node_id, selector)
+            .await
     }
 
-    pub fn find_element_by_xpath(&self, query: &str) -> Result<Element<'_>> {
-        self.get_document()?;
+    pub async fn find_element_by_xpath(&self, query: &str) -> Result<Element<'_>, ChromeError> {
+        self.get_document().await?;
 
         self.call_method(DOM::PerformSearch {
             query: query.to_string(),
             include_user_agent_shadow_dom: None,
         })
+        .await
         .and_then(|o| {
             Ok(self
                 .call_method(DOM::GetSearchResults {
                     search_id: o.search_id,
                     from_index: 0,
                     to_index: o.result_count,
-                })?
+                })
+                .await?
                 .node_ids[0])
         })
         .and_then(|id| {
             if id == 0 {
-                Err(NoElementFound {}.into())
+                Err(ChromeError::NoElementFound)
             } else {
                 Ok(Element::new(self, id)?)
             }
         })
     }
 
-    pub fn run_query_selector_on_node(
+    pub async fn run_query_selector_on_node(
         &self,
         node_id: NodeId,
         selector: &str,
-    ) -> Result<Element<'_>> {
+    ) -> Result<Element<'_>, ChromeError> {
         let node_id = self
             .call_method(DOM::QuerySelector {
                 node_id,
                 selector: selector.to_string(),
             })
-            .map_err(NoElementFound::map)?
+            .await?
             .node_id;
 
         Element::new(self, node_id)
     }
 
-    pub fn run_query_selector_all_on_node(
+    pub async fn run_query_selector_all_on_node(
         &self,
         node_id: NodeId,
         selector: &str,
-    ) -> Result<Vec<Element<'_>>> {
+    ) -> Result<Vec<Element<'_>>, ChromeError> {
         let node_ids = self
             .call_method(DOM::QuerySelectorAll {
                 node_id,
                 selector: selector.to_string(),
             })
-            .map_err(NoElementFound::map)?
+            .await?
             .node_ids;
 
         node_ids
@@ -747,19 +705,20 @@ impl Tab {
             .collect()
     }
 
-    pub fn get_document(&self) -> Result<Node> {
+    pub async fn get_document(&self) -> Result<Node, ChromeError> {
         Ok(self
             .call_method(DOM::GetDocument {
                 depth: Some(0),
                 pierce: Some(false),
-            })?
+            })
+            .await?
             .root)
     }
 
     /// Get the full HTML contents of the page.
-    pub fn get_content(&self) -> Result<String> {
+    pub async fn get_content(&self) -> Result<String, ChromeError> {
         let func = "
-            (function () { 
+            (function () {
                 let retVal = '';
                 if (document.doctype)
                     retVal = new XMLSerializer().serializeToString(document.doctype);
@@ -767,20 +726,20 @@ impl Tab {
                     retVal += document.documentElement.outerHTML;
                 return retVal;
             })();";
-        let html = self.evaluate(func, false)?.value.unwrap();
+        let html = self.evaluate(func, false).await?.value.unwrap();
         Ok(String::from(html.as_str().unwrap()))
     }
 
-    pub fn find_elements(&self, selector: &str) -> Result<Vec<Element<'_>>> {
+    pub async fn find_elements(&self, selector: &str) -> Result<Vec<Element<'_>>> {
         trace!("Looking up elements via selector: {}", selector);
 
-        let root_node_id = self.get_document()?.node_id;
+        let root_node_id = self.get_document().await?.node_id;
         let node_ids = self
             .call_method(DOM::QuerySelectorAll {
                 node_id: root_node_id,
                 selector: selector.to_string(),
             })
-            .map_err(NoElementFound::map)?
+            .await?
             .node_ids;
 
         if node_ids.is_empty() {
@@ -793,20 +752,25 @@ impl Tab {
             .collect()
     }
 
-    pub fn find_elements_by_xpath(&self, query: &str) -> Result<Vec<Element<'_>>> {
+    pub async fn find_elements_by_xpath(
+        &self,
+        query: &str,
+    ) -> Result<Vec<Element<'_>>, ChromeError> {
         self.get_document()?;
 
         self.call_method(DOM::PerformSearch {
             query: query.to_string(),
             include_user_agent_shadow_dom: None,
         })
+        .await
         .and_then(|o| {
             Ok(self
                 .call_method(DOM::GetSearchResults {
                     search_id: o.search_id,
                     from_index: 0,
                     to_index: o.result_count,
-                })?
+                })
+                .await?
                 .node_ids)
         })
         .and_then(|ids| {
@@ -817,7 +781,7 @@ impl Tab {
         })
     }
 
-    pub fn describe_node(&self, node_id: NodeId) -> Result<Node> {
+    pub async fn describe_node(&self, node_id: NodeId) -> Result<Node, ChromeError> {
         let node = self
             .call_method(DOM::DescribeNode {
                 node_id: Some(node_id),
@@ -825,12 +789,13 @@ impl Tab {
                 depth: Some(100),
                 object_id: None,
                 pierce: None,
-            })?
+            })
+            .await?
             .node;
         Ok(node)
     }
 
-    pub fn type_str(&self, string_to_type: &str) -> Result<&Self> {
+    pub async fn type_str(&self, string_to_type: &str) -> Result<&Self, ChromeError> {
         for c in string_to_type.split("") {
             // split call above will have empty string at start and end which we won't type
             if c.is_empty() {
@@ -842,14 +807,15 @@ impl Tab {
                 Ok(key) => {
                     let v: DispatchKeyEvent = key.into();
 
-                    self.call_method(v.clone())?;
+                    self.call_method(v.clone()).await?;
                     self.call_method(DispatchKeyEvent {
                         Type: Input::DispatchKeyEventTypeOption::KeyUp,
                         ..v
-                    })?;
+                    })
+                    .await?;
                 },
                 Err(_) => {
-                    self.send_character(c)?;
+                    self.send_character(c).await?;
                 },
             }
         }
@@ -861,14 +827,19 @@ impl Tab {
     ///
     /// What this means is that it is much faster.
     /// It is especially useful when you have a lot of text as input.
-    pub fn send_character(&self, char_to_send: &str) -> Result<&Self> {
+    pub async fn send_character(&self, char_to_send: &str) -> Result<&Self, ChromeError> {
         self.call_method(Input::InsertText {
             text: char_to_send.to_string(),
-        })?;
+        })
+        .await?;
         Ok(self)
     }
 
-    pub fn press_key(&self, key: &str) -> Result<&Self> {
+    pub async fn press_key(
+        &self,
+        key: &str,
+        slow_motion_sleep: Option<u64>,
+    ) -> Result<&Self, ChromeError> {
         // See https://github.com/GoogleChrome/puppeteer/blob/62da2366c65b335751896afbb0206f23c61436f1/lib/Input.js#L114-L115
         let definiton = keys::get_key_definition(key)?;
 
@@ -881,7 +852,7 @@ impl Tab {
                     None
                 }
             })
-            .map(std::string::ToString::to_string);
+            .map(ToString::to_string);
 
         // See https://github.com/GoogleChrome/puppeteer/blob/62da2366c65b335751896afbb0206f23c61436f1/lib/Input.js#L52
         let key_down_event_type = if text.is_some() {
@@ -893,7 +864,9 @@ impl Tab {
         let key = Some(definiton.key.to_string());
         let code = Some(definiton.code.to_string());
 
-        self.optional_slow_motion_sleep(25);
+        if let Some(slow_motion_sleep) = slow_motion_sleep {
+            self.optional_slow_motion_sleep(slow_motion_sleep).await;
+        }
 
         self.call_method(Input::DispatchKeyEvent {
             Type: key_down_event_type,
@@ -933,12 +906,18 @@ impl Tab {
     }
 
     /// Moves the mouse to this point (dispatches a mouseMoved event)
-    pub fn move_mouse_to_point(&self, point: Point) -> Result<&Self> {
+    pub fn move_mouse_to_point(
+        &self,
+        point: Point,
+        slow_motions_sleep: Option<u64>,
+    ) -> Result<&Self, ChromeError> {
         if point.x == 0.0 && point.y == 0.0 {
             warn!("Midpoint of element shouldn't be 0,0. Something is probably wrong.");
         }
 
-        self.optional_slow_motion_sleep(100);
+        if let Some(slow_motion_sleep) = slow_motion_sleep {
+            self.optional_slow_motion_sleep(slow_motion_sleep).await;
+        }
 
         self.call_method(Input::DispatchMouseEvent {
             Type: Input::DispatchMouseEventTypeOption::MouseMoved,
@@ -962,7 +941,11 @@ impl Tab {
         Ok(self)
     }
 
-    pub fn click_point(&self, point: Point) -> Result<&Self> {
+    pub async fn click_point(
+        &self,
+        point: Point,
+        slow_motion_sleep: Option<u64>,
+    ) -> Result<&Self, ChromeError> {
         trace!("Clicking point: {:?}", point);
         if point.x == 0.0 && point.y == 0.0 {
             warn!("Midpoint of element shouldn't be 0,0. Something is probably wrong.");
@@ -970,7 +953,10 @@ impl Tab {
 
         self.move_mouse_to_point(point)?;
 
-        self.optional_slow_motion_sleep(250);
+        if let Some(slow_motion_sleep) = slow_motion_sleep {
+            self.optional_slow_motion_sleep(slow_motion_sleep).await;
+        }
+
         self.call_method(Input::DispatchMouseEvent {
             Type: Input::DispatchMouseEventTypeOption::MousePressed,
             x: point.x,
@@ -1018,30 +1004,13 @@ impl Tab {
     ///
     /// If `from_surface` is true, the screenshot is taken from the surface rather than
     /// the view.
-    ///
-    /// ```rust,no_run
-    /// # use anyhow::Result;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::{protocol::page::ScreenshotFormat, Browser, LaunchOptions};
-    /// let browser = Browser::new(LaunchOptions::default_builder().build().unwrap())?;
-    /// let tab = browser.new_tab()?;
-    /// let viewport = tab.navigate_to("https://en.wikipedia.org/wiki/WebKit")?
-    ///     .wait_for_element("#mw-content-text > div > table.infobox.vevent")?
-    ///     .get_box_model()?
-    ///     .margin_viewport();
-    ///  let png_data = tab.capture_screenshot(ScreenshotFormat::PNG, Some(viewport), true)?;
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
     pub fn capture_screenshot(
         &self,
         format: Page::CaptureScreenshotFormatOption,
         quality: Option<u32>,
         clip: Option<Page::Viewport>,
         from_surface: bool,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Vec<u8>, ChromeError> {
         let data = self
             .call_method(Page::CaptureScreenshot {
                 format: Some(format),
@@ -1056,7 +1025,7 @@ impl Tab {
             .map_err(Into::into)
     }
 
-    pub fn print_to_pdf(&self, options: Option<PrintToPdfOptions>) -> Result<Vec<u8>> {
+    pub fn print_to_pdf(&self, options: Option<PrintToPdfOptions>) -> Result<Vec<u8>, ChromeError> {
         if let Some(options) = options {
             let transfer_mode: Option<Page::PrintToPDFTransfer_modeOption> =
                 options.transfer_mode.and_then(std::convert::Into::into);
@@ -1101,38 +1070,29 @@ impl Tab {
     /// If `ignore_cache` is true, the browser cache is ignored (as if the user pressed Shift+F5).
     /// If `script_to_evaluate` is given, the script will be injected into all frames of the
     /// inspected page after reload. Argument will be ignored if reloading dataURL origin.
-    pub fn reload(
+    pub async fn reload(
         &self,
         ignore_cache: bool,
         script_to_evaluate_on_load: Option<&str>,
-    ) -> Result<&Self> {
-        self.optional_slow_motion_sleep(100);
+        slow_motion_sleep: Option<u64>,
+    ) -> Result<&Self, ChromeError> {
+        if let Some(slow_motion_sleep) = slow_motion_sleep {
+            self.optional_slow_motion_sleep(slow_motion_sleep).await;
+        }
+
         self.call_method(Page::Reload {
             ignore_cache: Some(ignore_cache),
             script_to_evaluate_on_load: script_to_evaluate_on_load
                 .map(std::string::ToString::to_string),
-        })?;
+        })
+        .await?;
         Ok(self)
     }
 
     /// Set the background color of the dom to transparent.
     ///
     /// Useful when you want capture a .png
-    ///
-    /// ```rust,no_run
-    /// # use anyhow::Result;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::{protocol::page::ScreenshotFormat, Browser, LaunchOptions};
-    /// let browser = Browser::new(LaunchOptions::default_builder().build().unwrap())?;
-    /// let tab = browser.new_tab()?;
-    /// tab.set_transparent_background_color()?;
-    ///
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn set_transparent_background_color(&self) -> Result<&Self> {
+    pub fn set_transparent_background_color(&self) -> Result<&Self, ChromeError> {
         self.call_method(Emulation::SetDefaultBackgroundColorOverride {
             color: Some(DOM::RGBA {
                 r: 0,
@@ -1147,34 +1107,20 @@ impl Tab {
     /// Set the default background color of the dom.
     ///
     /// Pass a RGBA to override the backrgound color of the dom.
-    ///
-    /// ```rust,no_run
-    /// # use anyhow::Result;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::{protocol::page::ScreenshotFormat, Browser, LaunchOptions};
-    /// let browser = Browser::new(LaunchOptions::default_builder().build().unwrap())?;
-    /// let tab = browser.new_tab()?;
-    /// tab.set_background_color( color: RGBA { r: 255, g: 0, b: 0, a: 1.,})?;
-    ///
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn set_background_color(&self, color: DOM::RGBA) -> Result<&Self> {
+    pub fn set_background_color(&self, color: DOM::RGBA) -> Result<&Self, ChromeError> {
         self.call_method(Emulation::SetDefaultBackgroundColorOverride { color: Some(color) })?;
         Ok(self)
     }
 
     /// Enables the profiler
-    pub fn enable_profiler(&self) -> Result<&Self> {
+    pub fn enable_profiler(&self) -> Result<&Self, ChromeError> {
         self.call_method(Profiler::Enable(None))?;
 
         Ok(self)
     }
 
     /// Disables the profiler
-    pub fn disable_profiler(&self) -> Result<&Self> {
+    pub fn disable_profiler(&self) -> Result<&Self, ChromeError> {
         self.call_method(Profiler::Disable(None))?;
 
         Ok(self)
@@ -1190,7 +1136,7 @@ impl Tab {
     /// By default we enable the 'detailed' flag on StartPreciseCoverage, which enables block-level
     /// granularity, and also enable 'call_count' (which when disabled always sets count to 1 or 0).
     ///
-    pub fn start_js_coverage(&self) -> Result<&Self> {
+    pub fn start_js_coverage(&self) -> Result<&Self, ChromeError> {
         self.call_method(Profiler::StartPreciseCoverage {
             call_count: Some(true),
             detailed: Some(true),
@@ -1201,7 +1147,7 @@ impl Tab {
 
     /// Stops tracking which lines of JS have been executed
     /// If you're finished with the profiler, don't forget to call `disable_profiler`.
-    pub fn stop_js_coverage(&self) -> Result<&Self> {
+    pub fn stop_js_coverage(&self) -> Result<&Self, ChromeError> {
         self.call_method(Profiler::StopPreciseCoverage(None))?;
         Ok(self)
     }
@@ -1217,7 +1163,7 @@ impl Tab {
     ///
     /// The format of the data is a little unintuitive, see here for details:
     /// <https://chromedevtools.github.io/devtools-protocol/tot/Profiler#type-ScriptCoverage>
-    pub fn take_precise_js_coverage(&self) -> Result<Vec<Profiler::ScriptCoverage>> {
+    pub fn take_precise_js_coverage(&self) -> Result<Vec<Profiler::ScriptCoverage>, ChromeError> {
         let script_coverages = self
             .call_method(Profiler::TakePreciseCoverage(None))?
             .result;
@@ -1229,7 +1175,7 @@ impl Tab {
         &self,
         patterns: Option<&[Fetch::RequestPattern]>,
         handle_auth_requests: Option<bool>,
-    ) -> Result<&Self> {
+    ) -> Result<&Self, ChromeError> {
         self.call_method(Fetch::Enable {
             patterns: patterns.map(Vec::from),
             handle_auth_requests,
@@ -1238,7 +1184,7 @@ impl Tab {
     }
 
     /// Disables fetch domain
-    pub fn disable_fetch(&self) -> Result<&Self> {
+    pub fn disable_fetch(&self) -> Result<&Self, ChromeError> {
         self.call_method(Fetch::Disable(None))?;
         Ok(self)
     }
@@ -1250,7 +1196,10 @@ impl Tab {
     /// so that you can call methods from within the closure using `transport.call_method_on_target`.
     ///
     /// The closure needs to return a variant of `RequestPausedDecision`.
-    pub fn enable_request_interception(&self, interceptor: Arc<RequestIntercept>) -> Result<()> {
+    pub fn enable_request_interception(
+        &self,
+        interceptor: Arc<RequestIntercept>,
+    ) -> Result<(), ChromeError> {
         let mut current_interceptor = self.request_interceptor.lock().unwrap();
         *current_interceptor = interceptor;
         Ok(())
@@ -1260,7 +1209,7 @@ impl Tab {
         &self,
         username: Option<String>,
         password: Option<String>,
-    ) -> Result<&Self> {
+    ) -> Result<&Self, ChromeError> {
         let mut current_auth_handler = self.auth_handler.lock().unwrap();
         *current_auth_handler = AuthChallengeResponse {
             response: Fetch::AuthChallengeResponseResponse::ProvideCredentials,
@@ -1286,7 +1235,7 @@ impl Tab {
         &self,
         handler_name: S,
         handler: ResponseHandler,
-    ) -> Result<Option<ResponseHandler>> {
+    ) -> Result<Option<ResponseHandler>, ChromeError> {
         self.call_method(Network::Enable {
             max_total_buffer_size: None,
             max_resource_buffer_size: None,
@@ -1303,7 +1252,7 @@ impl Tab {
         &self,
         handler_name: S,
         handler: LoadingFailedHandler,
-    ) -> Result<Option<LoadingFailedHandler>> {
+    ) -> Result<Option<LoadingFailedHandler>, ChromeError> {
         self.call_method(Network::Enable {
             max_total_buffer_size: None,
             max_resource_buffer_size: None,
@@ -1322,30 +1271,30 @@ impl Tab {
     pub fn deregister_response_handling(
         &self,
         handler_name: &str,
-    ) -> Result<Option<ResponseHandler>> {
+    ) -> Result<Option<ResponseHandler>, ChromeError> {
         Ok(self.response_handler.lock().unwrap().remove(handler_name))
     }
 
     /// Deregister all registered handlers.
-    pub fn deregister_response_handling_all(&self) -> Result<()> {
+    pub fn deregister_response_handling_all(&self) -> Result<(), ChromeError> {
         self.response_handler.lock().unwrap().clear();
         Ok(())
     }
 
     /// Enables runtime domain.
-    pub fn enable_runtime(&self) -> Result<&Self> {
+    pub fn enable_runtime(&self) -> Result<&Self, ChromeError> {
         self.call_method(Runtime::Enable(None))?;
         Ok(self)
     }
 
     /// Disables runtime domain
-    pub fn disable_runtime(&self) -> Result<&Self> {
+    pub fn disable_runtime(&self) -> Result<&Self, ChromeError> {
         self.call_method(Runtime::Disable(None))?;
         Ok(self)
     }
 
     /// Enables Debugger
-    pub fn enable_debugger(&self) -> Result<()> {
+    pub fn enable_debugger(&self) -> Result<(), ChromeError> {
         self.call_method(Debugger::Enable {
             max_scripts_cache_size: None,
         })?;
@@ -1353,7 +1302,7 @@ impl Tab {
     }
 
     /// Disables Debugger
-    pub fn disable_debugger(&self) -> Result<()> {
+    pub fn disable_debugger(&self) -> Result<(), ChromeError> {
         self.call_method(Debugger::Disable(None))?;
         Ok(())
     }
@@ -1361,7 +1310,7 @@ impl Tab {
     /// Returns source for the script with given id.
     ///
     /// Debugger must be enabled.
-    pub fn get_script_source(&self, script_id: &str) -> Result<String> {
+    pub fn get_script_source(&self, script_id: &str) -> Result<String, ChromeError> {
         Ok(self
             .call_method(Debugger::GetScriptSource {
                 script_id: script_id.to_string(),
@@ -1374,7 +1323,7 @@ impl Tab {
     /// Sends the entries collected so far to the client by means of the entryAdded notification.
     ///
     /// See <https://chromedevtools.github.io/devtools-protocol/tot/Log#method-enable>
-    pub fn enable_log(&self) -> Result<&Self> {
+    pub fn enable_log(&self) -> Result<&Self, ChromeError> {
         self.call_method(Log::Enable(None))?;
 
         Ok(self)
@@ -1385,7 +1334,7 @@ impl Tab {
     /// Prevents further log entries from being reported to the client
     ///
     /// See <https://chromedevtools.github.io/devtools-protocol/tot/Log#method-disable>
-    pub fn disable_log(&self) -> Result<&Self> {
+    pub fn disable_log(&self) -> Result<&Self, ChromeError> {
         self.call_method(Log::Disable(None))?;
 
         Ok(self)
@@ -1394,7 +1343,10 @@ impl Tab {
     /// Starts violation reporting
     ///
     /// See <https://chromedevtools.github.io/devtools-protocol/tot/Log#method-startViolationsReport>
-    pub fn start_violations_report(&self, config: Vec<ViolationSetting>) -> Result<&Self> {
+    pub fn start_violations_report(
+        &self,
+        config: Vec<ViolationSetting>,
+    ) -> Result<&Self, ChromeError> {
         self.call_method(Log::StartViolationsReport { config })?;
         Ok(self)
     }
@@ -1402,13 +1354,17 @@ impl Tab {
     /// Stop violation reporting
     ///
     /// See <https://chromedevtools.github.io/devtools-protocol/tot/Log#method-stopViolationsReport>
-    pub fn stop_violations_report(&self) -> Result<&Self> {
+    pub fn stop_violations_report(&self) -> Result<&Self, ChromeError> {
         self.call_method(Log::StopViolationsReport(None))?;
         Ok(self)
     }
 
     /// Evaluates expression on global object.
-    pub fn evaluate(&self, expression: &str, await_promise: bool) -> Result<Runtime::RemoteObject> {
+    pub async fn evaluate(
+        &self,
+        expression: &str,
+        await_promise: bool,
+    ) -> Result<Runtime::RemoteObject, ChromeError> {
         let result = self
             .call_method(Runtime::Evaluate {
                 expression: expression.to_string(),
@@ -1426,7 +1382,8 @@ impl Tab {
                 repl_mode: None,
                 allow_unsafe_eval_blocked_by_csp: None,
                 unique_context_id: None,
-            })?
+            })
+            .await?
             .result;
         Ok(result)
     }
@@ -1434,39 +1391,16 @@ impl Tab {
     /// Adds event listener to Event
     ///
     /// Make sure you are enabled domain you are listening events to.
-    ///
-    /// ## Usage example
-    ///
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # use std::sync::Arc;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// # use bencher_chrome::Browser;
-    /// # use bencher_chrome::protocol::Event;
-    /// # let browser = Browser::default()?;
-    /// # let tab = browser.new_tab()?;
-    /// tab.enable_log()?;
-    /// tab.add_event_listener(Arc::new(move |event: &Event| {
-    ///     match event {
-    ///         Event::LogEntryAdded(_) => {
-    ///             // process event here
-    ///         }
-    ///         _ => {}
-    ///       }
-    ///     }))?;
-    /// #
-    /// #     Ok(())
-    /// # }
-    /// ```
-    ///
-    pub fn add_event_listener(&self, listener: Arc<SyncSendEvent>) -> Result<Weak<SyncSendEvent>> {
+    pub fn add_event_listener(
+        &self,
+        listener: Arc<SyncSendEvent>,
+    ) -> Result<Weak<SyncSendEvent>, ChromeError> {
         let mut listeners = self.event_listeners.lock().unwrap();
         listeners.push(listener);
         Ok(Arc::downgrade(listeners.last().unwrap()))
     }
 
-    pub fn remove_event_listener(&self, listener: &Weak<SyncSendEvent>) -> Result<()> {
+    pub fn remove_event_listener(&self, listener: &Weak<SyncSendEvent>) -> Result<(), ChromeError> {
         let listener = listener.upgrade();
         if listener.is_none() {
             return Ok(());
@@ -1482,33 +1416,41 @@ impl Tab {
     }
 
     /// Closes the target Page
-    pub fn close_target(&self) -> Result<bool> {
+    pub async fn close_target(&self) -> Result<bool, ChromeError> {
         self.call_method(Target::CloseTarget {
             target_id: self.get_target_id().to_string(),
         })
+        .await
         .map(|r| r.success)
     }
 
     /// Tries to close page, running its beforeunload hooks, if any
-    pub fn close_with_unload(&self) -> Result<bool> {
-        self.call_method(Page::Close(None)).map(|_| true)
+    pub async fn close_with_unload(&self) -> Result<bool, ChromeError> {
+        self.call_method(Page::Close(None)).await.map(|_| true)
     }
 
     /// Calls one of the close_* methods depending on fire_unload option
-    pub fn close(&self, fire_unload: bool) -> Result<bool> {
-        self.optional_slow_motion_sleep(50);
+    pub async fn close(
+        &self,
+        fire_unload: bool,
+        slow_motion_sleep: Option<u64>,
+    ) -> Result<bool, ChromeError> {
+        if let Some(slow_motion_sleep) = slow_motion_sleep {
+            self.optional_slow_motion_sleep(slow_motion_sleep).await;
+        }
 
         if fire_unload {
-            return self.close_with_unload();
+            return self.close_with_unload().await;
         }
-        self.close_target()
+        self.close_target().await
     }
 
     /// Activates (focuses) the target.
-    pub fn activate(&self) -> Result<&Self> {
+    pub async fn activate(&self) -> Result<&Self, ChromeError> {
         self.call_method(Target::ActivateTarget {
             target_id: self.get_target_id().clone(),
         })
+        .await
         .map(|_| self)
     }
 
@@ -1517,11 +1459,12 @@ impl Tab {
     /// Note that the returned bounds are always specified for normal (windowed)
     /// state; they do not change when minimizing, maximizing or setting to
     /// fullscreen.
-    pub fn get_bounds(&self) -> Result<CurrentBounds, Error> {
+    pub async fn get_bounds(&self) -> Result<CurrentBounds, ChromeError> {
         self.transport
             .call_method_on_browser(Browser::GetWindowForTarget {
                 target_id: Some(self.get_target_id().to_string()),
             })
+            .await
             .map(|r| r.bounds.into())
     }
 
@@ -1529,12 +1472,13 @@ impl Tab {
     ///
     /// When setting the window to normal (windowed) state, unspecified fields
     /// are left unchanged.
-    pub fn set_bounds(&self, bounds: Bounds) -> Result<&Self, Error> {
+    pub async fn set_bounds(&self, bounds: Bounds) -> Result<&Self, ChromeError> {
         let window_id = self
             .transport
             .call_method_on_browser(Browser::GetWindowForTarget {
                 target_id: Some(self.get_target_id().to_string()),
-            })?
+            })
+            .await?
             .window_id;
         // If we set Normal window state, we *have* to make two API calls
         // to set the state before setting the coordinates; despite what the docs say...
@@ -1549,25 +1493,28 @@ impl Tab {
                         height: None,
                         window_state: Some(Browser::WindowState::Normal),
                     },
-                })?;
+                })
+                .await?;
         }
         self.transport
             .call_method_on_browser(Browser::SetWindowBounds {
                 window_id,
                 bounds: bounds.into(),
-            })?;
+            })
+            .await?;
         Ok(self)
     }
 
     /// Returns all cookies that match the tab's current URL.
-    pub fn get_cookies(&self) -> Result<Vec<Cookie>> {
+    pub async fn get_cookies(&self) -> Result<Vec<Cookie>, ChromeError> {
         Ok(self
-            .call_method(Network::GetCookies { urls: None })?
+            .call_method(Network::GetCookies { urls: None })
+            .await?
             .cookies)
     }
 
     /// Set cookies with tab's current URL
-    pub fn set_cookies(&self, cs: Vec<Network::CookieParam>) -> Result<()> {
+    pub async fn set_cookies(&self, cs: Vec<Network::CookieParam>) -> Result<(), ChromeError> {
         // puppeteer 7b24e5435b:src/common/Page.ts :1009-1028
         use Network::SetCookies;
         let url = self.get_url();
@@ -1591,13 +1538,14 @@ impl Tab {
                 .into_iter()
                 .map(std::convert::Into::into)
                 .collect(),
-        )?;
-        self.call_method(SetCookies { cookies })?;
+        )
+        .await?;
+        self.call_method(SetCookies { cookies }).await?;
         Ok(())
     }
 
     /// Delete cookies with tab's current URL
-    pub fn delete_cookies(&self, cs: Vec<Network::DeleteCookies>) -> Result<()> {
+    pub async fn delete_cookies(&self, cs: Vec<Network::DeleteCookies>) -> Result<(), ChromeError> {
         // puppeteer 7b24e5435b:src/common/Page.ts :998-1007
         let url = self.get_url();
         let starts_with_http = url.starts_with("http");
@@ -1614,39 +1562,24 @@ impl Tab {
                 }
             })
             .try_for_each(|c| -> Result<(), anyhow::Error> {
-                let _ = self.call_method(c)?;
+                let _ = self.call_method(c).await?;
                 Ok(())
             })?;
         Ok(())
     }
 
     /// Returns the title of the document.
-    ///
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # use bencher_chrome::Browser;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// # let browser = Browser::default()?;
-    /// # let tab = browser.new_tab()?;
-    /// tab.navigate_to("https://google.com")?;
-    /// tab.wait_until_navigated()?;
-    /// let title = tab.get_title()?;
-    /// assert_eq!(title, "Google");
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn get_title(&self) -> Result<String> {
-        let remote_object = self.evaluate("document.title", false)?;
+    pub async fn get_title(&self) -> Result<String, ChromeError> {
+        let remote_object = self.evaluate("document.title", false).await?;
         Ok(serde_json::from_value(remote_object.value.unwrap())?)
     }
 
     /// If enabled, instead of using the GUI to select files, the browser will
     /// wait for the `Tab.handle_file_chooser` method to be called.
     /// **WARNING**: Only works on Chromium / Chrome 77 and above.
-    pub fn set_file_chooser_dialog_interception(&self, enabled: bool) -> Result<()> {
-        self.call_method(SetInterceptFileChooserDialog { enabled })?;
+    pub async fn set_file_chooser_dialog_interception(&self, enabled: bool) -> Result<()> {
+        self.call_method(SetInterceptFileChooserDialog { enabled })
+            .await?;
         Ok(())
     }
 
@@ -1657,29 +1590,39 @@ impl Tab {
     /// Supports selecting files or closing the file chooser dialog.
     ///
     /// NOTE: the filepaths listed in `files` must be absolute.
-    pub fn handle_file_chooser(&self, files: Vec<String>, node_id: u32) -> Result<()> {
+    pub async fn handle_file_chooser(
+        &self,
+        files: Vec<String>,
+        node_id: u32,
+    ) -> Result<(), ChromeError> {
         self.call_method(DOM::SetFileInputFiles {
             files,
             node_id: Some(node_id),
             backend_node_id: None,
             object_id: None,
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    pub fn set_extra_http_headers(&self, headers: HashMap<&str, &str>) -> Result<()> {
+    pub async fn set_extra_http_headers(
+        &self,
+        headers: HashMap<&str, &str>,
+    ) -> Result<(), ChromeError> {
         self.call_method(Network::Enable {
             max_total_buffer_size: None,
             max_resource_buffer_size: None,
             max_post_data_size: None,
-        })?;
+        })
+        .await?;
         self.call_method(SetExtraHTTPHeaders {
             headers: Network::Headers(Some(json!(headers))),
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    pub fn set_storage<T>(&self, item_name: &str, item: T) -> Result<()>
+    pub async fn set_storage<T>(&self, item_name: &str, item: T) -> Result<(), ChromeError>
     where
         T: Serialize,
     {
@@ -1688,16 +1631,19 @@ impl Tab {
         self.evaluate(
             &format!(r#"localStorage.setItem("{item_name}",JSON.stringify({value}))"#),
             false,
-        )?;
+        )
+        .await?;
 
         Ok(())
     }
 
-    pub fn get_storage<T>(&self, item_name: &str) -> Result<T>
+    pub async fn get_storage<T>(&self, item_name: &str) -> Result<T, ChromeError>
     where
         T: DeserializeOwned,
     {
-        let object = self.evaluate(&format!(r#"localStorage.getItem("{item_name}")"#), false)?;
+        let object = self
+            .evaluate(&format!(r#"localStorage.getItem("{item_name}")"#), false)
+            .await?;
 
         let json: Option<T> = object.value.and_then(|v| match v {
             serde_json::Value::String(ref s) => {
@@ -1718,18 +1664,21 @@ impl Tab {
         }
     }
 
-    pub fn remove_storage(&self, item_name: &str) -> Result<()> {
-        self.evaluate(&format!(r#"localStorage.removeItem("{item_name}")"#), false)?;
+    pub async fn remove_storage(&self, item_name: &str) -> Result<(), ChromeError> {
+        self.evaluate(&format!(r#"localStorage.removeItem("{item_name}")"#), false)
+            .await?;
 
         Ok(())
     }
 
-    pub fn stop_loading(&self) -> Result<bool> {
-        self.call_method(Page::StopLoading(None)).map(|_| true)
+    pub async fn stop_loading(&self) -> Result<bool, ChromeError> {
+        self.call_method(Page::StopLoading(None))
+            .await
+            .map(|_| true)
     }
 
-    fn bypass_user_agent(&self) -> Result<()> {
-        let object = self.evaluate("window.navigator.userAgent", true)?;
+    async fn bypass_user_agent(&self) -> Result<(), ChromeError> {
+        let object = self.evaluate("window.navigator.userAgent", true).await?;
 
         match object.value.map(|x| x.to_string()) {
             Some(mut ua) => {
@@ -1741,30 +1690,32 @@ impl Tab {
                 self.set_user_agent(&ua, None, None)?;
                 Ok(())
             },
-            None => Err(NoUserAgentEvaluated {}.into()),
+            None => Err(ChromeError::NoUserAgentEvaluated),
         }
     }
 
-    fn bypass_wedriver(&self) -> Result<()> {
+    async fn bypass_wedriver(&self) -> Result<(), ChromeError> {
         self.call_method(Page::AddScriptToEvaluateOnNewDocument {
             source: "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
                 .to_string(),
             world_name: None,
             include_command_line_api: None,
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    fn bypass_chrome(&self) -> Result<()> {
+    async fn bypass_chrome(&self) -> Result<(), ChromeError> {
         self.call_method(Page::AddScriptToEvaluateOnNewDocument {
             source: "window.chrome = { runtime: {} };".to_string(),
             world_name: None,
             include_command_line_api: None,
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    fn bypass_permissions(&self) -> Result<()> {
+    async fn bypass_permissions(&self) -> Result<(), ChromeError> {
         let r = "const originalQuery = window.navigator.permissions.query;
         window.navigator.permissions.__proto__.query = parameters =>
         parameters.name === 'notifications'
@@ -1775,11 +1726,12 @@ impl Tab {
             source: r.to_string(),
             world_name: None,
             include_command_line_api: None,
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    fn bypass_plugins(&self) -> Result<()> {
+    async fn bypass_plugins(&self) -> Result<(), ChromeError> {
         self.call_method(Page::AddScriptToEvaluateOnNewDocument {
             source: "Object.defineProperty(navigator, 'plugins', { get: () => [
             {filename:'internal-pdf-viewer'},
@@ -1789,11 +1741,12 @@ impl Tab {
                 .to_string(),
             world_name: None,
             include_command_line_api: None,
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    fn bypass_webgl_vendor(&self) -> Result<()> {
+    async fn bypass_webgl_vendor(&self) -> Result<(), ChromeError> {
         let r = "const getParameter = WebGLRenderingContext.getParameter;
         WebGLRenderingContext.prototype.getParameter = function(parameter) {
             // UNMASKED_VENDOR_WEBGL
@@ -1812,17 +1765,18 @@ impl Tab {
             source: r.to_string(),
             world_name: None,
             include_command_line_api: None,
-        })?;
+        })
+        .await?;
         Ok(())
     }
 
-    pub fn enable_stealth_mode(&self) -> Result<()> {
-        self.bypass_user_agent()?;
-        self.bypass_wedriver()?;
-        self.bypass_chrome()?;
-        self.bypass_permissions()?;
-        self.bypass_plugins()?;
-        self.bypass_webgl_vendor()?;
+    pub async fn enable_stealth_mode(&self) -> Result<(), ChromeError> {
+        self.bypass_user_agent().await?;
+        self.bypass_wedriver().await?;
+        self.bypass_chrome().await?;
+        self.bypass_permissions().await?;
+        self.bypass_plugins().await?;
+        self.bypass_webgl_vendor().await?;
         Ok(())
     }
 }

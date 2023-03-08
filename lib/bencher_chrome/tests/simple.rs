@@ -143,18 +143,19 @@ fn bounds_unchanged() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-#[test]
-fn actions_on_tab_wont_hang_after_browser_drops() -> Result<()> {
+#[tokio::test]
+async fn actions_on_tab_wont_hang_after_browser_drops() -> Result<()> {
     logging::enable_logging();
     for _ in 0..20 {
         let (_, browser, tab) = dumb_server(include_str!("simple.html"));
-        std::thread::spawn(move || {
+        tokio::task::spawn(move || {
             let mut rng = rand::thread_rng();
             let millis: u64 = rng.gen_range(0..5000);
             std::thread::sleep(std::time::Duration::from_millis(millis));
             trace!("dropping browser");
             drop(browser);
-        });
+        })
+        .await;
         let _element = tab.find_element("div#foobar");
     }
     Ok(())

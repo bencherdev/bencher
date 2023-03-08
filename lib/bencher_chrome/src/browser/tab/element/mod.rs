@@ -4,24 +4,18 @@ use std::time::Duration;
 
 use anyhow::{Error, Result};
 
-use thiserror::Error;
-
 use log::{debug, error};
 
-use crate::browser::tab::NoElementFound;
 use crate::protocol::cdp::Runtime::RemoteObject;
 use crate::{browser::tab::point::Point, protocol::cdp::CSS::CSSComputedStyleProperty};
 
 mod box_model;
 
-use crate::wait;
+use crate::{wait, ChromeError};
 pub use box_model::{BoxModel, ElementQuad};
 
 use crate::protocol::cdp::{Page, Runtime, CSS, DOM};
 
-#[derive(Debug, Error)]
-#[error("Couldnt get element quad")]
-pub struct NoQuadFound {}
 /// A handle to a [DOM Element](https://developer.mozilla.org/en-US/docs/Web/API/Element).
 ///
 /// Typically you get access to these by passing `Tab.wait_for_element` a CSS selector. Once
@@ -49,12 +43,15 @@ impl<'a> Element<'a> {
     /// Using a 'node_id', of the type returned by QuerySelector and QuerySelectorAll, this finds
     /// the 'backend_node_id' and 'remote_object_id' which are stable identifiers, unlike node_id.
     /// We use these two when making various calls to the API because of that.
-    pub fn new(parent: &'a super::Tab, node_id: DOM::NodeId) -> Result<Self> {
+    pub async fn new(parent: &'a super::Tab, node_id: DOM::NodeId) -> Result<Self, ChromeError> {
         if node_id == 0 {
-            return Err(NoElementFound {}.into());
+            return Err(ChromeError::NoElementFound);
         }
 
-        let node = parent.describe_node(node_id).map_err(NoElementFound::map)?;
+        let node = parent
+            .describe_node(node_id)
+            .await
+            .map_err(ChromeError::NoElementFound)?;
 
         let attributes = node.attributes;
         let tag_name = node.node_name;
@@ -67,7 +64,8 @@ impl<'a> Element<'a> {
                 node_id: None,
                 object_group: None,
                 execution_context_id: None,
-            })?
+            })
+            .await?
             .object;
 
         let value = object.value.unwrap_or("".into()).to_string();
@@ -91,37 +89,13 @@ impl<'a> Element<'a> {
     /// ```js
     /// document.querySelector(selector)
     /// ```
-    ///
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # // Awful hack to get access to testing utils common between integration, doctest, and unit tests
-    /// # mod server {
-    /// #     include!("../../../testing_utils/server.rs");
-    /// # }
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::Browser;
-    ///
-    /// let browser = Browser::default()?;
-    /// let initial_tab = browser.new_tab()?;
-    ///
-    /// let file_server = server::Server::with_dumb_html(include_str!("../../../../tests/simple.html"));
-    /// let containing_element = initial_tab.navigate_to(&file_server.url())?
-    ///     .wait_until_navigated()?
-    ///     .find_element("div#position-test")?;
-    /// let inner_element = containing_element.find_element("#strictly-above")?;
-    /// let attrs = inner_element.get_attributes()?.unwrap();
-    /// assert_eq!(attrs["id"], "strictly-above");
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn find_element(&self, selector: &str) -> Result<Self> {
+    pub async fn find_element(&self, selector: &str) -> Result<Self, ChromeError> {
         self.parent
             .run_query_selector_on_node(self.node_id, selector)
+            .await
     }
 
-    pub fn find_element_by_xpath(&self, query: &str) -> Result<Element<'_>> {
+    pub async fn find_element_by_xpath(&self, query: &str) -> Result<Element<'_>, ChromeError> {
         self.parent.get_document()?;
 
         self.parent
@@ -129,6 +103,7 @@ impl<'a> Element<'a> {
                 query: query.to_string(),
                 include_user_agent_shadow_dom: Some(true),
             })
+            .await
             .and_then(|o| {
                 Ok(self
                     .parent
@@ -136,12 +111,13 @@ impl<'a> Element<'a> {
                         search_id: o.search_id,
                         from_index: 0,
                         to_index: o.result_count,
-                    })?
+                    })
+                    .await?
                     .node_ids[0])
             })
             .and_then(|id| {
                 if id == 0 {
-                    Err(NoElementFound {}.into())
+                    Err(ChromeError::NoElementFound)
                 } else {
                     Ok(Element::new(self.parent, id)?)
                 }
@@ -155,42 +131,20 @@ impl<'a> Element<'a> {
     /// ```js
     /// document.querySelector(selector)
     /// ```
-    ///
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # // Awful hack to get access to testing utils common between integration, doctest, and unit tests
-    /// # mod server {
-    /// #     include!("../../../testing_utils/server.rs");
-    /// # }
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::Browser;
-    ///
-    /// let browser = Browser::default()?;
-    /// let initial_tab = browser.new_tab()?;
-    ///
-    /// let file_server = server::Server::with_dumb_html(include_str!("../../../../tests/simple.html"));
-    /// let containing_element = initial_tab.navigate_to(&file_server.url())?
-    ///     .wait_until_navigated()?
-    ///     .find_element("div#position-test")?;
-    /// let inner_divs = containing_element.find_elements("div")?;
-    /// assert_eq!(inner_divs.len(), 5);
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn find_elements(&self, selector: &str) -> Result<Vec<Self>> {
+    pub async fn find_elements(&self, selector: &str) -> Result<Vec<Self>, ChromeError> {
         self.parent
             .run_query_selector_all_on_node(self.node_id, selector)
+            .await
     }
 
-    pub fn find_elements_by_xpath(&self, query: &str) -> Result<Vec<Element<'_>>> {
+    pub async fn find_elements_by_xpath(&self, query: &str) -> Result<Vec<Element<'_>>> {
         self.parent.get_document()?;
         self.parent
             .call_method(DOM::PerformSearch {
                 query: query.to_string(),
                 include_user_agent_shadow_dom: Some(true),
             })
+            .await
             .and_then(|o| {
                 Ok(self
                     .parent
@@ -198,7 +152,8 @@ impl<'a> Element<'a> {
                         search_id: o.search_id,
                         from_index: 0,
                         to_index: o.result_count,
-                    })?
+                    })
+                    .await?
                     .node_ids)
             })
             .and_then(|ids| {
@@ -209,86 +164,90 @@ impl<'a> Element<'a> {
             })
     }
 
-    pub fn wait_for_element(&self, selector: &str) -> Result<Element<'_>> {
-        self.wait_for_element_with_custom_timeout(selector, Duration::from_secs(3))
-    }
-
-    pub fn wait_for_xpath(&self, selector: &str) -> Result<Element<'_>> {
-        self.wait_for_xpath_with_custom_timeout(selector, Duration::from_secs(3))
-    }
-
-    pub fn wait_for_element_with_custom_timeout(
+    pub async fn wait_for_element(
         &self,
         selector: &str,
-        timeout: std::time::Duration,
-    ) -> Result<Element<'_>> {
+        timeout: Duration,
+        sleep: Duration,
+    ) -> Result<Element<'_>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(timeout).strict_until(
-            || self.find_element(selector),
+        wait::Wait::new(timeout, sleep).strict_until(
+            || self.find_element(selector).await,
             Error::downcast::<NoElementFound>,
         )
     }
 
-    pub fn wait_for_xpath_with_custom_timeout(
+    pub async fn wait_for_xpath(
         &self,
         selector: &str,
-        timeout: std::time::Duration,
-    ) -> Result<Element<'_>> {
+        timeout: Duration,
+        sleep: Duration,
+    ) -> Result<Element<'_>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(timeout).strict_until(
-            || self.find_element_by_xpath(selector),
+        wait::Wait::new(timeout, sleep).strict_until(
+            || self.find_element_by_xpath(selector).await,
             Error::downcast::<NoElementFound>,
         )
     }
 
-    pub fn wait_for_elements(&self, selector: &str) -> Result<Vec<Element<'_>>> {
+    pub fn wait_for_elements(
+        &self,
+        selector: &str,
+        timeout: Duration,
+        sleep: Duration,
+    ) -> Result<Vec<Element<'_>>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(Duration::from_secs(3)).strict_until(
-            || self.find_elements(selector),
+        wait::Wait::new(timeout, sleep).strict_until(
+            || self.find_elements(selector).await,
             Error::downcast::<NoElementFound>,
         )
     }
 
-    pub fn wait_for_elements_by_xpath(&self, selector: &str) -> Result<Vec<Element<'_>>> {
+    pub async fn wait_for_elements_by_xpath(
+        &self,
+        selector: &str,
+        timeout: Duration,
+        sleep: Duration,
+    ) -> Result<Vec<Element<'_>>, ChromeError> {
         debug!("Waiting for element with selector: {:?}", selector);
-        wait::Wait::with_timeout(Duration::from_secs(3)).strict_until(
+        wait::Wait::new(timeout, sleep).strict_until(
             || self.find_elements_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )
     }
 
     /// Moves the mouse to the middle of this element
-    pub fn move_mouse_over(&self) -> Result<&Self> {
-        self.scroll_into_view()?;
-        let midpoint = self.get_midpoint()?;
-        self.parent.move_mouse_to_point(midpoint)?;
+    pub async fn move_mouse_over(&self) -> Result<&Self, ChromeError> {
+        self.scroll_into_view().await?;
+        let midpoint = self.get_midpoint().await?;
+        self.parent.move_mouse_to_point(midpoint).await?;
         Ok(self)
     }
 
-    pub fn click(&self) -> Result<&Self> {
-        self.scroll_into_view()?;
+    pub async fn click(&self) -> Result<&Self, ChromeError> {
+        self.scroll_into_view().await?;
         debug!("Clicking element {:?}", &self);
-        let midpoint = self.get_midpoint()?;
-        self.parent.click_point(midpoint)?;
+        let midpoint = self.get_midpoint().await?;
+        self.parent.click_point(midpoint).await?;
         Ok(self)
     }
 
-    pub fn type_into(&self, text: &str) -> Result<&Self> {
-        self.click()?;
+    pub async fn type_into(&self, text: &str) -> Result<&Self, ChromeError> {
+        self.click().await?;
 
         debug!("Typing into element ( {:?} ): {}", &self, text);
 
-        self.parent.type_str(text)?;
+        self.parent.type_str(text).await?;
 
         Ok(self)
     }
 
-    pub fn call_js_fn(
+    pub async fn call_js_fn(
         &self,
         function_declaration: &str,
         args: Vec<serde_json::Value>,
         await_promise: bool,
-    ) -> Result<Runtime::RemoteObject> {
+    ) -> Result<Runtime::RemoteObject, ChromeError> {
         let mut args = args;
         let result = self
             .parent
@@ -313,19 +272,22 @@ impl<'a> Element<'a> {
                 execution_context_id: None,
                 object_group: None,
                 throw_on_side_effect: None,
-            })?
+            })
+            .await?
             .result;
 
         Ok(result)
     }
 
-    pub fn focus(&self) -> Result<&Self> {
-        self.scroll_into_view()?;
-        self.parent.call_method(DOM::Focus {
-            backend_node_id: Some(self.backend_node_id),
-            node_id: None,
-            object_id: None,
-        })?;
+    pub async fn focus(&self) -> Result<&Self, ChromeError> {
+        self.scroll_into_view().await?;
+        self.parent
+            .call_method(DOM::Focus {
+                backend_node_id: Some(self.backend_node_id),
+                node_id: None,
+                object_id: None,
+            })
+            .await?;
         Ok(self)
     }
 
@@ -336,26 +298,10 @@ impl<'a> Element<'a> {
     ///
     /// Note: if you somehow call this on a node that's not an HTML Element (e.g. `document`), this
     /// will fail.
-    /// ```rust
-    /// # use anyhow::Result;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::Browser;
-    /// use std::time::Duration;
-    /// let browser = Browser::default()?;
-    /// let url = "https://web.archive.org/web/20190403224553/https://en.wikipedia.org/wiki/JavaScript";
-    /// let inner_text_content = browser.new_tab()?
-    ///     .navigate_to(url)?
-    ///     .wait_for_element_with_custom_timeout("#Misplaced_trust_in_developers", Duration::from_secs(10))?
-    ///     .get_inner_text()?;
-    /// assert_eq!(inner_text_content, "Misplaced trust in developers");
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn get_inner_text(&self) -> Result<String> {
+    pub async fn get_inner_text(&self) -> Result<String, ChromeError> {
         let text: String = serde_json::from_value(
-            self.call_js_fn("function() { return this.innerText }", vec![], false)?
+            self.call_js_fn("function() { return this.innerText }", vec![], false)
+                .await?
                 .value
                 .unwrap(),
         )?;
@@ -365,27 +311,29 @@ impl<'a> Element<'a> {
     /// Get the full HTML contents of the element.
     ///
     /// Equivalent to the following JS: ```element.outerHTML```.
-    pub fn get_content(&self) -> Result<String> {
+    pub async fn get_content(&self) -> Result<String, ChromeError> {
         let html = self
-            .call_js_fn("function() { return this.outerHTML }", vec![], false)?
+            .call_js_fn("function() { return this.outerHTML }", vec![], false)
+            .await?
             .value
             .unwrap();
 
         Ok(String::from(html.as_str().unwrap()))
     }
 
-    pub fn get_computed_styles(&self) -> Result<Vec<CSSComputedStyleProperty>> {
+    pub async fn get_computed_styles(&self) -> Result<Vec<CSSComputedStyleProperty>, ChromeError> {
         let styles = self
             .parent
             .call_method(CSS::GetComputedStyleForNode {
                 node_id: self.node_id,
-            })?
+            })
+            .await?
             .computed_style;
 
         Ok(styles)
     }
 
-    pub fn get_description(&self) -> Result<DOM::Node> {
+    pub async fn get_description(&self) -> Result<DOM::Node, ChromeError> {
         let node = self
             .parent
             .call_method(DOM::DescribeNode {
@@ -394,7 +342,8 @@ impl<'a> Element<'a> {
                 depth: Some(100),
                 object_id: None,
                 pierce: None,
-            })?
+            })
+            .await?
             .node;
         Ok(node)
     }
@@ -402,54 +351,44 @@ impl<'a> Element<'a> {
     /// Capture a screenshot of this element.
     ///
     /// The screenshot is taken from the surface using this element's content-box.
-    ///
-    /// ```rust,no_run
-    /// # use anyhow::Result;
-    /// # fn main() -> Result<()> {
-    /// #
-    /// use bencher_chrome::{protocol::page::ScreenshotFormat, Browser};
-    /// let browser = Browser::default()?;
-    /// let png_data = browser.new_tab()?
-    ///     .navigate_to("https://en.wikipedia.org/wiki/WebKit")?
-    ///     .wait_for_element("#mw-content-text > div > table.infobox.vevent")?
-    ///     .capture_screenshot(ScreenshotFormat::PNG)?;
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn capture_screenshot(
+    pub async fn capture_screenshot(
         &self,
         format: Page::CaptureScreenshotFormatOption,
-    ) -> Result<Vec<u8>> {
-        self.scroll_into_view()?;
-        self.parent.capture_screenshot(
-            format,
-            Some(90),
-            Some(self.get_box_model()?.content_viewport()),
-            true,
-        )
+    ) -> Result<Vec<u8>, ChromeError> {
+        self.scroll_into_view().await?;
+        self.parent
+            .capture_screenshot(
+                format,
+                Some(90),
+                Some(self.get_box_model().await?.content_viewport().await),
+                true,
+            )
+            .await
     }
 
-    pub fn set_input_files(&self, file_paths: &[&str]) -> Result<&Self> {
-        self.parent.call_method(DOM::SetFileInputFiles {
-            files: file_paths
-                .to_vec()
-                .iter()
-                .map(std::string::ToString::to_string)
-                .collect(),
-            backend_node_id: Some(self.backend_node_id),
-            node_id: None,
-            object_id: None,
-        })?;
+    pub async fn set_input_files(&self, file_paths: &[&str]) -> Result<&Self, ChromeError> {
+        self.parent
+            .call_method(DOM::SetFileInputFiles {
+                files: file_paths
+                    .to_vec()
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect(),
+                backend_node_id: Some(self.backend_node_id),
+                node_id: None,
+                object_id: None,
+            })
+            .await?;
         Ok(self)
     }
 
     /// Scrolls the current element into view
     ///
     /// Used prior to any action applied to the current element to ensure action is duable.
-    pub fn scroll_into_view(&self) -> Result<&Self> {
-        let result = self.call_js_fn(
-            "async function() {
+    pub async fn scroll_into_view(&self) -> Result<&Self, ChromeError> {
+        let result = self
+            .call_js_fn(
+                "async function() {
                 if (!this.isConnected)
                     return 'Node is detached from document';
                 if (this.nodeType !== Node.ELEMENT_NODE)
@@ -471,32 +410,34 @@ impl<'a> Element<'a> {
                     });
                 return false;
             }",
-            vec![],
-            true,
-        )?;
+                vec![],
+                true,
+            )
+            .await?;
 
         if result.Type == Runtime::RemoteObjectType::String {
             let error_text = result.value.unwrap().as_str().unwrap().to_string();
-            return Err(ScrollFailed { error_text }.into());
+            return Err(ChromeError::ScrollFailed(error_text));
         }
 
         Ok(self)
     }
 
-    pub fn get_attributes(&self) -> Result<Option<Vec<String>>> {
-        let description = self.get_description()?;
+    pub async fn get_attributes(&self) -> Result<Option<Vec<String>>, ChromeError> {
+        let description = self.get_description().await?;
         Ok(description.attributes)
     }
 
     /// Get boxes for this element
-    pub fn get_box_model(&self) -> Result<BoxModel> {
+    pub async fn get_box_model(&self) -> Result<BoxModel, ChromeError> {
         let model = self
             .parent
             .call_method(DOM::GetBoxModel {
                 node_id: None,
                 backend_node_id: Some(self.backend_node_id),
                 object_id: None,
-            })?
+            })
+            .await?
             .model;
         Ok(BoxModel {
             content: ElementQuad::from_raw_points(&model.content),
@@ -508,7 +449,11 @@ impl<'a> Element<'a> {
         })
     }
 
-    pub fn get_midpoint(&self) -> Result<Point> {
+    pub async fn get_midpoint(
+        &self,
+        timeout: Duration,
+        sleep: Duration,
+    ) -> Result<Point, ChromeError> {
         if let Ok(e) = self
             .parent
             .call_method(DOM::GetContentQuads {
@@ -516,6 +461,7 @@ impl<'a> Element<'a> {
                 backend_node_id: Some(self.backend_node_id),
                 object_id: None,
             })
+            .await
             .map(|quad| {
                 let raw_quad = quad.quads.first().unwrap();
                 let input_quad = ElementQuad::from_raw_points(raw_quad);
@@ -526,7 +472,7 @@ impl<'a> Element<'a> {
             return Ok(e);
         }
         // let mut p = Point { x: 0.0, y: 0.0 }; FIX FOR CLIPPY `value assigned to `p` is never read`
-        let p = wait::Wait::with_timeout(Duration::from_secs(20)).until(|| {
+        let p = wait::Wait::new(timeout, sleep).until(|| {
             let r = self
                 .call_js_fn(
                     r#"
@@ -543,6 +489,7 @@ impl<'a> Element<'a> {
                     vec![],
                     false,
                 )
+                .await
                 .unwrap();
 
             let res = extract_midpoint(r);
@@ -562,18 +509,20 @@ impl<'a> Element<'a> {
         Ok(p)
     }
 
-    pub fn get_js_midpoint(&self) -> Result<Point> {
-        let result = self.call_js_fn(
-            "function(){return this.getBoundingClientRect(); }",
-            vec![],
-            false,
-        )?;
+    pub async fn get_js_midpoint(&self) -> Result<Point, ChromeError> {
+        let result = self
+            .call_js_fn(
+                "function(){return this.getBoundingClientRect(); }",
+                vec![],
+                false,
+            )
+            .await?;
 
         extract_midpoint(result)
     }
 }
 
-fn extract_midpoint(remote_obj: RemoteObject) -> Result<Point> {
+fn extract_midpoint(remote_obj: RemoteObject) -> Result<Point, ChromeError> {
     let mut prop_map = HashMap::new();
 
     match remote_obj.preview.map(|v| {
@@ -588,10 +537,4 @@ fn extract_midpoint(remote_obj: RemoteObject) -> Result<Point> {
         Some(v) => Ok(v),
         None => Ok(Point { x: 0.0, y: 0.0 }),
     }
-}
-
-#[derive(Debug, Error)]
-#[error("Scrolling element into view failed: {}", error_text)]
-struct ScrollFailed {
-    error_text: String,
 }
