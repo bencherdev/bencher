@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::time::Duration;
 
@@ -8,11 +9,12 @@ use thiserror::Error;
 use log::{debug, error};
 
 use crate::browser::tab::NoElementFound;
+use crate::protocol::cdp::Runtime::RemoteObject;
 use crate::{browser::tab::point::Point, protocol::cdp::CSS::CSSComputedStyleProperty};
 
 mod box_model;
 
-use crate::util;
+use crate::wait;
 pub use box_model::{BoxModel, ElementQuad};
 
 use crate::protocol::cdp::{Page, Runtime, CSS, DOM};
@@ -221,7 +223,7 @@ impl<'a> Element<'a> {
         timeout: std::time::Duration,
     ) -> Result<Element<'_>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(timeout).strict_until(
+        wait::Wait::with_timeout(timeout).strict_until(
             || self.find_element(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -233,7 +235,7 @@ impl<'a> Element<'a> {
         timeout: std::time::Duration,
     ) -> Result<Element<'_>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(timeout).strict_until(
+        wait::Wait::with_timeout(timeout).strict_until(
             || self.find_element_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -241,7 +243,7 @@ impl<'a> Element<'a> {
 
     pub fn wait_for_elements(&self, selector: &str) -> Result<Vec<Element<'_>>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(Duration::from_secs(3)).strict_until(
+        wait::Wait::with_timeout(Duration::from_secs(3)).strict_until(
             || self.find_elements(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -249,7 +251,7 @@ impl<'a> Element<'a> {
 
     pub fn wait_for_elements_by_xpath(&self, selector: &str) -> Result<Vec<Element<'_>>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(Duration::from_secs(3)).strict_until(
+        wait::Wait::with_timeout(Duration::from_secs(3)).strict_until(
             || self.find_elements_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -524,7 +526,7 @@ impl<'a> Element<'a> {
             return Ok(e);
         }
         // let mut p = Point { x: 0.0, y: 0.0 }; FIX FOR CLIPPY `value assigned to `p` is never read`
-        let p = util::Wait::with_timeout(Duration::from_secs(20)).until(|| {
+        let p = wait::Wait::with_timeout(Duration::from_secs(20)).until(|| {
             let r = self
                 .call_js_fn(
                     r#"
@@ -543,7 +545,7 @@ impl<'a> Element<'a> {
                 )
                 .unwrap();
 
-            let res = util::extract_midpoint(r);
+            let res = extract_midpoint(r);
 
             match res {
                 Ok(v) => {
@@ -567,7 +569,24 @@ impl<'a> Element<'a> {
             false,
         )?;
 
-        util::extract_midpoint(result)
+        extract_midpoint(result)
+    }
+}
+
+fn extract_midpoint(remote_obj: RemoteObject) -> Result<Point> {
+    let mut prop_map = HashMap::new();
+
+    match remote_obj.preview.map(|v| {
+        for prop in v.properties {
+            prop_map.insert(prop.name, prop.value.unwrap().parse::<f64>().unwrap());
+        }
+        Point {
+            x: prop_map["x"] + (prop_map["width"] / 2.0),
+            y: prop_map["y"] + (prop_map["height"] / 2.0),
+        }
+    }) {
+        Some(v) => Ok(v),
+        None => Ok(Point { x: 0.0, y: 0.0 }),
     }
 }
 

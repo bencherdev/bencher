@@ -50,7 +50,7 @@ use Network::{
     GetResponseBodyReturnObject, SetExtraHTTPHeaders, SetUserAgentOverride,
 };
 
-use crate::util;
+use crate::wait;
 
 use crate::types::{Bounds, CurrentBounds, PrintToPdfOptions, RemoteError};
 
@@ -509,7 +509,7 @@ impl Tab {
         let navigating = Arc::clone(&self.navigating);
         let timeout = *self.default_timeout.read().unwrap();
 
-        util::Wait::with_timeout(timeout).until(|| {
+        wait::Wait::with_timeout(timeout).until(|| {
             if navigating.load(Ordering::SeqCst) {
                 None
             } else {
@@ -615,7 +615,7 @@ impl Tab {
         timeout: std::time::Duration,
     ) -> Result<Element<'_>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(timeout).strict_until(
+        wait::Wait::with_timeout(timeout).strict_until(
             || self.find_element(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -627,7 +627,7 @@ impl Tab {
         timeout: std::time::Duration,
     ) -> Result<Element<'_>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(timeout).strict_until(
+        wait::Wait::with_timeout(timeout).strict_until(
             || self.find_element_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -635,7 +635,7 @@ impl Tab {
 
     pub fn wait_for_elements(&self, selector: &str) -> Result<Vec<Element<'_>>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(*self.default_timeout.read().unwrap()).strict_until(
+        wait::Wait::with_timeout(*self.default_timeout.read().unwrap()).strict_until(
             || self.find_elements(selector),
             Error::downcast::<NoElementFound>,
         )
@@ -643,7 +643,7 @@ impl Tab {
 
     pub fn wait_for_elements_by_xpath(&self, selector: &str) -> Result<Vec<Element<'_>>> {
         debug!("Waiting for element with selector: {:?}", selector);
-        util::Wait::with_timeout(*self.default_timeout.read().unwrap()).strict_until(
+        wait::Wait::with_timeout(*self.default_timeout.read().unwrap()).strict_until(
             || self.find_elements_by_xpath(selector),
             Error::downcast::<NoElementFound>,
         )

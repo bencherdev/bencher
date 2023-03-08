@@ -22,7 +22,7 @@ use winreg::{enums::HKEY_LOCAL_MACHINE, RegKey};
 
 #[cfg(not(feature = "fetch"))]
 use crate::browser::default_executable;
-use crate::util;
+use crate::wait;
 
 #[cfg(feature = "fetch")]
 use super::fetcher::{Fetcher, FetcherOptions};
@@ -417,7 +417,7 @@ impl Process {
     }
 
     fn ws_url_from_output(child_process: &mut Child) -> Result<Url> {
-        let chrome_output_result = util::Wait::with_timeout(Duration::from_secs(30)).until(|| {
+        let chrome_output_result = wait::Wait::with_timeout(Duration::from_secs(30)).until(|| {
             let my_stderr = BufReader::new(child_process.stderr.as_mut()?);
             match Self::ws_url_from_reader(my_stderr) {
                 Ok(output_option) => output_option.map(Ok),

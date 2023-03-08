@@ -18,7 +18,7 @@ use which::which;
 use crate::protocol::cdp::{types::Event, types::Method, Browser as B, Target, CSS, DOM};
 
 use crate::browser::context::Context;
-use crate::util;
+use crate::wait;
 use Target::{CreateTarget, SetDiscoverTargets};
 use B::GetVersion;
 pub use B::GetVersionReturnObject;
@@ -191,7 +191,7 @@ impl Browser {
     /// Wait timeout: 10 secs
     #[deprecated(since = "1.0.4", note = "Use new_tab() instead.")]
     pub fn wait_for_initial_tab(&self) -> Result<Arc<Tab>> {
-        match util::Wait::with_timeout(Duration::from_secs(10))
+        match wait::Wait::with_timeout(Duration::from_secs(10))
             .until(|| self.inner.tabs.lock().unwrap().first().map(Arc::clone))
         {
             Ok(tab) => Ok(tab),
@@ -251,7 +251,7 @@ impl Browser {
     pub fn new_tab_with_options(&self, create_target_params: CreateTarget) -> Result<Arc<Tab>> {
         let target_id = self.call_method(create_target_params)?.target_id;
 
-        util::Wait::with_timeout(Duration::from_secs(20))
+        wait::Wait::with_timeout(Duration::from_secs(20))
             .until(|| {
                 let tabs = self.inner.tabs.lock().unwrap();
                 tabs.iter().find_map(|tab| {

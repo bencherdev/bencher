@@ -21,7 +21,7 @@ use crate::protocol::cdp::{types::Event, types::Method, Target};
 
 use crate::types::{parse_raw_message, parse_response, CallId, Message};
 
-use crate::util;
+use crate::wait;
 
 mod waiting_call_registry;
 mod web_socket_connection;
@@ -171,7 +171,7 @@ impl Transport {
             params_string.chars().take(400).collect::<String>()
         );
 
-        let response_result = util::Wait::new(self.idle_browser_timeout, Duration::from_millis(5))
+        let response_result = wait::Wait::new(self.idle_browser_timeout, Duration::from_millis(5))
             .until(|| response_rx.try_recv().ok());
         trace!("received response for: {} {:?}", &call_id, params_string);
         parse_response::<C::ReturnObject>((response_result?)?)

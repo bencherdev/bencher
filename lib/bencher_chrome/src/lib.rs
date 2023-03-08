@@ -100,7 +100,7 @@ pub use browser::Revision;
 pub mod browser;
 pub mod protocol;
 pub mod types;
-pub mod util;
+pub mod wait;
 
 #[cfg(feature = "nightly")]
 #[doc = include_str!("../README.md")]

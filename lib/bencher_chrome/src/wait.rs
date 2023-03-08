@@ -1,13 +1,7 @@
-use std::time::{Duration, Instant};
-use std::{collections::HashMap, thread::sleep};
-
 use anyhow::{Error, Result};
+use tokio::time::{sleep, Duration, Instant};
 
 use thiserror::Error;
-
-use crate::protocol::cdp::Runtime::RemoteObject;
-
-use crate::browser::tab::point::Point;
 
 #[derive(Debug, Error)]
 #[error("The event waited for never came")]
@@ -59,7 +53,7 @@ impl Wait {
     ///
     /// Note: If your predicate function shadows potential unexpected
     ///   errors you should consider using `#strict_until`.
-    pub fn until<F, G>(&self, predicate: F) -> Result<G, Timeout>
+    pub async fn until<F, G>(&self, predicate: F) -> Result<G, Timeout>
     where
         F: FnMut() -> Option<G>,
     {
@@ -72,7 +66,7 @@ impl Wait {
             if start.elapsed() > self.timeout {
                 return Err(Timeout);
             }
-            sleep(self.sleep);
+            sleep(self.sleep).await;
         }
     }
 
@@ -85,7 +79,7 @@ impl Wait {
     /// You can use `failure::Error::downcast::<YourStructName>` out-of-the-box,
     /// if you need to ignore one expected error, or you can implement a matching closure
     /// that responds to multiple error types.
-    pub fn strict_until<F, D, E, G>(&self, predicate: F, downcast: D) -> Result<G>
+    pub async fn strict_until<F, D, E, G>(&self, predicate: F, downcast: D) -> Result<G>
     where
         F: FnMut() -> Result<G>,
         D: FnMut(Error) -> Result<E>,
@@ -102,24 +96,7 @@ impl Wait {
             if start.elapsed() > self.timeout {
                 return Err(Timeout.into());
             }
-            sleep(self.sleep);
+            sleep(self.sleep).await;
         }
-    }
-}
-
-pub fn extract_midpoint(remote_obj: RemoteObject) -> Result<Point> {
-    let mut prop_map = HashMap::new();
-
-    match remote_obj.preview.map(|v| {
-        for prop in v.properties {
-            prop_map.insert(prop.name, prop.value.unwrap().parse::<f64>().unwrap());
-        }
-        Point {
-            x: prop_map["x"] + (prop_map["width"] / 2.0),
-            y: prop_map["y"] + (prop_map["height"] / 2.0),
-        }
-    }) {
-        Some(v) => Ok(v),
-        None => Ok(Point { x: 0.0, y: 0.0 }),
     }
 }

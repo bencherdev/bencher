@@ -21,7 +21,7 @@ use rand::prelude::*;
 
 use bencher_chrome::browser::tab::RequestPausedDecision;
 use bencher_chrome::browser::transport::{SessionId, Transport};
-use bencher_chrome::util::Wait;
+use bencher_chrome::wait::Wait;
 use bencher_chrome::{Browser, Tab};
 use std::collections::HashMap;
 

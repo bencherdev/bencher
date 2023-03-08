@@ -672,6 +672,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tiny_http",
+ "tokio",
  "tungstenite",
  "ureq",
  "url",

@@ -5,6 +5,9 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+# Workspace
+tokio = { workspace = true, features = ["time"] }
+# OLD
 anyhow = "1"
 base64 = "0.21"
 derive_builder = "0.12"
