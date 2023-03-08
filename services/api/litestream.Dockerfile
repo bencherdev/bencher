@@ -17,8 +17,6 @@ RUN dpkg -i google-chrome-stable_current_amd64.deb
 RUN apt-get -fy install
 RUN rm google-chrome-stable_current_amd64.deb
 
-EXPOSE 8118
-
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.9/litestream-v0.3.9-linux-amd64.deb
 RUN dpkg -i litestream-v0.3.9-linux-amd64.deb
 

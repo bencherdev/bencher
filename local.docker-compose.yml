@@ -8,7 +8,6 @@ services:
     container_name: bencher_api_local
     ports:
       - 61016:61016
-      - 8118:8118
     volumes:
       - "./services/api/data:/data"
       # environment:

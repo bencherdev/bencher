@@ -17,8 +17,6 @@ RUN dpkg -i google-chrome-stable_current_amd64.deb
 RUN apt-get -fy install
 RUN rm google-chrome-stable_current_amd64.deb
 
-EXPOSE 8118
-
 ENV PORT 61016
 
 CMD ["/api"]

@@ -8,7 +8,6 @@ services:
     container_name: bencher_api_litestream
     ports:
       - 61016:61016
-      - 8118:8118
     environment:
       # Set configuration string or filepath
       # - BENCHER_CONFIG=
