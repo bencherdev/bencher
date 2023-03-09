@@ -42,22 +42,8 @@ const PlotKey = (props) => {
 		return key_data;
 	};
 
-	const [dimensions, setDimensions] = createStore({
-		branches: false,
-		testbeds: false,
-		benchmarks: false,
-	});
-	const perf_key = createMemo(() => {
-		if (dimensions.branches && dimensions.testbeds && dimensions.benchmarks) {
-			return "perf_key";
-		} else {
-			return "loading_key";
-		}
-	});
 	const dimension_fetcher = async (tab: PerfTab, fetcher) => {
-		const dimension = await getLs(tab, fetcher);
-		setDimensions({ ...dimensions, [tab]: true });
-		return dimension;
+		return await getLs(tab, fetcher);
 	};
 	const [branches] = createResource(branches_fetcher, async (fetcher) =>
 		dimension_fetcher(PerfTab.BRANCHES, fetcher),
@@ -73,13 +59,11 @@ const PlotKey = (props) => {
 		<>
 			{props.key() ? (
 				<ExpandedKey
-					perf_key={perf_key}
 					branches={branches}
 					testbeds={testbeds}
 					benchmarks={benchmarks}
 					perf_data={props.perf_data}
 					perf_active={props.perf_active}
-					img={props.img}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
 				/>
@@ -87,7 +71,6 @@ const PlotKey = (props) => {
 				<MinimizedKey
 					perf_data={props.perf_data}
 					perf_active={props.perf_active}
-					img={props.img}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
 				/>
@@ -98,15 +81,10 @@ const PlotKey = (props) => {
 
 const ExpandedKey = (props) => {
 	return (
-		<div
-			class="columns is-centered is-gapless is-multiline"
-			id={props.perf_key()}
-		>
-			{!props.img() && (
-				<div class="column is-narrow">
-					<MinimizeKeyButton handleKey={props.handleKey} />
-				</div>
-			)}
+		<div class="columns is-centered is-gapless is-multiline">
+			<div class="column is-narrow">
+				<MinimizeKeyButton handleKey={props.handleKey} />
+			</div>
 			<For each={props.perf_data()?.results}>
 				{(
 					result: {
@@ -144,11 +122,9 @@ const ExpandedKey = (props) => {
 const MinimizedKey = (props) => {
 	return (
 		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
-			{!props.img() && (
-				<div class="column is-narrow">
-					<MaximizeKeyButton handleKey={props.handleKey} />
-				</div>
-			)}
+			<div class="column is-narrow">
+				<MaximizeKeyButton handleKey={props.handleKey} />
+			</div>
 			<For each={props.perf_data()?.results}>
 				{(_result, index) => (
 					<div class="column is-narrow">

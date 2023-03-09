@@ -22,11 +22,9 @@ const END_TIME_PARAM = "end_time";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
-const IMG_PARAM = "img";
 
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
-const DEFAULT_PERF_IMG = false;
 
 const addToArray = (array: any[], add: any) => {
 	array.push(add);
@@ -131,9 +129,6 @@ const PerfPanel = (props) => {
 	if (!is_bool_param(searchParams[KEY_PARAM])) {
 		setSearchParams({ [KEY_PARAM]: DEFAULT_PERF_KEY });
 	}
-	if (!is_bool_param(searchParams[IMG_PARAM])) {
-		setSearchParams({ [IMG_PARAM]: null });
-	}
 
 	// Create marshalized memos of all query params
 	const branches = createMemo(() =>
@@ -170,16 +165,6 @@ const PerfPanel = (props) => {
 			return searchParams[KEY_PARAM] === "true";
 		} else {
 			return DEFAULT_PERF_KEY;
-		}
-	});
-
-	const img = createMemo(() => {
-		// This check is required for the initial load
-		// before the query params have been sanitized
-		if (is_bool_param(searchParams[IMG_PARAM])) {
-			return searchParams[IMG_PARAM] === "true";
-		} else {
-			return DEFAULT_PERF_IMG;
 		}
 	});
 
@@ -375,7 +360,6 @@ const PerfPanel = (props) => {
 				perf_data={perf_data}
 				tab={tab}
 				key={key}
-				img={img}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}

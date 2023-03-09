@@ -715,12 +715,15 @@ dependencies = [
 name = "bencher_plot"
 version = "0.2.40"
 dependencies = [
+ "bencher_json",
  "chrono",
  "image",
+ "once_cell",
+ "ordered-float",
  "plotters",
  "plotters-bitmap",
+ "serde_json",
  "thiserror",
- "tokio",
 ]
 
 [[package]]

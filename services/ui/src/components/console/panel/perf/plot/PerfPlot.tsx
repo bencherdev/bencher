@@ -20,7 +20,7 @@ const PerfPlot = (props) => {
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
 					/>
-					<div class="panel-block" id="perf_viewport">
+					<div class="panel-block">
 						{props.isPlotInit() ? (
 							<PlotInit
 								metric_kind={props.metric_kind}
@@ -39,7 +39,6 @@ const PerfPlot = (props) => {
 								benchmarks={props.benchmarks}
 								perf_data={props.perf_data}
 								key={props.key}
-								img={props.img}
 								handleKey={props.handleKey}
 							/>
 						)}
