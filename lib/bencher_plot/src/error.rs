@@ -1,4 +1,3 @@
-use plotters::prelude::{BitMapBackend, DrawingAreaErrorKind};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -7,4 +6,8 @@ pub enum PlotError {
     Plotters(String),
     #[error("Failed to cast integer: {0}")]
     IntError(#[from] std::num::TryFromIntError),
+    #[error("Failed to generate image buffer")]
+    ImageBuffer,
+    #[error("Failed to generate image: {0}")]
+    Image(#[from] image::error::ImageError),
 }

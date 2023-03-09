@@ -1,3 +1,6 @@
+use std::io::Cursor;
+
+use image::ImageBuffer;
 use plotters::{
     prelude::{BitMapBackend, IntoDrawingArea},
     style::WHITE,
@@ -7,11 +10,11 @@ mod error;
 
 pub use error::PlotError;
 
-pub async fn plot(length: u32, width: u32) -> Result<Vec<u8>, PlotError> {
-    let mut plot_buffer = vec![0; 3 * usize::try_from(length)? * usize::try_from(width)?];
+pub async fn plot(width: u32, height: u32) -> Result<Vec<u8>, PlotError> {
+    let mut plot_buffer = vec![0; 3 * usize::try_from(width)? * usize::try_from(height)?];
     {
         let root_area =
-            BitMapBackend::with_buffer(&mut plot_buffer, (length, width)).into_drawing_area();
+            BitMapBackend::with_buffer(&mut plot_buffer, (width, height)).into_drawing_area();
 
         root_area
             .fill(&WHITE)
@@ -21,7 +24,17 @@ pub async fn plot(length: u32, width: u32) -> Result<Vec<u8>, PlotError> {
             .present()
             .map_err(|e| PlotError::Plotters(e.to_string()))?;
     }
-    Ok(plot_buffer)
+
+    let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
+        ImageBuffer::from_vec(width, height, plot_buffer).ok_or(PlotError::ImageBuffer)?;
+
+    let mut image_cursor = Cursor::new(Vec::with_capacity(
+        3 * usize::try_from(width)? * usize::try_from(height)?,
+    ));
+
+    image_buffer.write_to(&mut image_cursor, image::ImageOutputFormat::Jpeg(100))?;
+
+    Ok(image_cursor.into_inner())
 }
 
 #[cfg(test)]
@@ -31,7 +44,7 @@ mod test {
     use super::plot;
 
     async fn save_jpeg(jpeg: &[u8]) {
-        let mut file = File::create("perf.bmp").await.unwrap();
+        let mut file = File::create("perf.jpeg").await.unwrap();
         file.write_all(jpeg).await.unwrap();
     }
 
