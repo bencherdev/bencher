@@ -69,12 +69,12 @@ static TABLEAU_10_RGB: Lazy<[RGBColor; 10]> = Lazy::new(|| {
         .expect("Failed to map Tableau 10 RGB values")
 });
 
-pub struct Plot {
+pub struct LinePlot {
     width: u32,
     height: u32,
 }
 
-impl Default for Plot {
+impl Default for LinePlot {
     fn default() -> Self {
         Self {
             width: PLOT_WIDTH,
@@ -83,8 +83,8 @@ impl Default for Plot {
     }
 }
 
-impl Plot {
-    pub fn new() -> Plot {
+impl LinePlot {
+    pub fn new() -> LinePlot {
         Self::default()
     }
 
@@ -108,7 +108,6 @@ impl Plot {
 
             let perf_data = PerfData::new(json_perf);
 
-            // TODO improve no data message
             if let Some(perf_data) = perf_data {
                 let mut chart_context = ChartBuilder::on(&plot_area)
                     .x_label_area_size(100)
@@ -259,7 +258,7 @@ mod test {
     use bencher_json::JsonPerf;
     use once_cell::sync::Lazy;
 
-    use crate::Plot;
+    use crate::LinePlot;
 
     pub const PERF_DOT_JSON: &str = include_str!("../perf.json");
     static JSON_PERF: Lazy<JsonPerf> =
@@ -272,14 +271,14 @@ mod test {
 
     #[test]
     fn test_plot() {
-        let plot = Plot::new();
+        let plot = LinePlot::new();
         let plot_buffer = plot.draw(Some("Adapter Comparison"), &JSON_PERF).unwrap();
         save_jpeg(&plot_buffer, "perf");
     }
 
     #[test]
     fn test_plot_empty() {
-        let plot = Plot::new();
+        let plot = LinePlot::new();
         let plot_buffer = plot
             .draw(Some("Adapter Comparison"), &JsonPerf::default())
             .unwrap();
