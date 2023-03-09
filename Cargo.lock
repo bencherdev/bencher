@@ -718,6 +718,7 @@ dependencies = [
  "chrono",
  "image",
  "plotters",
+ "plotters-bitmap",
  "thiserror",
  "tokio",
 ]

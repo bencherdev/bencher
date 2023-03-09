@@ -11,30 +11,33 @@ mod error;
 pub use error::PlotError;
 
 pub async fn plot(width: u32, height: u32) -> Result<Vec<u8>, PlotError> {
-    let mut plot_buffer = vec![0; 3 * usize::try_from(width)? * usize::try_from(height)?];
-    {
-        let root_area =
-            BitMapBackend::with_buffer(&mut plot_buffer, (width, height)).into_drawing_area();
+    let buffer_size = buffer_size(width, height)?;
 
-        root_area
-            .fill(&WHITE)
-            .map_err(|e| PlotError::Plotters(e.to_string()))?;
-
-        root_area
-            .present()
-            .map_err(|e| PlotError::Plotters(e.to_string()))?;
-    }
+    let mut plot_buffer = vec![0; buffer_size];
+    draw(width, height, &mut plot_buffer).await?;
 
     let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
         ImageBuffer::from_vec(width, height, plot_buffer).ok_or(PlotError::ImageBuffer)?;
-
-    let mut image_cursor = Cursor::new(Vec::with_capacity(
-        3 * usize::try_from(width)? * usize::try_from(height)?,
-    ));
-
+    let mut image_cursor = Cursor::new(Vec::with_capacity(buffer_size));
     image_buffer.write_to(&mut image_cursor, image::ImageOutputFormat::Jpeg(100))?;
 
     Ok(image_cursor.into_inner())
+}
+
+async fn draw(width: u32, height: u32, plot_buffer: &mut [u8]) -> Result<(), PlotError> {
+    let root_area = BitMapBackend::with_buffer(plot_buffer, (width, height)).into_drawing_area();
+
+    root_area.fill(&WHITE)?;
+
+    root_area.present()?;
+
+    Ok(())
+}
+
+// RGB is three units in size
+// https://docs.rs/image/latest/image/struct.Rgb.html
+fn buffer_size(width: u32, height: u32) -> Result<usize, PlotError> {
+    Ok(usize::try_from(width)? * usize::try_from(height)? * 3)
 }
 
 #[cfg(test)]
