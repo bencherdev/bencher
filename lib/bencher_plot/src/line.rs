@@ -2,23 +2,20 @@ use std::{io::Cursor, ops::Range};
 
 use bencher_json::JsonPerf;
 use chrono::{DateTime, Utc};
-use image::{DynamicImage, ImageBuffer};
+use image::ImageBuffer;
 use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
 use plotters::{
-    coord::types::{RangedCoordf64, RangedCoordi32},
+    coord::types::RangedCoordf64,
     prelude::{
-        BitMapBackend, BitMapElement, Cartesian2d, ChartBuilder, ChartContext, Circle,
-        DiscreteRanged, EmptyElement, IntoDrawingArea, IntoLinspace, PathElement, RangedDateTime,
-        SeriesLabelPosition, Text,
+        BitMapBackend, BitMapElement, Cartesian2d, ChartBuilder, ChartContext, IntoDrawingArea,
+        RangedDateTime, Text,
     },
-    series::{LineSeries, PointSeries},
-    style::{RGBColor, ShapeStyle, BLACK, BLUE, RED, WHITE},
+    series::LineSeries,
+    style::{RGBColor, WHITE},
 };
 
-mod error;
-
-pub use error::PlotError;
+use crate::PlotError;
 
 const PLOT_WIDTH: u32 = 1024;
 const PLOT_HEIGHT: u32 = 768;
