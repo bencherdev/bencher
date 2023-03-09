@@ -101,21 +101,25 @@ impl LinePlot {
                 root_area = root_area.titled(title, ("sans-serif", 50))?;
             }
 
-            let (_header, plot_area) = root_area.split_vertically(42);
+            let (_header, plot_area) = root_area.split_vertically(0);
 
             let perf_data = PerfData::new(json_perf);
 
             if let Some(perf_data) = perf_data {
                 let mut chart_context = ChartBuilder::on(&plot_area)
-                    .x_label_area_size(100)
+                    .x_label_area_size(36)
                     .y_label_area_size(perf_data.y_label_area_size()?)
-                    .margin_right(40)
+                    .margin_left(8)
+                    .margin_right(32)
+                    .margin_bottom(64)
                     .build_cartesian_2d(perf_data.x(), perf_data.y())?;
 
                 chart_context
                     .configure_mesh()
+                    .x_desc("Benchmark Date and Time")
                     .x_labels(5)
                     .x_label_formatter(&PerfData::x_label_fmt)
+                    .y_desc("TODO Metric Kind")
                     .y_labels(5)
                     .y_label_formatter(&PerfData::y_label_fmt)
                     .max_light_lines(4)
@@ -145,9 +149,6 @@ impl LinePlot {
         Ok(image_cursor.into_inner())
     }
 }
-
-type PerfChartContext<'a> =
-    ChartContext<'a, BitMapBackend<'a>, Cartesian2d<RangedDateTime<DateTime<Utc>>, RangedCoordf64>>;
 
 struct PerfData {
     lines: Vec<LineData>,
@@ -233,8 +234,10 @@ impl PerfData {
     }
 
     fn y_label_area_size(&self) -> Result<u32, PlotError> {
-        u32::try_from(std::cmp::max(self.y.0.to_string().len(), self.y.1.to_string().len()) * 8 + 8)
-            .map_err(Into::into)
+        u32::try_from(
+            std::cmp::max(self.y.0.to_string().len(), self.y.1.to_string().len()) * 8 + 16,
+        )
+        .map_err(Into::into)
     }
 
     fn y_label_fmt(y: &f64) -> String {
