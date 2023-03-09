@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{io::Cursor, ops::Range};
 
 use bencher_json::JsonPerf;
 use chrono::{DateTime, Utc};
@@ -90,7 +90,55 @@ impl Plot {
 
     pub fn draw(&self, title: Option<&str>, json_perf: &JsonPerf) -> Result<Vec<u8>, PlotError> {
         let mut plot_buffer = vec![0; BUFFER_SIZE];
-        self.draw_inner(title, json_perf, &mut plot_buffer)?;
+        {
+            let mut root_area =
+                BitMapBackend::with_buffer(&mut plot_buffer, (self.width, self.height))
+                    .into_drawing_area();
+            root_area.fill(&WHITE)?;
+
+            // Bencher Wordmark
+            root_area.draw(&*WORDMARK_ELEMENT)?;
+
+            // Chart plot
+            if let Some(title) = title {
+                root_area = root_area.titled(title, ("sans-serif", 50))?;
+            }
+
+            let (_header, plot_area) = root_area.split_vertically(42);
+
+            let perf_data = PerfData::new(json_perf);
+
+            // TODO improve no data message
+            if let Some(perf_data) = perf_data {
+                let mut chart_context = ChartBuilder::on(&plot_area)
+                    .x_label_area_size(100)
+                    .y_label_area_size(perf_data.y_label_area_size()?)
+                    .margin_right(40)
+                    .build_cartesian_2d(perf_data.x(), perf_data.y())?;
+
+                chart_context
+                    .configure_mesh()
+                    .x_labels(5)
+                    .x_label_formatter(&PerfData::x_label_fmt)
+                    .y_labels(5)
+                    .y_label_formatter(&PerfData::y_label_fmt)
+                    .max_light_lines(4)
+                    .draw()?;
+
+                for LineData { data, color } in perf_data.lines {
+                    let _series = chart_context.draw_series(LineSeries::new(
+                        data.into_iter().map(|(x, y)| (x, y.into())),
+                        color,
+                    ))?;
+                }
+            } else {
+                let _chart_context = ChartBuilder::on(&plot_area)
+                    .caption(format!("No Data Found: {}", Utc::now()), ("sans-serif", 30))
+                    .build_cartesian_2d(PerfData::default_x(), PerfData::default_y())?;
+            };
+
+            root_area.present()?;
+        }
 
         let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
             ImageBuffer::from_vec(self.width, self.height, plot_buffer)
@@ -100,70 +148,13 @@ impl Plot {
 
         Ok(image_cursor.into_inner())
     }
-
-    fn draw_inner(
-        &self,
-        title: Option<&str>,
-        json_perf: &JsonPerf,
-        plot_buffer: &mut [u8],
-    ) -> Result<(), PlotError> {
-        let mut root_area =
-            BitMapBackend::with_buffer(plot_buffer, (self.width, self.height)).into_drawing_area();
-        root_area.fill(&WHITE)?;
-
-        // Bencher Wordmark
-        root_area.draw(&*WORDMARK_ELEMENT)?;
-
-        // Chart plot
-        if let Some(title) = title {
-            root_area = root_area.titled(title, ("sans-serif", 50))?;
-        }
-
-        let (_header, plot) = root_area.split_vertically(42);
-
-        let perf_data = PerfData::new(json_perf);
-
-        // TODO improve no data message
-        let Some(perf_data) = perf_data else {
-            let _chart_context = ChartBuilder::on(&plot)
-                .caption(format!("No Data Found: {}", Utc::now()), ("sans-serif", 30))
-                .build_cartesian_2d(0..0, 0..0)?;
-            root_area.present()?;
-            return Ok(());
-        };
-
-        let mut chart_context = ChartBuilder::on(&plot)
-            .x_label_area_size(100)
-            .y_label_area_size(40)
-            .margin_right(20)
-            .build_cartesian_2d(0..100, 0..100)?;
-
-        chart_context.configure_mesh()
-        .x_labels(5)
-        // .x_label_formatter(&|v| format!("{v}"))
-        .y_labels(3)
-        // .y_label_formatter(&|v| format!("{v}"))
-        .max_light_lines(4)
-        .draw()?;
-
-        chart_context.draw_series(LineSeries::new(
-            (0..100).step(1).values().map(|x| (x, x * x)),
-            &BLUE,
-        ))?;
-
-        // draw_series(json_perf, &mut chart_context)?;
-
-        root_area.present()?;
-
-        Ok(())
-    }
 }
 
 type PerfChartContext<'a> =
     ChartContext<'a, BitMapBackend<'a>, Cartesian2d<RangedDateTime<DateTime<Utc>>, RangedCoordf64>>;
 
 struct PerfData {
-    data: Vec<LineData>,
+    lines: Vec<LineData>,
     x: (DateTime<Utc>, DateTime<Utc>),
     y: (OrderedFloat<f64>, OrderedFloat<f64>),
 }
@@ -180,7 +171,7 @@ impl PerfData {
         let mut min_y = None;
         let mut max_y = None;
 
-        let data = json_perf
+        let lines = json_perf
             .results
             .iter()
             .enumerate()
@@ -194,14 +185,14 @@ impl PerfData {
                             .map(|min| std::cmp::min(min, x_value))
                             .or(Some(x_value));
                         max_x = max_x
-                            .map(|max| std::cmp::min(max, x_value))
+                            .map(|max| std::cmp::max(max, x_value))
                             .or(Some(x_value));
                         let y_value = metric.metric.value;
                         min_y = min_y
                             .map(|min| std::cmp::min(min, y_value))
                             .or(Some(y_value));
                         max_y = max_y
-                            .map(|max| std::cmp::min(max, y_value))
+                            .map(|max| std::cmp::max(max, y_value))
                             .or(Some(y_value));
                         (x_value, y_value)
                     })
@@ -213,17 +204,52 @@ impl PerfData {
 
         match (min_x, max_x, min_y, max_y) {
             (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => Some(PerfData {
-                data,
+                lines,
                 x: (min_x, max_x),
                 y: (min_y, max_y),
             }),
             _ => None,
         }
     }
-}
 
-fn max_units_len(max: usize, value: OrderedFloat<f64>) -> usize {
-    std::cmp::max(max, value.to_string().len())
+    fn x(&self) -> Range<DateTime<Utc>> {
+        self.x.0..self.x.1
+    }
+
+    fn default_x() -> Range<DateTime<Utc>> {
+        let epoch = DateTime::default();
+        epoch..epoch
+    }
+
+    fn x_label_fmt(x: &DateTime<Utc>) -> String {
+        format!("{}", x.format("%d %b %Y %H:%M"))
+    }
+
+    fn y(&self) -> Range<f64> {
+        let diff = self.y.1 - self.y.0;
+        let min = std::cmp::max(self.y.0 - (diff * 0.08), OrderedFloat::from(0.0)).into();
+        let max = (self.y.1 + (diff * 0.04)).into();
+        min..max
+    }
+
+    fn default_y() -> Range<f64> {
+        0.0..0.0
+    }
+
+    fn y_label_area_size(&self) -> Result<u32, PlotError> {
+        u32::try_from(std::cmp::max(self.y.0.to_string().len(), self.y.1.to_string().len()) * 8 + 8)
+            .map_err(Into::into)
+    }
+
+    fn y_label_fmt(y: &f64) -> String {
+        y.to_string()
+            .as_bytes()
+            .rchunks(3)
+            .rev()
+            .filter_map(|thousand| std::str::from_utf8(thousand).ok())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
 }
 
 #[cfg(test)]
