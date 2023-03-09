@@ -7,5 +7,9 @@ edition.workspace = true
 [dependencies]
 # Workspace
 chrono.workspace = true
+thiserror.workspace = true
 # Crate
 plotters = { version = "0.3", features = ["datetime"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["fs", "io-util", "macros", "rt"] }

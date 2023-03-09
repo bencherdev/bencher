@@ -717,6 +717,8 @@ version = "0.2.40"
 dependencies = [
  "chrono",
  "plotters",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
