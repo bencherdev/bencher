@@ -1,0 +1,11 @@
+[package]
+name = "bencher_plot"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Workspace
+chrono.workspace = true
+# Crate
+plotters = { version = "0.3", features = ["datetime"] }
