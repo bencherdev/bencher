@@ -168,7 +168,7 @@ async fn get_inner(
     }
 
     Ok(JsonPerf {
-        metric_kind: Uuid::from_str(&metric_kind.uuid).map_err(api_error!())?,
+        metric_kind: metric_kind.into_json(conn)?,
         start_time,
         end_time,
         results,

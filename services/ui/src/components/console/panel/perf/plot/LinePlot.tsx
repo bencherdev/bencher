@@ -1,8 +1,6 @@
 import * as Plot from "@observablehq/plot";
-import axios from "axios";
 import * as d3 from "d3";
-import { createResource, createSignal } from "solid-js";
-import { get_options } from "../../../../site/util";
+import { createSignal } from "solid-js";
 
 const PLOT_ID = "perf_plot";
 
@@ -13,24 +11,14 @@ const LinePlot = (props) => {
 		setMaxUnits(Math.max(max_units(), Math.round(value).toString().length));
 	};
 
-	const getUnits = async (perf_data) => {
-		const default_units = "units";
-		if (!perf_data.metric_kind) {
-			return default_units;
+	const get_units = (json_perf) => {
+		const units = json_perf?.metric_kind?.units;
+		if (units) {
+			return units;
+		} else {
+			return "units";
 		}
-		const url = props.config?.metric_kind_url(
-			props.path_params(),
-			perf_data.metric_kind,
-		);
-		return await axios(get_options(url, props.user?.token))
-			.then((resp) => resp?.data?.units)
-			.catch((error) => {
-				console.error(error);
-				return default_units;
-			});
 	};
-
-	const [units] = createResource(props.perf_data, getUnits);
 
 	const plotted = () => {
 		const json_perf = props.perf_data();
@@ -42,6 +30,8 @@ const LinePlot = (props) => {
 		) {
 			return;
 		}
+
+		const units = get_units(json_perf);
 
 		const plot_arrays = [];
 		let metrics_found = false;
@@ -73,7 +63,7 @@ const LinePlot = (props) => {
 					{Plot.plot({
 						y: {
 							grid: true,
-							label: `↑ ${units()}`,
+							label: `↑ ${units}`,
 						},
 						marks: plot_arrays,
 						width: props.width(),

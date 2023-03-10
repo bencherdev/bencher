@@ -10,7 +10,7 @@ use crate::urlencoded::{
     from_millis, from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list,
     UrlEncodedError,
 };
-use crate::ResourceId;
+use crate::{JsonMetricKind, ResourceId};
 
 use super::metric::JsonMetric;
 
@@ -174,16 +174,18 @@ impl JsonPerfQuery {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
-    pub metric_kind: Uuid,
+    pub metric_kind: JsonMetricKind,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
     pub results: Vec<JsonPerfMetrics>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetrics {
     pub branch: Uuid,
@@ -192,7 +194,8 @@ pub struct JsonPerfMetrics {
     pub metrics: Vec<JsonPerfMetric>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
     pub uuid: Uuid,

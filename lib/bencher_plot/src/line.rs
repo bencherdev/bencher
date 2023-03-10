@@ -1,6 +1,9 @@
-use std::{io::Cursor, ops::Range};
+use std::{
+    io::Cursor,
+    ops::{Deref, Range},
+};
 
-use bencher_json::JsonPerf;
+use bencher_json::{JsonMetricKind, JsonPerf};
 use chrono::{DateTime, Utc};
 use image::ImageBuffer;
 use once_cell::sync::Lazy;
@@ -9,20 +12,23 @@ use plotters::{
     coord::types::RangedCoordf64,
     prelude::{
         BitMapBackend, BitMapElement, Cartesian2d, ChartBuilder, ChartContext, IntoDrawingArea,
-        RangedDateTime, Text,
+        RangedDateTime, Rectangle, Text,
     },
     series::LineSeries,
-    style::{FontFamily, RGBColor, WHITE},
+    style::{FontFamily, RGBColor, ShapeStyle, WHITE},
 };
 
 use crate::PlotError;
 
-const PLOT_WIDTH: u32 = 1024;
-const PLOT_HEIGHT: u32 = 768;
+const IMG_WIDTH: u32 = 1024;
+const IMG_HEIGHT: u32 = 768;
+const TITLE_HEIGHT: u32 = 48;
+const PLOT_HEIGHT: u32 = 600;
+const KEY_HEIGHT: u32 = IMG_HEIGHT - PLOT_HEIGHT;
 
 // RGB is three units in size
 // https://docs.rs/image/latest/image/struct.Rgb.html
-const BUFFER_SIZE: usize = PLOT_WIDTH as usize * PLOT_HEIGHT as usize * 3;
+const BUFFER_SIZE: usize = IMG_WIDTH as usize * IMG_HEIGHT as usize * 3;
 
 pub const BENCHER_WORDMARK: &[u8; 4910] = include_bytes!("../wordmark.png");
 #[allow(clippy::expect_used)]
@@ -74,8 +80,8 @@ pub struct LinePlot {
 impl Default for LinePlot {
     fn default() -> Self {
         Self {
-            width: PLOT_WIDTH,
-            height: PLOT_HEIGHT,
+            width: IMG_WIDTH,
+            height: IMG_HEIGHT,
         }
     }
 }
@@ -85,7 +91,7 @@ impl LinePlot {
         Self::default()
     }
 
-    pub fn draw(&self, title: Option<&str>, json_perf: &JsonPerf) -> Result<Vec<u8>, PlotError> {
+    pub fn draw(&self, title: Option<&str>, json_perf: JsonPerf) -> Result<Vec<u8>, PlotError> {
         let mut plot_buffer = vec![0; BUFFER_SIZE];
         {
             let mut root_area =
@@ -96,40 +102,34 @@ impl LinePlot {
             // Bencher Wordmark
             root_area.draw(&*WORDMARK_ELEMENT)?;
 
-            // Chart plot
-            let top_margin = if let Some(title) = title {
+            let (header, plot_area) = root_area.split_vertically(TITLE_HEIGHT);
+
+            // Adaptive title sizing
+            if let Some(title) = title {
                 const MAX_LEN: usize = 28;
-                const START_SIZE: i32 = 48;
                 let title_len = title.len();
-                let (top_margin, size) = if title_len > MAX_LEN {
+                let size = if title_len > MAX_LEN {
                     let diff = title_len - MAX_LEN;
-                    let title_mod = (diff as f32 / 1.25) as i32;
-                    (
-                        std::cmp::min(title_mod, 32),
-                        std::cmp::max(START_SIZE - title_mod, 12),
-                    )
+                    std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
                 } else {
-                    (0, START_SIZE)
+                    TITLE_HEIGHT
                 };
-                root_area = root_area.titled(title, (FontFamily::Monospace, size))?;
-                top_margin
-            } else {
-                0
-            };
+                header.titled(title, (FontFamily::Monospace, size))?;
+            }
 
-            let (_header, plot_area) = root_area.split_vertically(0);
-
+            // Marshal the perf data into a plot-able form
             let perf_data = PerfData::new(json_perf);
 
             if let Some(perf_data) = perf_data {
+                let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
+
                 let mut chart_context = ChartBuilder::on(&plot_area)
                     .x_label_area_size(40)
                     .y_label_area_size(perf_data.y_label_area_size()?)
                     .margin_left(8)
                     .margin_right(32)
-                    .margin_top(top_margin)
-                    .margin_bottom(60)
-                    .build_cartesian_2d(perf_data.x(), perf_data.y())?;
+                    .margin_bottom(8)
+                    .build_cartesian_2d(perf_data.x_range(), perf_data.y_range())?;
 
                 chart_context
                     .configure_mesh()
@@ -138,29 +138,41 @@ impl LinePlot {
                     .x_labels(5)
                     .x_label_style((FontFamily::Monospace, 16))
                     .x_label_formatter(&PerfData::x_label_fmt)
-                    .y_desc("TODO Metric Kind")
+                    .y_desc(perf_data.y_desc)
                     .y_labels(5)
                     .y_label_style((FontFamily::Monospace, 12))
                     .y_label_formatter(&PerfData::y_label_fmt)
                     .max_light_lines(4)
                     .draw()?;
 
+                const BOX_WIDTH: i32 = 200;
+                const BOX_GAP: i32 = 12;
+                const BOX_HEIGHT: i32 = 24;
+                let mut box_x_left = 48;
                 for LineData { data, color } in perf_data.lines {
                     let _series = chart_context.draw_series(LineSeries::new(
                         data.into_iter().map(|(x, y)| (x, y.into())),
                         color,
                     ))?;
+
+                    let box_x_right = box_x_left + BOX_WIDTH;
+                    let shape_style = ShapeStyle::from(color).filled();
+                    key_area.draw(&Rectangle::new(
+                        [(box_x_left, 0), (box_x_right, BOX_HEIGHT)],
+                        shape_style,
+                    ))?;
+                    box_x_left = box_x_right + BOX_GAP;
                 }
             } else {
+                // Return an informative message if there is no perf data found
                 let _chart_context = ChartBuilder::on(&plot_area)
+                    .margin_top(TITLE_HEIGHT)
                     .caption(
                         format!("No Data Found: {}", Utc::now().format("%d %b %Y %H:%M:%S")),
                         (FontFamily::Monospace, 30),
                     )
-                    .build_cartesian_2d(PerfData::default_x(), PerfData::default_y())?;
+                    .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
             };
-
-            // let (_plot_area, key_area) = plot_area.split_vertically(500);
 
             root_area.present()?;
         }
@@ -179,6 +191,7 @@ struct PerfData {
     lines: Vec<LineData>,
     x: (DateTime<Utc>, DateTime<Utc>),
     y: (OrderedFloat<f64>, OrderedFloat<f64>),
+    y_desc: String,
 }
 
 struct LineData {
@@ -187,7 +200,7 @@ struct LineData {
 }
 
 impl PerfData {
-    fn new(json_perf: &JsonPerf) -> Option<PerfData> {
+    fn new(json_perf: JsonPerf) -> Option<PerfData> {
         let mut min_x = None;
         let mut max_x = None;
         let mut min_y = None;
@@ -225,20 +238,27 @@ impl PerfData {
             .collect();
 
         match (min_x, max_x, min_y, max_y) {
-            (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => Some(PerfData {
-                lines,
-                x: (min_x, max_x),
-                y: (min_y, max_y),
-            }),
+            (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => {
+                let y_desc = format!(
+                    "{}: {}",
+                    json_perf.metric_kind.name, json_perf.metric_kind.units
+                );
+                Some(PerfData {
+                    lines,
+                    x: (min_x, max_x),
+                    y: (min_y, max_y),
+                    y_desc,
+                })
+            },
             _ => None,
         }
     }
 
-    fn x(&self) -> Range<DateTime<Utc>> {
+    fn x_range(&self) -> Range<DateTime<Utc>> {
         self.x.0..self.x.1
     }
 
-    fn default_x() -> Range<DateTime<Utc>> {
+    fn default_x_range() -> Range<DateTime<Utc>> {
         let epoch = DateTime::default();
         epoch..epoch
     }
@@ -247,25 +267,54 @@ impl PerfData {
         format!("{}", x.format("%d %b %Y"))
     }
 
-    fn y(&self) -> Range<f64> {
-        let diff = self.y.1 - self.y.0;
-        let min = std::cmp::max(self.y.0 - (diff * 0.08), OrderedFloat::from(0.0)).into();
-        let max = (self.y.1 + (diff * 0.04)).into();
-        min..max
+    fn y_range(&self) -> Range<f64> {
+        let (min, max) = if self.y.1 < OrderedFloat::from(1.0) {
+            (self.y.0, self.y.1)
+        } else {
+            let diff = self.y.1 - self.y.0;
+            (
+                std::cmp::max(self.y.0 - (diff * 0.08), OrderedFloat::from(0.0)),
+                (self.y.1 + (diff * 0.04)),
+            )
+        };
+        min.into()..max.into()
     }
 
-    fn default_y() -> Range<f64> {
+    fn default_y_range() -> Range<f64> {
         0.0..0.0
     }
 
     fn y_label_area_size(&self) -> Result<u32, PlotError> {
-        u32::try_from(
-            std::cmp::max(self.y.0.to_string().len(), self.y.1.to_string().len()) * 8 + 20,
-        )
-        .map_err(Into::into)
+        let buffer = if self.y.1 < OrderedFloat::from(1.0) {
+            48
+        } else if self.y.1 < OrderedFloat::from(1_000.0) {
+            36
+        } else {
+            30
+        };
+        let y_len =
+            buffer + 6 * std::cmp::max(Self::float_len(self.y.0), Self::float_len(self.y.1));
+        u32::try_from(y_len).map_err(Into::into)
     }
 
     fn y_label_fmt(y: &f64) -> String {
+        if *y < 1.0 {
+            y.to_string()
+        } else {
+            Self::comma_format(*y as u64)
+        }
+    }
+
+    fn float_len(y: OrderedFloat<f64>) -> usize {
+        let y = f64::from(y);
+        if y < 1.0 {
+            y.to_string().len()
+        } else {
+            Self::comma_format(y as u64).len()
+        }
+    }
+
+    fn comma_format(y: u64) -> String {
         y.to_string()
             .as_bytes()
             .rchunks(3)
@@ -298,7 +347,7 @@ mod test {
     fn test_plot() {
         let plot = LinePlot::new();
         let plot_buffer = plot
-            .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF)
+            .draw(Some("Benchmark Adapter Comparison"), JSON_PERF.clone())
             .unwrap();
         save_jpeg(&plot_buffer, "perf");
     }
@@ -307,7 +356,7 @@ mod test {
     fn test_plot_empty() {
         let plot = LinePlot::new();
         let plot_buffer = plot
-            .draw(Some("Adapter Comparison"), &JsonPerf::default())
+            .draw(Some("Adapter Comparison"), JsonPerf::default())
             .unwrap();
         save_jpeg(&plot_buffer, "empty");
     }
