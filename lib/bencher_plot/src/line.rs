@@ -12,7 +12,7 @@ use plotters::{
         RangedDateTime, Text,
     },
     series::LineSeries,
-    style::{RGBColor, WHITE},
+    style::{FontFamily, RGBColor, WHITE},
 };
 
 use crate::PlotError;
@@ -97,9 +97,25 @@ impl LinePlot {
             root_area.draw(&*WORDMARK_ELEMENT)?;
 
             // Chart plot
-            if let Some(title) = title {
-                root_area = root_area.titled(title, ("sans-serif", 50))?;
-            }
+            let top_margin = if let Some(title) = title {
+                const MAX_LEN: usize = 28;
+                const START_SIZE: i32 = 48;
+                let title_len = title.len();
+                let (top_margin, size) = if title_len > MAX_LEN {
+                    let diff = title_len - MAX_LEN;
+                    let title_mod = (diff as f32 / 1.25) as i32;
+                    (
+                        std::cmp::min(title_mod, 32),
+                        std::cmp::max(START_SIZE - title_mod, 12),
+                    )
+                } else {
+                    (0, START_SIZE)
+                };
+                root_area = root_area.titled(title, (FontFamily::Monospace, size))?;
+                top_margin
+            } else {
+                0
+            };
 
             let (_header, plot_area) = root_area.split_vertically(0);
 
@@ -107,20 +123,24 @@ impl LinePlot {
 
             if let Some(perf_data) = perf_data {
                 let mut chart_context = ChartBuilder::on(&plot_area)
-                    .x_label_area_size(36)
+                    .x_label_area_size(40)
                     .y_label_area_size(perf_data.y_label_area_size()?)
                     .margin_left(8)
                     .margin_right(32)
-                    .margin_bottom(64)
+                    .margin_top(top_margin)
+                    .margin_bottom(60)
                     .build_cartesian_2d(perf_data.x(), perf_data.y())?;
 
                 chart_context
                     .configure_mesh()
+                    .axis_desc_style((FontFamily::Monospace, 20))
                     .x_desc("Benchmark Date and Time")
                     .x_labels(5)
+                    .x_label_style((FontFamily::Monospace, 16))
                     .x_label_formatter(&PerfData::x_label_fmt)
                     .y_desc("TODO Metric Kind")
                     .y_labels(5)
+                    .y_label_style((FontFamily::Monospace, 12))
                     .y_label_formatter(&PerfData::y_label_fmt)
                     .max_light_lines(4)
                     .draw()?;
@@ -133,9 +153,14 @@ impl LinePlot {
                 }
             } else {
                 let _chart_context = ChartBuilder::on(&plot_area)
-                    .caption(format!("No Data Found: {}", Utc::now()), ("sans-serif", 30))
+                    .caption(
+                        format!("No Data Found: {}", Utc::now().format("%d %b %Y %H:%M:%S")),
+                        (FontFamily::Monospace, 30),
+                    )
                     .build_cartesian_2d(PerfData::default_x(), PerfData::default_y())?;
             };
+
+            // let (_plot_area, key_area) = plot_area.split_vertically(500);
 
             root_area.present()?;
         }
@@ -219,7 +244,7 @@ impl PerfData {
     }
 
     fn x_label_fmt(x: &DateTime<Utc>) -> String {
-        format!("{}", x.format("%d %b %Y %H:%M"))
+        format!("{}", x.format("%d %b %Y"))
     }
 
     fn y(&self) -> Range<f64> {
@@ -235,7 +260,7 @@ impl PerfData {
 
     fn y_label_area_size(&self) -> Result<u32, PlotError> {
         u32::try_from(
-            std::cmp::max(self.y.0.to_string().len(), self.y.1.to_string().len()) * 8 + 16,
+            std::cmp::max(self.y.0.to_string().len(), self.y.1.to_string().len()) * 8 + 20,
         )
         .map_err(Into::into)
     }
@@ -272,7 +297,9 @@ mod test {
     #[test]
     fn test_plot() {
         let plot = LinePlot::new();
-        let plot_buffer = plot.draw(Some("Adapter Comparison"), &JSON_PERF).unwrap();
+        let plot_buffer = plot
+            .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF)
+            .unwrap();
         save_jpeg(&plot_buffer, "perf");
     }
 
