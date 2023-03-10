@@ -169,7 +169,7 @@ impl LinePlot {
                     .margin_top(TITLE_HEIGHT)
                     .caption(
                         format!("No Data Found: {}", Utc::now().format("%d %b %Y %H:%M:%S")),
-                        (FontFamily::Monospace, 30),
+                        (FontFamily::Monospace, 32),
                     )
                     .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
             };

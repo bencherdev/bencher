@@ -1,6 +1,9 @@
 [alias]
 xtask = "run --manifest-path ./xtask/Cargo.toml --"
 
+[registries.crates-io]
+protocol = "sparse"
+
 [target.'cfg(all()']
 rustflags = [
     # https://github.com/rust-lang/rust-clippy
