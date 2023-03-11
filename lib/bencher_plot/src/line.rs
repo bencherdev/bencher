@@ -145,23 +145,37 @@ impl LinePlot {
                     .max_light_lines(4)
                     .draw()?;
 
-                const BOX_WIDTH: i32 = 200;
-                const BOX_GAP: i32 = 12;
+                const BOX_GAP: usize = 12;
                 const BOX_HEIGHT: i32 = 24;
                 let mut box_x_left = 48;
+
+                let lines_len = perf_data.lines.len();
+                let (box_width, box_gap) = if lines_len > 4 {
+                    let extra_lines = lines_len - 4;
+                    let line_gap = std::cmp::max(4, BOX_GAP - extra_lines);
+                    let line_gaps = lines_len * line_gap;
+                    let width = (usize::try_from(IMG_WIDTH)? - line_gaps - box_x_left) / lines_len;
+                    (width, line_gap)
+                } else {
+                    (200, BOX_GAP)
+                };
+
                 for LineData { data, color } in perf_data.lines {
                     let _series = chart_context.draw_series(LineSeries::new(
                         data.into_iter().map(|(x, y)| (x, y.into())),
                         color,
                     ))?;
 
-                    let box_x_right = box_x_left + BOX_WIDTH;
+                    let box_x_right = box_x_left + box_width;
                     let shape_style = ShapeStyle::from(color).filled();
                     key_area.draw(&Rectangle::new(
-                        [(box_x_left, 0), (box_x_right, BOX_HEIGHT)],
+                        [
+                            (i32::try_from(box_x_left)?, 0),
+                            (i32::try_from(box_x_right)?, BOX_HEIGHT),
+                        ],
                         shape_style,
                     ))?;
-                    box_x_left = box_x_right + BOX_GAP;
+                    box_x_left = box_x_right + box_gap;
                 }
             } else {
                 // Return an informative message if there is no perf data found
