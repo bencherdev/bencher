@@ -1,4 +1,4 @@
-use plotters::prelude::DrawingAreaErrorKind;
+use plotters::{prelude::DrawingAreaErrorKind, style::FontError};
 use plotters_bitmap::BitMapBackendError;
 use thiserror::Error;
 
@@ -12,4 +12,6 @@ pub enum PlotError {
     ImageBuffer,
     #[error("Failed to generate image: {0}")]
     Image(#[from] image::error::ImageError),
+    #[error("Failed to generate font: {0}")]
+    Font(FontError),
 }

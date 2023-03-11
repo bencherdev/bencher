@@ -1,18 +1,13 @@
-use std::{
-    io::Cursor,
-    ops::{Deref, Range},
-};
+use std::{io::Cursor, ops::Range};
 
-use bencher_json::{JsonMetricKind, JsonPerf};
+use bencher_json::JsonPerf;
 use chrono::{DateTime, Utc};
 use image::ImageBuffer;
 use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
 use plotters::{
-    coord::types::RangedCoordf64,
     prelude::{
-        BitMapBackend, BitMapElement, Cartesian2d, ChartBuilder, ChartContext, IntoDrawingArea,
-        RangedDateTime, Rectangle, Text,
+        BitMapBackend, BitMapElement, ChartBuilder, IntoDrawingArea, MultiLineText, Rectangle,
     },
     series::LineSeries,
     style::{FontFamily, RGBColor, ShapeStyle, WHITE},
@@ -192,6 +187,9 @@ impl LinePlot {
             };
 
             const BOX_HEIGHT: i32 = 24;
+            const TEXT_START: i32 = BOX_HEIGHT + 4;
+            let max_text_end = i32::try_from(KEY_HEIGHT)? - TEXT_START - 48;
+            let text_width = u32::try_from(box_width)?;
             let (mut box_x_left, box_width, box_gap) = (
                 i32::try_from(box_x_left)?,
                 i32::try_from(box_width)?,
@@ -205,9 +203,28 @@ impl LinePlot {
                 ))?;
 
                 let box_x_right = box_x_left + box_width;
+
                 let points = [(box_x_left, 0), (box_x_right, BOX_HEIGHT)];
                 let shape_style = ShapeStyle::from(color).filled();
-                key_area.draw(&Rectangle::new(points, shape_style))?;
+                let rectangle = Rectangle::new(points, shape_style);
+                key_area.draw(&rectangle)?;
+
+                let mut font = 16;
+                let text = loop {
+                    let text = MultiLineText::from_str(
+                        "- main\n- localhost\n- path::to::my_benchmark_until_the_end_of_the_line",
+                        (box_x_left, TEXT_START),
+                        (FontFamily::Monospace, font),
+                        text_width,
+                    );
+                    let (_, text_height) = text.estimate_dimension().map_err(PlotError::Font)?;
+                    if text_height < max_text_end || font == 8 {
+                        break text;
+                    }
+                    font -= 1;
+                };
+                key_area.draw(&text)?;
+
                 box_x_left = box_x_right + box_gap;
             }
 
