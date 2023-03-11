@@ -1,27 +1,20 @@
-use bencher_json::{project::perf::JsonPerfQueryParams, JsonPerf, JsonPerfQuery, ResourceId};
+use bencher_json::{project::perf::JsonPerfQueryParams, JsonPerfQuery};
 use bencher_plot::LinePlot;
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use http::{Response, StatusCode};
 use hyper::Body;
-use schemars::JsonSchema;
-use serde::Deserialize;
-use tracing::info;
 
 use crate::{
     context::ApiContext,
     endpoints::{Endpoint, Method},
+    model::user::auth::AuthUser,
     util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
-use super::Resource;
+use super::{DirPath, Resource};
 
 const PERF_IMG_RESOURCE: Resource = Resource::PerfImg;
-
-#[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
-    pub project: ResourceId,
-}
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -53,11 +46,17 @@ pub async fn get(
         .try_into()
         .map_err(ApiError::from)?;
 
+    let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PERF_IMG_RESOURCE, Method::GetLs);
 
-    let jpeg = get_inner(rqctx.context(), path_params.into_inner(), json_perf_query)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let jpeg = get_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        json_perf_query,
+        auth_user.as_ref(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     Response::builder()
         .status(StatusCode::OK)
@@ -71,16 +70,8 @@ async fn get_inner(
     context: &ApiContext,
     path_params: DirPath,
     json_perf_query: JsonPerfQuery,
+    auth_user: Option<&AuthUser>,
 ) -> Result<Vec<u8>, ApiError> {
-    let path = format!("/perf/{}", path_params.project);
-    let url = json_perf_query.to_url(
-        context.endpoint.as_ref(),
-        &path,
-        &[("img", Some("true".into()))],
-    )?;
-    info!("Taking a screenshot of: {url}");
-
-    LinePlot::new()
-        .draw(None, JsonPerf::default())
-        .map_err(Into::into)
+    let json_perf = super::get_inner(context, path_params, json_perf_query, auth_user).await?;
+    LinePlot::new().draw(None, json_perf).map_err(Into::into)
 }

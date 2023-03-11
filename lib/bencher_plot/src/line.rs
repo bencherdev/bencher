@@ -10,7 +10,7 @@ use plotters::{
         BitMapBackend, BitMapElement, ChartBuilder, IntoDrawingArea, MultiLineText, Rectangle,
     },
     series::LineSeries,
-    style::{FontFamily, RGBColor, ShapeStyle, WHITE},
+    style::{Color, FontFamily, RGBColor, ShapeStyle, WHITE},
 };
 
 use crate::PlotError;
@@ -169,10 +169,10 @@ impl LinePlot {
                 dimensions,
             } in perf_data.lines
             {
-                let _series = chart_context.draw_series(LineSeries::new(
-                    data.into_iter().map(|(x, y)| (x, y.into())),
-                    color,
-                ))?;
+                let _series = chart_context.draw_series(
+                    LineSeries::new(data.into_iter().map(|(x, y)| (x, y.into())), color.filled())
+                        .point_size(2),
+                )?;
 
                 let box_x_right = box_x_left + box_width;
 
