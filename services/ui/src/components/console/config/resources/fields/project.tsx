@@ -18,7 +18,7 @@ const PROJECT_FIELDS = {
 	},
 	url: {
 		type: "text",
-		placeholder: "www.example.com",
+		placeholder: "https://www.example.com",
 		icon: "fas fa-link",
 		help: "Must be a valid URL",
 		validate: (input) => validate_string(input, is_valid_url),
