@@ -176,8 +176,7 @@ impl JsonPerfQuery {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(debug_assertions, derive(Default))]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
     pub project: JsonProject,
@@ -187,8 +186,7 @@ pub struct JsonPerf {
     pub results: Vec<JsonPerfMetrics>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(debug_assertions, derive(Default))]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetrics {
     pub branch: JsonBranch,
@@ -197,8 +195,7 @@ pub struct JsonPerfMetrics {
     pub metrics: Vec<JsonPerfMetric>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(debug_assertions, derive(Default))]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
     pub uuid: Uuid,

@@ -30,8 +30,7 @@ pub struct JsonProjects {
     pub public: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(debug_assertions, derive(Default))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProject {
     pub uuid: Uuid,

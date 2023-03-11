@@ -441,7 +441,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(debug_assertions)]
     fn test_plot_empty() {
         let plot = LinePlot::new();
         let plot_buffer = plot.draw(None, JsonPerf::default()).unwrap();
