@@ -31,6 +31,7 @@ pub struct JsonProjects {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProject {
     pub uuid: Uuid,

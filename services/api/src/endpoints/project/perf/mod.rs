@@ -116,8 +116,8 @@ async fn get_inner(
 ) -> Result<JsonPerf, ApiError> {
     let conn = &mut *context.conn().await;
 
-    let project_id =
-        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?.id;
+    let project =
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     let JsonPerfQuery {
         branches,
@@ -128,7 +128,7 @@ async fn get_inner(
         end_time,
     } = json_perf_query;
 
-    let metric_kind = QueryMetricKind::from_resource_id(conn, project_id, &metric_kind)?;
+    let metric_kind = QueryMetricKind::from_resource_id(conn, project.id, &metric_kind)?;
 
     let times = Times {
         start_time_nanos: start_time.as_ref().map(chrono::DateTime::timestamp_nanos),
@@ -143,19 +143,19 @@ async fn get_inner(
     let mut dimensions = Dimensions::default();
 
     for branch in &branches {
-        let Ok(branch) = QueryBranch::from_uuid(conn, project_id, *branch) else {
+        let Ok(branch) = QueryBranch::from_uuid(conn, project.id, *branch) else {
             continue;
         };
         ids.branch_id = branch.id;
         dimensions.branch = branch.into_json(conn)?;
         for testbed in &testbeds {
-            let Ok(testbed) = QueryTestbed::from_uuid(conn, project_id, *testbed) else {
+            let Ok(testbed) = QueryTestbed::from_uuid(conn, project.id, *testbed) else {
                 continue;
             };
             ids.testbed_id = testbed.id;
             dimensions.testbed = testbed.into_json(conn)?;
             for benchmark in &benchmarks {
-                let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project_id, *benchmark) else {
+                let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project.id, *benchmark) else {
                     continue;
                 };
                 ids.benchmark_id = benchmark.id;
@@ -167,6 +167,7 @@ async fn get_inner(
     }
 
     Ok(JsonPerf {
+        project: project.into_json(conn)?,
         metric_kind: metric_kind.into_json(conn)?,
         start_time,
         end_time,

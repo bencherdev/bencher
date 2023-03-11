@@ -1,4 +1,12 @@
 {
+    "project": {
+        "uuid": "a1154042-1cf8-4b2c-872f-de88e4516b66",
+        "organization": "04150e3c-7ed2-4e9b-a8fa-feebf0782d58",
+        "name": "The Computer",
+        "slug": "the-computer",
+        "url": null,
+        "visibility": "public"
+    },
     "metric_kind": {
         "uuid": "a89cee32-9290-488f-b58a-ade1793b3c05",
         "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",

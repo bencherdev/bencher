@@ -21,6 +21,7 @@ const TITLE_HEIGHT: u32 = 48;
 const PLOT_HEIGHT: u32 = 600;
 const KEY_HEIGHT: u32 = IMG_HEIGHT - PLOT_HEIGHT;
 
+const MAX_TITLE_LEN: usize = 28;
 const X_LABELS: i64 = 5;
 const DATE_TIME_FMT: &str = "%d %b %Y %H:%M:%S";
 
@@ -73,17 +74,15 @@ impl LinePlot {
             let (header, plot_area) = root_area.split_vertically(TITLE_HEIGHT);
 
             // Adaptive title sizing
-            if let Some(title) = title {
-                const MAX_LEN: usize = 28;
-                let title_len = title.len();
-                let size = if title_len > MAX_LEN {
-                    let diff = title_len - MAX_LEN;
-                    std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
-                } else {
-                    TITLE_HEIGHT
-                };
-                header.titled(title, (FontFamily::Monospace, size))?;
-            }
+            let title = title.unwrap_or(json_perf.project.name.as_ref());
+            let title_len = title.len();
+            let size = if title_len > MAX_TITLE_LEN {
+                let diff = title_len - MAX_TITLE_LEN;
+                std::cmp::max(TITLE_HEIGHT - u32::try_from(diff)?, 12)
+            } else {
+                TITLE_HEIGHT
+            };
+            header.titled(title, (FontFamily::Monospace, size))?;
 
             // Marshal the perf data into a plot-able form
             let perf_data = PerfData::new(json_perf);
@@ -442,11 +441,10 @@ mod test {
     }
 
     #[test]
+    #[cfg(debug_assertions)]
     fn test_plot_empty() {
         let plot = LinePlot::new();
-        let plot_buffer = plot
-            .draw(Some("Adapter Comparison"), JsonPerf::default())
-            .unwrap();
+        let plot_buffer = plot.draw(None, JsonPerf::default()).unwrap();
         save_jpeg(&plot_buffer, "empty");
     }
 }

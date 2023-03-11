@@ -16,7 +16,7 @@ const PerfHeader = (props) => {
 	const [project_data] = createResource(props.project_fetcher, getProject);
 
 	createEffect(() => {
-		pageTitle(project_data()?.name);
+		pageTitle(props.perf_data()?.project?.name);
 	});
 
 	return (
