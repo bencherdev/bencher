@@ -1,67 +1,11 @@
-import axios from "axios";
-import { createMemo, createResource, createSignal, For } from "solid-js";
-import { PerfTab } from "../../../config/types";
+import { For } from "solid-js";
 import * as d3 from "d3";
-import { get_options } from "../../../../site/util";
-import { createStore } from "solid-js/store";
 
 const PlotKey = (props) => {
-	const branches_fetcher = createMemo(() => {
-		return {
-			branches: props.branches(),
-			token: props.user?.token,
-		};
-	});
-	const testbeds_fetcher = createMemo(() => {
-		return {
-			testbeds: props.testbeds(),
-			token: props.user?.token,
-		};
-	});
-	const benchmarks_fetcher = createMemo(() => {
-		return {
-			benchmarks: props.benchmarks(),
-			token: props.user?.token,
-		};
-	});
-
-	const getLs = async (perf_tab: PerfTab, fetcher) => {
-		const key_data = {};
-
-		await Promise.all(
-			fetcher[perf_tab]?.map(async (uuid: string) => {
-				const url = props.config?.key_url(props.path_params(), perf_tab, uuid);
-				await axios(get_options(url, fetcher.token))
-					.then((resp) => {
-						key_data[uuid] = resp.data;
-					})
-					.catch(console.error);
-			}),
-		);
-
-		return key_data;
-	};
-
-	const dimension_fetcher = async (tab: PerfTab, fetcher) => {
-		return await getLs(tab, fetcher);
-	};
-	const [branches] = createResource(branches_fetcher, async (fetcher) =>
-		dimension_fetcher(PerfTab.BRANCHES, fetcher),
-	);
-	const [testbeds] = createResource(testbeds_fetcher, async (fetcher) =>
-		dimension_fetcher(PerfTab.TESTBEDS, fetcher),
-	);
-	const [benchmarks] = createResource(benchmarks_fetcher, async (fetcher) =>
-		dimension_fetcher(PerfTab.BENCHMARKS, fetcher),
-	);
-
 	return (
 		<>
 			{props.key() ? (
 				<ExpandedKey
-					branches={branches}
-					testbeds={testbeds}
-					benchmarks={benchmarks}
 					perf_data={props.perf_data}
 					perf_active={props.perf_active}
 					handleKey={props.handleKey}
@@ -88,9 +32,9 @@ const ExpandedKey = (props) => {
 			<For each={props.perf_data()?.results}>
 				{(
 					result: {
-						branch: string;
-						testbed: string;
-						benchmark: string;
+						branch: { name: string };
+						testbed: { name: string };
+						benchmark: { name: string };
 					},
 					index,
 				) => (
@@ -100,17 +44,11 @@ const ExpandedKey = (props) => {
 							perf_active={props.perf_active}
 							handlePerfActive={props.handlePerfActive}
 						/>
-						<KeyResource
-							icon="fas fa-code-branch"
-							name={props.branches()?.[result.branch]?.name}
-						/>
-						<KeyResource
-							icon="fas fa-server"
-							name={props.testbeds()?.[result.testbed]?.name}
-						/>
+						<KeyResource icon="fas fa-code-branch" name={result.branch?.name} />
+						<KeyResource icon="fas fa-server" name={result.testbed?.name} />
 						<KeyResource
 							icon="fas fa-tachometer-alt"
-							name={props.benchmarks()?.[result.benchmark]?.name}
+							name={result.benchmark?.name}
 						/>
 					</div>
 				)}
