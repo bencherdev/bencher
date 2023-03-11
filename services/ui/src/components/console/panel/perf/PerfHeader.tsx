@@ -1,16 +1,8 @@
 import createDebounce from "@solid-primitives/debounce";
-import axios from "axios";
-import { useLocation } from "solid-app-router";
-import {
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-} from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
-import { get_options, pageTitle } from "../../../site/util";
-import token from "../../config/resources/fields/token";
+import { pageTitle } from "../../../site/util";
 
 const PerfHeader = (props) => {
 	const [share, set_share] = createSignal(false);
@@ -32,6 +24,7 @@ const PerfHeader = (props) => {
 				user={props.user}
 				config={props.config}
 				perf_query={props.perf_query}
+				isPlotInit={props.isPlotInit}
 				project={project}
 				share={share}
 				set_share={set_share}
@@ -106,7 +99,7 @@ const ShareModal = (props) => {
 	);
 
 	const perf_img_url = createMemo(() => {
-		if (!(props.project()?.slug && props.perf_query())) {
+		if (props.isPlotInit() || !(props.project()?.slug && props.perf_query())) {
 			return null;
 		}
 

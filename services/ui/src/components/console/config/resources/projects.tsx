@@ -171,7 +171,9 @@ const projectsConfig = {
 				`${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img`,
 		},
 		plot: {
-			url: (path_params) =>
+			project_url: (path_params) =>
+				`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}`,
+			perf_url: (path_params) =>
 				`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/perf`,
 			tab_url: (path_params, tab: PerfTab) =>
 				`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/${tab}`,

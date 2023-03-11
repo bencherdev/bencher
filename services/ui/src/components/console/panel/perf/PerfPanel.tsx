@@ -180,11 +180,13 @@ const PerfPanel = (props) => {
 		};
 	});
 
-	const isPlotInit = () =>
-		branches().length === 0 ||
-		testbeds().length === 0 ||
-		benchmarks().length === 0 ||
-		!metric_kind();
+	const isPlotInit = createMemo(
+		() =>
+			!metric_kind() ||
+			branches().length === 0 ||
+			testbeds().length === 0 ||
+			benchmarks().length === 0,
+	);
 
 	// Refresh pref query
 	const [refresh, setRefresh] = createSignal(0);
@@ -204,7 +206,17 @@ const PerfPanel = (props) => {
 		const EMPTY_OBJECT = {};
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
-			return EMPTY_OBJECT;
+			const url = `${props.config?.plot?.project_url(props.path_params())}`;
+			return await axios(get_options(url, fetcher.token))
+				.then((resp) => {
+					return {
+						project: resp?.data,
+					};
+				})
+				.catch((error) => {
+					console.error(error);
+					return EMPTY_OBJECT;
+				});
 		}
 		const search_params = new URLSearchParams();
 		for (const [key, value] of Object.entries(fetcher.perf_query)) {
@@ -212,7 +224,7 @@ const PerfPanel = (props) => {
 				search_params.set(key, value);
 			}
 		}
-		const url = `${props.config?.plot?.url(
+		const url = `${props.config?.plot?.perf_url(
 			props.path_params(),
 		)}?${search_params.toString()}`;
 		return await axios(get_options(url, fetcher.token))
