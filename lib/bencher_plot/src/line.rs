@@ -1,6 +1,6 @@
 use std::{io::Cursor, ops::Range};
 
-use bencher_json::JsonPerf;
+use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
 use chrono::{DateTime, Utc};
 use image::ImageBuffer;
 use once_cell::sync::Lazy;
@@ -32,39 +32,6 @@ static WORDMARK_ELEMENT: Lazy<BitMapElement<(i32, i32)>> = Lazy::new(|| {
     let wordmark_image =
         image::load(wordmark_cursor, image::ImageFormat::Png).expect("Failed to load wordmark");
     ((0, 5), wordmark_image).into()
-});
-
-// https://observablehq.com/@d3/color-schemes
-// ["#4e79a7","#f28e2c","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
-const TABLEAU_10: [(u8, u8, u8); 10] = [
-    // #4e79a7
-    (78, 121, 167),
-    // #f28e2c
-    (242, 142, 44),
-    // #e15759
-    (225, 87, 89),
-    // #76b7b2
-    (118, 183, 178),
-    // #59a14f
-    (89, 161, 79),
-    // #edc949
-    (237, 201, 73),
-    // #af7aa1
-    (175, 122, 161),
-    // #ff9da7
-    (255, 157, 167),
-    // #9c755f
-    (156, 117, 95),
-    // #bab0ab
-    (186, 176, 171),
-];
-static TABLEAU_10_RGB: Lazy<[RGBColor; 10]> = Lazy::new(|| {
-    TABLEAU_10
-        .into_iter()
-        .map(|(r, g, b)| RGBColor(r, g, b))
-        .collect::<Vec<_>>()
-        .try_into()
-        .expect("Failed to map Tableau 10 RGB values")
 });
 
 pub struct LinePlot {
@@ -196,7 +163,12 @@ impl LinePlot {
                 i32::try_from(box_gap)?,
             );
 
-            for LineData { data, color } in perf_data.lines {
+            for LineData {
+                data,
+                color,
+                dimensions,
+            } in perf_data.lines
+            {
                 let _series = chart_context.draw_series(LineSeries::new(
                     data.into_iter().map(|(x, y)| (x, y.into())),
                     color,
@@ -212,7 +184,7 @@ impl LinePlot {
                 let mut font = 16;
                 let text = loop {
                     let text = MultiLineText::from_str(
-                        "- main\n- localhost\n- path::to::my_benchmark_until_the_end_of_the_line",
+                        dimensions.as_str(),
                         (box_x_left, TEXT_START),
                         (FontFamily::Monospace, font),
                         text_width,
@@ -251,6 +223,7 @@ struct PerfData {
 struct LineData {
     data: Vec<(DateTime<Utc>, OrderedFloat<f64>)>,
     color: RGBColor,
+    dimensions: String,
 }
 
 impl PerfData {
@@ -286,8 +259,13 @@ impl PerfData {
                         (x_value, y_value)
                     })
                     .collect();
-                let color = TABLEAU_10_RGB[index % 10];
-                LineData { data, color }
+                let color = LineData::color(index);
+                let dimensions = LineData::dimensions(result);
+                LineData {
+                    data,
+                    color,
+                    dimensions,
+                }
             })
             .collect();
 
@@ -376,6 +354,52 @@ impl PerfData {
             .filter_map(|thousand| std::str::from_utf8(thousand).ok())
             .collect::<Vec<_>>()
             .join(",")
+    }
+}
+
+// https://observablehq.com/@d3/color-schemes
+// ["#4e79a7","#f28e2c","#e15759","#76b7b2","#59a14f","#edc949","#af7aa1","#ff9da7","#9c755f","#bab0ab"]
+const TABLEAU_10: [(u8, u8, u8); 10] = [
+    // #4e79a7
+    (78, 121, 167),
+    // #f28e2c
+    (242, 142, 44),
+    // #e15759
+    (225, 87, 89),
+    // #76b7b2
+    (118, 183, 178),
+    // #59a14f
+    (89, 161, 79),
+    // #edc949
+    (237, 201, 73),
+    // #af7aa1
+    (175, 122, 161),
+    // #ff9da7
+    (255, 157, 167),
+    // #9c755f
+    (156, 117, 95),
+    // #bab0ab
+    (186, 176, 171),
+];
+static TABLEAU_10_RGB: Lazy<[RGBColor; 10]> = Lazy::new(|| {
+    TABLEAU_10
+        .into_iter()
+        .map(|(r, g, b)| RGBColor(r, g, b))
+        .collect::<Vec<_>>()
+        .try_into()
+        .expect("Failed to map Tableau 10 RGB values")
+});
+
+impl LineData {
+    fn color(index: usize) -> RGBColor {
+        TABLEAU_10_RGB[index % 10]
+    }
+
+    fn dimensions(result: &JsonPerfMetrics) -> String {
+        format!(
+            "- {}\n- {}\n- {}",
+            result.branch.name, result.testbed.name, result.benchmark.name
+        )
     }
 }
 
