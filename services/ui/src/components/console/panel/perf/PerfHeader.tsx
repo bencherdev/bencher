@@ -1,5 +1,6 @@
 import createDebounce from "@solid-primitives/debounce";
 import axios from "axios";
+import { useLocation } from "solid-app-router";
 import {
 	createEffect,
 	createMemo,
@@ -95,6 +96,8 @@ const PerfHeader = (props) => {
 export default PerfHeader;
 
 const ShareModal = (props) => {
+	const location = window.location.href;
+
 	const [title, set_title] = createSignal(null);
 
 	const handle_title = createDebounce(
@@ -123,9 +126,9 @@ const ShareModal = (props) => {
 
 	const img_tag = createMemo(
 		() =>
-			`<img src="${perf_img_url()}" alt="${
+			`<a href="${location}"><img src="${perf_img_url()}" alt="${
 				title() ? title() : props.project()?.name
-			} - Bencher" />`,
+			} - Bencher" /></a>`,
 	);
 
 	return (
@@ -152,7 +155,7 @@ const ShareModal = (props) => {
 						valid={true}
 						config={{
 							type: "text",
-							placeholder: "Title",
+							placeholder: props.project()?.name,
 							icon: "fas fa-chart-line",
 							help: null,
 							validate: (_input) => true,
@@ -192,10 +195,10 @@ const ShareModal = (props) => {
 						href=""
 						onClick={(e) => {
 							e.preventDefault();
-							navigator.clipboard.writeText(window.location.href);
+							navigator.clipboard.writeText(location);
 						}}
 					>
-						{window.location.href}
+						{location}
 					</a>
 				</section>
 				<footer class="modal-card-foot">
