@@ -212,9 +212,11 @@ const PerfPanel = (props) => {
 				search_params.set(key, value);
 			}
 		}
+		const query_string = search_params.toString();
+		set_perf_query_string(query_string);
 		const url = `${props.config?.plot?.url(
 			props.path_params(),
-		)}?${search_params.toString()}`;
+		)}?${query_string}`;
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => resp?.data)
 			.catch((error) => {
@@ -223,6 +225,7 @@ const PerfPanel = (props) => {
 			});
 	};
 
+	const [perf_query_string, set_perf_query_string] = createSignal("?");
 	const [perf_data] = createResource(perf_query_fetcher, get_perf);
 
 	const project_fetcher = createMemo(() => {
@@ -244,15 +247,15 @@ const PerfPanel = (props) => {
 	};
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
-	const [branches_data] = createResource(project_fetcher, async (fetcher) => {
-		return getPerfTab(PerfTab.BRANCHES, fetcher.token);
-	});
-	const [testbeds_data] = createResource(project_fetcher, async (fetcher) => {
-		return getPerfTab(PerfTab.TESTBEDS, fetcher.token);
-	});
-	const [benchmarks_data] = createResource(project_fetcher, async (fetcher) => {
-		return getPerfTab(PerfTab.BENCHMARKS, fetcher.token);
-	});
+	const [branches_data] = createResource(project_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.BRANCHES, fetcher.token),
+	);
+	const [testbeds_data] = createResource(project_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.TESTBEDS, fetcher.token),
+	);
+	const [benchmarks_data] = createResource(project_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.BENCHMARKS, fetcher.token),
+	);
 
 	// Initialize as empty, wait for resources to load
 	const [branches_tab, setBranchesTab] = createStore([]);
@@ -338,7 +341,13 @@ const PerfPanel = (props) => {
 
 	return (
 		<>
-			<PerfHeader perf_data={perf_data} handleRefresh={handleRefresh} />
+			<PerfHeader
+				user={props.user}
+				config={props.config?.header}
+				perf_data={perf_data}
+				perf_query_string={perf_query_string}
+				handleRefresh={handleRefresh}
+			/>
 			<PerfPlot
 				user={props.user}
 				project_slug={props.project_slug}

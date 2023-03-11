@@ -166,6 +166,10 @@ const projectsConfig = {
 	},
 	[Operation.PERF]: {
 		operation: Operation.PERF,
+		header: {
+			url: (project_slug) =>
+				`${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img`,
+		},
 		plot: {
 			url: (path_params) =>
 				`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/perf`,
