@@ -48,7 +48,7 @@ const PerfHeader = (props) => {
 							</div>
 						)}
 						<nav class="level is-mobile">
-							{!props.isPlotInit() && (
+							{project()?.visibility === "public" && !props.isPlotInit() && (
 								<div class="level-item">
 									<button
 										class="button is-outlined is-fullwidth"
@@ -89,13 +89,20 @@ const PerfHeader = (props) => {
 export default PerfHeader;
 
 const ShareModal = (props) => {
-	const location = window.location.href;
+	const location = window.location;
 
 	const [title, set_title] = createSignal(null);
 
 	const handle_title = createDebounce(
 		(_key, value, _valid) => set_title(value),
 		250,
+	);
+
+	const perf_page_url = createMemo(
+		() =>
+			`${location.protocol}//${location.hostname}${
+				location.port === "80" ? "" : `:${location.port}`
+			}/perf/${props.project()?.slug}${location.search}`,
 	);
 
 	const perf_img_url = createMemo(() => {
@@ -119,8 +126,10 @@ const ShareModal = (props) => {
 
 	const img_tag = createMemo(
 		() =>
-			`<a href="${location}"><img src="${perf_img_url()}" alt="${
+			`<a href="${perf_page_url()}"><img src="${perf_img_url()}" title="${
 				title() ? title() : props.project()?.name
+			}" alt="${title() ? `${title()} for ` : ""}${
+				props.project()?.name
 			} - Bencher" /></a>`,
 	);
 
@@ -188,10 +197,10 @@ const ShareModal = (props) => {
 						href=""
 						onClick={(e) => {
 							e.preventDefault();
-							navigator.clipboard.writeText(location);
+							navigator.clipboard.writeText(perf_page_url());
 						}}
 					>
-						{location}
+						{perf_page_url()}
 					</a>
 				</section>
 				<footer class="modal-card-foot">
