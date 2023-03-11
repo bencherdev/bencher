@@ -1,3 +1,4 @@
+import createDebounce from "@solid-primitives/debounce";
 import axios from "axios";
 import {
 	createEffect,
@@ -5,6 +6,8 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
+import Field from "../../../field/Field";
+import FieldKind from "../../../field/kind";
 import { get_options, pageTitle } from "../../../site/util";
 import token from "../../config/resources/fields/token";
 
@@ -94,6 +97,11 @@ export default PerfHeader;
 const ShareModal = (props) => {
 	const [title, set_title] = createSignal(null);
 
+	const handle_title = createDebounce(
+		(_key, value, _valid) => set_title(value),
+		250,
+	);
+
 	const perf_img_url = createMemo(() => {
 		if (!(props.project()?.slug && props.perf_query())) {
 			return null;
@@ -114,7 +122,10 @@ const ShareModal = (props) => {
 	});
 
 	const img_tag = createMemo(
-		() => `<img src="${perf_img_url()}" alt="${props.project()?.name}" />`,
+		() =>
+			`<img src="${perf_img_url()}" alt="${
+				title() ? title() : props.project()?.name
+			} - Bencher" />`,
 	);
 
 	return (
@@ -133,6 +144,22 @@ const ShareModal = (props) => {
 					/>
 				</header>
 				<section class="modal-card-body">
+					<Field
+						kind={FieldKind.INPUT}
+						fieldKey="title"
+						label="Title (optional)"
+						value={title()}
+						valid={true}
+						config={{
+							type: "text",
+							placeholder: "Title",
+							icon: "fas fa-chart-line",
+							help: null,
+							validate: (_input) => true,
+						}}
+						handleField={handle_title}
+					/>
+					<br />
 					{perf_img_url() ? (
 						<img src={perf_img_url()} alt={props.project()?.name} />
 					) : (
