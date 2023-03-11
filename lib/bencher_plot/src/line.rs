@@ -292,7 +292,10 @@ impl PerfData {
     }
 
     fn x_range(&self) -> Range<DateTime<Utc>> {
-        self.x.0..self.x.1
+        let diff = Duration::seconds(((self.x.1 - self.x.0).num_seconds() as f64 * 0.04) as i64);
+        let min = self.x.0 - diff;
+        let max = self.x.1 + diff;
+        min..max
     }
 
     fn default_x_range() -> Range<DateTime<Utc>> {
