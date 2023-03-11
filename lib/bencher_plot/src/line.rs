@@ -177,20 +177,26 @@ impl LinePlot {
                 .max_light_lines(4)
                 .draw()?;
 
+            const KEY_LEFT_MARGIN: usize = 48;
             const BOX_GAP: usize = 12;
-            const BOX_HEIGHT: i32 = 24;
-            let mut box_x_left = 48;
-
-            let lines_len = perf_data.lines.len();
-            let (box_width, box_gap) = if lines_len > 4 {
+            let (box_x_left, box_width, box_gap) = if lines_len > 4 {
+                const MIN_GAP: usize = 4;
                 let extra_lines = lines_len - 4;
-                let line_gap = std::cmp::max(4, BOX_GAP - extra_lines);
-                let line_gaps = lines_len * line_gap;
-                let width = (usize::try_from(IMG_WIDTH)? - line_gaps - box_x_left) / lines_len;
-                (width, line_gap)
+                let box_x_left = std::cmp::max(MIN_GAP, KEY_LEFT_MARGIN - (extra_lines * 8));
+                let box_gap = std::cmp::max(MIN_GAP, BOX_GAP - extra_lines);
+                let box_gaps = lines_len * box_gap;
+                let width = (usize::try_from(IMG_WIDTH)? - box_x_left - box_gaps) / lines_len;
+                (box_x_left, width, box_gap)
             } else {
-                (200, BOX_GAP)
+                (KEY_LEFT_MARGIN, 200, BOX_GAP)
             };
+
+            const BOX_HEIGHT: i32 = 24;
+            let (mut box_x_left, box_width, box_gap) = (
+                i32::try_from(box_x_left)?,
+                i32::try_from(box_width)?,
+                i32::try_from(box_gap)?,
+            );
 
             for LineData { data, color } in perf_data.lines {
                 let _series = chart_context.draw_series(LineSeries::new(
@@ -199,14 +205,9 @@ impl LinePlot {
                 ))?;
 
                 let box_x_right = box_x_left + box_width;
+                let points = [(box_x_left, 0), (box_x_right, BOX_HEIGHT)];
                 let shape_style = ShapeStyle::from(color).filled();
-                key_area.draw(&Rectangle::new(
-                    [
-                        (i32::try_from(box_x_left)?, 0),
-                        (i32::try_from(box_x_right)?, BOX_HEIGHT),
-                    ],
-                    shape_style,
-                ))?;
+                key_area.draw(&Rectangle::new(points, shape_style))?;
                 box_x_left = box_x_right + box_gap;
             }
 
