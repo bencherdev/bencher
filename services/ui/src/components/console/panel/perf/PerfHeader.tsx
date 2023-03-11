@@ -1,20 +1,7 @@
-import axios from "axios";
-import { createEffect, createResource } from "solid-js";
-import { get_options, pageTitle } from "../../../site/util";
+import { createEffect } from "solid-js";
+import { pageTitle } from "../../../site/util";
 
 const PerfHeader = (props) => {
-	const getProject = async (fetcher) => {
-		const url = props.config?.url(fetcher.project_slug);
-		return await axios(get_options(url, fetcher.token))
-			.then((resp) => resp?.data)
-			.catch((error) => {
-				console.error(error);
-				return [];
-			});
-	};
-
-	const [project_data] = createResource(props.project_fetcher, getProject);
-
 	createEffect(() => {
 		pageTitle(props.perf_data()?.project?.name);
 	});
@@ -23,17 +10,17 @@ const PerfHeader = (props) => {
 		<div class="columns is-vcentered">
 			<div class="column">
 				<h3 class="title is-3" style="overflow-wrap:break-word;">
-					{project_data()?.name}
+					{props.perf_data()?.project?.name}
 				</h3>
 			</div>
 			<div class="column is-narrow">
 				<nav class="level">
 					<div class="level-right">
-						{project_data()?.url && (
+						{props.perf_data()?.project?.url && (
 							<div class="level-item">
 								<a
 									class="button is-outlined is-fullwidth"
-									href={project_data()?.url}
+									href={props.perf_data()?.project?.url}
 									rel="noreferrer nofollow"
 									target="_blank"
 								>

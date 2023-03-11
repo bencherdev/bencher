@@ -338,13 +338,7 @@ const PerfPanel = (props) => {
 
 	return (
 		<>
-			<PerfHeader
-				config={props.config?.header}
-				path_params={props.path_params}
-				project_fetcher={project_fetcher}
-				perf_data={perf_data}
-				handleRefresh={handleRefresh}
-			/>
+			<PerfHeader perf_data={perf_data} handleRefresh={handleRefresh} />
 			<PerfPlot
 				user={props.user}
 				project_slug={props.project_slug}
