@@ -57,7 +57,6 @@ const PerfHeader = (props) => {
 									onClick={(e) => {
 										e.preventDefault();
 										set_share(true);
-										navigator.clipboard.writeText(window.location.href);
 									}}
 								>
 									<span class="icon">
@@ -91,7 +90,7 @@ const PerfHeader = (props) => {
 export default PerfHeader;
 
 const ShareModal = (props) => {
-	const perf_img = createMemo(() => {
+	const perf_img_url = createMemo(() => {
 		if (!(props.project()?.slug && props.perf_query_string())) {
 			return null;
 		}
@@ -100,6 +99,10 @@ const ShareModal = (props) => {
 			props.project()?.slug,
 		)}?${props.perf_query_string()}`;
 	});
+
+	const img_tag = createMemo(
+		() => `<img src="${perf_img_url()}" alt="${props.project()?.name}" />`,
+	);
 
 	return (
 		<div class={`modal ${props.share() && "is-active"}`}>
@@ -117,11 +120,41 @@ const ShareModal = (props) => {
 					/>
 				</header>
 				<section class="modal-card-body">
-					{perf_img() ? (
-						<img src={perf_img()} alt={props.project()?.name} />
+					{perf_img_url() ? (
+						<img src={perf_img_url()} alt={props.project()?.name} />
 					) : (
 						<p>Loading...</p>
 					)}
+					<br />
+					<br />
+					<h4 class="title is-4">
+						Click to Copy <code>img</code> Tag
+					</h4>
+					{/* rome-ignore lint/a11y/useValidAnchor: Copy tag */}
+					<a
+						href=""
+						onClick={(e) => {
+							e.preventDefault();
+							navigator.clipboard.writeText(img_tag());
+						}}
+					>
+						<code>{img_tag()}</code>
+					</a>
+					<br />
+					<br />
+					<blockquote>🐰 Add me to your README!</blockquote>
+					<div class="is-divider" data-content="OR" />
+					<h4 class="title is-4">Click to Copy URL</h4>
+					{/* rome-ignore lint/a11y/useValidAnchor: Copy link */}
+					<a
+						href=""
+						onClick={(e) => {
+							e.preventDefault();
+							navigator.clipboard.writeText(window.location.href);
+						}}
+					>
+						{window.location.href}
+					</a>
 				</section>
 				<footer class="modal-card-foot">
 					<button
