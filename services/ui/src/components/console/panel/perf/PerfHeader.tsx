@@ -27,8 +27,8 @@ const PerfHeader = (props) => {
 			<ShareModal
 				user={props.user}
 				config={props.config}
+				perf_query={props.perf_query}
 				project={project}
-				perf_query_string={props.perf_query_string}
 				share={share}
 				set_share={set_share}
 			/>
@@ -51,20 +51,22 @@ const PerfHeader = (props) => {
 							</div>
 						)}
 						<nav class="level is-mobile">
-							<div class="level-item">
-								<button
-									class="button is-outlined is-fullwidth"
-									onClick={(e) => {
-										e.preventDefault();
-										set_share(true);
-									}}
-								>
-									<span class="icon">
-										<i class="fas fa-share" aria-hidden="true" />
-									</span>
-									<span>Share</span>
-								</button>
-							</div>
+							{!props.isPlotInit() && (
+								<div class="level-item">
+									<button
+										class="button is-outlined is-fullwidth"
+										onClick={(e) => {
+											e.preventDefault();
+											set_share(true);
+										}}
+									>
+										<span class="icon">
+											<i class="fas fa-share" aria-hidden="true" />
+										</span>
+										<span>Share</span>
+									</button>
+								</div>
+							)}
 							<div class="level-item">
 								<button
 									class="button is-outlined is-fullwidth"
@@ -90,14 +92,25 @@ const PerfHeader = (props) => {
 export default PerfHeader;
 
 const ShareModal = (props) => {
+	const [title, set_title] = createSignal(null);
+
 	const perf_img_url = createMemo(() => {
-		if (!(props.project()?.slug && props.perf_query_string())) {
+		if (!(props.project()?.slug && props.perf_query())) {
 			return null;
 		}
 
+		const search_params = new URLSearchParams();
+		for (const [key, value] of Object.entries(props.perf_query())) {
+			if (value) {
+				search_params.set(key, value);
+			}
+		}
+		if (title()) {
+			search_params.set("title", title());
+		}
 		return `${props.config?.url(
 			props.project()?.slug,
-		)}?${props.perf_query_string()}`;
+		)}?${search_params.toString()}`;
 	});
 
 	const img_tag = createMemo(

@@ -212,11 +212,9 @@ const PerfPanel = (props) => {
 				search_params.set(key, value);
 			}
 		}
-		const query_string = search_params.toString();
-		set_perf_query_string(query_string);
 		const url = `${props.config?.plot?.url(
 			props.path_params(),
-		)}?${query_string}`;
+		)}?${search_params.toString()}`;
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => resp?.data)
 			.catch((error) => {
@@ -225,7 +223,6 @@ const PerfPanel = (props) => {
 			});
 	};
 
-	const [perf_query_string, set_perf_query_string] = createSignal("?");
 	const [perf_data] = createResource(perf_query_fetcher, get_perf);
 
 	const project_fetcher = createMemo(() => {
@@ -345,7 +342,8 @@ const PerfPanel = (props) => {
 				user={props.user}
 				config={props.config?.header}
 				perf_data={perf_data}
-				perf_query_string={perf_query_string}
+				isPlotInit={isPlotInit}
+				perf_query={perf_query}
 				handleRefresh={handleRefresh}
 			/>
 			<PerfPlot
