@@ -43,6 +43,18 @@ impl QueryBenchmark {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
+    pub fn from_uuid(
+        conn: &mut DbConnection,
+        project_id: i32,
+        uuid: Uuid,
+    ) -> Result<Self, ApiError> {
+        schema::benchmark::table
+            .filter(schema::benchmark::project_id.eq(project_id))
+            .filter(schema::benchmark::uuid.eq(uuid.to_string()))
+            .first::<Self>(conn)
+            .map_err(api_error!())
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
         let QueryBenchmark {
             uuid,

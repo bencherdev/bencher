@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
-    JsonMetric, JsonPerf, JsonPerfQuery, ResourceId,
+    JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed, ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
@@ -18,15 +18,12 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        branch::QueryBranch, metric_kind::QueryMetricKind, report::to_date_time,
-        testbed::QueryTestbed, QueryProject,
+        benchmark::QueryBenchmark, branch::QueryBranch, metric_kind::QueryMetricKind,
+        report::to_date_time, testbed::QueryTestbed, QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
-    util::{
-        cors::{get_cors, CorsResponse},
-        same_project::SameProject,
-    },
+    util::cors::{get_cors, CorsResponse},
     ApiError,
 };
 
@@ -92,17 +89,17 @@ pub async fn get(
 
 #[derive(Clone, Copy, Default)]
 struct Ids {
-    project_id: i32,
     metric_kind_id: i32,
     branch_id: i32,
     testbed_id: i32,
+    benchmark_id: i32,
 }
 
-#[derive(Clone, Copy, Default)]
-struct Uuids {
-    branch: Uuid,
-    testbed: Uuid,
-    benchmark: Uuid,
+#[derive(Clone, Default)]
+struct Dimensions {
+    branch: JsonBranch,
+    testbed: JsonTestbed,
+    benchmark: JsonBenchmark,
 }
 
 #[derive(Clone, Copy)]
@@ -140,28 +137,31 @@ async fn get_inner(
 
     let mut results = Vec::new();
     let mut ids = Ids {
-        project_id,
         metric_kind_id: metric_kind.id,
         ..Default::default()
     };
-    let mut uuids = Uuids::default();
+    let mut dimensions = Dimensions::default();
 
     for branch in &branches {
-        let Ok(branch_id) = QueryBranch::get_id(conn, branch) else {
+        let Ok(branch) = QueryBranch::from_uuid(conn, project_id, *branch) else {
             continue;
         };
-        ids.branch_id = branch_id;
-        uuids.branch = *branch;
+        ids.branch_id = branch.id;
+        dimensions.branch = branch.into_json(conn)?;
         for testbed in &testbeds {
-            let Ok(testbed_id) = QueryTestbed::get_id(conn, testbed) else {
+            let Ok(testbed) = QueryTestbed::from_uuid(conn, project_id, *testbed) else {
                 continue;
             };
-            ids.testbed_id = testbed_id;
-            uuids.testbed = *testbed;
+            ids.testbed_id = testbed.id;
+            dimensions.testbed = testbed.into_json(conn)?;
             for benchmark in &benchmarks {
-                uuids.benchmark = *benchmark;
+                let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project_id, *benchmark) else {
+                    continue;
+                };
+                ids.benchmark_id = benchmark.id;
+                dimensions.benchmark = benchmark.into_json(conn)?;
 
-                perf_query(conn, ids, uuids, times, &mut results)?;
+                perf_query(conn, ids, dimensions.clone(), times, &mut results)?;
             }
         }
     }
@@ -189,34 +189,27 @@ type PerfQuery = (
 fn perf_query(
     conn: &mut DbConnection,
     ids: Ids,
-    uuids: Uuids,
+    dimensions: Dimensions,
     times: Times,
     results: &mut Vec<JsonPerfMetrics>,
 ) -> Result<(), ApiError> {
     let Ids {
-        project_id,
         metric_kind_id,
         branch_id,
         testbed_id,
+        benchmark_id,
     } = ids;
 
-    // Verify that the branch and testbed are part of the same project
-    SameProject::validate_ids(conn, project_id, branch_id, testbed_id)?;
-
-    let Uuids {
+    let Dimensions {
         branch,
         testbed,
         benchmark,
-    } = uuids;
+    } = dimensions;
 
     let mut query = schema::metric::table
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .inner_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .left_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-        )
-        .filter(schema::benchmark::uuid.eq(benchmark.to_string()))
-        .filter(schema::benchmark::project_id.eq(project_id))
+        .filter(schema::perf::benchmark_id.eq(benchmark_id))
         .inner_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
         .filter(schema::report::testbed_id.eq(testbed_id))
         .into_boxed();

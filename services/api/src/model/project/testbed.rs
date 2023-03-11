@@ -37,6 +37,18 @@ impl QueryTestbed {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
+    pub fn from_uuid(
+        conn: &mut DbConnection,
+        project_id: i32,
+        uuid: Uuid,
+    ) -> Result<Self, ApiError> {
+        schema::testbed::table
+            .filter(schema::testbed::project_id.eq(project_id))
+            .filter(schema::testbed::uuid.eq(uuid.to_string()))
+            .first::<Self>(conn)
+            .map_err(api_error!())
+    }
+
     pub fn from_resource_id(
         conn: &mut DbConnection,
         project_id: i32,
@@ -45,7 +57,7 @@ impl QueryTestbed {
         schema::testbed::table
             .filter(schema::testbed::project_id.eq(project_id))
             .filter(resource_id(testbed)?)
-            .first::<QueryTestbed>(conn)
+            .first::<Self>(conn)
             .map_err(api_error!())
     }
 
