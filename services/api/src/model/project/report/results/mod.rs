@@ -156,16 +156,7 @@ impl ReportResults {
         conn: &mut DbConnection,
         benchmark_name: BenchmarkName,
     ) -> Result<i32, ApiError> {
-        Ok(
-            if let Some(id) = self.benchmark_cache.get(&benchmark_name) {
-                *id
-            } else {
-                let benchmark_id =
-                    QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name.as_ref())?;
-                self.benchmark_cache.insert(benchmark_name, benchmark_id);
-                benchmark_id
-            },
-        )
+        QueryBenchmark::get_or_create(conn, self.project_id, benchmark_name.as_ref())
     }
 
     fn metric_kind_id(
