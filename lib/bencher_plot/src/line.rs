@@ -1,7 +1,7 @@
 use std::{io::Cursor, ops::Range};
 
 use bencher_json::{project::perf::JsonPerfMetrics, JsonPerf};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use image::ImageBuffer;
 use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
@@ -20,6 +20,9 @@ const IMG_HEIGHT: u32 = 768;
 const TITLE_HEIGHT: u32 = 48;
 const PLOT_HEIGHT: u32 = 600;
 const KEY_HEIGHT: u32 = IMG_HEIGHT - PLOT_HEIGHT;
+
+const X_LABELS: i64 = 5;
+const DATE_TIME_FMT: &str = "%d %b %Y %H:%M:%S";
 
 // RGB is three units in size
 // https://docs.rs/image/latest/image/struct.Rgb.html
@@ -90,7 +93,7 @@ impl LinePlot {
                   let _chart_context = ChartBuilder::on(&plot_area)
                   .margin_top(TITLE_HEIGHT)
                   .caption(
-                      format!("No Data Found: {}", Utc::now().format("%d %b %Y %H:%M:%S")),
+                      format!("No Data Found: {}", Utc::now().format(DATE_TIME_FMT)),
                       (FontFamily::Monospace, 32),
                   )
                   .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
@@ -129,10 +132,10 @@ impl LinePlot {
                 .configure_mesh()
                 .axis_desc_style((FontFamily::Monospace, 20))
                 .x_desc("Benchmark Date and Time")
-                .x_labels(5)
+                .x_labels(usize::try_from(X_LABELS)?)
                 .x_label_style((FontFamily::Monospace, 16))
-                .x_label_formatter(&PerfData::x_label_fmt)
-                .y_desc(perf_data.y_desc)
+                .x_label_formatter(&|x| perf_data.x_label_fmt(x))
+                .y_desc(&perf_data.y_desc)
                 .y_labels(5)
                 .y_label_style((FontFamily::Monospace, 12))
                 .y_label_formatter(&PerfData::y_label_fmt)
@@ -217,6 +220,7 @@ struct PerfData {
     lines: Vec<LineData>,
     x: (DateTime<Utc>, DateTime<Utc>),
     y: (OrderedFloat<f64>, OrderedFloat<f64>),
+    x_time: bool,
     y_desc: String,
 }
 
@@ -271,6 +275,7 @@ impl PerfData {
 
         match (min_x, max_x, min_y, max_y) {
             (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => {
+                let x_time = max_x - min_x < Duration::days(X_LABELS);
                 let y_desc = format!(
                     "{}: {}",
                     json_perf.metric_kind.name, json_perf.metric_kind.units
@@ -279,6 +284,7 @@ impl PerfData {
                     lines,
                     x: (min_x, max_x),
                     y: (min_y, max_y),
+                    x_time,
                     y_desc,
                 })
             },
@@ -295,8 +301,13 @@ impl PerfData {
         epoch..epoch
     }
 
-    fn x_label_fmt(x: &DateTime<Utc>) -> String {
-        format!("{}", x.format("%d %b %Y"))
+    fn x_label_fmt(&self, x: &DateTime<Utc>) -> String {
+        let fmt = if self.x_time {
+            DATE_TIME_FMT
+        } else {
+            "%d %b %Y"
+        };
+        format!("{}", x.format(fmt))
     }
 
     fn y_range(&self) -> Range<f64> {
