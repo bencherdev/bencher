@@ -31,6 +31,7 @@ const QUERY_KEYS: [&str; 6] = [
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
+    pub title: Option<String>,
     pub metric_kind: String,
     pub branches: String,
     pub testbeds: String,
@@ -56,6 +57,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
 
     fn try_from(query_params: JsonPerfQueryParams) -> Result<Self, Self::Error> {
         let JsonPerfQueryParams {
+            title: _,
             metric_kind,
             branches,
             testbeds,

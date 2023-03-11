@@ -143,7 +143,9 @@ const ShareModal = (props) => {
 					<br />
 					<br />
 					<blockquote>🐰 Add me to your README!</blockquote>
+
 					<div class="is-divider" data-content="OR" />
+
 					<h4 class="title is-4">Click to Copy URL</h4>
 					{/* rome-ignore lint/a11y/useValidAnchor: Copy link */}
 					<a

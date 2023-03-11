@@ -40,11 +40,10 @@ pub async fn get(
     path_params: Path<DirPath>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<Response<Body>, HttpError> {
+    let mut json_perf_query_params = query_params.into_inner();
+    let title = json_perf_query_params.title.take();
     // Second round of marshaling
-    let json_perf_query = query_params
-        .into_inner()
-        .try_into()
-        .map_err(ApiError::from)?;
+    let json_perf_query = json_perf_query_params.try_into().map_err(ApiError::from)?;
 
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PERF_IMG_RESOURCE, Method::GetLs);
@@ -52,6 +51,7 @@ pub async fn get(
     let jpeg = get_inner(
         rqctx.context(),
         path_params.into_inner(),
+        title.as_deref(),
         json_perf_query,
         auth_user.as_ref(),
     )
@@ -69,9 +69,10 @@ pub async fn get(
 async fn get_inner(
     context: &ApiContext,
     path_params: DirPath,
+    title: Option<&str>,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<Vec<u8>, ApiError> {
     let json_perf = super::get_inner(context, path_params, json_perf_query, auth_user).await?;
-    LinePlot::new().draw(None, json_perf).map_err(Into::into)
+    LinePlot::new().draw(title, json_perf).map_err(Into::into)
 }
