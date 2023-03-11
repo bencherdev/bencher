@@ -1,7 +1,5 @@
-#![cfg(feature = "browser")]
-
-use bencher_json::{project::perf::JsonPerfQueryParams, JsonPerfQuery, ResourceId};
-use bencher_selfie::Selfie;
+use bencher_json::{project::perf::JsonPerfQueryParams, JsonPerf, JsonPerfQuery, ResourceId};
+use bencher_plot::LinePlot;
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use http::{Response, StatusCode};
 use hyper::Body;
@@ -82,8 +80,7 @@ async fn get_inner(
     )?;
     info!("Taking a screenshot of: {url}");
 
-    Selfie::new_embedded()?
-        .capture_perf(url.as_ref())
-        .await
+    LinePlot::new()
+        .draw(None, JsonPerf::default())
         .map_err(Into::into)
 }

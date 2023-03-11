@@ -72,15 +72,13 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v3
-      - name: Install Chromium
-        run: ./scripts/chrome.sh
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
       - name: Upload Perf JPEG
         uses: actions/upload-artifact@v3
         with:
           name: perf.jpeg
-          path: ./lib/bencher_selfie/perf.jpeg
+          path: ./lib/bencher_plot/perf.jpeg
 
   # Cargo Check (Minus)
   cargo_check_api_minus:

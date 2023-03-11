@@ -30,10 +30,9 @@ use crate::{
     ApiError,
 };
 
-use super::Resource;
-
-#[cfg(feature = "browser")]
 pub mod img;
+
+use super::Resource;
 
 const PERF_RESOURCE: Resource = Resource::Perf;
 

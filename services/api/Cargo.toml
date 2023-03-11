@@ -5,8 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
-default = ["browser", "plus"]
-browser = ["dep:bencher_selfie"]
+default = ["plus"]
 plus = [
     "bencher_json/plus",
     "dep:bencher_billing",
@@ -19,8 +18,8 @@ swagger = ["dep:literally"]
 # Local
 bencher_adapter = { path = "../../lib/bencher_adapter" }
 bencher_json = { path = "../../lib/bencher_json", features = ["schema"] }
+bencher_plot = { path = "../../lib/bencher_plot" }
 bencher_rbac = { path = "../../lib/bencher_rbac" }
-bencher_selfie = { path = "../../lib/bencher_selfie", optional = true }
 # Plus
 bencher_billing = { path = "../../plus/bencher_billing", optional = true }
 bencher_plus = { path = "../../plus/bencher_plus", optional = true }
