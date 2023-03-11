@@ -14,6 +14,7 @@ use serde::{
 use crate::ValidError;
 
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct BranchName(String);
 

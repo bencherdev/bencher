@@ -10,7 +10,7 @@ use crate::urlencoded::{
     from_millis, from_urlencoded, from_urlencoded_list, to_urlencoded, to_urlencoded_list,
     UrlEncodedError,
 };
-use crate::{JsonMetricKind, ResourceId};
+use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonTestbed, ResourceId};
 
 use super::metric::JsonMetric;
 
@@ -188,9 +188,9 @@ pub struct JsonPerf {
 #[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetrics {
-    pub branch: Uuid,
-    pub testbed: Uuid,
-    pub benchmark: Uuid,
+    pub branch: JsonBranch,
+    pub testbed: JsonTestbed,
+    pub benchmark: JsonBenchmark,
     pub metrics: Vec<JsonPerfMetric>,
 }
 

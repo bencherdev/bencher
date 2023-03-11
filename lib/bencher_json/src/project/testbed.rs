@@ -38,6 +38,7 @@ impl JsonNewTestbed {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(debug_assertions, derive(Default))]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbed {
     pub uuid: Uuid,
