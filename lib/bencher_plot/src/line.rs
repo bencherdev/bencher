@@ -93,15 +93,18 @@ impl LinePlot {
 
     pub fn draw(&self, title: Option<&str>, json_perf: JsonPerf) -> Result<Vec<u8>, PlotError> {
         let mut plot_buffer = vec![0; BUFFER_SIZE];
-        {
-            let mut root_area =
-                BitMapBackend::with_buffer(&mut plot_buffer, (self.width, self.height))
-                    .into_drawing_area();
+
+        // Use a closure that gets immediately executed here
+        // This provides early return control flow and avoids the lifetime complexity
+        || -> Result<(), PlotError> {
+            let root_area = BitMapBackend::with_buffer(&mut plot_buffer, (self.width, self.height))
+                .into_drawing_area();
             root_area.fill(&WHITE)?;
 
             // Bencher Wordmark
             root_area.draw(&*WORDMARK_ELEMENT)?;
 
+            // Split header and plot areas
             let (header, plot_area) = root_area.split_vertically(TITLE_HEIGHT);
 
             // Adaptive title sizing
@@ -120,76 +123,95 @@ impl LinePlot {
             // Marshal the perf data into a plot-able form
             let perf_data = PerfData::new(json_perf);
 
-            if let Some(perf_data) = perf_data {
-                let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
+            let Some(perf_data) = perf_data else {
+                  // Return an informative message if there is no perf data found
+                  let _chart_context = ChartBuilder::on(&plot_area)
+                  .margin_top(TITLE_HEIGHT)
+                  .caption(
+                      format!("No Data Found: {}", Utc::now().format("%d %b %Y %H:%M:%S")),
+                      (FontFamily::Monospace, 32),
+                  )
+                  .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
 
-                let mut chart_context = ChartBuilder::on(&plot_area)
-                    .x_label_area_size(40)
-                    .y_label_area_size(perf_data.y_label_area_size()?)
-                    .margin_left(8)
-                    .margin_right(32)
-                    .margin_bottom(8)
-                    .build_cartesian_2d(perf_data.x_range(), perf_data.y_range())?;
+                  return root_area.present().map_err(Into::into);
+            };
 
-                chart_context
-                    .configure_mesh()
-                    .axis_desc_style((FontFamily::Monospace, 20))
-                    .x_desc("Benchmark Date and Time")
-                    .x_labels(5)
-                    .x_label_style((FontFamily::Monospace, 16))
-                    .x_label_formatter(&PerfData::x_label_fmt)
-                    .y_desc(perf_data.y_desc)
-                    .y_labels(5)
-                    .y_label_style((FontFamily::Monospace, 12))
-                    .y_label_formatter(&PerfData::y_label_fmt)
-                    .max_light_lines(4)
-                    .draw()?;
+            let lines_len = perf_data.lines.len();
 
-                const BOX_GAP: usize = 12;
-                const BOX_HEIGHT: i32 = 24;
-                let mut box_x_left = 48;
-
-                let lines_len = perf_data.lines.len();
-                let (box_width, box_gap) = if lines_len > 4 {
-                    let extra_lines = lines_len - 4;
-                    let line_gap = std::cmp::max(4, BOX_GAP - extra_lines);
-                    let line_gaps = lines_len * line_gap;
-                    let width = (usize::try_from(IMG_WIDTH)? - line_gaps - box_x_left) / lines_len;
-                    (width, line_gap)
-                } else {
-                    (200, BOX_GAP)
-                };
-
-                for LineData { data, color } in perf_data.lines {
-                    let _series = chart_context.draw_series(LineSeries::new(
-                        data.into_iter().map(|(x, y)| (x, y.into())),
-                        color,
-                    ))?;
-
-                    let box_x_right = box_x_left + box_width;
-                    let shape_style = ShapeStyle::from(color).filled();
-                    key_area.draw(&Rectangle::new(
-                        [
-                            (i32::try_from(box_x_left)?, 0),
-                            (i32::try_from(box_x_right)?, BOX_HEIGHT),
-                        ],
-                        shape_style,
-                    ))?;
-                    box_x_left = box_x_right + box_gap;
-                }
-            } else {
-                // Return an informative message if there is no perf data found
+            if lines_len > 10 {
+                // Return an informative message if there is too much data to be shown
                 let _chart_context = ChartBuilder::on(&plot_area)
                     .margin_top(TITLE_HEIGHT)
                     .caption(
-                        format!("No Data Found: {}", Utc::now().format("%d %b %Y %H:%M:%S")),
-                        (FontFamily::Monospace, 32),
+                        format!(
+                            "Too Many Data Sets: {lines_len} found which exceeds the max of 10"
+                        ),
+                        (FontFamily::Monospace, 24),
                     )
                     .build_cartesian_2d(PerfData::default_x_range(), PerfData::default_y_range())?;
+
+                return root_area.present().map_err(Into::into);
+            }
+
+            let (plot_area, key_area) = plot_area.split_vertically(PLOT_HEIGHT);
+
+            let mut chart_context = ChartBuilder::on(&plot_area)
+                .x_label_area_size(40)
+                .y_label_area_size(perf_data.y_label_area_size()?)
+                .margin_left(8)
+                .margin_right(32)
+                .margin_bottom(8)
+                .build_cartesian_2d(perf_data.x_range(), perf_data.y_range())?;
+
+            chart_context
+                .configure_mesh()
+                .axis_desc_style((FontFamily::Monospace, 20))
+                .x_desc("Benchmark Date and Time")
+                .x_labels(5)
+                .x_label_style((FontFamily::Monospace, 16))
+                .x_label_formatter(&PerfData::x_label_fmt)
+                .y_desc(perf_data.y_desc)
+                .y_labels(5)
+                .y_label_style((FontFamily::Monospace, 12))
+                .y_label_formatter(&PerfData::y_label_fmt)
+                .max_light_lines(4)
+                .draw()?;
+
+            const BOX_GAP: usize = 12;
+            const BOX_HEIGHT: i32 = 24;
+            let mut box_x_left = 48;
+
+            let lines_len = perf_data.lines.len();
+            let (box_width, box_gap) = if lines_len > 4 {
+                let extra_lines = lines_len - 4;
+                let line_gap = std::cmp::max(4, BOX_GAP - extra_lines);
+                let line_gaps = lines_len * line_gap;
+                let width = (usize::try_from(IMG_WIDTH)? - line_gaps - box_x_left) / lines_len;
+                (width, line_gap)
+            } else {
+                (200, BOX_GAP)
             };
 
-            root_area.present()?;
-        }
+            for LineData { data, color } in perf_data.lines {
+                let _series = chart_context.draw_series(LineSeries::new(
+                    data.into_iter().map(|(x, y)| (x, y.into())),
+                    color,
+                ))?;
+
+                let box_x_right = box_x_left + box_width;
+                let shape_style = ShapeStyle::from(color).filled();
+                key_area.draw(&Rectangle::new(
+                    [
+                        (i32::try_from(box_x_left)?, 0),
+                        (i32::try_from(box_x_right)?, BOX_HEIGHT),
+                    ],
+                    shape_style,
+                ))?;
+                box_x_left = box_x_right + box_gap;
+            }
+
+            root_area.present().map_err(Into::into)
+        }()?;
 
         let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
             ImageBuffer::from_vec(self.width, self.height, plot_buffer)
