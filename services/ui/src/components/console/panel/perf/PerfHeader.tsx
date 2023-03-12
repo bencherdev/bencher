@@ -124,9 +124,11 @@ const ShareModal = (props) => {
 		)}?${search_params.toString()}`;
 	});
 
+	const border = "border: 0.2em solid #ed6704;";
+
 	const img_tag = createMemo(
 		() =>
-			`<a href="${perf_page_url()}"><img src="${perf_img_url()}" title="${
+			`<a href="${perf_page_url()}"><img style="${border}" src="${perf_img_url()}" title="${
 				title() ? title() : props.project()?.name
 			}" alt="${title() ? `${title()} for ` : ""}${
 				props.project()?.name
@@ -166,7 +168,11 @@ const ShareModal = (props) => {
 					/>
 					<br />
 					{perf_img_url() ? (
-						<img src={perf_img_url()} alt={props.project()?.name} />
+						<img
+							style={border}
+							src={perf_img_url()}
+							alt={props.project()?.name}
+						/>
 					) : (
 						<p>Loading...</p>
 					)}

@@ -37,6 +37,7 @@
     "interquartile",
     "jsonwebtoken",
     "libtest",
+    "litestream",
     "luhn",
     "Microbenchmark",
     "milli",
