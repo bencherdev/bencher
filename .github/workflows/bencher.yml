@@ -129,10 +129,10 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     name: Cargo Audit
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs:
       - cargo_fmt
       - cargo_clippy
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/audit-check@v1
@@ -512,6 +512,7 @@ jobs:
   backup_database:
     name: Backup Database
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs:
       - nightly_api_docker
       - npx_vitest
