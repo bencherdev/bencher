@@ -81,6 +81,14 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 
 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
 
+## Share Your Benchmarks
+
+All public projects get their own [public perf page](https://bencher.dev/perf). These results can easily be shared with an auto-updating perf image. Perfect for your README!
+
+<p align="center">
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Benchmark Adapter Comparison" alt="Benchmark Adapter Comparison for Bencher - Bencher" /></a>
+</p>
+
 ## Contributing
 
 The easiest way to contribute is to open the repo in GitPod.
