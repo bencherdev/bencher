@@ -11,7 +11,7 @@ const Repo = () => {
 				header: "Redirecting...",
 				content: (
 					<p>
-						Redirecting to <a href={BENCHER_GITHUB_URL}>GitHub</a>.
+						Redirecting to <a href={BENCHER_GITHUB_URL}>GitHub</a>...
 					</p>
 				),
 			}}

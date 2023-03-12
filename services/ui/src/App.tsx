@@ -17,6 +17,7 @@ const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const PerfRoutes = lazy(() => import("./components/perf/PerfRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/pages/Repo"));
+const Demo = lazy(() => import("./components/site/pages/Demo"));
 
 export const defaultUser = () => {
 	return {
@@ -122,6 +123,9 @@ const App: Component = () => {
 
 				{/* GitHub repo shortcut */}
 				<Route path="/repo" element={<Repo />} />
+
+				{/* Calendly demo shortcut */}
+				<Route path="/demo" element={<Demo />} />
 			</Routes>
 
 			<For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
