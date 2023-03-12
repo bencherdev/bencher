@@ -2,7 +2,7 @@ app = "bencher-api-dev"
 kill_timeout = 6
 
 [build]
-image = "bencherdev/bencher-api-local:nightly"
+image = "registry.fly.io/bencher-api-local"
 
 [[services]]
 protocol = "tcp"
