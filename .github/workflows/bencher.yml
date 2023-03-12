@@ -49,18 +49,6 @@ jobs:
       - name: Run clippy
         run: cargo clippy --no-deps -- -Dwarnings
 
-  cargo_udeps:
-    name: Cargo Unused Deps
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install nightly toolchain
-        run: rustup toolchain install nightly
-      - name: Install udeps
-        run: cargo install cargo-udeps --locked
-      - name: Run udeps
-        run: cargo +nightly udeps
-
   # Cargo Test
   cargo_test:
     name: Cargo Test
@@ -134,6 +122,19 @@ jobs:
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Cargo Unused Deps
+  cargo_udeps:
+    name: Cargo Unused Deps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install nightly toolchain
+        run: rustup toolchain install nightly
+      - name: Install udeps
+        run: cargo install cargo-udeps --locked
+      - name: Run udeps
+        run: cargo +nightly udeps
 
   # Pretty JS
   npx_rome_format:
@@ -268,7 +269,7 @@ jobs:
 
   latest_api_docker:
     if: startsWith(github.ref, 'refs/tags/')
-    name: Build API and Release Latest (Linux)
+    name: Build API and Release Latest
     runs-on: ubuntu-latest
     needs:
       - cargo_test
@@ -276,6 +277,7 @@ jobs:
       - cargo_check_cli_minus
       - cargo_bench
       - cargo_audit
+      - cargo_udeps
       - npx_vitest
     steps:
       - uses: actions/checkout@v3
@@ -317,7 +319,7 @@ jobs:
   # CLI
   # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
   build_cli_bin:
-    name: Build CLI (Linux)
+    name: Build CLI
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -380,7 +382,7 @@ jobs:
   # UI Docker
   build_ui_docker:
     if: true && !startsWith(github.ref, 'refs/tags/')
-    name: Build UI (Linux)
+    name: Build UI Docker
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -400,7 +402,7 @@ jobs:
 
   latest_ui_docker:
     if: startsWith(github.ref, 'refs/tags/')
-    name: Build UI and Release Latest (Linux)
+    name: Build UI and Release Latest
     runs-on: ubuntu-latest
     needs:
       - cargo_test
@@ -408,6 +410,7 @@ jobs:
       - cargo_check_cli_minus
       - cargo_bench
       - cargo_audit
+      - cargo_udeps
       - npx_vitest
     steps:
       - uses: actions/checkout@v3
