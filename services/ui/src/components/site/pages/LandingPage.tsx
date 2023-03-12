@@ -259,6 +259,32 @@ const LandingPage = (props) => {
 					</div>
 				</div>
 			</section>
+			<br />
+			<hr />
+
+			<section class="section">
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column">
+							<h2 class="title">Share Your Benchmarks</h2>
+						</div>
+					</div>
+					<br />
+					<div class="columns is-centered">
+						<div class="column">
+							<div class="content has-text-centered">
+								<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000">
+									<img
+										src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison"
+										title="Benchmark Adapter Comparison"
+										alt="Benchmark Adapter Comparison for Bencher - Bencher"
+									/>
+								</a>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
 		</section>
 	);
 };

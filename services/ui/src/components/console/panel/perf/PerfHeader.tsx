@@ -101,7 +101,7 @@ const ShareModal = (props) => {
 	const perf_page_url = createMemo(
 		() =>
 			`${location.protocol}//${location.hostname}${
-				location.port === "80" ? "" : `:${location.port}`
+				location.port ? `:${location.port}` : ""
 			}/perf/${props.project()?.slug}${location.search}`,
 	);
 
