@@ -9,7 +9,9 @@ COPY --from=builder /usr/src/target/release/api /api
 RUN mkdir -p /data
 
 RUN apt-get update \
-    && apt-get install -y sqlite3
+    && apt-get install -y \
+    sqlite3 \
+    pkg-config libfreetype6-dev libfontconfig1-dev
 
 ENV PORT 61016
 
