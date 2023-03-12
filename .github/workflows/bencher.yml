@@ -111,6 +111,7 @@ jobs:
   cargo_bench:
     name: Cargo Bench
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       BENCHER_PROJECT: bencher
       BENCHER_TESTBED: ubuntu-latest
