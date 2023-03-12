@@ -273,10 +273,10 @@ const LandingPage = (props) => {
 						<div class="column">
 							<div class="content">
 								<p>
-									All public projects get their own{" "}
-									<Link href="/perf">public perf page</Link>. These results can
-									easily be shared with an auto-updating perf image. Perfect for
-									your README!
+									All public projects have their own{" "}
+									<Link href="/perf">perf page</Link>. These results can easily
+									be shared with an auto-updating perf image. Perfect for your
+									README!
 								</p>
 							</div>
 						</div>
