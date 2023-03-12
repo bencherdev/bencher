@@ -247,7 +247,8 @@ jobs:
     name: Build Litestream API
     runs-on: ubuntu-latest
     needs:
-      - cargo_test
+      - cargo_fmt
+      - cargo_clippy
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
@@ -479,6 +480,7 @@ jobs:
     runs-on: ubuntu-latest
     # continue-on-error: true
     needs:
+      - cargo_test
       - litestream_api_docker
       - npx_vitest
       - build_ui
@@ -496,6 +498,7 @@ jobs:
     name: Deploy Local API to Fly.io
     runs-on: ubuntu-latest
     needs:
+      - cargo_test
       - local_api_docker
       - npx_vitest
       - build_ui
@@ -508,6 +511,8 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
+      - name: Add registry.fly.io as Docker registry
+        run: flyctl auth docker
       - name: Load, Tag, & Push Local Image
         run: |
           docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
@@ -530,16 +535,13 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+      - name: Add registry.fly.io as Docker registry
+        run: flyctl auth docker
       - name: Load, Tag, & Push Litestream Image
         run: |
           docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
           docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} registry.fly.io/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
           docker push registry.fly.io/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-      - name: Deploy Litestream API to Fly.io
-        working-directory: ./services/api
-        run: flyctl deploy --config fly.dev.toml
-      - uses: actions/checkout@v3
-      - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy
