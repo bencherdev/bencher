@@ -1,315 +1,1082 @@
 {
     "project": {
-        "uuid": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-        "organization": "04150e3c-7ed2-4e9b-a8fa-feebf0782d58",
-        "name": "The Computer",
-        "slug": "the-computer",
-        "url": null,
+        "uuid": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+        "organization": "68f5b40f-9e33-4e85-948b-652a7b6dec5a",
+        "name": "Bencher",
+        "slug": "bencher",
+        "url": "https://github.com/bencherdev/bencher",
         "visibility": "public"
     },
     "metric_kind": {
-        "uuid": "a89cee32-9290-488f-b58a-ade1793b3c05",
-        "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
+        "uuid": "4358146b-b647-4869-9d24-bd22bb0c49b5",
+        "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
         "name": "Latency",
         "slug": "latency",
         "units": "nanoseconds (ns)"
     },
-    "start_time": null,
+    "start_time": "2023-01-27T00:00:00Z",
     "end_time": null,
     "results": [
         {
             "branch": {
-                "uuid": "d199846b-c261-4ee0-bd71-e09a5a056614",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "master",
-                "slug": "master"
+                "uuid": "619d15ed-0fbd-4ccb-86cb-fddf3124da29",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "main",
+                "slug": "main"
             },
             "testbed": {
-                "uuid": "0a99d6fc-4a4f-4b4f-b95f-5146b1f5567c",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "base",
-                "slug": "base"
+                "uuid": "0d991aac-b241-493a-8b0f-8d41419455d2",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "ubuntu-latest",
+                "slug": "ubuntu-latest"
             },
             "benchmark": {
-                "uuid": "cfb39f98-8ca4-48fa-a338-925489728486",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "bencher::mock_0"
+                "uuid": "3525f177-fc8f-4a92-bd2f-dda7c4e15699",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "JsonAdapter::Magic (Rust)"
             },
             "metrics": [
                 {
-                    "uuid": "1a687da5-1959-46f8-a413-5c265b466ff6",
+                    "uuid": "9363399a-d4c0-4750-b1a7-398da18f497f",
                     "iteration": 0,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
+                    "start_time": "2023-01-28T02:29:31.725944242Z",
+                    "end_time": "2023-01-28T02:37:27.605813958Z",
+                    "version_number": 8,
                     "version_hash": null,
                     "metric": {
-                        "value": 200.77556612500305,
-                        "lower_bound": 184.7096674522132,
-                        "upper_bound": 216.84146479779287
+                        "value": 3214.5,
+                        "lower_bound": 3214.2,
+                        "upper_bound": 3214.9
                     }
                 },
                 {
-                    "uuid": "f48610ab-8bff-439d-b7a6-1afaf161ccbd",
-                    "iteration": 1,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
-                    "version_hash": null,
-                    "metric": {
-                        "value": 130.58028856450045,
-                        "lower_bound": 129.3418498937609,
-                        "upper_bound": 131.81872723524
-                    }
-                },
-                {
-                    "uuid": "b7e0c76e-1d4e-4157-9074-d2633c8ddd49",
-                    "iteration": 2,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
-                    "version_hash": null,
-                    "metric": {
-                        "value": 449.6498387670955,
-                        "lower_bound": 443.63200750917906,
-                        "upper_bound": 455.66767002501194
-                    }
-                },
-                {
-                    "uuid": "728be5ea-afdc-4150-8773-8871fa6a0828",
+                    "uuid": "a5304556-22fb-4cf0-851c-e4345c938793",
                     "iteration": 0,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "start_time": "2023-01-30T02:34:28.978323153Z",
+                    "end_time": "2023-01-30T02:43:36.969703599Z",
+                    "version_number": 9,
                     "version_hash": null,
                     "metric": {
-                        "value": 143.76172504477702,
-                        "lower_bound": 138.8445653754178,
-                        "upper_bound": 148.67888471413625
+                        "value": 3773.2000000000003,
+                        "lower_bound": 3772.9,
+                        "upper_bound": 3773.5
                     }
                 },
                 {
-                    "uuid": "81ab7513-5d1c-4cce-b6b3-060fbbcec4ec",
-                    "iteration": 1,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "uuid": "773a512a-9ac9-4152-b496-1cf9d5f8b2df",
+                    "iteration": 0,
+                    "start_time": "2023-01-31T12:34:33.146164699Z",
+                    "end_time": "2023-01-31T12:43:55.100989769Z",
+                    "version_number": 10,
                     "version_hash": null,
                     "metric": {
-                        "value": 317.0384959528555,
-                        "lower_bound": 292.99840195170964,
-                        "upper_bound": 341.07858995400136
+                        "value": 3872.0,
+                        "lower_bound": 3871.1000000000004,
+                        "upper_bound": 3872.9
                     }
                 },
                 {
-                    "uuid": "d5331f3b-9dd0-4be6-8fcf-908b1eadf65e",
-                    "iteration": 2,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "uuid": "a2f31bd8-385b-46f6-ad14-1ef170b59cf8",
+                    "iteration": 0,
+                    "start_time": "2023-01-31T21:11:04.839657939Z",
+                    "end_time": "2023-01-31T21:20:37.889107139Z",
+                    "version_number": 11,
                     "version_hash": null,
                     "metric": {
-                        "value": 530.2728508987145,
-                        "lower_bound": 523.0516862045262,
-                        "upper_bound": 537.4940155929029
+                        "value": 3896.7000000000003,
+                        "lower_bound": 3895.9,
+                        "upper_bound": 3897.8
+                    }
+                },
+                {
+                    "uuid": "5e5ae937-a468-4d7a-b0d2-b1f0da80f17c",
+                    "iteration": 0,
+                    "start_time": "2023-02-02T15:45:25.165461911Z",
+                    "end_time": "2023-02-02T15:55:59.775254142Z",
+                    "version_number": 12,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 4145.0,
+                        "lower_bound": 4119.1,
+                        "upper_bound": 4173.9
+                    }
+                },
+                {
+                    "uuid": "ba082dd5-2bfb-4335-98c3-3bd8cfa4208b",
+                    "iteration": 0,
+                    "start_time": "2023-02-06T16:03:59.856923852Z",
+                    "end_time": "2023-02-06T16:13:11.791086403Z",
+                    "version_number": 13,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 25188.0,
+                        "lower_bound": 25183.0,
+                        "upper_bound": 25193.0
+                    }
+                },
+                {
+                    "uuid": "e6742b53-192c-489b-8baf-0f98bbcf9026",
+                    "iteration": 0,
+                    "start_time": "2023-02-06T16:04:32.078571874Z",
+                    "end_time": "2023-02-06T16:13:45.772649977Z",
+                    "version_number": 14,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 25670.0,
+                        "lower_bound": 25667.0,
+                        "upper_bound": 25672.0
+                    }
+                },
+                {
+                    "uuid": "98d5441b-a346-4e81-a8d1-bd3efcff41f2",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T17:15:23.602525147Z",
+                    "end_time": "2023-02-13T17:33:51.693571584Z",
+                    "version_number": 15,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 36236.0,
+                        "lower_bound": 36228.0,
+                        "upper_bound": 36243.0
+                    }
+                },
+                {
+                    "uuid": "4033b859-216b-4a48-b819-de1c88ecf520",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T17:16:48.826568844Z",
+                    "end_time": "2023-02-13T17:36:03.337633836Z",
+                    "version_number": 16,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 35815.0,
+                        "lower_bound": 35549.0,
+                        "upper_bound": 36099.0
+                    }
+                },
+                {
+                    "uuid": "8f21f370-7dbb-438c-b1a4-786371a67c2a",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T19:21:12.602583647Z",
+                    "end_time": "2023-02-13T19:42:01.115486590Z",
+                    "version_number": 17,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 35780.0,
+                        "lower_bound": 35415.0,
+                        "upper_bound": 36127.0
+                    }
+                },
+                {
+                    "uuid": "220b7ce8-4fd7-4246-95e6-0fe7713aba67",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T20:38:09.766564039Z",
+                    "end_time": "2023-02-13T20:58:02.150245035Z",
+                    "version_number": 18,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 34094.0,
+                        "lower_bound": 33680.0,
+                        "upper_bound": 34525.0
+                    }
+                },
+                {
+                    "uuid": "882beb41-4a0e-4d3d-987d-6632e1ec93e8",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T21:26:27.261183726Z",
+                    "end_time": "2023-02-13T21:41:46.936599709Z",
+                    "version_number": 19,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 26864.0,
+                        "lower_bound": 26862.0,
+                        "upper_bound": 26866.0
+                    }
+                },
+                {
+                    "uuid": "853ae6a3-2d5e-401b-b4a1-80145cb196aa",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T23:18:24.361692205Z",
+                    "end_time": "2023-02-13T23:33:40.101222058Z",
+                    "version_number": 20,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 28143.0,
+                        "lower_bound": 28137.0,
+                        "upper_bound": 28152.0
+                    }
+                },
+                {
+                    "uuid": "8ec94e93-4c97-429e-ba69-e40823287a21",
+                    "iteration": 0,
+                    "start_time": "2023-02-15T17:56:17.949603958Z",
+                    "end_time": "2023-02-15T18:16:20.622373831Z",
+                    "version_number": 21,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 34518.0,
+                        "lower_bound": 34074.0,
+                        "upper_bound": 35033.0
+                    }
+                },
+                {
+                    "uuid": "42b26b5c-b6d9-4753-aa2a-f28672b71af3",
+                    "iteration": 0,
+                    "start_time": "2023-02-17T20:25:22.896657343Z",
+                    "end_time": "2023-02-17T20:40:37.305176464Z",
+                    "version_number": 22,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 28622.0,
+                        "lower_bound": 28617.0,
+                        "upper_bound": 28626.0
+                    }
+                },
+                {
+                    "uuid": "d5787754-e440-497f-9381-026b59bef1a2",
+                    "iteration": 0,
+                    "start_time": "2023-02-24T18:19:12.192430506Z",
+                    "end_time": "2023-02-24T18:38:47.285620691Z",
+                    "version_number": 23,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 34196.0,
+                        "lower_bound": 33797.0,
+                        "upper_bound": 34661.0
+                    }
+                },
+                {
+                    "uuid": "d5111501-2207-4c56-9955-e6dce5562d12",
+                    "iteration": 0,
+                    "start_time": "2023-03-04T23:03:52.611694871Z",
+                    "end_time": "2023-03-04T23:21:12.250863832Z",
+                    "version_number": 24,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 29335.0,
+                        "lower_bound": 29331.0,
+                        "upper_bound": 29339.0
+                    }
+                },
+                {
+                    "uuid": "858bdec3-8a59-4b3c-9fed-18ab33b6089e",
+                    "iteration": 0,
+                    "start_time": "2023-03-06T02:16:02.077250733Z",
+                    "end_time": "2023-03-06T02:40:03.279292197Z",
+                    "version_number": 25,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 37328.0,
+                        "lower_bound": 37064.0,
+                        "upper_bound": 37598.0
+                    }
+                },
+                {
+                    "uuid": "8493e8e3-befb-47c6-947d-f3ab4753c9d0",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T13:44:19.804592372Z",
+                    "end_time": "2023-03-07T14:07:16.757933299Z",
+                    "version_number": 26,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 36152.0,
+                        "lower_bound": 35693.0,
+                        "upper_bound": 36623.0
+                    }
+                },
+                {
+                    "uuid": "233a44fb-9d5a-4715-8a8b-b38a17bfdd27",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T15:51:20.936359892Z",
+                    "end_time": "2023-03-07T16:08:22.954662644Z",
+                    "version_number": 27,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 28751.0,
+                        "lower_bound": 28748.0,
+                        "upper_bound": 28754.0
+                    }
+                },
+                {
+                    "uuid": "7aacab86-bde1-49fd-b0d2-a208cfaa6d76",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T19:51:45.642146847Z",
+                    "end_time": "2023-03-07T20:10:25.746382168Z",
+                    "version_number": 28,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 32655.0,
+                        "lower_bound": 32176.000000000004,
+                        "upper_bound": 33083.0
+                    }
+                },
+                {
+                    "uuid": "340b6d10-99ba-4be8-a77e-c1451c4b1b43",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T23:53:38.989204753Z",
+                    "end_time": "2023-03-08T00:16:04.282271599Z",
+                    "version_number": 29,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 37788.0,
+                        "lower_bound": 37173.0,
+                        "upper_bound": 38598.0
+                    }
+                },
+                {
+                    "uuid": "e02d5659-4e38-4438-82a1-535520dcbfa3",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T00:07:37.096686262Z",
+                    "end_time": "2023-03-08T00:24:57.361925878Z",
+                    "version_number": 30,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 30171.0,
+                        "lower_bound": 30168.0,
+                        "upper_bound": 30175.0
+                    }
+                },
+                {
+                    "uuid": "73183200-6f66-47c4-963b-a7a9298c93a5",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T01:48:29.106600509Z",
+                    "end_time": "2023-03-08T02:05:56.292832785Z",
+                    "version_number": 31,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 29147.0,
+                        "lower_bound": 29144.0,
+                        "upper_bound": 29151.0
+                    }
+                },
+                {
+                    "uuid": "b76738cd-f114-4e61-914c-7e64195edb77",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T02:32:21.622694235Z",
+                    "end_time": "2023-03-08T02:49:35.577733290Z",
+                    "version_number": 32,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 29075.0,
+                        "lower_bound": 29072.0,
+                        "upper_bound": 29078.0
+                    }
+                },
+                {
+                    "uuid": "0e9bd95e-70fe-482f-89e8-f7a8dfaf470e",
+                    "iteration": 0,
+                    "start_time": "2023-03-11T22:55:49.499203379Z",
+                    "end_time": "2023-03-11T23:12:59.952823572Z",
+                    "version_number": 33,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 29820.0,
+                        "lower_bound": 29817.0,
+                        "upper_bound": 29824.0
                     }
                 }
             ]
         },
         {
             "branch": {
-                "uuid": "d199846b-c261-4ee0-bd71-e09a5a056614",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "master",
-                "slug": "master"
+                "uuid": "619d15ed-0fbd-4ccb-86cb-fddf3124da29",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "main",
+                "slug": "main"
             },
             "testbed": {
-                "uuid": "0a99d6fc-4a4f-4b4f-b95f-5146b1f5567c",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "base",
-                "slug": "base"
+                "uuid": "0d991aac-b241-493a-8b0f-8d41419455d2",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "ubuntu-latest",
+                "slug": "ubuntu-latest"
             },
             "benchmark": {
-                "uuid": "2e7b29e9-113b-4961-b1f7-a05311702675",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "bencher::mock_1"
+                "uuid": "5655ed2a-3e45-4622-bdbd-39cdd9837af8",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "JsonAdapter::Rust"
             },
             "metrics": [
                 {
-                    "uuid": "1e2a6351-93c9-4e5e-bf4e-ee54a33699a4",
+                    "uuid": "496dbda5-1432-4018-b59e-a2cc6d32d837",
                     "iteration": 0,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
+                    "start_time": "2023-01-28T02:29:31.725944242Z",
+                    "end_time": "2023-01-28T02:37:27.605813958Z",
+                    "version_number": 8,
                     "version_hash": null,
                     "metric": {
-                        "value": 1021.5818358869884,
-                        "lower_bound": 955.127235799719,
-                        "upper_bound": 1088.0364359742578
+                        "value": 3157.2,
+                        "lower_bound": 3156.8,
+                        "upper_bound": 3157.5
                     }
                 },
                 {
-                    "uuid": "9759804c-e6b6-4300-af2a-fecd73a96ff3",
-                    "iteration": 1,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
-                    "version_hash": null,
-                    "metric": {
-                        "value": 906.8726476689416,
-                        "lower_bound": 905.380144561979,
-                        "upper_bound": 908.3651507759045
-                    }
-                },
-                {
-                    "uuid": "1747c728-1f02-4b59-99d0-53d124295787",
-                    "iteration": 2,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
-                    "version_hash": null,
-                    "metric": {
-                        "value": 554.7946276093874,
-                        "lower_bound": 519.5834254330819,
-                        "upper_bound": 590.0058297856929
-                    }
-                },
-                {
-                    "uuid": "a309d428-6652-4c71-82f2-714221ea92e2",
+                    "uuid": "d5169fbd-ac3e-4493-8611-3e43de6e3f40",
                     "iteration": 0,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "start_time": "2023-01-30T02:34:28.978323153Z",
+                    "end_time": "2023-01-30T02:43:36.969703599Z",
+                    "version_number": 9,
                     "version_hash": null,
                     "metric": {
-                        "value": 1373.36102022595,
-                        "lower_bound": 1325.580806293918,
-                        "upper_bound": 1421.141234157982
+                        "value": 2735.3999999999996,
+                        "lower_bound": 2735.0,
+                        "upper_bound": 2735.9
                     }
                 },
                 {
-                    "uuid": "3c1125b6-a8d1-4cc5-b709-9bf34961555b",
-                    "iteration": 1,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "uuid": "cbce735c-d193-4117-a333-ab7a003b0411",
+                    "iteration": 0,
+                    "start_time": "2023-01-31T12:34:33.146164699Z",
+                    "end_time": "2023-01-31T12:43:55.100989769Z",
+                    "version_number": 10,
                     "version_hash": null,
                     "metric": {
-                        "value": 223.05044752843585,
-                        "lower_bound": 202.33880712336185,
-                        "upper_bound": 243.7620879335098
+                        "value": 2741.8999999999996,
+                        "lower_bound": 2741.7,
+                        "upper_bound": 2742.2
                     }
                 },
                 {
-                    "uuid": "3e45cad8-b138-4c5f-ab64-efaf971bd7e9",
-                    "iteration": 2,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "uuid": "805f69a0-3827-4b8b-bef7-b152e3e67765",
+                    "iteration": 0,
+                    "start_time": "2023-01-31T21:11:04.839657939Z",
+                    "end_time": "2023-01-31T21:20:37.889107139Z",
+                    "version_number": 11,
                     "version_hash": null,
                     "metric": {
-                        "value": 1909.004162648574,
-                        "lower_bound": 1879.5471917663465,
-                        "upper_bound": 1938.4611335308016
+                        "value": 2814.0,
+                        "lower_bound": 2813.6,
+                        "upper_bound": 2814.6
+                    }
+                },
+                {
+                    "uuid": "8c1ac269-6abc-45ae-b513-5d9a8e1fc042",
+                    "iteration": 0,
+                    "start_time": "2023-02-02T15:45:25.165461911Z",
+                    "end_time": "2023-02-02T15:55:59.775254142Z",
+                    "version_number": 12,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3016.3,
+                        "lower_bound": 2983.9,
+                        "upper_bound": 3053.4
+                    }
+                },
+                {
+                    "uuid": "d35e645a-fa7c-4326-8c5c-691a5079fa0c",
+                    "iteration": 0,
+                    "start_time": "2023-02-06T16:03:59.856923852Z",
+                    "end_time": "2023-02-06T16:13:11.791086403Z",
+                    "version_number": 13,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2829.4,
+                        "lower_bound": 2827.6,
+                        "upper_bound": 2832.3999999999996
+                    }
+                },
+                {
+                    "uuid": "625e8fc8-a535-4a6b-ba52-d6be89c4537c",
+                    "iteration": 0,
+                    "start_time": "2023-02-06T16:04:32.078571874Z",
+                    "end_time": "2023-02-06T16:13:45.772649977Z",
+                    "version_number": 14,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2825.2000000000003,
+                        "lower_bound": 2824.8,
+                        "upper_bound": 2825.6
+                    }
+                },
+                {
+                    "uuid": "720b59f1-abd2-4705-9c1a-33c869fb010f",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T17:15:23.602525147Z",
+                    "end_time": "2023-02-13T17:33:51.693571584Z",
+                    "version_number": 15,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3315.6,
+                        "lower_bound": 3314.5,
+                        "upper_bound": 3316.7
+                    }
+                },
+                {
+                    "uuid": "5543d5e2-f6fd-4077-be05-5f0d45c170ed",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T17:16:48.826568844Z",
+                    "end_time": "2023-02-13T17:36:03.337633836Z",
+                    "version_number": 16,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3350.6,
+                        "lower_bound": 3331.2,
+                        "upper_bound": 3371.3
+                    }
+                },
+                {
+                    "uuid": "88a50b7e-be25-4119-bfea-aa3d69e21a6c",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T19:21:12.602583647Z",
+                    "end_time": "2023-02-13T19:42:01.115486590Z",
+                    "version_number": 17,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3498.2000000000003,
+                        "lower_bound": 3466.8,
+                        "upper_bound": 3527.8
+                    }
+                },
+                {
+                    "uuid": "58e0210f-b5fa-4a8d-a422-902d8aed5bbd",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T20:38:09.766564039Z",
+                    "end_time": "2023-02-13T20:58:02.150245035Z",
+                    "version_number": 18,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3183.8,
+                        "lower_bound": 3141.0,
+                        "upper_bound": 3227.7999999999997
+                    }
+                },
+                {
+                    "uuid": "b7c05d73-ed8b-48e4-95ed-6f0a44835e16",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T21:26:27.261183726Z",
+                    "end_time": "2023-02-13T21:41:46.936599709Z",
+                    "version_number": 19,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2820.7,
+                        "lower_bound": 2820.6000000000004,
+                        "upper_bound": 2820.9
+                    }
+                },
+                {
+                    "uuid": "d0304782-5323-41ae-bcfd-0e0eea29e3e3",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T23:18:24.361692205Z",
+                    "end_time": "2023-02-13T23:33:40.101222058Z",
+                    "version_number": 20,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2808.0,
+                        "lower_bound": 2806.6,
+                        "upper_bound": 2810.4
+                    }
+                },
+                {
+                    "uuid": "6d72e7a3-e2cd-46bc-95ca-1f5aa3265bb0",
+                    "iteration": 0,
+                    "start_time": "2023-02-15T17:56:17.949603958Z",
+                    "end_time": "2023-02-15T18:16:20.622373831Z",
+                    "version_number": 21,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3495.7,
+                        "lower_bound": 3463.4,
+                        "upper_bound": 3529.9
+                    }
+                },
+                {
+                    "uuid": "7191d045-4c24-442d-a8df-2bf71c18d572",
+                    "iteration": 0,
+                    "start_time": "2023-02-17T20:25:22.896657343Z",
+                    "end_time": "2023-02-17T20:40:37.305176464Z",
+                    "version_number": 22,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2850.2000000000003,
+                        "lower_bound": 2849.8,
+                        "upper_bound": 2850.6
+                    }
+                },
+                {
+                    "uuid": "e6fe76a2-ac07-47e6-ad5a-a91dfd0e970c",
+                    "iteration": 0,
+                    "start_time": "2023-02-24T18:19:12.192430506Z",
+                    "end_time": "2023-02-24T18:38:47.285620691Z",
+                    "version_number": 23,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3325.0,
+                        "lower_bound": 3278.9,
+                        "upper_bound": 3371.0
+                    }
+                },
+                {
+                    "uuid": "5b9ad00e-21d9-47c0-b000-ed0e14a77822",
+                    "iteration": 0,
+                    "start_time": "2023-03-04T23:03:52.611694871Z",
+                    "end_time": "2023-03-04T23:21:12.250863832Z",
+                    "version_number": 24,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2774.5,
+                        "lower_bound": 2774.3,
+                        "upper_bound": 2774.7999999999997
+                    }
+                },
+                {
+                    "uuid": "d561ae99-5a8e-46ad-9164-65de58e82320",
+                    "iteration": 0,
+                    "start_time": "2023-03-06T02:16:02.077250733Z",
+                    "end_time": "2023-03-06T02:40:03.279292197Z",
+                    "version_number": 25,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3575.6,
+                        "lower_bound": 3555.4,
+                        "upper_bound": 3598.2
+                    }
+                },
+                {
+                    "uuid": "2ad2955d-13b1-4dd1-a576-61fad9e3c672",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T13:44:19.804592372Z",
+                    "end_time": "2023-03-07T14:07:16.757933299Z",
+                    "version_number": 26,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3467.0,
+                        "lower_bound": 3412.7999999999997,
+                        "upper_bound": 3520.9
+                    }
+                },
+                {
+                    "uuid": "fd0a4644-feda-4d5c-88cd-135004c9d381",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T15:51:20.936359892Z",
+                    "end_time": "2023-03-07T16:08:22.954662644Z",
+                    "version_number": 27,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2832.5,
+                        "lower_bound": 2832.2,
+                        "upper_bound": 2832.8
+                    }
+                },
+                {
+                    "uuid": "0c5c206b-845e-4054-ac33-7cf4128680f6",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T19:51:45.642146847Z",
+                    "end_time": "2023-03-07T20:10:25.746382168Z",
+                    "version_number": 28,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2861.8,
+                        "lower_bound": 2815.7999999999997,
+                        "upper_bound": 2914.5
+                    }
+                },
+                {
+                    "uuid": "e8ca482b-0df2-4259-85e4-c5bf9f542e82",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T23:53:38.989204753Z",
+                    "end_time": "2023-03-08T00:16:04.282271599Z",
+                    "version_number": 29,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3484.6,
+                        "lower_bound": 3453.3999999999996,
+                        "upper_bound": 3518.5
+                    }
+                },
+                {
+                    "uuid": "eb0abb84-da1b-4c24-a093-d3e1c2af96ba",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T00:07:37.096686262Z",
+                    "end_time": "2023-03-08T00:24:57.361925878Z",
+                    "version_number": 30,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2822.2999999999997,
+                        "lower_bound": 2822.1,
+                        "upper_bound": 2822.5
+                    }
+                },
+                {
+                    "uuid": "ca6662a6-64ae-48bd-97d8-be705c694041",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T01:48:29.106600509Z",
+                    "end_time": "2023-03-08T02:05:56.292832785Z",
+                    "version_number": 31,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2823.9,
+                        "lower_bound": 2823.7000000000003,
+                        "upper_bound": 2824.2
+                    }
+                },
+                {
+                    "uuid": "8f41ad62-f315-4b02-a28e-47aa3f103e30",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T02:32:21.622694235Z",
+                    "end_time": "2023-03-08T02:49:35.577733290Z",
+                    "version_number": 32,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2875.3,
+                        "lower_bound": 2874.8,
+                        "upper_bound": 2875.9
+                    }
+                },
+                {
+                    "uuid": "cd8582b6-e543-402d-a5bb-2878f33cc3fa",
+                    "iteration": 0,
+                    "start_time": "2023-03-11T22:55:49.499203379Z",
+                    "end_time": "2023-03-11T23:12:59.952823572Z",
+                    "version_number": 33,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2759.1,
+                        "lower_bound": 2758.7999999999997,
+                        "upper_bound": 2759.5
                     }
                 }
             ]
         },
         {
             "branch": {
-                "uuid": "d199846b-c261-4ee0-bd71-e09a5a056614",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "master",
-                "slug": "master"
+                "uuid": "619d15ed-0fbd-4ccb-86cb-fddf3124da29",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "main",
+                "slug": "main"
             },
             "testbed": {
-                "uuid": "0a99d6fc-4a4f-4b4f-b95f-5146b1f5567c",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "base",
-                "slug": "base"
+                "uuid": "0d991aac-b241-493a-8b0f-8d41419455d2",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "ubuntu-latest",
+                "slug": "ubuntu-latest"
             },
             "benchmark": {
-                "uuid": "62ba9176-227d-4837-83d4-a0a07e9c8bf0",
-                "project": "a1154042-1cf8-4b2c-872f-de88e4516b66",
-                "name": "bencher::mock_2"
+                "uuid": "1db23e93-f909-40aa-bf42-838cc7ae05f5",
+                "project": "6bd4b7f2-d850-4028-8d1b-edd18a9cae1d",
+                "name": "JsonAdapter::RustBench"
             },
             "metrics": [
                 {
-                    "uuid": "2a4fc46f-527c-442e-91a0-96a69520d74a",
+                    "uuid": "b694f801-c97d-4bc4-a6a3-668ef6c30017",
                     "iteration": 0,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
+                    "start_time": "2023-01-30T02:34:28.978323153Z",
+                    "end_time": "2023-01-30T02:43:36.969703599Z",
+                    "version_number": 9,
                     "version_hash": null,
                     "metric": {
-                        "value": 1713.477550108362,
-                        "lower_bound": 1587.1124846924608,
-                        "upper_bound": 1839.8426155242632
+                        "value": 2721.5,
+                        "lower_bound": 2721.2999999999997,
+                        "upper_bound": 2721.7
                     }
                 },
                 {
-                    "uuid": "d168d46e-869b-470e-90d8-f3b455dbea83",
-                    "iteration": 1,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
-                    "version_hash": null,
-                    "metric": {
-                        "value": 1218.5010956842114,
-                        "lower_bound": 1215.157082284474,
-                        "upper_bound": 1221.8451090839487
-                    }
-                },
-                {
-                    "uuid": "0d6ed568-72c0-4277-8cd9-69c52d1562b6",
-                    "iteration": 2,
-                    "start_time": "2023-03-11T12:23:18.289863643Z",
-                    "end_time": "2023-03-11T12:23:18.298702113Z",
-                    "version_number": 0,
-                    "version_hash": null,
-                    "metric": {
-                        "value": 417.1042595022343,
-                        "lower_bound": 390.13220421094354,
-                        "upper_bound": 444.07631479352506
-                    }
-                },
-                {
-                    "uuid": "3cdbe7ea-3811-4f45-91ef-1dc2d8316c48",
+                    "uuid": "9153e86e-dc42-483b-aa4c-cfaec0112d7e",
                     "iteration": 0,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "start_time": "2023-01-31T12:34:33.146164699Z",
+                    "end_time": "2023-01-31T12:43:55.100989769Z",
+                    "version_number": 10,
                     "version_hash": null,
                     "metric": {
-                        "value": 2969.584042356512,
-                        "lower_bound": 2864.0445138387113,
-                        "upper_bound": 3075.1235708743125
+                        "value": 2747.3,
+                        "lower_bound": 2746.6,
+                        "upper_bound": 2748.4
                     }
                 },
                 {
-                    "uuid": "b8afa91a-f3a8-4a95-9071-e5567ab564f6",
-                    "iteration": 1,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "uuid": "d055652e-ee34-4283-94fa-0257666527a5",
+                    "iteration": 0,
+                    "start_time": "2023-01-31T21:11:04.839657939Z",
+                    "end_time": "2023-01-31T21:20:37.889107139Z",
+                    "version_number": 11,
                     "version_hash": null,
                     "metric": {
-                        "value": 689.5596988098592,
-                        "lower_bound": 665.321837544157,
-                        "upper_bound": 713.7975600755615
+                        "value": 2818.5,
+                        "lower_bound": 2818.2,
+                        "upper_bound": 2818.8
                     }
                 },
                 {
-                    "uuid": "e37907bb-58cb-4ed5-94aa-52c220bfbd8c",
-                    "iteration": 2,
-                    "start_time": "2023-03-11T17:30:30.962778238Z",
-                    "end_time": "2023-03-11T17:30:30.972401737Z",
-                    "version_number": 1,
+                    "uuid": "f93331ab-6ae7-43a2-a022-05c5c1e936ac",
+                    "iteration": 0,
+                    "start_time": "2023-02-02T15:45:25.165461911Z",
+                    "end_time": "2023-02-02T15:55:59.775254142Z",
+                    "version_number": 12,
                     "version_hash": null,
                     "metric": {
-                        "value": 2655.2317078622364,
-                        "lower_bound": 2393.4682549539575,
-                        "upper_bound": 2916.995160770515
+                        "value": 2973.3999999999996,
+                        "lower_bound": 2952.5,
+                        "upper_bound": 2998.5
+                    }
+                },
+                {
+                    "uuid": "2cbf65df-2e89-44f2-ac17-87648644f071",
+                    "iteration": 0,
+                    "start_time": "2023-02-06T16:03:59.856923852Z",
+                    "end_time": "2023-02-06T16:13:11.791086403Z",
+                    "version_number": 13,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2828.5,
+                        "lower_bound": 2828.2,
+                        "upper_bound": 2828.9
+                    }
+                },
+                {
+                    "uuid": "3f321cf5-dbc0-4067-8cde-4d2753bdf847",
+                    "iteration": 0,
+                    "start_time": "2023-02-06T16:04:32.078571874Z",
+                    "end_time": "2023-02-06T16:13:45.772649977Z",
+                    "version_number": 14,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2820.9,
+                        "lower_bound": 2820.3999999999996,
+                        "upper_bound": 2821.6
+                    }
+                },
+                {
+                    "uuid": "d4e7fd9e-fdcb-41ef-bd1b-eff281726d57",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T17:15:23.602525147Z",
+                    "end_time": "2023-02-13T17:33:51.693571584Z",
+                    "version_number": 15,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3315.2,
+                        "lower_bound": 3314.5,
+                        "upper_bound": 3315.7999999999997
+                    }
+                },
+                {
+                    "uuid": "b309c862-42e3-4b50-8233-1aec955dc345",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T17:16:48.826568844Z",
+                    "end_time": "2023-02-13T17:36:03.337633836Z",
+                    "version_number": 16,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3375.3,
+                        "lower_bound": 3349.5,
+                        "upper_bound": 3402.6
+                    }
+                },
+                {
+                    "uuid": "26544fdf-7ba4-4a1b-992b-a46db8dbff0e",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T19:21:12.602583647Z",
+                    "end_time": "2023-02-13T19:42:01.115486590Z",
+                    "version_number": 17,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3476.3,
+                        "lower_bound": 3444.7999999999997,
+                        "upper_bound": 3511.6
+                    }
+                },
+                {
+                    "uuid": "3d56b3dc-7124-4233-9f9b-c947d0c542b3",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T20:38:09.766564039Z",
+                    "end_time": "2023-02-13T20:58:02.150245035Z",
+                    "version_number": 18,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3252.5,
+                        "lower_bound": 3216.4,
+                        "upper_bound": 3286.4
+                    }
+                },
+                {
+                    "uuid": "2e6d0dfd-1c91-4ce0-909a-5dd56bd7d9c4",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T21:26:27.261183726Z",
+                    "end_time": "2023-02-13T21:41:46.936599709Z",
+                    "version_number": 19,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2834.7000000000003,
+                        "lower_bound": 2819.7999999999997,
+                        "upper_bound": 2856.3999999999996
+                    }
+                },
+                {
+                    "uuid": "13be37a7-7bbd-4f5c-996a-f8a42745e1fa",
+                    "iteration": 0,
+                    "start_time": "2023-02-13T23:18:24.361692205Z",
+                    "end_time": "2023-02-13T23:33:40.101222058Z",
+                    "version_number": 20,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2801.6,
+                        "lower_bound": 2801.2999999999997,
+                        "upper_bound": 2801.8999999999996
+                    }
+                },
+                {
+                    "uuid": "30f166a5-b013-4634-952d-78600954c9ae",
+                    "iteration": 0,
+                    "start_time": "2023-02-15T17:56:17.949603958Z",
+                    "end_time": "2023-02-15T18:16:20.622373831Z",
+                    "version_number": 21,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3476.9,
+                        "lower_bound": 3429.9,
+                        "upper_bound": 3531.5
+                    }
+                },
+                {
+                    "uuid": "ae2f72f6-3597-4954-b16e-7eea2a822f69",
+                    "iteration": 0,
+                    "start_time": "2023-02-17T20:25:22.896657343Z",
+                    "end_time": "2023-02-17T20:40:37.305176464Z",
+                    "version_number": 22,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2846.2000000000003,
+                        "lower_bound": 2845.9,
+                        "upper_bound": 2846.5
+                    }
+                },
+                {
+                    "uuid": "4e41b5fc-5a85-45b5-9245-4548e1a50949",
+                    "iteration": 0,
+                    "start_time": "2023-02-24T18:19:12.192430506Z",
+                    "end_time": "2023-02-24T18:38:47.285620691Z",
+                    "version_number": 23,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3238.3,
+                        "lower_bound": 3201.4,
+                        "upper_bound": 3277.8
+                    }
+                },
+                {
+                    "uuid": "0f870a07-d077-490a-9243-b249e67f82a7",
+                    "iteration": 0,
+                    "start_time": "2023-03-04T23:03:52.611694871Z",
+                    "end_time": "2023-03-04T23:21:12.250863832Z",
+                    "version_number": 24,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2767.0,
+                        "lower_bound": 2766.7000000000003,
+                        "upper_bound": 2767.3999999999996
+                    }
+                },
+                {
+                    "uuid": "cc6b5079-5ca8-4343-a8b0-086b5b0483bb",
+                    "iteration": 0,
+                    "start_time": "2023-03-06T02:16:02.077250733Z",
+                    "end_time": "2023-03-06T02:40:03.279292197Z",
+                    "version_number": 25,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3628.7,
+                        "lower_bound": 3591.2000000000003,
+                        "upper_bound": 3672.7
+                    }
+                },
+                {
+                    "uuid": "f070428f-5dd0-450a-b69c-8a17066a637f",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T13:44:19.804592372Z",
+                    "end_time": "2023-03-07T14:07:16.757933299Z",
+                    "version_number": 26,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3443.7000000000003,
+                        "lower_bound": 3410.2000000000003,
+                        "upper_bound": 3480.6
+                    }
+                },
+                {
+                    "uuid": "073301c1-f5a2-4030-8265-d7ca8f7b4e14",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T15:51:20.936359892Z",
+                    "end_time": "2023-03-07T16:08:22.954662644Z",
+                    "version_number": 27,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2821.6,
+                        "lower_bound": 2820.7,
+                        "upper_bound": 2822.6
+                    }
+                },
+                {
+                    "uuid": "a216c029-cfed-4741-9927-8e47cf2595c0",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T19:51:45.642146847Z",
+                    "end_time": "2023-03-07T20:10:25.746382168Z",
+                    "version_number": 28,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2850.9,
+                        "lower_bound": 2820.3999999999996,
+                        "upper_bound": 2884.6
+                    }
+                },
+                {
+                    "uuid": "ff49a2c2-60f9-4a4e-97d7-ed39b975155c",
+                    "iteration": 0,
+                    "start_time": "2023-03-07T23:53:38.989204753Z",
+                    "end_time": "2023-03-08T00:16:04.282271599Z",
+                    "version_number": 29,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 3505.6,
+                        "lower_bound": 3476.7000000000003,
+                        "upper_bound": 3537.1
+                    }
+                },
+                {
+                    "uuid": "ef222752-9315-43c0-8fc9-9ab7a3ee459c",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T00:07:37.096686262Z",
+                    "end_time": "2023-03-08T00:24:57.361925878Z",
+                    "version_number": 30,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2819.7000000000003,
+                        "lower_bound": 2819.6,
+                        "upper_bound": 2819.9
+                    }
+                },
+                {
+                    "uuid": "dea31e91-83dc-47d3-8e6d-1356a242c5a7",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T01:48:29.106600509Z",
+                    "end_time": "2023-03-08T02:05:56.292832785Z",
+                    "version_number": 31,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2819.1000000000004,
+                        "lower_bound": 2818.9,
+                        "upper_bound": 2819.3
+                    }
+                },
+                {
+                    "uuid": "edbf079a-ef9d-44b5-a31b-3d079d8b8851",
+                    "iteration": 0,
+                    "start_time": "2023-03-08T02:32:21.622694235Z",
+                    "end_time": "2023-03-08T02:49:35.577733290Z",
+                    "version_number": 32,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2875.2,
+                        "lower_bound": 2872.6,
+                        "upper_bound": 2880.1
+                    }
+                },
+                {
+                    "uuid": "6dd51914-3075-4821-a30a-faed105496ef",
+                    "iteration": 0,
+                    "start_time": "2023-03-11T22:55:49.499203379Z",
+                    "end_time": "2023-03-11T23:12:59.952823572Z",
+                    "version_number": 33,
+                    "version_hash": null,
+                    "metric": {
+                        "value": 2759.3,
+                        "lower_bound": 2758.0,
+                        "upper_bound": 2761.1
                     }
                 }
             ]

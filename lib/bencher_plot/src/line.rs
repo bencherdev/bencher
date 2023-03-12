@@ -143,7 +143,7 @@ impl LinePlot {
 
             const KEY_LEFT_MARGIN: usize = 48;
             const BOX_GAP: usize = 12;
-            let (box_x_left, box_width, box_gap) = if lines_len > 4 {
+            let (box_x_left, box_width, box_gap) = if lines_len > 3 {
                 const MIN_GAP: usize = 4;
                 let extra_lines = lines_len - 4;
                 let box_x_left = std::cmp::max(MIN_GAP, KEY_LEFT_MARGIN - (extra_lines * 8));
@@ -152,7 +152,7 @@ impl LinePlot {
                 let width = (usize::try_from(IMG_WIDTH)? - box_x_left - box_gaps) / lines_len;
                 (box_x_left, width, box_gap)
             } else {
-                (KEY_LEFT_MARGIN, 200, BOX_GAP)
+                (KEY_LEFT_MARGIN, 256, BOX_GAP)
             };
 
             const BOX_HEIGHT: i32 = 24;
