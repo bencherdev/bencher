@@ -2,7 +2,7 @@ app = "bencher-api"
 kill_timeout = 6
 
 [build]
-image = "registry.fly.io/bencher-api-litestream"
+image = "registry.fly.io/bencher-api"
 
 [env]
 LITESTREAM_DB_PATH = "/data/bencher.db"

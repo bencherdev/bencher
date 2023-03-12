@@ -516,8 +516,8 @@ jobs:
       - name: Load, Tag, & Push Local Image
         run: |
           docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} registry.fly.io/${{ env.API_LOCAL_DOCKER_IMAGE }}
-          docker push registry.fly.io/${{ env.API_LOCAL_DOCKER_IMAGE }}
+          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} registry.fly.io/bencher-api-dev
+          docker push registry.fly.io/bencher-api-dev
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --config fly.dev.toml
@@ -540,8 +540,8 @@ jobs:
       - name: Load, Tag, & Push Litestream Image
         run: |
           docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} registry.fly.io/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-          docker push registry.fly.io/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
+          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} registry.fly.io/bencher-api
+          docker push registry.fly.io/bencher-api
       - name: Deploy Litestream API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy
