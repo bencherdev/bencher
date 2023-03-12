@@ -230,15 +230,12 @@ jobs:
         with:
           context: ./services/api
           file: ./services/api/local.Dockerfile
-          tags: ${{ env.DOCKER_HUB_ORG }}/${{ env.API_LOCAL_DOCKER_IMAGE }}
+          tags: ${{ env.DOCKER_HUB_ORG }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:local
           push: false
-      - name: Build Litestream
-        uses: docker/build-push-action@v3
-        with:
-          context: ./services/api
-          file: ./services/api/litestream.Dockerfile
-          tags: ${{ env.DOCKER_HUB_ORG }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-          push: false
+      - name: Save Local
+        run: |
+          docker save ${{ env.DOCKER_HUB_ORG }}/${{ env.API_LOCAL_DOCKER_IMAGE }}:local \
+          | gzip > bencher_api_local.tar.gz
 
   nightly_api_docker:
     if: github.ref == 'refs/heads/main'
@@ -529,6 +526,22 @@ jobs:
   deploy_api_fly:
     name: Deploy API to Fly.io
     runs-on: ubuntu-latest
+    needs:
+      - nightly_api_docker
+      - npx_vitest
+      - build_ui
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy API to Fly.io
+        working-directory: ./services/api
+        run: flyctl deploy --config fly.dev.toml
+
+  deploy_api_fly_prod:
+    name: Deploy API to Fly.io Prod
+    runs-on: ubuntu-latest
     needs: backup_database
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -537,14 +550,14 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy API to Fly.io
         working-directory: ./services/api
-        run: flyctl deploy --remote-only
+        run: flyctl deploy
 
   # UI Netlify
   deploy_ui_netlify:
     if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
     name: Deploy UI to Netlify
     runs-on: ubuntu-latest
-    needs: build_ui
+    needs: deploy_api_fly
     steps:
       - uses: actions/checkout@v3
       - name: Download UI Artifact
@@ -562,7 +575,7 @@ jobs:
   deploy_ui_netlify_prod:
     name: Deploy UI to Netlify Prod
     runs-on: ubuntu-latest
-    needs: deploy_api_fly
+    needs: deploy_api_fly_prod
     steps:
       - uses: actions/checkout@v3
       - name: Download UI Artifact

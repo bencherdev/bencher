@@ -1,0 +1,18 @@
+app = "bencher-api-dev"
+kill_timeout = 6
+
+[build]
+image = "bencherdev/bencher-api-local:nightly"
+
+[[services]]
+protocol = "tcp"
+internal_port = 61016
+
+[[services.ports]]
+handlers = ["http"]
+port = 80
+force_https = true
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
