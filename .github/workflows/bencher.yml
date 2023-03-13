@@ -504,7 +504,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
-        run: flyctl deploy --config fly.dev.toml
+        run: flyctl deploy --local-only --config fly.dev.toml
       - name: Ping API Server
         run: wget https://dev.api.bencher.dev/v0/server/ping
 
@@ -527,7 +527,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io
         working-directory: ./services/api
-        run: flyctl deploy
+        run: flyctl deploy --local-only
       - name: Ping API Server
         run: wget https://api.bencher.dev/v0/server/ping
 
