@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.40"
+    "version": "0.2.41"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -2994,6 +2994,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3109,6 +3117,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3197,6 +3213,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3272,6 +3296,14 @@
             "name": "testbeds",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "nullable": true,
               "type": "string"
             }
           }
@@ -6160,8 +6192,10 @@
             "format": "date-time"
           },
           "metric_kind": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonMetricKind"
+          },
+          "project": {
+            "$ref": "#/components/schemas/JsonProject"
           },
           "results": {
             "type": "array",
@@ -6177,6 +6211,7 @@
         },
         "required": [
           "metric_kind",
+          "project",
           "results"
         ]
       },
@@ -6226,12 +6261,10 @@
         "type": "object",
         "properties": {
           "benchmark": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonBenchmark"
           },
           "branch": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonBranch"
           },
           "metrics": {
             "type": "array",
@@ -6240,8 +6273,7 @@
             }
           },
           "testbed": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonTestbed"
           }
         },
         "required": [
