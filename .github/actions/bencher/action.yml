@@ -1,4 +1,4 @@
-name: Bencher CLI
+name: Bencher
 description: Installs the Bencher CLI for Continuous Benchmarking
 author: Bencher
 branding:
