@@ -1,0 +1,18 @@
+name: Bencher CLI
+description: Installs the Bencher CLI for Continuous Benchmarking
+author: Bencher
+branding:
+  icon: bar-chart
+  color: orange
+runs:
+  using: node16
+  main: dist/index.js
+inputs:
+  version:
+    description: Version of the Bencher CLI to install (default latest)
+    default: latest
+    required: false
+  host: # id of input
+    description: "Backend host URL (default https://api.bencher.dev)"
+    # default: ""
+    required: false

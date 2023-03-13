@@ -14,6 +14,10 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
+  "[typescript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rome.rome"
+  },
   "[typescriptreact]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rome.rome"

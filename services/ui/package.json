@@ -2,6 +2,7 @@
   "name": "bencher-ui",
   "version": "0.1.0",
   "description": "Bencher Web UI",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "wasm": "wasm-pack build ../../lib/bencher_valid --target web",
@@ -13,7 +14,23 @@
     "preview": "vite preview",
     "start": "start-storybook"
   },
-  "license": "MIT",
+  "dependencies": {
+    "@analytics/google-analytics": "^1.0.5",
+    "@observablehq/plot": "^0.4.3",
+    "@solid-primitives/debounce": "^1.3.0",
+    "@solid-primitives/resize-observer": "^2.0.6",
+    "analytics": "^0.8.1",
+    "axios": "^0.27.2",
+    "bulma-divider": "^0.2.0",
+    "bulma-pricingtable": "^0.2.0",
+    "bulma-switch": "^2.0.4",
+    "d3": "^7.6.1",
+    "slugify": "^1.6.5",
+    "solid-app-router": "^0.4.1",
+    "solid-js": "^1.5.0",
+    "swagger-ui-dist": "^4.15.5",
+    "validator": "^13.7.0"
+  },
   "devDependencies": {
     "@babel/core": "7.16.7",
     "@mdx-js/rollup": "^2.1.5",
@@ -32,22 +49,5 @@
     "vite-plugin-solid": "^2.5.0",
     "vite-plugin-wasm-pack": "^0.1.12",
     "vitest": "^0.26.3"
-  },
-  "dependencies": {
-    "@analytics/google-analytics": "^1.0.5",
-    "@observablehq/plot": "^0.4.3",
-    "@solid-primitives/debounce": "^1.3.0",
-    "@solid-primitives/resize-observer": "^2.0.6",
-    "analytics": "^0.8.1",
-    "axios": "^0.27.2",
-    "bulma-divider": "^0.2.0",
-    "bulma-pricingtable": "^0.2.0",
-    "bulma-switch": "^2.0.4",
-    "d3": "^7.6.1",
-    "slugify": "^1.6.5",
-    "solid-app-router": "^0.4.1",
-    "solid-js": "^1.5.0",
-    "swagger-ui-dist": "^4.15.5",
-    "validator": "^13.7.0"
   }
 }
