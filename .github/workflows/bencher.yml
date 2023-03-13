@@ -493,18 +493,15 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-      - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Download Local Artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-      - name: Add registry.fly.io as Docker registry
-        run: flyctl auth docker
-      - name: Load, Tag, & Push Local Image
+      - name: Load & Tag Local Image
         run: |
           docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
           docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} registry.fly.io/bencher-api-dev
-          docker push registry.fly.io/bencher-api-dev
+      - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy --config fly.dev.toml
@@ -519,18 +516,15 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-      - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Download Litestream Artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-      - name: Add registry.fly.io as Docker registry
-        run: flyctl auth docker
-      - name: Load, Tag, & Push Litestream Image
+      - name: Load & Tag Litestream Image
         run: |
           docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
           docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} registry.fly.io/bencher-api
-          docker push registry.fly.io/bencher-api
+      - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io
         working-directory: ./services/api
         run: flyctl deploy
