@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from "solid-app-router";
+import { useLocation, useParams } from "solid-app-router";
 import { createEffect, createMemo, createResource, For } from "solid-js";
 import { BENCHER_API_URL, get_options, validate_jwt } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
@@ -7,7 +7,10 @@ import axios from "axios";
 import Notification from "../site/Notification";
 
 export const organizationSlug = (pathname) => {
-	const path = pathname().split("/");
+	const path = pathname()?.split("/");
+	if (!path) {
+		return null;
+	}
 	if (
 		path.length < 5 ||
 		path[0] ||
@@ -22,7 +25,10 @@ export const organizationSlug = (pathname) => {
 };
 
 export const projectSlug = (pathname) => {
-	const path = pathname().split("/");
+	const path = pathname()?.split("/");
+	if (!path) {
+		return null;
+	}
 	if (
 		path.length < 5 ||
 		path[0] ||

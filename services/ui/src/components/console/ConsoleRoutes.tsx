@@ -9,7 +9,7 @@ import {
 import { Operation, Resource } from "./config/types";
 
 import consoleConfig from "./config/console";
-import Forward, { forward_path } from "../site/Forward";
+import { forward_path } from "../site/Forward";
 import {
 	PLAN_PARAM,
 	NOTIFY_KIND_PARAM,

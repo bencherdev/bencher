@@ -196,6 +196,7 @@ const PerfPanel = (props) => {
 
 	const perf_query_fetcher = createMemo(() => {
 		return {
+			project_slug: props.path_params().project_slug,
 			perf_query: perf_query(),
 			refresh: refresh(),
 			token: props.user?.token,
@@ -353,6 +354,7 @@ const PerfPanel = (props) => {
 			<PerfHeader
 				user={props.user}
 				config={props.config?.header}
+				path_params={props.path_params}
 				perf_data={perf_data}
 				isPlotInit={isPlotInit}
 				perf_query={perf_query}
