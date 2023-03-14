@@ -272,22 +272,21 @@ impl PerfData {
             })
             .collect();
 
-        match (min_x, max_x, min_y, max_y) {
-            (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) => {
-                let x_time = max_x - min_x < Duration::days(X_LABELS);
-                let y_desc = format!(
-                    "{}: {}",
-                    json_perf.metric_kind.name, json_perf.metric_kind.units
-                );
-                Some(PerfData {
-                    lines,
-                    x: (min_x, max_x),
-                    y: (min_y, max_y),
-                    x_time,
-                    y_desc,
-                })
-            },
-            _ => None,
+        if let (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) = (min_x, max_x, min_y, max_y) {
+            let x_time = max_x - min_x < Duration::days(X_LABELS);
+            let y_desc = format!(
+                "{}: {}",
+                json_perf.metric_kind.name, json_perf.metric_kind.units
+            );
+            Some(PerfData {
+                lines,
+                x: (min_x, max_x),
+                y: (min_y, max_y),
+                x_time,
+                y_desc,
+            })
+        } else {
+            None
         }
     }
 
