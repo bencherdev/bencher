@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
     character::complete::{anychar, space0, space1},
     combinator::{eof, map, map_res},
@@ -20,7 +20,12 @@ use crate::{
 pub struct AdapterCppCatch2;
 
 impl Adapter for AdapterCppCatch2 {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Mean) | None => {},
+            Some(JsonAverage::Median) => return None,
+        }
+
         let mut benchmark_metrics = Vec::new();
 
         let mut benchmark_name_line = None;
@@ -142,11 +147,12 @@ fn parse_catch2_prelude(input: &str) -> IResult<&str, Prelude> {
 
 #[cfg(test)]
 pub(crate) mod test_cpp_catch2 {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
-        AdapterResults,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
+        AdapterResults, Settings,
     };
 
     use super::{parse_catch2_benchmark_name, AdapterCppCatch2};
@@ -185,6 +191,29 @@ pub(crate) mod test_cpp_catch2 {
                 "#{index}: {input}"
             )
         }
+    }
+
+    #[test]
+    fn test_adapter_cpp_catch2_average() {
+        let file_path = "./tool_output/cpp/catch2/four.txt";
+        let results = opt_convert_file_path::<AdapterCppCatch2>(
+            file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+        validate_adapter_cpp_catch2(results);
+
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterCppCatch2>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Median)
+                }
+            )
+        );
     }
 
     #[test]

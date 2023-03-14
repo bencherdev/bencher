@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 
 use nom::{
     bytes::complete::tag,
@@ -20,7 +20,12 @@ use crate::{
 pub struct AdapterJsTime;
 
 impl Adapter for AdapterJsTime {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Mean) | Some(JsonAverage::Median) => return None,
+            None => {},
+        }
+
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
@@ -77,11 +82,12 @@ fn parse_time_time(input: &str) -> IResult<&str, JsonMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_js_time {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
-        AdapterResults,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
+        AdapterResults, Settings,
     };
 
     use super::AdapterJsTime;
@@ -89,6 +95,30 @@ pub(crate) mod test_js_time {
     fn convert_js_time(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/js/time/{suffix}.txt");
         convert_file_path::<AdapterJsTime>(&file_path)
+    }
+
+    #[test]
+    fn test_adapter_js_time_average() {
+        let file_path = "./tool_output/js/time/four.txt";
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterJsTime>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Mean)
+                }
+            )
+        );
+
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterJsTime>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Median)
+                }
+            )
+        );
     }
 
     #[test]

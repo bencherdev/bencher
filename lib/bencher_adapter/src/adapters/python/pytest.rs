@@ -90,11 +90,14 @@ impl Pytest {
 
 #[cfg(test)]
 pub(crate) mod test_python_pytest {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, convert_file_path_median, validate_latency},
-        AdapterResults,
+        adapters::test_util::{
+            convert_file_path, convert_file_path_median, opt_convert_file_path, validate_latency,
+        },
+        AdapterResults, Settings,
     };
 
     use super::AdapterPythonPytest;
@@ -159,8 +162,23 @@ pub(crate) mod test_python_pytest {
 
     #[test]
     fn test_adapter_python_pytest_four() {
-        let results = convert_python_pytest("four");
+        let four = "four";
+        let file_path = file_path(four);
+
+        let results = convert_python_pytest(four);
         validate_adapter_python_pytest(results);
+
+        let results = opt_convert_file_path::<AdapterPythonPytest>(
+            &file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+        validate_adapter_python_pytest(results);
+
+        let results = convert_python_pytest_median(four);
+        validate_adapter_python_pytest_median(results);
     }
 
     pub fn validate_adapter_python_pytest(results: AdapterResults) {
@@ -199,9 +217,7 @@ pub(crate) mod test_python_pytest {
         );
     }
 
-    #[test]
-    fn test_adapter_python_pytest_four_median() {
-        let results = convert_python_pytest_median("four");
+    fn validate_adapter_python_pytest_median(results: AdapterResults) {
         assert_eq!(results.inner.len(), 4);
 
         let metrics = results.get("bench.py::test_fib_1").unwrap();

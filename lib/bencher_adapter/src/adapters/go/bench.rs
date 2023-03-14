@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::{tag, take_till1},
     character::complete::space1,
@@ -18,7 +18,12 @@ use crate::{
 pub struct AdapterGoBench;
 
 impl Adapter for AdapterGoBench {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Mean) | None => {},
+            Some(JsonAverage::Median) => return None,
+        }
+
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
@@ -66,12 +71,12 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_go_bench {
-    use bencher_json::JsonMetric;
+    use bencher_json::{project::report::JsonAverage, JsonMetric};
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
-        AdapterResults,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
+        AdapterResults, Settings,
     };
 
     use super::{parse_go, AdapterGoBench};
@@ -160,6 +165,29 @@ pub(crate) mod test_go_bench {
         {
             assert_eq!(expected, parse_go(input), "#{index}: {input}")
         }
+    }
+
+    #[test]
+    fn test_adapter_go_bench_average() {
+        let file_path = "./tool_output/go/bench/five.txt";
+        let results = opt_convert_file_path::<AdapterGoBench>(
+            file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+        validate_adapter_go_bench(results);
+
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterGoBench>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Median)
+                }
+            )
+        );
     }
 
     #[test]

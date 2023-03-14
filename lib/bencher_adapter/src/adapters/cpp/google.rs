@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
@@ -11,7 +11,12 @@ use crate::{
 pub struct AdapterCppGoogle;
 
 impl Adapter for AdapterCppGoogle {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Mean) | None => {},
+            Some(JsonAverage::Median) => return None,
+        }
+
         serde_json::from_str::<Google>(input)
             .ok()?
             .try_into()
@@ -65,11 +70,12 @@ impl TryFrom<Google> for Option<AdapterResults> {
 
 #[cfg(test)]
 pub(crate) mod test_cpp_google {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
-        AdapterResults,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
+        AdapterResults, Settings,
     };
 
     use super::AdapterCppGoogle;
@@ -80,7 +86,30 @@ pub(crate) mod test_cpp_google {
     }
 
     #[test]
-    fn test_adapter_json_latency() {
+    fn test_adapter_cpp_google_average() {
+        let file_path = "./tool_output/cpp/google/two.txt";
+        let results = opt_convert_file_path::<AdapterCppGoogle>(
+            file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+        validate_adapter_cpp_google(results);
+
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterCppGoogle>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Median)
+                }
+            )
+        );
+    }
+
+    #[test]
+    fn test_adapter_cpp_google() {
         let results = convert_cpp_google("two");
         validate_adapter_cpp_google(results);
     }

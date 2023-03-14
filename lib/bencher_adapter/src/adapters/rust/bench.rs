@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::{tag, take_until1},
     character::complete::space1,
@@ -16,7 +16,12 @@ use crate::{
 pub struct AdapterRustBench;
 
 impl Adapter for AdapterRustBench {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Median) | None => {},
+            Some(JsonAverage::Mean) => return None,
+        }
+
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
@@ -78,7 +83,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_rust_bench {
-    use bencher_json::JsonMetric;
+    use bencher_json::{project::report::JsonAverage, JsonMetric};
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -105,6 +110,29 @@ pub(crate) mod test_rust_bench {
             None,
             opt_convert_file_path::<AdapterRustBench>(file_path, Settings::default())
         )
+    }
+
+    #[test]
+    fn test_adapter_rust_average() {
+        let file_path = "./tool_output/rust/bench/many.txt";
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterRustBench>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Mean)
+                }
+            )
+        );
+
+        let results = opt_convert_file_path::<AdapterRustBench>(
+            file_path,
+            Settings {
+                average: Some(JsonAverage::Median),
+            },
+        )
+        .unwrap();
+        validate_adapter_rust_bench(results);
     }
 
     #[test]

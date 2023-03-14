@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 
 use nom::{
     bytes::complete::tag,
@@ -21,7 +21,12 @@ use crate::{
 pub struct AdapterJsBenchmark;
 
 impl Adapter for AdapterJsBenchmark {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Median) | None => {},
+            Some(JsonAverage::Mean) => return None,
+        }
+
         let mut benchmark_metrics = Vec::new();
 
         for line in input.lines() {
@@ -81,11 +86,12 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_js_benchmark {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_throughput},
-        AdapterResults,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_throughput},
+        AdapterResults, Settings,
     };
 
     use super::AdapterJsBenchmark;
@@ -93,6 +99,29 @@ pub(crate) mod test_js_benchmark {
     fn convert_js_benchmark(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/js/benchmark/{suffix}.txt");
         convert_file_path::<AdapterJsBenchmark>(&file_path)
+    }
+
+    #[test]
+    fn test_adapter_js_benchmark_average() {
+        let file_path = "./tool_output/js/benchmark/three.txt";
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterJsBenchmark>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Mean)
+                }
+            )
+        );
+
+        let results = opt_convert_file_path::<AdapterJsBenchmark>(
+            file_path,
+            Settings {
+                average: Some(JsonAverage::Median),
+            },
+        )
+        .unwrap();
+        validate_adapter_js_benchmark(results);
     }
 
     #[test]

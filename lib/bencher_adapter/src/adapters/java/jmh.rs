@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonEmpty, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonEmpty, JsonMetric};
 
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -12,7 +12,12 @@ use crate::{
 pub struct AdapterJavaJmh;
 
 impl Adapter for AdapterJavaJmh {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Mean) | None => {},
+            Some(JsonAverage::Median) => return None,
+        }
+
         serde_json::from_str::<Jmh>(input).ok()?.try_into().ok()?
     }
 }
@@ -104,11 +109,14 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
 #[cfg(test)]
 pub(crate) mod test_java_jmh {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency, validate_throughput},
-        AdapterResults,
+        adapters::test_util::{
+            convert_file_path, opt_convert_file_path, validate_latency, validate_throughput,
+        },
+        AdapterResults, Settings,
     };
 
     use super::AdapterJavaJmh;
@@ -147,6 +155,29 @@ pub(crate) mod test_java_jmh {
             3376238873.1228185,
             Some(3361950887.3788824),
             Some(3390526858.8667545),
+        );
+    }
+
+    #[test]
+    fn test_adapter_java_jmh_average() {
+        let file_path = "./tool_output/java/jmh/six.json";
+        let results = opt_convert_file_path::<AdapterJavaJmh>(
+            file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+        validate_adapter_java_jmh(results);
+
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterJavaJmh>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Median)
+                }
+            )
         );
     }
 

@@ -1,4 +1,4 @@
-use bencher_json::{BenchmarkName, JsonMetric};
+use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
@@ -17,7 +17,12 @@ use crate::{
 pub struct AdapterRubyBenchmark;
 
 impl Adapter for AdapterRubyBenchmark {
-    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+    fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
+        match settings.average {
+            Some(JsonAverage::Mean) | Some(JsonAverage::Median) => return None,
+            None => {},
+        }
+
         let mut benchmark_metrics = Vec::new();
 
         let mut header = false;
@@ -95,11 +100,12 @@ fn parse_ruby_benchmark(input: &str) -> IResult<&str, JsonMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_ruby_benchmark {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, validate_latency},
-        AdapterResults,
+        adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
+        AdapterResults, Settings,
     };
 
     use super::AdapterRubyBenchmark;
@@ -107,6 +113,30 @@ pub(crate) mod test_ruby_benchmark {
     fn convert_ruby_benchmark(suffix: &str) -> AdapterResults {
         let file_path = format!("./tool_output/ruby/benchmark/{suffix}.txt");
         convert_file_path::<AdapterRubyBenchmark>(&file_path)
+    }
+
+    #[test]
+    fn test_adapter_ruby_average() {
+        let file_path = "./tool_output/ruby/benchmark/two.txt";
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterRubyBenchmark>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Mean)
+                }
+            )
+        );
+
+        assert_eq!(
+            None,
+            opt_convert_file_path::<AdapterRubyBenchmark>(
+                file_path,
+                Settings {
+                    average: Some(JsonAverage::Median)
+                }
+            )
+        );
     }
 
     #[test]

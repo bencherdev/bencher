@@ -95,11 +95,14 @@ impl DotNet {
 
 #[cfg(test)]
 pub(crate) mod test_c_sharp_dot_net {
+    use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
     use crate::{
-        adapters::test_util::{convert_file_path, convert_file_path_median, validate_latency},
-        AdapterResults,
+        adapters::test_util::{
+            convert_file_path, convert_file_path_median, opt_convert_file_path, validate_latency,
+        },
+        AdapterResults, Settings,
     };
 
     use super::AdapterCSharpDotNet;
@@ -120,8 +123,23 @@ pub(crate) mod test_c_sharp_dot_net {
 
     #[test]
     fn test_adapter_c_sharp_dot_net_two() {
-        let results = convert_c_sharp_dot_net("two");
+        let two = "two";
+        let file_path = file_path(two);
+
+        let results = convert_c_sharp_dot_net(two);
         validate_adapter_c_sharp_dot_net(results);
+
+        let results = opt_convert_file_path::<AdapterCSharpDotNet>(
+            &file_path,
+            Settings {
+                average: Some(JsonAverage::Mean),
+            },
+        )
+        .unwrap();
+        validate_adapter_c_sharp_dot_net(results);
+
+        let results = convert_c_sharp_dot_net_median(two);
+        validate_adapter_c_sharp_dot_net_median(results);
     }
 
     pub fn validate_adapter_c_sharp_dot_net(results: AdapterResults) {
@@ -148,9 +166,7 @@ pub(crate) mod test_c_sharp_dot_net {
         );
     }
 
-    #[test]
-    fn test_adapter_c_sharp_dot_net_two_median() {
-        let results = convert_c_sharp_dot_net_median("two");
+    fn validate_adapter_c_sharp_dot_net_median(results: AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results
