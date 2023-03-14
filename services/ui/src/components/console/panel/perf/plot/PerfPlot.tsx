@@ -1,3 +1,4 @@
+import { Show } from "solid-js";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
@@ -21,7 +22,22 @@ const PerfPlot = (props) => {
 						handleEndTime={props.handleEndTime}
 					/>
 					<div class="panel-block">
-						{props.isPlotInit() ? (
+						<Show
+							when={props.isPlotInit()}
+							fallback={
+								<Plot
+									user={props.user}
+									config={props.config}
+									path_params={props.path_params}
+									branches={props.branches}
+									testbeds={props.testbeds}
+									benchmarks={props.benchmarks}
+									perf_data={props.perf_data}
+									key={props.key}
+									handleKey={props.handleKey}
+								/>
+							}
+						>
 							<PlotInit
 								metric_kind={props.metric_kind}
 								branches={props.branches}
@@ -29,19 +45,7 @@ const PerfPlot = (props) => {
 								benchmarks={props.benchmarks}
 								handleTab={props.handleTab}
 							/>
-						) : (
-							<Plot
-								user={props.user}
-								config={props.config}
-								path_params={props.path_params}
-								branches={props.branches}
-								testbeds={props.testbeds}
-								benchmarks={props.benchmarks}
-								perf_data={props.perf_data}
-								key={props.key}
-								handleKey={props.handleKey}
-							/>
-						)}
+						</Show>
 					</div>
 					<PlotTab
 						project_slug={props.project_slug}

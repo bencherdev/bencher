@@ -1,3 +1,5 @@
+import { Show } from "solid-js";
+
 export enum PlanLevel {
 	FREE = "free",
 	TEAM = "team",
@@ -132,19 +134,25 @@ const Footer = (props: {
 }) => {
 	return (
 		<div class="plan-footer">
-			{props.plan === props.active ? (
+			<Show
+				when={props.plan === props.active}
+				fallback={
+					<div class="columns is-centered">
+						<div class="column is-four-fifths">
+							<button
+								class="button is-fullwidth"
+								onClick={props.handlePlanLevel}
+							>
+								{props.button_text}
+							</button>
+						</div>
+					</div>
+				}
+			>
 				<button class="button is-fullwidth" onClick={props.handlePlanLevel}>
 					{props.button_text}
 				</button>
-			) : (
-				<div class="columns is-centered">
-					<div class="column is-four-fifths">
-						<button class="button is-fullwidth" onClick={props.handlePlanLevel}>
-							{props.button_text}
-						</button>
-					</div>
-				</div>
-			)}
+			</Show>
 		</div>
 	);
 };

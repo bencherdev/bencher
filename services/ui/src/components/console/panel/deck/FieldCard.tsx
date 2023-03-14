@@ -3,6 +3,7 @@ import {
 	createResource,
 	createSignal,
 	Match,
+	Show,
 	Switch,
 } from "solid-js";
 import Field from "../../../field/Field";
@@ -21,7 +22,8 @@ const FieldCard = (props) => {
 	};
 
 	return (
-		<Switch
+		<Show
+			when={update()}
 			fallback={
 				<ViewCard
 					card={props.card}
@@ -31,18 +33,16 @@ const FieldCard = (props) => {
 				/>
 			}
 		>
-			<Match when={update()}>
-				<UpdateCard
-					user={props.user}
-					card={props.card}
-					value={props.value}
-					path_params={props.path_params}
-					url={props.url}
-					toggleUpdate={toggleUpdate}
-					handleRefresh={props.handleRefresh}
-				/>
-			</Match>
-		</Switch>
+			<UpdateCard
+				user={props.user}
+				card={props.card}
+				value={props.value}
+				path_params={props.path_params}
+				url={props.url}
+				toggleUpdate={toggleUpdate}
+				handleRefresh={props.handleRefresh}
+			/>
+		</Show>
 	);
 };
 

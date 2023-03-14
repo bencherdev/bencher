@@ -1,5 +1,5 @@
 import { Link } from "solid-app-router";
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
 
@@ -46,11 +46,14 @@ const PlotTab = (props) => {
 					)}
 				</For>
 			</p>
-			{getTab().length === 0 ? (
-				<div class="box">
-					<AddButton project_slug={props.project_slug} tab={props.tab} />
-				</div>
-			) : (
+			<Show
+				when={getTab().length > 0}
+				fallback={
+					<div class="box">
+						<AddButton project_slug={props.project_slug} tab={props.tab} />
+					</div>
+				}
+			>
 				<For each={getTab()}>
 					{(item, index) => (
 						// TODO maybe move over to a store and see if this works?
@@ -70,7 +73,7 @@ const PlotTab = (props) => {
 						</a>
 					)}
 				</For>
-			)}
+			</Show>
 		</>
 	);
 };

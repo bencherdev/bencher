@@ -5,6 +5,7 @@ import {
 	createSignal,
 	For,
 	Match,
+	Show,
 	Switch,
 } from "solid-js";
 import Field from "../../../field/Field";
@@ -174,7 +175,9 @@ const Poster = (props) => {
 						disabled={!is_sendable()}
 						onClick={sendForm}
 					>
-						{props.config?.button ? props.config?.button : "Save"}
+						<Show when={props.config?.button} fallback={"Save"}>
+							{props.config?.button}
+						</Show>
 					</button>
 				</form>
 			</div>

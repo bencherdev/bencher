@@ -9,10 +9,6 @@ runs:
   main: dist/index.js
 inputs:
   version:
-    description: Version of the Bencher CLI to install (default latest)
+    description: "Version of the Bencher CLI to install (ex: 0.1.23) (default latest)"
     default: latest
-    required: false
-  host: # id of input
-    description: "Backend host URL (default https://api.bencher.dev)"
-    # default: ""
     required: false

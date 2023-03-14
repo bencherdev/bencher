@@ -1,5 +1,5 @@
 import { Link } from "solid-app-router";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import {
 	BENCHER_GITHUB_URL,
 	BENCHER_LOGO_URL,
@@ -46,30 +46,31 @@ export const Navbar = (props) => {
 					<a class="navbar-item" href="/docs">
 						Docs
 					</a>
-					{is_valid_jwt() ? (
-						<a class="navbar-item" href="/perf">
-							Public Projects
-						</a>
-					) : (
-						<a class="navbar-item" href="/perf">
-							Projects
-						</a>
-					)}
-					{!is_valid_jwt() && (
-						<a class="navbar-item" href="/pricing">
-							Pricing
-						</a>
-					)}
-					{!is_valid_jwt() && (
-						<a
-							class="navbar-item"
-							href={BENCHER_GITHUB_URL}
-							target="_blank"
-							rel="noreferrer"
-						>
-							GitHub
-						</a>
-					)}
+					<Show
+						when={!is_valid_jwt()}
+						fallback={
+							<a class="navbar-item" href="/perf">
+								Public Projects
+							</a>
+						}
+					>
+						<>
+							<a class="navbar-item" href="/perf">
+								Projects
+							</a>
+							<a class="navbar-item" href="/pricing">
+								Pricing
+							</a>
+							<a
+								class="navbar-item"
+								href={BENCHER_GITHUB_URL}
+								target="_blank"
+								rel="noreferrer"
+							>
+								GitHub
+							</a>
+						</>
+					</Show>
 					{is_valid_jwt() && props.organization_slug() && (
 						<div class="navbar-item">
 							<ProjectSelect

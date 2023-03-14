@@ -1,25 +1,26 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import * as d3 from "d3";
 
 const PlotKey = (props) => {
 	return (
-		<>
-			{props.key() ? (
-				<ExpandedKey
-					perf_data={props.perf_data}
-					perf_active={props.perf_active}
-					handleKey={props.handleKey}
-					handlePerfActive={props.handlePerfActive}
-				/>
-			) : (
+		<Show
+			when={props.key()}
+			fallback={
 				<MinimizedKey
 					perf_data={props.perf_data}
 					perf_active={props.perf_active}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
 				/>
-			)}
-		</>
+			}
+		>
+			<ExpandedKey
+				perf_data={props.perf_data}
+				perf_active={props.perf_active}
+				handleKey={props.handleKey}
+				handlePerfActive={props.handlePerfActive}
+			/>
+		</Show>
 	);
 };
 
@@ -110,9 +111,11 @@ const KeyResource = (props) => {
 			<span class="icon">
 				<i class={props.icon} aria-hidden="true" />
 			</span>
-			<small style="overflow-wrap:anywhere;">{` ${
-				props.name ? props.name : "Loading..."
-			}`}</small>
+			<small style="overflow-wrap:anywhere;">
+				<Show when={props.name} fallback={"Loading..."}>
+					{props.name}
+				</Show>
+			</small>
 		</div>
 	);
 };

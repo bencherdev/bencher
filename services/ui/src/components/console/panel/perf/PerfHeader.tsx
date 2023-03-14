@@ -1,5 +1,5 @@
 import createDebounce from "@solid-primitives/debounce";
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import Field from "../../../field/Field";
 import FieldKind from "../../../field/kind";
 import { pageTitle } from "../../../site/util";
@@ -168,11 +168,9 @@ const ShareModal = (props) => {
 						handleField={handle_title}
 					/>
 					<br />
-					{perf_img_url() ? (
+					<Show when={perf_img_url()} fallback={<div>Loading...</div>}>
 						<img src={perf_img_url()} alt={props.project()?.name} />
-					) : (
-						<p>Loading...</p>
-					)}
+					</Show>
 					<br />
 					<br />
 					<h4 class="title is-4">

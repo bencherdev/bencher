@@ -1,5 +1,5 @@
 import { useLocation, useSearchParams } from "solid-app-router";
-import { createMemo, Match, Switch } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { forward_path } from "./Forward";
 import {
 	NotifyKind,
@@ -88,15 +88,14 @@ const Notification = (_props) => {
 
 	return (
 		<div>
-			<Switch fallback={<></>}>
-				<Match
-					when={isNotifyKind(notify_kind()) && isNotifyText(notify_text())}
-				>
-					<section class="section">
-						<div class="container">{getNotification()}</div>
-					</section>
-				</Match>
-			</Switch>
+			<Show
+				when={isNotifyKind(notify_kind()) && isNotifyText(notify_text())}
+				fallback={<></>}
+			>
+				<section class="section">
+					<div class="container">{getNotification()}</div>
+				</section>
+			</Show>
 		</div>
 	);
 };
