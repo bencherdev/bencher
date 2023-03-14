@@ -106,7 +106,10 @@ const ShareModal = (props) => {
 	);
 
 	const perf_img_url = createMemo(() => {
-		if (props.isPlotInit() || !(props.project()?.slug && props.perf_query())) {
+		if (
+			props.isPlotInit() ||
+			!(props.share() && props.project()?.slug && props.perf_query())
+		) {
 			return null;
 		}
 
