@@ -6,9 +6,9 @@ branding:
   color: orange
 runs:
   using: node16
-  main: dist/index.js
+  main: ./services/action/dist/index.js
 inputs:
   version:
-    description: "Version of the Bencher CLI to install (ex: 0.1.23) (default latest)"
+    description: "Version of the Bencher CLI to install (ex: `0.1.23`) (default `latest`)"
     default: latest
     required: false
