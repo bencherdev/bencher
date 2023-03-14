@@ -99,7 +99,6 @@ const ConsolePage = (props) => {
 							<ConsolePanel
 								user={props.user}
 								organization_slug={props.organization_slug}
-								project_slug={props.project_slug}
 								operation={props.operation}
 								config={props.config}
 								path_params={path_params}

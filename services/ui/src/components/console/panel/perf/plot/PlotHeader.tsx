@@ -13,7 +13,7 @@ const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 const PlotHeader = (props) => {
 	const metric_kinds_fetcher = createMemo(() => {
 		return {
-			project: props.path_params().project_slug,
+			project: props.path_params()?.project_slug,
 			refresh: props.refresh(),
 			token: props.user?.token,
 		};
@@ -24,7 +24,7 @@ const PlotHeader = (props) => {
 			name: "Metric Kind",
 			slug: BENCHER_METRIC_KIND,
 		};
-		const url = props.config?.metric_kinds_url(props.path_params());
+		const url = props.config?.metric_kinds_url(fetcher.project);
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => {
 				let data = resp?.data;

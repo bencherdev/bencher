@@ -83,7 +83,7 @@ const AddButton = (props) => {
 		switch (props.tab()) {
 			case PerfTab.BRANCHES:
 			case PerfTab.TESTBEDS:
-				return `/console/projects/${props.project_slug()}/${props.tab()}/add`;
+				return `/console/projects/${props.project_slug}/${props.tab()}/add`;
 			case PerfTab.BENCHMARKS:
 				return "/docs/how-to/track-benchmarks";
 			default:

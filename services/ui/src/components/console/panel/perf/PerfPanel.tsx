@@ -194,9 +194,10 @@ const PerfPanel = (props) => {
 		setRefresh(refresh() + 1);
 	};
 
+	const project_slug = createMemo(() => props.path_params()?.project_slug);
 	const perf_query_fetcher = createMemo(() => {
 		return {
-			project_slug: props.path_params().project_slug,
+			project_slug: project_slug(),
 			perf_query: perf_query(),
 			refresh: refresh(),
 			token: props.user?.token,
@@ -207,7 +208,7 @@ const PerfPanel = (props) => {
 		const EMPTY_OBJECT = {};
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
-			const url = `${props.config?.plot?.project_url(props.path_params())}`;
+			const url = `${props.config?.plot?.project_url(fetcher.project_slug)}`;
 			return await axios(get_options(url, fetcher.token))
 				.then((resp) => {
 					return {
@@ -226,7 +227,7 @@ const PerfPanel = (props) => {
 			}
 		}
 		const url = `${props.config?.plot?.perf_url(
-			props.path_params(),
+			project_slug(),
 		)}?${search_params.toString()}`;
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => resp?.data)
@@ -240,14 +241,14 @@ const PerfPanel = (props) => {
 
 	const project_fetcher = createMemo(() => {
 		return {
-			project_slug: props.path_params().project_slug,
+			project_slug: project_slug(),
 			refresh: refresh(),
 			token: props.user?.token,
 		};
 	});
 
 	const getPerfTab = async (perf_tab: PerfTab, token: null | string) => {
-		const url = props.config?.plot?.tab_url(props.path_params(), perf_tab);
+		const url = props.config?.plot?.tab_url(project_slug(), perf_tab);
 		return await axios(get_options(url, token))
 			.then((resp) => resp?.data)
 			.catch((error) => {
@@ -362,7 +363,7 @@ const PerfPanel = (props) => {
 			/>
 			<PerfPlot
 				user={props.user}
-				project_slug={props.project_slug}
+				project_slug={project_slug()}
 				config={props.config?.plot}
 				path_params={props.path_params}
 				isPlotInit={isPlotInit}
