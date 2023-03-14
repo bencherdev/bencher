@@ -10,11 +10,10 @@ plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 
 [dependencies]
-# Local
-bencher_valid = { path = "../bencher_valid", default-features = false, features = [
+# Workspace
+bencher_valid = { workspace = true, default-features = false, features = [
     "schema",
 ] }
-# Workspace
 chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true
 once_cell.workspace = true

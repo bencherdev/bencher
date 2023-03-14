@@ -7,6 +7,17 @@ authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
 
 [workspace.dependencies]
+# lib
+bencher_adapter = { path = "lib/bencher_adapter" }
+bencher_json = { path = "lib/bencher_json" }
+bencher_plot = { path = "lib/bencher_plot" }
+bencher_rbac = { path = "lib/bencher_rbac" }
+bencher_valid = { path = "lib/bencher_valid" }
+# plus
+bencher_billing = { path = "plus/bencher_billing" }
+bencher_license = { path = "plus/bencher_license" }
+bencher_plus = { path = "plus/bencher_plus" }
+# crates.io
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = "0.4"

@@ -5,11 +5,9 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-# Local
-bencher_valid = { path = "../../lib/bencher_valid" }
-# Plus
-bencher_plus = { path = "../bencher_plus" }
 # Workspace
+bencher_valid.workspace = true
+bencher_plus.workspace = true
 chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["use_pem"] }
 once_cell.workspace = true

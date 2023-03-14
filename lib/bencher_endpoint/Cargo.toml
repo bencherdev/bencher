@@ -5,9 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-# Local
-bencher_json = { path = "../bencher_json" }
-# Workspace
+bencher_json.workspace = true
 derive_more.workspace = true
 
 [dev-dependencies]

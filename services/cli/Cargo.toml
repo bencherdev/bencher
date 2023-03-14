@@ -11,11 +11,10 @@ plus = ["bencher_json/plus"]
 seed = []
 
 [dependencies]
-# Local
-bencher_adapter = { path = "../../lib/bencher_adapter" }
-bencher_json = { path = "../../lib/bencher_json" }
 # Workspace
 async-trait.workspace = true
+bencher_adapter.workspace = true
+bencher_json.workspace = true
 chrono.workspace = true
 clap.workspace = true
 literally.workspace = true

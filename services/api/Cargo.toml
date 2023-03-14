@@ -15,16 +15,14 @@ plus = [
 swagger = ["dep:literally"]
 
 [dependencies]
-# Local
-bencher_adapter = { path = "../../lib/bencher_adapter" }
-bencher_json = { path = "../../lib/bencher_json", features = ["schema"] }
-bencher_plot = { path = "../../lib/bencher_plot" }
-bencher_rbac = { path = "../../lib/bencher_rbac" }
-# Plus
-bencher_billing = { path = "../../plus/bencher_billing", optional = true }
-bencher_plus = { path = "../../plus/bencher_plus", optional = true }
-bencher_license = { path = "../../plus/bencher_license", optional = true }
 # Workspace
+bencher_adapter.workspace = true
+bencher_billing = { workspace = true, optional = true }
+bencher_json = { workspace = true, features = ["schema"] }
+bencher_license = { workspace = true, optional = true }
+bencher_plot.workspace = true
+bencher_plus = { workspace = true, optional = true }
+bencher_rbac.workspace = true
 chrono.workspace = true
 derive_more.workspace = true
 jsonwebtoken.workspace = true
