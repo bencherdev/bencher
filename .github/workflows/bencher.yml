@@ -11,7 +11,8 @@ on:
 env:
   # General
   CARGO_TERM_COLOR: always
-  DOCKER_HUB_ORG: bencherdev
+  GITHUB_REGISTRY: ghcr.io
+  FLY_REGISTRY: registry.fly.io
   # API
   API_BUILDER_DOCKER_IMAGE: bencher-api-builder
   API_LOCAL_DOCKER_IMAGE: bencher-api-local
@@ -207,9 +208,8 @@ jobs:
           npx vitest run
 
   # API Docker
-  local_api_docker:
-    if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
-    name: Build Local API
+  builder_api_docker:
+    name: Build API Builder
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -220,6 +220,28 @@ jobs:
           file: ./services/api/builder.Dockerfile
           tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
           push: false
+      - name: Save Builder Stage
+        run: |
+          docker save ${{ env.API_BUILDER_DOCKER_IMAGE }} \
+          | gzip > ${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
+      - name: Upload Builder Stage Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
+          path: ./${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
+
+  build_local_api_docker:
+    name: Build Local API
+    runs-on: ubuntu-latest
+    needs: builder_api_docker
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download Builder Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
+      - name: Load Builder Image
+        run: docker load < ${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
       - name: Build Local API
         uses: docker/build-push-action@v3
         with:
@@ -237,19 +259,18 @@ jobs:
           name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
 
-  litestream_api_docker:
-    if: github.ref == 'refs/heads/main'
+  build_litestream_api_docker:
     name: Build Litestream API
     runs-on: ubuntu-latest
+    needs: builder_api_docker
     steps:
       - uses: actions/checkout@v3
-      - name: Build Builder Stage
-        uses: docker/build-push-action@v3
+      - name: Download Builder Artifact
+        uses: actions/download-artifact@v3
         with:
-          context: .
-          file: ./services/api/builder.Dockerfile
-          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
-          push: false
+          name: ${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
+      - name: Load Builder Image
+        run: docker load < ${{ env.API_BUILDER_DOCKER_IMAGE }}.tar.gz
       - name: Build Litestream API
         uses: docker/build-push-action@v3
         with:
@@ -266,55 +287,6 @@ jobs:
         with:
           name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
           path: ./${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-
-  latest_api_docker:
-    if: startsWith(github.ref, 'refs/tags/')
-    name: Build API and Release Latest
-    runs-on: ubuntu-latest
-    needs:
-      - cargo_test
-      - cargo_check_api_minus
-      - cargo_check_cli_minus
-      - cargo_bench
-      - cargo_audit
-      - cargo_udeps
-      - npx_vitest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Export LOCAL_TAGS
-        run: |
-          export LOCAL_DOCKER_HUB_URL=${{ env.DOCKER_HUB_ORG }}/${API_LOCAL_DOCKER_IMAGE}
-          echo "LOCAL_TAGS=${LOCAL_DOCKER_HUB_URL}:latest,${LOCAL_DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Export LITESTREAM_TAGS
-        run: |
-          export LITESTREAM_DOCKER_HUB_URL=${{ env.DOCKER_HUB_ORG }}/${API_LITESTREAM_DOCKER_IMAGE}
-          echo "LITESTREAM_TAGS=${LITESTREAM_DOCKER_HUB_URL}:latest,${LITESTREAM_DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-      - name: Build Builder Stage
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          file: ./services/api/builder.Dockerfile
-          tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
-          push: false
-      - name: Build and Push Local to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          context: ./services/api
-          file: ./services/api/local.Dockerfile
-          tags: ${{ env.LOCAL_TAGS }}
-          push: true
-      - name: Build and Push Litestream to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          context: ./services/api
-          file: ./services/api/litestream.Dockerfile
-          tags: ${{ env.LITESTREAM_TAGS }}
-          push: true
 
   # CLI
   # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
@@ -338,46 +310,19 @@ jobs:
     needs: build_cli_bin
     steps:
       - uses: actions/checkout@v3
-      - name: export DEB_FILE
-        run: echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
       - name: Download CLI Artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ env.CLI_BIN_NAME }}
       - name: Build .deb package
-        run: ./scripts/deb.sh $CLI_BIN_NAME $(./scripts/version.sh) $CLI_BIN_ARCH $CLI_DEB_DIR
+        run: |
+          ./scripts/deb.sh $CLI_BIN_NAME $(./scripts/version.sh) $CLI_BIN_ARCH $CLI_DEB_DIR
+          echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.DEB_FILE }}
           path: ${{ env.CLI_DEB_DIR }}/${{ env.DEB_FILE }}
-
-  release_cli_deb:
-    if: startsWith(github.ref, 'refs/tags/')
-    name: Release CLI
-    runs-on: ubuntu-20.04
-    needs:
-      - build_cli_deb
-      - latest_api_docker
-      - latest_ui_docker
-    steps:
-      - uses: actions/checkout@v3
-      - name: export DEB_FILE
-        run: echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
-      - name: Download CLI bin artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.CLI_BIN_NAME }}
-      - name: Download CLI .deb Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.DEB_FILE }}
-      - name: GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ${{ env.CLI_BIN_NAME }}
-            ${{ env.DEB_FILE }}
 
   # UI Docker
   build_ui_docker:
@@ -397,45 +342,13 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./services/ui
-          tags: ${{ env.DOCKER_HUB_ORG }}/${{ env.UI_DOCKER_IMAGE }}
+          tags: ${{ env.UI_DOCKER_IMAGE }}
           push: false
-
-  latest_ui_docker:
-    if: startsWith(github.ref, 'refs/tags/')
-    name: Build UI and Release Latest
-    runs-on: ubuntu-latest
-    needs:
-      - cargo_test
-      - cargo_check_api_minus
-      - cargo_check_cli_minus
-      - cargo_bench
-      - cargo_audit
-      - cargo_udeps
-      - npx_vitest
-    steps:
-      - uses: actions/checkout@v3
-      - name: export TAGS
-        run: |
-          export DOCKER_HUB_URL=${{ env.DOCKER_HUB_ORG }}/${UI_DOCKER_IMAGE}
-          echo "TAGS=${DOCKER_HUB_URL}:latest,${DOCKER_HUB_URL}:${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - name: Upload UI Artifact
+        uses: actions/upload-artifact@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-      - name: Build Builder Stage
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          file: ./services/ui/builder.Dockerfile
-          tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
-          push: false
-      - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@v3
-        with:
-          context: ./services/ui
-          tags: ${{ env.TAGS }}
-          push: true
+          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+          path: ./${{ env.UI_DOCKER_IMAGE }}.tar.gz
 
   # UI
   build_ui:
@@ -468,7 +381,7 @@ jobs:
     # continue-on-error: true
     needs:
       - cargo_test
-      - litestream_api_docker
+      - build_litestream_api_docker
       - npx_vitest
       - build_ui
     env:
@@ -486,7 +399,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cargo_test
-      - local_api_docker
+      - build_local_api_docker
       - npx_vitest
       - build_ui
     env:
@@ -500,7 +413,7 @@ jobs:
       - name: Load & Tag Local Image
         run: |
           docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} registry.fly.io/bencher-api-dev
+          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api-dev
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Local API to Fly.io
         working-directory: ./services/api
@@ -523,7 +436,7 @@ jobs:
       - name: Load & Tag Litestream Image
         run: |
           docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} registry.fly.io/bencher-api
+          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${{ env.FLY_REGISTRY }}/bencher-api
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy Litestream API to Fly.io
         working-directory: ./services/api
@@ -568,3 +481,90 @@ jobs:
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+  # Release
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    name: Release CLI
+    runs-on: ubuntu-20.04
+    needs:
+      # Test
+      - cargo_test
+      - cargo_check_api_minus
+      - cargo_check_cli_minus
+      - cargo_bench
+      - cargo_audit
+      - cargo_udeps
+      - npx_vitest
+      # Build
+      - build_local_api_docker
+      - build_litestream_api_docker
+      - build_cli_deb
+      - build_ui_docker
+    steps:
+      - uses: actions/checkout@v3
+      # Download
+      - name: Download Local API Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
+      - name: Download Litestream API Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+      - name: Download CLI bin artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.CLI_BIN_NAME }}
+      - name: export DEB_FILE
+        run: echo "DEB_FILE=${CLI_BIN_NAME}_$(./scripts/version.sh)_${CLI_BIN_ARCH}.deb" >> $GITHUB_ENV
+      - name: Download CLI .deb Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.DEB_FILE }}
+      - name: Download UI Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+      # Load
+      - name: Load Local API Image
+        run: docker load < ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
+      - name: Load Litestream API Image
+        run: docker load < ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+      - name: Load UI Image
+        run: docker load < ${{ env.UI_DOCKER_IMAGE }}.tar.gz
+      # Login GHCR
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Tag & Push
+      - name: Tag & Push Local API Image
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.API_LOCAL_DOCKER_IMAGE }}
+          export GITHUB_TAGGED_IMAGE=${GITHUB_IMAGE}:latest,${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${{ env.GITHUB_TAGGED_IMAGE }}
+          docker push ${{ env.GITHUB_TAGGED_IMAGE }}
+      - name: Tag & Push Litestream API Image
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
+          export GITHUB_TAGGED_IMAGE=${GITHUB_IMAGE}:latest,${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${{ env.GITHUB_TAGGED_IMAGE }}
+          docker push ${{ env.GITHUB_TAGGED_IMAGE }}
+      - name: Tag & Push UI Image
+        run: |
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.UI_DOCKER_IMAGE }}
+          export GITHUB_TAGGED_IMAGE=${GITHUB_IMAGE}:latest,${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          docker tag ${{ env.UI_DOCKER_IMAGE }} ${{ env.GITHUB_TAGGED_IMAGE }}
+          docker push ${{ env.GITHUB_TAGGED_IMAGE }}
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
+            ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
+            ${{ env.CLI_BIN_NAME }}
+            ${{ env.DEB_FILE }}
+            ${{ env.UI_DOCKER_IMAGE }}.tar.gz
