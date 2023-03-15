@@ -326,7 +326,6 @@ jobs:
 
   # UI Docker
   build_ui_docker:
-    if: true && !startsWith(github.ref, 'refs/tags/')
     name: Build UI Docker
     runs-on: ubuntu-latest
     steps:
@@ -374,31 +373,12 @@ jobs:
           name: ${{ env.UI_BUILD_DIST }}
           path: ./services/ui/dist
 
-  # API Database
-  backup_database:
-    name: Backup Database
-    runs-on: ubuntu-latest
-    # continue-on-error: true
-    needs:
-      - cargo_test
-      - build_litestream_api_docker
-      - npx_vitest
-      - build_ui
-    env:
-      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN_ADMIN }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install `bencher` CLI
-        run: cargo install --path services/cli --locked
-      - name: Backup API Server Database
-        run: bencher server backup --compress --data-store aws_s3 --rm
-
   # API Fly.io
   deploy_local_api_fly:
+    if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
     name: Deploy Local API to Fly.io
     runs-on: ubuntu-latest
     needs:
-      - cargo_test
       - build_local_api_docker
       - npx_vitest
       - build_ui
@@ -420,6 +400,24 @@ jobs:
         run: flyctl deploy --local-only --config fly.dev.toml
       - name: Ping API Server
         run: wget https://dev.api.bencher.dev/v0/server/ping
+
+  backup_database:
+    if: github.ref == 'refs/heads/main'
+    name: Backup Database
+    runs-on: ubuntu-latest
+    # continue-on-error: true
+    needs:
+      - build_litestream_api_docker
+      - npx_vitest
+      - build_ui
+    env:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN_ADMIN }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install `bencher` CLI
+        run: cargo install --path services/cli --locked
+      - name: Backup API Server Database
+        run: bencher server backup --compress --data-store aws_s3 --rm
 
   deploy_litestream_api_fly:
     name: Deploy Litestream API to Fly.io Prod
@@ -445,8 +443,7 @@ jobs:
         run: wget https://api.bencher.dev/v0/server/ping
 
   # UI Netlify
-  deploy_ui_netlify:
-    if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
+  deploy_ui_netlify_dev:
     name: Deploy UI to Netlify
     runs-on: ubuntu-latest
     needs: deploy_local_api_fly
@@ -483,9 +480,9 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
   # Release
-  release:
+  release_bencher:
     if: startsWith(github.ref, 'refs/tags/')
-    name: Release CLI
+    name: Release Bencher
     runs-on: ubuntu-20.04
     needs:
       # Test
