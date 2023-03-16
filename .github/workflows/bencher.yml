@@ -461,20 +461,20 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
-  # bencher_github_action:
-  #   name: Bencher CLI GitHub Action
-  #   runs-on: ubuntu-latest
-  #   # continue-on-error: true
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Build next Bencher CLI GitHub Action
-  #       run: |
-  #         cd services/action
-  #         npm install --include=dev
-  #         npm run build
-  #     - uses: bencherdev/bencher@main
-  #     - name: Run current Bencher CLI GitHub Action
-  #       run: bencher run --project bencher --local "bencher mock"
+  bencher_github_action:
+    name: Bencher CLI GitHub Action
+    runs-on: ubuntu-latest
+    # continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build next Bencher CLI GitHub Action
+        run: |
+          cd services/action
+          npm install --include=dev
+          npm run build
+      - uses: bencherdev/bencher@main
+      - name: Run current Bencher CLI GitHub Action
+        run: bencher run --project bencher --local "bencher mock"
 
   # Release
   release_bencher:
@@ -491,7 +491,7 @@ jobs:
       - cargo_udeps
       - npx_vitest
       # Integrations
-      # - bencher_github_action
+      - bencher_github_action
       # Build
       - build_local_api_docker
       - build_litestream_api_docker
