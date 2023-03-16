@@ -443,7 +443,9 @@ mod test {
     #[test]
     fn test_plot_empty() {
         let plot = LinePlot::new();
-        let plot_buffer = plot.draw(None, JsonPerf::default()).unwrap();
+        let mut json_perf = JSON_PERF.clone();
+        json_perf.results.clear();
+        let plot_buffer = plot.draw(None, json_perf).unwrap();
         save_jpeg(&plot_buffer, "empty");
     }
 }

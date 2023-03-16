@@ -54,7 +54,7 @@ pub struct JsonBranches {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranch {
     pub uuid: Uuid,

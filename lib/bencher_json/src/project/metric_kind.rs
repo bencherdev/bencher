@@ -79,7 +79,7 @@ impl JsonNewMetricKind {
     }
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetricKind {
     pub uuid: Uuid,

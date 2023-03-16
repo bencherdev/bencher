@@ -87,27 +87,6 @@ pub async fn get(
     }
 }
 
-#[derive(Clone, Copy, Default)]
-struct Ids {
-    metric_kind_id: i32,
-    branch_id: i32,
-    testbed_id: i32,
-    benchmark_id: i32,
-}
-
-#[derive(Clone, Default)]
-struct Dimensions {
-    branch: JsonBranch,
-    testbed: JsonTestbed,
-    benchmark: JsonBenchmark,
-}
-
-#[derive(Clone, Copy)]
-struct Times {
-    start_time_nanos: Option<i64>,
-    end_time_nanos: Option<i64>,
-}
-
 async fn get_inner(
     context: &ApiContext,
     path_params: DirPath,
@@ -140,28 +119,28 @@ async fn get_inner(
         metric_kind_id: metric_kind.id,
         ..Default::default()
     };
-    let mut dimensions = Dimensions::default();
+    let mut dimensions = Dimensions::Zero;
 
     for branch in &branches {
         let Ok(branch) = QueryBranch::from_uuid(conn, project.id, *branch) else {
             continue;
         };
         ids.branch_id = branch.id;
-        dimensions.branch = branch.into_json(conn)?;
+        dimensions = dimensions.branch(conn, branch)?;
         for testbed in &testbeds {
             let Ok(testbed) = QueryTestbed::from_uuid(conn, project.id, *testbed) else {
                 continue;
             };
             ids.testbed_id = testbed.id;
-            dimensions.testbed = testbed.into_json(conn)?;
+            dimensions = dimensions.testbed(conn, testbed)?;
             for benchmark in &benchmarks {
                 let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project.id, *benchmark) else {
                     continue;
                 };
                 ids.benchmark_id = benchmark.id;
-                dimensions.benchmark = benchmark.into_json(conn)?;
+                dimensions = dimensions.benchmark(conn, benchmark)?;
 
-                perf_query(conn, ids, dimensions.clone(), times, &mut results)?;
+                perf_query(conn, ids, dimensions.to_query()?, times, &mut results)?;
             }
         }
     }
@@ -173,6 +152,127 @@ async fn get_inner(
         end_time,
         results,
     })
+}
+
+#[derive(Clone, Copy, Default)]
+struct Ids {
+    metric_kind_id: i32,
+    branch_id: i32,
+    testbed_id: i32,
+    benchmark_id: i32,
+}
+
+enum Dimensions {
+    Zero,
+    One {
+        branch: JsonBranch,
+    },
+    Two {
+        branch: JsonBranch,
+        testbed: JsonTestbed,
+    },
+    Three {
+        branch: JsonBranch,
+        testbed: JsonTestbed,
+        benchmark: JsonBenchmark,
+    },
+}
+
+impl Dimensions {
+    fn branch(self, conn: &mut DbConnection, branch: QueryBranch) -> Result<Self, ApiError> {
+        Ok(match self {
+            Self::Zero => Self::One {
+                branch: branch.into_json(conn)?,
+            },
+            Self::One { .. } => Self::One {
+                branch: branch.into_json(conn)?,
+            },
+            Self::Two { .. } => Self::One {
+                branch: branch.into_json(conn)?,
+            },
+            Self::Three { .. } => Self::One {
+                branch: branch.into_json(conn)?,
+            },
+        })
+    }
+
+    fn testbed(self, conn: &mut DbConnection, testbed: QueryTestbed) -> Result<Self, ApiError> {
+        Ok(match self {
+            Self::Zero => return Err(ApiError::DimensionTestbed),
+            Self::One { branch } => Self::Two {
+                branch,
+                testbed: testbed.into_json(conn)?,
+            },
+            Self::Two { branch, .. } => Self::Two {
+                branch,
+                testbed: testbed.into_json(conn)?,
+            },
+            Self::Three { branch, .. } => Self::Two {
+                branch,
+                testbed: testbed.into_json(conn)?,
+            },
+        })
+    }
+
+    fn benchmark(
+        self,
+        conn: &mut DbConnection,
+        benchmark: QueryBenchmark,
+    ) -> Result<Self, ApiError> {
+        Ok(match self {
+            Self::Zero | Self::One { .. } => return Err(ApiError::DimensionBenchmark),
+            Self::Two { branch, testbed } => Self::Three {
+                branch,
+                testbed,
+                benchmark: benchmark.into_json(conn)?,
+            },
+            Self::Three {
+                branch, testbed, ..
+            } => Self::Three {
+                branch,
+                testbed,
+                benchmark: benchmark.into_json(conn)?,
+            },
+        })
+    }
+
+    fn to_query(&self) -> Result<QueryDimensions, ApiError> {
+        self.try_into()
+    }
+}
+
+#[derive(Clone)]
+struct QueryDimensions {
+    branch: JsonBranch,
+    testbed: JsonTestbed,
+    benchmark: JsonBenchmark,
+}
+
+impl TryFrom<&Dimensions> for QueryDimensions {
+    type Error = ApiError;
+
+    fn try_from(dimensions: &Dimensions) -> Result<Self, Self::Error> {
+        if let Dimensions::Three {
+            branch,
+            testbed,
+            benchmark,
+        } = dimensions
+        {
+            Ok(Self {
+                branch: branch.clone(),
+                testbed: testbed.clone(),
+                benchmark: benchmark.clone(),
+            })
+        } else {
+            Err(ApiError::DimensionMissing)
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Times {
+    start_time_nanos: Option<i64>,
+    end_time_nanos: Option<i64>,
 }
 
 type PerfQuery = (
@@ -190,7 +290,7 @@ type PerfQuery = (
 fn perf_query(
     conn: &mut DbConnection,
     ids: Ids,
-    dimensions: Dimensions,
+    dimensions: QueryDimensions,
     times: Times,
     results: &mut Vec<JsonPerfMetrics>,
 ) -> Result<(), ApiError> {
@@ -201,7 +301,7 @@ fn perf_query(
         benchmark_id,
     } = ids;
 
-    let Dimensions {
+    let QueryDimensions {
         branch,
         testbed,
         benchmark,

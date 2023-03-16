@@ -206,6 +206,12 @@ pub enum ApiError {
     StatisticKind(i32),
     #[error("Failed to recognize visibility integer: {0}")]
     VisibilityInt(i32),
+    #[error("Unexpected dimension testbed")]
+    DimensionTestbed,
+    #[error("Unexpected dimension benchmark")]
+    DimensionBenchmark,
+    #[error("Missing dimension")]
+    DimensionMissing,
 }
 
 impl From<ApiError> for HttpError {
