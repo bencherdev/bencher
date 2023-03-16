@@ -183,16 +183,7 @@ enum Dimensions {
 impl Dimensions {
     fn branch(self, conn: &mut DbConnection, branch: QueryBranch) -> Result<Self, ApiError> {
         Ok(match self {
-            Self::Zero => Self::One {
-                branch: branch.into_json(conn)?,
-            },
-            Self::One { .. } => Self::One {
-                branch: branch.into_json(conn)?,
-            },
-            Self::Two { .. } => Self::One {
-                branch: branch.into_json(conn)?,
-            },
-            Self::Three { .. } => Self::One {
+            Self::Zero | Self::One { .. } | Self::Two { .. } | Self::Three { .. } => Self::One {
                 branch: branch.into_json(conn)?,
             },
         })
@@ -201,17 +192,11 @@ impl Dimensions {
     fn testbed(self, conn: &mut DbConnection, testbed: QueryTestbed) -> Result<Self, ApiError> {
         Ok(match self {
             Self::Zero => return Err(ApiError::DimensionTestbed),
-            Self::One { branch } => Self::Two {
-                branch,
-                testbed: testbed.into_json(conn)?,
-            },
-            Self::Two { branch, .. } => Self::Two {
-                branch,
-                testbed: testbed.into_json(conn)?,
-            },
-            Self::Three { branch, .. } => Self::Two {
-                branch,
-                testbed: testbed.into_json(conn)?,
+            Self::One { branch } | Self::Two { branch, .. } | Self::Three { branch, .. } => {
+                Self::Two {
+                    branch,
+                    testbed: testbed.into_json(conn)?,
+                }
             },
         })
     }
@@ -223,12 +208,8 @@ impl Dimensions {
     ) -> Result<Self, ApiError> {
         Ok(match self {
             Self::Zero | Self::One { .. } => return Err(ApiError::DimensionBenchmark),
-            Self::Two { branch, testbed } => Self::Three {
-                branch,
-                testbed,
-                benchmark: benchmark.into_json(conn)?,
-            },
-            Self::Three {
+            Self::Two { branch, testbed }
+            | Self::Three {
                 branch, testbed, ..
             } => Self::Three {
                 branch,
