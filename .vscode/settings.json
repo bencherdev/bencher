@@ -33,8 +33,10 @@
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
     "anychar",
+    "bencherdev",
     "Bulma",
     "chrono",
+    "Dogfooding",
     "dropshot",
     "fullwidth",
     "Insertable",

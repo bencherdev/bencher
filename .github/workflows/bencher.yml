@@ -461,6 +461,21 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
+  # bencher_github_action:
+  #   name: Bencher CLI GitHub Action
+  #   runs-on: ubuntu-latest
+  #   # continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Build next Bencher CLI GitHub Action
+  #       run: |
+  #         cd services/action
+  #         npm install --include=dev
+  #         npm run build
+  #     - uses: bencherdev/bencher@main
+  #     - name: Run current Bencher CLI GitHub Action
+  #       run: bencher run --project bencher --local "bencher mock"
+
   # Release
   release_bencher:
     if: startsWith(github.ref, 'refs/tags/')
@@ -475,6 +490,8 @@ jobs:
       - cargo_audit
       - cargo_udeps
       - npx_vitest
+      # Integrations
+      # - bencher_github_action
       # Build
       - build_local_api_docker
       - build_litestream_api_docker
@@ -522,21 +539,21 @@ jobs:
       # Tag & Push
       - name: Tag & Push Local API Image
         run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.API_LOCAL_DOCKER_IMAGE }}
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LOCAL_DOCKER_IMAGE }}
           docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
           docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - name: Tag & Push Litestream API Image
         run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
           docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
           docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - name: Tag & Push UI Image
         run: |
-          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.UI_DOCKER_IMAGE }}
+          export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ github.repository_owner }}/${{ env.UI_DOCKER_IMAGE }}
           docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
           docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest

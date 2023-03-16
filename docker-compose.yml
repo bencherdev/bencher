@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   bencher_api:
-    image: bencherdev/bencher-api-local:latest
+    image: ghcr.io/bencherdev/bencher-api-local:latest
     container_name: bencher_api_local
     ports:
       - 61016:61016
@@ -13,7 +13,7 @@ services:
       # - BENCHER_CONFIG_PATH=
 
   bencher_ui:
-    image: bencherdev/bencher-ui:latest
+    image: ghcr.io/bencherdev/bencher-ui:latest
     container_name: bencher_ui
     ports:
       - 3000:80
