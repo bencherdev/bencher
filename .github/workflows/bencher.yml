@@ -523,21 +523,24 @@ jobs:
       - name: Tag & Push Local API Image
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.API_LOCAL_DOCKER_IMAGE }}
-          export GITHUB_TAGGED_IMAGE=${GITHUB_IMAGE}:latest,${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_TAGGED_IMAGE}
-          docker push ${GITHUB_TAGGED_IMAGE}
+          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.API_LOCAL_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          docker push ${GITHUB_IMAGE}:latest
+          docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - name: Tag & Push Litestream API Image
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.API_LITESTREAM_DOCKER_IMAGE }}
-          export GITHUB_TAGGED_IMAGE=${GITHUB_IMAGE}:latest,${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_TAGGED_IMAGE}
-          docker push ${GITHUB_TAGGED_IMAGE}
+          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.API_LITESTREAM_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          docker push ${GITHUB_IMAGE}:latest
+          docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - name: Tag & Push UI Image
         run: |
           export GITHUB_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.UI_DOCKER_IMAGE }}
-          export GITHUB_TAGGED_IMAGE=${GITHUB_IMAGE}:latest,${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
-          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_TAGGED_IMAGE}
-          docker push ${GITHUB_TAGGED_IMAGE}
+          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:latest
+          docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+          docker push ${GITHUB_IMAGE}:latest
+          docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         with:
