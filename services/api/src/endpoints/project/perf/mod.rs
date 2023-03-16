@@ -139,8 +139,10 @@ async fn get_inner(
                 };
                 ids.benchmark_id = benchmark.id;
                 dimensions = dimensions.benchmark(conn, benchmark)?;
+                let (two_d, query_dimensions) = dimensions.into_query()?;
+                dimensions = two_d;
 
-                perf_query(conn, ids, dimensions.to_query()?, times, &mut results)?;
+                perf_query(conn, ids, query_dimensions, times, &mut results)?;
             }
         }
     }
@@ -236,37 +238,29 @@ impl Dimensions {
         })
     }
 
-    fn to_query(&self) -> Result<QueryDimensions, ApiError> {
-        self.try_into()
-    }
-}
-
-#[derive(Clone)]
-struct QueryDimensions {
-    branch: JsonBranch,
-    testbed: JsonTestbed,
-    benchmark: JsonBenchmark,
-}
-
-impl TryFrom<&Dimensions> for QueryDimensions {
-    type Error = ApiError;
-
-    fn try_from(dimensions: &Dimensions) -> Result<Self, Self::Error> {
+    fn into_query(self) -> Result<(Self, QueryDimensions), ApiError> {
         if let Dimensions::Three {
             branch,
             testbed,
             benchmark,
-        } = dimensions
+        } = self
         {
-            Ok(Self {
+            let query_dimensions = QueryDimensions {
                 branch: branch.clone(),
                 testbed: testbed.clone(),
-                benchmark: benchmark.clone(),
-            })
+                benchmark,
+            };
+            Ok((Self::Two { branch, testbed }, query_dimensions))
         } else {
             Err(ApiError::DimensionMissing)
         }
     }
+}
+
+struct QueryDimensions {
+    branch: JsonBranch,
+    testbed: JsonTestbed,
+    benchmark: JsonBenchmark,
 }
 
 #[derive(Clone, Copy)]

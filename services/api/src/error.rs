@@ -206,11 +206,11 @@ pub enum ApiError {
     StatisticKind(i32),
     #[error("Failed to recognize visibility integer: {0}")]
     VisibilityInt(i32),
-    #[error("Unexpected dimension testbed")]
+    #[error("Unexpected dimension: testbed")]
     DimensionTestbed,
-    #[error("Unexpected dimension benchmark")]
+    #[error("Unexpected dimension: benchmark")]
     DimensionBenchmark,
-    #[error("Missing dimension")]
+    #[error("Missing dimension: less than three")]
     DimensionMissing,
 }
 
