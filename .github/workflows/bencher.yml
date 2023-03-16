@@ -472,6 +472,7 @@ jobs:
           cd services/action
           npm install --include=dev
           npm run build
+          git diff --exit-code dist/index.js
       - uses: bencherdev/bencher@main
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --local "bencher mock"

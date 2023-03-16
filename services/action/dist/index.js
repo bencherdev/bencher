@@ -8014,6 +8014,7 @@
 			Object.defineProperty(exports, "__esModule", { value: true });
 			const core = __importStar(__nccwpck_require__(2186));
 			const toolCache = __importStar(__nccwpck_require__(7784));
+			const BENCHER_VERSION = "0.2.41";
 			const run = async () => {
 				const cli_version = core.getInput("version");
 				const { url, version } = into_url(cli_version);
@@ -8027,11 +8028,10 @@
 				core.info(`Bencher CLI ${version} installed!`);
 			};
 			const into_url = (cli_version) => {
-				const package_version = process.env.npm_package_version
-					? process.env.npm_package_version
-					: "0.2.40";
 				const version =
-					cli_version === "latest" ? package_version : cli_version;
+					cli_version === "latest"
+						? BENCHER_VERSION
+						: cli_version.replace(/^v/, "");
 				const url = `https://github.com/bencherdev/bencher/releases/download/v${version}/bencher_${version}_amd64.deb`;
 				return { url, version };
 			};
