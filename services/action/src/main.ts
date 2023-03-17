@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
 
-const BENCHER_VERSION = "0.2.41";
+import swagger from "../../ui/src/components/docs/api/swagger.json";
 
 const run = async () => {
 	const cli_version = core.getInput("version");
@@ -18,15 +18,16 @@ const run = async () => {
 
 const into_url = (cli_version: string) => {
 	const version =
-		cli_version === "latest" ? BENCHER_VERSION : cli_version.replace(/^v/, "");
-	const url = `https://github.com/bencherdev/bencher/releases/download/v${version}/bencher_${version}_amd64.deb`;
+		cli_version === "latest"
+			? swagger?.info?.version
+			: cli_version.replace(/^v/, "");
+	const url = `https://github.com/bencherdev/bencher/releases/download/v${version}/bencher`;
 	return { url, version };
 };
 
 const install = async (url: string, version: string) => {
-	const tar = await toolCache.downloadTool(url);
-	const extracted = await toolCache.extractTar(tar);
-	const cache = await toolCache.cacheDir(extracted, "bencher", version);
+	const bencher = await toolCache.downloadTool(url);
+	const cache = await toolCache.cacheDir(bencher, "bencher", version);
 	core.addPath(cache);
 };
 

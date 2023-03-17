@@ -19,11 +19,25 @@ See [how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions) 
 
 <pre>
   <code>
+    {`- uses: bencherdev/bencher@v${BENCHER_VERSION}`}
+  </code>
+</pre>
+
+There is an optional `version` argument to specify an exact version of the Bencher CLI to use.
+Otherwise, it will default to using the latest CLI version.
+
+<pre>
+  <code>
     {`- uses: bencherdev/bencher@main
   with:
     version: ${BENCHER_VERSION}`}
   </code>
 </pre>
+
+
+These two commands are functionally equivalent.
+However, the first protects you from any breaking changes in the Bencher CLI GitHub action by using a tagged release.
+Therefore, the former is the suggested method (ex: <code>{`- uses: bencherdev/bencher@v${BENCHER_VERSION}`}</code>)
 
 ## From Source
 

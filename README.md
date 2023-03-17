@@ -89,12 +89,11 @@ All public projects have their own [perf page](https://bencher.dev/perf). These 
 <a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Benchmark Adapter Comparison" alt="Benchmark Adapter Comparison for Bencher - Bencher" /></a>
 </p>
 
-
-
-This action installs the [Bencher CLI](https://bencher.dev/docs/how-to/install-cli).
-Use it to [track your benchmarks](https://bencher.dev/docs/how-to/track-benchmarks) in GitHub Actions.
-
 ## GitHub Actions
+
+Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
+Use it to [track your benchmarks](https://bencher.dev/docs/how-to/track-benchmarks).
+See [how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions) for more details.
 
 ```yaml
 name: Track benchmarks with Bencher
@@ -107,7 +106,7 @@ jobs:
       - BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@main
+      - uses: bencherdev/bencher@v0.2.42
       - run: bencher run --project my-project-slug "bencher mock"
 ```
 
@@ -118,7 +117,11 @@ Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/m
 
 ### Specify CLI Version
 
-There is an optional `version` argument to specify an exact version of the Bencher CLI to use.
+```yaml
+- uses: bencherdev/bencher@v0.2.42
+```
+
+There is also an optional `version` argument to specify an exact version of the Bencher CLI to use.
 Otherwise, it will default to using the latest CLI version.
 
 ```yaml
@@ -126,6 +129,10 @@ Otherwise, it will default to using the latest CLI version.
   with:
     version: 0.2.42
 ```
+
+These two commands are functionally equivalent.
+However, the first protects you from any breaking changes in the Bencher CLI GitHub action by using a tagged release.
+Therefore, the former is the suggested method (ex: `- uses: bencherdev/bencher@v0.2.42`)
 
 ## Contributing
 

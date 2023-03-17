@@ -1,14 +1,14 @@
 #!/bin/bash
 
+# Generate the API docs from the server
+cd ./services/api
+cargo run --features swagger
+cd -
+
 # Generate the Bencher CLI GitHub Action
 cd ./services/action
 npm install --include=dev
 npm run build
-cd -
-
-# Generate the API docs from the server
-cd ./services/api
-cargo run --features swagger
 cd -
 
 git add Cargo.toml
