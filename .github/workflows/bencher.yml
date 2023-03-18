@@ -464,7 +464,8 @@ jobs:
   bencher_github_action:
     name: Bencher CLI GitHub Action
     runs-on: ubuntu-latest
-    # continue-on-error: true
+    # If main has already been updated then this will fail
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Build next Bencher CLI GitHub Action

@@ -341,7 +341,7 @@ impl PerfData {
 
     fn y_label_fmt(y: &f64) -> String {
         if *y < 1.0 {
-            y.to_string()
+            Self::decimal_format(*y)
         } else {
             Self::comma_format(*y as u64)
         }
@@ -350,7 +350,7 @@ impl PerfData {
     fn float_len(y: OrderedFloat<f64>) -> usize {
         let y = f64::from(y);
         if y < 1.0 {
-            y.to_string().len()
+            Self::decimal_format(y).len()
         } else {
             Self::comma_format(y as u64).len()
         }
@@ -364,6 +364,31 @@ impl PerfData {
             .filter_map(|thousand| std::str::from_utf8(thousand).ok())
             .collect::<Vec<_>>()
             .join(",")
+    }
+
+    fn decimal_format(y: f64) -> String {
+        const ZERO: char = '0';
+
+        let y_str = y.to_string();
+        let mut y_chars = String::with_capacity(y_str.len());
+        let mut zero_count = 0;
+        for (index, c) in y_str.chars().enumerate() {
+            if index < 2 {
+                y_chars.push(c);
+            } else if zero_count > 3 {
+                y_chars.push(ZERO);
+                break;
+            } else if c == ZERO {
+                zero_count += 1;
+            } else {
+                for _ in 0..zero_count {
+                    y_chars.push(ZERO);
+                }
+                zero_count = 0;
+                y_chars.push(c);
+            }
+        }
+        y_chars
     }
 }
 
