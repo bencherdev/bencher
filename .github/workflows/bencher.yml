@@ -472,7 +472,7 @@ jobs:
           cd services/action
           npm install --include=dev
           npm run build
-      - uses: bencherdev/bencher@main
+      - uses: bencherdev/bencher@devel
       - name: Run current Bencher CLI GitHub Action
         run: bencher run --project bencher --local "bencher mock"
 

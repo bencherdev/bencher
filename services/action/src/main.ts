@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
+import { chmod } from "fs/promises";
 
 import swagger from "../../ui/src/components/docs/api/swagger.json";
 
@@ -27,6 +28,7 @@ const into_url = (cli_version: string) => {
 
 const install = async (url: string, version: string) => {
 	const bencher = await toolCache.downloadTool(url);
+	await chmod(bencher, 0o755);
 	const cache = await toolCache.cacheFile(
 		bencher,
 		"bencher",
