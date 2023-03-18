@@ -27,7 +27,12 @@ const into_url = (cli_version: string) => {
 
 const install = async (url: string, version: string) => {
 	const bencher = await toolCache.downloadTool(url);
-	const cache = await toolCache.cacheDir(bencher, "bencher", version);
+	const cache = await toolCache.cacheFile(
+		bencher,
+		"bencher",
+		"bencher",
+		version,
+	);
 	core.addPath(cache);
 };
 

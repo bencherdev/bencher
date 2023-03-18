@@ -8042,7 +8042,12 @@
 			};
 			const install = async (url, version) => {
 				const bencher = await toolCache.downloadTool(url);
-				const cache = await toolCache.cacheDir(bencher, "bencher", version);
+				const cache = await toolCache.cacheFile(
+					bencher,
+					"bencher",
+					"bencher",
+					version,
+				);
 				core.addPath(cache);
 			};
 			run().catch((error) => {
