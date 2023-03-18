@@ -491,7 +491,7 @@ jobs:
       - cargo_udeps
       - npx_vitest
       # Integrations
-      # - bencher_github_action
+      - bencher_github_action
       # Build
       - build_local_api_docker
       - build_litestream_api_docker
