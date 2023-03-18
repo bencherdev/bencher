@@ -6,8 +6,10 @@ use image::ImageBuffer;
 use once_cell::sync::Lazy;
 use ordered_float::OrderedFloat;
 use plotters::{
+    coord::types::RangedCoordf64,
     prelude::{
-        BitMapBackend, BitMapElement, ChartBuilder, IntoDrawingArea, MultiLineText, Rectangle,
+        BitMapBackend, BitMapElement, ChartBuilder, IntoDrawingArea, MultiLineText, Ranged,
+        Rectangle,
     },
     series::LineSeries,
     style::{Color, FontFamily, RGBColor, ShapeStyle, WHITE},
@@ -23,6 +25,7 @@ const KEY_HEIGHT: u32 = IMG_HEIGHT - PLOT_HEIGHT;
 
 const MAX_TITLE_LEN: usize = 28;
 const X_LABELS: i64 = 5;
+const Y_LABELS: usize = 5;
 const DATE_TIME_FMT: &str = "%d %b %Y %H:%M:%S";
 
 // RGB is three units in size
@@ -135,7 +138,7 @@ impl LinePlot {
                 .x_label_style((FontFamily::Monospace, 16))
                 .x_label_formatter(&|x| perf_data.x_label_fmt(x))
                 .y_desc(&perf_data.y_desc)
-                .y_labels(5)
+                .y_labels(Y_LABELS)
                 .y_label_style((FontFamily::Monospace, 12))
                 .y_label_formatter(&PerfData::y_label_fmt)
                 .max_light_lines(4)
@@ -327,15 +330,17 @@ impl PerfData {
     }
 
     fn y_label_area_size(&self) -> Result<u32, PlotError> {
-        let buffer = if self.y.1 < OrderedFloat::from(1.0) {
-            48
-        } else if self.y.1 < OrderedFloat::from(1_000.0) {
+        let y_range = RangedCoordf64::from(self.y_range()).key_points(Y_LABELS);
+        let min = y_range.first().cloned().unwrap_or_default();
+        let max = y_range.last().cloned().unwrap_or_default();
+        let buffer = if max < 1.0 {
+            40
+        } else if max < 1_000.0 {
             36
         } else {
-            30
+            32
         };
-        let y_len =
-            buffer + 6 * std::cmp::max(Self::float_len(self.y.0), Self::float_len(self.y.1));
+        let y_len = buffer + 6 * std::cmp::max(Self::float_len(min), Self::float_len(max));
         u32::try_from(y_len).map_err(Into::into)
     }
 
@@ -347,23 +352,12 @@ impl PerfData {
         }
     }
 
-    fn float_len(y: OrderedFloat<f64>) -> usize {
-        let y = f64::from(y);
+    fn float_len(y: f64) -> usize {
         if y < 1.0 {
             Self::decimal_format(y).len()
         } else {
             Self::comma_format(y as u64).len()
         }
-    }
-
-    fn comma_format(y: u64) -> String {
-        y.to_string()
-            .as_bytes()
-            .rchunks(3)
-            .rev()
-            .filter_map(|thousand| std::str::from_utf8(thousand).ok())
-            .collect::<Vec<_>>()
-            .join(",")
     }
 
     fn decimal_format(y: f64) -> String {
@@ -389,6 +383,16 @@ impl PerfData {
             }
         }
         y_chars
+    }
+
+    fn comma_format(y: u64) -> String {
+        y.to_string()
+            .as_bytes()
+            .rchunks(3)
+            .rev()
+            .filter_map(|thousand| std::str::from_utf8(thousand).ok())
+            .collect::<Vec<_>>()
+            .join(",")
     }
 }
 
@@ -451,6 +455,11 @@ mod test {
     static JSON_PERF: Lazy<JsonPerf> =
         Lazy::new(|| serde_json::from_str(PERF_DOT_JSON).expect("Failed to serialize perf JSON"));
 
+    pub const DECIMAL_DOT_JSON: &str = include_str!("../decimal.json");
+    static JSON_PERF_DECIMAL: Lazy<JsonPerf> = Lazy::new(|| {
+        serde_json::from_str(DECIMAL_DOT_JSON).expect("Failed to serialize perf JSON")
+    });
+
     fn save_jpeg(jpeg: &[u8], name: &str) {
         let mut file = File::create(format!("{name}.jpeg")).unwrap();
         file.write_all(jpeg).unwrap();
@@ -463,6 +472,18 @@ mod test {
             .draw(Some("Benchmark Adapter Comparison"), JSON_PERF.clone())
             .unwrap();
         save_jpeg(&plot_buffer, "perf");
+    }
+
+    #[test]
+    fn test_plot_decimal() {
+        let plot = LinePlot::new();
+        let plot_buffer = plot
+            .draw(
+                Some("Benchmark Adapter Comparison"),
+                JSON_PERF_DECIMAL.clone(),
+            )
+            .unwrap();
+        save_jpeg(&plot_buffer, "decimal");
     }
 
     #[test]
