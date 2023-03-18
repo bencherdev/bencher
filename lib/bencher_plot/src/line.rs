@@ -375,8 +375,10 @@ impl PerfData {
         for (index, c) in y_str.chars().enumerate() {
             if index < 2 {
                 y_chars.push(c);
-            } else if zero_count > 3 {
-                y_chars.push(ZERO);
+            } else if zero_count == 4 {
+                if index == 6 {
+                    y_chars.push(ZERO);
+                }
                 break;
             } else if c == ZERO {
                 zero_count += 1;

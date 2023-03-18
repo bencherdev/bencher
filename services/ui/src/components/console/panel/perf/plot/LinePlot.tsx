@@ -8,10 +8,30 @@ const LinePlot = (props) => {
 	const [max_units, setMaxUnits] = createSignal(1);
 
 	const handleMaxUnits = (value: number) => {
-		if (value >= 1.0) {
-			value = Math.round(value);
+		let value_len = 0;
+		if (value < 1.0) {
+			let zero_count = 0;
+			let value_str = value.toString();
+			for (var index = 0; index < value_str.length; index++) {
+				if (index < 2) {
+					value_len++;
+				} else if (zero_count == 4) {
+					if (index == 6) {
+						value_len++;
+					}
+					break;
+				} else if (value_str.charAt(index) == "0") {
+					zero_count++;
+				} else {
+					value_len += zero_count;
+					zero_count = 0;
+					value_len++;
+				}
+			}
+		} else {
+			value_len = Math.round(value).toString().length;
 		}
-		setMaxUnits(Math.max(max_units(), value.toString().length));
+		setMaxUnits(Math.max(max_units(), value_len));
 	};
 
 	const get_units = (json_perf) => {
