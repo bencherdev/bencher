@@ -313,15 +313,9 @@ impl PerfData {
     }
 
     fn y_range(&self) -> Range<f64> {
-        let (min, max) = if self.y.1 < OrderedFloat::from(1.0) {
-            (self.y.0, self.y.1)
-        } else {
-            let diff = self.y.1 - self.y.0;
-            (
-                std::cmp::max(self.y.0 - (diff * 0.08), OrderedFloat::from(0.0)),
-                (self.y.1 + (diff * 0.04)),
-            )
-        };
+        let diff = self.y.1 - self.y.0;
+        let min = std::cmp::max(self.y.0 - (diff * 0.08), OrderedFloat::from(0.0));
+        let max = self.y.1 + (diff * 0.04);
         min.into()..max.into()
     }
 
