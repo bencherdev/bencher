@@ -1,38 +1,26 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
-import { createSignal } from "solid-js";
-
-const PLOT_ID = "perf_plot";
+import { createEffect, createMemo, createSignal } from "solid-js";
 
 const LinePlot = (props) => {
-	const [max_units, setMaxUnits] = createSignal(1);
+	const [is_plotted, set_is_plotted] = createSignal(false);
+	const [y_label_area_size, set_y_label_area_size] = createSignal(1000);
 
-	const handleMaxUnits = (value: number) => {
-		let value_len = 0;
-		if (value < 1.0) {
-			let zero_count = 0;
-			let value_str = value.toString();
-			for (var index = 0; index < value_str.length; index++) {
-				if (index < 2) {
-					value_len++;
-				} else if (zero_count == 4) {
-					if (index == 6) {
-						value_len++;
-					}
-					break;
-				} else if (value_str.charAt(index) == "0") {
-					zero_count++;
-				} else {
-					value_len += zero_count;
-					zero_count = 0;
-					value_len++;
-				}
-			}
-		} else {
-			value_len = Math.round(value).toString().length;
+	createEffect(() => {
+		if (is_plotted()) {
+			let y_axis = document.querySelectorAll(
+				"svg [aria-label='y-axis'] g.tick text",
+			);
+
+			let max_width = 0;
+			y_axis.forEach((y_tick) => {
+				let width = y_tick.getBoundingClientRect().width;
+				max_width = Math.max(max_width, width);
+			});
+
+			set_y_label_area_size(max_width * 1.12);
 		}
-		setMaxUnits(Math.max(max_units(), value_len));
-	};
+	});
 
 	const get_units = (json_perf) => {
 		const units = json_perf?.metric_kind?.units;
@@ -70,7 +58,6 @@ const LinePlot = (props) => {
 				const x_value = new Date(perf_metric.start_time);
 				x_value.setSeconds(x_value.getSeconds() + perf_metric.iteration);
 				const y_value = perf_metric.metric?.value;
-				handleMaxUnits(y_value);
 				const xy = [x_value, y_value];
 				line_data.push(xy);
 				metrics_found = true;
@@ -82,27 +69,30 @@ const LinePlot = (props) => {
 
 		if (metrics_found) {
 			return (
-				<div id={PLOT_ID}>
-					{Plot.plot({
-						y: {
-							grid: true,
-							label: `↑ ${units}`,
-						},
-						marks: plot_arrays,
-						width: props.width(),
-						nice: true,
-						// https://github.com/observablehq/plot/blob/main/README.md#layout-options
-						// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-						marginLeft: max_units() * 10 + 10,
-					})}
-				</div>
+				<>
+					<div>
+						{Plot.plot({
+							y: {
+								grid: true,
+								label: `↑ ${units}`,
+							},
+							marks: plot_arrays,
+							width: props.width(),
+							nice: true,
+							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
+							// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
+							marginLeft: y_label_area_size(),
+						})}
+					</div>
+					<>{set_is_plotted(true)}</>
+				</>
 			);
 		} else {
 			return (
 				<section class="section">
 					<div class="container">
 						<div class="content">
-							<div id={PLOT_ID}>
+							<div>
 								<h3 class="title is-3">No data found</h3>
 								<h4 class="subtitle is-4">{new Date(Date.now()).toString()}</h4>
 							</div>
