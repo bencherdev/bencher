@@ -49,6 +49,7 @@ const PerfPlot = (props) => {
 					</div>
 					<PlotTab
 						project_slug={props.project_slug}
+						is_console={props.is_console}
 						tab={props.tab}
 						branches_tab={props.branches_tab}
 						testbeds_tab={props.testbeds_tab}

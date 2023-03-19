@@ -366,6 +366,7 @@ const PerfPanel = (props) => {
 				project_slug={project_slug()}
 				config={props.config?.plot}
 				path_params={props.path_params}
+				is_console={props.is_console}
 				isPlotInit={isPlotInit}
 				branches={branches}
 				testbeds={testbeds}

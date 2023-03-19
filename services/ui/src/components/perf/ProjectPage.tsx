@@ -20,6 +20,7 @@ const ProjectPage = (props) => {
 							project_slug={project_slug}
 							config={projectsConfig[Operation.PERF]}
 							path_params={path_params}
+							is_console={false}
 						/>
 					</div>
 				</div>

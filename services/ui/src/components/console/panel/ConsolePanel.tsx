@@ -40,6 +40,7 @@ const ConsolePanel = (props) => {
 					user={props.user}
 					config={props.config}
 					path_params={props.path_params}
+					is_console={true}
 				/>
 			</Match>
 			<Match when={props.config?.operation === Operation.BILLING}>

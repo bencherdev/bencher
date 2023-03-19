@@ -1,5 +1,5 @@
 import { Link } from "solid-app-router";
-import { For, Show } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
 
@@ -46,34 +46,40 @@ const PlotTab = (props) => {
 					)}
 				</For>
 			</p>
-			<Show
-				when={getTab().length > 0}
+			<Switch
 				fallback={
 					<div class="box">
-						<AddButton project_slug={props.project_slug} tab={props.tab} />
+						<p>No {props.tab()} found</p>
 					</div>
 				}
 			>
-				<For each={getTab()}>
-					{(item, index) => (
-						// TODO maybe move over to a store and see if this works?
-						// https://www.solidjs.com/tutorial/stores_createstore
-						<a
-							class="panel-block"
-							onClick={(e) => handleChecked(index(), item.uuid)}
-						>
-							<div class="columns is-vcentered is-mobile">
-								<div class="column is-narrow">
-									<input type="checkbox" checked={item.checked} />
+				<Match when={props.is_console && getTab().length === 0}>
+					<div class="box">
+						<AddButton project_slug={props.project_slug} tab={props.tab} />
+					</div>
+				</Match>
+				<Match when={getTab().length > 0}>
+					<For each={getTab()}>
+						{(item, index) => (
+							// TODO maybe move over to a store and see if this works?
+							// https://www.solidjs.com/tutorial/stores_createstore
+							<a
+								class="panel-block"
+								onClick={(e) => handleChecked(index(), item.uuid)}
+							>
+								<div class="columns is-vcentered is-mobile">
+									<div class="column is-narrow">
+										<input type="checkbox" checked={item.checked} />
+									</div>
+									<div class="column">
+										<small style="overflow-wrap:anywhere;">{item.name}</small>
+									</div>
 								</div>
-								<div class="column">
-									<small style="overflow-wrap:anywhere;">{item.name}</small>
-								</div>
-							</div>
-						</a>
-					)}
-				</For>
-			</Show>
+							</a>
+						)}
+					</For>
+				</Match>
+			</Switch>
 		</>
 	);
 };
