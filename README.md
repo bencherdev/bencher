@@ -30,6 +30,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   </a>
 </p>
 
+> 🐰 [Use the GitHub Action with your project](#github-actions)
 
 ## Documentation
 
