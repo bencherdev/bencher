@@ -1,0 +1,246 @@
+// https://code.visualstudio.com/docs/editor/debugging#_launch-configurations
+{
+    "version": "0.2.0",
+    "configurations": [
+        // lib
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_adapter`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_adapter",
+                ],
+                "filter": {
+                    "name": "bencher_adapter",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_json`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_json",
+                ],
+                "filter": {
+                    "name": "bencher_json",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_plot`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_plot",
+                ],
+                "filter": {
+                    "name": "bencher_plot",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_rbac`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_rbac",
+                ],
+                "filter": {
+                    "name": "bencher_rbac",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_valid`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_valid",
+                ],
+                "filter": {
+                    "name": "bencher_valid",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration tests for `bencher_valid`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_valid",
+                    "--test=web",
+                ],
+                "filter": {
+                    "name": "web",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        // plus
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_billing`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_billing",
+                ],
+                "filter": {
+                    "name": "bencher_billing",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_license`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_license",
+                ],
+                "filter": {
+                    "name": "bencher_license",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_plus`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_plus",
+                ],
+                "filter": {
+                    "name": "bencher_plus",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        // api
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests for `bencher_api`",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=bencher_api",
+                ],
+                "filter": {
+                    "name": "bencher_api",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bin `api`",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=bencher_api",
+                    "--bin=api",
+                ],
+                "filter": {
+                    "name": "api",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bin Swagger `api`",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=bencher_api",
+                    "--bin=api",
+                    "--features=swagger",
+                ],
+                "filter": {
+                    "name": "api",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        // cli
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug bin `cli`",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=bencher_cli",
+                    "--bin=bencher",
+                ],
+                "filter": {
+                    "name": "bencher",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}

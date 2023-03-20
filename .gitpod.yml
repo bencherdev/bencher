@@ -10,6 +10,7 @@ vscode:
       "serayuzgur.crates",
       "wcrichton.flowistry",
       "tamasfe.even-better-toml",
+      "vadimcn.vscode-lldb",
       "rome.rome",
       "yzhang.markdown-all-in-one",
       "unifiedjs.vscode-mdx",
