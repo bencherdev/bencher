@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bencher_valid::{NonEmpty, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
@@ -44,4 +46,10 @@ pub struct JsonTestbed {
     pub project: Uuid,
     pub name: NonEmpty,
     pub slug: Slug,
+}
+
+impl fmt::Display for JsonTestbed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }

@@ -14,7 +14,7 @@ seed = []
 # Workspace
 async-trait.workspace = true
 bencher_adapter.workspace = true
-bencher_json.workspace = true
+bencher_json = { workspace = true, features = ["table"] }
 chrono.workspace = true
 clap.workspace = true
 literally.workspace = true
@@ -25,6 +25,7 @@ reqwest = { workspace = true, default-features = false, features = [
 ] }
 serde.workspace = true
 serde_json.workspace = true
+tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true

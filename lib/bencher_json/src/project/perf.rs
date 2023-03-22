@@ -1,3 +1,4 @@
+use bencher_valid::GitHash;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -195,7 +196,7 @@ pub struct JsonPerfMetrics {
     pub metrics: Vec<JsonPerfMetric>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
     pub uuid: Uuid,
@@ -203,6 +204,85 @@ pub struct JsonPerfMetric {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub version_number: u32,
-    pub version_hash: Option<String>,
+    pub version_hash: Option<GitHash>,
     pub metric: JsonMetric,
+}
+
+#[cfg(feature = "table")]
+pub mod table {
+    use std::fmt;
+
+    use bencher_valid::GitHash;
+    use chrono::{DateTime, Utc};
+    use tabled::{Table, TableIteratorExt, Tabled};
+
+    use crate::{
+        JsonBenchmark, JsonBranch, JsonMetric, JsonMetricKind, JsonPerf, JsonProject, JsonTestbed,
+    };
+
+    impl From<JsonPerf> for Table {
+        fn from(json_perf: JsonPerf) -> Self {
+            let mut perf_table = Vec::new();
+            for result in json_perf.results {
+                for metric in result.metrics {
+                    perf_table.push(PerfTable {
+                        project: json_perf.project.clone(),
+                        metric_kind: json_perf.metric_kind.clone(),
+                        branch: result.branch.clone(),
+                        testbed: result.testbed.clone(),
+                        benchmark: result.benchmark.clone(),
+                        iteration: metric.iteration,
+                        start_time: metric.start_time,
+                        end_time: metric.end_time,
+                        version_number: metric.version_number,
+                        version_hash: VersionHash(metric.version_hash),
+                        metric: metric.metric,
+                    })
+                }
+            }
+            perf_table.table()
+        }
+    }
+
+    #[derive(Tabled)]
+    pub struct PerfTable {
+        #[tabled(rename = "Project")]
+        pub project: JsonProject,
+        #[tabled(rename = "Metric Kind")]
+        pub metric_kind: JsonMetricKind,
+        #[tabled(rename = "Branch")]
+        pub branch: JsonBranch,
+        #[tabled(rename = "Testbed")]
+        pub testbed: JsonTestbed,
+        #[tabled(rename = "Benchmark")]
+        pub benchmark: JsonBenchmark,
+        #[tabled(rename = "Iteration")]
+        pub iteration: u32,
+        #[tabled(rename = "Start Time")]
+        pub start_time: DateTime<Utc>,
+        #[tabled(rename = "End Time")]
+        pub end_time: DateTime<Utc>,
+        #[tabled(rename = "Version Number")]
+        pub version_number: u32,
+        #[tabled(rename = "Version Hash")]
+        pub version_hash: VersionHash,
+        #[tabled(rename = "Metric Value")]
+        pub metric: JsonMetric,
+    }
+
+    pub struct VersionHash(Option<GitHash>);
+
+    impl fmt::Display for VersionHash {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "{}",
+                if let Some(git_hash) = &self.0 {
+                    git_hash.as_ref()
+                } else {
+                    "---"
+                }
+            )
+        }
+    }
 }

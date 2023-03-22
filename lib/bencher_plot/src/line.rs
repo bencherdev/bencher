@@ -277,10 +277,7 @@ impl PerfData {
 
         if let (Some(min_x), Some(max_x), Some(min_y), Some(max_y)) = (min_x, max_x, min_y, max_y) {
             let x_time = max_x - min_x < Duration::days(X_LABELS);
-            let y_desc = format!(
-                "{}: {}",
-                json_perf.metric_kind.name, json_perf.metric_kind.units
-            );
+            let y_desc = json_perf.metric_kind.to_string();
             Some(PerfData {
                 lines,
                 x: (min_x, max_x),

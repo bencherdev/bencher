@@ -1,12 +1,13 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonPerfQuery, ResourceId};
+use bencher_json::{JsonPerf, JsonPerfQuery, ResourceId};
 use chrono::serde::ts_milliseconds_option::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
+use tabled::Table;
 use uuid::Uuid;
 
-use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, CliError};
+use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println, CliError};
 
 use crate::bencher::SubCmd;
 
@@ -19,6 +20,7 @@ pub struct Perf {
     benchmarks: Vec<Uuid>,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
+    table: bool,
     backend: Backend,
 }
 
@@ -34,6 +36,7 @@ impl TryFrom<CliPerf> for Perf {
             benchmarks,
             start_time,
             end_time,
+            table,
             backend,
         } = perf;
         Ok(Self {
@@ -44,6 +47,7 @@ impl TryFrom<CliPerf> for Perf {
             benchmarks,
             start_time: from_milli_ts(serde_json::json!(start_time))?,
             end_time: from_milli_ts(serde_json::json!(end_time))?,
+            table,
             backend: backend.try_into()?,
         })
     }
@@ -75,9 +79,15 @@ impl From<Perf> for JsonPerfQuery {
 impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
         let perf: JsonPerfQuery = self.clone().into();
-        self.backend
+        let resp = self
+            .backend
             .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;
+        if self.table {
+            let json_perf: JsonPerf = serde_json::from_value(resp)?;
+            let perf_table: Table = json_perf.into();
+            cli_println!("{perf_table}");
+        }
         Ok(())
     }
 }

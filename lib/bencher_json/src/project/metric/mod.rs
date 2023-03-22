@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, iter::Sum, ops::Add};
+use std::{cmp::Ordering, fmt, iter::Sum, ops::Add};
 
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
@@ -17,6 +17,12 @@ pub struct JsonMetric {
     pub value: OrderedFloat<f64>,
     pub lower_bound: Option<OrderedFloat<f64>>,
     pub upper_bound: Option<OrderedFloat<f64>>,
+}
+
+impl fmt::Display for JsonMetric {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
 }
 
 impl PartialEq for JsonMetric {

@@ -8,6 +8,7 @@ edition.workspace = true
 default = []
 plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "ordered-float/schemars"]
+table = ["dep:tabled"]
 
 [dependencies]
 # Workspace
@@ -22,6 +23,7 @@ schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true
 serde_json.workspace = true
 slug.workspace = true
+tabled = { workspace = true, optional = true }
 thiserror.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }

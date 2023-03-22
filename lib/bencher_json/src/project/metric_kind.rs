@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bencher_valid::{NonEmpty, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
@@ -87,4 +89,10 @@ pub struct JsonMetricKind {
     pub name: NonEmpty,
     pub slug: Slug,
     pub units: NonEmpty,
+}
+
+impl fmt::Display for JsonMetricKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.name, self.units)
+    }
 }

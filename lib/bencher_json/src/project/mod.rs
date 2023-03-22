@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bencher_valid::{NonEmpty, Slug, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -39,6 +41,12 @@ pub struct JsonProject {
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: JsonVisibility,
+}
+
+impl fmt::Display for JsonProject {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]

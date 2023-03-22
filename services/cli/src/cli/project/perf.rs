@@ -34,6 +34,10 @@ pub struct CliPerf {
     #[clap(long)]
     pub end_time: Option<i64>,
 
+    /// Output results in a table
+    #[clap(long)]
+    pub table: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

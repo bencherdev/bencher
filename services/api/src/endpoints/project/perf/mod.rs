@@ -2,7 +2,8 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
-    JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed, ResourceId,
+    GitHash, JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed,
+    ResourceId,
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
@@ -360,7 +361,11 @@ fn perf_metric(
         start_time: to_date_time(start_time).ok()?,
         end_time: to_date_time(end_time).ok()?,
         version_number: u32::try_from(version_number).ok()?,
-        version_hash,
+        version_hash: if let Some(version_hash) = version_hash.as_deref() {
+            Some(GitHash::from_str(version_hash).ok()?)
+        } else {
+            None
+        },
         metric: JsonMetric {
             value: value.into(),
             lower_bound: lower_bound.map(Into::into),

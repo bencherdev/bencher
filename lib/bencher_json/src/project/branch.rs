@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bencher_valid::{BranchName, ResourceId, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
@@ -61,4 +63,10 @@ pub struct JsonBranch {
     pub project: Uuid,
     pub name: BranchName,
     pub slug: Slug,
+}
+
+impl fmt::Display for JsonBranch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
