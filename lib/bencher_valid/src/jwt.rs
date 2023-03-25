@@ -1,3 +1,4 @@
+use base64::Engine;
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -88,9 +89,16 @@ pub fn is_valid_jwt(jwt: &str) -> bool {
     let (signature, message) = expect_two!(jwt.rsplitn(2, '.'));
     let (payload, header) = expect_two!(message.rsplitn(2, '.'));
 
-    base64::decode_config(header, base64::URL_SAFE).is_ok()
-        && base64::decode_config(payload, base64::URL_SAFE).is_ok()
-        && base64::decode_config(signature, base64::URL_SAFE).is_ok()
+    // A URL safe encoding that does not have trailing `=` characters
+    let url_safe = base64::engine::general_purpose::GeneralPurpose::new(
+        &base64::alphabet::URL_SAFE,
+        base64::engine::general_purpose::GeneralPurposeConfig::new()
+            .with_decode_padding_mode(base64::engine::DecodePaddingMode::RequireNone),
+    );
+
+    url_safe.decode(header).is_ok()
+        && url_safe.decode(payload).is_ok()
+        && url_safe.decode(signature).is_ok()
 }
 
 #[cfg(test)]

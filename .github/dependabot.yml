@@ -24,5 +24,6 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    target-branch: devel
     labels:
       - dependencies

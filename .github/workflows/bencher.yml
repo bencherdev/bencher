@@ -175,7 +175,7 @@ jobs:
       WASM_PACK_BUILD: "wasm-pack build --target web"
     steps:
       - uses: actions/checkout@v3
-      - uses: jetli/wasm-pack-action@v0.3.0
+      - uses: jetli/wasm-pack-action@v0.4.0
       - name: WASM pack `bencher_valid`
         working-directory: ./lib/bencher_valid
         run: |
@@ -214,14 +214,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./services/api/builder.Dockerfile
           tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build Local API
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: ./services/api
           file: ./services/api/local.Dockerfile
@@ -243,14 +243,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./services/api/builder.Dockerfile
           tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build Litestream API
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: ./services/api
           file: ./services/api/litestream.Dockerfile
@@ -309,14 +309,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Builder Stage
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: ./services/ui/builder.Dockerfile
           tags: ${{ env.UI_BUILDER_DOCKER_IMAGE }}
           push: false
       - name: Build UI
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: ./services/ui
           tags: ${{ env.UI_DOCKER_IMAGE }}

@@ -746,7 +746,7 @@ dependencies = [
 name = "bencher_valid"
 version = "0.2.42"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.0",
  "chrono",
  "console_error_panic_hook",
  "derive_more",
