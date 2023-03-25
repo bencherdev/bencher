@@ -11,9 +11,37 @@ For the same reasons that unit tests are run in CI for each code change,
 performance tests should be run in CB for each code change.
 This analogy is so apt in fact, that the first paragraph of this section is just a Mad Libs version of [Martin Fowler's 2006 intro to Continous Integration](https://martinfowler.com/articles/continuousIntegration.html).
 
-## Continuous Benchmarking is the Future
+> 🐰 Performance bugs are bugs!
 
-Myth: Humans can't notice 100ms of latency
+## Benchmarking in CI
+
+Myth: You can't run benchmarks in CI
+
+Most benchmarking harnesses use the [system wall clock](https://en.wikipedia.org/wiki/Elapsed_real_time) to measure latency or throughput.
+There is very helpful, as these are the exact metrics that we as developers care the most about.
+However, general purpose CI environments are often noisy and inconsistent when measuring wall clock time.
+When performing continuous benchmarking, this volatility adds unwanted noise into the results.
+
+There are a few options for handling this:
+- [Relative benchmarking](/docs/how-to/track-benchmarks)
+- Dedicated CI runners, like [BuildJet](https://buildjet.com)
+- Switching benchmark harnesses to one that counts instructions as opposed to wall time
+
+Or simply embrace the chaos! Continuous benchmarking doesn't have to be perfect.
+Yes, reducing the volatility and thus the noise in your continuous benchmarking environment will allow you to detect ever finer performance regressions.
+However, don't let perfect be the enemy of good here!
+
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5"><img src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&title=Embrace+the+Chaos%21" title="Embrace the Chaos!" alt="Embrace the Chaos! for Bencher - Bencher" /></a>
+
+You might look at this graph and think, "Wow, that's crazy!" But ask yourself, can your current development process detect a factor of two or even a factor of ten performance regression before it effects your users? Probably not! Now _that_ is crazy!
+
+Even with all of the noise from a CI environment, tracking wall clock benchmarks can still pay great dividends in catching performance regressions before they reach your customers in production.
+Over time, as your software performance management matures you can build from there.
+In the mean time, just use your regular CI.
+
+## Performance Matters
+
+Myth: You can't notice 100ms of latency
 
 It's common to hear people claim that humans can't perceive 100ms of latency.
 A [Nielsen Group article on response times](https://www.nngroup.com/articles/response-times-3-important-limits/) is often cited for this claim.
@@ -73,6 +101,7 @@ Tools like Bencher have been developed internally at
 Microsoft, Facebook (now Meta), Apple, Amazon, Netflix, and Google among countless others.
 As the titans of the indusry, they understand the importance of monitoring performance during development
 and integrating these insights into the development process through CB.
+We built Bencher to bring continuous benchmarking from behind the walls of Big Tech to the open source community.
 For links to posts related to continuous benchmarking from Big Tech see [prior art](/docs/reference/prior-art).
 
 ## Continuous Benchmarking vs Local Benchmark Comparison
@@ -88,6 +117,7 @@ There are several features Bencher offers that local benchmark comaprison tools 
 - Comparison of benchmarks across languages and harnesses
 - Collaboration and sharing of benchmark resuts
 - Running benchmarks on dedicated testbeds to minimize noise
+- No more copypasta
 
 ## Continuous Benchmarking vs Application Performance Management (APM)
 
@@ -105,7 +135,8 @@ There are several features Bencher offers that APM tools cannot:
 - Detect and prevent performance regressions _before_ they make it to production
 - Performance changes and impacts included in code review
 - No overhead in production environments
-- Possible even when deployed on-prem by users
+- Effective for on-prem deployments
+- No changes to production source code
 
 ## Continuous Benchmarking vs Observability
 

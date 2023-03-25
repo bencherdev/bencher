@@ -5,7 +5,6 @@ import Talks from "../../pages/explanation/Talks.mdx";
 import Adapters from "../../pages/explanation/Adapters.mdx";
 import Thresholds from "../../pages/explanation/Thresholds.mdx";
 import Benchmarking from "../../pages/explanation/Benchmarking.mdx";
-import BenchmarkVolatility from "../../pages/explanation/BenchmarkVolatility.mdx";
 
 const Explanation = [
 	{
@@ -55,15 +54,6 @@ const Explanation = [
 			kind: PageKind.MDX,
 			heading: "What is Continuous Benchmarking?",
 			content: <ContinuousBenchmarking />,
-		},
-	},
-	{
-		title: "Benchmark Volatility",
-		slug: "benchmark-volatility",
-		panel: {
-			kind: PageKind.MDX,
-			heading: "Managing Benchmark Volatility",
-			content: <BenchmarkVolatility />,
 		},
 	},
 	{
