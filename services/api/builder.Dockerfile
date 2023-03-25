@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.68.0-bullseye
+FROM rust:1.68.1-bullseye
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml

@@ -1,7 +1,7 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.68.0-bullseye as wasm-builder
+FROM rust:1.68.1-bullseye as wasm-builder
 
-RUN cargo install --locked wasm-pack
+RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 WORKDIR /usr/src
 COPY Cargo.toml Cargo.toml
