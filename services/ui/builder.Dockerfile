@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/rust
-FROM rust:1.65.0-bullseye as wasm-builder
+FROM rust:1.68.0-bullseye as wasm-builder
 
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
