@@ -64,7 +64,9 @@ const LinePlot = (props) => {
 			});
 
 			const color = colors[index % 10];
-			plot_arrays.push(Plot.line(line_data, { stroke: color }));
+			plot_arrays.push(
+				Plot.line(line_data, { stroke: color, marker: "circle" }),
+			);
 		});
 
 		if (metrics_found) {
