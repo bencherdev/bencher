@@ -57,11 +57,12 @@ const LinePlot = (props) => {
 			const line_data = [];
 			perf_metrics.forEach((perf_metric) => {
 				const x_value = new Date(perf_metric.start_time);
-				x_value.setSeconds(x_value.getSeconds() + perf_metric.iteration);
 				const y_value = perf_metric.metric?.value;
 				line_data.push({
 					x: x_value,
 					y: y_value,
+					number: perf_metric.version_number,
+					hash: perf_metric.version_hash,
 				});
 				metrics_found = true;
 			});
@@ -80,9 +81,11 @@ const LinePlot = (props) => {
 					y: "y",
 					stroke: color,
 					fill: color,
-					title: (line) => {
-						console.log(line);
-						return "TOOLTIP";
+					title: (dot) => {
+						console.log(dot);
+						return `${dot.y}\n${dot.x}\n${dot.number}${
+							dot.hash ? `\n${dot.hash}` : ""
+						}`;
 					},
 				}),
 			);
