@@ -59,28 +59,29 @@ const LinePlot = (props) => {
 				const x_value = new Date(perf_metric.start_time);
 				x_value.setSeconds(x_value.getSeconds() + perf_metric.iteration);
 				const y_value = perf_metric.metric?.value;
-				const xy = [x_value, y_value];
-				line_data.push(xy);
+				line_data.push({
+					x: x_value,
+					y: y_value,
+				});
 				metrics_found = true;
 			});
 
 			const color = colors[index % 10];
 			plot_arrays.push(
 				Plot.line(line_data, {
+					x: "x",
+					y: "y",
 					stroke: color,
-					// marker: "circle",
-					// title: (x) => {
-					// 	console.log(x);
-					// 	return "TOOLTIP";
-					// },
 				}),
 			);
 			plot_arrays.push(
 				Plot.dot(line_data, {
+					x: "x",
+					y: "y",
 					stroke: color,
-					marker: "circle",
-					title: (x) => {
-						console.log(x);
+					fill: color,
+					title: (line) => {
+						console.log(line);
 						return "TOOLTIP";
 					},
 				}),
@@ -105,10 +106,10 @@ const LinePlot = (props) => {
 								marginLeft: y_label_area_size(),
 							}),
 							{
-								fill: "gray",
+								stroke: "#ed6704",
 								opacity: 0.5,
 								"stroke-width": "3px",
-								stroke: "red",
+								fill: "gray",
 							},
 						)}
 					</div>
