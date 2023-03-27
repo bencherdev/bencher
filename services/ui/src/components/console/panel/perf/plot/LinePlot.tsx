@@ -1,6 +1,7 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { createEffect, createMemo, createSignal } from "solid-js";
+import { addTooltips } from "./tooltip";
 
 const LinePlot = (props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
@@ -65,7 +66,24 @@ const LinePlot = (props) => {
 
 			const color = colors[index % 10];
 			plot_arrays.push(
-				Plot.line(line_data, { stroke: color, marker: "circle" }),
+				Plot.line(line_data, {
+					stroke: color,
+					// marker: "circle",
+					// title: (x) => {
+					// 	console.log(x);
+					// 	return "TOOLTIP";
+					// },
+				}),
+			);
+			plot_arrays.push(
+				Plot.dot(line_data, {
+					stroke: color,
+					marker: "circle",
+					title: (x) => {
+						console.log(x);
+						return "TOOLTIP";
+					},
+				}),
 			);
 		});
 
@@ -73,18 +91,26 @@ const LinePlot = (props) => {
 			return (
 				<>
 					<div>
-						{Plot.plot({
-							y: {
-								grid: true,
-								label: `↑ ${units}`,
+						{addTooltips(
+							Plot.plot({
+								y: {
+									grid: true,
+									label: `↑ ${units}`,
+								},
+								marks: plot_arrays,
+								width: props.width(),
+								nice: true,
+								// https://github.com/observablehq/plot/blob/main/README.md#layout-options
+								// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
+								marginLeft: y_label_area_size(),
+							}),
+							{
+								fill: "gray",
+								opacity: 0.5,
+								"stroke-width": "3px",
+								stroke: "red",
 							},
-							marks: plot_arrays,
-							width: props.width(),
-							nice: true,
-							// https://github.com/observablehq/plot/blob/main/README.md#layout-options
-							// For simplicity’s sake and for consistent layout across plots, margins are not automatically sized to make room for tick labels; instead, shorten your tick labels or increase the margins as needed.
-							marginLeft: y_label_area_size(),
-						})}
+						)}
 					</div>
 					<>{set_is_plotted(true)}</>
 				</>
