@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.42"
+    "version": "0.2.43"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -6240,7 +6240,11 @@
           },
           "version_hash": {
             "nullable": true,
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
+              }
+            ]
           },
           "version_number": {
             "type": "integer",
