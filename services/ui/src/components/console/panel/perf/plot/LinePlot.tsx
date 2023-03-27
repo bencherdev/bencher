@@ -1,7 +1,7 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import { XAxis } from "../../../config/types";
+import { Range } from "../../../config/types";
 import { addTooltips } from "./tooltip";
 
 const LinePlot = (props) => {
@@ -34,10 +34,10 @@ const LinePlot = (props) => {
 	};
 
 	const get_x_axis = () => {
-		switch (props.x_axis()) {
-			case XAxis.DATE_TIME:
+		switch (props.range()) {
+			case Range.DATE_TIME:
 				return ["date_time", "Benchmark Date and Time"];
-			case XAxis.VERSION:
+			case Range.VERSION:
 				return ["number", "Benchmark Version Number"];
 		}
 	};

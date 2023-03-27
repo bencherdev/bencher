@@ -6,7 +6,7 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { isPerfTab, PerfTab } from "../../config/types";
+import { isPerfTab, is_range, PerfTab, Range } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
 import { get_options, validate_string } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
@@ -22,9 +22,11 @@ const END_TIME_PARAM = "end_time";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
+const RANGE_PARAM = "range";
 
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
+const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 
 const addToArray = (array: any[], add: any) => {
 	array.push(add);
@@ -129,6 +131,9 @@ const PerfPanel = (props) => {
 	if (!is_bool_param(searchParams[KEY_PARAM])) {
 		setSearchParams({ [KEY_PARAM]: DEFAULT_PERF_KEY });
 	}
+	if (!is_range(searchParams[RANGE_PARAM])) {
+		setSearchParams({ [RANGE_PARAM]: null });
+	}
 
 	// Create marshalized memos of all query params
 	const branches = createMemo(() =>
@@ -165,6 +170,16 @@ const PerfPanel = (props) => {
 			return searchParams[KEY_PARAM] === "true";
 		} else {
 			return DEFAULT_PERF_KEY;
+		}
+	});
+
+	const range = createMemo(() => {
+		// This check is required for the initial load
+		// before the query params have been sanitized
+		if (is_range(searchParams[RANGE_PARAM])) {
+			return searchParams[RANGE_PARAM];
+		} else {
+			return DEFAULT_PERF_RANGE;
 		}
 	});
 
@@ -350,6 +365,12 @@ const PerfPanel = (props) => {
 		}
 	};
 
+	const handleRange = (range: Range) => {
+		if (is_range(range)) {
+			setSearchParams({ [RANGE_PARAM]: range });
+		}
+	};
+
 	return (
 		<>
 			<PerfHeader
@@ -378,6 +399,7 @@ const PerfPanel = (props) => {
 				perf_data={perf_data}
 				tab={tab}
 				key={key}
+				range={range}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}
@@ -386,6 +408,7 @@ const PerfPanel = (props) => {
 				handleEndTime={handleEndTime}
 				handleTab={handleTab}
 				handleKey={handleKey}
+				handleRange={handleRange}
 				handleBranchChecked={handleBranchChecked}
 				handleTestbedChecked={handleTestbedChecked}
 				handleBenchmarkChecked={handleBenchmarkChecked}

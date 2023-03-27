@@ -7,6 +7,7 @@ import {
 	For,
 } from "solid-js";
 import { get_options } from "../../../../site/util";
+import { Range } from "../../../config/types";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 
@@ -69,6 +70,15 @@ const PlotHeader = (props) => {
 		props.handleMetricKind(target_slug);
 	};
 
+	const icon = createMemo(() => {
+		switch (props.range()) {
+			case Range.DATE_TIME:
+				return <i class="far fa-calendar" aria-hidden="true" />;
+			case Range.VERSION:
+				return <i class="fas fa-hashtag" aria-hidden="true" />;
+		}
+	});
+
 	return (
 		<nav class="panel-heading level">
 			<div class="level-left">
@@ -118,12 +128,17 @@ const PlotHeader = (props) => {
 						class="button is-outlined "
 						onClick={(e) => {
 							e.preventDefault();
-							props.handle_x_axis();
+							switch (props.range()) {
+								case Range.DATE_TIME:
+									props.handleRange(Range.VERSION);
+									break;
+								case Range.VERSION:
+									props.handleRange(Range.DATE_TIME);
+									break;
+							}
 						}}
 					>
-						<span class="icon">
-							<i class="fab fa-git-alt" aria-hidden="true" />
-						</span>
+						<span class="icon">{icon()}</span>
 					</button>
 				</div>
 			</div>

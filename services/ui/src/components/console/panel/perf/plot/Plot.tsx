@@ -34,7 +34,7 @@ const Plot = (props) => {
 					config={props.config}
 					path_params={props.path_params}
 					perf_data={props.perf_data}
-					x_axis={props.x_axis}
+					range={props.range}
 					perf_active={perf_active}
 					width={width}
 				/>

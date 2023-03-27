@@ -62,7 +62,10 @@ export const isPerfTab = (tab: string) =>
 	tab === PerfTab.TESTBEDS ||
 	tab === PerfTab.BENCHMARKS;
 
-export enum XAxis {
-	DATE_TIME,
-	VERSION,
+export enum Range {
+	DATE_TIME = "date_time",
+	VERSION = "version",
 }
+
+export const is_range = (range: string) =>
+	range === Range.DATE_TIME || range === Range.VERSION;
