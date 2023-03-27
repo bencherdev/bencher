@@ -75,7 +75,7 @@ const PlotHeader = (props) => {
 			case Range.DATE_TIME:
 				return <i class="far fa-calendar" aria-hidden="true" />;
 			case Range.VERSION:
-				return <i class="fas fa-hashtag" aria-hidden="true" />;
+				return <i class="fas fa-code-branch" aria-hidden="true" />;
 		}
 	});
 

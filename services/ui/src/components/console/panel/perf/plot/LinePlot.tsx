@@ -36,9 +36,9 @@ const LinePlot = (props) => {
 	const get_x_axis = () => {
 		switch (props.range()) {
 			case Range.DATE_TIME:
-				return ["date_time", "Benchmark Date and Time"];
+				return ["date_time", "Report Date and Time"];
 			case Range.VERSION:
-				return ["number", "Benchmark Version Number"];
+				return ["number", "Branch Version Number"];
 		}
 	};
 
