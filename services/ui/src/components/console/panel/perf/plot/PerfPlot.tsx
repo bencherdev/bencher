@@ -1,10 +1,24 @@
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { XAxis } from "../../../config/types";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
 import PlotTab from "./PlotTab";
 
 const PerfPlot = (props) => {
+	const [x_axis, set_x_axis] = createSignal(XAxis.DATE_TIME);
+
+	const handle_x_axis = () => {
+		switch (x_axis()) {
+			case XAxis.DATE_TIME:
+				set_x_axis(XAxis.VERSION);
+				break;
+			case XAxis.VERSION:
+				set_x_axis(XAxis.DATE_TIME);
+				break;
+		}
+	};
+
 	return (
 		<div class="columns">
 			<div class="column">
@@ -20,6 +34,7 @@ const PerfPlot = (props) => {
 						handleMetricKind={props.handleMetricKind}
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
+						handle_x_axis={handle_x_axis}
 					/>
 					<div class="panel-block">
 						<Show
@@ -35,6 +50,7 @@ const PerfPlot = (props) => {
 									perf_data={props.perf_data}
 									key={props.key}
 									handleKey={props.handleKey}
+									x_axis={x_axis}
 								/>
 							}
 						>

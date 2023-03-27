@@ -1,11 +1,12 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
 import { createEffect, createMemo, createSignal } from "solid-js";
+import { XAxis } from "../../../config/types";
 import { addTooltips } from "./tooltip";
 
 const LinePlot = (props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
-	const [y_label_area_size, set_y_label_area_size] = createSignal(1000);
+	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
 
 	createEffect(() => {
 		if (is_plotted()) {
@@ -32,6 +33,15 @@ const LinePlot = (props) => {
 		}
 	};
 
+	const get_x_axis = () => {
+		switch (props.x_axis()) {
+			case XAxis.DATE_TIME:
+				return ["date_time", "Benchmark Date and Time"];
+			case XAxis.VERSION:
+				return ["number", "Benchmark Version Number"];
+		}
+	};
+
 	const plotted = () => {
 		const json_perf = props.perf_data();
 
@@ -44,6 +54,7 @@ const LinePlot = (props) => {
 		}
 
 		const units = get_units(json_perf);
+		const [x_axis, x_axis_label] = get_x_axis();
 
 		const plot_arrays = [];
 		let metrics_found = false;
@@ -56,11 +67,9 @@ const LinePlot = (props) => {
 
 			const line_data = [];
 			perf_metrics.forEach((perf_metric) => {
-				const x_value = new Date(perf_metric.start_time);
-				const y_value = perf_metric.metric?.value;
 				line_data.push({
-					x: x_value,
-					y: y_value,
+					value: perf_metric.metric?.value,
+					date_time: new Date(perf_metric.start_time),
 					number: perf_metric.version_number,
 					hash: perf_metric.version_hash,
 					iteration: perf_metric.iteration,
@@ -71,19 +80,19 @@ const LinePlot = (props) => {
 			const color = colors[index % 10];
 			plot_arrays.push(
 				Plot.line(line_data, {
-					x: "x",
-					y: "y",
+					x: x_axis,
+					y: "value",
 					stroke: color,
 				}),
 			);
 			plot_arrays.push(
 				Plot.dot(line_data, {
-					x: "x",
-					y: "y",
+					x: x_axis,
+					y: "value",
 					stroke: color,
 					fill: color,
 					title: (dot) =>
-						`${dot.y}\n${dot.x?.toLocaleString(undefined, {
+						`${dot.value}\n${dot.date_time?.toLocaleString(undefined, {
 							weekday: "short",
 							year: "numeric",
 							month: "short",
@@ -107,7 +116,7 @@ const LinePlot = (props) => {
 							Plot.plot({
 								x: {
 									grid: true,
-									label: "Benchmark Date and Time ➡",
+									label: `${x_axis_label} ➡`,
 								},
 								y: {
 									grid: true,

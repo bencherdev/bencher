@@ -113,6 +113,19 @@ const PlotHeader = (props) => {
 						</div>
 					</nav>
 				</div>
+				<div class="level-item">
+					<button
+						class="button is-outlined "
+						onClick={(e) => {
+							e.preventDefault();
+							props.handle_x_axis();
+						}}
+					>
+						<span class="icon">
+							<i class="fab fa-git-alt" aria-hidden="true" />
+						</span>
+					</button>
+				</div>
 			</div>
 		</nav>
 	);

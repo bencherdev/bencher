@@ -61,3 +61,8 @@ export const isPerfTab = (tab: string) =>
 	tab === PerfTab.BRANCHES ||
 	tab === PerfTab.TESTBEDS ||
 	tab === PerfTab.BENCHMARKS;
+
+export enum XAxis {
+	DATE_TIME,
+	VERSION,
+}
