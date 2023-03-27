@@ -63,6 +63,7 @@ const LinePlot = (props) => {
 					y: y_value,
 					number: perf_metric.version_number,
 					hash: perf_metric.version_hash,
+					iteration: perf_metric.iteration,
 				});
 				metrics_found = true;
 			});
@@ -81,12 +82,19 @@ const LinePlot = (props) => {
 					y: "y",
 					stroke: color,
 					fill: color,
-					title: (dot) => {
-						console.log(dot);
-						return `${dot.y}\n${dot.x}\n${dot.number}${
-							dot.hash ? `\n${dot.hash}` : ""
-						}`;
-					},
+					title: (dot) =>
+						`${dot.y}\n${dot.x?.toLocaleString(undefined, {
+							weekday: "short",
+							year: "numeric",
+							month: "short",
+							day: "2-digit",
+							hour: "2-digit",
+							hour12: false,
+							minute: "2-digit",
+							second: "2-digit",
+						})}\nVersion Number: ${dot.number}${
+							dot.hash ? `\nVersion Hash: ${dot.hash}` : ""
+						}\nIteration: ${dot.iteration}`,
 				}),
 			);
 		});
@@ -97,6 +105,10 @@ const LinePlot = (props) => {
 					<div>
 						{addTooltips(
 							Plot.plot({
+								x: {
+									grid: true,
+									label: "Benchmark Date and Time ➡",
+								},
 								y: {
 									grid: true,
 									label: `↑ ${units}`,
