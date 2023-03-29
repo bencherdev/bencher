@@ -5,10 +5,17 @@ cd ./services/api
 cargo run --features swagger
 cd -
 
+VERSION=$(./scripts/version.sh)
+
 # Generate the Bencher CLI GitHub Action
 cd ./services/action
 npm install --include=dev
 npm run build
+cd -
+
+# Update UI version
+cd ./services/ui
+npm version $VERSION
 cd -
 
 git add Cargo.toml
@@ -18,7 +25,7 @@ git add ./services/action/dist/index.js
 SWAGGER=./services/ui/src/components/docs/api/swagger.json
 git diff --quiet $SWAGGER || git add $SWAGGER
 
-TAG="$(./scripts/v.sh)"
+TAG="v$VERSION"
 COMMIT="Release $TAG"
 echo $COMMIT
 git commit -m "$COMMIT"
