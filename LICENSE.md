@@ -1,4 +1,4 @@
-Copyright © 2022-present Pompeii LLC
+Copyright © 2022-present Bencher
 
 All content that resides under any directory or <a href="https://doc.rust-lang.org/cargo/reference/features.html">feature</a> named "plus" is licensed under the <a href="LICENSE-PLUS">Bencher Plus License</a>.
 

@@ -4,7 +4,7 @@ const licensingPage = {
 	content: (
 		<div>
 			<p>Bencher Plus License (the "Plus License")</p>
-			<p>Copyright © 2022-{new Date().getFullYear()} Pompeii LLC</p>
+			<p>Copyright © 2022-{new Date().getFullYear()} Bencher</p>
 			<p>With regard to the Bencher Software:</p>
 			<p>
 				This software and associated documentation files (the "Software") may
@@ -13,7 +13,7 @@ const licensingPage = {
 				Agreement available at{" "}
 				<a href="/legal/subscription">https://bencher.dev/legal/subscription</a>{" "}
 				(the "Plus Agreement"), or other agreements governing the use of the
-				Software, as mutually agreed by you and Pompeii LLC ("Bencher"), and
+				Software, as mutually agreed by you and Bencher ("Bencher"), and
 				otherwise have a valid Bencher Plus subscription ("Plus Subscription")
 				for the correct number of metrics as defined in the Plus Agreement
 				("Metrics"). Subject to the foregoing sentence, you are free to modify

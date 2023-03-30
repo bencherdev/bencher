@@ -3,7 +3,7 @@ const licensingPage = {
 	heading: "Bencher License Agreement",
 	content: (
 		<div>
-			<p>Copyright © 2022-{new Date().getFullYear()} Pompeii LLC</p>
+			<p>Copyright © 2022-{new Date().getFullYear()} Bencher</p>
 			<p>
 				All content that resides under any directory or{" "}
 				<a href="https://doc.rust-lang.org/cargo/reference/features.html">

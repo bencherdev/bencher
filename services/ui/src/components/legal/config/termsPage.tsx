@@ -12,10 +12,10 @@ const termsPage = {
 				LEAST 13 YEARS OLD.
 			</h2>
 			<p>
-				Bencher's products and services are provided by Pompeii LLC (“we”,
-				“our”, or “us”). These Website Terms of Use (the “Agreement”) govern all
-				use of the bencher.dev website, or other website(s) owned and operated
-				by Pompeii LLC (the “Website”). The Website is offered subject to your
+				Bencher's products and services are provided by Bencher (“we”, “our”, or
+				“us”). These Website Terms of Use (the “Agreement”) govern all use of
+				the bencher.dev website, or other website(s) owned and operated by
+				Bencher (the “Website”). The Website is offered subject to your
 				acceptance, without modification, to the terms and conditions contained
 				herein as updated subject to this Agreement. For the avoidance of doubt,
 				this Agreement does not control or govern your use of the Bencher
