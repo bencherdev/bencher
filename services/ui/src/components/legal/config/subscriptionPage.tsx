@@ -12,7 +12,7 @@ const licensingPage = {
 			</p>
 			<p>
 				Customer's continued use of the software or any Licensed Materials
-				provided by Pompeii LLC or one of its affiliates and/or subsidiaries, as
+				provided by Bencher or one of its affiliates and/or subsidiaries, as
 				specified on an order form or quote ("Bencher") shall also constitute
 				assent to the terms of this agreement.
 			</p>

@@ -51,7 +51,7 @@ const Footer = () => {
 					</div>
 				</div>
 				<div class="content">
-					<p>© {new Date().getFullYear()} Pompeii LLC</p>
+					<p>© {new Date().getFullYear()} Bencher</p>
 				</div>
 			</div>
 		</footer>
