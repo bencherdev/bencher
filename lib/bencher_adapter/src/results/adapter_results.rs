@@ -5,7 +5,9 @@ use literally::hmap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    adapter_metrics::AdapterMetrics, CombinedKind, LATENCY_RESOURCE_ID, THROUGHPUT_RESOURCE_ID,
+    adapter_metrics::AdapterMetrics, CombinedKind, CYCLES_RESOURCE_ID, INSTRUCTIONS_RESOURCE_ID,
+    L1_ACCESSES_RESOURCE_ID, L2_ACCESSES_RESOURCE_ID, LATENCY_RESOURCE_ID,
+    RAM_ACCESSES_RESOURCE_ID, THROUGHPUT_RESOURCE_ID,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,6 +28,11 @@ impl From<ResultsMap> for AdapterResults {
 pub enum AdapterMetricKind {
     Latency(JsonMetric),
     Throughput(JsonMetric),
+    Instructions(JsonMetric),
+    Cycles(JsonMetric),
+    L1Accesses(JsonMetric),
+    L2Accesses(JsonMetric),
+    RamAccesses(JsonMetric),
 }
 
 impl AdapterResults {
@@ -46,6 +53,31 @@ impl AdapterResults {
                     AdapterMetricKind::Throughput(json_metric) => {
                         hmap! {
                             THROUGHPUT_RESOURCE_ID.clone() => json_metric
+                        }
+                    },
+                    AdapterMetricKind::Instructions(json_metric) => {
+                        hmap! {
+                            INSTRUCTIONS_RESOURCE_ID.clone() => json_metric,
+                        }
+                    },
+                    AdapterMetricKind::Cycles(json_metric) => {
+                        hmap! {
+                            CYCLES_RESOURCE_ID.clone() => json_metric,
+                        }
+                    },
+                    AdapterMetricKind::L1Accesses(json_metric) => {
+                        hmap! {
+                            L1_ACCESSES_RESOURCE_ID.clone() => json_metric,
+                        }
+                    },
+                    AdapterMetricKind::L2Accesses(json_metric) => {
+                        hmap! {
+                            L2_ACCESSES_RESOURCE_ID.clone() => json_metric,
+                        }
+                    },
+                    AdapterMetricKind::RamAccesses(json_metric) => {
+                        hmap! {
+                            RAM_ACCESSES_RESOURCE_ID.clone() => json_metric,
                         }
                     },
                 },
