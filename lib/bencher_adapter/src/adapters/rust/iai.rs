@@ -1,16 +1,15 @@
 use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
     bytes::complete::tag,
-    character::complete::{anychar, space0, space1},
-    combinator::{eof, map, map_res},
-    multi::many_till,
+    character::complete::{space0, space1},
+    combinator::{eof, map},
     sequence::tuple,
     IResult,
 };
 
 use crate::{
-    adapters::util::{nom_error, parse_benchmark_name, parse_f64, NomError},
-    results::adapter_results::AdapterResults,
+    adapters::util::{parse_f64},
+    results::adapter_results::{AdapterMetricKind, AdapterResults},
     Adapter, Settings,
 };
 
@@ -24,46 +23,49 @@ impl Adapter for AdapterRustIai {
         }
 
         let mut benchmark_metrics = Vec::new();
-
-        let mut prior_line = None;
-        for line in input.lines() {
-            if let Ok((remainder, benchmark_metric)) = parse_iai(prior_line, line) {
-                if remainder.is_empty() {
-                    benchmark_metrics.push(benchmark_metric);
+        let lines = input.lines().collect::<Vec<_>>();
+        for lines in lines.windows(6) {
+            if let Some((benchmark_name, benchmark_metric)) = parse_iai_lines(lines) {
+                for metric in benchmark_metric {
+                    benchmark_metrics.push((benchmark_name.clone(), metric));
                 }
             }
-            prior_line = Some(line);
         }
 
-        AdapterResults::new_latency(benchmark_metrics)
+        AdapterResults::new(benchmark_metrics)
     }
 }
 
-fn parse_iai<'i>(
-    prior_line: Option<&str>,
-    input: &'i str,
-) -> IResult<&'i str, (BenchmarkName, JsonMetric)> {
-    map_res(
-        many_till(anychar, parse_iai_instructions),
-        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonMetric), NomError> {
-            let name: String = if name_chars.is_empty() {
-                prior_line.ok_or_else(|| nom_error(String::new()))?.into()
-            } else {
-                name_chars.into_iter().collect()
-            };
-            let benchmark_name = parse_benchmark_name(&name)?;
-            Ok((benchmark_name, json_metric))
-        },
-    )(input)
+fn parse_iai_lines(lines: &[&str]) -> Option<(BenchmarkName, Vec<AdapterMetricKind>)> {
+    if lines.len() != 6 {
+        return None;
+    }
+    let instructions_fn: fn(_) -> _ = |r| AdapterMetricKind::Instructions(r);
+    let benchmark_name_line = lines[0];
+    let instructions_line = lines[1];
+    let l1_accesses_line = lines[2];
+    let l2_accesses_line = lines[3];
+    let ram_accesses_line = lines[4];
+    let cycles_line = lines[5];
+    let metrics = [
+        ("Instructions:", instructions_line, instructions_fn),
+        ("L1 Accesses:", l1_accesses_line, |r| AdapterMetricKind::L1Accesses(r)),
+        ("L2 Accesses:", l2_accesses_line, |r| AdapterMetricKind::L2Accesses(r)),
+        ("RAM Accesses:", ram_accesses_line, |r| AdapterMetricKind::RamAccesses(r)),
+        ("Estimated cycles:", cycles_line, |r| AdapterMetricKind::Cycles(r)),
+    ]
+    .into_iter()
+    .map(|(header, input, to_variant): (_, _, fn(JsonMetric) -> AdapterMetricKind)| parse_iai_metric(input, header).map(|metric| to_variant(metric.1)))
+    .collect::<Result<Vec<_>, _>>().ok()?;
+    let name = benchmark_name_line.parse().ok()?;
+    Some((name, metrics))
 }
 
-fn parse_iai_instructions(input: &str) -> IResult<&str, JsonMetric> {
-    map(parse_from_header("Instructions:"), |instructions| {
-        JsonMetric {
-            value: instructions.into(),
-            lower_bound: None,
-            upper_bound: None,
-        }
+fn parse_iai_metric<'a>(input: &'a str, metric: &'static str) -> IResult<&'a str, JsonMetric> {
+    map(parse_from_header(metric), |instructions| JsonMetric {
+        value: instructions.into(),
+        lower_bound: None,
+        upper_bound: None,
     })(input)
 }
 
