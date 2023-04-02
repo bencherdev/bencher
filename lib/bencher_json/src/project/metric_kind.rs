@@ -108,7 +108,7 @@ static L1_ACCESSES_NAME: Lazy<NonEmpty> = Lazy::new(|| {
         .parse()
         .expect("Failed to parse metric kind name.")
 });
-pub const L1_ACCESSES_SLUG_STR: &str = "l1_accesses";
+pub const L1_ACCESSES_SLUG_STR: &str = "l1-accesses";
 #[allow(clippy::expect_used)]
 static L1_ACCESSES_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     Some(
@@ -131,7 +131,7 @@ static L2_ACCESSES_NAME: Lazy<NonEmpty> = Lazy::new(|| {
         .parse()
         .expect("Failed to parse metric kind name.")
 });
-pub const L2_ACCESSES_SLUG_STR: &str = "l2_accesses";
+pub const L2_ACCESSES_SLUG_STR: &str = "l2-accesses";
 #[allow(clippy::expect_used)]
 static L2_ACCESSES_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     Some(
@@ -154,7 +154,7 @@ static RAM_ACCESSES_NAME: Lazy<NonEmpty> = Lazy::new(|| {
         .parse()
         .expect("Failed to parse metric kind name.")
 });
-pub const RAM_ACCESSES_SLUG_STR: &str = "ram_accesses";
+pub const RAM_ACCESSES_SLUG_STR: &str = "ram-accesses";
 #[allow(clippy::expect_used)]
 static RAM_ACCESSES_SLUG: Lazy<Option<Slug>> = Lazy::new(|| {
     Some(

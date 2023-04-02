@@ -8,7 +8,7 @@ use nom::{
 };
 
 use crate::{
-    adapters::util::{parse_f64},
+    adapters::util::parse_f64,
     results::adapter_results::{AdapterMetricKind, AdapterResults},
     Adapter, Settings,
 };
@@ -49,14 +49,27 @@ fn parse_iai_lines(lines: &[&str]) -> Option<(BenchmarkName, Vec<AdapterMetricKi
     let cycles_line = lines[5];
     let metrics = [
         ("Instructions:", instructions_line, instructions_fn),
-        ("L1 Accesses:", l1_accesses_line, |r| AdapterMetricKind::L1Accesses(r)),
-        ("L2 Accesses:", l2_accesses_line, |r| AdapterMetricKind::L2Accesses(r)),
-        ("RAM Accesses:", ram_accesses_line, |r| AdapterMetricKind::RamAccesses(r)),
-        ("Estimated cycles:", cycles_line, |r| AdapterMetricKind::Cycles(r)),
+        ("L1 Accesses:", l1_accesses_line, |r| {
+            AdapterMetricKind::L1Accesses(r)
+        }),
+        ("L2 Accesses:", l2_accesses_line, |r| {
+            AdapterMetricKind::L2Accesses(r)
+        }),
+        ("RAM Accesses:", ram_accesses_line, |r| {
+            AdapterMetricKind::RamAccesses(r)
+        }),
+        ("Estimated Cycles:", cycles_line, |r| {
+            AdapterMetricKind::Cycles(r)
+        }),
     ]
     .into_iter()
-    .map(|(header, input, to_variant): (_, _, fn(JsonMetric) -> AdapterMetricKind)| parse_iai_metric(input, header).map(|metric| to_variant(metric.1)))
-    .collect::<Result<Vec<_>, _>>().ok()?;
+    .map(
+        |(header, input, to_variant): (_, _, fn(JsonMetric) -> AdapterMetricKind)| {
+            parse_iai_metric(input, header).map(|metric| to_variant(metric.1))
+        },
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .ok()?;
     let name = benchmark_name_line.parse().ok()?;
     Some((name, metrics))
 }
@@ -81,6 +94,7 @@ fn parse_from_header(header: &'static str) -> Box<dyn Fn(&str) -> IResult<&str, 
 #[cfg(test)]
 pub(crate) mod test_rust_iai {
 
+    use crate::Adapter;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -89,5 +103,17 @@ pub(crate) mod test_rust_iai {
             super::parse_from_header("Instructions:")("  Instructions:  1234"),
             Ok(("", 1234.0))
         );
+    }
+
+    #[test]
+    fn test_parse_multiple_lines() {
+        let input = "bench_fibonacci_short
+  Instructions:                1735
+  L1 Accesses:                 2364
+  L2 Accesses:                    1
+  RAM Accesses:                   1
+  Estimated Cycles:            2404";
+        let output = super::AdapterRustIai::parse(input, crate::Settings::default());
+        assert!(output.is_some());
     }
 }
