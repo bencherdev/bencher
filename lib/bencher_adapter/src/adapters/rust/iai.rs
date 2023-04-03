@@ -8,7 +8,7 @@ use nom::{
 };
 
 use crate::{
-    adapters::util::parse_f64,
+    adapters::util::parse_u64,
     results::adapter_results::{AdapterMetricKind, AdapterResults},
     Adapter, Settings,
 };
@@ -18,8 +18,8 @@ pub struct AdapterRustIai;
 impl Adapter for AdapterRustIai {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
-            Some(JsonAverage::Mean) | None => {},
-            Some(JsonAverage::Median) => return None,
+            None => {},
+            Some(JsonAverage::Mean) | Some(JsonAverage::Median) => return None,
         }
 
         let mut benchmark_metrics = Vec::new();
@@ -37,71 +37,74 @@ impl Adapter for AdapterRustIai {
 }
 
 fn parse_iai_lines(lines: &[&str]) -> Option<(BenchmarkName, Vec<AdapterMetricKind>)> {
-    if lines.len() != 6 {
+    debug_assert_eq!(lines.len(), 6);
+    let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, cycles_line] = lines else {
         return None;
-    }
-    let instructions_fn: fn(_) -> _ = |r| AdapterMetricKind::Instructions(r);
-    let benchmark_name_line = lines[0];
-    let instructions_line = lines[1];
-    let l1_accesses_line = lines[2];
-    let l2_accesses_line = lines[3];
-    let ram_accesses_line = lines[4];
-    let cycles_line = lines[5];
+    };
+
     let metrics = [
-        ("Instructions:", instructions_line, instructions_fn),
-        ("L1 Accesses:", l1_accesses_line, |r| {
-            AdapterMetricKind::L1Accesses(r)
-        }),
-        ("L2 Accesses:", l2_accesses_line, |r| {
-            AdapterMetricKind::L2Accesses(r)
-        }),
-        ("RAM Accesses:", ram_accesses_line, |r| {
-            AdapterMetricKind::RamAccesses(r)
-        }),
-        ("Estimated Cycles:", cycles_line, |r| {
-            AdapterMetricKind::Cycles(r)
-        }),
+        (
+            "Instructions:",
+            instructions_line,
+            AdapterMetricKind::Instructions as fn(JsonMetric) -> AdapterMetricKind,
+        ),
+        (
+            "L1 Accesses:",
+            l1_accesses_line,
+            AdapterMetricKind::L1Accesses,
+        ),
+        (
+            "L2 Accesses:",
+            l2_accesses_line,
+            AdapterMetricKind::L2Accesses,
+        ),
+        (
+            "RAM Accesses:",
+            ram_accesses_line,
+            AdapterMetricKind::RamAccesses,
+        ),
+        ("Estimated Cycles:", cycles_line, AdapterMetricKind::Cycles),
     ]
     .into_iter()
-    .map(
-        |(header, input, to_variant): (_, _, fn(JsonMetric) -> AdapterMetricKind)| {
-            parse_iai_metric(input, header).map(|metric| to_variant(metric.1))
-        },
-    )
+    .map(|(header, input, to_variant)| {
+        parse_iai_metric(input, header).map(|metric| to_variant(metric.1))
+    })
     .collect::<Result<Vec<_>, _>>()
     .ok()?;
     let name = benchmark_name_line.parse().ok()?;
     Some((name, metrics))
 }
 
-fn parse_iai_metric<'a>(input: &'a str, metric: &'static str) -> IResult<&'a str, JsonMetric> {
-    map(parse_from_header(metric), |instructions| JsonMetric {
-        value: instructions.into(),
-        lower_bound: None,
-        upper_bound: None,
-    })(input)
-}
-
-fn parse_from_header(header: &'static str) -> Box<dyn Fn(&str) -> IResult<&str, f64>> {
-    Box::new(move |input| {
-        map(
-            tuple((space0, tag(header), space1, parse_f64, eof)),
-            |(_, _, _, value, _)| value,
-        )(input)
-    })
+fn parse_iai_metric<'a>(input: &'a str, header: &'static str) -> IResult<&'a str, JsonMetric> {
+    map(
+        tuple((space0, tag(header), space1, parse_u64, eof)),
+        |(_, _, _, metric, _)| JsonMetric {
+            value: (metric as f64).into(),
+            lower_bound: None,
+            upper_bound: None,
+        },
+    )(input)
 }
 
 #[cfg(test)]
 pub(crate) mod test_rust_iai {
 
     use crate::Adapter;
+    use bencher_json::JsonMetric;
     use pretty_assertions::assert_eq;
 
     #[test]
     fn test_parse_line() {
         assert_eq!(
-            super::parse_from_header("Instructions:")("  Instructions:  1234"),
-            Ok(("", 1234.0))
+            super::parse_iai_metric("  Instructions:  1234", "Instructions:"),
+            Ok((
+                "",
+                JsonMetric {
+                    value: 1234.0.into(),
+                    upper_bound: None,
+                    lower_bound: None
+                }
+            ))
         );
     }
 
