@@ -1,9 +1,5 @@
 {
-  "workbench.colorTheme": "Default Dark+",
-  "workbench.panel.defaultLocation": "right",
-  "window.zoomLevel": 1,
   "files.eol": "\n",
-  "editor.wordWrap": "on",
   "editor.formatOnSave": true,
   // https://rust-analyzer.github.io/manual.html
   "rust-analyzer.imports.granularity.group": "crate",
