@@ -15,6 +15,8 @@ use crate::{
 
 pub struct AdapterRustIai;
 
+const IAI_METRICS_LINE_COUNT: usize = 6;
+
 impl Adapter for AdapterRustIai {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         match settings.average {
@@ -24,7 +26,10 @@ impl Adapter for AdapterRustIai {
 
         let mut benchmark_metrics = Vec::new();
         let lines = input.lines().collect::<Vec<_>>();
-        for lines in lines.windows(6) {
+        for lines in lines.windows(IAI_METRICS_LINE_COUNT) {
+            let lines = lines
+                .try_into()
+                .expect("Windows struct should always be convertible to array of the same size.");
             if let Some((benchmark_name, benchmark_metric)) = parse_iai_lines(lines) {
                 for metric in benchmark_metric {
                     benchmark_metrics.push((benchmark_name.clone(), metric));
@@ -36,11 +41,11 @@ impl Adapter for AdapterRustIai {
     }
 }
 
-fn parse_iai_lines(lines: &[&str]) -> Option<(BenchmarkName, Vec<AdapterMetricKind>)> {
-    debug_assert_eq!(lines.len(), 6);
-    let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, cycles_line] = lines else {
-        return None;
-    };
+fn parse_iai_lines(
+    lines: [&str; IAI_METRICS_LINE_COUNT],
+) -> Option<(BenchmarkName, Vec<AdapterMetricKind>)> {
+    let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, cycles_line] =
+        lines;
 
     let metrics = [
         (
