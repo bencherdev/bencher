@@ -6,10 +6,11 @@ use nom::{
     sequence::tuple,
     IResult,
 };
+use std::collections::HashSet;
 
 use crate::{
     adapters::util::parse_u64,
-    results::adapter_results::{AdapterMetricKind, AdapterResults},
+    results::adapter_results::{AdapterMultiMetricKind, AdapterResults},
     Adapter, Settings,
 };
 
@@ -30,20 +31,18 @@ impl Adapter for AdapterRustIai {
             let lines = lines
                 .try_into()
                 .expect("Windows struct should always be convertible to array of the same size.");
-            if let Some((benchmark_name, benchmark_metric)) = parse_iai_lines(lines) {
-                for metric in benchmark_metric {
-                    benchmark_metrics.push((benchmark_name.clone(), metric));
-                }
+            if let Some((benchmark_name, metrics)) = parse_iai_lines(lines) {
+                benchmark_metrics.push((benchmark_name, metrics));
             }
         }
 
-        AdapterResults::new(benchmark_metrics)
+        AdapterResults::new_multi(benchmark_metrics)
     }
 }
 
 fn parse_iai_lines(
     lines: [&str; IAI_METRICS_LINE_COUNT],
-) -> Option<(BenchmarkName, Vec<AdapterMetricKind>)> {
+) -> Option<(BenchmarkName, HashSet<AdapterMultiMetricKind>)> {
     let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, cycles_line] =
         lines;
 
@@ -51,30 +50,34 @@ fn parse_iai_lines(
         (
             "Instructions:",
             instructions_line,
-            AdapterMetricKind::Instructions as fn(JsonMetric) -> AdapterMetricKind,
+            AdapterMultiMetricKind::Instructions as fn(JsonMetric) -> AdapterMultiMetricKind,
         ),
         (
             "L1 Accesses:",
             l1_accesses_line,
-            AdapterMetricKind::L1Accesses,
+            AdapterMultiMetricKind::L1Accesses,
         ),
         (
             "L2 Accesses:",
             l2_accesses_line,
-            AdapterMetricKind::L2Accesses,
+            AdapterMultiMetricKind::L2Accesses,
         ),
         (
             "RAM Accesses:",
             ram_accesses_line,
-            AdapterMetricKind::RamAccesses,
+            AdapterMultiMetricKind::RamAccesses,
         ),
-        ("Estimated Cycles:", cycles_line, AdapterMetricKind::Cycles),
+        (
+            "Estimated Cycles:",
+            cycles_line,
+            AdapterMultiMetricKind::Cycles,
+        ),
     ]
     .into_iter()
     .map(|(header, input, to_variant)| {
         parse_iai_metric(input, header).map(|metric| to_variant(metric.1))
     })
-    .collect::<Result<Vec<_>, _>>()
+    .collect::<Result<HashSet<_>, _>>()
     .ok()?;
     let name = benchmark_name_line.parse().ok()?;
     Some((name, metrics))

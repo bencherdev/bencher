@@ -1,4 +1,7 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use bencher_json::{project::metric::Mean, BenchmarkName, JsonMetric};
 use literally::hmap;
@@ -28,6 +31,10 @@ impl From<ResultsMap> for AdapterResults {
 pub enum AdapterMetricKind {
     Latency(JsonMetric),
     Throughput(JsonMetric),
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum AdapterMultiMetricKind {
     Instructions(JsonMetric),
     Cycles(JsonMetric),
     L1Accesses(JsonMetric),
@@ -55,34 +62,45 @@ impl AdapterResults {
                             THROUGHPUT_RESOURCE_ID.clone() => json_metric
                         }
                     },
-                    AdapterMetricKind::Instructions(json_metric) => {
-                        hmap! {
-                            INSTRUCTIONS_RESOURCE_ID.clone() => json_metric,
-                        }
-                    },
-                    AdapterMetricKind::Cycles(json_metric) => {
-                        hmap! {
-                            CYCLES_RESOURCE_ID.clone() => json_metric,
-                        }
-                    },
-                    AdapterMetricKind::L1Accesses(json_metric) => {
-                        hmap! {
-                            L1_ACCESSES_RESOURCE_ID.clone() => json_metric,
-                        }
-                    },
-                    AdapterMetricKind::L2Accesses(json_metric) => {
-                        hmap! {
-                            L2_ACCESSES_RESOURCE_ID.clone() => json_metric,
-                        }
-                    },
-                    AdapterMetricKind::RamAccesses(json_metric) => {
-                        hmap! {
-                            RAM_ACCESSES_RESOURCE_ID.clone() => json_metric,
-                        }
-                    },
                 },
             };
             results_map.insert(benchmark_name, adapter_metrics);
+        }
+
+        Some(results_map.into())
+    }
+    pub fn new_multi(
+        benchmark_metrics: Vec<(BenchmarkName, HashSet<AdapterMultiMetricKind>)>,
+    ) -> Option<Self> {
+        if benchmark_metrics.is_empty() {
+            return None;
+        }
+
+        let mut results_map = HashMap::new();
+        for (benchmark_name, metrics) in benchmark_metrics {
+            let metrics_value = results_map
+                .entry(benchmark_name)
+                .or_insert_with(AdapterMetrics::default);
+            for metric in metrics {
+                let (resource_id, metric) = match metric {
+                    AdapterMultiMetricKind::Instructions(json_metric) => {
+                        (INSTRUCTIONS_RESOURCE_ID.clone(), json_metric)
+                    },
+                    AdapterMultiMetricKind::Cycles(json_metric) => {
+                        (CYCLES_RESOURCE_ID.clone(), json_metric)
+                    },
+                    AdapterMultiMetricKind::L1Accesses(json_metric) => {
+                        (L1_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                    },
+                    AdapterMultiMetricKind::L2Accesses(json_metric) => {
+                        (L2_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                    },
+                    AdapterMultiMetricKind::RamAccesses(json_metric) => {
+                        (RAM_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                    },
+                };
+                metrics_value.inner.insert(resource_id, metric);
+            }
         }
 
         Some(results_map.into())
