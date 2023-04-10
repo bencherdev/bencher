@@ -21,7 +21,7 @@ bencher_plus = { path = "plus/bencher_plus" }
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = "0.4"
-clap = { version = "4.1", features = ["derive"] }
+clap = { version = "4.2", features = ["derive"] }
 derive_more = "0.99"
 jsonwebtoken = "8.2"
 literally = "0.1"

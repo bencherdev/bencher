@@ -54,8 +54,13 @@ impl AwsS3 {
         secret_access_key: Secret,
         access_point: &str,
     ) -> Result<Self, ApiError> {
-        let credentials =
-            aws_sdk_s3::Credentials::new(access_key_id, secret_access_key, None, None, "bencher");
+        let credentials = aws_credential_types::Credentials::new(
+            access_key_id,
+            secret_access_key,
+            None,
+            None,
+            "bencher",
+        );
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
 
@@ -66,7 +71,7 @@ impl AwsS3 {
 
         let config = aws_sdk_s3::Config::builder()
             .credentials_provider(credentials_provider)
-            .region(aws_sdk_s3::Region::new(region.to_string()))
+            .region(aws_sdk_s3::config::Region::new(region.to_string()))
             .build();
         let client = aws_sdk_s3::Client::from_conf(config);
 
@@ -97,7 +102,7 @@ impl AwsS3 {
             file_name.to_string()
         };
 
-        let body = aws_sdk_s3::types::ByteStream::from_path(source_path)
+        let body = aws_sdk_s3::primitives::ByteStream::from_path(source_path)
             .await
             .map_err(|e| ApiError::AwsS3(e.to_string()))?;
 
