@@ -22,7 +22,7 @@ pub trait Median {
             let right = size / 2;
             Some((array[left] + array[right]) / 2)
         } else {
-            Some(array[(size / 2)])
+            Some(array[size / 2])
         }
     }
 }
