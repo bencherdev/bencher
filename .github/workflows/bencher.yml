@@ -273,6 +273,8 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
+      - name: Debian Version
+        run: cat /etc/debian_version
       - name: cargo build CLI
         working-directory: ./services/cli
         run: cargo build --release
