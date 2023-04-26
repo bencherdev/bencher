@@ -4,6 +4,11 @@
   // https://rust-analyzer.github.io/manual.html
   "rust-analyzer.imports.granularity.group": "crate",
   "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.linkedProjects": [
+    "Cargo.toml",
+    "examples/ebpf/Cargo.toml",
+    "examples/ebpf/ebpf-ebpf/Cargo.toml"
+  ],
   // "rust-analyzer.check.allTargets": false,
   // https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
   "[rust]": {

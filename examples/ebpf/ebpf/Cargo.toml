@@ -1,0 +1,18 @@
+[package]
+name = "ebpf"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+aya = { version = ">=0.11", features=["async_tokio"] }
+aya-log = "0.1"
+ebpf-common = { path = "../ebpf-common", features = ["user"] }
+anyhow = "1"
+env_logger = "0.10"
+log = "0.4"
+tokio = { version = "1.25", features = ["macros", "rt", "rt-multi-thread", "net", "signal"] }
+
+[[bin]]
+name = "ebpf"
+path = "src/main.rs"
