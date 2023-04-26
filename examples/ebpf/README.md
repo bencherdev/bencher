@@ -4,7 +4,8 @@
 
 1. Install a rust stable toolchain: `rustup install stable`
 1. Install a rust nightly toolchain with the rust-src component: `rustup toolchain install nightly --component rust-src`
-1. Install bpf-linker: `cargo install bpf-linker`
+1. Install LLVM 15: `sudo ./llvm.sh 15 && sudo apt install libpolly-15-dev libz-dev`
+1. Install bpf-linker: `cargo install --no-default-features --features system-llvm --locked bpf-linker@0.9.5`
 
 ## Build eBPF
 
