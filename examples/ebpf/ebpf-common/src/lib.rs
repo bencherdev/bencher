@@ -6,6 +6,7 @@
 pub enum SourceAddr {
     Fizz,
     Buzz,
+    FizzBuzz,
     Fibonacci,
 }
 

@@ -36,10 +36,12 @@ async fn main() -> Result<(), anyhow::Error> {
         // This can happen if you remove all log statements from your eBPF program.
         warn!("failed to initialize eBPF logger: {}", e);
     }
-    let program: &mut Xdp = bpf.program_mut("fizz_buzz_fibonacci").unwrap().try_into()?;
+    let program: &mut Xdp = bpf.program_mut("fun_xdp").unwrap().try_into()?;
     program.load()?;
     program.attach(&opt.iface, XdpFlags::default())
         .context("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE")?;
+
+    spawn_agent(&mut bpf).await?;
 
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;
@@ -48,17 +50,13 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn spawn_agent(opt: &Opt, bpf: &mut Bpf) -> Result<(), anyhow::Error> {
+async fn spawn_agent(bpf: &mut Bpf) -> Result<(), anyhow::Error> {
     let mut xdp_map: aya::maps::Queue<_, SourceAddr> =
         aya::maps::Queue::try_from(bpf.map_mut("SOURCE_ADDR_QUEUE").unwrap())?;
 
     loop {
         while let Ok(source_addr) = xdp_map.pop(0) {
-            // info!("Received a packet");
-            // info!("IPv4 Source Address: {:#?}", source_addr);
+            info!("{:?}", source_addr);
         }
-        // tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
     }
-
-    Ok(())
 }
