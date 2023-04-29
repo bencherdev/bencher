@@ -3,6 +3,7 @@ use aya::programs::{Xdp, XdpFlags};
 use aya::{include_bytes_aligned, Bpf};
 use aya_log::BpfLogger;
 use clap::Parser;
+use ebpf_common::SourceAddr;
 use log::{info, warn};
 use tokio::signal;
 
@@ -43,6 +44,21 @@ async fn main() -> Result<(), anyhow::Error> {
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;
     info!("Exiting...");
+
+    Ok(())
+}
+
+async fn spawn_agent(opt: &Opt, bpf: &mut Bpf) -> Result<(), anyhow::Error> {
+    let mut xdp_map: aya::maps::Queue<_, SourceAddr> =
+        aya::maps::Queue::try_from(bpf.map_mut("SOURCE_ADDR_QUEUE").unwrap())?;
+
+    loop {
+        while let Ok(source_addr) = xdp_map.pop(0) {
+            // info!("Received a packet");
+            // info!("IPv4 Source Address: {:#?}", source_addr);
+        }
+        // tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+    }
 
     Ok(())
 }

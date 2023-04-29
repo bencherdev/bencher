@@ -1,12 +1,21 @@
 #![no_std]
 #![no_main]
 
-use aya_bpf::{bindings::xdp_action, macros::xdp, programs::XdpContext};
-use aya_log_ebpf::info;
+use aya_bpf::{
+    bindings::xdp_action,
+    macros::{map, xdp},
+    maps::Queue,
+    programs::XdpContext,
+};
+use aya_log_ebpf::{error, info};
+use ebpf_common::SourceAddr;
 use network_types::{
     eth::{EthHdr, EtherType},
     ip::Ipv4Hdr,
 };
+
+#[map]
+pub static mut SOURCE_ADDR_QUEUE: Queue<SourceAddr> = Queue::with_max_entries(1024, 0);
 
 #[xdp(name = "fizz_buzz_fibonacci")]
 pub fn fizz_buzz_fibonacci(ctx: XdpContext) -> u32 {
@@ -30,6 +39,14 @@ fn try_fizz_buzz_fibonacci(ctx: &XdpContext) -> Result<u32, ()> {
     let source_addr = unsafe { (*ipv4_hdr).src_addr };
 
     info!(ctx, "IPv4 Source Address: {}", source_addr);
+
+    let source_addr_result = SourceAddr::Fizz;
+    unsafe {
+        if let Err(e) = SOURCE_ADDR_QUEUE.push(&source_addr_result, 0) {
+            error!(ctx, "Failed to push source address to queue: {}", e);
+            return Err(());
+        }
+    }
 
     // if not n % 7:
     //     return fibonacci(n)
