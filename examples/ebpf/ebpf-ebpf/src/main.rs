@@ -1,20 +1,20 @@
 #![no_std]
 #![no_main]
 
-use aya_bpf::{macros::tracepoint, programs::TracePointContext};
+use aya_bpf::{bindings::xdp_action, macros::xdp, programs::XdpContext};
 use aya_log_ebpf::info;
 
-#[tracepoint(name = "ebpf")]
-pub fn ebpf(ctx: TracePointContext) -> u32 {
-    match try_ebpf(&ctx) {
+#[xdp(name = "temp")]
+pub fn temp(ctx: XdpContext) -> u32 {
+    match try_temp(ctx) {
         Ok(ret) => ret,
-        Err(ret) => ret,
+        Err(_) => xdp_action::XDP_ABORTED,
     }
 }
 
-fn try_ebpf(ctx: &TracePointContext) -> Result<u32, u32> {
-    info!(ctx, "tracepoint sys_enter_execve called");
-    Ok(0)
+fn try_temp(ctx: XdpContext) -> Result<u32, u32> {
+    info!(&ctx, "received a packet");
+    Ok(xdp_action::XDP_PASS)
 }
 
 #[panic_handler]

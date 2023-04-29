@@ -20,6 +20,7 @@ tokio = { version = "1.25", features = [
     "net",
     "signal",
 ] }
+clap = { version = "4.1", features = ["derive"] }
 
 [[bin]]
 name = "ebpf"
