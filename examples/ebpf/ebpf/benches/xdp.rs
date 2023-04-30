@@ -15,6 +15,14 @@ pub struct EBpfBenchmark {
 inventory::collect!(EBpfBenchmark);
 
 fn basic_benchmark() -> f64 {
+    use tokio::runtime::Runtime;
+
+    // Create the runtime
+    let rt = Runtime::new().unwrap();
+
+    // Spawn a blocking function onto the runtime
+    let process = rt.block_on(async { ebpf::run("ens160").await.unwrap() });
+
     0.0
 }
 

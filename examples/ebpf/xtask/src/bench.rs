@@ -22,8 +22,8 @@ pub fn bench(opts: Options) -> Result<(), anyhow::Error> {
     .context("Error while building eBPF program")?;
 
     // run the command
-    let status = Command::new("cargo")
-        .args(["+nightly", "bench"])
+    let status = Command::new("sudo")
+        .args(["-E", "/home/epompeii/.cargo/bin/cargo", "+nightly", "bench"])
         .status()
         .expect("failed to run the command");
 
