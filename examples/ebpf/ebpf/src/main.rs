@@ -1,3 +1,5 @@
+use std::os::fd::AsRawFd;
+
 use anyhow::Context;
 use aya::programs::{Xdp, XdpFlags};
 use aya::{include_bytes_aligned, Bpf};
@@ -40,6 +42,11 @@ async fn main() -> Result<(), anyhow::Error> {
     program.load()?;
     program.attach(&opt.iface, XdpFlags::default())
         .context("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE")?;
+
+    let pid = std::process::id();
+    let prog_fd = bpf.program("fun_xdp").unwrap().fd().unwrap().as_raw_fd();
+    info!("Process ID: {}", pid);
+    info!("Program FD: {}", prog_fd);
 
     spawn_agent(&mut bpf).await?;
 
