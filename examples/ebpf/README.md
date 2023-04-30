@@ -27,3 +27,15 @@ cargo build
 ```bash
 RUST_LOG=info cargo xtask run
 ```
+
+## Build Release
+
+```bash
+RUST_LOG=info cargo xtask build-ebpf --release
+```
+
+## Run Benchmarks
+
+```bash
+cargo +nightly bench
+```

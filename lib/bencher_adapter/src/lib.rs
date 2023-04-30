@@ -15,6 +15,7 @@ use adapters::{
     rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion, AdapterRust},
 };
 use bencher_json::project::report::{JsonAdapter, JsonAverage};
+pub use bencher_json::{BenchmarkName, JsonMetric};
 pub use error::AdapterError;
 pub use results::{adapter_results::AdapterResults, AdapterResultsArray};
 

@@ -19,6 +19,16 @@ pub struct JsonMetric {
     pub upper_bound: Option<OrderedFloat<f64>>,
 }
 
+impl JsonMetric {
+    pub fn new(value: f64, lower_bound: Option<f64>, upper_bound: Option<f64>) -> Self {
+        Self {
+            value: OrderedFloat(value),
+            lower_bound: lower_bound.map(OrderedFloat),
+            upper_bound: upper_bound.map(OrderedFloat),
+        }
+    }
+}
+
 impl fmt::Display for JsonMetric {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
