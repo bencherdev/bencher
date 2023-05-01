@@ -1,14 +1,5 @@
 #![no_std]
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "user", derive(Debug))]
-pub enum SourceAddr {
-    Fizz,
-    Buzz,
-    FizzBuzz,
-    Fibonacci,
-}
+pub mod source_addr;
 
-#[cfg(feature = "user")]
-unsafe impl aya::Pod for SourceAddr {}
+pub use source_addr::SourceAddr;
