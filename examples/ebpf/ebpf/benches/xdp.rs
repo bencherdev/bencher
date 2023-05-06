@@ -8,6 +8,10 @@ use std::{
 };
 
 use bencher_adapter::{AdapterResults, JsonMetric};
+use ebpf::Process;
+use tokio::runtime::Runtime;
+
+const IFACE: &str = "ens160";
 
 #[derive(Debug)]
 pub struct EBpfBenchmark {
@@ -16,28 +20,31 @@ pub struct EBpfBenchmark {
 }
 
 inventory::collect!(EBpfBenchmark);
+inventory::submit!(EBpfBenchmark {
+    name: "fun_xdp",
+    benchmark_fn: fun_xdp_benchmark
+});
 
 fn fun_xdp_benchmark() -> f64 {
-    use tokio::runtime::Runtime;
-
-    // Create the runtime
     let rt = Runtime::new().unwrap();
 
     let shutdown = Arc::new(AtomicBool::new(false));
     let ebpf_shutdown = shutdown.clone();
-    let process = rt.block_on(async { ebpf::run("ens160", ebpf_shutdown).await.unwrap() });
+    let process = rt.block_on(async { ebpf::run(IFACE, ebpf_shutdown).await.unwrap() });
 
-    // Generate some network traffic
-    // IRL this should probably be mocked
     let _resp = rt.block_on(async { reqwest::get("https://bencher.dev").await.unwrap() });
 
-    let fd_info =
-        std::fs::File::open(format!("/proc/{}/fdinfo/{}", process.pid, process.prog_fd)).unwrap();
+    let bpf_stats = get_bpf_stats(&process);
 
+    shutdown.store(true, Ordering::Relaxed);
+
+    bpf_stats
+}
+
+fn get_bpf_stats(process: &Process) -> f64 {
+    let fd_info = File::open(format!("/proc/{}/fdinfo/{}", process.pid, process.prog_fd)).unwrap();
     let reader = BufReader::new(fd_info);
-
-    let mut run_time_ns = None;
-    let mut run_ctn = None;
+    let (mut run_time_ns, mut run_ctn) = (None, None);
     for line in reader.lines().flatten() {
         if let Some(l) = line.strip_prefix("run_time_ns:") {
             run_time_ns = l.trim().parse::<u64>().ok();
@@ -46,21 +53,11 @@ fn fun_xdp_benchmark() -> f64 {
         }
     }
 
-    shutdown.store(true, Ordering::Relaxed);
-
-    if let (Some(run_time_ns), Some(run_ctn)) = (run_time_ns, run_ctn) {
-        if run_ctn != 0 {
-            return run_time_ns as f64 / run_ctn as f64;
-        }
+    match (run_time_ns, run_ctn) {
+        (Some(run_time_ns), Some(run_ctn)) if run_ctn != 0 => run_time_ns as f64 / run_ctn as f64,
+        _ => 0.0,
     }
-
-    0.0
 }
-
-inventory::submit!(EBpfBenchmark {
-    name: "fun_xdp",
-    benchmark_fn: fun_xdp_benchmark
-});
 
 // Enable stats
 // `sudo sysctl -w kernel.bpf_stats_enabled=1`
@@ -68,7 +65,7 @@ inventory::submit!(EBpfBenchmark {
 // `cargo xtask build-ebpf --release`
 // From within the `ebpf` directory:
 // `cd ebpf`
-// `RUST_LOG=trace sudo -E $(which cargo) bench`
+// `sudo -E $(which cargo) bench`
 fn main() {
     let mut results = Vec::new();
 
