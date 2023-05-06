@@ -1,5 +1,3 @@
-#![feature(test)]
-
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -11,8 +9,6 @@ use std::{
 
 use bencher_adapter::{AdapterResults, JsonMetric};
 
-extern crate test;
-
 #[derive(Debug)]
 pub struct EBpfBenchmark {
     pub name: &'static str,
@@ -21,19 +17,19 @@ pub struct EBpfBenchmark {
 
 inventory::collect!(EBpfBenchmark);
 
-fn basic_benchmark() -> f64 {
+fn fun_xdp_benchmark() -> f64 {
     use tokio::runtime::Runtime;
 
     // Create the runtime
     let rt = Runtime::new().unwrap();
 
-    let mut shutdown = Arc::new(AtomicBool::new(false));
+    let shutdown = Arc::new(AtomicBool::new(false));
     let ebpf_shutdown = shutdown.clone();
     let process = rt.block_on(async { ebpf::run("ens160", ebpf_shutdown).await.unwrap() });
 
     // Generate some network traffic
     // IRL this should probably be mocked
-    let body = rt.block_on(async { reqwest::get("https://bencher.dev").await.unwrap() });
+    let _resp = rt.block_on(async { reqwest::get("https://bencher.dev").await.unwrap() });
 
     let fd_info =
         std::fs::File::open(format!("/proc/{}/fdinfo/{}", process.pid, process.prog_fd)).unwrap();
@@ -62,16 +58,17 @@ fn basic_benchmark() -> f64 {
 }
 
 inventory::submit!(EBpfBenchmark {
-    name: "basic",
-    benchmark_fn: basic_benchmark
+    name: "fun_xdp",
+    benchmark_fn: fun_xdp_benchmark
 });
 
-// From the root of the repo:
-// `cargo xtask build-ebpf --release`
 // Enable stats
 // `sudo sysctl -w kernel.bpf_stats_enabled=1`
+// From the root of the repo:
+// `cargo xtask build-ebpf --release`
 // From within the `ebpf` directory:
-// `RUST_LOG=trace sudo -E $(which cargo) +nightly bench`
+// `cd ebpf`
+// `RUST_LOG=trace sudo -E $(which cargo) bench`
 fn main() {
     let mut results = Vec::new();
 
