@@ -1,20 +1,21 @@
 use std::os::fd::AsRawFd;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use anyhow::Context;
 use aya::programs::{Xdp, XdpFlags};
 use aya::{include_bytes_aligned, Bpf};
 use aya_log::BpfLogger;
-use clap::Parser;
 use ebpf_common::SourceAddr;
 use log::{info, warn};
-use tokio::signal;
 
 pub struct Process {
     pub pid: u32,
     pub prog_fd: i32,
+    pub handle: tokio::task::JoinHandle<Result<(), anyhow::Error>>,
 }
 
-pub async fn run(iface: &str) -> Result<Process, anyhow::Error> {
+pub async fn run(iface: &str, shutdown: Arc<AtomicBool>) -> Result<Process, anyhow::Error> {
     env_logger::init();
 
     #[cfg(debug_assertions)]
@@ -39,18 +40,25 @@ pub async fn run(iface: &str) -> Result<Process, anyhow::Error> {
     info!("Process ID: {}", pid);
     info!("Program FD: {}", prog_fd);
 
-    spawn_agent(&mut bpf).await?;
+    let handle = tokio::spawn(async move { spawn_agent(&mut bpf, shutdown).await });
 
-    Ok(Process { pid, prog_fd })
+    Ok(Process {
+        pid,
+        prog_fd,
+        handle,
+    })
 }
 
-async fn spawn_agent(bpf: &mut Bpf) -> Result<(), anyhow::Error> {
+async fn spawn_agent(bpf: &mut Bpf, shutdown: Arc<AtomicBool>) -> Result<(), anyhow::Error> {
     let mut xdp_map: aya::maps::Queue<_, SourceAddr> =
         aya::maps::Queue::try_from(bpf.map_mut("SOURCE_ADDR_QUEUE").unwrap()).unwrap();
 
     loop {
         while let Ok(source_addr) = xdp_map.pop(0) {
             info!("{:?}", source_addr);
+        }
+        if shutdown.load(Ordering::Relaxed) {
+            break;
         }
     }
 
