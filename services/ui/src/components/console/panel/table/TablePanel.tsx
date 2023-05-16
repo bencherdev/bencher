@@ -5,7 +5,7 @@ import {
 	createMemo,
 	createEffect,
 } from "solid-js";
-import Table from "./Table";
+import Table, { TableState } from "./Table";
 
 import TableHeader from "./TableHeader";
 import {
@@ -36,14 +36,20 @@ const TablePanel = (props) => {
 		};
 	});
 
+	const [state, setState] = createSignal(TableState.LOADING);
 	const getLs = async (fetcher) => {
 		const EMPTY_ARRAY = [];
 		if (!validate_jwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
 		return await axios(get_options(url(), fetcher.token))
-			.then((resp) => resp?.data)
+			.then((resp) => {
+				const data = resp?.data;
+				setState(data.length === 0 ? TableState.EMPTY : TableState.OK);
+				return data;
+			})
 			.catch((error) => {
+				setState(TableState.ERR);
 				console.error(error);
 				return EMPTY_ARRAY;
 			});
@@ -72,7 +78,11 @@ const TablePanel = (props) => {
 				refresh={refresh}
 				handleRefresh={handleRefresh}
 			/>
-			<Table config={props.config?.table} table_data={table_data} />
+			<Table
+				config={props.config?.table}
+				table_data={table_data}
+				state={state}
+			/>
 		</>
 	);
 };

@@ -1,18 +1,32 @@
 import { Link, useLocation, useNavigate } from "solid-app-router";
-import { For, Switch, Match, createMemo } from "solid-js";
+import { For, Switch, Match, createMemo, Show } from "solid-js";
 import { Row } from "../../config/types";
+
+export enum TableState {
+	LOADING = 0,
+	EMPTY = 1,
+	OK = 2,
+	ERR = 3,
+}
 
 const Table = (props) => {
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
 	return (
-		<>
-			{props.table_data()?.length === 0 ? (
+		<Switch fallback={<>ERROR: Unknown table state</>}>
+			<Match when={props.state() === TableState.LOADING}>
+				<></>
+			</Match>
+
+			<Match when={props.state() === TableState.EMPTY}>
 				<div class="box">
 					<AddButton pathname={pathname} add={props.config?.add} />
 				</div>
-			) : (
+			</Match>
+
+			<Match when={props.state() === TableState.OK}>
+				{" "}
 				<div class="pricing-table is-horizontal">
 					<For each={props.table_data()}>
 						{(datum, i) => (
@@ -60,8 +74,12 @@ const Table = (props) => {
 						)}
 					</For>
 				</div>
-			)}
-		</>
+			</Match>
+
+			<Match when={props.state() === TableState.ERR}>
+				<LogoutButton />
+			</Match>
+		</Switch>
 	);
 };
 
@@ -71,9 +89,20 @@ const AddButton = (props) => {
 			<div class="content has-text-centered">{props.add?.prefix}</div>
 			<Link
 				class="button is-primary is-fullwidth"
-				href={props.add?.path(props.pathname())}
+				href={props.add?.path?.(props.pathname?.())}
 			>
 				{props.add?.text}
+			</Link>
+		</>
+	);
+};
+
+const LogoutButton = (_props) => {
+	return (
+		<>
+			<div class="content has-text-centered">Expired session token</div>
+			<Link class="button is-primary is-fullwidth" href="/auth/logout">
+				Log out
 			</Link>
 		</>
 	);
@@ -87,7 +116,7 @@ const RowButton = (props) => {
 			class="button is-fullwidth"
 			onClick={(e) => {
 				e.preventDefault();
-				navigate(props.config?.path?.(props.pathname(), props.datum));
+				navigate(props.config?.path?.(props.pathname?.(), props.datum));
 			}}
 		>
 			{props.config?.text}
