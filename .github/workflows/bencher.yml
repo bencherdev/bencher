@@ -267,17 +267,16 @@ jobs:
           path: ./${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz
 
   # CLI
-  # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
   build_cli_bin:
     name: Build CLI
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Debian Version
-        run: cat /etc/debian_version
+      - name: Install zigbuild
+        run: cargo install cargo-zigbuild
       - name: cargo build CLI
         working-directory: ./services/cli
-        run: cargo build --release
+        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.17
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -286,7 +285,7 @@ jobs:
 
   build_cli_deb:
     name: Package CLI (.deb)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: build_cli_bin
     steps:
       - uses: actions/checkout@v3
