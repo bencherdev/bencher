@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "wasm": "wasm-pack build ../../lib/bencher_valid --target web",
+    "wasm": "wasm-pack build ../../lib/bencher_valid --target web --features plus,wasm",
     "dev": "npm run wasm && vite",
     "test": "npm run wasm && vitest",
     "coverage": "npm run wasm && vitest run --coverage",

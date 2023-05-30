@@ -5,16 +5,13 @@ authors.workspace = true
 edition.workspace = true
 
 [features]
-default = []
 plus = ["bencher_valid/plus"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 table = ["dep:tabled"]
 
 [dependencies]
 # Workspace
-bencher_valid = { workspace = true, default-features = false, features = [
-    "schema",
-] }
+bencher_valid = { workspace = true, features = ["schema"] }
 chrono = { workspace = true, features = ["serde"] }
 derive_more.workspace = true
 once_cell.workspace = true
