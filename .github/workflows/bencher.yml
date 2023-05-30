@@ -13,6 +13,7 @@ env:
   CARGO_TERM_COLOR: always
   GITHUB_REGISTRY: ghcr.io
   FLY_REGISTRY: registry.fly.io
+  MOLD_VERSION: 1.11.0
   # API
   API_BUILDER_DOCKER_IMAGE: bencher-api-builder
   API_LOCAL_DOCKER_IMAGE: bencher-api-local
@@ -47,7 +48,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: rui314/setup-mold@v1
         with:
-          mold-version: 1.11.0
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: Add clippy
         run: rustup component add clippy
       - name: Run clippy
@@ -64,6 +65,9 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo test
         run: RUST_BACKTRACE=1 cargo test -- --nocapture
       - name: Upload Perf JPEG
@@ -81,6 +85,9 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo check
         run: |
           cd services/api
@@ -94,6 +101,9 @@ jobs:
       - cargo_clippy
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: cargo check
         run: |
           cd services/cli
@@ -111,6 +121,9 @@ jobs:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: Install `bencher` CLI
         run: cargo install --path services/cli --locked
       - name: Dogfooding Benchmarks with Bencher
@@ -123,6 +136,9 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -133,6 +149,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: Install nightly toolchain
         run: rustup toolchain install nightly
       - name: Install udeps
