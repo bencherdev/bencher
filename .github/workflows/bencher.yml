@@ -282,7 +282,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.CLI_BIN_NAME }}
-          path: ./target/release/${{ env.CLI_BIN_NAME }}
+          path: ./target/x86_64-unknown-linux-gnu/release/${{ env.CLI_BIN_NAME }}
 
   build_cli_deb:
     name: Package CLI (.deb)
