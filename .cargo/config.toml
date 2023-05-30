@@ -40,3 +40,7 @@ rustflags = [
     "-Aclippy::std_instead_of_core",
     "-Aclippy::str_to_string",
 ]
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/opt/mold-1.11.0-x86_64-linux/bin/mold"]

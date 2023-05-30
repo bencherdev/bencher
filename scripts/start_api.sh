@@ -1,5 +1,7 @@
 #!/bin/bash
 
+../../scripts/mold.sh
+
 rustup self update
 rustup update
 rustup component add rust-src
