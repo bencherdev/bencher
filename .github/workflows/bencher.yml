@@ -273,13 +273,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: goto-bus-stop/setup-zig@v2
-      - name: Install libssl
-        run: sudo apt-get install pkg-config libssl-dev
       - name: Install zigbuild
         run: cargo install cargo-zigbuild --locked
       - name: cargo build CLI
         working-directory: ./services/cli
-        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.17
+        run: |
+          sudo apt-get install pkg-config libssl-dev
+          cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.17
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
