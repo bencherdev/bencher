@@ -45,6 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: 1.11.0
       - name: Add clippy
         run: rustup component add clippy
       - name: Run clippy
