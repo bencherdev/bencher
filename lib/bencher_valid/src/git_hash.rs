@@ -1,4 +1,4 @@
-use ::git_hash::ObjectId;
+use ::gix_hash::ObjectId;
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
