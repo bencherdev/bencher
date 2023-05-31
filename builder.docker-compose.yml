@@ -4,15 +4,16 @@ services:
     build:
       context: .
       dockerfile: ./services/api/builder.Dockerfile
+      args:
+        - MOLD_VERSION=1.11.0
     image: bencher-api-builder
     container_name: bencher_api_builder
-
-  bencher-ui-builder:
-    build:
-      context: .
-      dockerfile: ./services/ui/builder.Dockerfile
-      args:
-        # Set this to your actual host if different
-        - VITE_BENCHER_API_URL=http://localhost:61016
-    image: bencher-ui-builder
-    container_name: bencher_ui_builder
+  # bencher-ui-builder:
+  #   build:
+  #     context: .
+  #     dockerfile: ./services/ui/builder.Dockerfile
+  #     args:
+  #       # Set this to your actual host if different
+  #       - VITE_BENCHER_API_URL=http://localhost:61016
+  #   image: bencher-ui-builder
+  #   container_name: bencher_ui_builder

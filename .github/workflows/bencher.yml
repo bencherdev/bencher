@@ -244,6 +244,8 @@ jobs:
           context: .
           file: ./services/api/builder.Dockerfile
           tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
+          build-args: |
+            MOLD_VERSION=${{ env.MOLD_VERSION }}
           push: false
       - name: Build Local API
         uses: docker/build-push-action@v4
@@ -273,6 +275,8 @@ jobs:
           context: .
           file: ./services/api/builder.Dockerfile
           tags: ${{ env.API_BUILDER_DOCKER_IMAGE }}
+          build-args: |
+            MOLD_VERSION=${{ env.MOLD_VERSION }}
           push: false
       - name: Build Litestream API
         uses: docker/build-push-action@v4
