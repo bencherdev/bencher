@@ -178,6 +178,79 @@ const PricingPage = (props) => {
 					</div> */}
 				</div>
 			</section>
+
+			<br />
+			<br />
+			<br />
+			<hr />
+
+			<section class="section">
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column">
+							<h2 class="title">Stewardship</h2>
+						</div>
+					</div>
+					<div class="content">
+						Bencher is a for profit company that balances the need to improve
+						the open source code of Bencher with the need to add
+						source-available features in order to generate income. We have an{" "}
+						<a
+							href="https://en.wikipedia.org/wiki/Open-core_model"
+							target="_blank"
+							rel="noreferrer"
+						>
+							open core
+						</a>{" "}
+						business model and generate almost all our revenue with
+						subscriptions to paid tiers. We recognize that we must balance the
+						need to generate income with the needs of the open source project.
+						<h3 class="title">Commitments</h3>
+						<ul>
+							<li>
+								When a feature is open source we won't move that feature to a
+								paid tier. Features might be removed from the open source
+								codebase in other cases, for example when combining features
+								from multiple tiers into one new feature. To be clear, this
+								promise only applies to open sourced features, features in paid
+								tiers might move to a higher tier.
+							</li>
+							<li>
+								We won't introduce features into the open source codebase with a
+								fixed delay, if a feature is planned to land in both it will be
+								released simultaneously in both.
+							</li>
+							<li>
+								We will always release and open source all tests that we have
+								for a open source feature.
+							</li>
+							<li>
+								The open source codebase will have all the essential features
+								for tracking the performance of a large open source project.
+							</li>
+							<li>
+								The open source codebase will not contain any artificial limits
+								(projects, users, metrics, performance, requiring a trademarked
+								header, etc.).
+							</li>
+							<li>
+								We will always allow you to benchmark the performance of
+								Bencher.
+							</li>
+						</ul>
+						<h3 class="title">Software as a Service</h3>
+						<p>
+							Our stewardship promise applies only to the Bencher open source
+							codebase, not to services such as Bencher Cloud. For Bencher
+							Cloud, we may add limits around usage (e.g., storage, compute,
+							traffic) or proxies for usage (e.g., number of users in a project)
+							as we seek to optimize costs and revenues. Our stewardship promise
+							allows other companies and organizations to provide a SaaS
+							offering based on the Bencher open source codebase.
+						</p>
+					</div>
+				</div>
+			</section>
 		</div>
 	);
 };
