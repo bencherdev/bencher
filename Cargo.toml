@@ -2,7 +2,7 @@
 members = ["services/api", "services/cli", "lib/*", "plus/*", "xtask"]
 
 [workspace.package]
-version = "0.2.43"
+version = "0.2.44"
 authors = ["Everett Pompeii <everett@bencher.dev>"]
 edition = "2021"
 
