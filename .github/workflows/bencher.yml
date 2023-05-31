@@ -22,6 +22,9 @@ env:
   CLI_BIN_NAME: bencher
   CLI_BIN_ARCH: amd64
   CLI_DEB_DIR: deb
+  # Use minimum supported glibc version for Rust Tier 1
+  # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
+  GLIBC_VERSION: 2.17
   # WASM
   WASM_BENCHER_VALID: bencher-valid-pkg
   # UI
@@ -299,7 +302,7 @@ jobs:
         run: cargo install cargo-zigbuild --locked
       - name: cargo build CLI
         working-directory: ./services/cli
-        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.17
+        run: cargo zigbuild --release --target x86_64-unknown-linux-gnu.${{ env.GLIBC_VERSION }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -488,7 +491,8 @@ jobs:
   bencher_github_action:
     name: Bencher CLI GitHub Action
     runs-on: ubuntu-latest
-    # If main has already been updated then this will fail
+    # This will fail during releases builds
+    # because the version number requested is for the current, in progress release
     continue-on-error: true
     steps:
       - uses: actions/checkout@v3
