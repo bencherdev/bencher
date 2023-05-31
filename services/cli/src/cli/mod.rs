@@ -1,5 +1,5 @@
 use bencher_json::{Jwt, Url};
-use clap::{ArgGroup, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 pub mod docs;
 pub mod mock;
@@ -94,22 +94,6 @@ pub enum CliSub {
 }
 
 #[derive(Args, Debug)]
-pub struct CliLocality {
-    /// Run local only
-    #[clap(long)]
-    pub local: bool,
-
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("backend")
-        .multiple(true)
-        .conflicts_with("local")
-        .args(&["token", "host"]),
-))]
 pub struct CliBackend {
     /// Backend host URL (default https://api.bencher.dev)
     #[clap(long)]

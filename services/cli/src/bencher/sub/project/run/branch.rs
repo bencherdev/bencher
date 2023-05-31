@@ -7,11 +7,7 @@ use bencher_json::{
 
 use uuid::Uuid;
 
-use crate::{
-    bencher::{backend::Backend, locality::Locality},
-    cli::project::run::CliRunBranch,
-    cli_println, CliError,
-};
+use crate::{bencher::backend::Backend, cli::project::run::CliRunBranch, cli_println, CliError};
 
 use super::BENCHER_BRANCH;
 
@@ -61,7 +57,7 @@ impl Branch {
     pub async fn resource_id(
         &self,
         project: &ResourceId,
-        locality: &Locality,
+        backend: &Backend,
     ) -> Result<Option<ResourceId>, CliError> {
         Ok(match self {
             Self::ResourceId(resource_id) => Some(resource_id.clone()),
@@ -70,8 +66,7 @@ impl Branch {
                 start_points,
                 create,
             } => {
-                if let Some(uuid) =
-                    if_branch(project, name, start_points, *create, locality).await?
+                if let Some(uuid) = if_branch(project, name, start_points, *create, backend).await?
                 {
                     Some(uuid.into())
                 } else {
@@ -94,12 +89,8 @@ async fn if_branch(
     branch_name: &BranchName,
     start_points: &[String],
     create: bool,
-    locality: &Locality,
+    backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
-    let Locality::Backend(backend) = &locality else {
-        return  Ok(None);
-    };
-
     let branch = get_branch(project, branch_name, backend).await?;
 
     if branch.is_some() {

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use bencher_json::{BranchName, ResourceId};
 use clap::{Args, Parser, ValueEnum};
 
-use crate::cli::CliLocality;
+use crate::cli::CliBackend;
 
 #[allow(clippy::option_option, clippy::struct_excessive_bools)]
 #[derive(Parser, Debug)]
@@ -51,7 +51,7 @@ pub struct CliRun {
     pub command: CliRunCommand,
 
     #[clap(flatten)]
-    pub locality: CliLocality,
+    pub backend: CliBackend,
 }
 
 #[derive(Args, Debug)]

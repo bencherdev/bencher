@@ -9,7 +9,7 @@ use chrono::Utc;
 use clap::ValueEnum;
 
 use crate::{
-    bencher::locality::Locality,
+    bencher::backend::Backend,
     cli::project::run::{CliRun, CliRunAdapter},
     cli_eprintln, cli_println, CliError,
 };
@@ -37,7 +37,7 @@ const BENCHER_CMD: &str = "BENCHER_CMD";
 #[derive(Debug)]
 pub struct Run {
     project: ResourceId,
-    locality: Locality,
+    backend: Backend,
     runner: Runner,
     branch: Branch,
     hash: Option<GitHash>,
@@ -56,7 +56,7 @@ impl TryFrom<CliRun> for Run {
     fn try_from(run: CliRun) -> Result<Self, Self::Error> {
         let CliRun {
             project,
-            locality,
+            backend,
             command,
             run_branch,
             hash,
@@ -70,7 +70,7 @@ impl TryFrom<CliRun> for Run {
         } = run;
         Ok(Self {
             project: unwrap_project(project)?,
-            locality: locality.try_into()?,
+            backend: backend.try_into()?,
             runner: command.try_into()?,
             branch: run_branch.try_into()?,
             hash: map_hash(hash)?,
@@ -130,7 +130,7 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
-        let Some(branch) = self.branch.resource_id(&self.project, &self.locality).await? else {
+        let Some(branch) = self.branch.resource_id(&self.project, &self.backend).await? else {
             return Ok(())
         };
 
@@ -169,19 +169,15 @@ impl SubCmd for Run {
         // TODO disable when quiet
         cli_println!("{}", serde_json::to_string_pretty(&report)?);
 
-        match &self.locality {
-            Locality::Local => {},
-            Locality::Backend(backend) => {
-                let value = backend
-                    .post(&format!("/v0/projects/{}/reports", self.project), &report)
-                    .await?;
-                if self.err {
-                    let json_report: JsonReport = serde_json::from_value(value)?;
-                    if !json_report.alerts.is_empty() {
-                        return Err(CliError::Alerts);
-                    }
-                }
-            },
+        let value = self
+            .backend
+            .post(&format!("/v0/projects/{}/reports", self.project), &report)
+            .await?;
+        if self.err {
+            let json_report: JsonReport = serde_json::from_value(value)?;
+            if !json_report.alerts.is_empty() {
+                return Err(CliError::Alerts);
+            }
         }
 
         Ok(())

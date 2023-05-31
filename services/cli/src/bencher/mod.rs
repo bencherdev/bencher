@@ -6,7 +6,6 @@ use clap::Parser;
 use crate::{cli::CliBencher, CliError};
 
 pub mod backend;
-pub mod locality;
 pub mod sub;
 
 use sub::{Sub, SubCmd};
