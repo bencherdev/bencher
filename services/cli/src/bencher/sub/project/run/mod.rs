@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{
@@ -73,7 +73,7 @@ impl TryFrom<CliRun> for Run {
             backend: backend.try_into()?,
             runner: command.try_into()?,
             branch: run_branch.try_into()?,
-            hash: map_hash(hash)?,
+            hash,
             testbed: unwrap_testbed(testbed)?,
             adapter: map_adapter(adapter),
             average: average.map(Into::into),
@@ -92,14 +92,6 @@ fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
         env_project.parse()?
     } else {
         return Err(CliError::ProjectNotFound);
-    })
-}
-
-fn map_hash(hash: Option<String>) -> Result<Option<GitHash>, CliError> {
-    Ok(if let Some(hash) = hash {
-        Some(GitHash::from_str(&hash)?)
-    } else {
-        None
     })
 }
 

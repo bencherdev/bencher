@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_json::{BranchName, ResourceId};
+use bencher_json::{BranchName, GitHash, ResourceId};
 use clap::{Args, Parser, ValueEnum};
 
 use crate::cli::CliBackend;
@@ -17,7 +17,7 @@ pub struct CliRun {
 
     /// Software commit hash
     #[clap(long)]
-    pub hash: Option<String>,
+    pub hash: Option<GitHash>,
 
     /// Testbed slug or UUID (or set BENCHER_TESTBED) (default is "localhost")
     #[clap(long)]
