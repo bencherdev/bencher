@@ -28,6 +28,12 @@ const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 
+const TABULAR_INIT = {
+	[PerfTab.BRANCHES]: false,
+	[PerfTab.TESTBEDS]: false,
+	[PerfTab.BENCHMARKS]: false,
+};
+
 const addToArray = (array: any[], add: any) => {
 	if (!array.includes(add)) {
 		array.push(add);
@@ -95,7 +101,7 @@ const resourcesToCheckable = (resources, params) =>
 		return {
 			uuid: resource?.uuid,
 			name: resource?.name,
-			checked: params.indexOf(resource?.uuid) > -1,
+			checked: params.includes(resource?.uuid),
 		};
 	});
 
@@ -207,7 +213,10 @@ const PerfPanel = (props) => {
 
 	// Refresh pref query
 	const [refresh, setRefresh] = createSignal(0);
+	// Keep state on whether the resources have been refreshed
+	const [tabular_refresh, setTabularRefresh] = createStore(TABULAR_INIT);
 	const handleRefresh = () => {
+		setTabularRefresh(TABULAR_INIT);
 		setRefresh(refresh() + 1);
 	};
 
@@ -267,8 +276,12 @@ const PerfPanel = (props) => {
 	const getPerfTab = async (perf_tab: PerfTab, token: null | string) => {
 		const url = props.config?.plot?.tab_url(project_slug(), perf_tab);
 		return await axios(get_options(url, token))
-			.then((resp) => resp?.data)
+			.then((resp) => {
+				setTabularRefresh({ ...tabular_refresh, [perf_tab]: true });
+				return resp?.data;
+			})
 			.catch((error) => {
+				setTabularRefresh({ ...tabular_refresh, [perf_tab]: true });
 				console.error(error);
 				return [];
 			});
@@ -291,20 +304,18 @@ const PerfPanel = (props) => {
 	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
 
 	// Keep state on whether the resources have been refreshed
-	const [tabular_refresh, setTabularRefresh] = createSignal();
+	// const [tabular_refresh, setTabularRefresh] = createSignal();
 
 	createEffect(() => {
-		// At init wait until data is loaded to set *_tab and tabular_refresh
-		// Otherwise, check to see if there is a new refresh
 		if (
-			(!tabular_refresh() &&
-				branches_data() &&
-				testbeds_data() &&
-				benchmarks_data()) ||
-			(tabular_refresh() && tabular_refresh() !== refresh())
+			branches_data() &&
+			testbeds_data() &&
+			benchmarks_data() &&
+			tabular_refresh[PerfTab.BRANCHES] &&
+			tabular_refresh[PerfTab.TESTBEDS] &&
+			tabular_refresh[PerfTab.BENCHMARKS]
 		) {
-			setTabularRefresh(refresh());
-
+			setTabularRefresh(TABULAR_INIT);
 			setBranchesTab(resourcesToCheckable(branches_data(), branches()));
 			setTestbedsTab(resourcesToCheckable(testbeds_data(), testbeds()));
 			setBenchmarksTab(resourcesToCheckable(benchmarks_data(), benchmarks()));
