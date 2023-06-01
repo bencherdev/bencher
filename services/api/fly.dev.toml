@@ -1,5 +1,5 @@
 app = "bencher-api-dev"
-kill_timeout = 6
+kill_timeout = "6s"
 
 [build]
 image = "registry.fly.io/bencher-api-dev"
@@ -9,10 +9,10 @@ protocol = "tcp"
 internal_port = 61016
 
 [[services.ports]]
-handlers = ["http"]
 port = 80
+handlers = ["http"]
 force_https = true
 
 [[services.ports]]
-handlers = ["tls", "http"]
 port = 443
+handlers = ["tls", "http"]
