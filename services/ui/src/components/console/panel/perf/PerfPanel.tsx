@@ -29,7 +29,9 @@ const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 
 const addToArray = (array: any[], add: any) => {
-	array.push(add);
+	if (!array.includes(add)) {
+		array.push(add);
+	}
 	return array;
 };
 const removeFromArray = (array: any[], remove: any) => {
