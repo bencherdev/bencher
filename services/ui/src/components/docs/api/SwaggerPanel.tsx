@@ -11,7 +11,27 @@ const SwaggerPanel = (props) => {
 		});
 	});
 
-	return <div id="swagger" />;
+	return (
+		<div class="content">
+			<blockquote>
+				<h2 class="title">
+					🐰 Bencher Cloud API Endpoint:{" "}
+					<code>
+						<a
+							href="https://api.bencher.dev/v0/server/version"
+							target="_blank"
+							rel="noreferrer"
+						>
+							https://api.bencher.dev
+						</a>
+					</code>
+				</h2>
+			</blockquote>
+			<hr />
+			<div id="swagger" />
+			<br />
+		</div>
+	);
 };
 
 export default SwaggerPanel;
