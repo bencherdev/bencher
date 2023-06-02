@@ -30,6 +30,8 @@ use crate::{
     ApiError,
 };
 
+pub mod results;
+
 use super::Resource;
 
 const REPORT_RESOURCE: Resource = Resource::Report;

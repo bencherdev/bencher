@@ -84,21 +84,24 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(project::projects::get_ls)?;
     api.register(project::projects::one_options)?;
     api.register(project::projects::get_one)?;
+
     // Perf
     api.register(project::perf::options)?;
     api.register(project::perf::get)?;
     // Perf Image
     api.register(project::perf::img::options)?;
     api.register(project::perf::img::get)?;
+
     // Reports
     api.register(project::reports::dir_options)?;
     api.register(project::reports::get_ls)?;
     api.register(project::reports::post)?;
     api.register(project::reports::one_options)?;
     api.register(project::reports::get_one)?;
-    // Results
-    api.register(project::results::one_options)?;
-    api.register(project::results::get_one)?;
+    // Report Results
+    api.register(project::reports::results::one_options)?;
+    api.register(project::reports::results::get_one)?;
+
     // Metric Kinds
     api.register(project::metric_kinds::dir_options)?;
     api.register(project::metric_kinds::get_ls)?;
@@ -122,17 +125,23 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(project::benchmarks::get_ls)?;
     api.register(project::benchmarks::one_options)?;
     api.register(project::benchmarks::get_one)?;
+
     // Thresholds
     api.register(project::thresholds::dir_options)?;
     api.register(project::thresholds::get_ls)?;
     api.register(project::thresholds::post)?;
     api.register(project::thresholds::one_options)?;
     api.register(project::thresholds::get_one)?;
-    // Alerts
-    api.register(project::alerts::dir_options)?;
-    api.register(project::alerts::get_ls)?;
-    api.register(project::alerts::one_options)?;
-    api.register(project::alerts::get_one)?;
+    // Threshold Statistics
+    api.register(project::thresholds::statistics::dir_options)?;
+    api.register(project::thresholds::statistics::get_ls)?;
+    api.register(project::thresholds::statistics::one_options)?;
+    api.register(project::thresholds::statistics::get_one)?;
+    // Threshold Alerts
+    api.register(project::thresholds::alerts::dir_options)?;
+    api.register(project::thresholds::alerts::get_ls)?;
+    api.register(project::thresholds::alerts::one_options)?;
+    api.register(project::thresholds::alerts::get_one)?;
 
     // Users
     api.register(user::users::one_options)?;

@@ -32,6 +32,9 @@ use crate::{
     ApiError,
 };
 
+pub mod alerts;
+pub mod statistics;
+
 use super::Resource;
 
 const THRESHOLD_RESOURCE: Resource = Resource::Threshold;
