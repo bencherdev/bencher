@@ -28,12 +28,6 @@ const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 
-const TABULAR_INIT = {
-	[PerfTab.BRANCHES]: false,
-	[PerfTab.TESTBEDS]: false,
-	[PerfTab.BENCHMARKS]: false,
-};
-
 const addToArray = (array: any[], add: any) => {
 	if (!array.includes(add)) {
 		array.push(add);
@@ -213,10 +207,7 @@ const PerfPanel = (props) => {
 
 	// Refresh pref query
 	const [refresh, setRefresh] = createSignal(0);
-	// Keep state on whether the resources have been refreshed
-	const [tabular_refresh, setTabularRefresh] = createStore(TABULAR_INIT);
 	const handleRefresh = () => {
-		setTabularRefresh(TABULAR_INIT);
 		setRefresh(refresh() + 1);
 	};
 
@@ -265,62 +256,70 @@ const PerfPanel = (props) => {
 
 	const [perf_data] = createResource(perf_query_fetcher, get_perf);
 
-	const project_fetcher = createMemo(() => {
+	// Initialize as empty, wait for resources to load
+	const [branches_tab, setBranchesTab] = createStore([]);
+	const [testbeds_tab, setTestbedsTab] = createStore([]);
+	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
+
+	const tab_fetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),
 			refresh: refresh(),
 			token: props.user?.token,
 		};
 	});
-
 	const getPerfTab = async (perf_tab: PerfTab, token: null | string) => {
 		const url = props.config?.plot?.tab_url(project_slug(), perf_tab);
 		return await axios(get_options(url, token))
 			.then((resp) => {
-				setTabularRefresh({ ...tabular_refresh, [perf_tab]: true });
 				return resp?.data;
 			})
 			.catch((error) => {
-				setTabularRefresh({ ...tabular_refresh, [perf_tab]: true });
 				console.error(error);
 				return [];
 			});
 	};
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
-	const [branches_data] = createResource(project_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BRANCHES, fetcher.token),
-	);
-	const [testbeds_data] = createResource(project_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.TESTBEDS, fetcher.token),
-	);
-	const [benchmarks_data] = createResource(project_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BENCHMARKS, fetcher.token),
-	);
-
-	// Initialize as empty, wait for resources to load
-	const [branches_tab, setBranchesTab] = createStore([]);
-	const [testbeds_tab, setTestbedsTab] = createStore([]);
-	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
-
-	// Keep state on whether the resources have been refreshed
-	// const [tabular_refresh, setTabularRefresh] = createSignal();
-
-	createEffect(() => {
-		if (
-			branches_data() &&
-			testbeds_data() &&
-			benchmarks_data() &&
-			tabular_refresh[PerfTab.BRANCHES] &&
-			tabular_refresh[PerfTab.TESTBEDS] &&
-			tabular_refresh[PerfTab.BENCHMARKS]
-		) {
-			setTabularRefresh(TABULAR_INIT);
-			setBranchesTab(resourcesToCheckable(branches_data(), branches()));
-			setTestbedsTab(resourcesToCheckable(testbeds_data(), testbeds()));
-			setBenchmarksTab(resourcesToCheckable(benchmarks_data(), benchmarks()));
-		}
+	const branches_fetcher = createMemo(() => {
+		return {
+			tab: tab_fetcher(),
+			branches: branches(),
+		};
 	});
+	const [_branches] = createResource(
+		branches_fetcher,
+		async (fetcher) =>
+			await getPerfTab(PerfTab.BRANCHES, fetcher.tab.token).then((data) =>
+				setBranchesTab(resourcesToCheckable(data, fetcher.branches)),
+			),
+	);
+	const testbeds_fetcher = createMemo(() => {
+		return {
+			tab: tab_fetcher(),
+			testbeds: testbeds(),
+		};
+	});
+	const [_testbeds] = createResource(
+		testbeds_fetcher,
+		async (fetcher) =>
+			await getPerfTab(PerfTab.TESTBEDS, fetcher.tab.token).then((data) =>
+				setTestbedsTab(resourcesToCheckable(data, fetcher.testbeds)),
+			),
+	);
+	const benchmarks_fetcher = createMemo(() => {
+		return {
+			tab: tab_fetcher(),
+			benchmarks: benchmarks(),
+		};
+	});
+	const [_benchmarks] = createResource(
+		benchmarks_fetcher,
+		async (fetcher) =>
+			await getPerfTab(PerfTab.BENCHMARKS, fetcher.tab.token).then((data) =>
+				setBenchmarksTab(resourcesToCheckable(data, fetcher.benchmarks)),
+			),
+	);
 
 	const handleChecked = (
 		resource_tab: any[],
