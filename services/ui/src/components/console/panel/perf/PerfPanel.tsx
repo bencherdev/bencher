@@ -281,45 +281,33 @@ const PerfPanel = (props) => {
 	};
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
-	const branches_fetcher = createMemo(() => {
-		return {
-			tab: tab_fetcher(),
-			branches: branches(),
-		};
-	});
-	const [_branches] = createResource(
-		branches_fetcher,
-		async (fetcher) =>
-			await getPerfTab(PerfTab.BRANCHES, fetcher.tab.token).then((data) =>
-				setBranchesTab(resourcesToCheckable(data, fetcher.branches)),
-			),
+	const [branches_data] = createResource(tab_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.BRANCHES, fetcher.token),
 	);
-	const testbeds_fetcher = createMemo(() => {
-		return {
-			tab: tab_fetcher(),
-			testbeds: testbeds(),
-		};
+	createEffect(() => {
+		const data = branches_data();
+		if (data) {
+			setBranchesTab(resourcesToCheckable(data, branches()));
+		}
 	});
-	const [_testbeds] = createResource(
-		testbeds_fetcher,
-		async (fetcher) =>
-			await getPerfTab(PerfTab.TESTBEDS, fetcher.tab.token).then((data) =>
-				setTestbedsTab(resourcesToCheckable(data, fetcher.testbeds)),
-			),
+	const [testbeds_data] = createResource(tab_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.TESTBEDS, fetcher.token),
 	);
-	const benchmarks_fetcher = createMemo(() => {
-		return {
-			tab: tab_fetcher(),
-			benchmarks: benchmarks(),
-		};
+	createEffect(() => {
+		const data = testbeds_data();
+		if (data) {
+			setTestbedsTab(resourcesToCheckable(data, testbeds()));
+		}
 	});
-	const [_benchmarks] = createResource(
-		benchmarks_fetcher,
-		async (fetcher) =>
-			await getPerfTab(PerfTab.BENCHMARKS, fetcher.tab.token).then((data) =>
-				setBenchmarksTab(resourcesToCheckable(data, fetcher.benchmarks)),
-			),
+	const [benchmarks_data] = createResource(tab_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.BENCHMARKS, fetcher.token),
 	);
+	createEffect(() => {
+		const data = benchmarks_data();
+		if (data) {
+			setBenchmarksTab(resourcesToCheckable(data, benchmarks()));
+		}
+	});
 
 	const handleChecked = (
 		resource_tab: any[],
