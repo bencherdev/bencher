@@ -18,14 +18,25 @@ const DEFAULT_COUNT: usize = 5;
 #[derive(Debug, Clone)]
 pub struct Mock {
     pub count: Option<usize>,
+    pub magnitude: Option<i32>,
     pub fail: bool,
     pub flaky: bool,
 }
 
 impl From<CliMock> for Mock {
     fn from(mock: CliMock) -> Self {
-        let CliMock { count, fail, flaky } = mock;
-        Self { count, fail, flaky }
+        let CliMock {
+            count,
+            magnitude,
+            fail,
+            flaky,
+        } = mock;
+        Self {
+            count,
+            magnitude,
+            fail,
+            flaky,
+        }
     }
 }
 
@@ -38,10 +49,12 @@ impl SubCmd for Mock {
     )]
     async fn exec(&self) -> Result<(), CliError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
+        let magnitude = self.magnitude.unwrap_or(1);
+        let magnitude = if magnitude < 0 { -1.0 } else { 1.0 } * 10.0f64.powi(magnitude.abs());
         let mut results = HashMap::with_capacity(count);
         let mut rng = rand::thread_rng();
         for c in 0..count {
-            let offset = 10.0 * c as f64;
+            let offset = magnitude * c as f64;
             let low = 0.0 + offset;
             let high = 10.0 + offset;
             let uniform = Uniform::new(low, high);
