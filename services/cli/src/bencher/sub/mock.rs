@@ -7,7 +7,7 @@ use bencher_adapter::{
 };
 use bencher_json::JsonMetric;
 use literally::hmap;
-use rand::Rng;
+use rand::{distributions::Uniform, prelude::Distribution, Rng};
 
 use crate::{cli::mock::CliMock, cli_println, CliError};
 
@@ -41,8 +41,12 @@ impl SubCmd for Mock {
         let mut results = HashMap::with_capacity(count);
         let mut rng = rand::thread_rng();
         for c in 0..count {
-            let value = 1_000.0 * (c + 1) as f64 * rng.gen::<f64>();
-            let variance = value * rng.gen::<f64>() * 0.1;
+            let offset = 10.0 * c as f64;
+            let low = 0.0 + offset;
+            let high = 10.0 + offset;
+            let uniform = Uniform::new(low, high);
+            let value: f64 = uniform.sample(&mut rng);
+            let variance = value * 0.1;
             results.insert(
                 format!("bencher::mock_{c}").as_str().parse()?,
                 AdapterMetrics {
