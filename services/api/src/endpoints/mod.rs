@@ -133,8 +133,6 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(project::thresholds::one_options)?;
     api.register(project::thresholds::get_one)?;
     // Threshold Statistics
-    api.register(project::thresholds::statistics::dir_options)?;
-    api.register(project::thresholds::statistics::get_ls)?;
     api.register(project::thresholds::statistics::one_options)?;
     api.register(project::thresholds::statistics::get_one)?;
     // Threshold Alerts
