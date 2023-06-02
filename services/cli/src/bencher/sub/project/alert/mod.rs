@@ -27,7 +27,7 @@ impl SubCmd for Alert {
     async fn exec(&self) -> Result<(), CliError> {
         match self {
             Self::List(list) => list.exec().await,
-            Self::View(create) => create.exec().await,
+            Self::View(view) => view.exec().await,
         }
     }
 }

@@ -9,7 +9,7 @@ pub enum CliAlert {
     /// List alerts
     #[clap(alias = "ls")]
     List(CliAlertList),
-    /// View a alert
+    /// View an alert
     View(CliAlertView),
 }
 

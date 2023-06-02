@@ -11,6 +11,7 @@ pub mod perf;
 pub mod report;
 pub mod result;
 pub mod run;
+pub mod statistic;
 pub mod testbed;
 pub mod threshold;
 

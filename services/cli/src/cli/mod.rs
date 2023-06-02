@@ -20,6 +20,8 @@ use project::{
 use system::{auth::CliAuth, server::CliServer};
 use user::{token::CliToken, CliUser};
 
+use self::project::statistic::CliStatistic;
+
 /// Bencher CLI
 #[derive(Parser, Debug)]
 #[clap(name = "bencher", author, version, about, long_about = None)]
@@ -45,34 +47,41 @@ pub enum CliSub {
     /// Manage projects
     #[clap(subcommand)]
     Project(CliProject),
+
+    /// Run benchmarks
+    Run(CliRun),
+    /// Query benchmark data
+    Perf(CliPerf),
+
     /// Manage reports
     #[clap(subcommand)]
     Report(CliReport),
-    /// View results
+    /// View report results
     #[clap(subcommand)]
     Result(CliResult),
+
+    /// Manage metric kinds
+    #[clap(subcommand)]
+    MetricKind(CliMetricKind),
     /// Manage branches
     #[clap(subcommand)]
     Branch(CliBranch),
     /// Manage testbeds
     #[clap(subcommand)]
     Testbed(CliTestbed),
-    /// Manage thresholds
-    #[clap(subcommand)]
-    Threshold(CliThreshold),
-    /// Manage metric kinds
-    #[clap(subcommand)]
-    MetricKind(CliMetricKind),
-    /// Run benchmarks
-    Run(CliRun),
     /// View benchmarks
     #[clap(subcommand)]
     Benchmark(CliBenchmark),
+
+    /// Manage thresholds
+    #[clap(subcommand)]
+    Threshold(CliThreshold),
+    /// Manage threshold statistics
+    #[clap(subcommand)]
+    Statistic(CliStatistic),
     /// View alerts
     #[clap(subcommand)]
     Alert(CliAlert),
-    /// Query benchmark data
-    Perf(CliPerf),
 
     /// View user
     #[clap(subcommand)]

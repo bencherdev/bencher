@@ -23,18 +23,6 @@ impl Registrar<ApiContext> for Api {
 }
 
 fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
-    // Server
-    api.register(system::server::ping::options)?;
-    api.register(system::server::ping::get)?;
-    api.register(system::server::version::options)?;
-    api.register(system::server::version::get)?;
-    api.register(system::server::restart::options)?;
-    api.register(system::server::restart::post)?;
-    api.register(system::server::config::options)?;
-    api.register(system::server::config::put)?;
-    api.register(system::server::config::get_one)?;
-    api.register(system::server::backup::options)?;
-    api.register(system::server::backup::post)?;
     // Auth
     api.register(system::auth::signup::options)?;
     api.register(system::auth::signup::post)?;
@@ -150,6 +138,19 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(user::tokens::post)?;
     api.register(user::tokens::one_options)?;
     api.register(user::tokens::get_one)?;
+
+    // Server
+    api.register(system::server::ping::options)?;
+    api.register(system::server::ping::get)?;
+    api.register(system::server::version::options)?;
+    api.register(system::server::version::get)?;
+    api.register(system::server::restart::options)?;
+    api.register(system::server::restart::post)?;
+    api.register(system::server::config::options)?;
+    api.register(system::server::config::put)?;
+    api.register(system::server::config::get_one)?;
+    api.register(system::server::backup::options)?;
+    api.register(system::server::backup::post)?;
 
     Ok(())
 }
