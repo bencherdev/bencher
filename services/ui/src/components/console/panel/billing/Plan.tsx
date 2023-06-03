@@ -6,18 +6,7 @@ import {
 	usd_formatter,
 	validate_jwt,
 } from "../../../site/util";
-import { PlanLevel } from "../../../../types/bencher";
-
-export enum PlanStatus {
-	ACTIVE = "active",
-	CANCELED = "canceled",
-	INCOMPLETE = "incomplete",
-	INCOMPLETE_EXPIRED = "incomplete_expired",
-	PAST_DUE = "past_due",
-	PAUSED = "paused",
-	TRIALING = "trialing",
-	UNPAID = "unpaid",
-}
+import { PlanLevel, PlanStatus } from "../../../../types/bencher";
 
 export enum CardBrand {
 	AMEX = "amex",
@@ -152,28 +141,28 @@ const Plan = (props) => {
 
 const FmtPlanStatus = (props) => {
 	switch (props.status) {
-		case PlanStatus.ACTIVE: {
+		case PlanStatus.Active: {
 			return <OkStatus status="Active" />;
 		}
-		case PlanStatus.CANCELED: {
+		case PlanStatus.Canceled: {
 			return <ErrStatus status="Canceled" />;
 		}
-		case PlanStatus.INCOMPLETE: {
+		case PlanStatus.Incomplete: {
 			return <ErrStatus status="Incomplete" />;
 		}
-		case PlanStatus.INCOMPLETE_EXPIRED: {
+		case PlanStatus.IncompleteExpired: {
 			return <ErrStatus status="Incomplete Expired" />;
 		}
-		case PlanStatus.PAST_DUE: {
+		case PlanStatus.PastDue: {
 			return <ErrStatus status="Past Due" />;
 		}
-		case PlanStatus.PAUSED: {
+		case PlanStatus.Paused: {
 			return <ErrStatus status="Paused" />;
 		}
-		case PlanStatus.TRIALING: {
+		case PlanStatus.Trialing: {
 			return <OkStatus status="Trialing" />;
 		}
-		case PlanStatus.UNPAID: {
+		case PlanStatus.Unpaid: {
 			return <ErrStatus status="Unpaid" />;
 		}
 		default:
