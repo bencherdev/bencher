@@ -14,7 +14,7 @@ const PerfHeader = (props) => {
 	});
 
 	return (
-		<div class="columns is-vcentered">
+		<div class="columns is-centered">
 			<div class="column">
 				<h3 class="title is-3" style="overflow-wrap:anywhere;">
 					{project()?.name}

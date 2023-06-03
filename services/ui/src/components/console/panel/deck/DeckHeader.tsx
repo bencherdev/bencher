@@ -12,10 +12,10 @@ const DeckHeader = (props) => {
 	});
 
 	return (
-		<nav class="level">
-			<div class="level-left">
+		<div class="columns is-centered">
+			<div class="column is-narrow">
 				<button
-					class="button is-outlined"
+					class="button is-outlined is-fullwidth"
 					onClick={(e) => {
 						e.preventDefault();
 						navigate(props.config?.path(pathname()));
@@ -27,31 +27,28 @@ const DeckHeader = (props) => {
 					<span>Back</span>
 				</button>
 			</div>
-			<div class="level-left">
-				<div class="level-item">
+			<div class="column">
+				<div class="content has-text-centered">
 					<h3 class="title is-3" style="overflow-wrap:anywhere;">
 						{props.data?.[props.config?.key]}
 					</h3>
 				</div>
 			</div>
-
-			<div class="level-right">
-				<p class="level-item">
-					<button
-						class="button is-outlined"
-						onClick={(e) => {
-							e.preventDefault();
-							props.handleRefresh();
-						}}
-					>
-						<span class="icon">
-							<i class="fas fa-sync-alt" aria-hidden="true" />
-						</span>
-						<span>Refresh</span>
-					</button>
-				</p>
+			<div class="column is-narrow">
+				<button
+					class="button is-outlined is-fullwidth"
+					onClick={(e) => {
+						e.preventDefault();
+						props.handleRefresh();
+					}}
+				>
+					<span class="icon">
+						<i class="fas fa-sync-alt" aria-hidden="true" />
+					</span>
+					<span>Refresh</span>
+				</button>
 			</div>
-		</nav>
+		</div>
 	);
 };
 
