@@ -222,7 +222,7 @@ const PricingPage = (props) => {
 							</li>
 							<li>
 								We will always release and open source all tests that we have
-								for a open source feature.
+								for an open source feature.
 							</li>
 							<li>
 								The open source codebase will have all the essential features
