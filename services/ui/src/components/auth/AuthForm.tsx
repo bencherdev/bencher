@@ -1,7 +1,7 @@
 import { createSignal, createEffect, createMemo } from "solid-js";
 import axios from "axios";
 
-import Field from "../field/Field";
+import Field, { FieldHandler } from "../field/Field";
 import AUTH_FIELDS from "./config/fields";
 import {
 	BENCHER_API_URL,
@@ -43,7 +43,7 @@ export const AuthForm = (props: Props) => {
 	);
 	const [form, setForm] = createSignal(initForm());
 
-	const handleField = (key, value, valid) => {
+	const handleField: FieldHandler = (key, value, valid) => {
 		setForm({
 			...form(),
 			[key]: {
@@ -187,7 +187,6 @@ export const AuthForm = (props: Props) => {
 				<Field
 					kind={FieldKind.CHECKBOX}
 					fieldKey="consent"
-					label=""
 					value={form()?.consent?.value}
 					valid={form()?.consent?.valid}
 					config={AUTH_FIELDS.consent}

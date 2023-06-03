@@ -9,6 +9,7 @@ const Switch = (props) => {
 				checked={props.value}
 				disabled={props.config?.disabled}
 			/>
+			{/* rome-ignore lint/a11y/useKeyWithClickEvents: TODO */}
 			<label
 				for={props.config?.label}
 				onClick={(_event) => {
@@ -17,7 +18,7 @@ const Switch = (props) => {
 					}
 					props.handleField(!props.value);
 				}}
-			></label>
+			/>
 		</div>
 	);
 };

@@ -1,6 +1,6 @@
 const Select = (props) => {
 	function getStatus() {
-		let selected = props.value.options.find((option) => {
+		const selected = props.value.options.find((option) => {
 			return props.value.selected === option.value;
 		});
 		if (selected?.status) {

@@ -213,7 +213,6 @@ const AuthConfirmPage = (props: {
 								<Field
 									kind={FieldKind.INPUT}
 									fieldKey="token"
-									label={true}
 									value={form()?.token?.value}
 									valid={form()?.token?.valid}
 									config={AUTH_FIELDS.token}

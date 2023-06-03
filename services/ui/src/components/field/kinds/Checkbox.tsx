@@ -1,4 +1,18 @@
-const Checkbox = (props) => {
+import { JSX } from "solid-js";
+import { FieldValueHandler } from "../Field";
+
+export type CheckboxValue = boolean;
+
+export interface CheckboxConfig {
+	label: string;
+	placeholder: JSX.Element;
+}
+
+const Checkbox = (props: {
+	value: CheckboxValue;
+	config: CheckboxConfig;
+	handleField: FieldValueHandler;
+}) => {
 	return (
 		<div class="field" id={props.config.label}>
 			<input

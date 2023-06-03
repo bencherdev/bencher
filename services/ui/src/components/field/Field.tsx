@@ -1,11 +1,31 @@
-import Input from "./kinds/Input";
-import Checkbox from "./kinds/Checkbox";
+import Input, { InputConfig, InputValue } from "./kinds/Input";
+import Checkbox, { CheckboxConfig, CheckboxValue } from "./kinds/Checkbox";
 import Switch from "./kinds/Switch";
 import Select from "./kinds/Select";
 import FieldKind from "./kind";
 import Radio from "./kinds/Radio";
 
-const Field = (props) => {
+type FieldValue = CheckboxValue | InputValue;
+
+type FieldConfig = CheckboxConfig | InputConfig;
+
+export type FieldHandler = (
+	key: string,
+	value: FieldValue,
+	valid: boolean,
+) => void;
+
+export type FieldValueHandler = (value: FieldValue) => void;
+
+const Field = (props: {
+	kind: FieldKind;
+	fieldKey: string;
+	label?: string;
+	value: FieldValue;
+	valid: boolean;
+	config: FieldConfig;
+	handleField: FieldHandler;
+}) => {
 	function handleField(value) {
 		switch (props.kind) {
 			case FieldKind.CHECKBOX:
@@ -24,10 +44,11 @@ const Field = (props) => {
 				break;
 			case FieldKind.INPUT:
 			case FieldKind.NUMBER:
+				const config = props.config as InputConfig;
 				props.handleField(
 					props.fieldKey,
 					value,
-					props.config.validate ? props.config.validate(value) : true,
+					config.validate ? config.validate(value) : true,
 				);
 				break;
 		}
@@ -38,8 +59,8 @@ const Field = (props) => {
 			case FieldKind.CHECKBOX:
 				return (
 					<Checkbox
-						value={props.value}
-						config={props.config}
+						value={props.value as CheckboxValue}
+						config={props.config as CheckboxConfig}
 						handleField={handleField}
 					/>
 				);
@@ -73,9 +94,9 @@ const Field = (props) => {
 			case FieldKind.NUMBER:
 				return (
 					<Input
-						value={props.value}
+						value={props.value as InputValue}
 						valid={props.valid}
-						config={props.config}
+						config={props.config as InputConfig}
 						handleField={handleField}
 					/>
 				);

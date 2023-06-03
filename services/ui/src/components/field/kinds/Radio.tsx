@@ -26,7 +26,7 @@ const Radio = (props) => {
 			<div class="level-left">
 				<div class="level-item">
 					<div class="icon is-small is-left">
-						<i class={props.config.icon}></i>
+						<i class={props.config.icon} />
 					</div>
 				</div>
 				<div class="level-item">
