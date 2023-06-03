@@ -21,6 +21,7 @@ schemars = { workspace = true, optional = true }
 serde.workspace = true
 slug.workspace = true
 thiserror.workspace = true
+typeshare.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde"] }
 # Crate

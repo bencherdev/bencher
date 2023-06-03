@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::{Slug, ValidError};
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ResourceId(String);

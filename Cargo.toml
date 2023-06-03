@@ -37,6 +37,7 @@ slug = "0.1"
 tabled = "0.10"
 thiserror = "1.0"
 tokio = "1.26"
+typeshare = "1.0"
 url = "2.3"
 uuid = "1.3"
 

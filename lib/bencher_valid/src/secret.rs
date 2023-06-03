@@ -14,6 +14,7 @@ use crate::{Sanitize, ValidError};
 
 const SANITIZED_SECRET: &str = "************";
 
+#[typeshare::typeshare]
 #[derive(Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Secret(String);

@@ -18,6 +18,7 @@ use crate::{is_valid_len, ValidError, REGEX_ERROR};
 static NAME_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[[[:alnum:]] ,\.\-']{1,50}$").expect(REGEX_ERROR));
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct UserName(String);

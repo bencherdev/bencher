@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::JsonUser;
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonSignup {
@@ -18,6 +19,7 @@ pub struct JsonSignup {
     pub invite: Option<Jwt>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLogin {
@@ -27,12 +29,14 @@ pub struct JsonLogin {
     pub invite: Option<Jwt>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAuthToken {
     pub token: Jwt,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfirm {

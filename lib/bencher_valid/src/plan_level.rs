@@ -20,6 +20,7 @@ const BENCHER_TEAM: &str = "Bencher Team";
 const ENTERPRISE: &str = "enterprise";
 const BENCHER_ENTERPRISE: &str = "Bencher Enterprise";
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

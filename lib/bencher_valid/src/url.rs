@@ -12,6 +12,7 @@ use serde::{
 
 use crate::ValidError;
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Url(String);

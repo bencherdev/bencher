@@ -23,6 +23,7 @@ const PAUSED: &str = "paused";
 const TRIALING: &str = "trialing";
 const UNPAID: &str = "unpaid";
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

@@ -19,10 +19,12 @@ mod secret;
 mod slug;
 mod url;
 mod user_name;
+mod uuid;
 
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
 pub use crate::url::Url;
+pub use crate::uuid::Uuid;
 pub use benchmark_name::BenchmarkName;
 pub use branch_name::BranchName;
 #[cfg(feature = "plus")]

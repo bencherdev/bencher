@@ -12,6 +12,7 @@ use serde::{
 
 use crate::{is_valid_len, ValidError};
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct NonEmpty(String);
