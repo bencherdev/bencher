@@ -1,5 +1,5 @@
 use bencher_json::ResourceId;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use uuid::Uuid;
 
 use crate::cli::CliBackend;
@@ -36,8 +36,38 @@ pub struct CliPerf {
 
     /// Output results in a table
     #[clap(long)]
-    pub table: bool,
+    pub table: Option<Option<CliPerfTableStyle>>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+/// Supported Table Formats
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliPerfTableStyle {
+    /// No styling options
+    Empty,
+    /// Analog of `empty` but with a vertical space (` `) line
+    Blank,
+    /// Style which relays only on ASCII charset
+    Ascii,
+    /// Analog of `ascii` but with rounded corners and without horizontal lines
+    AsciiRounded,
+    /// Analog of `ascii` which uses UTF-8 charset
+    Modern,
+    /// Analog of `modern` but without horizontal lines except a header
+    Sharp,
+    /// Analog of `sharp` but with rounded corners
+    Rounded,
+    /// Mimics a PostgreSQL table style
+    Psql,
+    /// Mimics a Markdown table style
+    Markdown,
+    /// Mimics a ReStructuredText table style
+    ReStructuredText,
+    /// Style using chars which resembles 2 lines
+    Extended,
+    /// Style using only ‘.’ and ‘:’ chars with vertical and horizontal split lines
+    Dots,
 }

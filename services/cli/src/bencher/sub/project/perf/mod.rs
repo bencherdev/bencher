@@ -11,6 +11,10 @@ use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println,
 
 use crate::bencher::SubCmd;
 
+mod table_style;
+
+use table_style::TableStyle;
+
 #[derive(Debug, Clone)]
 pub struct Perf {
     project: ResourceId,
@@ -20,7 +24,7 @@ pub struct Perf {
     benchmarks: Vec<Uuid>,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
-    table: bool,
+    table: Option<Option<TableStyle>>,
     backend: Backend,
 }
 
@@ -47,7 +51,7 @@ impl TryFrom<CliPerf> for Perf {
             benchmarks,
             start_time: from_milli_ts(serde_json::json!(start_time))?,
             end_time: from_milli_ts(serde_json::json!(end_time))?,
-            table,
+            table: table.map(|t| t.map(Into::into)),
             backend: backend.try_into()?,
         })
     }
@@ -83,9 +87,12 @@ impl SubCmd for Perf {
             .backend
             .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;
-        if self.table {
+        if let Some(table_style) = self.table {
             let json_perf: JsonPerf = serde_json::from_value(resp)?;
-            let perf_table: Table = json_perf.into();
+            let mut perf_table: Table = json_perf.into();
+            if let Some(table_style) = table_style {
+                table_style.stylize(&mut perf_table);
+            }
             cli_println!("{perf_table}");
         }
         Ok(())
