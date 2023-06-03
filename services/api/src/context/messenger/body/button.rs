@@ -109,7 +109,7 @@ impl FmtBody for ButtonBody {
                             </p>
                             <p>
                               <small>
-                                <code id=\"clipboard-target\" style=\"overflow-wrap:break-word;\">
+                                <code id=\"clipboard-target\" style=\"overflow-wrap:anywhere;\">
                                     {clipboard_target}
                                 </code>
                               </small>

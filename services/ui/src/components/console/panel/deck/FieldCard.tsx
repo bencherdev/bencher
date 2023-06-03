@@ -59,7 +59,7 @@ const ViewCard = (props) => {
 			<div class="card-content">
 				<div class="content">
 					<Switch
-						fallback={<p style="overflow-wrap:break-word;">{props.value}</p>}
+						fallback={<p style="overflow-wrap:anywhere;">{props.value}</p>}
 					>
 						<Match when={props.card?.display === Display.SWITCH}>
 							<div class="field">
@@ -69,7 +69,7 @@ const ViewCard = (props) => {
 									checked={props.value}
 									disabled={true}
 								/>
-								<label></label>
+								<label />
 							</div>
 						</Match>
 						<Match when={props.card?.display === Display.SELECT}>

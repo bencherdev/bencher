@@ -7,7 +7,7 @@ import {
 	Match,
 	Switch,
 } from "solid-js";
-import { OrganizationPermission, pageTitle } from "../../../site/util";
+import { pageTitle } from "../../../site/util";
 import { Button } from "../../config/types";
 
 const TableHeader = (props) => {
