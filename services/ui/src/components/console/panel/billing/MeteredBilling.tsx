@@ -6,7 +6,7 @@ import {
 	validate_plan_level,
 } from "../../../site/util";
 import PaymentCard, { cardForm } from "./PaymentCard";
-import Pricing, { PlanLevel } from "./Pricing";
+import { PlanLevel } from "../../../../types/bencher";
 
 const Billing = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -15,7 +15,7 @@ const Billing = (props) => {
 		setSearchParams({ [PLAN_PARAM]: plan_level });
 	};
 	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
-		setPlanLevel(PlanLevel.FREE);
+		setPlanLevel(PlanLevel.Free);
 	}
 	const plan = createMemo(() => searchParams[PLAN_PARAM]);
 
@@ -29,21 +29,21 @@ const Billing = (props) => {
 					free_text="Stick with Free"
 					handleFree={(e) => {
 						e.preventDefault();
-						setPlanLevel(PlanLevel.FREE);
+						setPlanLevel(PlanLevel.Free);
 					}}
 					team_text="Go with Team"
 					handleTeam={(e) => {
 						e.preventDefault();
-						setPlanLevel(PlanLevel.TEAM);
+						setPlanLevel(PlanLevel.Team);
 					}}
 					enterprise_text="Go with Enterprise"
 					handleEnterprise={(e) => {
 						e.preventDefault();
-						setPlanLevel(PlanLevel.ENTERPRISE);
+						setPlanLevel(PlanLevel.Enterprise);
 					}}
 				/>
 				<br />
-				{plan() !== PlanLevel.FREE && (
+				{plan() !== PlanLevel.Free && (
 					<PaymentCard
 						user={props.user}
 						url={`${BENCHER_API_URL()}/v0/organizations/${props.organization_slug()}/plan`}

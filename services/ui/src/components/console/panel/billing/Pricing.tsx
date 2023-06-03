@@ -1,18 +1,13 @@
 import { Show } from "solid-js";
-
-export enum PlanLevel {
-	FREE = "free",
-	TEAM = "team",
-	ENTERPRISE = "enterprise",
-}
+import { PlanLevel } from "../../../../types/bencher";
 
 export const per_metric_cost = (plan: PlanLevel) => {
 	switch (plan) {
-		case PlanLevel.FREE:
+		case PlanLevel.Free:
 			return 0;
-		case PlanLevel.TEAM:
+		case PlanLevel.Team:
 			return 1;
-		case PlanLevel.ENTERPRISE:
+		case PlanLevel.Enterprise:
 			return 5;
 	}
 };
@@ -29,7 +24,7 @@ const Pricing = (props: {
 	return (
 		<div class="pricing-table is-comparative">
 			<div
-				class={`pricing-plan ${props.active === PlanLevel.FREE && "is-active"}`}
+				class={`pricing-plan ${props.active === PlanLevel.Free && "is-active"}`}
 			>
 				<div class="plan-header">
 					<h2 class="title">Free</h2>
@@ -49,14 +44,14 @@ const Pricing = (props: {
 				</div>
 				<Footer
 					active={props.active}
-					plan={PlanLevel.FREE}
+					plan={PlanLevel.Free}
 					button_text={props.free_text}
 					handlePlanLevel={props.handleFree}
 				/>
 			</div>
 
 			<div
-				class={`pricing-plan ${props.active === PlanLevel.TEAM && "is-active"}`}
+				class={`pricing-plan ${props.active === PlanLevel.Team && "is-active"}`}
 			>
 				<div class="plan-header">
 					<h2 class="title">Team</h2>
@@ -74,7 +69,7 @@ const Pricing = (props: {
 				</div>
 				<Footer
 					active={props.active}
-					plan={PlanLevel.TEAM}
+					plan={PlanLevel.Team}
 					button_text={props.team_text}
 					handlePlanLevel={props.handleTeam}
 				/>
@@ -82,7 +77,7 @@ const Pricing = (props: {
 
 			<div
 				class={`pricing-plan ${
-					props.active === PlanLevel.ENTERPRISE && "is-active"
+					props.active === PlanLevel.Enterprise && "is-active"
 				}`}
 			>
 				<div class="plan-header">

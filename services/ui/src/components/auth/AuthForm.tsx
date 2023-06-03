@@ -21,7 +21,7 @@ import {
 import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 import FieldKind from "../field/kind";
 import { notification_path } from "../site/Notification";
-import { PlanLevel } from "../console/panel/billing/Pricing";
+import { Email, JsonLogin, JsonSignup, PlanLevel } from "../../types/bencher";
 
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
@@ -34,6 +34,8 @@ export interface Props {
 	handleUser: Function;
 }
 
+type JsonAuthForm = JsonSignup | JsonLogin;
+
 export const AuthForm = (props: Props) => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -44,7 +46,9 @@ export const AuthForm = (props: Props) => {
 		setSearchParams({ [PLAN_PARAM]: null });
 	}
 	const plan = createMemo(() =>
-		searchParams[PLAN_PARAM] ? searchParams[PLAN_PARAM].trim() : null,
+		searchParams[PLAN_PARAM]
+			? (searchParams[PLAN_PARAM].trim() as PlanLevel)
+			: null,
 	);
 	const [form, setForm] = createSignal(initForm());
 
@@ -75,7 +79,7 @@ export const AuthForm = (props: Props) => {
 	};
 
 	const handleFormValid = () => {
-		var valid = validateForm();
+		const valid = validateForm();
 		if (valid !== form()?.valid) {
 			setForm({ ...form(), valid: valid });
 		}
@@ -85,12 +89,7 @@ export const AuthForm = (props: Props) => {
 		setForm({ ...form(), submitting: submitting });
 	};
 
-	const post = async (data: {
-		name: null | string;
-		slug: null | string;
-		email: string;
-		invite: null | string;
-	}) => {
+	const post = async (data: JsonAuthForm) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`;
 		const no_token = null;
 		return await axios(post_options(url, no_token, data));
@@ -107,8 +106,8 @@ export const AuthForm = (props: Props) => {
 			invite = null;
 		}
 
-		let data;
-		let form_email;
+		let data: JsonAuthForm;
+		let form_email: Email;
 		if (props.config?.kind === FormKind.SIGNUP) {
 			const signup_form = form();
 			form_email = signup_form.email.value?.trim();
@@ -121,7 +120,7 @@ export const AuthForm = (props: Props) => {
 			};
 
 			if (!plan()) {
-				setSearchParams({ [PLAN_PARAM]: PlanLevel.FREE });
+				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
 			}
 		} else if (props.config?.kind === FormKind.LOGIN) {
 			const login_form = form();

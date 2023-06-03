@@ -18,7 +18,7 @@ import {
 import axios from "axios";
 import { notification_path } from "../../../site/Notification";
 import { useLocation, useNavigate } from "solid-app-router";
-import { PlanLevel } from "./Pricing";
+import { PlanLevel } from "../../../../types/bencher";
 
 const PaymentCard = (props) => {
 	const navigate = useNavigate();
@@ -46,7 +46,7 @@ const PaymentCard = (props) => {
 	};
 
 	const handleFormValid = () => {
-		var valid = validateForm();
+		const valid = validateForm();
 		if (valid !== form()?.valid) {
 			props.handleForm({ ...form(), valid: valid });
 		}
