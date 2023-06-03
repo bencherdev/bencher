@@ -41,15 +41,11 @@ const Pricing = (props: {
 					<small>per metric/month</small>
 				</div>
 				<div class="plan-items">
-					<div class="plan-item" data-feature="Public Projects">
-						Public Projects
-					</div>
-					<div class="plan-item" data-feature="Team Roles">
-						---
-					</div>
+					<div class="plan-item">Public Projects</div>
 					<div class="plan-item" data-feature="Private Projects">
-						Community Support
+						⎯⎯⎯
 					</div>
+					<div class="plan-item">Community Support</div>
 				</div>
 				<Footer
 					active={props.active}
@@ -72,15 +68,9 @@ const Pricing = (props: {
 					<small>per metric/month</small>
 				</div>
 				<div class="plan-items">
-					<div class="plan-item" data-feature="Public Projects">
-						Public Projects
-					</div>
-					<div class="plan-item" data-feature="Private Projects">
-						Private Projects
-					</div>
-					<div class="plan-item" data-feature="Team Roles">
-						Customer Support
-					</div>
+					<div class="plan-item">Public Projects</div>
+					<div class="plan-item">Private Projects</div>
+					<div class="plan-item">Customer Support</div>
 				</div>
 				<Footer
 					active={props.active}
@@ -105,15 +95,9 @@ const Pricing = (props: {
 					<small>per metric/month</small>
 				</div>
 				<div class="plan-items">
-					<div class="plan-item" data-feature="Public Projects">
-						Public Projects
-					</div>
-					<div class="plan-item" data-feature="Private Projects">
-						Private Projects
-					</div>
-					<div class="plan-item" data-feature="Team Roles">
-						Priority Support
-					</div>
+					<div class="plan-item">Public Projects</div>
+					<div class="plan-item">Private Projects</div>
+					<div class="plan-item">Priority Support</div>
 				</div>
 				<Footer
 					active={props.active}
