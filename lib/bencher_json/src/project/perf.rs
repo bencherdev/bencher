@@ -280,7 +280,7 @@ pub mod table {
                 if let Some(git_hash) = &self.0 {
                     git_hash.as_ref()
                 } else {
-                    "---"
+                    ""
                 }
             )
         }
