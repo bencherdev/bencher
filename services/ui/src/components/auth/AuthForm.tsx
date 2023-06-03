@@ -1,15 +1,8 @@
-import {
-	createSignal,
-	createEffect,
-	createMemo,
-	Switch,
-	Match,
-} from "solid-js";
+import { createSignal, createEffect, createMemo } from "solid-js";
 import axios from "axios";
 
 import Field from "../field/Field";
 import AUTH_FIELDS from "./config/fields";
-import { FormKind } from "./config/types";
 import {
 	BENCHER_API_URL,
 	NotifyKind,
@@ -28,9 +21,8 @@ export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";
 
 export interface Props {
-	config: any;
+	new_user: boolean;
 	invite: Function;
-	user: Function;
 	handleUser: Function;
 }
 
@@ -64,14 +56,10 @@ export const AuthForm = (props: Props) => {
 
 	const validateForm = () => {
 		if (form()?.email?.valid) {
-			if (props.config?.kind === FormKind.LOGIN) {
+			if (props.new_user && form()?.username?.valid && form()?.consent?.value) {
 				return true;
 			}
-			if (
-				props.config?.kind === FormKind.SIGNUP &&
-				form()?.username?.valid &&
-				form()?.consent?.value
-			) {
+			if (!props.new_user) {
 				return true;
 			}
 		}
@@ -90,7 +78,9 @@ export const AuthForm = (props: Props) => {
 	};
 
 	const post = async (data: JsonAuthForm) => {
-		const url = `${BENCHER_API_URL()}/v0/auth/${props.config?.kind}`;
+		const url = `${BENCHER_API_URL()}/v0/auth/${
+			props.new_user ? "signup" : "login"
+		}`;
 		const no_token = null;
 		return await axios(post_options(url, no_token, data));
 	};
@@ -108,7 +98,7 @@ export const AuthForm = (props: Props) => {
 
 		let data: JsonAuthForm;
 		let form_email: Email;
-		if (props.config?.kind === FormKind.SIGNUP) {
+		if (props.new_user) {
 			const signup_form = form();
 			form_email = signup_form.email.value?.trim();
 			data = {
@@ -122,7 +112,7 @@ export const AuthForm = (props: Props) => {
 			if (!plan()) {
 				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
 			}
-		} else if (props.config?.kind === FormKind.LOGIN) {
+		} else {
 			const login_form = form();
 			form_email = login_form.email.value?.trim();
 			data = {
@@ -137,11 +127,13 @@ export const AuthForm = (props: Props) => {
 				handleFormSubmitting(false);
 				navigate(
 					notification_path(
-						props.config?.redirect,
+						"/auth/confirm",
 						[PLAN_PARAM],
 						[[EMAIL_PARAM, form_email]],
 						NotifyKind.OK,
-						`Successful ${props.config?.kind}! Please confirm token.`,
+						`Successful ${
+							props.new_user ? "signup" : "login"
+						}! Please confirm token.`,
 					),
 				);
 			})
@@ -154,7 +146,9 @@ export const AuthForm = (props: Props) => {
 						[PLAN_PARAM, INVITE_PARAM],
 						[],
 						NotifyKind.ERROR,
-						`Failed to ${props.config?.kind}. Please, try again.`,
+						`Failed to ${
+							props.new_user ? "signup" : "login"
+						}. Please, try again.`,
 					),
 				);
 			});
@@ -166,7 +160,7 @@ export const AuthForm = (props: Props) => {
 
 	return (
 		<form class="box">
-			{props.config?.kind === FormKind.SIGNUP && (
+			{props.new_user && (
 				<Field
 					kind={FieldKind.INPUT}
 					fieldKey="username"
@@ -190,33 +184,24 @@ export const AuthForm = (props: Props) => {
 
 			<br />
 
-			{props.config?.kind === FormKind.SIGNUP &&
-				form()?.username?.valid &&
-				form()?.email?.valid && (
-					<Field
-						kind={FieldKind.CHECKBOX}
-						fieldKey="consent"
-						label=""
-						value={form()?.consent?.value}
-						valid={form()?.consent?.valid}
-						config={AUTH_FIELDS.consent}
-						handleField={handleField}
-					/>
-				)}
+			{props.new_user && form()?.username?.valid && form()?.email?.valid && (
+				<Field
+					kind={FieldKind.CHECKBOX}
+					fieldKey="consent"
+					label=""
+					value={form()?.consent?.value}
+					valid={form()?.consent?.valid}
+					config={AUTH_FIELDS.consent}
+					handleField={handleField}
+				/>
+			)}
 
 			<button
 				class="button is-primary is-fullwidth"
 				disabled={!form()?.valid || form()?.submitting}
 				onClick={handleAuthFormSubmit}
 			>
-				<Switch fallback={<>Submit</>}>
-					<Match when={props.config?.kind === FormKind.SIGNUP}>
-						<>Sign up</>
-					</Match>
-					<Match when={props.config?.kind === FormKind.LOGIN}>
-						<>Log in</>
-					</Match>
-				</Switch>
+				{props.new_user ? "Sign up" : "Log in"}
 			</button>
 		</form>
 	);

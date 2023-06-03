@@ -5,12 +5,13 @@ import { pageTitle, validate_jwt } from "../site/util";
 import { AuthForm } from "./AuthForm";
 import { Auth } from "./config/types";
 import Notification from "../site/Notification";
+import { UiUser } from "../../App";
 
 const INVITE_PARAM = "invite";
 
 const AuthFormPage = (props: {
-	config: any;
-	user: Function;
+	new_user: boolean;
+	user: UiUser;
 	handleUser: Function;
 }) => {
 	const navigate = useNavigate();
@@ -19,17 +20,18 @@ const AuthFormPage = (props: {
 	if (searchParams[INVITE_PARAM] && !validate_jwt(searchParams[INVITE_PARAM])) {
 		setSearchParams({ [INVITE_PARAM]: null });
 	}
-
 	const invite = createMemo(() =>
 		searchParams[INVITE_PARAM] ? searchParams[INVITE_PARAM].trim() : null,
 	);
 
+	const title = props.new_user ? "Sign up" : "Log in";
+
 	createEffect(() => {
-		if (validate_jwt(props.user.token)) {
+		if (validate_jwt(props.user?.token)) {
 			navigate("/console");
 		}
 
-		pageTitle(props.config?.title);
+		pageTitle(title);
 	});
 
 	return (
@@ -40,11 +42,10 @@ const AuthFormPage = (props: {
 				<div class="container">
 					<div class="columns is-centered">
 						<div class="column is-two-fifths">
-							<h2 class="title">{props.config?.title}</h2>
+							<h2 class="title">{title}</h2>
 
 							<AuthForm
-								config={props.config?.form}
-								user={props.user}
+								new_user={props.new_user}
 								invite={invite}
 								handleUser={props.handleUser}
 							/>
@@ -54,10 +55,9 @@ const AuthFormPage = (props: {
 							<p class="has-text-centered">
 								<small>
 									switch to{" "}
-									{props.config?.auth === Auth.SIGNUP && (
+									{props.new_user ? (
 										<Link href="/auth/login">log in</Link>
-									)}
-									{props.config?.auth === Auth.LOGIN && (
+									) : (
 										<Link href="/auth/signup">sign up</Link>
 									)}
 								</small>

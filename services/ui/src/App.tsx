@@ -20,7 +20,9 @@ const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/pages/Repo"));
 const Demo = lazy(() => import("./components/site/pages/Demo"));
 
-export const defaultUser = (): { user: JsonUser; token: Jwt } => {
+export type UiUser = { user: JsonUser; token: Jwt };
+
+export const defaultUser = (): UiUser => {
 	return {
 		user: {
 			uuid: null,
@@ -34,7 +36,7 @@ export const defaultUser = (): { user: JsonUser; token: Jwt } => {
 	};
 };
 
-export const loadUser = () => {
+export const loadUser = (): UiUser => {
 	const cookie_user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
 	if (validate_user(cookie_user)) {
 		return cookie_user;
