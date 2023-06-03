@@ -42,7 +42,7 @@
     "jsdom": "^21.0.0",
     "node-sass": "^7.0.3",
     "remark-gfm": "^3.0.1",
-    "rome": "^11.0.0",
+    "rome": "11.0.0",
     "sass": "^1.49.9",
     "solid-jsx": "^0.9.1",
     "solid-testing-library": "^0.5.0",
