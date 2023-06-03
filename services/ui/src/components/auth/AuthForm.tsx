@@ -23,7 +23,6 @@ export const TOKEN_PARAM = "token";
 export interface Props {
 	new_user: boolean;
 	invite: Function;
-	handleUser: Function;
 }
 
 type JsonAuthForm = JsonSignup | JsonLogin;

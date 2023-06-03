@@ -15,13 +15,13 @@ import {
 import Notification, { notification_path } from "../site/Notification";
 import FieldKind from "../field/kind";
 import { EMAIL_PARAM, TOKEN_PARAM } from "./AuthForm";
+import { JsonConfirm } from "../../types/bencher";
 
 const CONFIRM_FORWARD = [EMAIL_PARAM, TOKEN_PARAM, PLAN_PARAM];
 
 const AuthConfirmPage = (props: {
-	config: any;
-	user: any;
-	handleUser: Function;
+	user: JsonConfirm;
+	handleUser: (user: JsonConfirm) => boolean;
 }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -46,6 +46,8 @@ const AuthConfirmPage = (props: {
 		searchParams[EMAIL_PARAM] ? searchParams[EMAIL_PARAM].trim() : null,
 	);
 
+	const title = "Confirm Token";
+
 	const [submitted, setSubmitted] = createSignal();
 	const [form, setForm] = createSignal(initForm());
 
@@ -63,7 +65,7 @@ const AuthConfirmPage = (props: {
 	};
 
 	const post = async () => {
-		const url = props.config?.form?.path;
+		const url = `${BENCHER_API_URL()}/v0/auth/confirm`;
 		const no_token = null;
 		const data = {
 			token: token(),
@@ -158,12 +160,16 @@ const AuthConfirmPage = (props: {
 	};
 
 	createEffect(() => {
-		pageTitle(props.config?.title);
+		pageTitle(title);
 
 		if (validate_jwt(props.user?.token)) {
 			navigate(
 				notification_path(
-					props.config?.form?.redirect[plan() ? plan() : "free"],
+					{
+						free: "/console",
+						team: "/console/billing",
+						enterprise: "/console/billing",
+					}[plan() ? plan() : "free"],
 					[PLAN_PARAM],
 					[],
 					NotifyKind.OK,
@@ -197,8 +203,11 @@ const AuthConfirmPage = (props: {
 				<div class="container">
 					<div class="columns is-centered">
 						<div class="column is-two-fifths">
-							<h2 class="title">{props.config?.title}</h2>
-							<h3 class="subtitle">{props.config?.sub}</h3>
+							<h2 class="title">{title}</h2>
+							<h3 class="subtitle">
+								Please check your email for a one-time token. Either click the
+								link or paste the token here.
+							</h3>
 
 							<form class="box">
 								<Field

@@ -8,7 +8,7 @@ import Footer from "./components/site/pages/Footer";
 import { projectSlug } from "./components/console/ConsolePage";
 import { BENCHER_USER_KEY, validate_user } from "./components/site/util";
 import { createStore } from "solid-js/store";
-import { JsonUser, Jwt } from "./types/bencher";
+import { JsonConfirm, JsonUser, Jwt } from "./types/bencher";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -20,9 +20,7 @@ const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/pages/Repo"));
 const Demo = lazy(() => import("./components/site/pages/Demo"));
 
-export type UiUser = { user: JsonUser; token: Jwt };
-
-export const defaultUser = (): UiUser => {
+export const defaultUser = (): JsonConfirm => {
 	return {
 		user: {
 			uuid: null,
@@ -36,7 +34,7 @@ export const defaultUser = (): UiUser => {
 	};
 };
 
-export const loadUser = (): UiUser => {
+export const loadUser = (): JsonConfirm => {
 	const cookie_user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
 	if (validate_user(cookie_user)) {
 		return cookie_user;

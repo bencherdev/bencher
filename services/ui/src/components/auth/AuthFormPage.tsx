@@ -3,16 +3,14 @@ import { createEffect, createMemo } from "solid-js";
 
 import { pageTitle, validate_jwt } from "../site/util";
 import { AuthForm } from "./AuthForm";
-import { Auth } from "./config/types";
 import Notification from "../site/Notification";
-import { UiUser } from "../../App";
+import { JsonConfirm } from "../../types/bencher";
 
 const INVITE_PARAM = "invite";
 
 const AuthFormPage = (props: {
 	new_user: boolean;
-	user: UiUser;
-	handleUser: Function;
+	user: JsonConfirm;
 }) => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -44,11 +42,7 @@ const AuthFormPage = (props: {
 						<div class="column is-two-fifths">
 							<h2 class="title">{title}</h2>
 
-							<AuthForm
-								new_user={props.new_user}
-								invite={invite}
-								handleUser={props.handleUser}
-							/>
+							<AuthForm new_user={props.new_user} invite={invite} />
 
 							<hr />
 
