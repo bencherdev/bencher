@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use bencher_json::{
     project::{
         metric::Mean,
-        metric_kind::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR},
+        metric_kind::{
+            CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR,
+            LATENCY_SLUG_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_SLUG_STR,
+        },
         report::{JsonAdapter, JsonFold},
     },
     ResourceId,
@@ -29,6 +32,37 @@ pub static LATENCY_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
 #[allow(clippy::expect_used)]
 pub static THROUGHPUT_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
     THROUGHPUT_SLUG_STR
+        .parse()
+        .expect("Failed to parse metric kind slug.")
+});
+
+#[allow(clippy::expect_used)]
+pub static INSTRUCTIONS_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
+    INSTRUCTIONS_SLUG_STR
+        .parse()
+        .expect("Failed to parse metric kind slug.")
+});
+#[allow(clippy::expect_used)]
+pub static CYCLES_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
+    CYCLES_SLUG_STR
+        .parse()
+        .expect("Failed to parse metric kind slug.")
+});
+#[allow(clippy::expect_used)]
+pub static L1_ACCESSES_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
+    L1_ACCESSES_SLUG_STR
+        .parse()
+        .expect("Failed to parse metric kind slug.")
+});
+#[allow(clippy::expect_used)]
+pub static L2_ACCESSES_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
+    L2_ACCESSES_SLUG_STR
+        .parse()
+        .expect("Failed to parse metric kind slug.")
+});
+#[allow(clippy::expect_used)]
+pub static RAM_ACCESSES_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
+    RAM_ACCESSES_SLUG_STR
         .parse()
         .expect("Failed to parse metric kind slug.")
 });
