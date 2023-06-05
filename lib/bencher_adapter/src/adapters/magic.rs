@@ -31,7 +31,7 @@ mod test_magic {
         json::test_json,
         python::{asv::test_python_asv, pytest::test_python_pytest},
         ruby::benchmark::test_ruby_benchmark,
-        rust::{bench::test_rust_bench, criterion::test_rust_criterion},
+        rust::{bench::test_rust_bench, criterion::test_rust_criterion, iai::test_rust_iai},
         test_util::convert_file_path,
     };
 
@@ -111,5 +111,11 @@ mod test_magic {
     fn test_adapter_magic_rust_criterion() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/rust/criterion/many.txt");
         test_rust_criterion::validate_adapter_rust_criterion(results);
+    }
+
+    #[test]
+    fn test_adapter_magic_rust_iai() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/rust/iai/two.txt");
+        test_rust_iai::validate_adapter_rust_iai(results);
     }
 }

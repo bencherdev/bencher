@@ -101,11 +101,7 @@ impl InsertTestbed {
         Self::from_json_inner(conn, project_id, JsonNewTestbed::localhost())
     }
 
-    pub fn from_json_inner(
-        conn: &mut DbConnection,
-        project_id: i32,
-        testbed: JsonNewTestbed,
-    ) -> Self {
+    fn from_json_inner(conn: &mut DbConnection, project_id: i32, testbed: JsonNewTestbed) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, testbed, QueryTestbed);
         Self {

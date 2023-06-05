@@ -1,0 +1,15 @@
+Running target/release/deps/test_regular_bench-8b173c29ce041afa
+
+bench_fibonacci_short
+  Instructions:                1735
+  L1 Accesses:                 2364
+  L2 Accesses:                    1
+  RAM Accesses:                   1
+  Estimated Cycles:            2404
+
+bench_fibonacci_long
+  Instructions:            26214735
+  L1 Accesses:             35638623
+  L2 Accesses:                    2
+  RAM Accesses:                   1
+  Estimated Cycles:        35638668

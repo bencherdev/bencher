@@ -7,6 +7,7 @@ const JSON_INT: i32 = 10;
 const RUST_INT: i32 = 20;
 const RUST_BENCH_INT: i32 = 21;
 const RUST_CRITERION_INT: i32 = 22;
+const RUST_IAI_INT: i32 = 23;
 const CPP_INT: i32 = 30;
 const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
@@ -32,6 +33,7 @@ pub enum Adapter {
     Rust = RUST_INT,
     RustBench = RUST_BENCH_INT,
     RustCriterion = RUST_CRITERION_INT,
+    RustIai = RUST_IAI_INT,
     Cpp = CPP_INT,
     CppGoogle = CPP_GOOGLE_INT,
     CppCatch2 = CPP_CATCH2_INT,
@@ -61,6 +63,7 @@ impl TryFrom<i32> for Adapter {
             RUST_INT => Ok(Self::Rust),
             RUST_BENCH_INT => Ok(Self::RustBench),
             RUST_CRITERION_INT => Ok(Self::RustCriterion),
+            RUST_IAI_INT => Ok(Self::RustIai),
             CPP_INT => Ok(Self::Cpp),
             CPP_GOOGLE_INT => Ok(Self::CppGoogle),
             CPP_CATCH2_INT => Ok(Self::CppCatch2),
@@ -91,6 +94,7 @@ impl From<JsonAdapter> for Adapter {
             JsonAdapter::Rust => Self::Rust,
             JsonAdapter::RustBench => Self::RustBench,
             JsonAdapter::RustCriterion => Self::RustCriterion,
+            JsonAdapter::RustIai => Self::RustIai,
             JsonAdapter::Cpp => Self::Cpp,
             JsonAdapter::CppGoogle => Self::CppGoogle,
             JsonAdapter::CppCatch2 => Self::CppCatch2,
@@ -120,6 +124,7 @@ impl From<Adapter> for JsonAdapter {
             Adapter::Rust => Self::Rust,
             Adapter::RustBench => Self::RustBench,
             Adapter::RustCriterion => Self::RustCriterion,
+            Adapter::RustIai => Self::RustIai,
             Adapter::Cpp => Self::Cpp,
             Adapter::CppGoogle => Self::CppGoogle,
             Adapter::CppCatch2 => Self::CppCatch2,

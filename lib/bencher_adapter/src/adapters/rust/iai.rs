@@ -19,7 +19,7 @@ use nom::{
 
 use crate::{
     adapters::util::{parse_f64, parse_u64},
-    results::adapter_results::{AdapterMetricKindIai, AdapterResults},
+    results::adapter_results::{AdapterResults, IaiMetricKind},
     Adapter, Settings,
 };
 
@@ -51,7 +51,7 @@ impl Adapter for AdapterRustIai {
 
 fn parse_iai_lines(
     lines: [&str; IAI_METRICS_LINE_COUNT],
-) -> Option<(BenchmarkName, Vec<AdapterMetricKindIai>)> {
+) -> Option<(BenchmarkName, Vec<IaiMetricKind>)> {
     let [benchmark_name_line, instructions_line, l1_accesses_line, l2_accesses_line, ram_accesses_line, estimated_cycles_line] =
         lines;
 
@@ -60,27 +60,27 @@ fn parse_iai_lines(
         (
             INSTRUCTIONS_NAME_STR,
             instructions_line,
-            AdapterMetricKindIai::Instructions as fn(JsonMetric) -> AdapterMetricKindIai,
+            IaiMetricKind::Instructions as fn(JsonMetric) -> IaiMetricKind,
         ),
         (
             L1_ACCESSES_NAME_STR,
             l1_accesses_line,
-            AdapterMetricKindIai::L1Accesses,
+            IaiMetricKind::L1Accesses,
         ),
         (
             L2_ACCESSES_NAME_STR,
             l2_accesses_line,
-            AdapterMetricKindIai::L2Accesses,
+            IaiMetricKind::L2Accesses,
         ),
         (
             RAM_ACCESSES_NAME_STR,
             ram_accesses_line,
-            AdapterMetricKindIai::RamAccesses,
+            IaiMetricKind::RamAccesses,
         ),
         (
             ESTIMATED_CYCLES_NAME_STR,
             estimated_cycles_line,
-            AdapterMetricKindIai::EstimatedCycles,
+            IaiMetricKind::EstimatedCycles,
         ),
     ]
     .into_iter()
@@ -132,12 +132,39 @@ fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'
 #[cfg(test)]
 pub(crate) mod test_rust_iai {
 
-    use crate::Adapter;
-    use bencher_json::{project::metric_kind::INSTRUCTIONS_NAME_STR, JsonMetric};
+    use crate::{
+        adapters::test_util::convert_file_path, results::adapter_metrics::AdapterMetrics, Adapter,
+        AdapterResults,
+    };
+    use bencher_json::{
+        project::metric_kind::{
+            ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR,
+            L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
+        },
+        JsonMetric,
+    };
+    use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
+    use super::AdapterRustIai;
+
+    fn convert_rust_iai(suffix: &str) -> AdapterResults {
+        let file_path = format!("./tool_output/rust/iai/{suffix}.txt");
+        convert_file_path::<AdapterRustIai>(&file_path)
+    }
+
+    pub fn validate_iai(metrics: &AdapterMetrics, results: [(&str, f64); 5]) {
+        assert_eq!(metrics.inner.len(), 5);
+        for (key, value) in results {
+            let metric = metrics.get(key).unwrap();
+            assert_eq!(metric.value, OrderedFloat::from(value));
+            assert_eq!(metric.lower_bound, None);
+            assert_eq!(metric.upper_bound, None);
+        }
+    }
+
     #[test]
-    fn test_parse_line() {
+    fn test_adapter_rust_iai_parse_line() {
         assert_eq!(
             super::parse_iai_metric("  Instructions:  1234", INSTRUCTIONS_NAME_STR),
             Ok((
@@ -176,7 +203,7 @@ pub(crate) mod test_rust_iai {
     }
 
     #[test]
-    fn test_parse_multiple_lines() {
+    fn test_adapter_rust_iai_parse_multiple_lines() {
         let input = "bench_fibonacci_short
   Instructions:                1735
   L1 Accesses:                 2364
@@ -185,5 +212,38 @@ pub(crate) mod test_rust_iai {
   Estimated Cycles:            2404";
         let output = super::AdapterRustIai::parse(input, crate::Settings::default());
         assert!(output.is_some());
+    }
+
+    #[test]
+    fn test_adapter_rust_aia() {
+        let results = convert_rust_iai("two");
+        validate_adapter_rust_iai(results);
+    }
+
+    pub fn validate_adapter_rust_iai(results: AdapterResults) {
+        assert_eq!(results.inner.len(), 2);
+
+        let metrics = results.get("bench_fibonacci_short").unwrap();
+        validate_iai(
+            metrics,
+            [
+                (INSTRUCTIONS_SLUG_STR, 1735.0),
+                (L1_ACCESSES_SLUG_STR, 2364.0),
+                (L2_ACCESSES_SLUG_STR, 1.0),
+                (RAM_ACCESSES_SLUG_STR, 1.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 2404.0),
+            ],
+        );
+        let metrics = results.get("bench_fibonacci_long").unwrap();
+        validate_iai(
+            metrics,
+            [
+                (INSTRUCTIONS_SLUG_STR, 26214735.0),
+                (L1_ACCESSES_SLUG_STR, 35638623.0),
+                (L2_ACCESSES_SLUG_STR, 2.0),
+                (RAM_ACCESSES_SLUG_STR, 1.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 35638668.0),
+            ],
+        );
     }
 }

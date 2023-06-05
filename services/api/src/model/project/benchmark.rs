@@ -74,7 +74,7 @@ impl QueryBenchmark {
         project_id: i32,
         name: &str,
     ) -> Result<i32, ApiError> {
-        let id = QueryBenchmark::get_id_from_name(conn, project_id, name);
+        let id = Self::get_id_from_name(conn, project_id, name);
 
         if id.is_ok() {
             return id;
@@ -86,7 +86,7 @@ impl QueryBenchmark {
             .execute(conn)
             .map_err(api_error!())?;
 
-        QueryBenchmark::get_id(conn, &insert_benchmark.uuid)
+        Self::get_id(conn, &insert_benchmark.uuid)
     }
 }
 

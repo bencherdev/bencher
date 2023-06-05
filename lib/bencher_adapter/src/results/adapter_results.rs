@@ -70,7 +70,7 @@ pub enum AdapterMetricKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AdapterMetricKindIai {
+pub enum IaiMetricKind {
     Instructions(JsonMetric),
     L1Accesses(JsonMetric),
     L2Accesses(JsonMetric),
@@ -106,43 +106,6 @@ impl AdapterResults {
         Some(results_map.into())
     }
 
-    pub fn new_iai(
-        benchmark_metrics: Vec<(BenchmarkName, Vec<AdapterMetricKindIai>)>,
-    ) -> Option<Self> {
-        if benchmark_metrics.is_empty() {
-            return None;
-        }
-
-        let mut results_map = HashMap::new();
-        for (benchmark_name, metrics) in benchmark_metrics {
-            let metrics_value = results_map
-                .entry(benchmark_name)
-                .or_insert_with(AdapterMetrics::default);
-            for metric in metrics {
-                let (resource_id, metric) = match metric {
-                    AdapterMetricKindIai::Instructions(json_metric) => {
-                        (INSTRUCTIONS_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMetricKindIai::L1Accesses(json_metric) => {
-                        (L1_ACCESSES_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMetricKindIai::L2Accesses(json_metric) => {
-                        (L2_ACCESSES_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMetricKindIai::RamAccesses(json_metric) => {
-                        (RAM_ACCESSES_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMetricKindIai::EstimatedCycles(json_metric) => {
-                        (ESTIMATED_CYCLES_RESOURCE_ID.clone(), json_metric)
-                    },
-                };
-                metrics_value.inner.insert(resource_id, metric);
-            }
-        }
-
-        Some(results_map.into())
-    }
-
     pub fn new_latency(benchmark_metrics: Vec<(BenchmarkName, JsonMetric)>) -> Option<Self> {
         Self::new(
             benchmark_metrics
@@ -163,6 +126,41 @@ impl AdapterResults {
                 })
                 .collect(),
         )
+    }
+
+    pub fn new_iai(benchmark_metrics: Vec<(BenchmarkName, Vec<IaiMetricKind>)>) -> Option<Self> {
+        if benchmark_metrics.is_empty() {
+            return None;
+        }
+
+        let mut results_map = HashMap::new();
+        for (benchmark_name, metrics) in benchmark_metrics {
+            let metrics_value = results_map
+                .entry(benchmark_name)
+                .or_insert_with(AdapterMetrics::default);
+            for metric in metrics {
+                let (resource_id, metric) = match metric {
+                    IaiMetricKind::Instructions(json_metric) => {
+                        (INSTRUCTIONS_RESOURCE_ID.clone(), json_metric)
+                    },
+                    IaiMetricKind::L1Accesses(json_metric) => {
+                        (L1_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                    },
+                    IaiMetricKind::L2Accesses(json_metric) => {
+                        (L2_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                    },
+                    IaiMetricKind::RamAccesses(json_metric) => {
+                        (RAM_ACCESSES_RESOURCE_ID.clone(), json_metric)
+                    },
+                    IaiMetricKind::EstimatedCycles(json_metric) => {
+                        (ESTIMATED_CYCLES_RESOURCE_ID.clone(), json_metric)
+                    },
+                };
+                metrics_value.inner.insert(resource_id, metric);
+            }
+        }
+
+        Some(results_map.into())
     }
 
     pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {

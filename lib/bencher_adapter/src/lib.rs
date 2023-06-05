@@ -12,7 +12,9 @@ use adapters::{
     magic::AdapterMagic,
     python::{asv::AdapterPythonAsv, pytest::AdapterPythonPytest, AdapterPython},
     ruby::{benchmark::AdapterRubyBenchmark, AdapterRuby},
-    rust::{bench::AdapterRustBench, criterion::AdapterRustCriterion, AdapterRust},
+    rust::{
+        bench::AdapterRustBench, criterion::AdapterRustCriterion, iai::AdapterRustIai, AdapterRust,
+    },
 };
 use bencher_json::project::report::{JsonAdapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonMetric};
@@ -52,6 +54,7 @@ impl Adapter for JsonAdapter {
             JsonAdapter::Rust => AdapterRust::parse(input, settings),
             JsonAdapter::RustBench => AdapterRustBench::parse(input, settings),
             JsonAdapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
+            JsonAdapter::RustIai => AdapterRustIai::parse(input, settings),
         }
     }
 

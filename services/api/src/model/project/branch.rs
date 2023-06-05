@@ -108,11 +108,7 @@ impl InsertBranch {
         Self::from_json_inner(conn, project_id, JsonNewBranch::main())
     }
 
-    pub fn from_json_inner(
-        conn: &mut DbConnection,
-        project_id: i32,
-        branch: JsonNewBranch,
-    ) -> Self {
+    fn from_json_inner(conn: &mut DbConnection, project_id: i32, branch: JsonNewBranch) -> Self {
         let JsonNewBranch { name, slug, .. } = branch;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, branch, QueryBranch);
         Self {

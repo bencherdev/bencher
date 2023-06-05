@@ -149,6 +149,8 @@ pub enum CliRunAdapter {
     RustBench,
     /// 🦀 Rust Criterion
     RustCriterion,
+    /// 🦀 Rust Iai
+    RustIai,
 }
 
 /// Suggested Central Tendency (Average)

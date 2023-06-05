@@ -170,10 +170,11 @@ impl ReportResults {
                 *id
             } else {
                 let metric_kind_id =
-                    QueryMetricKind::from_resource_id(conn, self.project_id, &metric_kind_key)?.id;
+                    QueryMetricKind::get_or_create(conn, self.project_id, &metric_kind_key)?;
 
                 self.metric_kind_cache
                     .insert(metric_kind_key, metric_kind_id);
+
                 metric_kind_id
             },
         )

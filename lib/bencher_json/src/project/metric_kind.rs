@@ -35,7 +35,7 @@ static THROUGHPUT_SLUG: Lazy<Option<Slug>> =
 static THROUGHPUT_UNITS: Lazy<NonEmpty> =
     Lazy::new(|| THROUGHPUT_UNITS_STR.parse().expect(METRIC_KIND_UNITS_ERROR));
 
-// Cachegrind based metric kinds
+// Iai metric kinds
 
 pub const INSTRUCTIONS_NAME_STR: &str = "Instructions";
 pub const INSTRUCTIONS_SLUG_STR: &str = "instructions";

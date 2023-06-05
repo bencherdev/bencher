@@ -81,6 +81,7 @@ Though Bencher is open source, there is also a hosted version available [Bencher
 - 🦀 Rust
   - [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
   - [Criterion](https://github.com/bheisler/criterion.rs)
+  - [Iai](https://github.com/bheisler/iai)
 
 For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
 

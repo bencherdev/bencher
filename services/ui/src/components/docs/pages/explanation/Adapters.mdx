@@ -150,7 +150,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the `bencher run` CLI command with the optional `--average` flag.
+This can be specified in the `bencher run` CLI command with the optional `--average` argument.
 
 ## ♦️ Ruby
 
@@ -178,6 +178,14 @@ The `lower_bound` and `upper_bound` are the deviation below and above the median
 The Rust Criterion Adapter (`rust_criterion`) expects [Criterion](https://github.com/bheisler/criterion.rs) output.
 The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
 The `lower_bound` and `upper_bound` are the lower and upper bounds of either the slope (if available) or the mean (if not) (ie `value`) respectively.
+
+## 🦀 Rust Iai
+
+The Rust Iai Adapter (`rust_iai`) expects [Iai](https://github.com/bheisler/iai) output.
+The `instructions`, `l1_access`, `l2_access`, `ram_access`, and `estimated_cycles` Metric Kinds are gathered.
+Only these measures (ie `value`) are available. There are no `lower_bound` and `upper_bound` measures.
+The Metric Kinds for this adapter are not created by default for all projects.
+However, when you use this adapter, these Metric Kinds will be automatically created for your Project.
 
 <br />
 <br />
