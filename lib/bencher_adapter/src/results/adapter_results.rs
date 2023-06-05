@@ -1,16 +1,11 @@
-use std::{
-    collections::{HashMap, HashSet},
-    str::FromStr,
-};
+use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{project::metric::Mean, BenchmarkName, JsonMetric};
 use literally::hmap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    adapter_metrics::AdapterMetrics, CombinedKind, CYCLES_RESOURCE_ID, INSTRUCTIONS_RESOURCE_ID,
-    L1_ACCESSES_RESOURCE_ID, L2_ACCESSES_RESOURCE_ID, LATENCY_RESOURCE_ID,
-    RAM_ACCESSES_RESOURCE_ID, THROUGHPUT_RESOURCE_ID,
+    adapter_metrics::AdapterMetrics, CombinedKind, LATENCY_RESOURCE_ID, THROUGHPUT_RESOURCE_ID,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,15 +26,6 @@ impl From<ResultsMap> for AdapterResults {
 pub enum AdapterMetricKind {
     Latency(JsonMetric),
     Throughput(JsonMetric),
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum AdapterMultiMetricKind {
-    Instructions(JsonMetric),
-    Cycles(JsonMetric),
-    L1Accesses(JsonMetric),
-    L2Accesses(JsonMetric),
-    RamAccesses(JsonMetric),
 }
 
 impl AdapterResults {
@@ -65,42 +51,6 @@ impl AdapterResults {
                 },
             };
             results_map.insert(benchmark_name, adapter_metrics);
-        }
-
-        Some(results_map.into())
-    }
-    pub fn new_multi(
-        benchmark_metrics: Vec<(BenchmarkName, HashSet<AdapterMultiMetricKind>)>,
-    ) -> Option<Self> {
-        if benchmark_metrics.is_empty() {
-            return None;
-        }
-
-        let mut results_map = HashMap::new();
-        for (benchmark_name, metrics) in benchmark_metrics {
-            let metrics_value = results_map
-                .entry(benchmark_name)
-                .or_insert_with(AdapterMetrics::default);
-            for metric in metrics {
-                let (resource_id, metric) = match metric {
-                    AdapterMultiMetricKind::Instructions(json_metric) => {
-                        (INSTRUCTIONS_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMultiMetricKind::Cycles(json_metric) => {
-                        (CYCLES_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMultiMetricKind::L1Accesses(json_metric) => {
-                        (L1_ACCESSES_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMultiMetricKind::L2Accesses(json_metric) => {
-                        (L2_ACCESSES_RESOURCE_ID.clone(), json_metric)
-                    },
-                    AdapterMultiMetricKind::RamAccesses(json_metric) => {
-                        (RAM_ACCESSES_RESOURCE_ID.clone(), json_metric)
-                    },
-                };
-                metrics_value.inner.insert(resource_id, metric);
-            }
         }
 
         Some(results_map.into())

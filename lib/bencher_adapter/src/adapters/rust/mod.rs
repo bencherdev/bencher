@@ -1,9 +1,7 @@
 pub mod bench;
 pub mod criterion;
-pub mod iai;
 
 use self::criterion::AdapterRustCriterion;
-use self::iai::AdapterRustIai;
 use crate::{Adapter, AdapterResults, Settings};
 use bench::AdapterRustBench;
 
@@ -13,7 +11,6 @@ impl Adapter for AdapterRust {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         AdapterRustBench::parse(input, settings)
             .or_else(|| AdapterRustCriterion::parse(input, settings))
-            .or_else(|| AdapterRustIai::parse(input, settings))
     }
 }
 

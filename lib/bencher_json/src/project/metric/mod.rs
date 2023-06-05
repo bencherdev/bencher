@@ -11,7 +11,7 @@ mod median;
 pub use mean::Mean;
 pub use median::Median;
 
-#[derive(Debug, Copy, Clone, Hash, Default, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetric {
     pub value: OrderedFloat<f64>,
