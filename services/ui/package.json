@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.d.ts",
+    "typeshare": "typeshare ../.. --lang=typescript --output-file=./src/types/bencher.ts",
     "wasm": "wasm-pack build ../../lib/bencher_valid --target web --features plus,wasm",
     "dev": "npm run typeshare && npm run wasm && vite",
     "test": "npm run typeshare && npm run wasm && vitest",
