@@ -1,5 +1,6 @@
 pub mod bench;
 pub mod criterion;
+pub mod iai;
 
 use self::criterion::AdapterRustCriterion;
 use crate::{Adapter, AdapterResults, Settings};

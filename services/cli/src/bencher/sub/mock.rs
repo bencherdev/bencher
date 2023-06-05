@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bencher_adapter::{
-    results::{adapter_metrics::AdapterMetrics, LATENCY_RESOURCE_ID},
+    results::{adapter_metrics::AdapterMetrics, adapter_results::LATENCY_RESOURCE_ID},
     AdapterResults,
 };
 use bencher_json::JsonMetric;

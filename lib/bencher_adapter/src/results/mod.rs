@@ -3,12 +3,10 @@ use std::collections::HashMap;
 use bencher_json::{
     project::{
         metric::Mean,
-        metric_kind::{LATENCY_SLUG_STR, THROUGHPUT_SLUG_STR},
         report::{JsonAdapter, JsonFold},
     },
     ResourceId,
 };
-use once_cell::sync::Lazy;
 
 use crate::{Adapter, AdapterError, Settings};
 
@@ -18,20 +16,6 @@ pub mod results_reducer;
 
 use adapter_results::{AdapterResults, ResultsMap};
 use results_reducer::ResultsReducer;
-
-#[allow(clippy::expect_used)]
-pub static LATENCY_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
-    LATENCY_SLUG_STR
-        .parse()
-        .expect("Failed to parse metric kind slug.")
-});
-
-#[allow(clippy::expect_used)]
-pub static THROUGHPUT_RESOURCE_ID: Lazy<ResourceId> = Lazy::new(|| {
-    THROUGHPUT_SLUG_STR
-        .parse()
-        .expect("Failed to parse metric kind slug.")
-});
 
 pub type MetricKind = ResourceId;
 
