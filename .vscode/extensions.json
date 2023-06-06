@@ -1,5 +1,6 @@
 {
   "recommendations": [
+    "ms-vscode-remote.remote-containers",
     "vscodevim.vim",
     "eamodio.gitlens",
     "rust-lang.rust-analyzer",
@@ -15,7 +16,6 @@
     "ZixuanChen.vitest-explorer",
     "osohq.oso",
     "GitHub.copilot",
-    "TabNine.tabnine-vscode",
     "streetsidesoftware.code-spell-checker",
     "shardulm94.trailing-spaces",
     "mtxr.sqltools",

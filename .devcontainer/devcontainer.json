@@ -1,0 +1,44 @@
+{
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "MOLD_VERSION": "1.11.0",
+            "MOLD_DEFAULT": "true",
+            "RUST_VERSION": "1.69.0"
+        }
+    },
+    // "postCreateCommand": "./scripts/setup.sh",
+    "postStartCommand": "./scripts/startup.sh",
+    "forwardPorts": [
+        3000,
+        3001,
+        61016
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "eamodio.gitlens",
+                "rust-lang.rust-analyzer",
+                "serayuzgur.crates",
+                "wcrichton.flowistry",
+                "tamasfe.even-better-toml",
+                "vadimcn.vscode-lldb",
+                "rome.rome",
+                "yzhang.markdown-all-in-one",
+                "unifiedjs.vscode-mdx",
+                "redhat.vscode-yaml",
+                "Syler.sass-indented",
+                "ZixuanChen.vitest-explorer",
+                "osohq.oso",
+                "GitHub.copilot",
+                "streetsidesoftware.code-spell-checker",
+                "shardulm94.trailing-spaces",
+                "mtxr.sqltools",
+                "mtxr.sqltools-driver-sqlite",
+                "ms-azuretools.vscode-docker",
+                "ms-vscode.hexeditor",
+                "streetsidesoftware.code-spell-checker"
+            ]
+        }
+    }
+}
