@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "rust_iai"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+iai = "0.1"
+
+[[bench]]
+name = "rust_iai"
+harness = false
