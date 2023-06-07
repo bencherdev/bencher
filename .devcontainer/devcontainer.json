@@ -1,3 +1,4 @@
+// https://containers.dev/implementors/json_reference/
 {
     "build": {
         "dockerfile": "Dockerfile",
@@ -7,8 +8,12 @@
             "RUST_VERSION": "1.69.0"
         }
     },
-    // "postCreateCommand": "./scripts/setup.sh",
-    "postStartCommand": "./scripts/startup.sh",
+    "postCreateCommand": "./scripts/setup.sh",
+    "postStartCommand": {
+        "api": "cargo run",
+        "cli": "./scripts/start_cli.sh",
+        "ui": "./scripts/start_ui.sh"
+    },
     "forwardPorts": [
         3000,
         3001,

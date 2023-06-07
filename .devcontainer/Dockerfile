@@ -2,6 +2,9 @@ FROM mcr.microsoft.com/vscode/devcontainers/rust:0.203.9-1-bullseye
 
 RUN sudo apt-get update
 
+# Install `nc`
+RUN sudo apt-get install -y netcat-openbsd
+
 # Install `mold`: https://github.com/rui314/mold
 ARG MOLD_VERSION
 ARG MOLD_DEFAULT
