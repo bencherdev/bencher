@@ -38,3 +38,7 @@ wasm-bindgen = { version = "0.2", optional = true }
 pretty_assertions.workspace = true
 # Crate
 wasm-bindgen-test = "0.3.33"
+
+# https://github.com/rust-lang/cargo/issues/4897
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
