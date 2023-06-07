@@ -42,6 +42,4 @@ wasm-bindgen-test = "0.3.33"
 # TODO user per-target profiles
 # https://github.com/rust-lang/cargo/issues/4897
 [package.metadata.wasm-pack.profile.release]
-# Set `wasm-opt` to false when working on `aarch64-unknown-linux-gnu`
-# wasm-opt = false
 wasm-opt = true

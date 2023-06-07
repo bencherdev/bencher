@@ -15,8 +15,8 @@ RUN test $MOLD_DEFAULT = true -a "$(realpath /usr/bin/ld)" != /usr/local/bin/mol
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
     sudo apt-get install -y nodejs
 
-# Install `@esbuild/linux-arm64`
-RUN test $(uname -m) = "aarch64" && sudo npm install -g @esbuild/linux-arm64; true
+# Install `@esbuild/linux-arm64` and `@rometools/cli-linux-arm64` for `aarch64`
+RUN test $(uname -m) = "aarch64" && sudo npm install -g @esbuild/linux-arm64 @rometools/cli-linux-arm64; true
 
 # Install `sqlite3`: https://www.sqlite.org/index.html
 RUN sudo apt-get install -y sqlite3
