@@ -1,15 +1,15 @@
 {
-  "$schema": "./node_modules/rome/configuration_schema.json",
-  "files": {
-    "ignore": [
-      "./src/components/docs/api/swagger.json",
-      "./src/types/bencher.ts"
-    ]
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true
-    }
-  }
+	"$schema": "./node_modules/rome/configuration_schema.json",
+	"files": {
+		"ignore": [
+			"./src/components/docs/api/swagger.json",
+			"./src/types/bencher.ts"
+		]
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	}
 }
