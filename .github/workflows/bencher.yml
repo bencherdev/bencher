@@ -185,7 +185,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: npx rome format
+      - name: Rome format Action
+        working-directory: ./services/action
+        run: |
+          npm install --include=dev
+          npx rome ci --linter-enabled false .
+      - name: Rome format UI
         working-directory: ./services/ui
         run: |
           npm install --include=dev
@@ -198,7 +203,12 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v3
-      - name: npx rome check
+      - name: Rome check Action
+        working-directory: ./services/action
+        run: |
+          npm install --include=dev
+          npx rome ci --formatter-enabled false .
+      - name: Rome check UI
         working-directory: ./services/ui
         run: |
           npm install --include=dev
