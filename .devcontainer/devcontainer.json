@@ -10,9 +10,9 @@
     },
     "postCreateCommand": "./scripts/setup.sh",
     "postStartCommand": {
-        "api": "cargo run",
-        "cli": "./scripts/start_cli.sh",
-        "ui": "./scripts/start_ui.sh"
+        "api": "cd ./services/api && cargo run",
+        "cli": "cd ./services/cli && ../../scripts/start_cli.sh",
+        "ui": "cd ./services/ui && ../../scripts/start_ui.sh"
     },
     "forwardPorts": [
         3000,
