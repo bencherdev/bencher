@@ -44,12 +44,10 @@ RUN rustup update
 RUN rustup toolchain install $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup component add clippy rust-src rustfmt --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
 RUN rustup target add wasm32-unknown-unknown --toolchain $RUST_VERSION-$(uname -m)-unknown-linux-gnu
-RUN rustup toolchain install nightly
 RUN cargo install diesel_cli --no-default-features --features sqlite --locked
 RUN cargo install typeshare-cli --locked
-RUN cargo install cargo-udeps --locked
 
 # Install `flyctl`: https://fly.io/docs/getting-started/installing-flyctl/
 RUN curl -L https://fly.io/install.sh | sh
-RUN echo "export FLYCTL_INSTALL=\"/home/gitpod/.fly\"" >> $HOME/.bash_profile
-RUN echo "export PATH=\"/home/gitpod/.fly/bin:$PATH\"" >> $HOME/.bash_profile
+RUN echo "export FLYCTL_INSTALL=\"/workspaces/bencher/.fly\"" >> $HOME/.bash_profile
+RUN echo "export PATH=\"/workspaces/bencher/.fly/bin:$PATH\"" >> $HOME/.bash_profile

@@ -146,19 +146,26 @@ Therefore, the former is the suggested method (ex: `- uses: bencherdev/bencher@v
 
 ## Contributing
 
-The easiest way to contribute is to open the repo in GitPod.
+The easiest way to contribute is to open this repo as a [Dev Container](https://containers.dev) in [VSCode](https://code.visualstudio.com/download) by simply clicking one of the buttons below.
 Everything you need will already be there!
-It is best to connect to the GitPod instance with VS Code Desktop via SSH.
-There is a hotkey set to tapping caps lock twice to prompt the web VS Code to create a VS Code Desktop SSH session.
-For more details see the [GitPod docs here](https://www.gitpod.io/docs/references/ides-and-editors/vscode).
 Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:61016](http://localhost:61016) respectively.
+To make any changes to the UI or API though, you will have to exit the startup process and restart the UI and API yourself.
 
 <br />
 <p align="center">
-  <a href="https://gitpod.io/#https://github.com/bencherdev/bencher">
+  <a href="https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/bencherdev/bencher">
     <img
-      src="https://gitpod.io/button/open-in-gitpod.svg"
-      alt="Bencher Gitpod"
+      src="https://img.shields.io/static/v1?label=Local%20Dev%20Container&message=Open&color=orange&logo=visualstudiocode&style=for-the-badge"
+      alt="Bencher VSCode Dev Container"
+    />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.dev/bencherdev/bencher">
+    <img
+      src="https://img.shields.io/static/v1?label=GitHub%20Codespaces&message=Open&color=orange&logo=github&style=for-the-badge"
+      alt="Bencher GitHub Codespaces"
     />
   </a>
 </p>
