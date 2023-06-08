@@ -111,7 +111,10 @@ fn parse_iai_metric<'a>(input: &'a str, metric_kind: &'static str) -> IResult<&'
                             tag("("),
                             alt((
                                 map(tag("No change"), |_| ()),
-                                map(tuple((parse_f64, tag("%"))), |_| ()),
+                                map(
+                                    tuple((alt((tag("+"), tag("-"))), parse_f64, tag("%"))),
+                                    |_| (),
+                                ),
                             )),
                             tag(")"),
                         ),
@@ -190,7 +193,7 @@ pub(crate) mod test_rust_iai {
         );
 
         assert_eq!(
-            super::parse_iai_metric("  Instructions:  1234 (3.14%)", INSTRUCTIONS_NAME_STR),
+            super::parse_iai_metric("  Instructions:  1234 (+3.14%)", INSTRUCTIONS_NAME_STR),
             Ok((
                 "",
                 JsonMetric {
@@ -243,6 +246,35 @@ pub(crate) mod test_rust_iai {
                 (L2_ACCESSES_SLUG_STR, 2.0),
                 (RAM_ACCESSES_SLUG_STR, 1.0),
                 (ESTIMATED_CYCLES_SLUG_STR, 35638668.0),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_adapter_rust_aia_change() {
+        let results = convert_rust_iai("change");
+        assert_eq!(results.inner.len(), 2);
+
+        let metrics = results.get("iai_benchmark_short").unwrap();
+        validate_iai(
+            metrics,
+            [
+                (INSTRUCTIONS_SLUG_STR, 1243.0),
+                (L1_ACCESSES_SLUG_STR, 1580.0),
+                (L2_ACCESSES_SLUG_STR, 1.0),
+                (RAM_ACCESSES_SLUG_STR, 2.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 1655.0),
+            ],
+        );
+        let metrics = results.get("iai_benchmark_long").unwrap();
+        validate_iai(
+            metrics,
+            [
+                (INSTRUCTIONS_SLUG_STR, 18454953.0),
+                (L1_ACCESSES_SLUG_STR, 23447195.0),
+                (L2_ACCESSES_SLUG_STR, 6.0),
+                (RAM_ACCESSES_SLUG_STR, 2.0),
+                (ESTIMATED_CYCLES_SLUG_STR, 23447295.0),
             ],
         );
     }

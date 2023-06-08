@@ -1,0 +1,18 @@
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+iai_benchmark_short
+  Instructions:                1243 (+1.139138%)
+  L1 Accesses:                 1580 (+0.701083%)
+  L2 Accesses:                    1 (-50.00000%)
+  RAM Accesses:                   2 (No change)
+  Estimated Cycles:            1655 (+0.363857%)
+
+iai_benchmark_long
+  Instructions:            18454953 (+0.000076%)
+  L1 Accesses:             23447195 (+0.000055%)
+  L2 Accesses:                    6 (-33.33333%)
+  RAM Accesses:                   2 (No change)
+  Estimated Cycles:        23447295 (-0.000009%)
+
