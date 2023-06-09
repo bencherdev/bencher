@@ -26,7 +26,7 @@ import { BENCHER_VERSION } from "../../../site/util";
 
 1. Create a GitHub Actions `job` (ex: `benchmark_with_bencher`)
 1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `BENCHER_PROJECT: save-walter-white`)
-1. Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
+1. Add `BENCHER_API_TOKEN` to your **Repository** secrets (ex: `https://github.com/USERNAME/REPO/settings/secrets/actions`)
 1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: json`)
 1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: ubuntu-latest`)
