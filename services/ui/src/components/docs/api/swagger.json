@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.45"
+    "version": "0.2.46"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -5534,7 +5534,8 @@
           "ruby_benchmark",
           "rust",
           "rust_bench",
-          "rust_criterion"
+          "rust_criterion",
+          "rust_iai"
         ]
       },
       "JsonAlert": {

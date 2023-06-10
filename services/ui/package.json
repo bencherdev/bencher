@@ -1,6 +1,6 @@
 {
   "name": "bencher-ui",
-  "version": "0.2.45",
+  "version": "0.2.46",
   "description": "Bencher Web UI",
   "license": "MIT",
   "type": "module",
