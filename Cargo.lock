@@ -2663,7 +2663,7 @@ dependencies = [
  "ahash 0.8.3",
  "flate2",
  "lru-cache",
- "mail-builder",
+ "mail-builder 0.2.5",
  "mail-parser",
  "parking_lot",
  "quick-xml",
@@ -2685,6 +2685,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mail-builder"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "765969f4385f88a62738e8ed63e2fa630571d7ed6fd96ca6932d699513dd8c28"
+dependencies = [
+ "gethostname",
+]
+
+[[package]]
 name = "mail-parser"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2695,14 +2704,14 @@ dependencies = [
 
 [[package]]
 name = "mail-send"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02102c7a6d6ebd2015ddb794747831e8943423abed5533f3748adc978fb08b6f"
+checksum = "d6d2b8d0cb56f199d36f527ff96453cf3b1cdfdacb5e4d154ac1d8fcd89873c2"
 dependencies = [
  "base64 0.20.0",
  "gethostname",
  "mail-auth",
- "mail-builder",
+ "mail-builder 0.3.0",
  "md5",
  "rand 0.8.5",
  "rustls 0.21.1",
