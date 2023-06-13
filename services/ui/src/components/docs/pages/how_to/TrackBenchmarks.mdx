@@ -19,11 +19,11 @@ bencher run \
 1. The Project must already exist. Set the `--project` flag or the `BENCHER_PROJECT` environment variable to the Project slug or UUID. (ex: `--project save-walter-white`)
 1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `--token ...`)
 1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `--adapter json`)
-1. There are several options for setting the project branch. See [branch selection](/docs/how-to/branch-selection) for a full overview.
+1. There are several options for setting the project branch. See [branch selection](/docs/explanation/branch-selection) for a full overview.
     1. Use the current branch if it already exists. (ex: `--if-branch feature-branch`)
     1. Create a clone of target branch data if it already exists. (ex: `--else-if-branch main`)
     1. Otherwise, create a new branch with the name provided to `--if-branch`, which would be `feature-branch`. (ex: `--else-branch`)
-1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. If this is not set, then the `localhost` Testbed will be used. (ex: `--testbed phoenix`)
+1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed must already exist. If this is not set, then the default `localhost` Testbed will be used. (ex: `--testbed phoenix`)
 1. Set the command to fail if an Alert is generated. In order for an Alert to be generated, a [Threshold](/docs/explanation/thresholds) must already exist. (ex: `--err`)
 1. Run your benchmarks and generate a Report from the results. (ex: `"bencher mock"`)
 
