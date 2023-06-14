@@ -5,12 +5,14 @@ use crate::{bencher::sub::SubCmd, cli::project::report::CliReport, CliError};
 
 mod list;
 mod view;
+mod upload;
 
 #[derive(Debug)]
 pub enum Report {
     List(list::List),
     Create(Box<Create>),
     View(view::View),
+    Upload(upload::Upload)
 }
 
 impl TryFrom<CliReport> for Report {
@@ -21,6 +23,7 @@ impl TryFrom<CliReport> for Report {
             CliReport::List(list) => Self::List(list.try_into()?),
             CliReport::Create(create) => Self::Create(Box::new((*create).try_into()?)),
             CliReport::View(view) => Self::View(view.try_into()?),
+            CliReport::Upload(upload) => Self::Upload(upload.try_into()?),
         })
     }
 }
@@ -32,6 +35,7 @@ impl SubCmd for Report {
             Self::List(list) => list.exec().await,
             Self::Create(create) => create.exec().await,
             Self::View(create) => create.exec().await,
+            Self::Upload(upload) => upload.exec().await
         }
     }
 }
