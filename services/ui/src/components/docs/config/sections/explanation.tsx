@@ -17,15 +17,6 @@ const Explanation = [
 		},
 	},
 	{
-		title: "Benchmark Adapters",
-		slug: "adapters",
-		panel: {
-			kind: PageKind.MDX,
-			heading: "Benchmark Harness Adapters",
-			content: <Adapters />,
-		},
-	},
-	{
 		title: "Branch Selection",
 		slug: "branch-selection",
 		panel: {
@@ -36,6 +27,15 @@ const Explanation = [
 				</>
 			),
 			content: <BranchSelection />,
+		},
+	},
+	{
+		title: "Benchmark Adapters",
+		slug: "adapters",
+		panel: {
+			kind: PageKind.MDX,
+			heading: "Benchmark Harness Adapters",
+			content: <Adapters />,
 		},
 	},
 	{

@@ -35,7 +35,7 @@ pub struct CliRun {
     #[clap(long)]
     pub iter: Option<usize>,
 
-    /// Fold multiple metrics into a single metric
+    /// Fold multiple results into a single result
     #[clap(value_enum, long, requires = "iter")]
     pub fold: Option<CliRunFold>,
 
@@ -79,12 +79,12 @@ pub struct CliRunBranch {
 
 #[derive(Args, Debug)]
 pub struct CliRunCommand {
-    #[clap(flatten)]
-    pub shell: CliRunShell,
-
     /// Benchmark command output file path
     #[clap(long, requires = "cmd")]
     pub file: Option<PathBuf>,
+
+    #[clap(flatten)]
+    pub shell: CliRunShell,
 
     /// Benchmark command
     pub cmd: Option<String>,

@@ -1,5 +1,5 @@
-There are a few options for setting the project branch in the `bencher` CLI `run` command (ie: `bencher run`).
-If none of these flags are used then `main` is used as the default branch.
+There are a few ways for setting the project branch in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand.
+If none of these options or flags are used then `main` is used as the default branch.
 
 <br />
 
@@ -7,10 +7,12 @@ If none of these flags are used then `main` is used as the default branch.
 
 <br />
 
-The simplest option is to set the `--branch` flag or the `BENCHER_BRANCH` environment variable to the branch slug or UUID of an already existing branch.
-If both are defined, the `--branch` flag takes precedence over the `BENCHER_BRANCH` environement variable.
+The simplest way is to set the `--branch` option or the `BENCHER_BRANCH` environment variable to the slug or UUID of an already existing branch.
+If both are defined, the `--branch` option takes precedence over the `BENCHER_BRANCH` environement variable.
 
-However, if both of these are missing or the provided value is invalid, then the `bencher run` command will error. This is not the most convient in CI/CD environments, where new branches are popping up all the time. Instead of using `--branch` or the `BENCHER_BRANCH` environment variable, there is an `--if-branch` flag.
+However, if both of these are missing or the provided value is invalid, then the `bencher run` command will error.
+This is not the most convient in CI/CD environments, where new branches are popping up all the time.
+Instead of using `--branch` or the `BENCHER_BRANCH` environment variable, there is an `--if-branch` option.
 
 <br />
 
@@ -18,11 +20,13 @@ However, if both of these are missing or the provided value is invalid, then the
 
 <br />
 
-The `--if-branch` flag expects a branch _name_ argument and queries to see if a single branch with that name exists. If there is exactly one branch found, then `bencher run` proceeds using that branch. Otherwise, `bencher run` will simply log and exit successfully.
+The `--if-branch` option expects a branch _name_ argument and queries to see if a single branch with that name exists.
+If there is exactly one branch found, then `bencher run` proceeds using that branch.
+Otherwise, `bencher run` will simply log and exit successfully.
 
 For example, if `main` exists then using `--if-branch main` would find it. Then `bencher run` would proceed using `main`.
 
-The `--branch` flag conflicts with the `--if-branch` flag, but the `BENCHER_BRANCH` environment variable takes precident over the `--if-branch` flag.
+The `--branch` option conflicts with the `--if-branch` option, but the `BENCHER_BRANCH` environment variable takes precident over the `--if-branch` option.
 
 <br />
 
@@ -34,11 +38,20 @@ The `--branch` flag conflicts with the `--if-branch` flag, but the `BENCHER_BRAN
 
 <br />
 
-Often, when working on feature branches, it would be useful to have historical data from the parent/base branch. This is where the `--else-if-branch` flag comes in. The `--else-if-branch` flag expects another branch _name_ argument. If `--if-branch` fails, then `--else-if-branch` queries to see if a single branch with that name exists. If there is exactly one branch found, then all the data and thresholds from this starting point branch will be copied over to a newly created branch with the name given to `--if-branch`.
+Often, when working on feature branches, it would be useful to have historical data from the parent/base branch.
+This is where the `--else-if-branch` option comes in.
+The `--else-if-branch` option expects another branch _name_ argument.
+If `--if-branch` fails, then `--else-if-branch` queries to see if a single branch with that name exists.
+If there is exactly one branch found, then all the data and thresholds from this starting point branch will be copied over to a newly created branch with the name given to `--if-branch`.
 
-For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data. Then using `--if-branch feature_branch --else-if-branch main`, would create a new branch named `feature_branch`, and it would have a copy of all the data and thresholds from `main`. Then `bencher run` would proceed using `feature_branch`.
+For example, if `feature_branch` does not yet exist, but `main` does exist and has historical data.
+Then using `--if-branch feature_branch --else-if-branch main`, would create a new branch named `feature_branch`,
+and it would have a copy of all the data and thresholds from `main`.
+Then `bencher run` would proceed using `feature_branch`.
 
-It is also possible to use mutliple `--else-if-branch` flags. For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main` would effectively function the same as the previous example, copying all of the data and thresholds from `main` and proceeding.
+It is also possible to use mutliple `--else-if-branch` options.
+For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
+would effectively function the same as the previous example, copying all of the data and thresholds from `main` and proceeding.
 
 If the `--if-branch` query succeededs then `--else-if-branch` is never run, and if both `--if-branch` and `--else-if-branch` fail, `bencher run` will simply log and exit successfully.
 
@@ -52,13 +65,20 @@ If the `--if-branch` query succeededs then `--else-if-branch` is never run, and 
 
 <br />
 
-To guarantee in all cases that the metrics from a run are stored, there is an `--else-branch` flag. The `--else-branch` flag takes no argumetns. If `--if-branch` fails, then `--else-branch` simply creates a new branch with the name given to `--if-branch`.
+To guarantee in all cases that the metrics from a run are stored, there is an `--else-branch` flag.
+The `--else-branch` flag takes no arguments.
+If `--if-branch` fails, then `--else-branch` simply creates a new branch with the name given to `--if-branch`.
 
-For example, if `feature_branch` does not yet exist. Then using `--if-branch feature_branch --else-branch`, would create a new branch named `feature_branch`, and it would have no initial data nor thresholds. Then `bencher run` would proceed using `feature_branch`.
+For example, if `feature_branch` does not yet exist.
+Then using `--if-branch feature_branch --else-branch`, would create a new branch named `feature_branch`,
+and it would have no initial data nor thresholds.
+Then `bencher run` would proceed using `feature_branch`.
 
-It is also possible to chain all three flags together: `--if-branch`, `--else-if-branch`, and `--else-branch`. For example, `--if-branch feature_branch --else-if-branch main --else-branch`.
+It is also possible to chain all three flags together: `--if-branch`, `--else-if-branch`, and `--else-branch`.
+For example, `--if-branch feature_branch --else-if-branch main --else-branch`.
 
-If the `--if-branch` query succeededs then `--else-branch` is never run, and likewise, if `--if-else-branch` succeeds then `--else-branch` is never run. And `--else-branch` is expected to always succeed and exit successfully.
+If the `--if-branch` query succeededs then `--else-branch` is never run, and likewise, if `--if-else-branch` succeeds then `--else-branch` is never run.
+And `--else-branch` is expected to always succeed and exit successfully.
 
 <br />
 
@@ -68,7 +88,8 @@ If the `--if-branch` query succeededs then `--else-branch` is never run, and lik
 
 The `--endif-branch` flag works as an optional noop flag to indicate the end of the `--if-branch` statement.
 
-It is possible to chain all four flags together: `--if-branch`, `--else-if-branch`, `--else-branch`, and `--endif-branch`. For example, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
+It is possible to chain all four flags together: `--if-branch`, `--else-if-branch`, `--else-branch`, and `--endif-branch`.
+For example, `--if-branch feature_branch --else-if-branch "$MY_ENV_VAR" --else-branch --endif-branch`.
 
 <br />
 <br />

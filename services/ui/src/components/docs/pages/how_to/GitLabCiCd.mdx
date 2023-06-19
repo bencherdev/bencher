@@ -33,7 +33,7 @@ import { BENCHER_VERSION } from "../../../site/util";
 1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: bullseye`)
 1. Optional: Create an environment variable to make it easy to keep track the CLI version being used. (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Download and install the Bencher CLI from a `.deb`.
-1. [Track your benchmarks](/docs/how-to/track-benchmarks) with the `bencher run` CLI command:
+1. [Track your benchmarks](/docs/how-to/track-benchmarks) with the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand:
     1. There are several options for setting the project branch. See [branch selection](/docs/how-to/branch-selection) for a full overview. The provided command uses [GitLab CI/CD predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html) and it tries to:
         1. Use the current branch if it already exists. (ex: `--if-branch "$CI_COMMIT_REF_NAME"`)
         1. Create a clone of MR target branch data and thresholds if it already exists. (ex: `--else-if-branch  "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"`)

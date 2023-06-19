@@ -69,7 +69,7 @@ The meaning of the statistical significance boundary depends on the statistical 
 - Z-score: Standard deviation (σ) expressed as a decimal cumulative percentage
 - t-test: Confidence interval (CI) expressed as a decimal confidence percentage
 
-> 🐰 Tip: To fail a CI build when a boundary is violated use the `--err` flag for the `bencher run` CLI command.
+> 🐰 Tip: To fail a CI build when a boundary is violated use the `--err` flag for the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand.
 
 ### Left Side Boundary
 A left side boundary can be set for a Threshold.
@@ -102,7 +102,7 @@ bounded by the given time window for its statistical significance test.
 
 ## Alerts
 Alerts are generated when a Metric is below a Threshold's left side boundary or above a Threshold's right side boundary.
-To fail a CI build in the event of an Alert set the `--err` flag when using the `bencher run` CLI command.
+To fail a CI build in the event of an Alert set the `--err` flag when using the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand.
 
 ### Suppressing Alerts
 Sometimes it can be useful to supress Alerts for a particular Benchmark.

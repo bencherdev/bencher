@@ -80,7 +80,7 @@ fn main() {
     println!("{}", adapter_results_str);
 
     // write to file
-    // use the --file flag for the bencher CLI command
+    // use the --file option for the bencher run CLI subcommand
     let mut file = File::create("../target/results.json").unwrap();
     file.write_all(adapter_results_str.as_bytes()).unwrap();
 }

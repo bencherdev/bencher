@@ -3,7 +3,7 @@ They disapear as soon as your terminal reaches its scrollback limit.
 Some benchmark harnesses let you cache results, but most only do so locally.
 Bencher allows you to track your benchmarks from both local and CI runs and compare against historical results.
 
-The easiest way to track your benchmarks is the `bencher run` CLI command.
+The easiest way to track your benchmarks is the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand.
 It wraps your existing benchmark harness output and generates a Report.
 This Report is then sent to the Bencher API server,
 where the benchmark harness output is parsed using a [benchmark harness adapter](/docs/explanation/adapters).
@@ -46,19 +46,21 @@ The Metric Kind is determined by the [benchmark harness adapter](/docs/explanati
 
 ## Report
 A Report is a collection Benchmarks and their Metrics for a particular Branch and Testbed.
-Reports are most often generated using the `bencher run` CLI command.
+Reports are most often generated using the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand.
 See [how to track performance regression tests](/docs/how-to/track-benchmarks) for a full overview.
 
 ### Branch
 A Branch is the `git` ref used when running a Report (ie branch name or tag).
 By default all Projects start with a `main` Branch.
-When using the `bencher run` CLI command, `main` is the default Branch if one is not provided.
+When using the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand,
+`main` is the default Branch if one is not provided.
 See [branch selection](/docs/explanation/branch-selection) for a full overview.
 
 ### Testbed
 A Testbed is the name of the testing environment used when running a Report.
 By default all Projects start with a `localhost` Testbed.
-When using the `bencher run` CLI command, `localhost` is the default Testbed if one is not provided.
+When using the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand,
+`localhost` is the default Testbed if one is not provided.
 
 <br />
 <br />

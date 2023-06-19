@@ -1,14 +1,14 @@
 Adapters convert benchmark harness output into standardized JSON, Bencher Metric Format (BMF).
 The adapters run on the API server when a new report is received.
 See the [benchmarking overview](/docs/explanation/benchmarking) for a more in-depth explanation.
-They can be specified in the `bencher run` CLI command with the optional `--adapter` flag.
+They can be specified in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--adapter` flag.
 If no adapter is specified, the `magic` adapter is used by default.
 
 It is best to use the most specific adapter for your use case.
 This will provide both the most accurate and performant parsing.
 For example if you are parsing Rust
 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
-output, you should use the `rust_bencher` adapter, and not the `magic` or `rust` adapter.
+output, you should use the `rust_bench` adapter, and not the `magic` or `rust` adapter.
 See our
 [Bencher perf page](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
 for a good comparison.
@@ -60,12 +60,12 @@ In this example, the `latency` Metric Kind object contains the following measure
 - An `upper_bound` of `88.88`
 
 If the BMF JSON is stored in a file,
-then you can use the `bencher run` CLI command with the optional `--file` argument to specify that file path
+then you can use the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path
 (ie `bencher run --file results.json`).
 
 <br/>
 
-> 🐰 Note: The `bencher mock` CLI command generates mock BMF Metrics.
+> 🐰 Note: The `bencher mock` CLI subcommand generates mock BMF Metrics.
 
 ## #️⃣ C#
 
@@ -80,7 +80,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the `bencher run` CLI command with the optional `--average` flag.
+This can be specified in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
 
 ## ➕ C++
 
@@ -154,7 +154,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the `bencher run` CLI command with the optional `--average` argument.
+This can be specified in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` argument.
 
 ## ♦️ Ruby
 
