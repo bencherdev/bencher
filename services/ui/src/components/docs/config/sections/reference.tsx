@@ -3,22 +3,8 @@ import Changelog from "../../pages/reference/Changelog.mdx";
 import PriorArt from "../../pages/reference/PriorArt.mdx";
 import Roadmap from "../../pages/reference/Roadmap.mdx";
 import ServerConfig from "../../pages/reference/ServerConfig.mdx";
-import BencherRun from "../../pages/reference/BencherRun.mdx";
 
 const Reference = [
-	{
-		title: "bencher run",
-		slug: "bencher-run",
-		panel: {
-			kind: PageKind.MDX,
-			heading: (
-				<>
-					<code>bencher run</code> CLI Subcommand
-				</>
-			),
-			content: <BencherRun />,
-		},
-	},
 	{
 		title: "REST API",
 		slug: "api",

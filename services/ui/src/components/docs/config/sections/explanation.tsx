@@ -5,6 +5,7 @@ import Talks from "../../pages/explanation/Talks.mdx";
 import Adapters from "../../pages/explanation/Adapters.mdx";
 import Thresholds from "../../pages/explanation/Thresholds.mdx";
 import Benchmarking from "../../pages/explanation/Benchmarking.mdx";
+import BencherRun from "../../pages/explanation/BencherRun.mdx";
 
 const Explanation = [
 	{
@@ -14,6 +15,19 @@ const Explanation = [
 			kind: PageKind.MDX,
 			heading: "Benchmarking Overview",
 			content: <Benchmarking />,
+		},
+	},
+	{
+		title: "bencher run",
+		slug: "bencher-run",
+		panel: {
+			kind: PageKind.MDX,
+			heading: (
+				<>
+					<code>bencher run</code> CLI Subcommand
+				</>
+			),
+			content: <BencherRun />,
 		},
 	},
 	{

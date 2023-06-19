@@ -1,7 +1,7 @@
 Adapters convert benchmark harness output into standardized JSON, Bencher Metric Format (BMF).
 The adapters run on the API server when a new report is received.
 See the [benchmarking overview](/docs/explanation/benchmarking) for a more in-depth explanation.
-They can be specified in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--adapter` flag.
+They can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--adapter` flag.
 If no adapter is specified, the `magic` adapter is used by default.
 
 It is best to use the most specific adapter for your use case.
@@ -60,7 +60,7 @@ In this example, the `latency` Metric Kind object contains the following measure
 - An `upper_bound` of `88.88`
 
 If the BMF JSON is stored in a file,
-then you can use the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path
+then you can use the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path
 (ie `bencher run --file results.json`).
 
 <br/>
@@ -80,7 +80,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
+This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
 
 ## ➕ C++
 
@@ -154,7 +154,7 @@ There are two options for the Metric:
 - `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
 
-This can be specified in the <code><a href="/docs/reference/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` argument.
+This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` argument.
 
 ## ♦️ Ruby
 
@@ -198,4 +198,4 @@ However, when you use this adapter, these Metric Kinds will be automatically cre
 
 <br/>
 
-<h2><a href="/docs/explanation/branch-selection">Keep Going: Branch Selection with <code>bencher run</code> ➡</a></h2>
+<h2><a href="/docs/explanation/thresholds">Keep Going: Thresholds & Alerts ➡</a></h2>
