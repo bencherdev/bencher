@@ -31,39 +31,59 @@ const LandingPage = (props) => {
 	return (
 		<section class="section is-medium">
 			<div class="container">
-				<div class="content has-text-centered">
-					<h1 class="title">Catch Performance Regressions in CI</h1>
-					<h4 class="subtitle">
-						Detect and prevent performance regressions before they make it to
-						production
-					</h4>
-					<div class="columns is-centered">
-						<div class="column is-one-fourth" />
+				<div class="columns is-centered is-vcentered">
+					<div class="column is-half">
+						<div class="content has-text-centered">
+							<h1 class="title">Catch Performance Regressions in CI</h1>
+							<h4 class="subtitle">
+								Bencher is the all-in-one continuous benchmarking solution for
+								any project. Detect and prevent performance regressions before
+								they make it to production.
+							</h4>
 
-						<div class="column is-one-fourth">
-							<button
-								class="button is-primary is-large is-responsive is-fullwidth"
-								onClick={(e) => {
-									e.preventDefault();
-									navigate("/pricing");
-								}}
-							>
-								Start Now
-							</button>
+							<div class="columns is-centered">
+								<div class="column is-one-fourth" />
+
+								<div class="column is-one-fourth">
+									<button
+										class="button is-primary is-large is-responsive is-fullwidth"
+										onClick={(e) => {
+											e.preventDefault();
+											navigate("/pricing");
+										}}
+									>
+										Start Now
+									</button>
+								</div>
+
+								<div class="column is-one-fourth">
+									<a
+										class="button is-inverted is-large is-responsive is-fullwidth"
+										href={BENCHER_CALENDLY_URL}
+										target="_blank"
+										rel="noreferrer"
+									>
+										Talk to an engineer
+									</a>
+								</div>
+
+								<div class="column is-one-fourth" />
+							</div>
 						</div>
-
-						<div class="column is-one-fourth">
-							<a
-								class="button is-inverted is-large is-responsive is-fullwidth"
-								href={BENCHER_CALENDLY_URL}
-								target="_blank"
-								rel="noreferrer"
-							>
-								Talk to an engineer
-							</a>
-						</div>
-
-						<div class="column is-one-fourth" />
+					</div>
+					<div class="column">
+						<video
+							autoplay={true}
+							loop={true}
+							muted={true}
+							style="pointer-events: none;border: 0.2em solid #ed6704;"
+							poster="https://s3.amazonaws.com/public.bencher.dev/demo/bencher_demo_cover.png"
+						>
+							<source
+								src="https://s3.amazonaws.com/public.bencher.dev/demo/bencher_demo_1080.mp4"
+								type="video/mp4"
+							/>
+						</video>
 					</div>
 				</div>
 			</div>
