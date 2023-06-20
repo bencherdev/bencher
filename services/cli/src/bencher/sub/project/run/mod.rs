@@ -168,7 +168,7 @@ impl SubCmd for Run {
         let json_report: JsonReport = serde_json::from_value(json_value)?;
 
         // TODO disable when quiet
-        cli_println!("\nView results: {}", json_report.url);
+        // cli_println!("\nView results: {}", json_report.url);
 
         if self.err && !json_report.alerts.is_empty() {
             return Err(CliError::Alerts);

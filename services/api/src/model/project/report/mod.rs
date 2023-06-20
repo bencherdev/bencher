@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::report::{JsonAdapter, JsonReportAlerts, JsonReportResults},
+    project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
     JsonNewReport, JsonPerfQuery, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
@@ -17,7 +17,10 @@ use super::{
 use crate::{
     context::DbConnection,
     error::api_error,
-    model::user::QueryUser,
+    model::{
+        project::{benchmark::QueryBenchmark, perf::QueryPerf},
+        user::QueryUser,
+    },
     schema,
     schema::report as report_table,
     util::{error::database_map, query::fn_get_id},
@@ -92,7 +95,7 @@ impl QueryReport {
         url.set_query(Some(
             &json_perf_query.to_query_string(&[("tab", Some("benchmarks".into()))])?,
         ));
-        let url = url.into();
+        // let url = url.into();
 
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
@@ -105,25 +108,36 @@ impl QueryReport {
             end_time: to_date_time(end_time)?,
             results,
             alerts,
-            url,
+            // url,
         })
     }
 
     fn get_results(&self, conn: &mut DbConnection) -> Result<JsonReportResults, ApiError> {
-        Ok(schema::perf::table
-            .inner_join(
-                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-            )
+        let perfs = schema::perf::table
             .filter(schema::perf::report_id.eq(self.id))
-            .select(schema::perf::uuid)
-            .order(schema::benchmark::name)
-            .load::<String>(conn)
-            .map_err(api_error!())?
-            .iter()
-            .filter_map(|uuid| {
-                database_map("QueryReport::get_benchmarks", Uuid::from_str(uuid)).map(Into::into)
-            })
-            .collect())
+            .order((schema::perf::iteration, schema::perf::benchmark_id))
+            .load::<QueryPerf>(conn)
+            .map_err(api_error!())?;
+
+        let mut results = Vec::new();
+        let mut benchmarks = Vec::new();
+        let mut iteration = 0;
+        for perf in perfs {
+            if perf.iteration == iteration {
+                let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
+                benchmarks.push(benchmark);
+            } else {
+                let result = JsonReportResult {
+                    metric_kind: "5c2ea020-bbd8-48f4-8d06-a87905356225".parse().unwrap(),
+                    benchmarks: std::mem::take(&mut benchmarks),
+                    url: "http://example.com".parse().unwrap(),
+                };
+                results.push(result);
+                iteration += 1;
+            }
+        }
+
+        Ok(results)
     }
 
     fn get_alerts(&self, conn: &mut DbConnection) -> Result<JsonReportAlerts, ApiError> {

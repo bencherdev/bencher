@@ -89,18 +89,15 @@ pub struct JsonReport {
     pub adapter: JsonAdapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
-    pub url: Url,
 }
 
 pub type JsonReportResults = Vec<JsonReportResult>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReportResult(pub Uuid);
-
-impl From<Uuid> for JsonReportResult {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
+pub struct JsonReportResult {
+    pub metric_kind: Uuid,
+    pub benchmarks: Vec<Uuid>,
+    pub url: Url,
 }
 
 pub type JsonReportAlerts = Vec<JsonReportAlert>;
