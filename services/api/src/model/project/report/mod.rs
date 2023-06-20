@@ -115,6 +115,8 @@ impl QueryReport {
     fn get_results(&self, conn: &mut DbConnection) -> Result<JsonReportResults, ApiError> {
         let perfs = schema::perf::table
             .filter(schema::perf::report_id.eq(self.id))
+            // It is important to order by the iteration first in order to make sure they are grouped together below
+            // Then ordering by the benchmark id makes sure that the benchmarks are in the same order for each iteration
             .order((schema::perf::iteration, schema::perf::benchmark_id))
             .load::<QueryPerf>(conn)
             .map_err(api_error!())?;
@@ -122,9 +124,15 @@ impl QueryReport {
         let mut results = Vec::new();
         let mut benchmarks = Vec::new();
         let mut iteration = 0;
-        for perf in perfs {
+        let perfs_len = perfs.len();
+        for (iter, perf) in perfs.into_iter().enumerate() {
+            // Get the UUID of the benchmark
+            let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
+
+            // If the iteration is the same as the previous one, add the benchmark to the benchmarks list
+            // Otherwise, create a new result and add it to the results list
+            // Then add the benchmark to the now empty benchmarks list
             if perf.iteration == iteration {
-                let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
                 benchmarks.push(benchmark);
             } else {
                 let result = JsonReportResult {
@@ -133,7 +141,18 @@ impl QueryReport {
                     url: "http://example.com".parse().unwrap(),
                 };
                 results.push(result);
-                iteration += 1;
+                iteration = perf.iteration;
+                benchmarks.push(benchmark);
+            }
+
+            // If this is the last iteration, create a new result and add it to the results list
+            if iter == perfs_len - 1 {
+                let result = JsonReportResult {
+                    metric_kind: "5c2ea020-bbd8-48f4-8d06-a87905356225".parse().unwrap(),
+                    benchmarks: std::mem::take(&mut benchmarks),
+                    url: "http://example.com".parse().unwrap(),
+                };
+                results.push(result);
             }
         }
 

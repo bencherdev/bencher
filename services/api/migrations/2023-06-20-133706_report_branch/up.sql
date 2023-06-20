@@ -1,8 +1,8 @@
 -- Since `2023-01-17-135550_branch_version` it has not been possible to know the exact branch of a report.
 -- This is due to the M-M relationship between the `version` and `branch` tables created by the introduction of the `branch_version` table.
 -- This migration attempts to fix this issue by adding a `branch_id` column to the `report` table.
--- Because of this oversight, it is not possible to know the exact branch for all past reports.
 -- This migration will simply use the first branch that the version was associated with, that is the base branch.
+-- This should be correct, as the report should always be for with the base branch.
 PRAGMA foreign_keys = off;
 CREATE TABLE up_report (
     id INTEGER PRIMARY KEY NOT NULL,
