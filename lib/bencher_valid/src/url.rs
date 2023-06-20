@@ -41,6 +41,12 @@ impl From<Url> for String {
     }
 }
 
+impl From<url::Url> for Url {
+    fn from(url: url::Url) -> Self {
+        Self(url.into())
+    }
+}
+
 impl<'de> Deserialize<'de> for Url {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

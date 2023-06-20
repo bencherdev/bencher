@@ -45,3 +45,9 @@ impl From<Visibility> for JsonVisibility {
         }
     }
 }
+
+impl Visibility {
+    pub fn is_public(self) -> bool {
+        JsonVisibility::from(self).is_public()
+    }
+}

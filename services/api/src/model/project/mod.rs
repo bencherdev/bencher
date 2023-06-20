@@ -4,9 +4,7 @@ use std::{str::FromStr, string::ToString};
 use bencher_billing::SubscriptionId;
 #[cfg(feature = "plus")]
 use bencher_json::Jwt;
-use bencher_json::{
-    project::JsonVisibility, JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
-};
+use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
 use bencher_rbac::{Organization, Project};
 #[cfg(feature = "plus")]
 use diesel::JoinOnDsl;
@@ -85,6 +83,10 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
+    pub fn visibility(&self) -> Result<Visibility, ApiError> {
+        Visibility::try_from(self.visibility)
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, ApiError> {
         let Self {
             uuid,
@@ -126,12 +128,13 @@ impl QueryProject {
 
     #[cfg(feature = "plus")]
     pub fn is_public(conn: &mut DbConnection, id: i32) -> Result<bool, ApiError> {
-        is_public(
+        Visibility::try_from(
             schema::project::table
                 .filter(schema::project::id.eq(id))
                 .select(schema::project::visibility)
                 .first::<i32>(conn)?,
         )
+        .map(Visibility::is_public)
     }
 
     #[cfg(feature = "plus")]
@@ -217,7 +220,7 @@ impl QueryProject {
 
         // Check to see if the project is public
         // If so, anyone can access it
-        if is_public(project.visibility)? {
+        if project.visibility()?.is_public() {
             Ok(project)
         } else if let Some(auth_user) = auth_user {
             // If there is an `AuthUser` then validate access
@@ -241,12 +244,6 @@ fn ok_url(url: Option<&str>) -> Result<Option<Url>, ApiError> {
     } else {
         None
     })
-}
-
-fn is_public(visibility: i32) -> Result<bool, ApiError> {
-    Visibility::try_from(visibility)
-        .map(From::from)
-        .map(|v: JsonVisibility| v.is_public())
 }
 
 impl From<&InsertProject> for Organization {

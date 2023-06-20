@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::report::{JsonAdapter, JsonReportAlerts, JsonReportResults},
-    JsonNewReport, JsonReport,
+    JsonNewReport, JsonPerfQuery, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -10,7 +10,10 @@ use uuid::Uuid;
 
 use self::adapter::Adapter;
 
-use super::{branch::QueryBranch, testbed::QueryTestbed, version::QueryVersion};
+use super::{
+    branch::QueryBranch, testbed::QueryTestbed, version::QueryVersion, visibility::Visibility,
+    QueryProject,
+};
 use crate::{
     context::DbConnection,
     error::api_error,
@@ -49,7 +52,12 @@ impl QueryReport {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
+    pub fn into_json(
+        self,
+        conn: &mut DbConnection,
+        endpoint: &url::Url,
+        project: &QueryProject,
+    ) -> Result<JsonReport, ApiError> {
         let results = self.get_results(conn)?;
         let alerts = self.get_alerts(conn)?;
         let Self {
@@ -64,14 +72,34 @@ impl QueryReport {
             ..
         } = self;
 
-        let url = "http://localhost".parse().unwrap();
+        let branch = QueryBranch::get_uuid(conn, branch_id)?;
+        let testbed = QueryTestbed::get_uuid(conn, testbed_id)?;
+        let json_perf_query = JsonPerfQuery {
+            metric_kind: "latency".parse().unwrap(),
+            branches: vec![branch],
+            testbeds: vec![testbed],
+            benchmarks: vec![],
+            start_time: None,
+            end_time: None,
+        };
+
+        let mut url = endpoint.clone();
+        let path = match project.visibility()? {
+            Visibility::Public => format!("/perf/{}", project.slug),
+            Visibility::Private => format!("/console/projects/{}/perf", project.slug),
+        };
+        url.set_path(&path);
+        url.set_query(Some(
+            &json_perf_query.to_query_string(&[("tab", Some("benchmarks".into()))])?,
+        ));
+        let url = url.into();
 
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             user: QueryUser::get_uuid(conn, user_id)?,
-            branch: QueryBranch::get_uuid(conn, branch_id)?,
+            branch,
             version: QueryVersion::get_uuid(conn, version_id)?,
-            testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
+            testbed,
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,

@@ -24,7 +24,6 @@ use crate::{
     schema,
     util::{
         cors::{get_cors, CorsResponse},
-        error::into_json,
         same_project::SameProject,
     },
     ApiError,
@@ -114,7 +113,12 @@ async fn get_ls_inner(
         .load::<QueryReport>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(into_json!(endpoint, conn))
+        .filter_map(|query| {
+            crate::util::error::database_map(
+                endpoint,
+                query.into_json(conn, &context.endpoint, &query_project),
+            )
+        })
         .collect())
 }
 
@@ -168,7 +172,7 @@ async fn post_inner(
     )?;
 
     // Verify that the user is allowed
-    QueryProject::is_allowed_id(
+    let query_project = QueryProject::is_allowed_id(
         conn,
         &context.rbac,
         project_id,
@@ -257,7 +261,7 @@ async fn post_inner(
     // until after the metrics usage has been checked
     processed_report?;
 
-    query_report.into_json(conn)
+    query_report.into_json(conn, &context.endpoint, &query_project)
 }
 
 #[cfg(feature = "plus")]
@@ -401,5 +405,5 @@ async fn get_one_inner(
         ))
         .first::<QueryReport>(conn)
         .map_err(api_error!())?
-        .into_json(conn)
+        .into_json(conn, &context.endpoint, &query_project)
 }
