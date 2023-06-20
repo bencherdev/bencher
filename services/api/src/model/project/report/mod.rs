@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use self::adapter::Adapter;
 
-use super::{testbed::QueryTestbed, version::QueryVersion};
+use super::{branch::QueryBranch, testbed::QueryTestbed, version::QueryVersion};
 use crate::{
     context::DbConnection,
     error::api_error,
@@ -29,6 +29,7 @@ pub struct QueryReport {
     pub id: i32,
     pub uuid: String,
     pub user_id: i32,
+    pub branch_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter: i32,
@@ -54,6 +55,7 @@ impl QueryReport {
         let Self {
             uuid,
             user_id,
+            branch_id,
             version_id,
             testbed_id,
             adapter,
@@ -61,9 +63,13 @@ impl QueryReport {
             end_time,
             ..
         } = self;
+
+        let url = "http://localhost".parse().unwrap();
+
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             user: QueryUser::get_uuid(conn, user_id)?,
+            branch: QueryBranch::get_uuid(conn, branch_id)?,
             version: QueryVersion::get_uuid(conn, version_id)?,
             testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
             adapter: Adapter::try_from(adapter)?.into(),
@@ -71,6 +77,7 @@ impl QueryReport {
             end_time: to_date_time(end_time)?,
             results,
             alerts,
+            url,
         })
     }
 
@@ -127,6 +134,7 @@ pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
 pub struct InsertReport {
     pub uuid: String,
     pub user_id: i32,
+    pub branch_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
     pub adapter: i32,
@@ -137,6 +145,7 @@ pub struct InsertReport {
 impl InsertReport {
     pub fn from_json(
         user_id: i32,
+        branch_id: i32,
         version_id: i32,
         testbed_id: i32,
         report: &JsonNewReport,
@@ -145,6 +154,7 @@ impl InsertReport {
         Self {
             uuid: Uuid::new_v4().to_string(),
             user_id,
+            branch_id,
             version_id,
             testbed_id,
             adapter: Adapter::from(adapter) as i32,

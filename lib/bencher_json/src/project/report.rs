@@ -1,4 +1,4 @@
-use bencher_valid::GitHash;
+use bencher_valid::{GitHash, Url};
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -81,6 +81,7 @@ pub enum JsonFold {
 pub struct JsonReport {
     pub uuid: Uuid,
     pub user: Uuid,
+    pub branch: Uuid,
     pub version: Uuid,
     pub testbed: Uuid,
     pub start_time: DateTime<Utc>,
@@ -88,6 +89,7 @@ pub struct JsonReport {
     pub adapter: JsonAdapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
+    pub url: Url,
 }
 
 pub type JsonReportResults = Vec<JsonReportResult>;

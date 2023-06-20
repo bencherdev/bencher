@@ -161,15 +161,17 @@ impl SubCmd for Run {
         // TODO disable when quiet
         cli_println!("{}", serde_json::to_string_pretty(&report)?);
 
-        let value = self
+        let json_value = self
             .backend
             .post(&format!("/v0/projects/{}/reports", self.project), &report)
             .await?;
-        if self.err {
-            let json_report: JsonReport = serde_json::from_value(value)?;
-            if !json_report.alerts.is_empty() {
-                return Err(CliError::Alerts);
-            }
+        let json_report: JsonReport = serde_json::from_value(json_value)?;
+
+        // TODO disable when quiet
+        cli_println!("\nView results: {}", json_report.url);
+
+        if self.err && !json_report.alerts.is_empty() {
+            return Err(CliError::Alerts);
         }
 
         Ok(())

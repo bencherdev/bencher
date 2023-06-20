@@ -100,6 +100,7 @@ async fn get_ls_inner(
             schema::report::id,
             schema::report::uuid,
             schema::report::user_id,
+            schema::report::branch_id,
             schema::report::version_id,
             schema::report::testbed_id,
             schema::report::adapter,
@@ -209,8 +210,14 @@ async fn post_inner(
     let adapter = json_settings.adapter.unwrap_or_default();
 
     // Create a new report and add it to the database
-    let insert_report =
-        InsertReport::from_json(auth_user.id, version_id, testbed_id, &json_report, adapter);
+    let insert_report = InsertReport::from_json(
+        auth_user.id,
+        branch_id,
+        version_id,
+        testbed_id,
+        &json_report,
+        adapter,
+    );
 
     diesel::insert_into(schema::report::table)
         .values(&insert_report)
@@ -385,6 +392,7 @@ async fn get_one_inner(
             schema::report::id,
             schema::report::uuid,
             schema::report::user_id,
+            schema::report::branch_id,
             schema::report::version_id,
             schema::report::testbed_id,
             schema::report::adapter,

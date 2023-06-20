@@ -119,6 +119,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
+        branch_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
         adapter -> Integer,
