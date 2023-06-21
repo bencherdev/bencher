@@ -1,4 +1,4 @@
-use bencher_valid::{GitHash, Url};
+use bencher_valid::GitHash;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -99,7 +99,6 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 pub struct JsonReportResult {
     pub metric_kind: JsonMetricKind,
     pub benchmarks: Vec<JsonBenchmarkMetric>,
-    pub url: Url,
 }
 
 pub type JsonReportAlerts = Vec<JsonReportAlert>;

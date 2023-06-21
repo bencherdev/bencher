@@ -116,7 +116,7 @@ async fn get_ls_inner(
         .filter_map(|query| {
             crate::util::error::database_map(
                 endpoint,
-                query.into_json(conn, &context.endpoint, &query_project),
+                query.into_json(conn, context.endpoint.clone(), &query_project),
             )
         })
         .collect())
@@ -261,7 +261,7 @@ async fn post_inner(
     // until after the metrics usage has been checked
     processed_report?;
 
-    query_report.into_json(conn, &context.endpoint, &query_project)
+    query_report.into_json(conn, context.endpoint.clone(), &query_project)
 }
 
 #[cfg(feature = "plus")]
@@ -405,5 +405,5 @@ async fn get_one_inner(
         ))
         .first::<QueryReport>(conn)
         .map_err(api_error!())?
-        .into_json(conn, &context.endpoint, &query_project)
+        .into_json(conn, context.endpoint.clone(), &query_project)
 }

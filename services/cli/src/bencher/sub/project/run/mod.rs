@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{collections::BTreeMap, convert::TryFrom};
 
 use async_trait::async_trait;
 use bencher_json::{
@@ -167,8 +167,22 @@ impl SubCmd for Run {
             .await?;
         let json_report: JsonReport = serde_json::from_value(json_value)?;
 
+        let mut urls = BTreeMap::new();
+        for iteration in &json_report.results {
+            for result in iteration {
+                for benchmark_metric in &result.benchmarks {
+                    urls.insert(
+                        benchmark_metric.name.as_ref(),
+                        benchmark_metric.url.as_ref(),
+                    );
+                }
+            }
+        }
         // TODO disable when quiet
-        // cli_println!("\nView results: {}", json_report.url);
+        cli_println!("\nView results:");
+        for (name, url) in urls {
+            cli_println!("- {name}: {url}");
+        }
 
         if self.err && !json_report.alerts.is_empty() {
             return Err(CliError::Alerts);

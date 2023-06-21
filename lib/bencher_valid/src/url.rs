@@ -47,6 +47,12 @@ impl From<url::Url> for Url {
     }
 }
 
+impl Default for Url {
+    fn default() -> Self {
+        Self("about:blank".into())
+    }
+}
+
 impl<'de> Deserialize<'de> for Url {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
