@@ -91,7 +91,8 @@ pub struct JsonReport {
     pub alerts: JsonReportAlerts,
 }
 
-pub type JsonReportResults = Vec<JsonReportResult>;
+pub type JsonReportResults = Vec<JsonReportIteration>;
+pub type JsonReportIteration = Vec<JsonReportResult>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {

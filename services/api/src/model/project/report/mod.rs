@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{
     project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
@@ -122,39 +122,66 @@ impl QueryReport {
             .map_err(api_error!())?;
 
         let mut results = Vec::new();
-        let mut benchmarks = Vec::new();
+
         let mut iteration = 0;
-        let perfs_len = perfs.len();
-        for (iter, perf) in perfs.into_iter().enumerate() {
+        let mut metric_kind_benchmarks = HashMap::<Uuid, Vec<Uuid>>::new();
+        for perf in perfs {
+            // Get the UUIDs of the metric kinds
+            let metric_kinds: Vec<Uuid> = schema::metric_kind::table
+                .left_join(
+                    schema::metric::table
+                        .on(schema::metric_kind::id.eq(schema::metric::metric_kind_id)),
+                )
+                .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+                .filter(schema::perf::id.eq(perf.id))
+                .select(schema::metric_kind::uuid)
+                .load::<String>(conn)
+                .map_err(api_error!())?
+                .into_iter()
+                .filter_map(|uuid| uuid.parse().ok())
+                .collect();
             // Get the UUID of the benchmark
             let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
 
-            // If the iteration is the same as the previous one, add the benchmark to the benchmarks list
-            // Otherwise, create a new result and add it to the results list
-            // Then add the benchmark to the now empty benchmarks list
+            // If the iteration is the same as the previous one, add the benchmark to the benchmarks list for all metric kinds
+            // Otherwise, create a new iteration result and add it to the results list
+            // Then add the benchmark to a new benchmarks list for all metric kinds
             if perf.iteration == iteration {
-                benchmarks.push(benchmark);
+                for metric_kind in metric_kinds {
+                    if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind) {
+                        benchmarks.push(benchmark);
+                    } else {
+                        metric_kind_benchmarks.insert(metric_kind, vec![benchmark]);
+                    }
+                }
             } else {
-                let result = JsonReportResult {
-                    metric_kind: "5c2ea020-bbd8-48f4-8d06-a87905356225".parse().unwrap(),
-                    benchmarks: std::mem::take(&mut benchmarks),
-                    url: "http://example.com".parse().unwrap(),
-                };
-                results.push(result);
+                let mut iteration_results = Vec::new();
+                for (metric_kind, benchmarks) in std::mem::take(&mut metric_kind_benchmarks) {
+                    let result = JsonReportResult {
+                        metric_kind,
+                        benchmarks,
+                        url: "http://example.com".parse().unwrap(),
+                    };
+                    iteration_results.push(result);
+                }
+                results.push(iteration_results);
                 iteration = perf.iteration;
-                benchmarks.push(benchmark);
-            }
-
-            // If this is the last iteration, create a new result and add it to the results list
-            if iter == perfs_len - 1 {
-                let result = JsonReportResult {
-                    metric_kind: "5c2ea020-bbd8-48f4-8d06-a87905356225".parse().unwrap(),
-                    benchmarks: std::mem::take(&mut benchmarks),
-                    url: "http://example.com".parse().unwrap(),
-                };
-                results.push(result);
+                for metric_kind in metric_kinds {
+                    metric_kind_benchmarks.insert(metric_kind, vec![benchmark]);
+                }
             }
         }
+        // Add the last iteration's metric kind and benchmark results
+        let mut iteration_results = Vec::new();
+        for (metric_kind, benchmarks) in metric_kind_benchmarks {
+            let result = JsonReportResult {
+                metric_kind,
+                benchmarks,
+                url: "http://example.com".parse().unwrap(),
+            };
+            iteration_results.push(result);
+        }
+        results.push(iteration_results);
 
         Ok(results)
     }
