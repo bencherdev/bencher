@@ -1,8 +1,10 @@
 use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{
-    project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
-    JsonMetricKind, JsonNewReport, JsonPerfQuery, JsonReport,
+    project::report::{
+        JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
+    },
+    JsonMetricKind, JsonNewReport, JsonPerfQuery, JsonReport, ResourceId, Url,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -12,7 +14,7 @@ use self::adapter::Adapter;
 
 use super::{
     branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed,
-    version::QueryVersion, visibility::Visibility, QueryProject,
+    visibility::Visibility, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -61,58 +63,52 @@ impl QueryReport {
         endpoint: &url::Url,
         project: &QueryProject,
     ) -> Result<JsonReport, ApiError> {
-        let results = self.get_results(conn)?;
+        let branch = QueryBranch::branch_version_json(conn, self.branch_id, self.version_id)?;
+        let testbed = schema::testbed::table
+            .filter(schema::testbed::id.eq(self.testbed_id))
+            .first::<QueryTestbed>(conn)
+            .map_err(api_error!())?
+            .into_json(conn)?;
+
+        let results = self.get_results(conn, endpoint, project, branch.uuid, testbed.uuid)?;
         let alerts = self.get_alerts(conn)?;
+
         let Self {
             uuid,
             user_id,
-            branch_id,
-            version_id,
-            testbed_id,
             adapter,
             start_time,
             end_time,
             ..
         } = self;
 
-        let branch = QueryBranch::branch_version_json(conn, branch_id, version_id)?;
-        let testbed = QueryTestbed::get_uuid(conn, testbed_id)?;
-        let json_perf_query = JsonPerfQuery {
-            metric_kind: "latency".parse().unwrap(),
-            branches: vec![branch.uuid],
-            testbeds: vec![testbed],
-            benchmarks: vec![],
-            start_time: None,
-            end_time: None,
-        };
-
-        let mut url = endpoint.clone();
-        let path = match project.visibility()? {
-            Visibility::Public => format!("/perf/{}", project.slug),
-            Visibility::Private => format!("/console/projects/{}/perf", project.slug),
-        };
-        url.set_path(&path);
-        url.set_query(Some(
-            &json_perf_query.to_query_string(&[("tab", Some("benchmarks".into()))])?,
-        ));
-        // let url = url.into();
+        let user = schema::user::table
+            .filter(schema::user::id.eq(user_id))
+            .first::<QueryUser>(conn)
+            .map_err(api_error!())?
+            .into_json()?;
 
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            user: QueryUser::get_uuid(conn, user_id)?,
+            user,
             branch,
-            version: QueryVersion::get_uuid(conn, version_id)?,
             testbed,
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
             results,
             alerts,
-            // url,
         })
     }
 
-    fn get_results(&self, conn: &mut DbConnection) -> Result<JsonReportResults, ApiError> {
+    fn get_results(
+        &self,
+        conn: &mut DbConnection,
+        endpoint: &url::Url,
+        project: &QueryProject,
+        branch: Uuid,
+        testbed: Uuid,
+    ) -> Result<JsonReportResults, ApiError> {
         let perfs = schema::perf::table
             .filter(schema::perf::report_id.eq(self.id))
             // It is important to order by the iteration first in order to make sure they are grouped together below
@@ -124,8 +120,8 @@ impl QueryReport {
         let mut results = Vec::new();
 
         let mut iteration = 0;
-        let mut metric_kinds = HashMap::<i32, JsonMetricKind>::new();
-        let mut metric_kind_benchmarks = HashMap::<i32, Vec<Uuid>>::new();
+        let mut metric_kinds = HashMap::<Uuid, JsonMetricKind>::new();
+        let mut metric_kind_benchmarks = HashMap::<Uuid, Vec<Uuid>>::new();
         for perf in perfs {
             // Get the metric kinds
             metric_kinds = schema::metric_kind::table
@@ -146,7 +142,10 @@ impl QueryReport {
                 .load::<QueryMetricKind>(conn)
                 .map_err(api_error!())?
                 .into_iter()
-                .filter_map(|metric_kind| Some((metric_kind.id, metric_kind.into_json(conn).ok()?)))
+                .filter_map(|metric_kind| {
+                    let metric_kind_json = metric_kind.into_json(conn).ok()?;
+                    Some((metric_kind_json.uuid, metric_kind_json))
+                })
                 .collect();
             // Get the UUID of the benchmark
             let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
@@ -163,21 +162,14 @@ impl QueryReport {
                     }
                 }
             } else {
-                let mut iteration_results = Vec::new();
-                for (metric_kind, benchmarks) in std::mem::take(&mut metric_kind_benchmarks) {
-                    let result = JsonReportResult {
-                        metric_kind: if let Some(metric_kind) =
-                            metric_kinds.get(&metric_kind).cloned()
-                        {
-                            metric_kind
-                        } else {
-                            continue;
-                        },
-                        benchmarks,
-                        url: "http://example.com".parse().unwrap(),
-                    };
-                    iteration_results.push(result);
-                }
+                let iteration_results = iteration_results(
+                    endpoint,
+                    project,
+                    &metric_kinds,
+                    branch,
+                    testbed,
+                    std::mem::take(&mut metric_kind_benchmarks),
+                )?;
                 results.push(iteration_results);
                 iteration = perf.iteration;
                 for metric_kind in metric_kinds.keys().cloned() {
@@ -186,19 +178,14 @@ impl QueryReport {
             }
         }
         // Add the last iteration's metric kind and benchmark results
-        let mut iteration_results = Vec::new();
-        for (metric_kind, benchmarks) in metric_kind_benchmarks {
-            let result = JsonReportResult {
-                metric_kind: if let Some(metric_kind) = metric_kinds.get(&metric_kind).cloned() {
-                    metric_kind
-                } else {
-                    continue;
-                },
-                benchmarks,
-                url: "http://example.com".parse().unwrap(),
-            };
-            iteration_results.push(result);
-        }
+        let iteration_results = iteration_results(
+            endpoint,
+            project,
+            &metric_kinds,
+            branch,
+            testbed,
+            metric_kind_benchmarks,
+        )?;
         results.push(iteration_results);
 
         Ok(results)
@@ -218,6 +205,69 @@ impl QueryReport {
             })
             .collect())
     }
+}
+
+fn iteration_results(
+    endpoint: &url::Url,
+    project: &QueryProject,
+    metric_kinds: &HashMap<Uuid, JsonMetricKind>,
+    branch: Uuid,
+    testbed: Uuid,
+    metric_kind_benchmarks: HashMap<Uuid, Vec<Uuid>>,
+) -> Result<JsonReportIteration, ApiError> {
+    let mut iteration_results = Vec::new();
+    for (metric_kind, benchmarks) in metric_kind_benchmarks {
+        let url = to_url(
+            endpoint,
+            project,
+            metric_kind.into(),
+            branch,
+            testbed,
+            benchmarks.clone(),
+        )?;
+        let result = JsonReportResult {
+            metric_kind: if let Some(metric_kind) = metric_kinds.get(&metric_kind).cloned() {
+                metric_kind
+            } else {
+                tracing::warn!("Metric kind {metric_kind} not found in metric kinds list");
+                continue;
+            },
+            benchmarks,
+            url,
+        };
+        iteration_results.push(result);
+    }
+    Ok(iteration_results)
+}
+
+fn to_url(
+    endpoint: &url::Url,
+    project: &QueryProject,
+    metric_kind: ResourceId,
+    branch: Uuid,
+    testbed: Uuid,
+    benchmarks: Vec<Uuid>,
+) -> Result<Url, ApiError> {
+    let json_perf_query = JsonPerfQuery {
+        metric_kind,
+        branches: vec![branch],
+        testbeds: vec![testbed],
+        benchmarks,
+        start_time: None,
+        end_time: None,
+    };
+
+    let mut url = endpoint.clone();
+    let path = match project.visibility()? {
+        Visibility::Public => format!("/perf/{}", project.slug),
+        Visibility::Private => format!("/console/projects/{}/perf", project.slug),
+    };
+    url.set_path(&path);
+    url.set_query(Some(&json_perf_query.to_query_string(&[
+            // ("tab", Some("benchmarks".into()))
+            ])?));
+
+    Ok(url.into())
 }
 
 // https://docs.rs/chrono/latest/chrono/serde/ts_nanoseconds/index.html

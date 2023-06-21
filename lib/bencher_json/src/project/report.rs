@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{JsonMetricKind, ResourceId};
+use crate::{JsonMetricKind, JsonTestbed, JsonUser, ResourceId};
 
 use super::branch::JsonBranchVersion;
 
@@ -82,10 +82,9 @@ pub enum JsonFold {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid: Uuid,
-    pub user: Uuid,
+    pub user: JsonUser,
     pub branch: JsonBranchVersion,
-    pub version: Uuid,
-    pub testbed: Uuid,
+    pub testbed: JsonTestbed,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub adapter: JsonAdapter,
