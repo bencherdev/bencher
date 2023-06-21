@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ResourceId;
+use crate::{JsonMetricKind, ResourceId};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -96,7 +96,7 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
-    pub metric_kind: Uuid,
+    pub metric_kind: JsonMetricKind,
     pub benchmarks: Vec<Uuid>,
     pub url: Url,
 }

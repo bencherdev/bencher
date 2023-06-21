@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{
     project::report::{JsonAdapter, JsonReportAlerts, JsonReportResult, JsonReportResults},
-    JsonNewReport, JsonPerfQuery, JsonReport,
+    JsonMetricKind, JsonNewReport, JsonPerfQuery, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -11,8 +11,8 @@ use uuid::Uuid;
 use self::adapter::Adapter;
 
 use super::{
-    branch::QueryBranch, testbed::QueryTestbed, version::QueryVersion, visibility::Visibility,
-    QueryProject,
+    branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed,
+    version::QueryVersion, visibility::Visibility, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -124,21 +124,29 @@ impl QueryReport {
         let mut results = Vec::new();
 
         let mut iteration = 0;
-        let mut metric_kind_benchmarks = HashMap::<Uuid, Vec<Uuid>>::new();
+        let mut metric_kinds = HashMap::<i32, JsonMetricKind>::new();
+        let mut metric_kind_benchmarks = HashMap::<i32, Vec<Uuid>>::new();
         for perf in perfs {
-            // Get the UUIDs of the metric kinds
-            let metric_kinds: Vec<Uuid> = schema::metric_kind::table
+            // Get the metric kinds
+            metric_kinds = schema::metric_kind::table
                 .left_join(
                     schema::metric::table
                         .on(schema::metric_kind::id.eq(schema::metric::metric_kind_id)),
                 )
                 .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
                 .filter(schema::perf::id.eq(perf.id))
-                .select(schema::metric_kind::uuid)
-                .load::<String>(conn)
+                .select((
+                    schema::metric_kind::id,
+                    schema::metric_kind::uuid,
+                    schema::metric_kind::project_id,
+                    schema::metric_kind::name,
+                    schema::metric_kind::slug,
+                    schema::metric_kind::units,
+                ))
+                .load::<QueryMetricKind>(conn)
                 .map_err(api_error!())?
                 .into_iter()
-                .filter_map(|uuid| uuid.parse().ok())
+                .filter_map(|metric_kind| Some((metric_kind.id, metric_kind.into_json(conn).ok()?)))
                 .collect();
             // Get the UUID of the benchmark
             let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
@@ -147,7 +155,7 @@ impl QueryReport {
             // Otherwise, create a new iteration result and add it to the results list
             // Then add the benchmark to a new benchmarks list for all metric kinds
             if perf.iteration == iteration {
-                for metric_kind in metric_kinds {
+                for metric_kind in metric_kinds.keys().cloned() {
                     if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind) {
                         benchmarks.push(benchmark);
                     } else {
@@ -158,7 +166,13 @@ impl QueryReport {
                 let mut iteration_results = Vec::new();
                 for (metric_kind, benchmarks) in std::mem::take(&mut metric_kind_benchmarks) {
                     let result = JsonReportResult {
-                        metric_kind,
+                        metric_kind: if let Some(metric_kind) =
+                            metric_kinds.get(&metric_kind).cloned()
+                        {
+                            metric_kind
+                        } else {
+                            continue;
+                        },
                         benchmarks,
                         url: "http://example.com".parse().unwrap(),
                     };
@@ -166,7 +180,7 @@ impl QueryReport {
                 }
                 results.push(iteration_results);
                 iteration = perf.iteration;
-                for metric_kind in metric_kinds {
+                for metric_kind in metric_kinds.keys().cloned() {
                     metric_kind_benchmarks.insert(metric_kind, vec![benchmark]);
                 }
             }
@@ -175,7 +189,11 @@ impl QueryReport {
         let mut iteration_results = Vec::new();
         for (metric_kind, benchmarks) in metric_kind_benchmarks {
             let result = JsonReportResult {
-                metric_kind,
+                metric_kind: if let Some(metric_kind) = metric_kinds.get(&metric_kind).cloned() {
+                    metric_kind
+                } else {
+                    continue;
+                },
                 benchmarks,
                 url: "http://example.com".parse().unwrap(),
             };
