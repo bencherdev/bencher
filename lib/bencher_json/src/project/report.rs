@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{JsonMetricKind, JsonTestbed, JsonUser, ResourceId};
 
-use super::branch::JsonBranchVersion;
+use super::{benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -98,7 +98,7 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
     pub metric_kind: JsonMetricKind,
-    pub benchmarks: Vec<Uuid>,
+    pub benchmarks: Vec<JsonBenchmarkMetric>,
     pub url: Url,
 }
 

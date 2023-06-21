@@ -1,10 +1,14 @@
 use std::{collections::HashMap, str::FromStr};
 
 use bencher_json::{
-    project::report::{
-        JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
+    project::{
+        benchmark::JsonBenchmarkMetric,
+        report::{
+            JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
+        },
     },
-    JsonMetricKind, JsonNewReport, JsonPerfQuery, JsonReport, ResourceId, Url,
+    JsonBenchmark, JsonMetric, JsonMetricKind, JsonNewReport, JsonPerfQuery, JsonReport,
+    ResourceId, Url,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -13,7 +17,7 @@ use uuid::Uuid;
 use self::adapter::Adapter;
 
 use super::{
-    branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed,
+    branch::QueryBranch, metric::QueryMetric, metric_kind::QueryMetricKind, testbed::QueryTestbed,
     visibility::Visibility, QueryProject,
 };
 use crate::{
@@ -109,60 +113,39 @@ impl QueryReport {
         branch: Uuid,
         testbed: Uuid,
     ) -> Result<JsonReportResults, ApiError> {
-        let perfs = schema::perf::table
-            .filter(schema::perf::report_id.eq(self.id))
-            // It is important to order by the iteration first in order to make sure they are grouped together below
-            // Then ordering by the benchmark id makes sure that the benchmarks are in the same order for each iteration
-            .order((schema::perf::iteration, schema::perf::benchmark_id))
-            .load::<QueryPerf>(conn)
-            .map_err(api_error!())?;
-
         let mut results = Vec::new();
 
         let mut iteration = 0;
-        let mut metric_kinds = HashMap::<Uuid, JsonMetricKind>::new();
-        let mut metric_kind_benchmarks = HashMap::<Uuid, Vec<Uuid>>::new();
+        let mut metric_kinds = HashMap::new();
+        let mut metric_kind_benchmarks = HashMap::<i32, Vec<JsonBenchmarkMetric>>::new();
+
+        let perfs = get_perfs(conn, self.id)?;
         for perf in perfs {
             // Get the metric kinds
-            metric_kinds = schema::metric_kind::table
-                .left_join(
-                    schema::metric::table
-                        .on(schema::metric_kind::id.eq(schema::metric::metric_kind_id)),
-                )
-                .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-                .filter(schema::perf::id.eq(perf.id))
-                .select((
-                    schema::metric_kind::id,
-                    schema::metric_kind::uuid,
-                    schema::metric_kind::project_id,
-                    schema::metric_kind::name,
-                    schema::metric_kind::slug,
-                    schema::metric_kind::units,
-                ))
-                .load::<QueryMetricKind>(conn)
-                .map_err(api_error!())?
-                .into_iter()
-                .filter_map(|metric_kind| {
-                    let metric_kind_json = metric_kind.into_json(conn).ok()?;
-                    Some((metric_kind_json.uuid, metric_kind_json))
-                })
-                .collect();
-            // Get the UUID of the benchmark
-            let benchmark = QueryBenchmark::get_uuid(conn, perf.benchmark_id)?;
+            metric_kinds = get_metric_kinds(conn, perf.id)?;
+
+            // Create a default benchmark metric to use for each metric kind
+            let default_benchmark_metric = get_default_benchmark_metric(conn, perf.benchmark_id)?;
 
             // If the iteration is the same as the previous one, add the benchmark to the benchmarks list for all metric kinds
             // Otherwise, create a new iteration result and add it to the results list
             // Then add the benchmark to a new benchmarks list for all metric kinds
             if perf.iteration == iteration {
-                for metric_kind in metric_kinds.keys().cloned() {
-                    if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind) {
-                        benchmarks.push(benchmark);
+                for metric_kind_id in metric_kinds.keys().cloned() {
+                    let benchmark_metric = get_benchmark_metric(
+                        conn,
+                        perf.id,
+                        metric_kind_id,
+                        default_benchmark_metric.clone(),
+                    )?;
+                    if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
+                        benchmarks.push(benchmark_metric);
                     } else {
-                        metric_kind_benchmarks.insert(metric_kind, vec![benchmark]);
+                        metric_kind_benchmarks.insert(metric_kind_id, vec![benchmark_metric]);
                     }
                 }
             } else {
-                let iteration_results = iteration_results(
+                let iteration_results = get_iteration_results(
                     endpoint,
                     project,
                     &metric_kinds,
@@ -172,13 +155,19 @@ impl QueryReport {
                 )?;
                 results.push(iteration_results);
                 iteration = perf.iteration;
-                for metric_kind in metric_kinds.keys().cloned() {
-                    metric_kind_benchmarks.insert(metric_kind, vec![benchmark]);
+                for metric_kind_id in metric_kinds.keys().cloned() {
+                    let benchmark_metric = get_benchmark_metric(
+                        conn,
+                        perf.id,
+                        metric_kind_id,
+                        default_benchmark_metric.clone(),
+                    )?;
+                    metric_kind_benchmarks.insert(metric_kind_id, vec![benchmark_metric]);
                 }
             }
         }
         // Add the last iteration's metric kind and benchmark results
-        let iteration_results = iteration_results(
+        let iteration_results = get_iteration_results(
             endpoint,
             project,
             &metric_kinds,
@@ -207,31 +196,112 @@ impl QueryReport {
     }
 }
 
-fn iteration_results(
+fn get_perfs(conn: &mut DbConnection, report_id: i32) -> Result<Vec<QueryPerf>, ApiError> {
+    schema::perf::table
+    .filter(schema::perf::report_id.eq(report_id))
+    .inner_join(
+        schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+    )
+    // It is important to order by the iteration first in order to make sure they are grouped together below
+    // Then ordering by the benchmark id makes sure that the benchmarks are in the same order for each iteration
+    .order((schema::perf::iteration,schema::benchmark::name))
+    .select((
+        schema::perf::id,
+        schema::perf::uuid,
+        schema::perf::report_id,
+        schema::perf::iteration,
+        schema::perf::benchmark_id,
+    ))
+    .load::<QueryPerf>(conn)
+    .map_err(api_error!())
+}
+
+fn get_metric_kinds(
+    conn: &mut DbConnection,
+    perf_id: i32,
+) -> Result<HashMap<i32, JsonMetricKind>, ApiError> {
+    Ok(schema::metric_kind::table
+        .left_join(
+            schema::metric::table.on(schema::metric_kind::id.eq(schema::metric::metric_kind_id)),
+        )
+        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+        .filter(schema::perf::id.eq(perf_id))
+        .select((
+            schema::metric_kind::id,
+            schema::metric_kind::uuid,
+            schema::metric_kind::project_id,
+            schema::metric_kind::name,
+            schema::metric_kind::slug,
+            schema::metric_kind::units,
+        ))
+        .load::<QueryMetricKind>(conn)
+        .map_err(api_error!())?
+        .into_iter()
+        .filter_map(|metric_kind| Some((metric_kind.id, metric_kind.into_json(conn).ok()?)))
+        .collect())
+}
+
+fn get_default_benchmark_metric(
+    conn: &mut DbConnection,
+    benchmark_id: i32,
+) -> Result<JsonBenchmarkMetric, ApiError> {
+    let json_benchmark = schema::benchmark::table
+        .filter(schema::benchmark::id.eq(benchmark_id))
+        .first::<QueryBenchmark>(conn)
+        .map_err(api_error!())?
+        .into_json(conn)?;
+    let JsonBenchmark {
+        uuid,
+        project,
+        name,
+    } = json_benchmark;
+    Ok(JsonBenchmarkMetric {
+        uuid,
+        project,
+        name,
+        metric: JsonMetric::default(),
+    })
+}
+
+fn get_benchmark_metric(
+    conn: &mut DbConnection,
+    perf_id: i32,
+    metric_kind_id: i32,
+    mut benchmark_metric: JsonBenchmarkMetric,
+) -> Result<JsonBenchmarkMetric, ApiError> {
+    benchmark_metric.metric = schema::metric::table
+        .filter(schema::metric::perf_id.eq(perf_id))
+        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
+        .first::<QueryMetric>(conn)
+        .map_err(api_error!())?
+        .into_json();
+    Ok(benchmark_metric)
+}
+
+fn get_iteration_results(
     endpoint: &url::Url,
     project: &QueryProject,
-    metric_kinds: &HashMap<Uuid, JsonMetricKind>,
+    metric_kinds: &HashMap<i32, JsonMetricKind>,
     branch: Uuid,
     testbed: Uuid,
-    metric_kind_benchmarks: HashMap<Uuid, Vec<Uuid>>,
+    metric_kind_benchmarks: HashMap<i32, Vec<JsonBenchmarkMetric>>,
 ) -> Result<JsonReportIteration, ApiError> {
     let mut iteration_results = Vec::new();
-    for (metric_kind, benchmarks) in metric_kind_benchmarks {
+    for (metric_kind_id, benchmarks) in metric_kind_benchmarks {
+        let Some(metric_kind) = metric_kinds.get(&metric_kind_id).cloned() else {
+            tracing::warn!("Metric kind {metric_kind_id} not found in metric kinds list");
+            continue;
+        };
         let url = to_url(
             endpoint,
             project,
-            metric_kind.into(),
+            metric_kind.uuid.into(),
             branch,
             testbed,
-            benchmarks.clone(),
+            benchmarks.iter().map(|benchmark| benchmark.uuid).collect(),
         )?;
         let result = JsonReportResult {
-            metric_kind: if let Some(metric_kind) = metric_kinds.get(&metric_kind).cloned() {
-                metric_kind
-            } else {
-                tracing::warn!("Metric kind {metric_kind} not found in metric kinds list");
-                continue;
-            },
+            metric_kind,
             benchmarks,
             url,
         };
