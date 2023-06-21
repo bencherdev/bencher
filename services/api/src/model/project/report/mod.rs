@@ -75,11 +75,11 @@ impl QueryReport {
             ..
         } = self;
 
-        let branch = QueryBranch::get_uuid(conn, branch_id)?;
+        let branch = QueryBranch::branch_version_json(conn, branch_id, version_id)?;
         let testbed = QueryTestbed::get_uuid(conn, testbed_id)?;
         let json_perf_query = JsonPerfQuery {
             metric_kind: "latency".parse().unwrap(),
-            branches: vec![branch],
+            branches: vec![branch.uuid],
             testbeds: vec![testbed],
             benchmarks: vec![],
             start_time: None,

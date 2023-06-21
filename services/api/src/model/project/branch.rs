@@ -1,14 +1,15 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::branch::JsonStartPoint, BranchName, JsonBranch, JsonNewBranch, ResourceId, Slug,
+    project::branch::{JsonBranchVersion, JsonStartPoint},
+    BranchName, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use super::{
     threshold::statistic::{InsertStatistic, QueryStatistic},
-    version::InsertBranchVersion,
+    version::{InsertBranchVersion, QueryVersion},
     QueryProject,
 };
 use crate::{
@@ -81,6 +82,41 @@ impl QueryBranch {
             project: QueryProject::get_uuid(conn, project_id)?,
             name: BranchName::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
+        })
+    }
+
+    pub fn branch_version_json(
+        conn: &mut DbConnection,
+        branch_id: i32,
+        version_id: i32,
+    ) -> Result<JsonBranchVersion, ApiError> {
+        let json_branch = schema::branch::table
+            .filter(schema::branch::id.eq(branch_id))
+            .first::<Self>(conn)
+            .map_err(api_error!())?
+            .into_json(conn)?;
+        let query_version = schema::version::table
+            .filter(schema::version::id.eq(version_id))
+            .first::<QueryVersion>(conn)
+            .map_err(api_error!())?;
+        let JsonBranch {
+            uuid,
+            project,
+            name,
+            slug,
+        } = json_branch;
+        let QueryVersion { number, hash, .. } = query_version;
+        Ok(JsonBranchVersion {
+            uuid,
+            project,
+            name,
+            slug,
+            version_number: number as u32,
+            version_hash: if let Some(version_hash) = hash.as_deref() {
+                Some(GitHash::from_str(version_hash)?)
+            } else {
+                None
+            },
         })
     }
 }

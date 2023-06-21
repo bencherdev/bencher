@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{BranchName, ResourceId, Slug};
+use bencher_valid::{BranchName, GitHash, ResourceId, Slug};
 use once_cell::sync::Lazy;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -69,4 +69,15 @@ impl fmt::Display for JsonBranch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonBranchVersion {
+    pub uuid: Uuid,
+    pub project: Uuid,
+    pub name: BranchName,
+    pub slug: Slug,
+    pub version_number: u32,
+    pub version_hash: Option<GitHash>,
 }

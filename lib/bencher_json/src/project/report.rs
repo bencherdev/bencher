@@ -7,6 +7,8 @@ use uuid::Uuid;
 
 use crate::{JsonMetricKind, ResourceId};
 
+use super::branch::JsonBranchVersion;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewReport {
@@ -81,7 +83,7 @@ pub enum JsonFold {
 pub struct JsonReport {
     pub uuid: Uuid,
     pub user: Uuid,
-    pub branch: Uuid,
+    pub branch: JsonBranchVersion,
     pub version: Uuid,
     pub testbed: Uuid,
     pub start_time: DateTime<Utc>,
