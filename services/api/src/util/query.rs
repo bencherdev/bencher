@@ -1,3 +1,19 @@
+macro_rules! fn_get {
+    ($table:ident) => {
+        pub fn get(
+            conn: &mut crate::context::DbConnection,
+            id: i32,
+        ) -> Result<Self, crate::ApiError> {
+            schema::$table::table
+                .filter(schema::$table::id.eq(id))
+                .first(conn)
+                .map_err(crate::error::api_error!())
+        }
+    };
+}
+
+pub(crate) use fn_get;
+
 macro_rules! fn_get_id {
     ($table:ident) => {
         pub fn get_id<U>(

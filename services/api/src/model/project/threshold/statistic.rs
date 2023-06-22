@@ -5,8 +5,12 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    context::DbConnection, error::api_error, schema, schema::statistic as statistic_table,
-    util::query::fn_get_id, ApiError,
+    context::DbConnection,
+    error::api_error,
+    schema,
+    schema::statistic as statistic_table,
+    util::query::{fn_get, fn_get_id},
+    ApiError,
 };
 
 #[derive(Queryable, Debug, Clone)]
@@ -22,6 +26,7 @@ pub struct QueryStatistic {
 }
 
 impl QueryStatistic {
+    fn_get!(statistic);
     fn_get_id!(statistic);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

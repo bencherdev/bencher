@@ -4,14 +4,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ResourceId;
+use crate::{JsonBranch, JsonMetricKind, JsonTestbed, ResourceId};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
+    pub metric_kind: ResourceId,
     pub branch: ResourceId,
     pub testbed: ResourceId,
-    pub metric_kind: ResourceId,
     #[serde(flatten)]
     pub statistic: JsonNewStatistic,
 }
@@ -27,14 +27,14 @@ pub struct JsonNewStatistic {
     pub right_side: Option<OrderedFloat<f32>>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThreshold {
     pub uuid: Uuid,
-    pub branch: Uuid,
-    pub testbed: Uuid,
-    pub metric_kind: Uuid,
-    pub statistic: Uuid,
+    pub metric_kind: JsonMetricKind,
+    pub branch: JsonBranch,
+    pub testbed: JsonTestbed,
+    pub statistic: JsonStatistic,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]

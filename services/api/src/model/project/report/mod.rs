@@ -17,6 +17,7 @@ use self::adapter::Adapter;
 
 use super::{
     branch::QueryBranch, metric::QueryMetric, metric_kind::QueryMetricKind, testbed::QueryTestbed,
+    threshold::alert::QueryAlert,
 };
 use crate::{
     context::DbConnection,
@@ -60,16 +61,6 @@ impl QueryReport {
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
-        let branch = QueryBranch::branch_version_json(conn, self.branch_id, self.version_id)?;
-        let testbed = schema::testbed::table
-            .filter(schema::testbed::id.eq(self.testbed_id))
-            .first::<QueryTestbed>(conn)
-            .map_err(api_error!())?
-            .into_json(conn)?;
-
-        let results = get_results(conn, self.id)?;
-        let alerts = get_alerts(conn, self.id)?;
-
         let Self {
             uuid,
             user_id,
@@ -79,22 +70,20 @@ impl QueryReport {
             ..
         } = self;
 
-        let user = schema::user::table
-            .filter(schema::user::id.eq(user_id))
-            .first::<QueryUser>(conn)
-            .map_err(api_error!())?
-            .into_json()?;
-
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            user,
-            branch,
-            testbed,
+            user: schema::user::table
+                .filter(schema::user::id.eq(user_id))
+                .first::<QueryUser>(conn)
+                .map_err(api_error!())?
+                .into_json()?,
+            branch: QueryBranch::branch_version_json(conn, self.branch_id, self.version_id)?,
+            testbed: QueryTestbed::get(conn, self.testbed_id)?.into_json(conn)?,
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            results,
-            alerts,
+            results: get_results(conn, self.id)?,
+            alerts: get_alerts(conn, self.id)?,
         })
     }
 }
@@ -261,13 +250,22 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
     Ok(schema::alert::table
         .left_join(schema::perf::table.on(schema::perf::id.eq(schema::alert::perf_id)))
         .filter(schema::perf::report_id.eq(report_id))
-        .select(schema::alert::uuid)
         .order(schema::alert::id)
-        .load::<String>(conn)
+        .select((
+            schema::alert::id,
+            schema::alert::uuid,
+            schema::alert::perf_id,
+            schema::alert::threshold_id,
+            schema::alert::statistic_id,
+            schema::alert::side,
+            schema::alert::boundary,
+            schema::alert::outlier,
+        ))
+        .load::<QueryAlert>(conn)
         .map_err(api_error!())?
-        .iter()
-        .filter_map(|uuid| {
-            database_map("QueryReport::get_alerts", Uuid::from_str(uuid)).map(Into::into)
+        .into_iter()
+        .filter_map(|alert| {
+            database_map("QueryReport::get_alerts", alert.into_json(conn)).map(Into::into)
         })
         .collect())
 }

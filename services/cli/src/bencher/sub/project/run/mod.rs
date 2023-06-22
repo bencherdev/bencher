@@ -169,10 +169,29 @@ impl SubCmd for Run {
         let json_report: JsonReport = serde_json::from_value(json_value)?;
 
         let benchmark_urls = BenchmarkUrls::new(&self.backend, &self.project, &json_report).await?;
-        benchmark_urls.print();
 
-        if self.err && !json_report.alerts.is_empty() {
-            return Err(CliError::Alerts);
+        cli_println!("\nView results:");
+        for (name, url) in &benchmark_urls.0 {
+            cli_println!("- {name}: {url}");
+        }
+
+        if json_report.alerts.is_empty() {
+            return Ok(());
+        }
+
+        cli_println!("\nView alerts:");
+        for alert in &json_report.alerts {
+            cli_println!(
+                "- {}: `bencher alert view --project {} {}`",
+                alert.benchmark.name,
+                self.project,
+                alert.uuid
+            );
+        }
+        cli_println!("\n");
+
+        if self.err {
+            return Err(CliError::Alerts(json_report.alerts.len()));
         }
 
         Ok(())

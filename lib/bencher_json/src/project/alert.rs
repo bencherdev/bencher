@@ -4,13 +4,18 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+use crate::JsonThreshold;
+
+use super::benchmark::JsonBenchmarkMetric;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAlert {
     pub uuid: Uuid,
-    pub perf: Uuid,
-    pub threshold: Uuid,
-    pub statistic: Uuid,
+    pub report: Uuid,
+    pub iteration: u32,
+    pub benchmark: JsonBenchmarkMetric,
+    pub threshold: JsonThreshold,
     pub side: JsonSide,
     pub boundary: OrderedFloat<f32>,
     pub outlier: OrderedFloat<f32>,

@@ -145,7 +145,7 @@ async fn get_branch(
     backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
     let value = backend
-        .get_query(
+        .get_query_quiet(
             &format!("/v0/projects/{project}/branches"),
             &JsonBranches {
                 name: Some(branch_name.to_string()),

@@ -9,7 +9,7 @@ use crate::{
     error::api_error,
     schema,
     schema::perf as perf_table,
-    util::query::fn_get_id,
+    util::query::{fn_get, fn_get_id},
     ApiError,
 };
 
@@ -23,6 +23,7 @@ pub struct QueryPerf {
 }
 
 impl QueryPerf {
+    fn_get!(perf);
     fn_get_id!(perf);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

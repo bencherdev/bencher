@@ -18,7 +18,11 @@ use crate::{
     model::project::threshold::{InsertThreshold, QueryThreshold},
     schema,
     schema::branch as branch_table,
-    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_child_slug},
+    util::{
+        query::{fn_get, fn_get_id},
+        resource_id::fn_resource_id,
+        slug::unwrap_child_slug,
+    },
     ApiError,
 };
 
@@ -34,6 +38,7 @@ pub struct QueryBranch {
 }
 
 impl QueryBranch {
+    fn_get!(branch);
     fn_get_id!(branch);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
@@ -90,22 +95,13 @@ impl QueryBranch {
         branch_id: i32,
         version_id: i32,
     ) -> Result<JsonBranchVersion, ApiError> {
-        let json_branch = schema::branch::table
-            .filter(schema::branch::id.eq(branch_id))
-            .first::<Self>(conn)
-            .map_err(api_error!())?
-            .into_json(conn)?;
-        let query_version = schema::version::table
-            .filter(schema::version::id.eq(version_id))
-            .first::<QueryVersion>(conn)
-            .map_err(api_error!())?;
         let JsonBranch {
             uuid,
             project,
             name,
             slug,
-        } = json_branch;
-        let QueryVersion { number, hash, .. } = query_version;
+        } = Self::get(conn, branch_id)?.into_json(conn)?;
+        let QueryVersion { number, hash, .. } = QueryVersion::get(conn, version_id)?;
         Ok(JsonBranchVersion {
             uuid,
             project,
@@ -208,9 +204,9 @@ impl InsertBranch {
                 // Clone the threshold for the new branch using the newly cloned statistic
                 let insert_threshold = InsertThreshold::new(
                     conn,
+                    query_threshold.metric_kind_id,
                     new_branch_id,
                     query_threshold.testbed_id,
-                    query_threshold.metric_kind_id,
                     &insert_statistic.uuid,
                 )?;
 

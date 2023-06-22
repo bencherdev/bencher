@@ -6,9 +6,9 @@ use bencher_json::{
 use url::Url;
 use uuid::Uuid;
 
-use crate::{bencher::backend::Backend, cli_println, CliError};
+use crate::{bencher::backend::Backend, CliError};
 
-pub struct BenchmarkUrls(BTreeMap<String, Url>);
+pub struct BenchmarkUrls(pub BTreeMap<String, Url>);
 
 impl BenchmarkUrls {
     pub async fn new(
@@ -16,10 +16,12 @@ impl BenchmarkUrls {
         project: &ResourceId,
         json_report: &JsonReport,
     ) -> Result<Self, CliError> {
-        let json_value = backend.get("/v0/server/config/endpoint").await?;
+        let json_value = backend.get_quiet("/v0/server/config/endpoint").await?;
         let endpoint_url: Url = serde_json::from_value(json_value)?;
 
-        let json_value = backend.get(&format!("/v0/projects/{project}")).await?;
+        let json_value = backend
+            .get_quiet(&format!("/v0/projects/{project}"))
+            .await?;
         let json_project: JsonProject = serde_json::from_value(json_value)?;
 
         let benchmark_url = BenchmarkUrl::new(
@@ -43,14 +45,6 @@ impl BenchmarkUrls {
         }
 
         Ok(Self(urls))
-    }
-
-    pub fn print(&self) {
-        // TODO disable when quiet
-        cli_println!("\nView results:");
-        for (name, url) in &self.0 {
-            cli_println!("- {name}: {url}");
-        }
     }
 }
 

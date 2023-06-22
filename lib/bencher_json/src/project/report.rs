@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{JsonMetricKind, JsonTestbed, JsonUser, ResourceId};
+use crate::{JsonAlert, JsonMetricKind, JsonTestbed, JsonUser, ResourceId};
 
 use super::{benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion};
 
@@ -101,13 +101,4 @@ pub struct JsonReportResult {
     pub benchmarks: Vec<JsonBenchmarkMetric>,
 }
 
-pub type JsonReportAlerts = Vec<JsonReportAlert>;
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReportAlert(pub Uuid);
-
-impl From<Uuid> for JsonReportAlert {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-}
+pub type JsonReportAlerts = Vec<JsonAlert>;

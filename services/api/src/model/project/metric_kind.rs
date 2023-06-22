@@ -16,7 +16,11 @@ use crate::{
     model::project::QueryProject,
     schema,
     schema::metric_kind as metric_kind_table,
-    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_child_slug},
+    util::{
+        query::{fn_get, fn_get_id},
+        resource_id::fn_resource_id,
+        slug::unwrap_child_slug,
+    },
     ApiError,
 };
 
@@ -33,6 +37,7 @@ pub struct QueryMetricKind {
 }
 
 impl QueryMetricKind {
+    fn_get!(metric_kind);
     fn_get_id!(metric_kind);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

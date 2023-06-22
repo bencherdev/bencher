@@ -61,7 +61,11 @@ fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, CliError> {
 
 impl Backend {
     pub async fn get(&self, path: &str) -> Result<serde_json::Value, CliError> {
-        self.send::<()>(Method::Get, path).await
+        self.send::<()>(Method::Get, path, true).await
+    }
+
+    pub async fn get_quiet(&self, path: &str) -> Result<serde_json::Value, CliError> {
+        self.send::<()>(Method::Get, path, false).await
     }
 
     pub async fn get_query<T: Serialize + ?Sized>(
@@ -69,36 +73,48 @@ impl Backend {
         path: &str,
         query: &T,
     ) -> Result<serde_json::Value, CliError> {
-        println!("{}", serde_json::to_string(query).unwrap());
-        self.send(Method::GetQuery(query), path).await
+        self.send(Method::GetQuery(query), path, true).await
+    }
+
+    pub async fn get_query_quiet<T: Serialize + ?Sized>(
+        &self,
+        path: &str,
+        query: &T,
+    ) -> Result<serde_json::Value, CliError> {
+        self.send(Method::GetQuery(query), path, false).await
     }
 
     pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
-        self.send(Method::Post(json), path).await
+        self.send(Method::Post(json), path, true).await
     }
 
     pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
-        self.send(Method::Put(json), path).await
+        self.send(Method::Put(json), path, true).await
     }
 
     pub async fn patch<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
-        self.send(Method::Patch(json), path).await
+        self.send(Method::Patch(json), path, true).await
     }
 
     pub async fn delete(&self, path: &str) -> Result<serde_json::Value, CliError> {
-        self.send::<()>(Method::Delete, path).await
+        self.send::<()>(Method::Delete, path, true).await
     }
 
-    async fn send<T>(&self, method: Method<&T>, path: &str) -> Result<serde_json::Value, CliError>
+    async fn send<T>(
+        &self,
+        method: Method<&T>,
+        path: &str,
+        verbose: bool,
+    ) -> Result<serde_json::Value, CliError>
     where
         T: Serialize + ?Sized,
     {
@@ -113,7 +129,9 @@ impl Backend {
             match self.builder(&client, &method, &url).send().await {
                 Ok(res) => {
                     let json = res.json().await?;
-                    cli_println!("{}", serde_json::to_string_pretty(&json)?);
+                    if verbose {
+                        cli_println!("{}", serde_json::to_string_pretty(&json)?);
+                    }
                     return Ok(json);
                 },
                 Err(e) => {

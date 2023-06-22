@@ -7,8 +7,12 @@ use uuid::Uuid;
 use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed};
 use crate::{
-    context::DbConnection, error::api_error, schema, schema::threshold as threshold_table,
-    util::query::fn_get_id, ApiError,
+    context::DbConnection,
+    error::api_error,
+    schema,
+    schema::threshold as threshold_table,
+    util::query::{fn_get, fn_get_id},
+    ApiError,
 };
 
 pub mod alert;
@@ -25,6 +29,7 @@ pub struct QueryThreshold {
 }
 
 impl QueryThreshold {
+    fn_get!(threshold);
     fn_get_id!(threshold);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
@@ -47,10 +52,10 @@ impl QueryThreshold {
         } = self;
         Ok(JsonThreshold {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            branch: QueryBranch::get_uuid(conn, branch_id)?,
-            testbed: QueryTestbed::get_uuid(conn, testbed_id)?,
-            metric_kind: QueryMetricKind::get_uuid(conn, metric_kind_id)?,
-            statistic: QueryStatistic::get_uuid(conn, statistic_id)?,
+            metric_kind: QueryMetricKind::get(conn, metric_kind_id)?.into_json(conn)?,
+            branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
+            testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
+            statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
         })
     }
 }
@@ -68,9 +73,9 @@ pub struct InsertThreshold {
 impl InsertThreshold {
     pub fn new<U>(
         conn: &mut DbConnection,
+        metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
-        metric_kind_id: i32,
         statistic: &U,
     ) -> Result<Self, ApiError>
     where
@@ -103,9 +108,9 @@ impl InsertThreshold {
 
         Self::new(
             conn,
+            metric_kind_id,
             branch_id,
             testbed_id,
-            metric_kind_id,
             &insert_statistic.uuid,
         )
     }

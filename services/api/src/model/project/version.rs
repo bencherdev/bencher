@@ -5,9 +5,13 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
 use crate::{
-    context::DbConnection, error::api_error, schema,
-    schema::branch_version as branch_version_table, schema::version as version_table,
-    util::query::fn_get_id, ApiError,
+    context::DbConnection,
+    error::api_error,
+    schema,
+    schema::branch_version as branch_version_table,
+    schema::version as version_table,
+    util::query::{fn_get, fn_get_id},
+    ApiError,
 };
 
 #[derive(Queryable)]
@@ -26,6 +30,7 @@ pub struct QueryBranchVersion {
 }
 
 impl QueryVersion {
+    fn_get!(version);
     fn_get_id!(version);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

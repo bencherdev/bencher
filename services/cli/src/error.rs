@@ -27,8 +27,8 @@ pub enum CliError {
         "{2} branches were found with name \"{1}\" in project \"{0}\"! Exactly one was expected."
     )]
     BranchName(String, String, usize),
-    #[error("Alerts detected.")]
-    Alerts,
+    #[error("Alerts detected ({0}).")]
+    Alerts(usize),
     #[error("Failed to send after {0} attempt(s)")]
     Send(usize),
     #[error("Arithmetic error")]

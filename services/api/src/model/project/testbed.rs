@@ -10,7 +10,11 @@ use crate::{
     error::api_error,
     schema,
     schema::testbed as testbed_table,
-    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_child_slug},
+    util::{
+        query::{fn_get, fn_get_id},
+        resource_id::fn_resource_id,
+        slug::unwrap_child_slug,
+    },
     ApiError,
 };
 
@@ -26,6 +30,7 @@ pub struct QueryTestbed {
 }
 
 impl QueryTestbed {
+    fn_get!(testbed);
     fn_get_id!(testbed);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
