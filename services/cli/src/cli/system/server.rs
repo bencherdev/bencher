@@ -45,6 +45,8 @@ pub enum CliConfig {
     Update(CliConfigUpdate),
     /// View server config
     View(CliConfigView),
+    /// View server endpoint
+    Endpoint(CliConfigEndpoint),
 }
 
 #[derive(Parser, Debug)]
@@ -63,6 +65,12 @@ pub struct CliConfigUpdate {
 
 #[derive(Parser, Debug)]
 pub struct CliConfigView {
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliConfigEndpoint {
     #[clap(flatten)]
     pub backend: CliBackend,
 }

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use crate::{bencher::sub::SubCmd, cli::system::server::CliConfig, CliError};
 
+mod endpoint;
 mod update;
 mod view;
 
@@ -11,6 +12,7 @@ const CONFIG_PATH: &str = "/v0/server/config";
 pub enum Config {
     Update(update::Update),
     View(view::View),
+    Endpoint(endpoint::Endpoint),
 }
 
 impl TryFrom<CliConfig> for Config {
@@ -20,6 +22,7 @@ impl TryFrom<CliConfig> for Config {
         Ok(match config {
             CliConfig::Update(update) => Self::Update(update.try_into()?),
             CliConfig::View(view) => Self::View(view.try_into()?),
+            CliConfig::Endpoint(endpoint) => Self::Endpoint(endpoint.try_into()?),
         })
     }
 }
@@ -30,6 +33,7 @@ impl SubCmd for Config {
         match self {
             Self::Update(update) => update.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Endpoint(endpoint) => endpoint.exec().await,
         }
     }
 }

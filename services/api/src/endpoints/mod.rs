@@ -149,6 +149,8 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(system::server::config::options)?;
     api.register(system::server::config::put)?;
     api.register(system::server::config::get_one)?;
+    api.register(system::server::config::endpoint::options)?;
+    api.register(system::server::config::endpoint::get_one)?;
     api.register(system::server::backup::options)?;
     api.register(system::server::backup::post)?;
 

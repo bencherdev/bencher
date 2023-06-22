@@ -104,3 +104,55 @@ async fn put_inner(
 
     Ok(json_config)
 }
+
+pub mod endpoint {
+    use bencher_json::Url;
+    use dropshot::{endpoint, HttpError, RequestContext};
+
+    use crate::{
+        context::ApiContext,
+        endpoints::{
+            endpoint::{pub_response_ok, response_ok, ResponseOk},
+            system::server::Resource,
+            Endpoint, Method,
+        },
+        model::user::auth::AuthUser,
+        util::cors::{get_cors, CorsResponse},
+        ApiError,
+    };
+
+    const ENDPOINT_RESOURCE: Resource = Resource::Endpoint;
+
+    #[allow(clippy::unused_async)]
+    #[endpoint {
+        method = OPTIONS,
+        path =  "/v0/server/config/endpoint",
+        tags = ["server", "config"]
+    }]
+    pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+        Ok(get_cors::<ApiContext>())
+    }
+
+    #[endpoint {
+        method = GET,
+        path =  "/v0/server/config/endpoint",
+        tags = ["server", "config"]
+    }]
+    pub async fn get_one(rqctx: RequestContext<ApiContext>) -> Result<ResponseOk<Url>, HttpError> {
+        let auth_user = AuthUser::new(&rqctx).await.ok();
+        let endpoint = Endpoint::new(ENDPOINT_RESOURCE, Method::GetOne);
+
+        let context = rqctx.context();
+        let json = get_one_inner(context).await.map_err(|e| endpoint.err(e))?;
+
+        if auth_user.is_some() {
+            response_ok!(endpoint, json)
+        } else {
+            pub_response_ok!(endpoint, json)
+        }
+    }
+
+    async fn get_one_inner(context: &ApiContext) -> Result<Url, ApiError> {
+        Ok(context.endpoint.clone().into())
+    }
+}

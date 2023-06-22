@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, convert::TryFrom};
+use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{
@@ -9,7 +9,7 @@ use chrono::Utc;
 use clap::ValueEnum;
 
 use crate::{
-    bencher::backend::Backend,
+    bencher::{backend::Backend, sub::project::run::urls::BenchmarkUrls},
     cli::project::run::{CliRun, CliRunAdapter},
     cli_eprintln, cli_println, CliError,
 };
@@ -19,6 +19,7 @@ mod average;
 mod branch;
 mod fold;
 pub mod runner;
+mod urls;
 
 use adapter::RunAdapter;
 use average::Average;
@@ -167,22 +168,8 @@ impl SubCmd for Run {
             .await?;
         let json_report: JsonReport = serde_json::from_value(json_value)?;
 
-        let mut urls = BTreeMap::new();
-        for iteration in &json_report.results {
-            for result in iteration {
-                for benchmark_metric in &result.benchmarks {
-                    urls.insert(
-                        benchmark_metric.name.as_ref(),
-                        benchmark_metric.url.as_ref(),
-                    );
-                }
-            }
-        }
-        // TODO disable when quiet
-        cli_println!("\nView results:");
-        for (name, url) in urls {
-            cli_println!("- {name}: {url}");
-        }
+        let benchmark_urls = BenchmarkUrls::new(&self.backend, &self.project, &json_report).await?;
+        benchmark_urls.print();
 
         if self.err && !json_report.alerts.is_empty() {
             return Err(CliError::Alerts);

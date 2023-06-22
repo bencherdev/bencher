@@ -7,8 +7,7 @@ use bencher_json::{
             JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
         },
     },
-    JsonBenchmark, JsonMetric, JsonMetricKind, JsonNewReport, JsonPerfQuery, JsonReport,
-    ResourceId, Url,
+    JsonBenchmark, JsonMetric, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -18,7 +17,6 @@ use self::adapter::Adapter;
 
 use super::{
     branch::QueryBranch, metric::QueryMetric, metric_kind::QueryMetricKind, testbed::QueryTestbed,
-    visibility::Visibility, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -61,12 +59,7 @@ impl QueryReport {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn into_json(
-        self,
-        conn: &mut DbConnection,
-        endpoint: url::Url,
-        project: &QueryProject,
-    ) -> Result<JsonReport, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
         let branch = QueryBranch::branch_version_json(conn, self.branch_id, self.version_id)?;
         let testbed = schema::testbed::table
             .filter(schema::testbed::id.eq(self.testbed_id))
@@ -74,8 +67,7 @@ impl QueryReport {
             .map_err(api_error!())?
             .into_json(conn)?;
 
-        let benchmark_url = BenchmarkUrl::new(endpoint, project, branch.uuid, testbed.uuid)?;
-        let results = get_results(conn, self.id, &benchmark_url)?;
+        let results = get_results(conn, self.id)?;
         let alerts = get_alerts(conn, self.id)?;
 
         let Self {
@@ -107,11 +99,7 @@ impl QueryReport {
     }
 }
 
-fn get_results(
-    conn: &mut DbConnection,
-    report_id: i32,
-    benchmark_url: &BenchmarkUrl,
-) -> Result<JsonReportResults, ApiError> {
+fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResults, ApiError> {
     let mut results = Vec::new();
 
     let mut iteration = 0;
@@ -136,9 +124,7 @@ fn get_results(
                     conn,
                     perf.id,
                     metric_kind_id,
-                    &metric_kinds,
                     default_benchmark_metric.clone(),
-                    benchmark_url,
                 )?;
                 if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
                     benchmarks.push(benchmark_metric);
@@ -156,9 +142,7 @@ fn get_results(
                     conn,
                     perf.id,
                     metric_kind_id,
-                    &metric_kinds,
                     default_benchmark_metric.clone(),
-                    benchmark_url,
                 )?;
                 metric_kind_benchmarks.insert(metric_kind_id, vec![benchmark_metric]);
             }
@@ -235,7 +219,6 @@ fn get_default_benchmark_metric(
         project,
         name,
         metric: JsonMetric::default(),
-        url: Url::default(),
     })
 }
 
@@ -243,9 +226,7 @@ fn get_benchmark_metric(
     conn: &mut DbConnection,
     perf_id: i32,
     metric_kind_id: i32,
-    metric_kinds: &HashMap<i32, JsonMetricKind>,
     mut benchmark_metric: JsonBenchmarkMetric,
-    benchmark_url: &BenchmarkUrl,
 ) -> Result<JsonBenchmarkMetric, ApiError> {
     benchmark_metric.metric = schema::metric::table
         .filter(schema::metric::perf_id.eq(perf_id))
@@ -254,61 +235,7 @@ fn get_benchmark_metric(
         .map_err(api_error!())?
         .into_json();
 
-    let Some(metric_kind) = metric_kinds.get(&metric_kind_id) else {
-        tracing::warn!("Metric kind {metric_kind_id} not found in benchmark url metric kinds list");
-        return Ok(benchmark_metric);
-    };
-    benchmark_metric.url = benchmark_url.to_url(metric_kind.uuid.into(), benchmark_metric.uuid)?;
-
     Ok(benchmark_metric)
-}
-
-struct BenchmarkUrl {
-    endpoint: url::Url,
-    project_visibility: Visibility,
-    project_slug: String,
-    branch: Uuid,
-    testbed: Uuid,
-}
-
-impl BenchmarkUrl {
-    fn new(
-        endpoint: url::Url,
-        project: &QueryProject,
-        branch: Uuid,
-        testbed: Uuid,
-    ) -> Result<Self, ApiError> {
-        Ok(Self {
-            endpoint,
-            project_visibility: project.visibility()?,
-            project_slug: project.slug.clone(),
-            branch,
-            testbed,
-        })
-    }
-
-    fn to_url(&self, metric_kind: ResourceId, benchmark: Uuid) -> Result<Url, ApiError> {
-        let json_perf_query = JsonPerfQuery {
-            metric_kind,
-            branches: vec![self.branch],
-            testbeds: vec![self.testbed],
-            benchmarks: vec![benchmark],
-            start_time: None,
-            end_time: None,
-        };
-
-        let mut url = self.endpoint.clone();
-        let path = match self.project_visibility {
-            Visibility::Public => format!("/perf/{}", self.project_slug),
-            Visibility::Private => format!("/console/projects/{}/perf", self.project_slug),
-        };
-        url.set_path(&path);
-        url.set_query(Some(&json_perf_query.to_query_string(&[
-            // ("tab", Some("reports".into()))
-            ])?));
-
-        Ok(url.into())
-    }
 }
 
 fn get_iteration_results(

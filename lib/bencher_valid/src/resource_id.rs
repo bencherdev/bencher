@@ -36,6 +36,12 @@ impl From<Uuid> for ResourceId {
     }
 }
 
+impl From<Slug> for ResourceId {
+    fn from(slug: Slug) -> Self {
+        Self(slug.into())
+    }
+}
+
 impl AsRef<str> for ResourceId {
     fn as_ref(&self) -> &str {
         &self.0

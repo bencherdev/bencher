@@ -52,7 +52,7 @@ pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| {
 pub static DEFAULT_SECRET_KEY: Lazy<Secret> = Lazy::new(|| uuid::Uuid::new_v4().into());
 
 #[derive(Debug, Clone)]
-pub struct Config(pub JsonConfig);
+pub struct Config(JsonConfig);
 
 impl Config {
     pub async fn load_or_default() -> Result<Self, ApiError> {
@@ -150,6 +150,10 @@ impl Config {
             error!("Failed to write config file at {path}: {e}");
             ApiError::WriteConfigFile(path)
         })
+    }
+
+    pub fn into_inner(self) -> JsonConfig {
+        self.0
     }
 }
 

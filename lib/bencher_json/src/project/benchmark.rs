@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{BenchmarkName, Url};
+use bencher_valid::BenchmarkName;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -29,5 +29,4 @@ pub struct JsonBenchmarkMetric {
     pub project: Uuid,
     pub name: BenchmarkName,
     pub metric: JsonMetric,
-    pub url: Url,
 }
