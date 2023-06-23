@@ -183,7 +183,7 @@ impl SubCmd for Run {
         for alert in &json_report.alerts {
             cli_println!(
                 "- {}: `bencher alert view --project {} {}`",
-                alert.benchmark.name,
+                alert.boundary.benchmark.name,
                 self.project,
                 alert.uuid
             );

@@ -130,6 +130,8 @@ pub enum ApiError {
     BadDate(i32, u32, u32),
     #[error("Bad time: {0} {1} {2}")]
     BadTime(u32, u32, u32),
+    #[error("Bad alert status: {0}")]
+    BadAlertStatus(i32),
 
     #[cfg(not(feature = "plus"))]
     #[error("Tried to create a private project")]

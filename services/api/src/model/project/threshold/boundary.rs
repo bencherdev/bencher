@@ -19,7 +19,7 @@ use crate::{
     },
     schema,
     schema::boundary as boundary_table,
-    util::query::fn_get_id,
+    util::query::{fn_get, fn_get_id},
     ApiError,
 };
 
@@ -35,6 +35,7 @@ pub struct QueryBoundary {
 }
 
 impl QueryBoundary {
+    fn_get!(boundary);
     fn_get_id!(boundary);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

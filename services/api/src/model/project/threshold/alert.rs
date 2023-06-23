@@ -1,38 +1,23 @@
 use std::str::FromStr;
 
-use bencher_json::{
-    project::{
-        alert::{JsonAlert, JsonSide},
-        benchmark::JsonBenchmarkMetric,
-    },
-    JsonBenchmark,
-};
+use bencher_json::project::alert::{JsonAlert, JsonAlertStatus};
+use chrono::{TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::QueryThreshold;
+use super::boundary::QueryBoundary;
 use crate::{
-    context::DbConnection,
-    error::api_error,
-    model::project::{
-        benchmark::QueryBenchmark, metric::QueryMetric, perf::QueryPerf, report::QueryReport,
-    },
-    schema,
-    schema::alert as alert_table,
-    util::query::fn_get_id,
-    ApiError,
+    context::DbConnection, error::api_error, schema, schema::alert as alert_table,
+    util::query::fn_get_id, ApiError,
 };
 
 #[derive(Queryable)]
 pub struct QueryAlert {
     pub id: i32,
     pub uuid: String,
-    pub perf_id: i32,
-    pub threshold_id: i32,
-    pub statistic_id: i32,
-    pub side: bool,
-    pub boundary: f32,
-    pub outlier: f32,
+    pub boundary_id: i32,
+    pub status: i32,
+    pub modified: i64,
 }
 
 impl QueryAlert {
@@ -50,99 +35,57 @@ impl QueryAlert {
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
         let Self {
             uuid,
-            perf_id,
-            threshold_id,
-            statistic_id,
-            side,
-            boundary,
-            outlier,
+            boundary_id,
+            status,
+            modified,
             ..
         } = self;
 
-        let perf = QueryPerf::get(conn, perf_id)?;
-        let mut threshold = QueryThreshold::get(conn, threshold_id)?;
-        // IMPORTANT: Set the statistic ID to the one from the alert, and not the current value!
-        threshold.statistic_id = statistic_id;
-
         Ok(JsonAlert {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            report: QueryReport::get_uuid(conn, perf.report_id)?,
-            iteration: perf.iteration as u32,
-            benchmark: get_benchmark_metric(
-                conn,
-                perf.id,
-                threshold.metric_kind_id,
-                perf.benchmark_id,
-            )?,
-            threshold: threshold.into_json(conn)?,
-            side: Side::from(side).into(),
-            boundary: boundary.into(),
-            outlier: outlier.into(),
+            boundary: QueryBoundary::get(conn, boundary_id)?.into_json(conn)?,
+            status: Status::try_from(status)?.into(),
+            modified: Utc
+                .timestamp_opt(modified, 0)
+                .single()
+                .ok_or(ApiError::Timestamp(modified))?,
         })
     }
 }
 
-fn get_benchmark_metric(
-    conn: &mut DbConnection,
-    perf_id: i32,
-    metric_kind_id: i32,
-    benchmark_id: i32,
-) -> Result<JsonBenchmarkMetric, ApiError> {
-    let json_benchmark = schema::benchmark::table
-        .filter(schema::benchmark::id.eq(benchmark_id))
-        .first::<QueryBenchmark>(conn)
-        .map_err(api_error!())?
-        .into_json(conn)?;
-    let JsonBenchmark {
-        uuid,
-        project,
-        name,
-    } = json_benchmark;
-
-    let metric = schema::metric::table
-        .filter(schema::metric::perf_id.eq(perf_id))
-        .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
-        .first::<QueryMetric>(conn)
-        .map_err(api_error!())?
-        .into_json();
-
-    Ok(JsonBenchmarkMetric {
-        uuid,
-        project,
-        name,
-        metric,
-    })
+#[derive(Default)]
+pub enum Status {
+    #[default]
+    Unread = 0,
+    Read = 1,
 }
 
-pub enum Side {
-    Left = 0,
-    Right = 1,
-}
+impl TryFrom<i32> for Status {
+    type Error = ApiError;
 
-impl From<bool> for Side {
-    fn from(side: bool) -> Self {
-        if side {
-            Self::Right
-        } else {
-            Self::Left
+    fn try_from(status: i32) -> Result<Self, Self::Error> {
+        match status {
+            0 => Ok(Self::Unread),
+            1 => Ok(Self::Read),
+            _ => Err(ApiError::BadAlertStatus(status)),
         }
     }
 }
 
-impl From<Side> for bool {
-    fn from(side: Side) -> Self {
-        match side {
-            Side::Left => false,
-            Side::Right => true,
+impl From<Status> for i32 {
+    fn from(status: Status) -> Self {
+        match status {
+            Status::Unread => 0,
+            Status::Read => 1,
         }
     }
 }
 
-impl From<Side> for JsonSide {
-    fn from(side: Side) -> Self {
-        match side {
-            Side::Left => Self::Left,
-            Side::Right => Self::Right,
+impl From<Status> for JsonAlertStatus {
+    fn from(status: Status) -> Self {
+        match status {
+            Status::Unread => Self::Unread,
+            Status::Read => Self::Read,
         }
     }
 }
@@ -151,10 +94,25 @@ impl From<Side> for JsonSide {
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
     pub uuid: String,
-    pub perf_id: i32,
-    pub threshold_id: i32,
-    pub statistic_id: i32,
-    pub side: bool,
-    pub boundary: f32,
-    pub outlier: f32,
+    pub boundary_id: i32,
+    pub status: i32,
+    pub modified: i64,
+}
+
+impl InsertAlert {
+    pub fn from_boundary(conn: &mut DbConnection, boundary: Uuid) -> Result<(), ApiError> {
+        let insert_alert = InsertAlert {
+            uuid: Uuid::new_v4().to_string(),
+            boundary_id: QueryBoundary::get_id(conn, &boundary)?,
+            status: Status::default().into(),
+            modified: Utc::now().timestamp(),
+        };
+
+        diesel::insert_into(schema::alert::table)
+            .values(&insert_alert)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        Ok(())
+    }
 }

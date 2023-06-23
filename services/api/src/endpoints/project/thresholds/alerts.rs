@@ -84,22 +84,20 @@ async fn get_ls_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     Ok(schema::alert::table
-        .left_join(schema::perf::table.on(schema::alert::perf_id.eq(schema::perf::id)))
+        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
+        .left_join(schema::perf::table.on(schema::boundary::perf_id.eq(schema::perf::id)))
         .left_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-        .order((schema::report::start_time, schema::perf::iteration))
+        .order((schema::report::start_time.desc(), schema::perf::iteration))
         .select((
             schema::alert::id,
             schema::alert::uuid,
-            schema::alert::perf_id,
-            schema::alert::threshold_id,
-            schema::alert::statistic_id,
-            schema::alert::side,
-            schema::alert::boundary,
-            schema::alert::outlier,
+            schema::alert::boundary_id,
+            schema::alert::status,
+            schema::alert::modified,
         ))
         .load::<QueryAlert>(conn)
         .map_err(api_error!())?
@@ -165,7 +163,8 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::alert::table
-        .left_join(schema::perf::table.on(schema::alert::perf_id.eq(schema::perf::id)))
+        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
+        .left_join(schema::perf::table.on(schema::boundary::perf_id.eq(schema::perf::id)))
         .left_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )
@@ -174,12 +173,9 @@ async fn get_one_inner(
         .select((
             schema::alert::id,
             schema::alert::uuid,
-            schema::alert::perf_id,
-            schema::alert::threshold_id,
-            schema::alert::statistic_id,
-            schema::alert::side,
-            schema::alert::boundary,
-            schema::alert::outlier,
+            schema::alert::boundary_id,
+            schema::alert::status,
+            schema::alert::modified,
         ))
         .first::<QueryAlert>(conn)
         .map_err(api_error!())?

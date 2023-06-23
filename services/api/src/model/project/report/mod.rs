@@ -250,18 +250,16 @@ fn get_iteration_results(
 
 fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlerts, ApiError> {
     Ok(schema::alert::table
-        .left_join(schema::perf::table.on(schema::perf::id.eq(schema::alert::perf_id)))
+        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
+        .left_join(schema::perf::table.on(schema::perf::id.eq(schema::boundary::perf_id)))
         .filter(schema::perf::report_id.eq(report_id))
         .order(schema::alert::id)
         .select((
             schema::alert::id,
             schema::alert::uuid,
-            schema::alert::perf_id,
-            schema::alert::threshold_id,
-            schema::alert::statistic_id,
-            schema::alert::side,
-            schema::alert::boundary,
-            schema::alert::outlier,
+            schema::alert::boundary_id,
+            schema::alert::status,
+            schema::alert::modified,
         ))
         .load::<QueryAlert>(conn)
         .map_err(api_error!())?

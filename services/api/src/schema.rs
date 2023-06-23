@@ -4,12 +4,9 @@ diesel::table! {
     alert (id) {
         id -> Integer,
         uuid -> Text,
-        perf_id -> Integer,
-        threshold_id -> Integer,
-        statistic_id -> Integer,
-        side -> Bool,
-        boundary -> Float,
-        outlier -> Float,
+        boundary_id -> Integer,
+        status -> Integer,
+        modified -> BigInt,
     }
 }
 
@@ -207,9 +204,7 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(alert -> perf (perf_id));
-diesel::joinable!(alert -> statistic (statistic_id));
-diesel::joinable!(alert -> threshold (threshold_id));
+diesel::joinable!(alert -> boundary (boundary_id));
 diesel::joinable!(benchmark -> project (project_id));
 diesel::joinable!(boundary -> perf (perf_id));
 diesel::joinable!(boundary -> statistic (statistic_id));

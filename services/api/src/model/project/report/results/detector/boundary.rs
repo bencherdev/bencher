@@ -3,7 +3,7 @@ use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
 use crate::{
     error::api_error,
-    model::project::threshold::{alert::Side, statistic::StatisticKind},
+    model::project::threshold::{boundary::Side, statistic::StatisticKind},
     ApiError,
 };
 
