@@ -1,4 +1,3 @@
-use bencher_valid::GitHash;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -13,6 +12,7 @@ use crate::urlencoded::{
 };
 use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed, ResourceId};
 
+use super::branch::JsonVersion;
 use super::metric::JsonMetric;
 
 const QUERY_KEYS: [&str; 6] = [
@@ -203,8 +203,7 @@ pub struct JsonPerfMetric {
     pub iteration: u32,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub version_number: u32,
-    pub version_hash: Option<GitHash>,
+    pub version: JsonVersion,
     pub metric: JsonMetric,
 }
 
@@ -234,8 +233,8 @@ pub mod table {
                         iteration: metric.iteration,
                         start_time: metric.start_time,
                         end_time: metric.end_time,
-                        version_number: metric.version_number,
-                        version_hash: VersionHash(metric.version_hash),
+                        version_number: metric.version.number,
+                        version_hash: VersionHash(metric.version.hash),
                         metric: metric.metric,
                     })
                 }

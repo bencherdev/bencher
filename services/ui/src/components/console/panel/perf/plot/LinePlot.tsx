@@ -70,8 +70,8 @@ const LinePlot = (props) => {
 				line_data.push({
 					value: perf_metric.metric?.value,
 					date_time: new Date(perf_metric.start_time),
-					number: perf_metric.version_number,
-					hash: perf_metric.version_hash,
+					number: perf_metric.version?.number,
+					hash: perf_metric.version?.hash,
 					iteration: perf_metric.iteration,
 				});
 				metrics_found = true;

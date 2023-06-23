@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::branch::{JsonBranchVersion, JsonStartPoint},
+    project::branch::{JsonBranchVersion, JsonStartPoint, JsonVersion},
     BranchName, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
@@ -107,11 +107,13 @@ impl QueryBranch {
             project,
             name,
             slug,
-            version_number: number as u32,
-            version_hash: if let Some(version_hash) = hash.as_deref() {
-                Some(GitHash::from_str(version_hash)?)
-            } else {
-                None
+            version: JsonVersion {
+                number: number as u32,
+                hash: if let Some(version_hash) = hash.as_deref() {
+                    Some(GitHash::from_str(version_hash)?)
+                } else {
+                    None
+                },
             },
         })
     }

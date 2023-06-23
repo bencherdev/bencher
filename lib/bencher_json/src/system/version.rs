@@ -4,6 +4,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonVersion {
+pub struct JsonApiVersion {
     pub version: String,
 }

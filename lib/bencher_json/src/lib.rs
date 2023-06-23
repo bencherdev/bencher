@@ -35,7 +35,7 @@ pub use system::{
     backup::JsonBackup,
     config::JsonConfig,
     restart::JsonRestart,
-    version::JsonVersion,
+    version::JsonApiVersion,
 };
 pub use user::{
     token::{JsonNewToken, JsonToken},

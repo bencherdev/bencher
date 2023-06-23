@@ -1,7 +1,10 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+    project::{
+        branch::JsonVersion,
+        perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+    },
     GitHash, JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed,
     ResourceId,
 };
@@ -360,11 +363,13 @@ fn perf_metric(
         iteration: u32::try_from(iteration).ok()?,
         start_time: to_date_time(start_time).ok()?,
         end_time: to_date_time(end_time).ok()?,
-        version_number: u32::try_from(version_number).ok()?,
-        version_hash: if let Some(version_hash) = version_hash.as_deref() {
-            Some(GitHash::from_str(version_hash).ok()?)
-        } else {
-            None
+        version: JsonVersion {
+            number: u32::try_from(version_number).ok()?,
+            hash: if let Some(version_hash) = version_hash.as_deref() {
+                Some(GitHash::from_str(version_hash).ok()?)
+            } else {
+                None
+            },
         },
         metric: JsonMetric {
             value: value.into(),

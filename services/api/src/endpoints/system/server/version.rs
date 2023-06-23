@@ -1,4 +1,4 @@
-use bencher_json::JsonVersion;
+use bencher_json::JsonApiVersion;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
@@ -33,9 +33,9 @@ pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse,
 }]
 pub async fn get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<JsonVersion>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonApiVersion>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(VERSION_RESOURCE, Method::GetOne);
-    let json = JsonVersion {
+    let json = JsonApiVersion {
         version: API_VERSION.into(),
     };
     pub_response_ok!(endpoint, json)
