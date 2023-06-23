@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{JsonAlert, JsonMetricKind, JsonTestbed, JsonUser, ResourceId};
+use crate::{JsonAlert, JsonMetricKind, JsonProject, JsonTestbed, JsonUser, ResourceId};
 
 use super::{benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion};
 
@@ -83,6 +83,7 @@ pub enum JsonFold {
 pub struct JsonReport {
     pub uuid: Uuid,
     pub user: JsonUser,
+    pub project: JsonProject,
     pub branch: JsonBranchVersion,
     pub testbed: JsonTestbed,
     pub start_time: DateTime<Utc>,

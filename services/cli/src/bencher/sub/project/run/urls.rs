@@ -1,8 +1,6 @@
 use std::collections::BTreeMap;
 
-use bencher_json::{
-    project::JsonVisibility, JsonPerfQuery, JsonProject, JsonReport, ResourceId, Slug,
-};
+use bencher_json::{project::JsonVisibility, JsonPerfQuery, JsonReport, Slug};
 use url::Url;
 use uuid::Uuid;
 
@@ -11,22 +9,14 @@ use crate::{bencher::backend::Backend, CliError};
 pub struct BenchmarkUrls(pub BTreeMap<String, Url>);
 
 impl BenchmarkUrls {
-    pub async fn new(
-        backend: &Backend,
-        project: &ResourceId,
-        json_report: &JsonReport,
-    ) -> Result<Self, CliError> {
+    pub async fn new(backend: &Backend, json_report: &JsonReport) -> Result<Self, CliError> {
         let json_value = backend.get_quiet("/v0/server/config/endpoint").await?;
         let endpoint_url: Url = serde_json::from_value(json_value)?;
 
-        let json_value = backend
-            .get_quiet(&format!("/v0/projects/{project}"))
-            .await?;
-        let json_project: JsonProject = serde_json::from_value(json_value)?;
-
         let benchmark_url = BenchmarkUrl::new(
             endpoint_url,
-            json_project,
+            json_report.project.visibility,
+            json_report.project.slug.clone(),
             json_report.branch.uuid,
             json_report.testbed.uuid,
         );
@@ -57,11 +47,17 @@ struct BenchmarkUrl {
 }
 
 impl BenchmarkUrl {
-    fn new(endpoint: Url, project: JsonProject, branch: Uuid, testbed: Uuid) -> Self {
+    fn new(
+        endpoint: Url,
+        project_visibility: JsonVisibility,
+        project_slug: Slug,
+        branch: Uuid,
+        testbed: Uuid,
+    ) -> Self {
         Self {
             endpoint,
-            project_visibility: project.visibility,
-            project_slug: project.slug,
+            project_visibility,
+            project_slug,
             branch,
             testbed,
         }

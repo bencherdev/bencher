@@ -168,7 +168,7 @@ impl SubCmd for Run {
             .await?;
         let json_report: JsonReport = serde_json::from_value(json_value)?;
 
-        let benchmark_urls = BenchmarkUrls::new(&self.backend, &self.project, &json_report).await?;
+        let benchmark_urls = BenchmarkUrls::new(&self.backend, &json_report).await?;
 
         cli_println!("\nView results:");
         for (name, url) in &benchmark_urls.0 {

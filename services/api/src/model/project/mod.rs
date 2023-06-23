@@ -16,7 +16,7 @@ use crate::{
     error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
-    util::{resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug},
     ApiError,
 };
 
@@ -83,6 +83,8 @@ pub struct QueryProject {
 }
 
 impl QueryProject {
+    fn_get!(project);
+
     pub fn visibility(&self) -> Result<Visibility, ApiError> {
         Visibility::try_from(self.visibility)
     }

@@ -17,7 +17,7 @@ use self::adapter::Adapter;
 
 use super::{
     branch::QueryBranch, metric::QueryMetric, metric_kind::QueryMetricKind, testbed::QueryTestbed,
-    threshold::alert::QueryAlert,
+    threshold::alert::QueryAlert, QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -70,6 +70,7 @@ impl QueryReport {
             ..
         } = self;
 
+        let testbed = QueryTestbed::get(conn, self.testbed_id)?;
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             user: schema::user::table
@@ -77,8 +78,9 @@ impl QueryReport {
                 .first::<QueryUser>(conn)
                 .map_err(api_error!())?
                 .into_json()?,
+            project: QueryProject::get(conn, testbed.project_id)?.into_json(conn)?,
             branch: QueryBranch::branch_version_json(conn, self.branch_id, self.version_id)?,
-            testbed: QueryTestbed::get(conn, self.testbed_id)?.into_json(conn)?,
+            testbed: testbed.into_json(conn)?,
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,

@@ -305,12 +305,18 @@ fn perf_query(
     }
 
     let metrics = query
+        // It is important to filter for the branch on the `branch_version` table and not on the branch in the `report` table.
+        // This is because the `branch_version` table is the one that is updated when a branch is cloned/used as a start point.
+        // In contrast, the `report` table is only set to a single branch when the report is created.
         .inner_join(schema::version::table.on(schema::report::version_id.eq(schema::version::id)))
         .left_join(
             schema::branch_version::table
                 .on(schema::version::id.eq(schema::branch_version::version_id)),
         )
         .filter(schema::branch_version::branch_id.eq(branch_id))
+        // Order by the version number so that the oldest version is first.
+        // Because multiple reports can use the same version (via git hash), order by the start time next.
+        // Then within a report order by the iteration number.
         .order((
             schema::version::number,
             schema::report::start_time,
