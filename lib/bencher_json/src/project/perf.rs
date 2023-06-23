@@ -199,7 +199,6 @@ pub struct JsonPerfMetrics {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
-    pub uuid: Uuid,
     pub iteration: u32,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
