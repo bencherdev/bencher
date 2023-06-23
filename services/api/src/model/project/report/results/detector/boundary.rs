@@ -9,13 +9,13 @@ use crate::{
 
 use super::data::MetricsData;
 
-pub struct Outlier {
+pub struct Boundary {
     pub side: Side,
-    pub boundary: f32,
-    pub percentile: f64,
+    pub limit: f64,
+    pub outlier: bool,
 }
 
-impl Outlier {
+impl Boundary {
     #[allow(
         clippy::arithmetic_side_effects,
         clippy::cast_possible_truncation,
@@ -24,7 +24,7 @@ impl Outlier {
         clippy::float_arithmetic,
         clippy::integer_arithmetic
     )]
-    pub fn detect(
+    pub fn check(
         metric: JsonMetric,
         metrics_data: MetricsData,
         test: StatisticKind,
@@ -52,10 +52,10 @@ impl Outlier {
         // If the datum is less than the mean, check for a left side boundary.
         // If the datum is greater than or equal to the mean, check for a right side boundary.
         // Otherwise, simply return.
-        let datum = metric.value.into();
+        let datum: f64 = metric.value.into();
         let (abs_datum, side, boundary_percentile) = if datum < mean {
             if let Some(left_side) = left_side {
-                // Flip the datum to the other side of the mean, creating an absolute datum
+                // Flip the datum to the other side of the mean, creating an absolute datum.
                 let abs_datum = mean * 2.0 - datum;
                 (abs_datum, Side::Left, left_side)
             } else {
@@ -67,7 +67,7 @@ impl Outlier {
             return Ok(None);
         };
 
-        let boundary = match test {
+        let abs_limit = match test {
             // Create a normal distribution and calculate the boundary value for the threshold based on the boundary percentile.
             StatisticKind::Z => {
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
@@ -81,11 +81,19 @@ impl Outlier {
             },
         };
 
-        // If the absolute datum is greater than the boundary, then the value is an outlier.
-        Ok((abs_datum > boundary.into()).then_some(Self {
+        let limit = match side {
+            // Flip the limit to the other side of the mean, creating the actual boundary limit.
+            Side::Left => mean * 2.0 - abs_limit,
+            Side::Right => abs_limit,
+        };
+
+        // An outlier occurs when the absolute datum is greater than the absolute boundary limit.
+        let outlier = abs_datum > abs_limit;
+
+        Ok(Some(Self {
             side,
-            boundary: boundary as f32,
-            percentile: abs_datum,
+            limit,
+            outlier,
         }))
     }
 }

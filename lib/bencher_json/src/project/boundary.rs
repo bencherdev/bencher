@@ -10,15 +10,14 @@ use super::benchmark::JsonBenchmarkMetric;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAlert {
+pub struct JsonBoundary {
     pub uuid: Uuid,
     pub report: Uuid,
     pub iteration: u32,
     pub benchmark: JsonBenchmarkMetric,
     pub threshold: JsonThreshold,
     pub side: JsonSide,
-    pub boundary: OrderedFloat<f32>,
-    pub outlier: OrderedFloat<f32>,
+    pub limit: OrderedFloat<f64>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

@@ -3,16 +3,18 @@ use diesel::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::{
-    context::DbConnection, error::api_error, model::project::threshold::alert::InsertAlert, schema,
-    ApiError,
+    context::DbConnection,
+    error::api_error,
+    model::project::threshold::{alert::InsertAlert, boundary::InsertBoundary},
+    schema, ApiError,
 };
 
+mod boundary;
 pub mod data;
-mod outlier;
 pub mod threshold;
 
+use boundary::Boundary;
 use data::MetricsData;
-use outlier::Outlier;
 use threshold::MetricsThreshold;
 
 #[derive(Debug, Clone)]
@@ -73,43 +75,64 @@ impl Detector {
             &self.threshold.statistic,
         )?;
 
-        // Check to see if the metric is an outlier based on the threshold
-        if let Some(alert) = Outlier::detect(
+        // Check to see if the metric has a boundary check for the given threshold statistic.
+        let Some(boundary) = Boundary::check(
             metric,
             metrics_data,
             self.threshold.statistic.test.try_into()?,
             self.threshold.statistic.min_sample_size,
             self.threshold.statistic.left_side,
             self.threshold.statistic.right_side,
-        )? {
-            self.alert(conn, perf_id, alert)?;
-        }
+        )? else {
+            return Ok(());
+        };
 
-        Ok(())
-    }
-
-    #[allow(clippy::cast_possible_truncation)]
-    fn alert(
-        &self,
-        conn: &mut DbConnection,
-        perf_id: i32,
-        outlier: Outlier,
-    ) -> Result<(), ApiError> {
-        let insert_alert = InsertAlert {
+        let insert_boundary = InsertBoundary {
             uuid: Uuid::new_v4().to_string(),
             perf_id,
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
-            side: outlier.side.into(),
-            boundary: outlier.boundary,
-            outlier: outlier.percentile as f32,
+            boundary_side: boundary.side.into(),
+            boundary_limit: boundary.limit,
         };
 
-        diesel::insert_into(schema::alert::table)
-            .values(&insert_alert)
+        diesel::insert_into(schema::boundary::table)
+            .values(&insert_boundary)
             .execute(conn)
             .map_err(api_error!())?;
 
+        if !boundary.outlier {
+            return Ok(());
+        }
+
+        // TODO insert an alert
+        // self.alert(conn, perf_id, boundary)?;
+
         Ok(())
     }
+
+    // #[allow(clippy::cast_possible_truncation)]
+    // fn alert(
+    //     &self,
+    //     conn: &mut DbConnection,
+    //     perf_id: i32,
+    //     outlier: Outlier,
+    // ) -> Result<(), ApiError> {
+    //     let insert_alert = InsertAlert {
+    //         uuid: Uuid::new_v4().to_string(),
+    //         perf_id,
+    //         threshold_id: self.threshold.id,
+    //         statistic_id: self.threshold.statistic.id,
+    //         side: outlier.side.into(),
+    //         boundary: outlier.boundary,
+    //         outlier: outlier.percentile as f32,
+    //     };
+
+    //     diesel::insert_into(schema::alert::table)
+    //         .values(&insert_alert)
+    //         .execute(conn)
+    //         .map_err(api_error!())?;
+
+    //     Ok(())
+    // }
 }

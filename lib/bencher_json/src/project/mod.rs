@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 pub mod alert;
 pub mod benchmark;
+pub mod boundary;
 pub mod branch;
 pub mod metric;
 pub mod metric_kind;

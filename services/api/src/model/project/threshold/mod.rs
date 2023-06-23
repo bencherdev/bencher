@@ -16,6 +16,7 @@ use crate::{
 };
 
 pub mod alert;
+pub mod boundary;
 pub mod statistic;
 
 #[derive(Queryable)]
