@@ -47,8 +47,8 @@ impl MetricsThreshold {
                 Option<i64>,
                 Option<i64>,
                 Option<i64>,
-                Option<f32>,
-                Option<f32>,
+                Option<f64>,
+                Option<f64>,
             )>(conn)
             .map(
                 |(

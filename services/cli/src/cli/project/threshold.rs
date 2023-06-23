@@ -71,11 +71,11 @@ pub struct CliStatisticCreate {
 
     /// Left side percentage
     #[clap(long)]
-    pub left_side: Option<f32>,
+    pub left_side: Option<f64>,
 
     /// Right side percentage
     #[clap(long)]
-    pub right_side: Option<f32>,
+    pub right_side: Option<f64>,
 }
 
 /// Supported kinds of statistic

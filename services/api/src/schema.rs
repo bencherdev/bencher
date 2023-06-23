@@ -136,8 +136,8 @@ diesel::table! {
         min_sample_size -> Nullable<BigInt>,
         max_sample_size -> Nullable<BigInt>,
         window -> Nullable<BigInt>,
-        left_side -> Nullable<Float>,
-        right_side -> Nullable<Float>,
+        left_side -> Nullable<Double>,
+        right_side -> Nullable<Double>,
     }
 }
 

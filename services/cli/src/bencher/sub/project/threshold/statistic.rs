@@ -13,8 +13,8 @@ pub struct Statistic {
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
-    pub left_side: Option<f32>,
-    pub right_side: Option<f32>,
+    pub left_side: Option<f64>,
+    pub right_side: Option<f64>,
 }
 
 impl TryFrom<CliStatisticCreate> for Statistic {

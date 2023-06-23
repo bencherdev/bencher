@@ -21,8 +21,8 @@ pub struct QueryStatistic {
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
     pub window: Option<i64>,
-    pub left_side: Option<f32>,
-    pub right_side: Option<f32>,
+    pub left_side: Option<f64>,
+    pub right_side: Option<f64>,
 }
 
 impl QueryStatistic {
@@ -106,8 +106,8 @@ pub struct InsertStatistic {
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
     pub window: Option<i64>,
-    pub left_side: Option<f32>,
-    pub right_side: Option<f32>,
+    pub left_side: Option<f64>,
+    pub right_side: Option<f64>,
 }
 
 impl From<QueryStatistic> for InsertStatistic {

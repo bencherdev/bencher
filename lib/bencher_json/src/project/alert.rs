@@ -21,6 +21,24 @@ pub struct JsonAlert {
     pub outlier: OrderedFloat<f32>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonBoundsCheck {
+    pub uuid: Uuid,
+    pub report: Uuid,
+    pub iteration: u32,
+    pub benchmark: JsonBenchmarkMetric,
+    pub threshold: JsonThreshold,
+    pub boundary: JsonBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonBoundary {
+    pub side: JsonSide,
+    pub limit: OrderedFloat<f64>,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

@@ -29,8 +29,8 @@ impl Outlier {
         metrics_data: MetricsData,
         test: StatisticKind,
         min_sample_size: Option<i64>,
-        left_side: Option<f32>,
-        right_side: Option<f32>,
+        left_side: Option<f64>,
+        right_side: Option<f64>,
     ) -> Result<Option<Self>, ApiError> {
         // If there is a min sample size, then check to see if it is met.
         // Otherwise, simply return.
@@ -53,7 +53,7 @@ impl Outlier {
         // If the datum is greater than or equal to the mean, check for a right side boundary.
         // Otherwise, simply return.
         let datum = metric.value.into();
-        let (abs_datum, side, boundary) = if datum < mean {
+        let (abs_datum, side, boundary_percentile) = if datum < mean {
             if let Some(left_side) = left_side {
                 // Flip the datum to the other side of the mean, creating an absolute datum
                 let abs_datum = mean * 2.0 - datum;
@@ -67,25 +67,25 @@ impl Outlier {
             return Ok(None);
         };
 
-        let percentile = match test {
-            // Create a normal distribution and calculate the percentile for the absolute datum within that distribution
+        let boundary = match test {
+            // Create a normal distribution and calculate the boundary value for the threshold based on the boundary percentile.
             StatisticKind::Z => {
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
-                normal.cdf(abs_datum)
+                normal.inverse_cdf(boundary_percentile)
             },
-            // Create a Student's t distribution and calculate the percentile for the absolute datum within that distribution
+            // Create a Student's t distribution and calculate the boundary value for the threshold based on the boundary percentile.
             StatisticKind::T => {
                 let students_t =
                     StudentsT::new(mean, std_dev, (data.len() - 1) as f64).map_err(api_error!())?;
-                students_t.cdf(abs_datum)
+                students_t.inverse_cdf(boundary_percentile)
             },
         };
 
-        // If the percentile is greater than the boundary, then return the outlier
-        Ok((percentile > boundary.into()).then_some(Self {
+        // If the absolute datum is greater than the boundary, then the value is an outlier.
+        Ok((abs_datum > boundary.into()).then_some(Self {
             side,
-            boundary,
-            percentile,
+            boundary: boundary as f32,
+            percentile: abs_datum,
         }))
     }
 }
@@ -114,4 +114,30 @@ fn mean(data: &[f64]) -> Option<f64> {
         return None;
     }
     Some(data.iter().sum::<f64>() / data.len() as f64)
+}
+
+#[cfg(test)]
+mod test {
+    use pretty_assertions::assert_eq;
+    use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
+
+    #[test]
+    fn test_outlier() {
+        let normal = Normal::new(1.0, 1.0).unwrap();
+        let percentile = normal.cdf(2.0);
+        assert_eq!(percentile, 0.8413447460549428);
+
+        let inverse = normal.inverse_cdf(0.6);
+        assert_eq!(inverse, 1.2533471031357997);
+
+        let inverse = normal.inverse_cdf(0.8413447460549428);
+        assert_eq!(inverse, 1.999999999943794);
+
+        let students_t = StudentsT::new(1.0, 1.0, 10.0).unwrap();
+        let percentile = students_t.cdf(2.0);
+        assert_eq!(percentile, 0.8295534338489701);
+
+        let inverse = students_t.inverse_cdf(0.8295534338489701);
+        assert_eq!(inverse, 2.000000000000001);
+    }
 }
