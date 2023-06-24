@@ -7,6 +7,7 @@ use bencher_json::{
 };
 use chrono::Utc;
 use clap::ValueEnum;
+use url::Url;
 
 use crate::{
     bencher::{backend::Backend, sub::project::run::urls::BenchmarkUrls},
@@ -168,7 +169,9 @@ impl SubCmd for Run {
             .await?;
         let json_report: JsonReport = serde_json::from_value(json_value)?;
 
-        let benchmark_urls = BenchmarkUrls::new(&self.backend, &json_report).await?;
+        let json_value = self.backend.get_quiet("/v0/server/config/endpoint").await?;
+        let endpoint_url: Url = serde_json::from_value(json_value)?;
+        let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), &json_report).await?;
 
         cli_println!("\nView results:");
         for (name, url) in &benchmark_urls.0 {
@@ -181,12 +184,12 @@ impl SubCmd for Run {
 
         cli_println!("\nView alerts:");
         for alert in &json_report.alerts {
-            cli_println!(
-                "- {}: `bencher alert view --project {} {}`",
-                alert.benchmark.name,
-                self.project,
-                alert.uuid
-            );
+            let mut url = endpoint_url.clone();
+            url.set_path(&format!(
+                "/console/projects/{}/alerts/{}",
+                json_report.project.slug, alert.uuid
+            ));
+            cli_println!("- {}: {url}", alert.benchmark.name,);
         }
         cli_println!("\n");
 

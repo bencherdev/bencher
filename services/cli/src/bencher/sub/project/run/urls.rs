@@ -1,21 +1,17 @@
 use std::collections::BTreeMap;
 
-use bencher_json::{project::JsonVisibility, JsonPerfQuery, JsonReport, Slug};
+use bencher_json::{JsonPerfQuery, JsonReport, Slug};
 use url::Url;
 use uuid::Uuid;
 
-use crate::{bencher::backend::Backend, CliError};
+use crate::CliError;
 
 pub struct BenchmarkUrls(pub BTreeMap<String, Url>);
 
 impl BenchmarkUrls {
-    pub async fn new(backend: &Backend, json_report: &JsonReport) -> Result<Self, CliError> {
-        let json_value = backend.get_quiet("/v0/server/config/endpoint").await?;
-        let endpoint_url: Url = serde_json::from_value(json_value)?;
-
+    pub async fn new(endpoint_url: Url, json_report: &JsonReport) -> Result<Self, CliError> {
         let benchmark_url = BenchmarkUrl::new(
             endpoint_url,
-            json_report.project.visibility,
             json_report.project.slug.clone(),
             json_report.branch.uuid,
             json_report.testbed.uuid,
@@ -40,23 +36,15 @@ impl BenchmarkUrls {
 
 struct BenchmarkUrl {
     endpoint: Url,
-    project_visibility: JsonVisibility,
     project_slug: Slug,
     branch: Uuid,
     testbed: Uuid,
 }
 
 impl BenchmarkUrl {
-    fn new(
-        endpoint: Url,
-        project_visibility: JsonVisibility,
-        project_slug: Slug,
-        branch: Uuid,
-        testbed: Uuid,
-    ) -> Self {
+    fn new(endpoint: Url, project_slug: Slug, branch: Uuid, testbed: Uuid) -> Self {
         Self {
             endpoint,
-            project_visibility,
             project_slug,
             branch,
             testbed,
@@ -74,12 +62,7 @@ impl BenchmarkUrl {
         };
 
         let mut url = self.endpoint.clone();
-        let path = match self.project_visibility {
-            JsonVisibility::Public => format!("/perf/{}", self.project_slug),
-            #[cfg(feature = "plus")]
-            JsonVisibility::Private => format!("/console/projects/{}/perf", self.project_slug),
-        };
-        url.set_path(&path);
+        url.set_path(&format!("/console/projects/{}/perf", self.project_slug,));
         url.set_query(Some(
             &json_perf_query
                 .to_query_string(&[
