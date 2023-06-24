@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 use crate::JsonMetric;
 
+use super::boundary::JsonBoundary;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmark {
@@ -29,4 +31,5 @@ pub struct JsonBenchmarkMetric {
     pub project: Uuid,
     pub name: BenchmarkName,
     pub metric: JsonMetric,
+    pub boundary: JsonBoundary,
 }

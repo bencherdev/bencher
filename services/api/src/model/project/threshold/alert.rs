@@ -2,13 +2,18 @@ use std::str::FromStr;
 
 use bencher_json::project::alert::{JsonAlert, JsonAlertStatus, JsonSide};
 use chrono::{TimeZone, Utc};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::boundary::QueryBoundary;
+use super::{boundary::QueryBoundary, QueryThreshold};
 use crate::{
-    context::DbConnection, error::api_error, schema, schema::alert as alert_table,
-    util::query::fn_get_id, ApiError,
+    context::DbConnection,
+    error::api_error,
+    model::project::{benchmark::QueryBenchmark, report::QueryReport},
+    schema,
+    schema::alert as alert_table,
+    util::query::fn_get_id,
+    ApiError,
 };
 
 #[derive(Queryable)]
@@ -42,10 +47,29 @@ impl QueryAlert {
             modified,
             ..
         } = self;
+        let QueryBoundary {
+            threshold_id,
+            statistic_id,
+            metric_id,
+            ..
+        } = QueryBoundary::get(conn, boundary_id)?;
+
+        let (report_id, iteration): (_, i32) = schema::perf::table
+            .left_join(schema::metric::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+            .left_join(
+                schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)),
+            )
+            .filter(schema::metric::id.eq(metric_id))
+            .select((schema::perf::report_id, schema::perf::iteration))
+            .first(conn)
+            .map_err(api_error!())?;
 
         Ok(JsonAlert {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            boundary: QueryBoundary::get(conn, boundary_id)?.into_json(conn)?,
+            report: QueryReport::get_uuid(conn, report_id)?,
+            iteration: iteration as u32,
+            threshold: QueryThreshold::into_historical_json(conn, threshold_id, statistic_id)?,
+            benchmark: QueryBenchmark::into_metric_json(conn, metric_id)?,
             side: Side::from(side).into(),
             status: Status::try_from(status)?.into(),
             modified: Utc

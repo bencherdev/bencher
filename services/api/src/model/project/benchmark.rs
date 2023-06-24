@@ -4,7 +4,7 @@ use bencher_json::{project::benchmark::JsonBenchmarkMetric, BenchmarkName, JsonB
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::{metric::QueryMetric, QueryProject};
+use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, QueryProject};
 use crate::{
     context::DbConnection, error::api_error, schema, schema::benchmark as benchmark_table,
     util::query::fn_get_id, ApiError,
@@ -92,12 +92,14 @@ impl QueryBenchmark {
             name,
         } = Self::json_benchmark(conn, uuid, project_id, name)?;
         let metric = QueryMetric::json_metric(value, lower_bound, upper_bound);
+        let boundary = QueryBoundary::from_metric_id(conn, metric_id)?.into_json();
 
         Ok(JsonBenchmarkMetric {
             uuid,
             project,
             name,
             metric,
+            boundary,
         })
     }
 

@@ -3,6 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use bencher_json::{
     project::{
         benchmark::JsonBenchmarkMetric,
+        boundary::JsonBoundary,
         report::{
             JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
         },
@@ -16,8 +17,12 @@ use uuid::Uuid;
 use self::adapter::Adapter;
 
 use super::{
-    branch::QueryBranch, metric::QueryMetric, metric_kind::QueryMetricKind, testbed::QueryTestbed,
-    threshold::alert::QueryAlert, QueryProject,
+    branch::QueryBranch,
+    metric::QueryMetric,
+    metric_kind::QueryMetricKind,
+    testbed::QueryTestbed,
+    threshold::{alert::QueryAlert, boundary::QueryBoundary},
+    QueryProject,
 };
 use crate::{
     context::DbConnection,
@@ -210,6 +215,7 @@ fn get_default_benchmark_metric(
         project,
         name,
         metric: JsonMetric::default(),
+        boundary: JsonBoundary::default(),
     })
 }
 
@@ -219,12 +225,15 @@ fn get_benchmark_metric(
     metric_kind_id: i32,
     mut benchmark_metric: JsonBenchmarkMetric,
 ) -> Result<JsonBenchmarkMetric, ApiError> {
-    benchmark_metric.metric = schema::metric::table
+    let metric = schema::metric::table
         .filter(schema::metric::perf_id.eq(perf_id))
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .first::<QueryMetric>(conn)
-        .map_err(api_error!())?
-        .into_json();
+        .map_err(api_error!())?;
+    let boundary = QueryBoundary::from_metric_id(conn, metric.id)?;
+
+    benchmark_metric.metric = metric.into_json();
+    benchmark_metric.boundary = boundary.into_json();
 
     Ok(benchmark_metric)
 }
@@ -249,27 +258,27 @@ fn get_iteration_results(
 }
 
 fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlerts, ApiError> {
-    // Ok(schema::alert::table
-    //     .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-    //     .left_join(schema::perf::table.on(schema::perf::id.eq(schema::boundary::perf_id)))
-    //     .filter(schema::perf::report_id.eq(report_id))
-    //     .order(schema::alert::id)
-    //     .select((
-    //         schema::alert::id,
-    //         schema::alert::uuid,
-    //         schema::alert::boundary_id,
-    //         schema::alert::side,
-    //         schema::alert::status,
-    //         schema::alert::modified,
-    //     ))
-    //     .load::<QueryAlert>(conn)
-    //     .map_err(api_error!())?
-    //     .into_iter()
-    //     .filter_map(|alert| {
-    //         database_map("QueryReport::get_alerts", alert.into_json(conn)).map(Into::into)
-    //     })
-    //     .collect())
-    Ok(Vec::new())
+    Ok(schema::alert::table
+        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
+        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+        .filter(schema::perf::report_id.eq(report_id))
+        .order(schema::alert::id)
+        .select((
+            schema::alert::id,
+            schema::alert::uuid,
+            schema::alert::boundary_id,
+            schema::alert::side,
+            schema::alert::status,
+            schema::alert::modified,
+        ))
+        .load::<QueryAlert>(conn)
+        .map_err(api_error!())?
+        .into_iter()
+        .filter_map(|alert| {
+            database_map("QueryReport::get_alerts", alert.into_json(conn)).map(Into::into)
+        })
+        .collect())
 }
 
 // https://docs.rs/chrono/latest/chrono/serde/ts_nanoseconds/index.html

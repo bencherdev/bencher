@@ -377,5 +377,6 @@ fn perf_metric(
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
         },
+        // boundary: JsonBoundary::default(),
     })
 }

@@ -85,7 +85,8 @@ async fn get_ls_inner(
 
     Ok(schema::alert::table
         .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .left_join(schema::perf::table.on(schema::boundary::perf_id.eq(schema::perf::id)))
+        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
         .left_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )
@@ -165,7 +166,8 @@ async fn get_one_inner(
 
     schema::alert::table
         .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .left_join(schema::perf::table.on(schema::boundary::perf_id.eq(schema::perf::id)))
+        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
         .left_join(
             schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
         )

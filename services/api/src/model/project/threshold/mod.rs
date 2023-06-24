@@ -59,6 +59,17 @@ impl QueryThreshold {
             statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
         })
     }
+
+    pub fn into_historical_json(
+        conn: &mut DbConnection,
+        threshold_id: i32,
+        statistic_id: i32,
+    ) -> Result<JsonThreshold, ApiError> {
+        let mut threshold = Self::get(conn, threshold_id)?;
+        // IMPORTANT: Set the statistic ID to the one from the boundary, and not the current value!
+        threshold.statistic_id = statistic_id;
+        threshold.into_json(conn)
+    }
 }
 
 #[derive(Insertable)]
