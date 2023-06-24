@@ -1,10 +1,6 @@
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
-use crate::{
-    error::api_error,
-    model::project::threshold::{alert::Side, statistic::StatisticKind},
-    ApiError,
-};
+use crate::{error::api_error, model::project::threshold::alert::Side, ApiError};
 
 #[derive(Default)]
 pub struct Limits {
@@ -16,18 +12,22 @@ pub struct Limit {
     pub value: f64,
 }
 
+pub enum TestKind {
+    Z,
+    T { freedom: f64 },
+}
+
 impl Limits {
     pub fn new(
         mean: f64,
         std_dev: f64,
-        freedom: f64,
-        test: StatisticKind,
+        test_kind: TestKind,
         left_side: Option<f64>,
         right_side: Option<f64>,
     ) -> Result<Self, ApiError> {
-        Ok(match test {
+        Ok(match test_kind {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
-            StatisticKind::Z => {
+            TestKind::Z => {
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
                 let left = left_side.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit);
@@ -40,7 +40,7 @@ impl Limits {
                 Self { left, right }
             },
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
-            StatisticKind::T => {
+            TestKind::T { freedom } => {
                 let students_t = StudentsT::new(mean, std_dev, freedom).map_err(api_error!())?;
                 let left = left_side.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit);
