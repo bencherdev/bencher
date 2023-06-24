@@ -92,7 +92,10 @@ impl QueryBenchmark {
             name,
         } = Self::json_benchmark(conn, uuid, project_id, name)?;
         let metric = QueryMetric::json_metric(value, lower_bound, upper_bound);
-        let boundary = QueryBoundary::from_metric_id(conn, metric_id)?.into_json();
+        // There may not be a boundary for every metric
+        let boundary = QueryBoundary::from_metric_id(conn, metric_id)
+            .map(|b| b.into_json())
+            .unwrap_or_default();
 
         Ok(JsonBenchmarkMetric {
             uuid,

@@ -3,12 +3,11 @@ use std::{collections::HashMap, str::FromStr};
 use bencher_json::{
     project::{
         benchmark::JsonBenchmarkMetric,
-        boundary::JsonBoundary,
         report::{
             JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
         },
     },
-    JsonBenchmark, JsonMetric, JsonMetricKind, JsonNewReport, JsonReport,
+    BenchmarkName, JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -108,8 +107,8 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
         // Get the metric kinds
         metric_kinds = get_metric_kinds(conn, perf.id)?;
 
-        // Create a default benchmark metric to use for each metric kind
-        let default_benchmark_metric = get_default_benchmark_metric(conn, perf.benchmark_id)?;
+        // Create a stub benchmark metric to use for each metric kind
+        let stub_benchmark_metric = get_stub_benchmark_metric(conn, perf.benchmark_id)?;
 
         // If the iteration is the same as the previous one, add the benchmark to the benchmarks list for all metric kinds
         // Otherwise, create a new iteration result and add it to the results list
@@ -120,7 +119,7 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
                     conn,
                     perf.id,
                     metric_kind_id,
-                    default_benchmark_metric.clone(),
+                    stub_benchmark_metric.clone(),
                 )?;
                 if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
                     benchmarks.push(benchmark_metric);
@@ -138,7 +137,7 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
                     conn,
                     perf.id,
                     metric_kind_id,
-                    default_benchmark_metric.clone(),
+                    stub_benchmark_metric.clone(),
                 )?;
                 metric_kind_benchmarks.insert(metric_kind_id, vec![benchmark_metric]);
             }
@@ -196,10 +195,17 @@ fn get_metric_kinds(
         .collect())
 }
 
-fn get_default_benchmark_metric(
+#[derive(Clone)]
+struct StubBenchmarkMetric {
+    uuid: Uuid,
+    project: Uuid,
+    name: BenchmarkName,
+}
+
+fn get_stub_benchmark_metric(
     conn: &mut DbConnection,
     benchmark_id: i32,
-) -> Result<JsonBenchmarkMetric, ApiError> {
+) -> Result<StubBenchmarkMetric, ApiError> {
     let json_benchmark = schema::benchmark::table
         .filter(schema::benchmark::id.eq(benchmark_id))
         .first::<QueryBenchmark>(conn)
@@ -210,12 +216,10 @@ fn get_default_benchmark_metric(
         project,
         name,
     } = json_benchmark;
-    Ok(JsonBenchmarkMetric {
+    Ok(StubBenchmarkMetric {
         uuid,
         project,
         name,
-        metric: JsonMetric::default(),
-        boundary: JsonBoundary::default(),
     })
 }
 
@@ -223,19 +227,32 @@ fn get_benchmark_metric(
     conn: &mut DbConnection,
     perf_id: i32,
     metric_kind_id: i32,
-    mut benchmark_metric: JsonBenchmarkMetric,
+    stub_benchmark_metric: StubBenchmarkMetric,
 ) -> Result<JsonBenchmarkMetric, ApiError> {
     let metric = schema::metric::table
         .filter(schema::metric::perf_id.eq(perf_id))
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .first::<QueryMetric>(conn)
         .map_err(api_error!())?;
-    let boundary = QueryBoundary::from_metric_id(conn, metric.id)?;
 
-    benchmark_metric.metric = metric.into_json();
-    benchmark_metric.boundary = boundary.into_json();
+    // There may not be a boundary for every metric
+    let boundary = QueryBoundary::from_metric_id(conn, metric.id)
+        .map(|b| b.into_json())
+        .unwrap_or_default();
 
-    Ok(benchmark_metric)
+    let StubBenchmarkMetric {
+        uuid,
+        project,
+        name,
+    } = stub_benchmark_metric;
+
+    Ok(JsonBenchmarkMetric {
+        uuid,
+        project,
+        name,
+        metric: metric.into_json(),
+        boundary,
+    })
 }
 
 fn get_iteration_results(
