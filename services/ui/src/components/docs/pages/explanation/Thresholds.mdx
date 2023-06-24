@@ -10,7 +10,6 @@ Thresholds work best when:
 - There are no extreme differences between benchmark runs
 - Benchmark runs are totally independent of one another
 - The number of iterations for a single benchmark run is less than 10% of the historical Metrics
-- There are at least 30 historical Metrics for the combination of Metric Kind, Branch, and Testbed
 
 If there are less than 30 historical Metrics for the combination of Metric Kind, Branch, and Testbed
 then a Student's t-test Threshold should be used and __*not*__ a Z-score Threshold.
@@ -46,6 +45,10 @@ a _left_ side cumulative percentage should be used.
 A _left_ side cumulative percentage of 97.7% would correspond to two standard deviations below the mean (-2σ).
 This would be given in decimal notation as a Left Side Boundary of `0.977`.
 
+<br />
+
+> 🐰 Tip: When using a Z-score Threshold, set the Minimum Sample Size to at least 30.
+
 ### Student's t-test
 
 The Student's t-test measures how likely it is that a given Metric is above or below the mean of the historical Metrics.
@@ -63,11 +66,21 @@ a _left_ side confidence percentage should be used.
 A _left_ side confidence percentage of 95.0% would indicate that Metrics should be _greater_ than an expected _minimum_.
 This would be given in decimal notation as a Left Side Boundary of `0.95`.
 
+<br />
+
+> 🐰 Tip: Use a t-test Threshold if you have less than 30 historical Metrics.
+
 ## Statistical Significance Boundary
 
 The meaning of the statistical significance boundary depends on the statistical significance test:
 - Z-score: Standard deviation (σ) expressed as a decimal cumulative percentage
 - t-test: Confidence interval (CI) expressed as a decimal confidence percentage
+
+Each Metric is checked against the Threshold's statistical significance boundary if it exists.
+This can include a Left Side Boundary, Right Side Boundary, or both.
+A Boundary Limit is calculated for each Side Boundary.
+This Boundary Limit is then compared against the current Metric.
+If that Metric falls outside of the Boundary Limit an Alert will be generate.
 
 > 🐰 Tip: To fail a CI build when a boundary is violated use the `--err` flag for the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand.
 
@@ -77,11 +90,19 @@ It is used when a smaller value would indicate a performance regression,
 such as with the Throughput Metric Kind.
 The value must be a decimal between `0.5` and `1.0`.
 
+For example, if you used a Z-score and your historical Metrics had a mean of `100` and a standard deviation of `10`,
+then a Left Side Boundary of `0.977` would create a Boundary Limit at `80.05`.
+Any value less than `80.05` would generate an Alert.
+
 ### Right Side Boundary
 A right side boundary can be set for a Threshold.
 It is used when a larger value would indicate a performance regression,
 such as with the Latency Metric Kind.
 The value must be a decimal between `0.5` and `1.0`.
+
+For example, if you used a Z-score and your historical Metrics had a mean of `100` and a standard deviation of `10`,
+then a Right Side Boundary of `0.977` would create a Boundary Limit at `119.95`.
+Any value greater than `119.95` would generate an Alert.
 
 ## Sample Size
 
@@ -101,7 +122,7 @@ The Threshold will limit itself to only the most recent historical Metrics
 bounded by the given time window for its statistical significance test.
 
 ## Alerts
-Alerts are generated when a Metric is below a Threshold's left side boundary or above a Threshold's right side boundary.
+Alerts are generated when a Metric is below a Threshold's Left Side Boundary or above a Threshold's Right Side Boundary.
 To fail a CI build in the event of an Alert set the `--err` flag when using the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand.
 
 ### Suppressing Alerts

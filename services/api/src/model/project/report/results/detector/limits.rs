@@ -214,6 +214,38 @@ mod test {
     }
 
     #[test]
+    fn test_limits_z_docs() {
+        let limits = Limits::new(100.0, 10.0, TestKind::Z, Some(0.977), Some(0.977)).unwrap();
+        assert_eq!(
+            limits.left,
+            Some(Limit {
+                value: 80.04606689832175
+            })
+        );
+        assert_eq!(
+            limits.right,
+            Some(Limit {
+                value: 119.95393310167825
+            })
+        );
+
+        let boundary = limits.outlier(75.0);
+        assert_eq!(boundary, Some(Side::Left));
+
+        let boundary = limits.outlier(90.0);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(100.0);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(110.0);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(125.0);
+        assert_eq!(boundary, Some(Side::Right));
+    }
+
+    #[test]
     fn test_limits_t_none() {
         let limits =
             Limits::new(MEAN, STD_DEV, TestKind::T { freedom: FREEDOM }, None, None).unwrap();
