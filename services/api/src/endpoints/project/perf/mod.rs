@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::{
+        boundary::JsonBoundary,
         branch::JsonVersion,
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
@@ -12,6 +13,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
     context::{ApiContext, DbConnection},
@@ -254,12 +256,15 @@ struct Times {
 }
 
 type PerfQuery = (
+    String,
     i32,
     i64,
     i64,
     i32,
     Option<String>,
     f64,
+    Option<f64>,
+    Option<f64>,
     Option<f64>,
     Option<f64>,
 );
@@ -314,6 +319,7 @@ fn perf_query(
                 .on(schema::version::id.eq(schema::branch_version::version_id)),
         )
         .filter(schema::branch_version::branch_id.eq(branch_id))
+        .inner_join(schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)))
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.
@@ -323,6 +329,7 @@ fn perf_query(
             schema::perf::iteration,
         ))
         .select((
+            schema::report::uuid,
             schema::perf::iteration,
             schema::report::start_time,
             schema::report::end_time,
@@ -331,6 +338,8 @@ fn perf_query(
             schema::metric::value,
             schema::metric::lower_bound,
             schema::metric::upper_bound,
+            schema::boundary::left_side,
+            schema::boundary::right_side,
         ))
         .load::<PerfQuery>(conn)
         .map_err(api_error!())?
@@ -350,6 +359,7 @@ fn perf_query(
 
 fn perf_metric(
     (
+        report,
         iteration,
         start_time,
         end_time,
@@ -358,9 +368,12 @@ fn perf_metric(
         value,
         lower_bound,
         upper_bound,
+        left_side,
+        right_side,
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
     Some(JsonPerfMetric {
+        report: Uuid::from_str(&report).ok()?,
         iteration: u32::try_from(iteration).ok()?,
         start_time: to_date_time(start_time).ok()?,
         end_time: to_date_time(end_time).ok()?,
@@ -377,6 +390,9 @@ fn perf_metric(
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
         },
-        // boundary: JsonBoundary::default(),
+        boundary: JsonBoundary {
+            left_side: left_side.map(Into::into),
+            right_side: right_side.map(Into::into),
+        },
     })
 }

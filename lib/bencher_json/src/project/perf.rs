@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::ser::{self, SerializeStruct};
@@ -13,9 +12,9 @@ use crate::urlencoded::{
 };
 use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed, ResourceId};
 
+use super::boundary::JsonBoundary;
 use super::branch::JsonVersion;
 use super::metric::JsonMetric;
-use super::threshold::JsonStatistic;
 
 const QUERY_KEYS: [&str; 6] = [
     "metric_kind",
@@ -201,23 +200,13 @@ pub struct JsonPerfMetrics {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
-    // pub report: Uuid,
+    pub report: Uuid,
     pub iteration: u32,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub version: JsonVersion,
     pub metric: JsonMetric,
-    // pub boundary: JsonPerfBoundary,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPerfBoundary {
-    pub threshold: Uuid,
-    pub statistic: JsonStatistic,
-    pub left_side: Option<OrderedFloat<f64>>,
-    pub right_side: Option<OrderedFloat<f64>>,
-    pub alert: Option<Uuid>,
+    pub boundary: JsonBoundary,
 }
 
 #[cfg(feature = "table")]
@@ -250,8 +239,8 @@ pub mod table {
                         version_number: metric.version.number,
                         version_hash: VersionHash(metric.version.hash),
                         metric: metric.metric,
-                        // left_side: BoundaryLimit(metric.boundary.left_side),
-                        // right_side: BoundaryLimit(metric.boundary.right_side),
+                        left_side: BoundaryLimit(metric.boundary.left_side),
+                        right_side: BoundaryLimit(metric.boundary.right_side),
                     })
                 }
             }
@@ -283,10 +272,10 @@ pub mod table {
         pub version_hash: VersionHash,
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
-        // #[tabled(rename = "Left Boundary Limit")]
-        // pub left_side: BoundaryLimit,
-        // #[tabled(rename = "Right Boundary Limit")]
-        // pub right_side: BoundaryLimit,
+        #[tabled(rename = "Left Boundary Limit")]
+        pub left_side: BoundaryLimit,
+        #[tabled(rename = "Right Boundary Limit")]
+        pub right_side: BoundaryLimit,
     }
 
     pub struct VersionHash(Option<GitHash>);
