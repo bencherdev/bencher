@@ -8,6 +8,7 @@ pub struct Limits {
     pub right: Option<Limit>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Limit {
     pub value: f64,
 }
@@ -25,6 +26,10 @@ impl Limits {
         left_side: Option<f64>,
         right_side: Option<f64>,
     ) -> Result<Self, ApiError> {
+        if left_side.is_none() && right_side.is_none() {
+            return Ok(Self::default());
+        }
+
         Ok(match test_kind {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::Z => {
@@ -96,25 +101,225 @@ impl From<Limit> for f64 {
 #[cfg(test)]
 mod test {
     use pretty_assertions::assert_eq;
-    use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
+
+    use super::{Limit, Limits, Side, TestKind};
+
+    const MEAN: f64 = 0.0;
+    const STD_DEV: f64 = 1.0;
+    const FREEDOM: f64 = 5.0;
+
+    const PERCENTILE: f64 = 0.85;
+    const Z_LIMIT: f64 = 1.0364333894937896;
+    const T_LIMIT: f64 = 1.1557673428942912;
+
+    const DATUM_NEGATIVE_OUTLIER: f64 = -1.5;
+    const DATUM_NEGATIVE: f64 = -1.0;
+    const DATUM_ZERO: f64 = 0.0;
+    const DATUM_POSITIVE: f64 = 1.0;
+    const DATUM_POSITIVE_OUTLIER: f64 = 1.5;
 
     #[test]
-    fn test_outlier() {
-        let normal = Normal::new(1.0, 1.0).unwrap();
-        let percentile = normal.cdf(2.0);
-        assert_eq!(percentile, 0.8413447460549428);
+    fn test_limits_z_none() {
+        let limits = Limits::new(MEAN, STD_DEV, TestKind::Z, None, None).unwrap();
+        assert_eq!(limits.left, None);
+        assert_eq!(limits.right, None);
 
-        let inverse = normal.inverse_cdf(0.6);
-        assert_eq!(inverse, 1.2533471031357997);
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, None);
 
-        let inverse = normal.inverse_cdf(0.8413447460549428);
-        assert_eq!(inverse, 1.999999999943794);
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
 
-        let students_t = StudentsT::new(1.0, 1.0, 10.0).unwrap();
-        let percentile = students_t.cdf(2.0);
-        assert_eq!(percentile, 0.8295534338489701);
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
 
-        let inverse = students_t.inverse_cdf(0.8295534338489701);
-        assert_eq!(inverse, 2.000000000000001);
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, None);
+    }
+
+    #[test]
+    fn test_limits_z_left() {
+        let limits = Limits::new(MEAN, STD_DEV, TestKind::Z, Some(PERCENTILE), None).unwrap();
+        assert_eq!(limits.left, Some(Limit { value: -Z_LIMIT }));
+        assert_eq!(limits.right, None);
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Left));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, None);
+    }
+
+    #[test]
+    fn test_limits_z_right() {
+        let limits = Limits::new(MEAN, STD_DEV, TestKind::Z, None, Some(PERCENTILE)).unwrap();
+        assert_eq!(limits.left, None);
+        assert_eq!(limits.right, Some(Limit { value: Z_LIMIT }));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Right));
+    }
+
+    #[test]
+    fn test_limits_z_both() {
+        let limits = Limits::new(
+            MEAN,
+            STD_DEV,
+            TestKind::Z,
+            Some(PERCENTILE),
+            Some(PERCENTILE),
+        )
+        .unwrap();
+        assert_eq!(limits.left, Some(Limit { value: -Z_LIMIT }));
+        assert_eq!(limits.right, Some(Limit { value: Z_LIMIT }));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Left));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Right));
+    }
+
+    #[test]
+    fn test_limits_t_none() {
+        let limits =
+            Limits::new(MEAN, STD_DEV, TestKind::T { freedom: FREEDOM }, None, None).unwrap();
+        assert_eq!(limits.left, None);
+        assert_eq!(limits.right, None);
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, None);
+    }
+
+    #[test]
+    fn test_limits_t_left() {
+        let limits = Limits::new(
+            MEAN,
+            STD_DEV,
+            TestKind::T { freedom: FREEDOM },
+            Some(PERCENTILE),
+            None,
+        )
+        .unwrap();
+        assert_eq!(limits.left, Some(Limit { value: -T_LIMIT }));
+        assert_eq!(limits.right, None);
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Left));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, None);
+    }
+
+    #[test]
+    fn test_limits_t_right() {
+        let limits = Limits::new(
+            MEAN,
+            STD_DEV,
+            TestKind::T { freedom: FREEDOM },
+            None,
+            Some(PERCENTILE),
+        )
+        .unwrap();
+        assert_eq!(limits.left, None);
+        assert_eq!(limits.right, Some(Limit { value: T_LIMIT }));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Right));
+    }
+
+    #[test]
+    fn test_limits_t_both() {
+        let limits = Limits::new(
+            MEAN,
+            STD_DEV,
+            TestKind::T { freedom: FREEDOM },
+            Some(PERCENTILE),
+            Some(PERCENTILE),
+        )
+        .unwrap();
+        assert_eq!(limits.left, Some(Limit { value: -T_LIMIT }));
+        assert_eq!(limits.right, Some(Limit { value: T_LIMIT }));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Left));
+
+        let boundary = limits.outlier(DATUM_NEGATIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_ZERO);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE);
+        assert_eq!(boundary, None);
+
+        let boundary = limits.outlier(DATUM_POSITIVE_OUTLIER);
+        assert_eq!(boundary, Some(Side::Right));
     }
 }

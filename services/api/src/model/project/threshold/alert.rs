@@ -56,6 +56,7 @@ impl QueryAlert {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Side {
     Left = 0,
     Right = 1,

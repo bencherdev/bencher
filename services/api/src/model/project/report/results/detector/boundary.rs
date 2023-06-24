@@ -107,6 +107,9 @@ fn variance(mean: f64, data: &[f64]) -> Option<f64> {
 #[cfg(test)]
 mod test {
     use pretty_assertions::assert_eq;
+
+    use super::{mean, std_deviation, variance};
+
     const DATA_ZERO: [f64; 0] = [];
     const DATA_ONE: [f64; 1] = [1.0];
     const DATA_TWO: [f64; 2] = [1.0, 2.0];
@@ -121,213 +124,213 @@ mod test {
 
     #[test]
     fn test_mean_zero() {
-        let mean = super::mean(&DATA_ZERO);
-        assert_eq!(mean, None);
+        let m = mean(&DATA_ZERO);
+        assert_eq!(m, None);
     }
 
     #[test]
     fn test_mean_one() {
-        let mean = super::mean(&DATA_ONE).unwrap();
-        assert_eq!(mean, MEAN_ONE);
+        let m = mean(&DATA_ONE).unwrap();
+        assert_eq!(m, MEAN_ONE);
     }
 
     #[test]
     fn test_mean_two() {
-        let mean = super::mean(&DATA_TWO).unwrap();
-        assert_eq!(mean, MEAN_TWO);
+        let m = mean(&DATA_TWO).unwrap();
+        assert_eq!(m, MEAN_TWO);
     }
 
     #[test]
     fn test_mean_three() {
-        let mean = super::mean(&DATA_THREE).unwrap();
-        assert_eq!(mean, MEAN_THREE);
+        let m = mean(&DATA_THREE).unwrap();
+        assert_eq!(m, MEAN_THREE);
     }
 
     #[test]
     fn test_mean_five() {
-        let mean = super::mean(&DATA_FIVE).unwrap();
-        assert_eq!(mean, MEAN_FIVE);
+        let m = mean(&DATA_FIVE).unwrap();
+        assert_eq!(m, MEAN_FIVE);
     }
 
     #[test]
     fn test_variance_zero() {
-        let variance = super::variance(MEAN_ZERO, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_ZERO, &DATA_ZERO);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_ONE, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_ONE, &DATA_ZERO);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_TWO, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_TWO, &DATA_ZERO);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_THREE, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_THREE, &DATA_ZERO);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_FIVE, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_FIVE, &DATA_ZERO);
+        assert_eq!(v, None);
     }
 
     #[test]
     fn test_variance_one() {
-        let variance = super::variance(MEAN_ZERO, &DATA_ONE);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_ZERO, &DATA_ONE);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_ONE, &DATA_ONE);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_ONE, &DATA_ONE);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_TWO, &DATA_ONE);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_TWO, &DATA_ONE);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_THREE, &DATA_ONE);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_THREE, &DATA_ONE);
+        assert_eq!(v, None);
 
-        let variance = super::variance(MEAN_FIVE, &DATA_ONE);
-        assert_eq!(variance, None);
+        let v = variance(MEAN_FIVE, &DATA_ONE);
+        assert_eq!(v, None);
     }
 
     #[test]
     fn test_variance_two() {
-        let variance = super::variance(MEAN_ZERO, &DATA_TWO).unwrap();
-        assert_eq!(variance, 2.5);
+        let v = variance(MEAN_ZERO, &DATA_TWO).unwrap();
+        assert_eq!(v, 2.5);
 
-        let variance = super::variance(MEAN_ONE, &DATA_TWO).unwrap();
-        assert_eq!(variance, 0.5);
+        let v = variance(MEAN_ONE, &DATA_TWO).unwrap();
+        assert_eq!(v, 0.5);
 
-        let variance = super::variance(MEAN_TWO, &DATA_TWO).unwrap();
-        assert_eq!(variance, 0.25);
+        let v = variance(MEAN_TWO, &DATA_TWO).unwrap();
+        assert_eq!(v, 0.25);
 
-        let variance = super::variance(MEAN_THREE, &DATA_TWO).unwrap();
-        assert_eq!(variance, 0.5);
+        let v = variance(MEAN_THREE, &DATA_TWO).unwrap();
+        assert_eq!(v, 0.5);
 
-        let variance = super::variance(MEAN_FIVE, &DATA_TWO).unwrap();
-        assert_eq!(variance, 2.5);
+        let v = variance(MEAN_FIVE, &DATA_TWO).unwrap();
+        assert_eq!(v, 2.5);
     }
 
     #[test]
     fn test_variance_three() {
-        let variance = super::variance(MEAN_ZERO, &DATA_THREE).unwrap();
-        assert_eq!(variance, 4.666666666666667);
+        let v = variance(MEAN_ZERO, &DATA_THREE).unwrap();
+        assert_eq!(v, 4.666666666666667);
 
-        let variance = super::variance(MEAN_ONE, &DATA_THREE).unwrap();
-        assert_eq!(variance, 1.6666666666666667);
+        let v = variance(MEAN_ONE, &DATA_THREE).unwrap();
+        assert_eq!(v, 1.6666666666666667);
 
-        let variance = super::variance(MEAN_TWO, &DATA_THREE).unwrap();
-        assert_eq!(variance, 0.9166666666666666);
+        let v = variance(MEAN_TWO, &DATA_THREE).unwrap();
+        assert_eq!(v, 0.9166666666666666);
 
-        let variance = super::variance(MEAN_THREE, &DATA_THREE).unwrap();
-        assert_eq!(variance, 0.6666666666666666);
+        let v = variance(MEAN_THREE, &DATA_THREE).unwrap();
+        assert_eq!(v, 0.6666666666666666);
 
-        let variance = super::variance(MEAN_FIVE, &DATA_THREE).unwrap();
-        assert_eq!(variance, 1.6666666666666667);
+        let v = variance(MEAN_FIVE, &DATA_THREE).unwrap();
+        assert_eq!(v, 1.6666666666666667);
     }
 
     #[test]
     fn test_variance_five() {
-        let variance = super::variance(MEAN_ZERO, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 11.0);
+        let v = variance(MEAN_ZERO, &DATA_FIVE).unwrap();
+        assert_eq!(v, 11.0);
 
-        let variance = super::variance(MEAN_ONE, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 6.0);
+        let v = variance(MEAN_ONE, &DATA_FIVE).unwrap();
+        assert_eq!(v, 6.0);
 
-        let variance = super::variance(MEAN_TWO, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 4.25);
+        let v = variance(MEAN_TWO, &DATA_FIVE).unwrap();
+        assert_eq!(v, 4.25);
 
-        let variance = super::variance(MEAN_THREE, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 3.0);
+        let v = variance(MEAN_THREE, &DATA_FIVE).unwrap();
+        assert_eq!(v, 3.0);
 
-        let variance = super::variance(MEAN_FIVE, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 2.0);
+        let v = variance(MEAN_FIVE, &DATA_FIVE).unwrap();
+        assert_eq!(v, 2.0);
     }
 
     #[test]
     fn test_std_dev_zero() {
-        let variance = super::std_deviation(MEAN_ZERO, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_ZERO);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_ONE, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_ONE, &DATA_ZERO);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_TWO, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_TWO, &DATA_ZERO);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_THREE, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_THREE, &DATA_ZERO);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_FIVE, &DATA_ZERO);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_FIVE, &DATA_ZERO);
+        assert_eq!(std_dev, None);
     }
 
     #[test]
     fn test_std_dev_one() {
-        let variance = super::std_deviation(MEAN_ZERO, &DATA_ONE);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_ONE);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_ONE, &DATA_ONE);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_ONE, &DATA_ONE);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_TWO, &DATA_ONE);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_TWO, &DATA_ONE);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_THREE, &DATA_ONE);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_THREE, &DATA_ONE);
+        assert_eq!(std_dev, None);
 
-        let variance = super::std_deviation(MEAN_FIVE, &DATA_ONE);
-        assert_eq!(variance, None);
+        let std_dev = std_deviation(MEAN_FIVE, &DATA_ONE);
+        assert_eq!(std_dev, None);
     }
 
     #[test]
     #[allow(clippy::approx_constant)]
     fn test_std_dev_two() {
-        let variance = super::std_deviation(MEAN_ZERO, &DATA_TWO).unwrap();
-        assert_eq!(variance, 1.5811388300841898);
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_TWO).unwrap();
+        assert_eq!(std_dev, 1.5811388300841898);
 
-        let variance = super::std_deviation(MEAN_ONE, &DATA_TWO).unwrap();
-        assert_eq!(variance, 0.7071067811865476);
+        let std_dev = std_deviation(MEAN_ONE, &DATA_TWO).unwrap();
+        assert_eq!(std_dev, 0.7071067811865476);
 
-        let variance = super::std_deviation(MEAN_TWO, &DATA_TWO).unwrap();
-        assert_eq!(variance, 0.5);
+        let std_dev = std_deviation(MEAN_TWO, &DATA_TWO).unwrap();
+        assert_eq!(std_dev, 0.5);
 
-        let variance = super::std_deviation(MEAN_THREE, &DATA_TWO).unwrap();
-        assert_eq!(variance, 0.7071067811865476);
+        let std_dev = std_deviation(MEAN_THREE, &DATA_TWO).unwrap();
+        assert_eq!(std_dev, 0.7071067811865476);
 
-        let variance = super::std_deviation(MEAN_FIVE, &DATA_TWO).unwrap();
-        assert_eq!(variance, 1.5811388300841898);
+        let std_dev = std_deviation(MEAN_FIVE, &DATA_TWO).unwrap();
+        assert_eq!(std_dev, 1.5811388300841898);
     }
 
     #[test]
     fn test_std_dev_three() {
-        let variance = super::std_deviation(MEAN_ZERO, &DATA_THREE).unwrap();
-        assert_eq!(variance, 2.160246899469287);
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_THREE).unwrap();
+        assert_eq!(std_dev, 2.160246899469287);
 
-        let variance = super::std_deviation(MEAN_ONE, &DATA_THREE).unwrap();
-        assert_eq!(variance, 1.2909944487358056);
+        let std_dev = std_deviation(MEAN_ONE, &DATA_THREE).unwrap();
+        assert_eq!(std_dev, 1.2909944487358056);
 
-        let variance = super::std_deviation(MEAN_TWO, &DATA_THREE).unwrap();
-        assert_eq!(variance, 0.9574271077563381);
+        let std_dev = std_deviation(MEAN_TWO, &DATA_THREE).unwrap();
+        assert_eq!(std_dev, 0.9574271077563381);
 
-        let variance = super::std_deviation(MEAN_THREE, &DATA_THREE).unwrap();
-        assert_eq!(variance, 0.816496580927726);
+        let std_dev = std_deviation(MEAN_THREE, &DATA_THREE).unwrap();
+        assert_eq!(std_dev, 0.816496580927726);
 
-        let variance = super::std_deviation(MEAN_FIVE, &DATA_THREE).unwrap();
-        assert_eq!(variance, 1.2909944487358056);
+        let std_dev = std_deviation(MEAN_FIVE, &DATA_THREE).unwrap();
+        assert_eq!(std_dev, 1.2909944487358056);
     }
 
     #[test]
     #[allow(clippy::approx_constant)]
     fn test_std_dev_five() {
-        let variance = super::std_deviation(MEAN_ZERO, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 3.3166247903554);
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_FIVE).unwrap();
+        assert_eq!(std_dev, 3.3166247903554);
 
-        let variance = super::std_deviation(MEAN_ONE, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 2.449489742783178);
+        let std_dev = std_deviation(MEAN_ONE, &DATA_FIVE).unwrap();
+        assert_eq!(std_dev, 2.449489742783178);
 
-        let variance = super::std_deviation(MEAN_TWO, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 2.0615528128088303);
+        let std_dev = std_deviation(MEAN_TWO, &DATA_FIVE).unwrap();
+        assert_eq!(std_dev, 2.0615528128088303);
 
-        let variance = super::std_deviation(MEAN_THREE, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 1.7320508075688772);
+        let std_dev = std_deviation(MEAN_THREE, &DATA_FIVE).unwrap();
+        assert_eq!(std_dev, 1.7320508075688772);
 
-        let variance = super::std_deviation(MEAN_FIVE, &DATA_FIVE).unwrap();
-        assert_eq!(variance, 1.4142135623730951);
+        let std_dev = std_deviation(MEAN_FIVE, &DATA_FIVE).unwrap();
+        assert_eq!(std_dev, 1.4142135623730951);
     }
 }
