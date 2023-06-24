@@ -4,7 +4,8 @@ use bencher_json::{
     project::{
         benchmark::JsonBenchmarkMetric,
         report::{
-            JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
+            JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult,
+            JsonReportResults, JsonReportThreshold,
         },
     },
     BenchmarkName, JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
@@ -20,7 +21,9 @@ use super::{
     metric::QueryMetric,
     metric_kind::QueryMetricKind,
     testbed::QueryTestbed,
-    threshold::{alert::QueryAlert, boundary::QueryBoundary},
+    threshold::{
+        alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic, QueryThreshold,
+    },
     QueryProject,
 };
 use crate::{
@@ -88,13 +91,18 @@ impl QueryReport {
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            results: get_results(conn, self.id)?,
+            results: get_results(conn, self.id, self.branch_id, self.testbed_id)?,
             alerts: get_alerts(conn, self.id)?,
         })
     }
 }
 
-fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResults, ApiError> {
+fn get_results(
+    conn: &mut DbConnection,
+    report_id: i32,
+    branch_id: i32,
+    testbed_id: i32,
+) -> Result<JsonReportResults, ApiError> {
     let mut results = Vec::new();
 
     let mut iteration = 0;
@@ -128,8 +136,13 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
                 }
             }
         } else {
-            let iteration_results =
-                get_iteration_results(&metric_kinds, std::mem::take(&mut metric_kind_benchmarks))?;
+            let iteration_results = get_iteration_results(
+                conn,
+                branch_id,
+                testbed_id,
+                &metric_kinds,
+                std::mem::take(&mut metric_kind_benchmarks),
+            )?;
             results.push(iteration_results);
             iteration = perf.iteration;
             for metric_kind_id in metric_kinds.keys().cloned() {
@@ -144,7 +157,13 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
         }
     }
     // Add the last iteration's metric kind and benchmark results
-    let iteration_results = get_iteration_results(&metric_kinds, metric_kind_benchmarks)?;
+    let iteration_results = get_iteration_results(
+        conn,
+        branch_id,
+        testbed_id,
+        &metric_kinds,
+        metric_kind_benchmarks,
+    )?;
     results.push(iteration_results);
 
     Ok(results)
@@ -252,6 +271,9 @@ fn get_benchmark_metric(
 }
 
 fn get_iteration_results(
+    conn: &mut DbConnection,
+    branch_id: i32,
+    testbed_id: i32,
     metric_kinds: &HashMap<i32, JsonMetricKind>,
     metric_kind_benchmarks: HashMap<i32, Vec<JsonBenchmarkMetric>>,
 ) -> Result<JsonReportIteration, ApiError> {
@@ -261,8 +283,24 @@ fn get_iteration_results(
             tracing::warn!("Metric kind {metric_kind_id} not found in metric kinds list");
             continue;
         };
+
+        let threshold = if let Ok(threshold) = schema::threshold::table
+            .filter(schema::threshold::metric_kind_id.eq(metric_kind_id))
+            .filter(schema::threshold::branch_id.eq(branch_id))
+            .filter(schema::threshold::testbed_id.eq(testbed_id))
+            .first::<QueryThreshold>(conn)
+        {
+            Some(JsonReportThreshold {
+                uuid: Uuid::from_str(&threshold.uuid).map_err(api_error!())?,
+                statistic: QueryStatistic::get(conn, threshold.statistic_id)?.into_json()?,
+            })
+        } else {
+            None
+        };
+
         let result = JsonReportResult {
             metric_kind,
+            threshold,
             benchmarks,
         };
         iteration_results.push(result);
