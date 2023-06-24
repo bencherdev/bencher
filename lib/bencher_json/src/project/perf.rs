@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::ser::{self, SerializeStruct};
@@ -14,6 +15,7 @@ use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed,
 
 use super::branch::JsonVersion;
 use super::metric::JsonMetric;
+use super::threshold::JsonStatistic;
 
 const QUERY_KEYS: [&str; 6] = [
     "metric_kind",
@@ -194,23 +196,28 @@ pub struct JsonPerfMetrics {
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
     pub metrics: Vec<JsonPerfMetric>,
-    // pub thresholds: Vec<JsonPerfThreshold>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {
+    pub report: Uuid,
     pub iteration: u32,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub version: JsonVersion,
     pub metric: JsonMetric,
-    // TODO add the boundaries here
-    // pub boundaries: Vec<JsonPerfBoundary>,
-    // JsonPerfBoundary {
-    //  pub threshold: Uuid,
-    //  pub side: JsonSide,
-    //  pub limit: OrderedFloat<f64>,
+    pub boundary: JsonPerfBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPerfBoundary {
+    pub threshold: Uuid,
+    pub statistic: JsonStatistic,
+    pub left_side: Option<OrderedFloat<f64>>,
+    pub right_side: Option<OrderedFloat<f64>>,
+    pub alert: Option<Uuid>,
 }
 
 #[cfg(feature = "table")]
@@ -219,6 +226,7 @@ pub mod table {
 
     use bencher_valid::GitHash;
     use chrono::{DateTime, Utc};
+    use ordered_float::OrderedFloat;
     use tabled::{Table, TableIteratorExt, Tabled};
 
     use crate::{
@@ -242,6 +250,8 @@ pub mod table {
                         version_number: metric.version.number,
                         version_hash: VersionHash(metric.version.hash),
                         metric: metric.metric,
+                        left_side: BoundaryLimit(metric.boundary.left_side),
+                        right_side: BoundaryLimit(metric.boundary.right_side),
                     })
                 }
             }
@@ -273,6 +283,10 @@ pub mod table {
         pub version_hash: VersionHash,
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
+        #[tabled(rename = "Left Boundary Limit")]
+        pub left_side: BoundaryLimit,
+        #[tabled(rename = "Right Boundary Limit")]
+        pub right_side: BoundaryLimit,
     }
 
     pub struct VersionHash(Option<GitHash>);
@@ -286,6 +300,22 @@ pub mod table {
                     git_hash.as_ref()
                 } else {
                     ""
+                }
+            )
+        }
+    }
+
+    pub struct BoundaryLimit(Option<OrderedFloat<f64>>);
+
+    impl fmt::Display for BoundaryLimit {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "{}",
+                if let Some(limit) = &self.0 {
+                    limit.to_string()
+                } else {
+                    "".into()
                 }
             )
         }
