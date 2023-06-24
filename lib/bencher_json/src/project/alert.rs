@@ -19,6 +19,6 @@ pub struct JsonAlert {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonAlertStatus {
-    Read,
     Unread,
+    Read,
 }

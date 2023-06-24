@@ -5,6 +5,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         boundary_id -> Integer,
+        side -> Bool,
         status -> Integer,
         modified -> BigInt,
     }
@@ -26,8 +27,8 @@ diesel::table! {
         perf_id -> Integer,
         threshold_id -> Integer,
         statistic_id -> Integer,
-        boundary_side -> Bool,
-        boundary_limit -> Double,
+        left_side -> Nullable<Double>,
+        right_side -> Nullable<Double>,
     }
 }
 

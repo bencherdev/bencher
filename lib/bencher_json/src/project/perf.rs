@@ -194,6 +194,7 @@ pub struct JsonPerfMetrics {
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
     pub metrics: Vec<JsonPerfMetric>,
+    // pub thresholds: Vec<JsonPerfThreshold>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -204,6 +205,12 @@ pub struct JsonPerfMetric {
     pub end_time: DateTime<Utc>,
     pub version: JsonVersion,
     pub metric: JsonMetric,
+    // TODO add the boundaries here
+    // pub boundaries: Vec<JsonPerfBoundary>,
+    // JsonPerfBoundary {
+    //  pub threshold: Uuid,
+    //  pub side: JsonSide,
+    //  pub limit: OrderedFloat<f64>,
 }
 
 #[cfg(feature = "table")]
