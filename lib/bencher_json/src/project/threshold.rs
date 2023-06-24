@@ -56,3 +56,10 @@ pub enum JsonStatisticKind {
     Z,
     T,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonThresholdStatistic {
+    pub uuid: Uuid,
+    pub statistic: JsonStatistic,
+}

@@ -4,8 +4,7 @@ use bencher_json::{
     project::{
         benchmark::JsonBenchmarkMetric,
         report::{
-            JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult,
-            JsonReportResults, JsonReportThreshold,
+            JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
         },
     },
     BenchmarkName, JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
@@ -21,9 +20,7 @@ use super::{
     metric::QueryMetric,
     metric_kind::QueryMetricKind,
     testbed::QueryTestbed,
-    threshold::{
-        alert::QueryAlert, boundary::QueryBoundary, statistic::QueryStatistic, QueryThreshold,
-    },
+    threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
     QueryProject,
 };
 use crate::{
@@ -284,19 +281,8 @@ fn get_iteration_results(
             continue;
         };
 
-        let threshold = if let Ok(threshold) = schema::threshold::table
-            .filter(schema::threshold::metric_kind_id.eq(metric_kind_id))
-            .filter(schema::threshold::branch_id.eq(branch_id))
-            .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .first::<QueryThreshold>(conn)
-        {
-            Some(JsonReportThreshold {
-                uuid: Uuid::from_str(&threshold.uuid).map_err(api_error!())?,
-                statistic: QueryStatistic::get(conn, threshold.statistic_id)?.into_json()?,
-            })
-        } else {
-            None
-        };
+        let threshold =
+            QueryThreshold::threshold_statistic_json(conn, metric_kind_id, branch_id, testbed_id)?;
 
         let result = JsonReportResult {
             metric_kind,

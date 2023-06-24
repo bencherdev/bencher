@@ -7,7 +7,9 @@ use uuid::Uuid;
 
 use crate::{JsonAlert, JsonMetricKind, JsonProject, JsonTestbed, JsonUser, ResourceId};
 
-use super::{benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonStatistic};
+use super::{
+    benchmark::JsonBenchmarkMetric, branch::JsonBranchVersion, threshold::JsonThresholdStatistic,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -99,14 +101,8 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
     pub metric_kind: JsonMetricKind,
-    pub threshold: Option<JsonReportThreshold>,
+    pub threshold: Option<JsonThresholdStatistic>,
     pub benchmarks: Vec<JsonBenchmarkMetric>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReportThreshold {
-    pub uuid: Uuid,
-    pub statistic: JsonStatistic,
 }
 
 pub type JsonReportAlerts = Vec<JsonAlert>;

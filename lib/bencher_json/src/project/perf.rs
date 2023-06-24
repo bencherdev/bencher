@@ -15,6 +15,7 @@ use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed,
 use super::boundary::JsonBoundary;
 use super::branch::JsonVersion;
 use super::metric::JsonMetric;
+use super::threshold::JsonThresholdStatistic;
 
 const QUERY_KEYS: [&str; 6] = [
     "metric_kind",
@@ -194,6 +195,7 @@ pub struct JsonPerfMetrics {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
+    pub threshold: Option<JsonThresholdStatistic>,
     pub metrics: Vec<JsonPerfMetric>,
 }
 

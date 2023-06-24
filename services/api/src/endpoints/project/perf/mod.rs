@@ -4,6 +4,7 @@ use bencher_json::{
     project::{
         branch::JsonVersion,
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+        threshold::JsonThresholdStatistic,
     },
     GitHash, JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed,
     ResourceId,
@@ -22,8 +23,12 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        benchmark::QueryBenchmark, branch::QueryBranch, metric_kind::QueryMetricKind,
-        report::to_date_time, testbed::QueryTestbed, threshold::boundary::QueryBoundary,
+        benchmark::QueryBenchmark,
+        branch::QueryBranch,
+        metric_kind::QueryMetricKind,
+        report::to_date_time,
+        testbed::QueryTestbed,
+        threshold::{boundary::QueryBoundary, QueryThreshold},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -138,6 +143,14 @@ async fn get_inner(
             };
             ids.testbed_id = testbed.id;
             dimensions = dimensions.testbed(conn, testbed)?;
+
+            let threshold = QueryThreshold::threshold_statistic_json(
+                conn,
+                ids.metric_kind_id,
+                ids.branch_id,
+                ids.testbed_id,
+            )?;
+
             for benchmark in &benchmarks {
                 let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project.id, *benchmark) else {
                     continue;
@@ -147,7 +160,14 @@ async fn get_inner(
                 let (two_d, query_dimensions) = dimensions.into_query()?;
                 dimensions = two_d;
 
-                perf_query(conn, ids, query_dimensions, times, &mut results)?;
+                perf_query(
+                    conn,
+                    ids,
+                    query_dimensions,
+                    times,
+                    threshold.clone(),
+                    &mut results,
+                )?;
             }
         }
     }
@@ -273,6 +293,7 @@ fn perf_query(
     ids: Ids,
     dimensions: QueryDimensions,
     times: Times,
+    threshold: Option<JsonThresholdStatistic>,
     results: &mut Vec<JsonPerfMetrics>,
 ) -> Result<(), ApiError> {
     let Ids {
@@ -348,6 +369,7 @@ fn perf_query(
         branch,
         testbed,
         benchmark,
+        threshold,
         metrics,
     });
 

@@ -65,7 +65,7 @@ impl QueryBenchmark {
         Self::json_benchmark(conn, uuid, project_id, name)
     }
 
-    pub fn into_metric_json(
+    pub fn metric_json(
         conn: &mut DbConnection,
         metric_id: i32,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
