@@ -207,7 +207,7 @@ pub struct JsonPerfMetric {
     pub end_time: DateTime<Utc>,
     pub version: JsonVersion,
     pub metric: JsonMetric,
-    pub boundary: JsonPerfBoundary,
+    // pub boundary: JsonPerfBoundary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -250,8 +250,8 @@ pub mod table {
                         version_number: metric.version.number,
                         version_hash: VersionHash(metric.version.hash),
                         metric: metric.metric,
-                        left_side: BoundaryLimit(metric.boundary.left_side),
-                        right_side: BoundaryLimit(metric.boundary.right_side),
+                        // left_side: BoundaryLimit(metric.boundary.left_side),
+                        // right_side: BoundaryLimit(metric.boundary.right_side),
                     })
                 }
             }
@@ -283,10 +283,10 @@ pub mod table {
         pub version_hash: VersionHash,
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
-        #[tabled(rename = "Left Boundary Limit")]
-        pub left_side: BoundaryLimit,
-        #[tabled(rename = "Right Boundary Limit")]
-        pub right_side: BoundaryLimit,
+        // #[tabled(rename = "Left Boundary Limit")]
+        // pub left_side: BoundaryLimit,
+        // #[tabled(rename = "Right Boundary Limit")]
+        // pub right_side: BoundaryLimit,
     }
 
     pub struct VersionHash(Option<GitHash>);

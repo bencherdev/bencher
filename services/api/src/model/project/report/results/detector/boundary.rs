@@ -1,5 +1,3 @@
-use bencher_json::JsonMetric;
-
 use crate::{
     model::project::threshold::{alert::Side, statistic::StatisticKind},
     ApiError,
@@ -18,7 +16,7 @@ pub struct Boundary {
 
 impl Boundary {
     pub fn new(
-        metric: JsonMetric,
+        datum: f64,
         metrics_data: MetricsData,
         test: StatisticKind,
         min_sample_size: Option<i64>,
@@ -26,7 +24,7 @@ impl Boundary {
         right_side: Option<f64>,
     ) -> Result<Self, ApiError> {
         Self::new_inner(
-            metric,
+            datum,
             metrics_data,
             test,
             min_sample_size,
@@ -37,7 +35,7 @@ impl Boundary {
     }
 
     fn new_inner(
-        metric: JsonMetric,
+        datum: f64,
         metrics_data: MetricsData,
         test: StatisticKind,
         min_sample_size: Option<i64>,
@@ -70,8 +68,6 @@ impl Boundary {
             },
         };
         let limits = Limits::new(mean, std_dev, test_kind, left_side, right_side)?;
-
-        let datum = metric.value.into();
         let outlier = limits.outlier(datum);
 
         Ok(Some(Self { limits, outlier }))

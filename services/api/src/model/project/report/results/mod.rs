@@ -15,7 +15,7 @@ use crate::{
     error::api_error,
     model::project::{
         benchmark::QueryBenchmark,
-        metric::InsertMetric,
+        metric::{InsertMetric, QueryMetric},
         metric_kind::QueryMetricKind,
         perf::{InsertPerf, QueryPerf},
     },
@@ -144,7 +144,8 @@ impl ReportResults {
             // Ignored benchmarks do not get checked against the threshold even if one exists
             if !ignore_benchmark {
                 if let Some(detector) = self.detector(conn, metric_kind_id)? {
-                    detector.detect(conn, perf_id, benchmark_id, metric)?;
+                    let query_metric = QueryMetric::from_uuid(conn, insert_metric.uuid)?;
+                    detector.detect(conn, benchmark_id, query_metric)?;
                 }
             }
         }

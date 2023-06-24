@@ -1,8 +1,13 @@
 use bencher_json::JsonMetric;
-use diesel::Insertable;
+use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use crate::schema::metric as metric_table;
+use crate::{
+    context::DbConnection,
+    error::api_error,
+    schema::{self, metric as metric_table},
+    ApiError,
+};
 
 #[derive(Queryable, Debug)]
 pub struct QueryMetric {
@@ -16,6 +21,13 @@ pub struct QueryMetric {
 }
 
 impl QueryMetric {
+    pub fn from_uuid(conn: &mut DbConnection, uuid: String) -> Result<Self, ApiError> {
+        schema::metric::table
+            .filter(schema::metric::uuid.eq(uuid))
+            .first::<Self>(conn)
+            .map_err(api_error!())
+    }
+
     pub fn into_json(self) -> JsonMetric {
         let Self {
             value,
@@ -23,6 +35,14 @@ impl QueryMetric {
             upper_bound,
             ..
         } = self;
+        Self::json_metric(value, lower_bound, upper_bound)
+    }
+
+    pub fn json_metric(
+        value: f64,
+        lower_bound: Option<f64>,
+        upper_bound: Option<f64>,
+    ) -> JsonMetric {
         JsonMetric {
             value: value.into(),
             lower_bound: lower_bound.map(Into::into),

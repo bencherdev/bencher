@@ -1,11 +1,13 @@
-use bencher_json::JsonMetric;
 use diesel::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::{
     context::DbConnection,
     error::api_error,
-    model::project::threshold::{alert::InsertAlert, boundary::InsertBoundary},
+    model::project::{
+        metric::QueryMetric,
+        threshold::{alert::InsertAlert, boundary::InsertBoundary},
+    },
     schema, ApiError,
 };
 
@@ -62,9 +64,8 @@ impl Detector {
     pub fn detect(
         &self,
         conn: &mut DbConnection,
-        perf_id: i32,
         benchmark_id: i32,
-        metric: JsonMetric,
+        metric: QueryMetric,
     ) -> Result<(), ApiError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = MetricsData::new(
@@ -78,7 +79,7 @@ impl Detector {
 
         // Check to see if the metric has a boundary check for the given threshold statistic.
         let boundary = Boundary::new(
-            metric,
+            metric.value,
             metrics_data,
             self.threshold.statistic.test.try_into()?,
             self.threshold.statistic.min_sample_size,
@@ -89,9 +90,9 @@ impl Detector {
         let boundary_uuid = Uuid::new_v4();
         let insert_boundary = InsertBoundary {
             uuid: boundary_uuid.to_string(),
-            perf_id,
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
+            metric_id: metric.id,
             left_side: boundary.limits.left.map(Into::into),
             right_side: boundary.limits.right.map(Into::into),
         };

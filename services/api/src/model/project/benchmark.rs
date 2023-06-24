@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
-use bencher_json::{BenchmarkName, JsonBenchmark};
-use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
+use bencher_json::{project::benchmark::JsonBenchmarkMetric, BenchmarkName, JsonBenchmark};
+use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
-use super::QueryProject;
+use super::{metric::QueryMetric, QueryProject};
 use crate::{
     context::DbConnection, error::api_error, schema, schema::benchmark as benchmark_table,
     util::query::fn_get_id, ApiError,
@@ -62,6 +62,51 @@ impl QueryBenchmark {
             name,
             ..
         } = self;
+        Self::json_benchmark(conn, uuid, project_id, name)
+    }
+
+    pub fn into_metric_json(
+        conn: &mut DbConnection,
+        metric_id: i32,
+    ) -> Result<JsonBenchmarkMetric, ApiError> {
+        let (uuid, project_id, name, value, lower_bound, upper_bound) = schema::metric::table
+            .filter(schema::metric::id.eq(metric_id))
+            .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
+            .inner_join(
+                schema::benchmark::table.on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
+            )
+            .select((
+                schema::benchmark::uuid,
+                schema::benchmark::project_id,
+                schema::benchmark::name,
+                schema::metric::value,
+                schema::metric::lower_bound,
+                schema::metric::upper_bound,
+            ))
+            .first(conn)
+            .map_err(api_error!())?;
+
+        let JsonBenchmark {
+            uuid,
+            project,
+            name,
+        } = Self::json_benchmark(conn, uuid, project_id, name)?;
+        let metric = QueryMetric::json_metric(value, lower_bound, upper_bound);
+
+        Ok(JsonBenchmarkMetric {
+            uuid,
+            project,
+            name,
+            metric,
+        })
+    }
+
+    fn json_benchmark(
+        conn: &mut DbConnection,
+        uuid: String,
+        project_id: i32,
+        name: String,
+    ) -> Result<JsonBenchmark, ApiError> {
         Ok(JsonBenchmark {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
