@@ -26,8 +26,9 @@ SELECT id,
     uuid,
     (
         SELECT perf_id
-        FROM boundary
-        WHERE boundary.uuid = alert.uuid
+        FROM boundary,
+            metric
+        WHERE boundary.metric_id = metric.id
         LIMIT 1
     ), (
         SELECT threshold_id

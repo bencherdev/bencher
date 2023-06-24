@@ -24,9 +24,9 @@ diesel::table! {
     boundary (id) {
         id -> Integer,
         uuid -> Text,
-        perf_id -> Integer,
         threshold_id -> Integer,
         statistic_id -> Integer,
+        metric_id -> Integer,
         left_side -> Nullable<Double>,
         right_side -> Nullable<Double>,
     }
@@ -207,7 +207,7 @@ diesel::table! {
 
 diesel::joinable!(alert -> boundary (boundary_id));
 diesel::joinable!(benchmark -> project (project_id));
-diesel::joinable!(boundary -> perf (perf_id));
+diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> statistic (statistic_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
