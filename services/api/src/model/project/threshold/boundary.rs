@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::{
-        benchmark::JsonBenchmarkMetric,
-        boundary::{JsonBoundary, JsonSide},
-    },
+    project::{benchmark::JsonBenchmarkMetric, boundary::JsonBoundary},
     JsonBenchmark,
 };
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
@@ -30,8 +27,8 @@ pub struct QueryBoundary {
     pub perf_id: i32,
     pub threshold_id: i32,
     pub statistic_id: i32,
-    pub boundary_side: bool,
-    pub boundary_limit: f64,
+    pub left_side: Option<f64>,
+    pub right_side: Option<f64>,
 }
 
 impl QueryBoundary {
@@ -49,12 +46,11 @@ impl QueryBoundary {
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBoundary, ApiError> {
         let Self {
-            uuid,
             perf_id,
             threshold_id,
             statistic_id,
-            boundary_side,
-            boundary_limit,
+            left_side,
+            right_side,
             ..
         } = self;
 
@@ -64,7 +60,6 @@ impl QueryBoundary {
         threshold.statistic_id = statistic_id;
 
         Ok(JsonBoundary {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             report: QueryReport::get_uuid(conn, perf.report_id)?,
             iteration: perf.iteration as u32,
             benchmark: get_benchmark_metric(
@@ -74,8 +69,8 @@ impl QueryBoundary {
                 perf.benchmark_id,
             )?,
             threshold: threshold.into_json(conn)?,
-            side: Side::from(boundary_side).into(),
-            limit: boundary_limit.into(),
+            left_side: left_side.map(Into::into),
+            right_side: right_side.map(Into::into),
         })
     }
 }
@@ -112,39 +107,6 @@ fn get_benchmark_metric(
     })
 }
 
-pub enum Side {
-    Left = 0,
-    Right = 1,
-}
-
-impl From<bool> for Side {
-    fn from(side: bool) -> Self {
-        if side {
-            Self::Right
-        } else {
-            Self::Left
-        }
-    }
-}
-
-impl From<Side> for bool {
-    fn from(side: Side) -> Self {
-        match side {
-            Side::Left => false,
-            Side::Right => true,
-        }
-    }
-}
-
-impl From<Side> for JsonSide {
-    fn from(side: Side) -> Self {
-        match side {
-            Side::Left => Self::Left,
-            Side::Right => Self::Right,
-        }
-    }
-}
-
 #[derive(Insertable)]
 #[diesel(table_name = boundary_table)]
 pub struct InsertBoundary {
@@ -152,6 +114,6 @@ pub struct InsertBoundary {
     pub perf_id: i32,
     pub threshold_id: i32,
     pub statistic_id: i32,
-    pub boundary_side: bool,
-    pub boundary_limit: f64,
+    pub left_side: Option<f64>,
+    pub right_side: Option<f64>,
 }

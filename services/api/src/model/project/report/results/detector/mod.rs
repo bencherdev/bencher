@@ -11,6 +11,7 @@ use crate::{
 
 mod boundary;
 pub mod data;
+mod limits;
 pub mod threshold;
 
 use boundary::Boundary;
@@ -76,16 +77,14 @@ impl Detector {
         )?;
 
         // Check to see if the metric has a boundary check for the given threshold statistic.
-        let Some(boundary) = Boundary::check(
+        let boundary = Boundary::new(
             metric,
             metrics_data,
             self.threshold.statistic.test.try_into()?,
             self.threshold.statistic.min_sample_size,
             self.threshold.statistic.left_side,
             self.threshold.statistic.right_side,
-        )? else {
-            return Ok(());
-        };
+        )?;
 
         let boundary_uuid = Uuid::new_v4();
         let insert_boundary = InsertBoundary {
@@ -93,8 +92,8 @@ impl Detector {
             perf_id,
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
-            boundary_side: boundary.side.into(),
-            boundary_limit: boundary.limit,
+            left_side: boundary.limits.left.map(Into::into),
+            right_side: boundary.limits.right.map(Into::into),
         };
 
         diesel::insert_into(schema::boundary::table)
@@ -102,9 +101,9 @@ impl Detector {
             .execute(conn)
             .map_err(api_error!())?;
 
-        // If the boundary check detects an outlier then create an alert for it.
-        if boundary.outlier {
-            InsertAlert::from_boundary(conn, boundary_uuid)
+        // If the boundary check detects an outlier then create an alert for it on the given side.
+        if let Some(side) = boundary.outlier {
+            InsertAlert::from_boundary(conn, boundary_uuid, side)
         } else {
             Ok(())
         }

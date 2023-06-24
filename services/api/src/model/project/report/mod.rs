@@ -258,6 +258,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
             schema::alert::id,
             schema::alert::uuid,
             schema::alert::boundary_id,
+            schema::alert::side,
             schema::alert::status,
             schema::alert::modified,
         ))

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bencher_json::project::alert::{JsonAlert, JsonAlertStatus};
+use bencher_json::project::alert::{JsonAlert, JsonAlertStatus, JsonSide};
 use chrono::{TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
@@ -16,6 +16,7 @@ pub struct QueryAlert {
     pub id: i32,
     pub uuid: String,
     pub boundary_id: i32,
+    pub side: bool,
     pub status: i32,
     pub modified: i64,
 }
@@ -36,6 +37,7 @@ impl QueryAlert {
         let Self {
             uuid,
             boundary_id,
+            side,
             status,
             modified,
             ..
@@ -44,12 +46,46 @@ impl QueryAlert {
         Ok(JsonAlert {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             boundary: QueryBoundary::get(conn, boundary_id)?.into_json(conn)?,
+            side: Side::from(side).into(),
             status: Status::try_from(status)?.into(),
             modified: Utc
                 .timestamp_opt(modified, 0)
                 .single()
                 .ok_or(ApiError::Timestamp(modified))?,
         })
+    }
+}
+
+pub enum Side {
+    Left = 0,
+    Right = 1,
+}
+
+impl From<bool> for Side {
+    fn from(side: bool) -> Self {
+        if side {
+            Self::Right
+        } else {
+            Self::Left
+        }
+    }
+}
+
+impl From<Side> for bool {
+    fn from(side: Side) -> Self {
+        match side {
+            Side::Left => false,
+            Side::Right => true,
+        }
+    }
+}
+
+impl From<Side> for JsonSide {
+    fn from(side: Side) -> Self {
+        match side {
+            Side::Left => Self::Left,
+            Side::Right => Self::Right,
+        }
     }
 }
 
@@ -95,15 +131,21 @@ impl From<Status> for JsonAlertStatus {
 pub struct InsertAlert {
     pub uuid: String,
     pub boundary_id: i32,
+    pub side: bool,
     pub status: i32,
     pub modified: i64,
 }
 
 impl InsertAlert {
-    pub fn from_boundary(conn: &mut DbConnection, boundary: Uuid) -> Result<(), ApiError> {
+    pub fn from_boundary(
+        conn: &mut DbConnection,
+        boundary: Uuid,
+        side: Side,
+    ) -> Result<(), ApiError> {
         let insert_alert = InsertAlert {
             uuid: Uuid::new_v4().to_string(),
             boundary_id: QueryBoundary::get_id(conn, &boundary)?,
+            side: side.into(),
             status: Status::default().into(),
             modified: Utc::now().timestamp(),
         };

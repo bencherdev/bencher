@@ -11,8 +11,17 @@ use super::boundary::JsonBoundary;
 pub struct JsonAlert {
     pub uuid: Uuid,
     pub boundary: JsonBoundary,
+    pub side: JsonSide,
     pub status: JsonAlertStatus,
     pub modified: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonSide {
+    Left,
+    Right,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

@@ -11,19 +11,10 @@ use super::benchmark::JsonBenchmarkMetric;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBoundary {
-    pub uuid: Uuid,
     pub report: Uuid,
     pub iteration: u32,
     pub benchmark: JsonBenchmarkMetric,
     pub threshold: JsonThreshold,
-    pub side: JsonSide,
-    pub limit: OrderedFloat<f64>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "snake_case")]
-pub enum JsonSide {
-    Left,
-    Right,
+    pub left_side: Option<OrderedFloat<f64>>,
+    pub right_side: Option<OrderedFloat<f64>>,
 }
