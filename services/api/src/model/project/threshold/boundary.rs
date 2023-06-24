@@ -37,18 +37,20 @@ impl QueryBoundary {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn from_metric_id(conn: &mut DbConnection, metric_id: i32) -> Result<Self, ApiError> {
-        schema::boundary::table
-            .filter(schema::boundary::metric_id.eq(metric_id))
-            .first::<Self>(conn)
-            .map_err(api_error!())
-    }
-
     pub fn into_json(self) -> JsonBoundary {
         JsonBoundary {
             left_side: self.left_side.map(Into::into),
             right_side: self.right_side.map(Into::into),
         }
+    }
+
+    // There may not be a boundary for every metric, so return the default if there isn't one.
+    pub fn json_boundary(conn: &mut DbConnection, metric_id: i32) -> JsonBoundary {
+        schema::boundary::table
+            .filter(schema::boundary::metric_id.eq(metric_id))
+            .first::<Self>(conn)
+            .map(|b| b.into_json())
+            .unwrap_or_default()
     }
 }
 

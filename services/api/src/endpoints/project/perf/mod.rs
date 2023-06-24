@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::{
-        boundary::JsonBoundary,
         branch::JsonVersion,
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
     },
@@ -24,7 +23,8 @@ use crate::{
     error::api_error,
     model::project::{
         benchmark::QueryBenchmark, branch::QueryBranch, metric_kind::QueryMetricKind,
-        report::to_date_time, testbed::QueryTestbed, QueryProject,
+        report::to_date_time, testbed::QueryTestbed, threshold::boundary::QueryBoundary,
+        QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
@@ -262,9 +262,8 @@ type PerfQuery = (
     i64,
     i32,
     Option<String>,
+    i32,
     f64,
-    Option<f64>,
-    Option<f64>,
     Option<f64>,
     Option<f64>,
 );
@@ -319,7 +318,6 @@ fn perf_query(
                 .on(schema::version::id.eq(schema::branch_version::version_id)),
         )
         .filter(schema::branch_version::branch_id.eq(branch_id))
-        .inner_join(schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)))
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.
@@ -335,16 +333,15 @@ fn perf_query(
             schema::report::end_time,
             schema::version::number,
             schema::version::hash,
+            schema::metric::id,
             schema::metric::value,
             schema::metric::lower_bound,
             schema::metric::upper_bound,
-            schema::boundary::left_side,
-            schema::boundary::right_side,
         ))
         .load::<PerfQuery>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(perf_metric)
+        .filter_map(|query| perf_metric(conn, query))
         .collect();
 
     results.push(JsonPerfMetrics {
@@ -358,6 +355,7 @@ fn perf_query(
 }
 
 fn perf_metric(
+    conn: &mut DbConnection,
     (
         report,
         iteration,
@@ -365,11 +363,10 @@ fn perf_metric(
         end_time,
         version_number,
         version_hash,
+        metric_id,
         value,
         lower_bound,
         upper_bound,
-        left_side,
-        right_side,
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
     Some(JsonPerfMetric {
@@ -390,9 +387,6 @@ fn perf_metric(
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
         },
-        boundary: JsonBoundary {
-            left_side: left_side.map(Into::into),
-            right_side: right_side.map(Into::into),
-        },
+        boundary: QueryBoundary::json_boundary(conn, metric_id),
     })
 }

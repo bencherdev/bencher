@@ -234,11 +234,7 @@ fn get_benchmark_metric(
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .first::<QueryMetric>(conn)
         .map_err(api_error!())?;
-
-    // There may not be a boundary for every metric
-    let boundary = QueryBoundary::from_metric_id(conn, metric.id)
-        .map(|b| b.into_json())
-        .unwrap_or_default();
+    let boundary = QueryBoundary::json_boundary(conn, metric.id);
 
     let StubBenchmarkMetric {
         uuid,
