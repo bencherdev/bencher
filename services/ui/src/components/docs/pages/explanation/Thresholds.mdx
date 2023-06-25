@@ -3,7 +3,7 @@ They are statistical significance tests that use either a
 [Z-score](https://en.wikipedia.org/wiki/Standard_score)
 or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test)
 in order to detect performance regressions and gerenerate Alerts.
-When a Metric is below a Threshold's left side boundary or above a Threshold's right side boundary,
+When a Metric is below a Threshold's Lower Boundary Limit or above a Threshold's Upper Boundary Limit,
 an Alert is generated for that Metric.
 
 Thresholds work best when:
@@ -32,18 +32,18 @@ then a Student's t-test Threshold should be used and __*not*__ a Z-score Thresho
 ### Z-score
 
 The Z-score measures the number of [standard deviations](https://en.wikipedia.org/wiki/Standard_deviation) (σ) a given Metric is above or below the mean of the historical Metrics.
-The standard deviation (σ) can also be expressed as a _left_ side or _right_ side cumulative percentage.
+The standard deviation (σ) can also be expressed as a _lower_ boundary or _upper_ boundary cumulative percentage.
 
-For example, two standard deviations (2σ) is the same as a _right_ side cumulative percentage of 97.7%, as pictured above.
+For example, two standard deviations (2σ) is the same as an _upper_ boundary cumulative percentage of 97.7%, as pictured above.
 When creating Z-score Thresholds, the decimal notation of the cumulative percentage is used.
-In this example, the _right_ side cumulative percentage of 97.7% would be a Right Side Boundary of `0.977`.
+In this example, the _upper_ bound cumulative percentage of 97.7% would be an Upper Boundary of `0.977`.
 In practice, a Threshold like this would be useful for the Latency Metric Kind.
 That is, a larger value would indicate a performance regression.
 
 When a smaller value would indicate a performance regression such as with the Throughput Metric Kind,
-a _left_ side cumulative percentage should be used.
-A _left_ side cumulative percentage of 97.7% would correspond to two standard deviations below the mean (-2σ).
-This would be given in decimal notation as a Left Side Boundary of `0.977`.
+a _lower_ boundary cumulative percentage should be used.
+A _lower_ boundary cumulative percentage of 97.7% would correspond to two standard deviations below the mean (-2σ).
+This would be given in decimal notation as a Lower Boundary of `0.977`.
 
 <br />
 
@@ -53,18 +53,18 @@ This would be given in decimal notation as a Left Side Boundary of `0.977`.
 
 The Student's t-test measures how likely it is that a given Metric is above or below the mean of the historical Metrics.
 This likelihood is called a confidence interval (CI).
-The confidence interval (CI) is expressed as a _left_ side or _right_ side confidence percentage.
+The confidence interval (CI) is expressed as a _lower_ boundary or _upper_ boundary confidence percentage.
 
-For example, a _right_ side confidence percentage of 95.0% indicates that 95.0% of Metrics should be _less_ than an expected _maximum_.
+For example, an _upper_ boundary confidence percentage of 95.0% indicates that 95.0% of Metrics should be _less_ than an expected _maximum_.
 When creating t-test Thresholds, the decimal notation of the confidence percentage is used.
-In this example, the _right_ side confidence percentage of 95.0% would be a Right Side Boundary of `0.95`.
+In this example, the _upper_ boundar confidence percentage of 95.0% would be an Upper Boundary of `0.95`.
 In practice, a Threshold like this would be useful for the Latency Metric Kind.
 That is, a larger value would indicate a performance regression.
 
 When a smaller value would indicate a performance regression such as with the Throughput Metric Kind,
-a _left_ side confidence percentage should be used.
-A _left_ side confidence percentage of 95.0% would indicate that Metrics should be _greater_ than an expected _minimum_.
-This would be given in decimal notation as a Left Side Boundary of `0.95`.
+a _lower_ boundary confidence percentage should be used.
+A _lower_ boundary confidence percentage of 95.0% would indicate that Metrics should be _greater_ than an expected _minimum_.
+This would be given in decimal notation as a Lower Boundary of `0.95`.
 
 <br />
 
@@ -77,31 +77,31 @@ The meaning of the statistical significance boundary depends on the statistical 
 - t-test: Confidence interval (CI) expressed as a decimal confidence percentage
 
 Each Metric is checked against the Threshold's statistical significance boundary if it exists.
-This can include a Left Side Boundary, Right Side Boundary, or both.
-A Boundary Limit is calculated for each Side Boundary.
+This can include a Lower Boundary, Upper Boundary, or both.
+A Boundary Limit is calculated for each Boundary.
 This Boundary Limit is then compared against the current Metric.
 If that Metric falls outside of the Boundary Limit an Alert will be generate.
 
 > 🐰 Tip: To fail a CI build when a boundary is violated use the `--err` flag for the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand.
 
-### Left Side Boundary
-A left side boundary can be set for a Threshold.
+### Lower Boundary
+A lower boundary can be set for a Threshold.
 It is used when a smaller value would indicate a performance regression,
 such as with the Throughput Metric Kind.
 The value must be a decimal between `0.5` and `1.0`.
 
 For example, if you used a Z-score and your historical Metrics had a mean of `100` and a standard deviation of `10`,
-then a Left Side Boundary of `0.977` would create a Boundary Limit at `80.05`.
+then a Lower Boundary of `0.977` would create a Lower Boundary Limit at `80.05`.
 Any value less than `80.05` would generate an Alert.
 
-### Right Side Boundary
-A right side boundary can be set for a Threshold.
+### Upper Boundary
+An upper boundary can be set for a Threshold.
 It is used when a larger value would indicate a performance regression,
 such as with the Latency Metric Kind.
 The value must be a decimal between `0.5` and `1.0`.
 
 For example, if you used a Z-score and your historical Metrics had a mean of `100` and a standard deviation of `10`,
-then a Right Side Boundary of `0.977` would create a Boundary Limit at `119.95`.
+then an Upper Boundary of `0.977` would create an Upper Boundary Limit at `119.95`.
 Any value greater than `119.95` would generate an Alert.
 
 ## Sample Size
@@ -122,7 +122,7 @@ The Threshold will limit itself to only the most recent historical Metrics
 bounded by the given time window for its statistical significance test.
 
 ## Alerts
-Alerts are generated when a Metric is below a Threshold's Left Side Boundary or above a Threshold's Right Side Boundary.
+Alerts are generated when a Metric is below a Threshold's Lower Boundary Limit or above a Threshold's Upper Boundary Limit.
 To fail a CI build in the event of an Alert set the `--err` flag when using the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand.
 
 ### Suppressing Alerts
