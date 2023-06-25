@@ -25,8 +25,8 @@ SELECT id,
     min_sample_size,
     max_sample_size,
     window,
-    lower_limit,
-    upper_limit
+    lower_boundary,
+    upper_boundary
 FROM statistic;
 DROP TABLE statistic;
 ALTER TABLE down_statistic

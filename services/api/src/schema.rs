@@ -146,8 +146,8 @@ diesel::table! {
         min_sample_size -> Nullable<BigInt>,
         max_sample_size -> Nullable<BigInt>,
         window -> Nullable<BigInt>,
-        lower_limit -> Nullable<Double>,
-        upper_limit -> Nullable<Double>,
+        lower_boundary -> Nullable<Double>,
+        upper_boundary -> Nullable<Double>,
     }
 }
 

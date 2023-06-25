@@ -6,8 +6,8 @@ CREATE TABLE up_statistic (
     min_sample_size BIGINT,
     max_sample_size BIGINT,
     window BIGINT,
-    lower_limit DOUBLE,
-    upper_limit DOUBLE
+    lower_boundary DOUBLE,
+    upper_boundary DOUBLE
 );
 INSERT INTO up_statistic(
         id,
@@ -16,8 +16,8 @@ INSERT INTO up_statistic(
         min_sample_size,
         max_sample_size,
         window,
-        lower_limit,
-        upper_limit
+        lower_boundary,
+        upper_boundary
     )
 SELECT id,
     uuid,
