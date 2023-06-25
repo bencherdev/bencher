@@ -6,9 +6,9 @@ pub struct CliMock {
     #[clap(long)]
     pub count: Option<usize>,
 
-    /// Order of magnitude for the values generated
+    /// Generate values of 10 raised to this power
     #[clap(long)]
-    pub magnitude: Option<i32>,
+    pub pow: Option<i32>,
 
     /// Fail while running
     #[clap(long)]
