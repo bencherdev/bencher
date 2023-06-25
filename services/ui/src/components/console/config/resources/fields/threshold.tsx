@@ -35,6 +35,20 @@ const THRESHOLD_FIELDS = {
 	test: {
 		icon: "fas fa-vial",
 	},
+	lower_boundary: {
+		type: "input",
+		placeholder: "0.95",
+		icon: "fas fa-arrow-down",
+		help: "Must be between 0.5000 and 1.0000",
+		validate: validate_boundary,
+	},
+	upper_boundary: {
+		type: "input",
+		placeholder: "0.95",
+		icon: "fas fa-arrow-up",
+		help: "Must be between 0.5000 and 1.0000",
+		validate: validate_boundary,
+	},
 	min_sample_size: {
 		type: "number",
 		placeholder: "30",
@@ -55,20 +69,6 @@ const THRESHOLD_FIELDS = {
 		icon: "fas fa-calendar-week",
 		help: "Must be an integer greater than zero",
 		validate: validate_u32,
-	},
-	left_side: {
-		type: "input",
-		placeholder: "0.95",
-		icon: "fas fa-hand-point-left",
-		help: "Must be between 0.5000 and 1.0000",
-		validate: validate_boundary,
-	},
-	right_side: {
-		type: "input",
-		placeholder: "0.95",
-		icon: "fas fa-hand-point-right",
-		help: "Must be between 0.5000 and 1.0000",
-		validate: validate_boundary,
 	},
 };
 
