@@ -21,8 +21,8 @@ pub struct QueryStatistic {
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
     pub window: Option<i64>,
-    pub left_side: Option<f64>,
-    pub right_side: Option<f64>,
+    pub lower_limit: Option<f64>,
+    pub upper_limit: Option<f64>,
 }
 
 impl QueryStatistic {
@@ -46,8 +46,8 @@ impl QueryStatistic {
             min_sample_size,
             max_sample_size,
             window,
-            left_side,
-            right_side,
+            lower_limit,
+            upper_limit,
             ..
         } = self;
         Ok(JsonStatistic {
@@ -56,8 +56,8 @@ impl QueryStatistic {
             min_sample_size: min_sample_size.map(|ss| ss as u32),
             max_sample_size: max_sample_size.map(|ss| ss as u32),
             window: window.map(|w| w as u32),
-            left_side: left_side.map(Into::into),
-            right_side: right_side.map(Into::into),
+            lower_limit: lower_limit.map(Into::into),
+            upper_limit: upper_limit.map(Into::into),
         })
     }
 }
@@ -106,8 +106,8 @@ pub struct InsertStatistic {
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
     pub window: Option<i64>,
-    pub left_side: Option<f64>,
-    pub right_side: Option<f64>,
+    pub lower_limit: Option<f64>,
+    pub upper_limit: Option<f64>,
 }
 
 impl From<QueryStatistic> for InsertStatistic {
@@ -117,8 +117,8 @@ impl From<QueryStatistic> for InsertStatistic {
             min_sample_size,
             max_sample_size,
             window,
-            left_side,
-            right_side,
+            lower_limit,
+            upper_limit,
             ..
         } = query_statistic;
         Self {
@@ -127,8 +127,8 @@ impl From<QueryStatistic> for InsertStatistic {
             min_sample_size,
             max_sample_size,
             window,
-            left_side,
-            right_side,
+            lower_limit,
+            upper_limit,
         }
     }
 }
@@ -140,8 +140,8 @@ impl InsertStatistic {
             min_sample_size,
             max_sample_size,
             window,
-            left_side,
-            right_side,
+            lower_limit,
+            upper_limit,
         } = json_statistic;
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
@@ -149,8 +149,8 @@ impl InsertStatistic {
             min_sample_size: min_sample_size.map(Into::into),
             max_sample_size: max_sample_size.map(Into::into),
             window: window.map(Into::into),
-            left_side: left_side.map(Into::into),
-            right_side: right_side.map(Into::into),
+            lower_limit: lower_limit.map(Into::into),
+            upper_limit: upper_limit.map(Into::into),
         })
     }
 }

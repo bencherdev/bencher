@@ -23,10 +23,10 @@ impl Limits {
         mean: f64,
         std_dev: f64,
         test_kind: TestKind,
-        left_side: Option<f64>,
-        right_side: Option<f64>,
+        lower_limit: Option<f64>,
+        upper_limit: Option<f64>,
     ) -> Result<Self, ApiError> {
-        if left_side.is_none() && right_side.is_none() {
+        if lower_limit.is_none() && upper_limit.is_none() {
             return Ok(Self::default());
         }
 
@@ -34,11 +34,11 @@ impl Limits {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::Z => {
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
-                let left = left_side.map(|limit| {
+                let left = lower_limit.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit);
                     Limit::left(mean, abs_limit)
                 });
-                let right = right_side.map(|limit| {
+                let right = upper_limit.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit);
                     Limit::right(abs_limit)
                 });
@@ -47,11 +47,11 @@ impl Limits {
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::T { freedom } => {
                 let students_t = StudentsT::new(mean, std_dev, freedom).map_err(api_error!())?;
-                let left = left_side.map(|limit| {
+                let left = lower_limit.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit);
                     Limit::left(mean, abs_limit)
                 });
-                let right = right_side.map(|limit| {
+                let right = upper_limit.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit);
                     Limit::right(abs_limit)
                 });

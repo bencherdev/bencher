@@ -242,8 +242,8 @@ pub mod table {
                         version_number: metric.version.number,
                         version_hash: VersionHash(metric.version.hash),
                         metric: metric.metric,
-                        left_side: BoundaryLimit(metric.boundary.left_side),
-                        right_side: BoundaryLimit(metric.boundary.right_side),
+                        lower_limit: BoundaryLimit(metric.boundary.lower_limit),
+                        upper_limit: BoundaryLimit(metric.boundary.upper_limit),
                     })
                 }
             }
@@ -276,9 +276,9 @@ pub mod table {
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
         #[tabled(rename = "Left Boundary Limit")]
-        pub left_side: BoundaryLimit,
+        pub lower_limit: BoundaryLimit,
         #[tabled(rename = "Right Boundary Limit")]
-        pub right_side: BoundaryLimit,
+        pub upper_limit: BoundaryLimit,
     }
 
     pub struct VersionHash(Option<GitHash>);

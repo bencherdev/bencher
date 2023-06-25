@@ -20,8 +20,8 @@ pub struct QueryBoundary {
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub metric_id: i32,
-    pub left_side: Option<f64>,
-    pub right_side: Option<f64>,
+    pub lower_limit: Option<f64>,
+    pub upper_limit: Option<f64>,
 }
 
 impl QueryBoundary {
@@ -53,8 +53,8 @@ impl QueryBoundary {
 
     pub fn into_json(self) -> JsonBoundary {
         JsonBoundary {
-            left_side: self.left_side.map(Into::into),
-            right_side: self.right_side.map(Into::into),
+            lower_limit: self.lower_limit.map(Into::into),
+            upper_limit: self.upper_limit.map(Into::into),
         }
     }
 }
@@ -66,6 +66,6 @@ pub struct InsertBoundary {
     pub threshold_id: i32,
     pub statistic_id: i32,
     pub metric_id: i32,
-    pub left_side: Option<f64>,
-    pub right_side: Option<f64>,
+    pub lower_limit: Option<f64>,
+    pub upper_limit: Option<f64>,
 }
