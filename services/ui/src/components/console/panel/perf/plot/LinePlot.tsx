@@ -44,7 +44,7 @@ const LinePlot = (props) => {
 
 	const plotted = () => {
 		const json_perf = props.perf_data();
-		// console.log(json_perf);
+		console.log(json_perf);
 
 		if (
 			typeof json_perf !== "object" ||

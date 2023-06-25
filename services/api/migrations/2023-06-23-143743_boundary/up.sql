@@ -5,8 +5,8 @@ CREATE TABLE boundary (
     threshold_id INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
     metric_id INTEGER NOT NULL,
-    left_side DOUBLE,
-    right_side DOUBLE,
+    lower_limit DOUBLE,
+    upper_limit DOUBLE,
     FOREIGN KEY (metric_id) REFERENCES metric (id),
     FOREIGN KEY (threshold_id) REFERENCES threshold (id),
     FOREIGN KEY (statistic_id) REFERENCES statistic (id)
@@ -17,8 +17,8 @@ INSERT INTO boundary(
         threshold_id,
         statistic_id,
         metric_id,
-        left_side,
-        right_side
+        lower_limit,
+        upper_limit
     )
 SELECT id,
     uuid,

@@ -27,8 +27,8 @@ diesel::table! {
         threshold_id -> Integer,
         statistic_id -> Integer,
         metric_id -> Integer,
-        left_side -> Nullable<Double>,
-        right_side -> Nullable<Double>,
+        lower_limit -> Nullable<Double>,
+        upper_limit -> Nullable<Double>,
     }
 }
 
@@ -146,8 +146,8 @@ diesel::table! {
         min_sample_size -> Nullable<BigInt>,
         max_sample_size -> Nullable<BigInt>,
         window -> Nullable<BigInt>,
-        left_side -> Nullable<Double>,
-        right_side -> Nullable<Double>,
+        lower_limit -> Nullable<Double>,
+        upper_limit -> Nullable<Double>,
     }
 }
 

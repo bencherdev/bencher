@@ -40,7 +40,7 @@ SELECT id,
         FROM boundary
         WHERE boundary.uuid = alert.uuid
         LIMIT 1
-    ), side, 0.0, 0.0
+    ), side, 1.0, 0.0
 FROM alert;
 DROP TABLE alert;
 ALTER TABLE down_alert
