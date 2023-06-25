@@ -88,23 +88,19 @@ impl QueryReport {
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            results: get_results(conn, self.id, self.branch_id, self.testbed_id)?,
+            results: get_results(conn, self.id)?,
             alerts: get_alerts(conn, self.id)?,
         })
     }
 }
 
-fn get_results(
-    conn: &mut DbConnection,
-    report_id: i32,
-    branch_id: i32,
-    testbed_id: i32,
-) -> Result<JsonReportResults, ApiError> {
+fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResults, ApiError> {
     let mut results = Vec::new();
 
     let mut iteration = 0;
     let mut metric_kinds = HashMap::new();
-    let mut metric_kind_benchmarks = HashMap::<i32, Vec<JsonBenchmarkMetric>>::new();
+    let mut metric_kind_benchmarks =
+        HashMap::<i32, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>::new();
 
     // Get the perfs for the report
     let perfs = get_perfs(conn, report_id)?;
@@ -118,49 +114,48 @@ fn get_results(
         // If the iteration is the same as the previous one, add the benchmark to the benchmarks list for all metric kinds
         // Otherwise, create a new iteration result and add it to the results list
         // Then add the benchmark to a new benchmarks list for all metric kinds
+        // Only keep a single instance of the threshold statistic for each metric kind as it should be the same value for all benchmarks
         if perf.iteration == iteration {
             for metric_kind_id in metric_kinds.keys().cloned() {
-                let benchmark_metric = get_benchmark_metric(
+                let (threshold_statistic, benchmark_metric) = get_benchmark_metric(
                     conn,
                     perf.id,
                     metric_kind_id,
                     stub_benchmark_metric.clone(),
                 )?;
-                if let Some(benchmarks) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
+                if let Some((_, benchmarks)) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
                     benchmarks.push(benchmark_metric);
                 } else {
-                    metric_kind_benchmarks.insert(metric_kind_id, vec![benchmark_metric]);
+                    metric_kind_benchmarks.insert(
+                        metric_kind_id,
+                        (threshold_statistic, vec![benchmark_metric]),
+                    );
                 }
             }
         } else {
             let iteration_results = get_iteration_results(
                 conn,
-                branch_id,
-                testbed_id,
                 &metric_kinds,
                 std::mem::take(&mut metric_kind_benchmarks),
             )?;
             results.push(iteration_results);
             iteration = perf.iteration;
             for metric_kind_id in metric_kinds.keys().cloned() {
-                let benchmark_metric = get_benchmark_metric(
+                let (threshold_statistic, benchmark_metric) = get_benchmark_metric(
                     conn,
                     perf.id,
                     metric_kind_id,
                     stub_benchmark_metric.clone(),
                 )?;
-                metric_kind_benchmarks.insert(metric_kind_id, vec![benchmark_metric]);
+                metric_kind_benchmarks.insert(
+                    metric_kind_id,
+                    (threshold_statistic, vec![benchmark_metric]),
+                );
             }
         }
     }
     // Add the last iteration's metric kind and benchmark results
-    let iteration_results = get_iteration_results(
-        conn,
-        branch_id,
-        testbed_id,
-        &metric_kinds,
-        metric_kind_benchmarks,
-    )?;
+    let iteration_results = get_iteration_results(conn, &metric_kinds, metric_kind_benchmarks)?;
     results.push(iteration_results);
 
     Ok(results)
@@ -239,18 +234,35 @@ fn get_stub_benchmark_metric(
     })
 }
 
+struct ThresholdStatistic {
+    threshold_id: i32,
+    statistic_id: i32,
+}
+
 fn get_benchmark_metric(
     conn: &mut DbConnection,
     perf_id: i32,
     metric_kind_id: i32,
     stub_benchmark_metric: StubBenchmarkMetric,
-) -> Result<JsonBenchmarkMetric, ApiError> {
-    let metric = schema::metric::table
+) -> Result<(Option<ThresholdStatistic>, JsonBenchmarkMetric), ApiError> {
+    let query_metric = schema::metric::table
         .filter(schema::metric::perf_id.eq(perf_id))
         .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
         .first::<QueryMetric>(conn)
         .map_err(api_error!())?;
-    let boundary = QueryBoundary::json_boundary(conn, metric.id);
+    // The boundary is optional, so it may not exist
+    let query_boundary = QueryBoundary::from_metric_id(conn, query_metric.id).ok();
+
+    let threshold_statistic = query_boundary.as_ref().map(
+        |QueryBoundary {
+             threshold_id,
+             statistic_id,
+             ..
+         }| ThresholdStatistic {
+            threshold_id: *threshold_id,
+            statistic_id: *statistic_id,
+        },
+    );
 
     let StubBenchmarkMetric {
         uuid,
@@ -258,31 +270,43 @@ fn get_benchmark_metric(
         name,
     } = stub_benchmark_metric;
 
-    Ok(JsonBenchmarkMetric {
-        uuid,
-        project,
-        name,
-        metric: metric.into_json(),
-        boundary,
-    })
+    Ok((
+        threshold_statistic,
+        JsonBenchmarkMetric {
+            uuid,
+            project,
+            name,
+            metric: query_metric.into_json(),
+            boundary: query_boundary.map(|b| b.into_json()).unwrap_or_default(),
+        },
+    ))
 }
 
 fn get_iteration_results(
     conn: &mut DbConnection,
-    branch_id: i32,
-    testbed_id: i32,
     metric_kinds: &HashMap<i32, JsonMetricKind>,
-    metric_kind_benchmarks: HashMap<i32, Vec<JsonBenchmarkMetric>>,
+    metric_kind_benchmarks: HashMap<i32, (Option<ThresholdStatistic>, Vec<JsonBenchmarkMetric>)>,
 ) -> Result<JsonReportIteration, ApiError> {
     let mut iteration_results = Vec::new();
-    for (metric_kind_id, benchmarks) in metric_kind_benchmarks {
+    for (metric_kind_id, (threshold_statistic, benchmarks)) in metric_kind_benchmarks {
         let Some(metric_kind) = metric_kinds.get(&metric_kind_id).cloned() else {
             tracing::warn!("Metric kind {metric_kind_id} not found in metric kinds list");
             continue;
         };
 
-        let threshold =
-            QueryThreshold::threshold_statistic_json(conn, metric_kind_id, branch_id, testbed_id)?;
+        let threshold = if let Some(ThresholdStatistic {
+            threshold_id,
+            statistic_id,
+        }) = threshold_statistic
+        {
+            Some(QueryThreshold::get_threshold_statistic_json(
+                conn,
+                threshold_id,
+                statistic_id,
+            )?)
+        } else {
+            None
+        };
 
         let result = JsonReportResult {
             metric_kind,

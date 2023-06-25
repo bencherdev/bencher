@@ -68,7 +68,7 @@ impl QueryAlert {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             report: QueryReport::get_uuid(conn, report_id)?,
             iteration: iteration as u32,
-            threshold: QueryThreshold::historical_json(conn, threshold_id, statistic_id)?,
+            threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
             benchmark: QueryBenchmark::metric_json(conn, metric_id)?,
             side: Side::from(side).into(),
             status: Status::try_from(status)?.into(),

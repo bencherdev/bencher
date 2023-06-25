@@ -42,6 +42,33 @@ impl QueryThreshold {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
+    pub fn get_historical(
+        conn: &mut DbConnection,
+        threshold_id: i32,
+        statistic_id: i32,
+    ) -> Result<Self, ApiError> {
+        let mut threshold = Self::get(conn, threshold_id)?;
+        // IMPORTANT: Set the statistic ID to the one from the boundary, and not the current value!
+        threshold.statistic_id = statistic_id;
+        Ok(threshold)
+    }
+
+    pub fn get_json(
+        conn: &mut DbConnection,
+        threshold_id: i32,
+        statistic_id: i32,
+    ) -> Result<JsonThreshold, ApiError> {
+        Self::get_historical(conn, threshold_id, statistic_id)?.into_json(conn)
+    }
+
+    pub fn get_threshold_statistic_json(
+        conn: &mut DbConnection,
+        threshold_id: i32,
+        statistic_id: i32,
+    ) -> Result<JsonThresholdStatistic, ApiError> {
+        Self::get_historical(conn, threshold_id, statistic_id)?.into_threshold_statistic_json(conn)
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, ApiError> {
         let Self {
             uuid,
@@ -60,15 +87,17 @@ impl QueryThreshold {
         })
     }
 
-    pub fn historical_json(
+    pub fn into_threshold_statistic_json(
+        self,
         conn: &mut DbConnection,
-        threshold_id: i32,
-        statistic_id: i32,
-    ) -> Result<JsonThreshold, ApiError> {
-        let mut threshold = Self::get(conn, threshold_id)?;
-        // IMPORTANT: Set the statistic ID to the one from the boundary, and not the current value!
-        threshold.statistic_id = statistic_id;
-        threshold.into_json(conn)
+    ) -> Result<JsonThresholdStatistic, ApiError> {
+        let Self {
+            uuid, statistic_id, ..
+        } = self;
+        Ok(JsonThresholdStatistic {
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
+        })
     }
 
     pub fn threshold_statistic_json(
