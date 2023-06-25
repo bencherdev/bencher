@@ -13,8 +13,8 @@ pub struct Statistic {
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
-    pub lower_limit: Option<f64>,
-    pub upper_limit: Option<f64>,
+    pub lower_boundary: Option<f64>,
+    pub upper_boundary: Option<f64>,
 }
 
 impl TryFrom<CliStatisticCreate> for Statistic {
@@ -26,8 +26,8 @@ impl TryFrom<CliStatisticCreate> for Statistic {
             min_sample_size,
             max_sample_size,
             window,
-            lower_limit,
-            upper_limit,
+            lower_boundary,
+            upper_boundary,
         } = create;
         Ok(Self {
             test: test.into(),
@@ -35,8 +35,8 @@ impl TryFrom<CliStatisticCreate> for Statistic {
             max_sample_size,
             window,
             // TODO validate these as reasonable percentages
-            lower_limit,
-            upper_limit,
+            lower_boundary,
+            upper_boundary,
         })
     }
 }
@@ -57,16 +57,16 @@ impl From<Statistic> for JsonNewStatistic {
             min_sample_size,
             max_sample_size,
             window,
-            lower_limit,
-            upper_limit,
+            lower_boundary,
+            upper_boundary,
         } = statistic;
         Self {
             test,
             min_sample_size,
             max_sample_size,
             window,
-            lower_limit: lower_limit.map(Into::into),
-            upper_limit: upper_limit.map(Into::into),
+            lower_boundary: lower_boundary.map(Into::into),
+            upper_boundary: upper_boundary.map(Into::into),
         }
     }
 }

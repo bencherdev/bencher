@@ -96,8 +96,8 @@ async fn get_one_inner(
             schema::statistic::min_sample_size,
             schema::statistic::max_sample_size,
             schema::statistic::window,
-            schema::statistic::lower_limit,
-            schema::statistic::upper_limit,
+            schema::statistic::lower_boundary,
+            schema::statistic::upper_boundary,
         ))
         .first::<QueryStatistic>(conn)
         .map_err(api_error!())?

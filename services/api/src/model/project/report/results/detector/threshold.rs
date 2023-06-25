@@ -36,8 +36,8 @@ impl MetricsThreshold {
                 schema::statistic::min_sample_size,
                 schema::statistic::max_sample_size,
                 schema::statistic::window,
-                schema::statistic::lower_limit,
-                schema::statistic::upper_limit,
+                schema::statistic::lower_boundary,
+                schema::statistic::upper_boundary,
             ))
             .first::<(
                 i32,
@@ -59,8 +59,8 @@ impl MetricsThreshold {
                     min_sample_size,
                     max_sample_size,
                     window,
-                    lower_limit,
-                    upper_limit,
+                    lower_boundary,
+                    upper_boundary,
                 )| {
                     let statistic = QueryStatistic {
                         id: statistic_id,
@@ -69,8 +69,8 @@ impl MetricsThreshold {
                         min_sample_size,
                         max_sample_size,
                         window,
-                        lower_limit,
-                        upper_limit,
+                        lower_boundary,
+                        upper_boundary,
                     };
                     Self {
                         id: threshold_id,

@@ -20,16 +20,16 @@ impl Boundary {
         metrics_data: MetricsData,
         test: StatisticKind,
         min_sample_size: Option<i64>,
-        lower_limit: Option<f64>,
-        upper_limit: Option<f64>,
+        lower_boundary: Option<f64>,
+        upper_boundary: Option<f64>,
     ) -> Result<Self, ApiError> {
         Self::new_inner(
             datum,
             metrics_data,
             test,
             min_sample_size,
-            lower_limit,
-            upper_limit,
+            lower_boundary,
+            upper_boundary,
         )
         .map(|opt| opt.unwrap_or_default())
     }
@@ -39,8 +39,8 @@ impl Boundary {
         metrics_data: MetricsData,
         test: StatisticKind,
         min_sample_size: Option<i64>,
-        lower_limit: Option<f64>,
-        upper_limit: Option<f64>,
+        lower_boundary: Option<f64>,
+        upper_boundary: Option<f64>,
     ) -> Result<Option<Self>, ApiError> {
         let data = &metrics_data.data;
 
@@ -67,7 +67,7 @@ impl Boundary {
                 freedom: (data.len() - 1) as f64,
             },
         };
-        let limits = Limits::new(mean, std_dev, test_kind, lower_limit, upper_limit)?;
+        let limits = Limits::new(mean, std_dev, test_kind, lower_boundary, upper_boundary)?;
         let outlier = limits.outlier(datum);
 
         Ok(Some(Self { limits, outlier }))

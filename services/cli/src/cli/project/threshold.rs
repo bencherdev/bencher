@@ -69,13 +69,13 @@ pub struct CliStatisticCreate {
     #[clap(long)]
     pub window: Option<u32>,
 
-    /// Left side percentage
+    /// Lower statistical boundary
     #[clap(long)]
-    pub lower_limit: Option<f64>,
+    pub lower_boundary: Option<f64>,
 
-    /// Right side percentage
+    /// Upper statistical boundary
     #[clap(long)]
-    pub upper_limit: Option<f64>,
+    pub upper_boundary: Option<f64>,
 }
 
 /// Supported kinds of statistic

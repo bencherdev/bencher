@@ -83,8 +83,8 @@ impl Detector {
             metrics_data,
             self.threshold.statistic.test.try_into()?,
             self.threshold.statistic.min_sample_size,
-            self.threshold.statistic.lower_limit,
-            self.threshold.statistic.upper_limit,
+            self.threshold.statistic.lower_boundary,
+            self.threshold.statistic.upper_boundary,
         )?;
 
         let boundary_uuid = Uuid::new_v4();
@@ -93,8 +93,8 @@ impl Detector {
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
             metric_id: metric.id,
-            lower_limit: boundary.limits.left.map(Into::into),
-            upper_limit: boundary.limits.right.map(Into::into),
+            lower_limit: boundary.limits.lower.map(Into::into),
+            upper_limit: boundary.limits.upper.map(Into::into),
         };
 
         diesel::insert_into(schema::boundary::table)

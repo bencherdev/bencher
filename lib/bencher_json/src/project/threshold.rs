@@ -23,8 +23,8 @@ pub struct JsonNewStatistic {
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
-    pub lower_limit: Option<OrderedFloat<f64>>,
-    pub upper_limit: Option<OrderedFloat<f64>>,
+    pub lower_boundary: Option<OrderedFloat<f64>>,
+    pub upper_boundary: Option<OrderedFloat<f64>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -45,8 +45,8 @@ pub struct JsonStatistic {
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
-    pub lower_limit: Option<OrderedFloat<f64>>,
-    pub upper_limit: Option<OrderedFloat<f64>>,
+    pub lower_boundary: Option<OrderedFloat<f64>>,
+    pub upper_boundary: Option<OrderedFloat<f64>>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
