@@ -4,7 +4,6 @@ use bencher_json::{
     project::{
         branch::JsonVersion,
         perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
-        threshold::JsonThresholdStatistic,
     },
     GitHash, JsonBenchmark, JsonBranch, JsonMetric, JsonPerf, JsonPerfQuery, JsonTestbed,
     ResourceId,
@@ -144,13 +143,6 @@ async fn get_inner(
             ids.testbed_id = testbed.id;
             dimensions = dimensions.testbed(conn, testbed)?;
 
-            let threshold = QueryThreshold::threshold_statistic_json(
-                conn,
-                ids.metric_kind_id,
-                ids.branch_id,
-                ids.testbed_id,
-            )?;
-
             for benchmark in &benchmarks {
                 let Ok(benchmark) = QueryBenchmark::from_uuid(conn, project.id, *benchmark) else {
                     continue;
@@ -160,14 +152,7 @@ async fn get_inner(
                 let (two_d, query_dimensions) = dimensions.into_query()?;
                 dimensions = two_d;
 
-                perf_query(
-                    conn,
-                    ids,
-                    query_dimensions,
-                    times,
-                    threshold.clone(),
-                    &mut results,
-                )?;
+                perf_query(conn, ids, query_dimensions, times, &mut results)?;
             }
         }
     }
@@ -293,7 +278,6 @@ fn perf_query(
     ids: Ids,
     dimensions: QueryDimensions,
     times: Times,
-    threshold: Option<JsonThresholdStatistic>,
     results: &mut Vec<JsonPerfMetrics>,
 ) -> Result<(), ApiError> {
     let Ids {
@@ -369,7 +353,6 @@ fn perf_query(
         branch,
         testbed,
         benchmark,
-        threshold,
         metrics,
     });
 
@@ -391,6 +374,8 @@ fn perf_metric(
         upper_bound,
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
+    // The boundary is optional, so it may not exist
+    let boundary = QueryBoundary::from_metric_id(conn, metric_id).ok();
     Some(JsonPerfMetric {
         report: Uuid::from_str(&report).ok()?,
         iteration: u32::try_from(iteration).ok()?,
@@ -404,11 +389,24 @@ fn perf_metric(
                 None
             },
         },
+        threshold: if let Some(QueryBoundary {
+            threshold_id,
+            statistic_id,
+            ..
+        }) = boundary.as_ref()
+        {
+            Some(
+                QueryThreshold::get_threshold_statistic_json(conn, *threshold_id, *statistic_id)
+                    .ok()?,
+            )
+        } else {
+            None
+        },
         metric: JsonMetric {
             value: value.into(),
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
         },
-        boundary: QueryBoundary::json_boundary(conn, metric_id),
+        boundary: boundary.map(|b| b.into_json()).unwrap_or_default(),
     })
 }

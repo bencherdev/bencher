@@ -101,6 +101,7 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
     pub metric_kind: JsonMetricKind,
+    // The threshold should be the same for all the benchmark results
     pub threshold: Option<JsonThresholdStatistic>,
     pub benchmarks: Vec<JsonBenchmarkMetric>,
 }

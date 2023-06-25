@@ -42,7 +42,7 @@ impl QueryThreshold {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn get_historical(
+    pub fn get_with_statistic(
         conn: &mut DbConnection,
         threshold_id: i32,
         statistic_id: i32,
@@ -58,7 +58,7 @@ impl QueryThreshold {
         threshold_id: i32,
         statistic_id: i32,
     ) -> Result<JsonThreshold, ApiError> {
-        Self::get_historical(conn, threshold_id, statistic_id)?.into_json(conn)
+        Self::get_with_statistic(conn, threshold_id, statistic_id)?.into_json(conn)
     }
 
     pub fn get_threshold_statistic_json(
@@ -66,7 +66,8 @@ impl QueryThreshold {
         threshold_id: i32,
         statistic_id: i32,
     ) -> Result<JsonThresholdStatistic, ApiError> {
-        Self::get_historical(conn, threshold_id, statistic_id)?.into_threshold_statistic_json(conn)
+        Self::get_with_statistic(conn, threshold_id, statistic_id)?
+            .into_threshold_statistic_json(conn)
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, ApiError> {
@@ -98,29 +99,6 @@ impl QueryThreshold {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
         })
-    }
-
-    pub fn threshold_statistic_json(
-        conn: &mut DbConnection,
-        metric_kind_id: i32,
-        branch_id: i32,
-        testbed_id: i32,
-    ) -> Result<Option<JsonThresholdStatistic>, ApiError> {
-        Ok(
-            if let Ok(threshold) = schema::threshold::table
-                .filter(schema::threshold::metric_kind_id.eq(metric_kind_id))
-                .filter(schema::threshold::branch_id.eq(branch_id))
-                .filter(schema::threshold::testbed_id.eq(testbed_id))
-                .first::<QueryThreshold>(conn)
-            {
-                Some(JsonThresholdStatistic {
-                    uuid: Uuid::from_str(&threshold.uuid).map_err(api_error!())?,
-                    statistic: QueryStatistic::get(conn, threshold.statistic_id)?.into_json()?,
-                })
-            } else {
-                None
-            },
-        )
     }
 }
 

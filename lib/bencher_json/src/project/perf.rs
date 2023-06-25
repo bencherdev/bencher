@@ -195,7 +195,6 @@ pub struct JsonPerfMetrics {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
-    pub threshold: Option<JsonThresholdStatistic>,
     pub metrics: Vec<JsonPerfMetric>,
 }
 
@@ -207,6 +206,8 @@ pub struct JsonPerfMetric {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub version: JsonVersion,
+    // Threshold is necessary for each metric as the statistic may change over time
+    pub threshold: Option<JsonThresholdStatistic>,
     pub metric: JsonMetric,
     pub boundary: JsonBoundary,
 }

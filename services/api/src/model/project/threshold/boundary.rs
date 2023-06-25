@@ -44,18 +44,18 @@ impl QueryBoundary {
             .map_err(api_error!())
     }
 
+    // There may not be a boundary for every metric, so return the default if there isn't one.
+    pub fn get_json(conn: &mut DbConnection, metric_id: i32) -> JsonBoundary {
+        Self::from_metric_id(conn, metric_id)
+            .map(|b| b.into_json())
+            .unwrap_or_default()
+    }
+
     pub fn into_json(self) -> JsonBoundary {
         JsonBoundary {
             left_side: self.left_side.map(Into::into),
             right_side: self.right_side.map(Into::into),
         }
-    }
-
-    // There may not be a boundary for every metric, so return the default if there isn't one.
-    pub fn json_boundary(conn: &mut DbConnection, metric_id: i32) -> JsonBoundary {
-        Self::from_metric_id(conn, metric_id)
-            .map(|b| b.into_json())
-            .unwrap_or_default()
     }
 }
 
