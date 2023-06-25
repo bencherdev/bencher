@@ -9,7 +9,6 @@ pub mod branch;
 pub mod metric_kind;
 pub mod perf;
 pub mod report;
-pub mod result;
 pub mod run;
 pub mod statistic;
 pub mod testbed;

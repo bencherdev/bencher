@@ -86,9 +86,6 @@ fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     api.register(project::reports::post)?;
     api.register(project::reports::one_options)?;
     api.register(project::reports::get_one)?;
-    // Report Results
-    api.register(project::reports::results::one_options)?;
-    api.register(project::reports::results::get_one)?;
 
     // Metric Kinds
     api.register(project::metric_kinds::dir_options)?;
