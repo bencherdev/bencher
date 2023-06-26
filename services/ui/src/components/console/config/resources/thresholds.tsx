@@ -52,7 +52,11 @@ const thresholdsConfig = {
 				text: "Add a Threshold",
 			},
 			row: {
-				key: "uuid",
+				keys: [
+					["metric_kind", "name"],
+					["branch", "name"],
+					["testbed", "name"],
+				],
 				items: [
 					{
 						kind: Row.FOREIGN,

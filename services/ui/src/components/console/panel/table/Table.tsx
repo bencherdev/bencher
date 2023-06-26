@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "solid-app-router";
-import { For, Switch, Match, createMemo, Show } from "solid-js";
+import { For, Switch, Match, createMemo, Show, JSX } from "solid-js";
 import { Row } from "../../config/types";
 
 export enum TableState {
@@ -29,12 +29,10 @@ const Table = (props) => {
 				{" "}
 				<div class="pricing-table is-horizontal">
 					<For each={props.table_data()}>
-						{(datum, i) => (
+						{(datum, _i) => (
 							<div class="pricing-plan is-primary">
 								<div class="plan-header">
-									<p style="overflow-wrap:anywhere;">
-										{datum[props.config?.row?.key]}
-									</p>
+									<RowHeader datum={datum} row={props.config?.row} />
 								</div>
 								<div class="plan-items">
 									<For each={props.config?.row?.items}>
@@ -106,6 +104,32 @@ const LogoutButton = (_props) => {
 			</Link>
 		</>
 	);
+};
+
+const RowHeader = (props: { datum: any; row: any }) => {
+	let header;
+	if (props.row?.key) {
+		header = props.datum[props.row?.key];
+	} else if (props.row?.keys) {
+		console.log(props.row?.keys);
+		header = props.row?.keys.reduce((accumulator, current, index) => {
+			const value = current.reduce((accumulator, current, index) => {
+				if (index === 0) {
+					return props.datum[current];
+				} else {
+					return accumulator[current];
+				}
+			}, "");
+			if (index === 0) {
+				return value;
+			} else {
+				return accumulator + " | " + value;
+			}
+		}, "");
+	} else {
+		header = "Item";
+	}
+	return <p style="overflow-wrap:anywhere;">{header}</p>;
 };
 
 const RowButton = (props) => {
