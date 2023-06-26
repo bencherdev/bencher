@@ -9,3 +9,11 @@ pub struct JsonBoundary {
     pub lower_limit: Option<OrderedFloat<f64>>,
     pub upper_limit: Option<OrderedFloat<f64>>,
 }
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum JsonLimit {
+    Lower,
+    Upper,
+}

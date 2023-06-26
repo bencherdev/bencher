@@ -114,7 +114,7 @@ const alertsConfig = {
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Boundary Limit Violation",
-					keys: ["side"],
+					keys: ["limit"],
 					display: Display.RAW,
 				},
 				{

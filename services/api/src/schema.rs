@@ -5,7 +5,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         boundary_id -> Integer,
-        side -> Bool,
+        boundary_limit -> Bool,
         status -> Integer,
         modified -> BigInt,
     }

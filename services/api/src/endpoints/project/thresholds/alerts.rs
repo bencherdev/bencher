@@ -97,7 +97,7 @@ async fn get_ls_inner(
             schema::alert::id,
             schema::alert::uuid,
             schema::alert::boundary_id,
-            schema::alert::side,
+            schema::alert::boundary_limit,
             schema::alert::status,
             schema::alert::modified,
         ))
@@ -177,7 +177,7 @@ async fn get_one_inner(
             schema::alert::id,
             schema::alert::uuid,
             schema::alert::boundary_id,
-            schema::alert::side,
+            schema::alert::boundary_limit,
             schema::alert::status,
             schema::alert::modified,
         ))

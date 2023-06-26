@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use bencher_json::project::alert::{JsonAlert, JsonAlertStatus, JsonSide};
+use bencher_json::project::{
+    alert::{JsonAlert, JsonAlertStatus},
+    boundary::JsonLimit,
+};
 use chrono::{TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
@@ -21,7 +24,7 @@ pub struct QueryAlert {
     pub id: i32,
     pub uuid: String,
     pub boundary_id: i32,
-    pub side: bool,
+    pub boundary_limit: bool,
     pub status: i32,
     pub modified: i64,
 }
@@ -42,7 +45,7 @@ impl QueryAlert {
         let Self {
             uuid,
             boundary_id,
-            side,
+            boundary_limit,
             status,
             modified,
             ..
@@ -70,7 +73,7 @@ impl QueryAlert {
             iteration: iteration as u32,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
             benchmark: QueryBenchmark::metric_json(conn, metric_id)?,
-            side: Side::from(side).into(),
+            limit: Limit::from(boundary_limit).into(),
             status: Status::try_from(status)?.into(),
             modified: Utc
                 .timestamp_opt(modified, 0)
@@ -81,35 +84,35 @@ impl QueryAlert {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Side {
-    Left = 0,
-    Right = 1,
+pub enum Limit {
+    Lower = 0,
+    Upper = 1,
 }
 
-impl From<bool> for Side {
-    fn from(side: bool) -> Self {
-        if side {
-            Self::Right
+impl From<bool> for Limit {
+    fn from(limit: bool) -> Self {
+        if limit {
+            Self::Upper
         } else {
-            Self::Left
+            Self::Lower
         }
     }
 }
 
-impl From<Side> for bool {
-    fn from(side: Side) -> Self {
-        match side {
-            Side::Left => false,
-            Side::Right => true,
+impl From<Limit> for bool {
+    fn from(limit: Limit) -> Self {
+        match limit {
+            Limit::Lower => false,
+            Limit::Upper => true,
         }
     }
 }
 
-impl From<Side> for JsonSide {
-    fn from(side: Side) -> Self {
-        match side {
-            Side::Left => Self::Left,
-            Side::Right => Self::Right,
+impl From<Limit> for JsonLimit {
+    fn from(limit: Limit) -> Self {
+        match limit {
+            Limit::Lower => Self::Lower,
+            Limit::Upper => Self::Upper,
         }
     }
 }
@@ -156,7 +159,7 @@ impl From<Status> for JsonAlertStatus {
 pub struct InsertAlert {
     pub uuid: String,
     pub boundary_id: i32,
-    pub side: bool,
+    pub boundary_limit: bool,
     pub status: i32,
     pub modified: i64,
 }
@@ -165,12 +168,12 @@ impl InsertAlert {
     pub fn from_boundary(
         conn: &mut DbConnection,
         boundary: Uuid,
-        side: Side,
+        limit: Limit,
     ) -> Result<(), ApiError> {
         let insert_alert = InsertAlert {
             uuid: Uuid::new_v4().to_string(),
             boundary_id: QueryBoundary::get_id(conn, &boundary)?,
-            side: side.into(),
+            boundary_limit: limit.into(),
             status: Status::default().into(),
             modified: Utc::now().timestamp(),
         };

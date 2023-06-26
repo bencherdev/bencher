@@ -1,17 +1,17 @@
 use crate::{
-    model::project::threshold::{alert::Side, statistic::StatisticKind},
+    model::project::threshold::{alert::Limit, statistic::StatisticKind},
     ApiError,
 };
 
 use super::{
     data::MetricsData,
-    limits::{Limits, TestKind},
+    limits::{MetricLimits, TestKind},
 };
 
 #[derive(Default)]
 pub struct MetricsBoundary {
-    pub limits: Limits,
-    pub outlier: Option<Side>,
+    pub limits: MetricLimits,
+    pub outlier: Option<Limit>,
 }
 
 impl MetricsBoundary {
@@ -67,7 +67,7 @@ impl MetricsBoundary {
                 freedom: (data.len() - 1) as f64,
             },
         };
-        let limits = Limits::new(mean, std_dev, test_kind, lower_boundary, upper_boundary)?;
+        let limits = MetricLimits::new(mean, std_dev, test_kind, lower_boundary, upper_boundary)?;
         let outlier = limits.outlier(datum);
 
         Ok(Some(Self { limits, outlier }))

@@ -3,7 +3,7 @@ CREATE TABLE up_alert (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     boundary_id INTEGER NOT NULL,
-    side BOOLEAN NOT NULL,
+    boundary_limit BOOLEAN NOT NULL,
     status INTEGER NOT NULL,
     modified BIGINT NOT NULL,
     FOREIGN KEY (boundary_id) REFERENCES boundary (id)
@@ -12,7 +12,7 @@ INSERT INTO up_alert(
         id,
         uuid,
         boundary_id,
-        side,
+        boundary_limit,
         status,
         modified
     )
