@@ -4,6 +4,8 @@
 
 export type BenchmarkName = string;
 
+export type Boundary = OrderedFloat<number>;
+
 export type BranchName = string;
 
 export type Email = string;

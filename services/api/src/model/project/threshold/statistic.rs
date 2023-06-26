@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use bencher_json::project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind};
+use bencher_json::{
+    project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind},
+    Boundary,
+};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
@@ -56,8 +59,8 @@ impl QueryStatistic {
             min_sample_size: min_sample_size.map(|ss| ss as u32),
             max_sample_size: max_sample_size.map(|ss| ss as u32),
             window: window.map(|w| w as u32),
-            lower_boundary: lower_boundary.map(Into::into),
-            upper_boundary: upper_boundary.map(Into::into),
+            lower_boundary: map_boundary(lower_boundary)?,
+            upper_boundary: map_boundary(upper_boundary)?,
         })
     }
 }
@@ -96,6 +99,14 @@ impl From<StatisticKind> for JsonStatisticKind {
             StatisticKind::T => Self::T,
         }
     }
+}
+
+fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError> {
+    Ok(if let Some(boundary) = boundary {
+        Some(boundary.try_into()?)
+    } else {
+        None
+    })
 }
 
 #[derive(Insertable)]

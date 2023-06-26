@@ -14,9 +14,25 @@ use serde::{
 use crate::ValidError;
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Boundary(OrderedFloat<f64>);
+
+impl TryFrom<f64> for Boundary {
+    type Error = ValidError;
+
+    fn try_from(boundary: f64) -> Result<Self, Self::Error> {
+        is_valid_boundary(boundary)
+            .then(|| Boundary(boundary.into()))
+            .ok_or(ValidError::InvalidBoundary(boundary))
+    }
+}
+
+impl From<Boundary> for f64 {
+    fn from(boundary: Boundary) -> Self {
+        boundary.0.into()
+    }
+}
 
 impl<'de> Deserialize<'de> for Boundary {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -40,9 +56,7 @@ impl<'de> Visitor<'de> for BoundaryVisitor {
     where
         E: de::Error,
     {
-        is_valid_boundary(value)
-            .then(|| Boundary(value.into()))
-            .ok_or(E::custom(ValidError::InvalidBoundary(value)))
+        value.try_into().map_err(E::custom)
     }
 }
 

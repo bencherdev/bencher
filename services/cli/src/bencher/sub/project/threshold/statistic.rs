@@ -1,6 +1,9 @@
 use std::convert::TryFrom;
 
-use bencher_json::project::threshold::{JsonNewStatistic, JsonStatisticKind};
+use bencher_json::{
+    project::threshold::{JsonNewStatistic, JsonStatisticKind},
+    Boundary,
+};
 
 use crate::{
     cli::project::threshold::{CliStatisticCreate, CliStatisticKind},
@@ -13,8 +16,8 @@ pub struct Statistic {
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
     pub window: Option<u32>,
-    pub lower_boundary: Option<f64>,
-    pub upper_boundary: Option<f64>,
+    pub lower_boundary: Option<Boundary>,
+    pub upper_boundary: Option<Boundary>,
 }
 
 impl TryFrom<CliStatisticCreate> for Statistic {
@@ -34,11 +37,18 @@ impl TryFrom<CliStatisticCreate> for Statistic {
             min_sample_size,
             max_sample_size,
             window,
-            // TODO validate these as reasonable percentages
-            lower_boundary,
-            upper_boundary,
+            lower_boundary: map_boundary(lower_boundary)?,
+            upper_boundary: map_boundary(upper_boundary)?,
         })
     }
+}
+
+fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, CliError> {
+    Ok(if let Some(boundary) = boundary {
+        Some(boundary.try_into()?)
+    } else {
+        None
+    })
 }
 
 impl From<CliStatisticKind> for JsonStatisticKind {
