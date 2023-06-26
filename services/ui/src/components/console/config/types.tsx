@@ -37,7 +37,7 @@ export enum Row {
 	TEXT,
 	BOOL,
 	SELECT,
-	FOREIGN,
+	NESTED_TEXT,
 }
 
 export enum Card {

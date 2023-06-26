@@ -59,18 +59,18 @@ const thresholdsConfig = {
 				],
 				items: [
 					{
-						kind: Row.FOREIGN,
-						key: "branch",
-					},
-					{
-						kind: Row.FOREIGN,
-						key: "testbed",
-					},
-					{
-						kind: Row.FOREIGN,
-						key: "metric_kind",
+						kind: Row.NESTED_TEXT,
+						keys: ["metric_kind", "name"],
 					},
 					{},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["branch", "name"],
+					},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["testbed", "name"],
+					},
 				],
 				button: {
 					text: "View",

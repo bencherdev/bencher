@@ -55,6 +55,9 @@ const Table = (props) => {
 																}
 															}, datum[item.key])}
 														</Match>
+														<Match when={item.kind === Row.NESTED_TEXT}>
+															{nested_value(datum, item.keys)}
+														</Match>
 													</Switch>
 												</p>
 											</div>
@@ -111,15 +114,8 @@ const RowHeader = (props: { datum: any; row: any }) => {
 	if (props.row?.key) {
 		header = props.datum[props.row?.key];
 	} else if (props.row?.keys) {
-		console.log(props.row?.keys);
 		header = props.row?.keys.reduce((accumulator, current, index) => {
-			const value = current.reduce((accumulator, current, index) => {
-				if (index === 0) {
-					return props.datum[current];
-				} else {
-					return accumulator[current];
-				}
-			}, "");
+			const value = nested_value(props.datum, current);
 			if (index === 0) {
 				return value;
 			} else {
@@ -147,5 +143,14 @@ const RowButton = (props) => {
 		</button>
 	);
 };
+
+const nested_value = (datum, keys) =>
+	keys.reduce((accumulator, current, index) => {
+		if (index === 0) {
+			return datum[current];
+		} else {
+			return accumulator[current];
+		}
+	}, "");
 
 export default Table;
