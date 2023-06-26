@@ -1,14 +1,18 @@
 import { useLocation, useNavigate } from "solid-app-router";
 import { createEffect, createMemo } from "solid-js";
-import { pageTitle } from "../../../site/util";
+import { concat_values, pageTitle } from "../../../site/util";
 
 const DeckHeader = (props) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
+	const header = createMemo(() =>
+		concat_values(props.data, props.config?.key, props.config?.keys, " | "),
+	);
+
 	createEffect(() => {
-		pageTitle(props.data?.[props.config?.key]);
+		pageTitle(header());
 	});
 
 	return (
@@ -30,7 +34,7 @@ const DeckHeader = (props) => {
 			<div class="column">
 				<div class="content has-text-centered">
 					<h3 class="title is-3" style="overflow-wrap:anywhere;">
-						{props.data?.[props.config?.key]}
+						{header()}
 					</h3>
 				</div>
 			</div>

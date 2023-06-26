@@ -43,6 +43,7 @@ export enum Row {
 export enum Card {
 	FIELD,
 	TABLE,
+	NESTED_FIELD,
 }
 
 export enum Display {

@@ -1,12 +1,8 @@
-import { BENCHER_API_URL, validate_u32 } from "../../../../site/util";
-
-const validate_boundary = (input: string) => {
-	if (input.length === 0) {
-		return false;
-	}
-	const num = Number(input);
-	return Number.isFinite(num) && num >= 0.5 && num <= 1.0;
-};
+import {
+	BENCHER_API_URL,
+	validate_boundary,
+	validate_u32,
+} from "../../../../site/util";
 
 const THRESHOLD_FIELDS = {
 	branch: {

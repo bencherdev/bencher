@@ -25,8 +25,24 @@ SELECT id,
     min_sample_size,
     max_sample_size,
     window,
-    left_side,
-    right_side
+    (
+        SELECT CASE
+                WHEN (
+                    (NOT left_side < 0.5)
+                    AND left_side < 1.0
+                ) THEN left_side
+                ELSE null
+            END left_side
+    ),
+    (
+        SELECT CASE
+                WHEN (
+                    (NOT right_side < 0.5)
+                    AND right_side < 1.0
+                ) THEN right_side
+                ELSE null
+            END right_side
+    )
 FROM statistic;
 DROP TABLE statistic;
 ALTER TABLE up_statistic

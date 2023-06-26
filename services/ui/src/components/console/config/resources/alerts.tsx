@@ -1,5 +1,5 @@
 import { BENCHER_API_URL } from "../../../site/util";
-import { Button, Card, Display, Operation } from "../types";
+import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
 const alertsConfig = {
@@ -32,8 +32,25 @@ const alertsConfig = {
 				text: "Track Your Benchmarks",
 			},
 			row: {
-				key: "uuid",
-				items: [{}, {}, {}, {}],
+				keys: [["benchmark", "name"]],
+				items: [
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["threshold", "metric_kind", "name"],
+					},
+					{
+						kind: Row.TEXT,
+						key: "status",
+					},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["threshold", "branch", "name"],
+					},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["threshold", "testbed", "name"],
+					},
+				],
 				button: {
 					text: "View",
 					path: (pathname, datum) => {
@@ -46,7 +63,7 @@ const alertsConfig = {
 	[Operation.VIEW]: {
 		operation: Operation.VIEW,
 		header: {
-			key: "uuid",
+			keys: [["benchmark", "name"]],
 			path: (pathname) => {
 				return parentPath(pathname);
 			},
@@ -59,39 +76,93 @@ const alertsConfig = {
 			},
 			cards: [
 				{
-					kind: Card.FIELD,
-					label: "Perf UUID",
-					key: "perf",
+					kind: Card.NESTED_FIELD,
+					label: "Status",
+					keys: ["status"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Threshold UUID",
-					key: "threshold",
+					kind: Card.NESTED_FIELD,
+					label: "Metric Kind",
+					keys: ["threshold", "metric_kind", "name"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Statistic UUID",
-					key: "statistic",
+					kind: Card.NESTED_FIELD,
+					label: "Branch",
+					keys: ["threshold", "branch", "name"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Side",
-					key: "side",
+					kind: Card.NESTED_FIELD,
+					label: "Testbed",
+					keys: ["threshold", "testbed", "name"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Boundary",
-					key: "boundary",
+					kind: Card.NESTED_FIELD,
+					label: "Benchmark",
+					keys: ["benchmark", "name"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Outlier",
-					key: "outlier",
+					kind: Card.NESTED_FIELD,
+					label: "Metric",
+					keys: ["benchmark", "metric", "value"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Boundary Limit Violation",
+					keys: ["side"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Lower Boundary Limit",
+					keys: ["benchmark", "boundary", "lower_limit"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Upper Boundary",
+					keys: ["benchmark", "boundary", "upper_limit"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Statistical Significance Test",
+					keys: ["threshold", "statistic", "test"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Lower Boundary",
+					keys: ["threshold", "statistic", "lower_boundary"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Upper Boundary",
+					keys: ["threshold", "statistic", "upper_boundary"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Minimum Sample Size",
+					keys: ["threshold", "statistic", "min_sample_size"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Maximum Sample Size",
+					keys: ["threshold", "statistic", "max_sample_size"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Window Size (seconds)",
+					keys: ["threshold", "statistic", "window"],
 					display: Display.RAW,
 				},
 			],

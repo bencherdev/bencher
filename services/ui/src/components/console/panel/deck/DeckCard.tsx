@@ -1,8 +1,10 @@
 import { createMemo, Match, Switch } from "solid-js";
 import { Card } from "../../config/types";
 import FieldCard from "./FieldCard";
+import { nested_value } from "../../../site/util";
 
 const DeckCard = (props) => {
+	console.log(props.data);
 	return (
 		<Switch
 			fallback={
@@ -18,6 +20,16 @@ const DeckCard = (props) => {
 		>
 			<Match when={props.card?.kind === Card.TABLE}>
 				<div>Table Card</div>
+			</Match>
+			<Match when={props.card?.kind === Card.NESTED_FIELD}>
+				<FieldCard
+					user={props.user}
+					card={props.card}
+					value={nested_value(props.data, props.card?.keys)}
+					path_params={props.path_params}
+					url={props.url}
+					handleRefresh={props.handleRefresh}
+				/>
 			</Match>
 		</Switch>
 	);

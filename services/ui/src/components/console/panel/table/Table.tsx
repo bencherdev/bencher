@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "solid-app-router";
 import { For, Switch, Match, createMemo, Show, JSX } from "solid-js";
 import { Row } from "../../config/types";
+import { concat_values, nested_value } from "../../../site/util";
 
 export enum TableState {
 	LOADING = 0,
@@ -110,21 +111,12 @@ const LogoutButton = (_props) => {
 };
 
 const RowHeader = (props: { datum: any; row: any }) => {
-	let header;
-	if (props.row?.key) {
-		header = props.datum[props.row?.key];
-	} else if (props.row?.keys) {
-		header = props.row?.keys.reduce((accumulator, current, index) => {
-			const value = nested_value(props.datum, current);
-			if (index === 0) {
-				return value;
-			} else {
-				return accumulator + " | " + value;
-			}
-		}, "");
-	} else {
-		header = "Item";
-	}
+	const header = concat_values(
+		props.datum,
+		props.row?.key,
+		props.row?.keys,
+		" | ",
+	);
 	return <p style="overflow-wrap:anywhere;">{header}</p>;
 };
 
@@ -143,14 +135,5 @@ const RowButton = (props) => {
 		</button>
 	);
 };
-
-const nested_value = (datum, keys) =>
-	keys.reduce((accumulator, current, index) => {
-		if (index === 0) {
-			return datum[current];
-		} else {
-			return accumulator[current];
-		}
-	}, "");
 
 export default Table;

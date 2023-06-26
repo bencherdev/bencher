@@ -6,6 +6,7 @@ import {
 	is_valid_expiration_month,
 	is_valid_expiration_year,
 	is_valid_card_cvc,
+	is_valid_boundary,
 } from "bencher_valid";
 import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
@@ -85,6 +86,20 @@ export const validate_string = (
 	}
 };
 
+export const validate_number = (
+	input: string,
+	validator: (input: number) => boolean,
+): boolean => {
+	if (input.length === 0) {
+		return false;
+	} else if (typeof input === "string") {
+		const num = Number(input.trim());
+		return validator(num);
+	} else {
+		return false;
+	}
+};
+
 export const validate_jwt = (token: string): boolean => {
 	return validate_string(token, is_valid_jwt);
 };
@@ -157,6 +172,10 @@ export const validate_card_cvc = (card_cvc: string): boolean => {
 // TODO improve this validation
 export const validate_user = (user: {}) => {
 	return validate_jwt(user?.token);
+};
+
+export const validate_boundary = (boundary: string): boolean => {
+	return validate_number(boundary, is_valid_boundary);
 };
 
 export const validate_u32 = (input: string) => {
@@ -344,3 +363,35 @@ export const usd_formatter = new Intl.NumberFormat("en-US", {
 	style: "currency",
 	currency: "USD",
 });
+
+export const concat_values = (data, key, keys, separator) => {
+	if (!data) {
+		return;
+	} else if (key) {
+		return data[key];
+	} else if (keys) {
+		return keys.reduce((accumulator, current, index) => {
+			const value = nested_value(data, current);
+			if (index === 0) {
+				return value;
+			} else {
+				return accumulator + separator + value;
+			}
+		}, "");
+	} else {
+		return "Unknown Item";
+	}
+};
+
+export const nested_value = (datum, keys) => {
+	if (!datum) {
+		return;
+	}
+	return keys.reduce((accumulator, current, index) => {
+		if (index === 0) {
+			return datum[current];
+		} else {
+			return accumulator[current];
+		}
+	}, "");
+};

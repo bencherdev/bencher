@@ -183,7 +183,11 @@ const thresholdsConfig = {
 	[Operation.VIEW]: {
 		operation: Operation.VIEW,
 		header: {
-			key: "uuid",
+			keys: [
+				["metric_kind", "name"],
+				["branch", "name"],
+				["testbed", "name"],
+			],
 			path: parentPath,
 		},
 		deck: {
@@ -193,21 +197,57 @@ const thresholdsConfig = {
 				}/thresholds/${path_params?.threshold_uuid}`,
 			cards: [
 				{
-					kind: Card.FIELD,
-					label: "Branch UUID",
-					key: "branch",
+					kind: Card.NESTED_FIELD,
+					label: "Metric Kind",
+					keys: ["metric_kind", "name"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Testbed UUID",
-					key: "testbed",
+					kind: Card.NESTED_FIELD,
+					label: "Branch",
+					keys: ["branch", "name"],
 					display: Display.RAW,
 				},
 				{
-					kind: Card.FIELD,
-					label: "Metric Kind UUID",
-					key: "metric_kind",
+					kind: Card.NESTED_FIELD,
+					label: "Testbed",
+					keys: ["testbed", "name"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Statistical Significance Test",
+					keys: ["statistic", "test"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Lower Boundary",
+					keys: ["statistic", "lower_boundary"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Upper Boundary",
+					keys: ["statistic", "upper_boundary"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Minimum Sample Size",
+					keys: ["statistic", "min_sample_size"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Maximum Sample Size",
+					keys: ["statistic", "max_sample_size"],
+					display: Display.RAW,
+				},
+				{
+					kind: Card.NESTED_FIELD,
+					label: "Window Size (seconds)",
+					keys: ["statistic", "window"],
 					display: Display.RAW,
 				},
 			],
