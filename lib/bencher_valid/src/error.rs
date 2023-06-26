@@ -48,4 +48,6 @@ pub enum ValidError {
     IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to validate payment card CVC: {0}")]
     CardCvc(String),
+    #[error("Invalid statistical boundary: {0}")]
+    InvalidBoundary(f64),
 }

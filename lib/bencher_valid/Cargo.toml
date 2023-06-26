@@ -17,6 +17,7 @@ wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook", "chrono/wasmbind"]
 chrono = { workspace = true, optional = true }
 derive_more.workspace = true
 once_cell.workspace = true
+ordered-float = { workspace = true, features = ["serde"] }
 schemars = { workspace = true, optional = true }
 serde.workspace = true
 slug.workspace = true
@@ -36,6 +37,7 @@ wasm-bindgen = { version = "0.2", optional = true }
 [dev-dependencies]
 # Workspace
 pretty_assertions.workspace = true
+serde_json.workspace = true
 # Crate
 wasm-bindgen-test = "0.3.33"
 

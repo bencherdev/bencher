@@ -16,7 +16,7 @@ pub mod data;
 mod limits;
 pub mod threshold;
 
-use boundary::Boundary;
+use boundary::MetricsBoundary;
 use data::MetricsData;
 use threshold::MetricsThreshold;
 
@@ -78,7 +78,7 @@ impl Detector {
         )?;
 
         // Check to see if the metric has a boundary check for the given threshold statistic.
-        let boundary = Boundary::new(
+        let boundary = MetricsBoundary::new(
             metric.value,
             metrics_data,
             self.threshold.statistic.test.try_into()?,

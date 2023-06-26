@@ -2,6 +2,7 @@
 use wasm_bindgen::prelude::*;
 
 mod benchmark_name;
+mod boundary;
 mod branch_name;
 #[cfg(feature = "plus")]
 mod card;
@@ -26,6 +27,7 @@ pub use crate::slug::Slug;
 pub use crate::url::Url;
 pub use crate::uuid::Uuid;
 pub use benchmark_name::BenchmarkName;
+pub use boundary::Boundary;
 pub use branch_name::BranchName;
 #[cfg(feature = "plus")]
 pub use card::{CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, LastFour};

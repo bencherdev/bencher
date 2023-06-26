@@ -9,12 +9,12 @@ use super::{
 };
 
 #[derive(Default)]
-pub struct Boundary {
+pub struct MetricsBoundary {
     pub limits: Limits,
     pub outlier: Option<Side>,
 }
 
-impl Boundary {
+impl MetricsBoundary {
     pub fn new(
         datum: f64,
         metrics_data: MetricsData,
