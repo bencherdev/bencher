@@ -1,4 +1,4 @@
-import { useLocation, useParams } from "solid-app-router";
+import { useLocation, useNavigate, useParams } from "solid-app-router";
 import { createEffect, createMemo, createResource, For } from "solid-js";
 import { BENCHER_API_URL, get_options, validate_jwt } from "../site/util";
 import ConsoleMenu from "./menu/ConsoleMenu";
@@ -42,6 +42,7 @@ export const projectSlug = (pathname) => {
 };
 
 const ConsolePage = (props) => {
+	const navigate = useNavigate();
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
@@ -57,15 +58,15 @@ const ConsolePage = (props) => {
 		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}`;
 		return await axios(get_options(url, token))
 			.then((resp) => resp?.data)
-			.catch(console.log);
+			.catch(console.error);
 	};
 
 	const [project] = createResource(props.project_slug, fetchProject);
 
 	createEffect(() => {
-		// if (!validate_jwt(props.user?.token)) {
-		//   navigate("/auth/login");
-		// }
+		if (!validate_jwt(props.user?.token)) {
+			navigate("/auth/login");
+		}
 
 		const organization_uuid = project()?.organization;
 		if (organization_uuid) {

@@ -4,7 +4,6 @@ import FieldCard from "./FieldCard";
 import { nested_value } from "../../../site/util";
 
 const DeckCard = (props) => {
-	console.log(props.data);
 	return (
 		<Switch
 			fallback={

@@ -391,7 +391,7 @@ export const nested_value = (datum, keys) => {
 		if (index === 0) {
 			return datum[current];
 		} else {
-			return accumulator[current];
+			return accumulator?.[current];
 		}
 	}, "");
 };
