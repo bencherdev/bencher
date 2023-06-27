@@ -25,7 +25,7 @@ tabled.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 url.workspace = true
-uuid.workspace = true
+uuid = { workspace = true, features = ["v4"] }
 # Crate
 clap_mangen = { version = "0.2", optional = true }
 reqwest = { version = "0.11", default-features = false, features = [

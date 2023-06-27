@@ -57,6 +57,7 @@ impl Branch {
     pub async fn resource_id(
         &self,
         project: &ResourceId,
+        dry_run: bool,
         backend: &Backend,
     ) -> Result<Option<ResourceId>, CliError> {
         Ok(match self {
@@ -66,7 +67,8 @@ impl Branch {
                 start_points,
                 create,
             } => {
-                if let Some(uuid) = if_branch(project, name, start_points, *create, backend).await?
+                if let Some(uuid) =
+                    if_branch(project, name, start_points, *create, dry_run, backend).await?
                 {
                     Some(uuid.into())
                 } else {
@@ -89,6 +91,7 @@ async fn if_branch(
     branch_name: &BranchName,
     start_points: &[String],
     create: bool,
+    dry_run: bool,
     backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
     let branch = get_branch(project, branch_name, backend).await?;
@@ -110,7 +113,7 @@ async fn if_branch(
 
         let new_branch =
             if let Some(start_point) = get_branch(project, &start_point, backend).await? {
-                create_branch(project, branch_name, Some(start_point.into()), backend).await?
+                Some(create_branch(project, branch_name, Some(start_point.into()), backend).await?)
             } else {
                 None
             };
@@ -124,19 +127,16 @@ async fn if_branch(
         );
     }
 
-    if create {
-        let new_branch = create_branch(project, branch_name, None, backend).await?;
-
-        if new_branch.is_some() {
-            return Ok(new_branch);
-        }
-
-        cli_println!(
-            "Failed to create new branch with name \"{branch_name}\" in project \"{project}\"."
-        );
-    }
-
-    Ok(None)
+    Ok(if create {
+        // If we're just doing a dry run, we don't need to actually create the branch
+        Some(if dry_run {
+            Uuid::new_v4()
+        } else {
+            create_branch(project, branch_name, None, backend).await?
+        })
+    } else {
+        None
+    })
 }
 
 async fn get_branch(
@@ -174,7 +174,7 @@ async fn create_branch(
     branch_name: &BranchName,
     start_point: Option<ResourceId>,
     backend: &Backend,
-) -> Result<Option<Uuid>, CliError> {
+) -> Result<Uuid, CliError> {
     // Default to cloning the thresholds from the start point branch
     let start_point = start_point.map(|branch| JsonStartPoint {
         branch,
@@ -192,5 +192,5 @@ async fn create_branch(
         .await?;
     let json_branch: JsonBranch = serde_json::from_value(value)?;
 
-    Ok(Some(json_branch.uuid))
+    Ok(json_branch.uuid)
 }

@@ -48,7 +48,7 @@ jobs:
           npm run build
       - uses: bencherdev/bencher@main
       - name: Run current Bencher CLI GitHub Action
-        run: bencher run --project bencher --noop "bencher mock"
+        run: bencher run --project bencher --dry-run "bencher mock"
 
   # Pretty Rust
   cargo_fmt:

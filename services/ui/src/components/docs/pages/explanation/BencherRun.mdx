@@ -3,7 +3,7 @@ It is used to run benchmarks and report the results.
 As such, it is one of the most complicated subcommands.
 This page will explain the options, flags, and arguments that can be passed to `bencher run`.
 
-## Benchmark Command:
+## Benchmark Command
 
 The first and only argument to `bencher run` is the optional benchmark command.
 This is the command that will be executed, invoking your benchmark harness.
@@ -24,7 +24,7 @@ If any of the iterations fail, then the entire command is considered to have fai
 If the benchmark command is not specified, then `bencher run` will read from `stdin` instead.
 This allows you to pipe the output of another command into `bencher run`.
 
-## Options:
+## Options
 
 ### `--project <PROJECT>`
 
@@ -162,6 +162,15 @@ Optional: Max request retry attempts. Defaults to `10`.
 <br />
 
 Optional: Retry request after the given number of seconds. Defaults to `3`.
+
+<br />
+
+### `--dry-run`
+
+<br />
+
+Optional: Perform a dry run. This will not store any data to the backend.
+Neither a Report nor Branch as detailed in [branch selection](/docs/explanation/branch-selection) will be created.
 
 <br />
 

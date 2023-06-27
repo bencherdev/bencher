@@ -50,6 +50,10 @@ pub struct CliRun {
     #[clap(flatten)]
     pub command: CliRunCommand,
 
+    /// Do a dry run (no data is saved)
+    #[clap(long)]
+    pub dry_run: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

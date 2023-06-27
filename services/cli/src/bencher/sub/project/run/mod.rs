@@ -50,6 +50,7 @@ pub struct Run {
     fold: Option<Fold>,
     allow_failure: bool,
     err: bool,
+    dry_run: bool,
 }
 
 impl TryFrom<CliRun> for Run {
@@ -69,6 +70,7 @@ impl TryFrom<CliRun> for Run {
             fold,
             allow_failure,
             err,
+            dry_run,
         } = run;
         Ok(Self {
             project: unwrap_project(project)?,
@@ -83,6 +85,7 @@ impl TryFrom<CliRun> for Run {
             fold: fold.map(Into::into),
             allow_failure,
             err,
+            dry_run,
         })
     }
 }
@@ -124,7 +127,7 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
-        let Some(branch) = self.branch.resource_id(&self.project, &self.backend).await? else {
+        let Some(branch) = self.branch.resource_id(&self.project, self.dry_run, &self.backend).await? else {
             return Ok(())
         };
 
@@ -162,6 +165,11 @@ impl SubCmd for Run {
 
         // TODO disable when quiet
         cli_println!("{}", serde_json::to_string_pretty(&report)?);
+
+        // If performing a dry run, don't actually send the report
+        if self.dry_run {
+            return Ok(());
+        }
 
         let json_value = self
             .backend
