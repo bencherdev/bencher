@@ -45,8 +45,9 @@ Though Bencher is open source, there is also a hosted version available [Bencher
   - [GitLab CI/CD](https://bencher.dev/docs/how-to/gitlab-ci-cd)
 - Explanation
   - [Benchmarking Overview](https://bencher.dev/docs/explanation/benchmarking)
-  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters)
+  - [`bencher run`](https://bencher.dev/docs/explanation/bencher-run)
   - [Branch Selection](https://bencher.dev/docs/explanation/branch-selection)
+  - [Benchmark Adapters](https://bencher.dev/docs/explanation/adapters)
   - [Thresholds & Alerts](https://bencher.dev/docs/explanation/thresholds)
   - [Continuous Benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking)
   - [Talks](https://bencher.dev/docs/explanation/talks)

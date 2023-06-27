@@ -245,46 +245,6 @@ mod test {
         assert_eq!(side, Some(Limit::Upper));
     }
 
-    // Z score max = 0.9999999999999999
-    #[test]
-    fn test_limits_z_docs_one() {
-        let limits = MetricLimits::new(
-            100.0,
-            10.0,
-            TestKind::T { freedom: 5.0 },
-            Some(0.99999999999999999),
-            Some(0.5),
-        )
-        .unwrap();
-        assert_eq!(
-            limits.lower,
-            Some(MetricLimit {
-                value: 80.04606689832175
-            })
-        );
-        assert_eq!(
-            limits.upper,
-            Some(MetricLimit {
-                value: 119.95393310167825
-            })
-        );
-
-        let side = limits.outlier(75.0);
-        assert_eq!(side, Some(Limit::Lower));
-
-        let side = limits.outlier(90.0);
-        assert_eq!(side, None);
-
-        let side = limits.outlier(100.0);
-        assert_eq!(side, None);
-
-        let side = limits.outlier(110.0);
-        assert_eq!(side, None);
-
-        let side = limits.outlier(125.0);
-        assert_eq!(side, Some(Limit::Upper));
-    }
-
     #[test]
     fn test_limits_t_none() {
         let limits =
