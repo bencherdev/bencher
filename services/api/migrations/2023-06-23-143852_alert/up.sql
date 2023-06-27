@@ -24,7 +24,7 @@ SELECT id,
         WHERE boundary.uuid = alert.uuid
         LIMIT 1
     ), side, 1,(
-        SELECT unixepoch()
+        SELECT strftime('%s', datetime('now', 'utc'))
     )
 FROM alert;
 DROP TABLE alert;
