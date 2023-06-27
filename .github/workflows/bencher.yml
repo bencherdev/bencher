@@ -48,7 +48,7 @@ jobs:
           npm run build
       - uses: bencherdev/bencher@main
       - name: Run current Bencher CLI GitHub Action
-        run: bencher run --project bencher --local "bencher mock"
+        run: bencher run --project bencher --noop "bencher mock"
 
   # Pretty Rust
   cargo_fmt:
@@ -133,7 +133,9 @@ jobs:
   cargo_bench:
     name: Cargo Bench
     runs-on: ubuntu-latest
-    # continue-on-error: true
+    # This will fail whenever Bencher Cloud is down
+    # or there are any breaking changes to the report format
+    continue-on-error: true
     env:
       BENCHER_PROJECT: bencher
       BENCHER_TESTBED: ubuntu-latest
