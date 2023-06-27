@@ -50,13 +50,12 @@ impl SubCmd for Mock {
     async fn exec(&self) -> Result<(), CliError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
         let pow = self.pow.unwrap_or(1);
-        let pow = if pow < 0 { -1.0 } else { 1.0 } * 10.0f64.powi(pow.abs());
+        let ten_pow = 10.0f64.powi(pow);
         let mut results = HashMap::with_capacity(count);
         let mut rng = rand::thread_rng();
         for c in 0..count {
-            let offset = pow * c as f64;
-            let low = 0.0 + offset;
-            let high = 10.0 + offset;
+            let low = ten_pow * c as f64;
+            let high = ten_pow * (c + 1) as f64;
             let uniform = Uniform::new(low, high);
             let value: f64 = uniform.sample(&mut rng);
             let variance = value * 0.1;
