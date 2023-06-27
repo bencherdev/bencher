@@ -1,4 +1,5 @@
 enum PageKind {
+	DIRECTORY,
 	MDX,
 	SWAGGER,
 }

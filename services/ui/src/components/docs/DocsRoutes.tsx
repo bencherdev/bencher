@@ -2,6 +2,8 @@ import { Route, Navigate } from "solid-app-router";
 import DocsPage from "./DocsPage";
 import { For } from "solid-js";
 import { docs, getPath } from "./config/docs";
+import DocsIndex from "./pages/DocsIndex";
+import PageKind from "./config/page_kind";
 
 const DocsRoutes = (_props) => {
 	return (
@@ -9,11 +11,24 @@ const DocsRoutes = (_props) => {
 			{/* Docs Routes */}
 			<Route
 				path="/"
-				element={<Navigate href="/docs/tutorial/quick-start" />}
+				element={
+					<DocsPage
+						page={{
+							title: "Bencher Docs",
+							panel: {
+								kind: PageKind.DIRECTORY,
+								heading: "Bencher Docs",
+								content: <DocsIndex />,
+							},
+						}}
+					/>
+				}
 			/>
 			<Route path="/tutorial" element={<Navigate href="/docs" />} />
 			<Route path="/how-to" element={<Navigate href="/docs" />} />
-			{/* TODO remove in due time */}
+			<Route path="/explanation" element={<Navigate href="/docs" />} />
+			<Route path="/reference" element={<Navigate href="/docs" />} />
+			{/* Historical route forwarding */}
 			<Route
 				path="/how-to/quick-start"
 				element={<Navigate href="/docs/tutorial/quick-start" />}
@@ -26,8 +41,6 @@ const DocsRoutes = (_props) => {
 				path="/explanation/cli-branch-selection"
 				element={<Navigate href="/docs/explanation/branch-selection" />}
 			/>
-			<Route path="/explanation" element={<Navigate href="/docs" />} />
-			<Route path="/reference" element={<Navigate href="/docs" />} />
 			<For each={docs}>
 				{(doc) => (
 					<>
