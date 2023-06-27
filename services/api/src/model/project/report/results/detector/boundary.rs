@@ -1,3 +1,5 @@
+use bencher_json::Boundary;
+
 use crate::{
     model::project::threshold::{alert::Limit, statistic::StatisticKind},
     ApiError,
@@ -5,12 +7,12 @@ use crate::{
 
 use super::{
     data::MetricsData,
-    limits::{MetricLimits, TestKind},
+    limits::{MetricsLimits, TestKind},
 };
 
 #[derive(Default)]
 pub struct MetricsBoundary {
-    pub limits: MetricLimits,
+    pub limits: MetricsLimits,
     pub outlier: Option<Limit>,
 }
 
@@ -19,9 +21,9 @@ impl MetricsBoundary {
         datum: f64,
         metrics_data: MetricsData,
         test: StatisticKind,
-        min_sample_size: Option<i64>,
-        lower_boundary: Option<f64>,
-        upper_boundary: Option<f64>,
+        min_sample_size: Option<u32>,
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
     ) -> Result<Self, ApiError> {
         Self::new_inner(
             datum,
@@ -38,9 +40,9 @@ impl MetricsBoundary {
         datum: f64,
         metrics_data: MetricsData,
         test: StatisticKind,
-        min_sample_size: Option<i64>,
-        lower_boundary: Option<f64>,
-        upper_boundary: Option<f64>,
+        min_sample_size: Option<u32>,
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
     ) -> Result<Option<Self>, ApiError> {
         let data = &metrics_data.data;
 
@@ -67,7 +69,7 @@ impl MetricsBoundary {
                 freedom: (data.len() - 1) as f64,
             },
         };
-        let limits = MetricLimits::new(mean, std_dev, test_kind, lower_boundary, upper_boundary)?;
+        let limits = MetricsLimits::new(mean, std_dev, test_kind, lower_boundary, upper_boundary)?;
         let outlier = limits.outlier(datum);
 
         Ok(Some(Self { limits, outlier }))

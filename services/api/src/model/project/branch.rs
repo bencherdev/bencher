@@ -108,7 +108,7 @@ impl QueryBranch {
             name,
             slug,
             version: JsonVersion {
-                number: number as u32,
+                number: u32::try_from(number).map_err(api_error!())?,
                 hash: if let Some(version_hash) = hash.as_deref() {
                     Some(GitHash::from_str(version_hash)?)
                 } else {

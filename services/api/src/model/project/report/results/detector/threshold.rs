@@ -1,13 +1,30 @@
+use bencher_json::Boundary;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
 };
 
-use crate::{context::DbConnection, model::project::threshold::statistic::QueryStatistic, schema};
+use crate::{
+    context::DbConnection,
+    model::project::threshold::statistic::{map_boundary, StatisticKind},
+    schema,
+    util::map_u32,
+};
 
 #[derive(Debug, Clone)]
 pub struct MetricsThreshold {
     pub id: i32,
-    pub statistic: QueryStatistic,
+    pub statistic: MetricsStatistic,
+}
+
+#[derive(Debug, Clone)]
+pub struct MetricsStatistic {
+    pub id: i32,
+    pub test: StatisticKind,
+    pub min_sample_size: Option<u32>,
+    pub max_sample_size: Option<u32>,
+    pub window: Option<u32>,
+    pub lower_boundary: Option<Boundary>,
+    pub upper_boundary: Option<Boundary>,
 }
 
 impl MetricsThreshold {
@@ -31,7 +48,6 @@ impl MetricsThreshold {
             .select((
                 schema::threshold::id,
                 schema::statistic::id,
-                schema::statistic::uuid,
                 schema::statistic::test,
                 schema::statistic::min_sample_size,
                 schema::statistic::max_sample_size,
@@ -42,7 +58,6 @@ impl MetricsThreshold {
             .first::<(
                 i32,
                 i32,
-                String,
                 i32,
                 Option<i64>,
                 Option<i64>,
@@ -54,7 +69,6 @@ impl MetricsThreshold {
                 |(
                     threshold_id,
                     statistic_id,
-                    uuid,
                     test,
                     min_sample_size,
                     max_sample_size,
@@ -62,22 +76,22 @@ impl MetricsThreshold {
                     lower_boundary,
                     upper_boundary,
                 )| {
-                    let statistic = QueryStatistic {
+                    let statistic = MetricsStatistic {
                         id: statistic_id,
-                        uuid,
-                        test,
-                        min_sample_size,
-                        max_sample_size,
-                        window,
-                        lower_boundary,
-                        upper_boundary,
+                        test: StatisticKind::try_from(test).ok()?,
+                        min_sample_size: map_u32(min_sample_size).ok()?,
+                        max_sample_size: map_u32(max_sample_size).ok()?,
+                        window: map_u32(window).ok()?,
+                        lower_boundary: map_boundary(lower_boundary).ok()?,
+                        upper_boundary: map_boundary(upper_boundary).ok()?,
                     };
-                    Self {
+                    Some(Self {
                         id: threshold_id,
                         statistic,
-                    }
+                    })
                 },
             )
             .ok()
+            .flatten()
     }
 }

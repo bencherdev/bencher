@@ -12,7 +12,10 @@ use crate::{
     error::api_error,
     schema,
     schema::statistic as statistic_table,
-    util::query::{fn_get, fn_get_id},
+    util::{
+        map_u32,
+        query::{fn_get, fn_get_id},
+    },
     ApiError,
 };
 
@@ -56,16 +59,16 @@ impl QueryStatistic {
         Ok(JsonStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             test: StatisticKind::try_from(test)?.into(),
-            min_sample_size: min_sample_size.map(|ss| ss as u32),
-            max_sample_size: max_sample_size.map(|ss| ss as u32),
-            window: window.map(|w| w as u32),
+            min_sample_size: map_u32(min_sample_size)?,
+            max_sample_size: map_u32(max_sample_size)?,
+            window: map_u32(window)?,
             lower_boundary: map_boundary(lower_boundary)?,
             upper_boundary: map_boundary(upper_boundary)?,
         })
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum StatisticKind {
     Z = 0,
     T = 1,
@@ -101,7 +104,7 @@ impl From<StatisticKind> for JsonStatisticKind {
     }
 }
 
-fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError> {
+pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError> {
     Ok(if let Some(boundary) = boundary {
         Some(boundary.try_into()?)
     } else {

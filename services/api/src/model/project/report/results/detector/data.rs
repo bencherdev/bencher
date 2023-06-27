@@ -1,10 +1,9 @@
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 
-use crate::{
-    context::DbConnection, error::api_error, model::project::threshold::statistic::QueryStatistic,
-    schema, ApiError,
-};
+use crate::{context::DbConnection, error::api_error, schema, ApiError};
+
+use super::threshold::MetricsStatistic;
 
 pub struct MetricsData {
     pub data: Vec<f64>,
@@ -17,7 +16,7 @@ impl MetricsData {
         testbed_id: i32,
         metric_kind_id: i32,
         benchmark_id: i32,
-        statistic: &QueryStatistic,
+        statistic: &MetricsStatistic,
     ) -> Result<Self, ApiError> {
         let mut query = schema::metric::table
             .filter(schema::metric::metric_kind_id.eq(metric_kind_id))
@@ -36,7 +35,8 @@ impl MetricsData {
         if let Some(window) = statistic.window {
             let now = Utc::now().timestamp();
             query = query.filter(
-                schema::report::start_time.ge(now.checked_sub(window).ok_or(ApiError::BadMath)?),
+                schema::report::start_time
+                    .ge(now.checked_sub(window.into()).ok_or(ApiError::BadMath)?),
             );
         }
 
@@ -59,7 +59,7 @@ impl MetricsData {
             ));
 
         if let Some(max_sample_size) = statistic.max_sample_size {
-            query = query.limit(max_sample_size);
+            query = query.limit(max_sample_size.into());
         }
 
         let data = query

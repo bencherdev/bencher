@@ -81,7 +81,7 @@ impl Detector {
         let boundary = MetricsBoundary::new(
             metric.value,
             metrics_data,
-            self.threshold.statistic.test.try_into()?,
+            self.threshold.statistic.test,
             self.threshold.statistic.min_sample_size,
             self.threshold.statistic.lower_boundary,
             self.threshold.statistic.upper_boundary,

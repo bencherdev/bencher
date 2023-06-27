@@ -1,15 +1,16 @@
+use bencher_json::Boundary;
 use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 
 use crate::{error::api_error, model::project::threshold::alert::Limit, ApiError};
 
 #[derive(Default)]
-pub struct MetricLimits {
-    pub lower: Option<MetricLimit>,
-    pub upper: Option<MetricLimit>,
+pub struct MetricsLimits {
+    pub lower: Option<MetricsLimit>,
+    pub upper: Option<MetricsLimit>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct MetricLimit {
+pub struct MetricsLimit {
     pub value: f64,
 }
 
@@ -18,13 +19,13 @@ pub enum TestKind {
     T { freedom: f64 },
 }
 
-impl MetricLimits {
+impl MetricsLimits {
     pub fn new(
         mean: f64,
         std_dev: f64,
         test_kind: TestKind,
-        lower_boundary: Option<f64>,
-        upper_boundary: Option<f64>,
+        lower_boundary: Option<Boundary>,
+        upper_boundary: Option<Boundary>,
     ) -> Result<Self, ApiError> {
         if lower_boundary.is_none() && upper_boundary.is_none() {
             return Ok(Self::default());
@@ -35,12 +36,12 @@ impl MetricLimits {
             TestKind::Z => {
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
                 let lower = lower_boundary.map(|limit| {
-                    let abs_limit = normal.inverse_cdf(limit);
-                    MetricLimit::lower(mean, abs_limit)
+                    let abs_limit = normal.inverse_cdf(limit.into());
+                    MetricsLimit::lower(mean, abs_limit)
                 });
                 let upper = upper_boundary.map(|limit| {
-                    let abs_limit = normal.inverse_cdf(limit);
-                    MetricLimit::upper(abs_limit)
+                    let abs_limit = normal.inverse_cdf(limit.into());
+                    MetricsLimit::upper(abs_limit)
                 });
                 Self { lower, upper }
             },
@@ -48,12 +49,12 @@ impl MetricLimits {
             TestKind::T { freedom } => {
                 let students_t = StudentsT::new(mean, std_dev, freedom).map_err(api_error!())?;
                 let lower = lower_boundary.map(|limit| {
-                    let abs_limit = students_t.inverse_cdf(limit);
-                    MetricLimit::lower(mean, abs_limit)
+                    let abs_limit = students_t.inverse_cdf(limit.into());
+                    MetricsLimit::lower(mean, abs_limit)
                 });
                 let upper = upper_boundary.map(|limit| {
-                    let abs_limit = students_t.inverse_cdf(limit);
-                    MetricLimit::upper(abs_limit)
+                    let abs_limit = students_t.inverse_cdf(limit.into());
+                    MetricsLimit::upper(abs_limit)
                 });
                 Self { lower, upper }
             },
@@ -79,7 +80,7 @@ impl MetricLimits {
     }
 }
 
-impl MetricLimit {
+impl MetricsLimit {
     // Flip the absolute limit to the other side of the mean, creating the actual boundary limit.
     fn lower(mean: f64, abs_limit: f64) -> Self {
         Self {
@@ -92,23 +93,25 @@ impl MetricLimit {
     }
 }
 
-impl From<MetricLimit> for f64 {
-    fn from(limit: MetricLimit) -> Self {
+impl From<MetricsLimit> for f64 {
+    fn from(limit: MetricsLimit) -> Self {
         limit.value
     }
 }
 
 #[cfg(test)]
 mod test {
+    use bencher_json::Boundary;
+    use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
 
-    use super::{Limit, MetricLimit, MetricLimits, TestKind};
+    use super::{Limit, MetricsLimit, MetricsLimits, TestKind};
 
     const MEAN: f64 = 0.0;
     const STD_DEV: f64 = 1.0;
     const FREEDOM: f64 = 5.0;
 
-    const PERCENTILE: f64 = 0.85;
+    static PERCENTILE: Lazy<Boundary> = Lazy::new(|| 0.85.try_into().expect("Failed to boundary."));
     const Z_LIMIT: f64 = 1.0364333894937896;
     const T_LIMIT: f64 = 1.1557673428942912;
 
@@ -120,7 +123,7 @@ mod test {
 
     #[test]
     fn test_limits_z_none() {
-        let limits = MetricLimits::new(MEAN, STD_DEV, TestKind::Z, None, None).unwrap();
+        let limits = MetricsLimits::new(MEAN, STD_DEV, TestKind::Z, None, None).unwrap();
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
@@ -142,8 +145,9 @@ mod test {
 
     #[test]
     fn test_limits_z_left() {
-        let limits = MetricLimits::new(MEAN, STD_DEV, TestKind::Z, Some(PERCENTILE), None).unwrap();
-        assert_eq!(limits.lower, Some(MetricLimit { value: -Z_LIMIT }));
+        let limits =
+            MetricsLimits::new(MEAN, STD_DEV, TestKind::Z, Some(*PERCENTILE), None).unwrap();
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
         assert_eq!(limits.upper, None);
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
@@ -164,9 +168,10 @@ mod test {
 
     #[test]
     fn test_limits_z_right() {
-        let limits = MetricLimits::new(MEAN, STD_DEV, TestKind::Z, None, Some(PERCENTILE)).unwrap();
+        let limits =
+            MetricsLimits::new(MEAN, STD_DEV, TestKind::Z, None, Some(*PERCENTILE)).unwrap();
         assert_eq!(limits.lower, None);
-        assert_eq!(limits.upper, Some(MetricLimit { value: Z_LIMIT }));
+        assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
         assert_eq!(side, None);
@@ -186,16 +191,16 @@ mod test {
 
     #[test]
     fn test_limits_z_both() {
-        let limits = MetricLimits::new(
+        let limits = MetricsLimits::new(
             MEAN,
             STD_DEV,
             TestKind::Z,
-            Some(PERCENTILE),
-            Some(PERCENTILE),
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
         )
         .unwrap();
-        assert_eq!(limits.lower, Some(MetricLimit { value: -Z_LIMIT }));
-        assert_eq!(limits.upper, Some(MetricLimit { value: Z_LIMIT }));
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -Z_LIMIT }));
+        assert_eq!(limits.upper, Some(MetricsLimit { value: Z_LIMIT }));
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
         assert_eq!(side, Some(Limit::Lower));
@@ -215,16 +220,18 @@ mod test {
 
     #[test]
     fn test_limits_z_docs() {
-        let limits = MetricLimits::new(100.0, 10.0, TestKind::Z, Some(0.977), Some(0.977)).unwrap();
+        let boundary = 0.977.try_into().expect("Failed to create boundary.");
+        let limits =
+            MetricsLimits::new(100.0, 10.0, TestKind::Z, Some(boundary), Some(boundary)).unwrap();
         assert_eq!(
             limits.lower,
-            Some(MetricLimit {
+            Some(MetricsLimit {
                 value: 80.04606689832175
             })
         );
         assert_eq!(
             limits.upper,
-            Some(MetricLimit {
+            Some(MetricsLimit {
                 value: 119.95393310167825
             })
         );
@@ -248,7 +255,8 @@ mod test {
     #[test]
     fn test_limits_t_none() {
         let limits =
-            MetricLimits::new(MEAN, STD_DEV, TestKind::T { freedom: FREEDOM }, None, None).unwrap();
+            MetricsLimits::new(MEAN, STD_DEV, TestKind::T { freedom: FREEDOM }, None, None)
+                .unwrap();
         assert_eq!(limits.lower, None);
         assert_eq!(limits.upper, None);
 
@@ -270,15 +278,15 @@ mod test {
 
     #[test]
     fn test_limits_t_left() {
-        let limits = MetricLimits::new(
+        let limits = MetricsLimits::new(
             MEAN,
             STD_DEV,
             TestKind::T { freedom: FREEDOM },
-            Some(PERCENTILE),
+            Some(*PERCENTILE),
             None,
         )
         .unwrap();
-        assert_eq!(limits.lower, Some(MetricLimit { value: -T_LIMIT }));
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -T_LIMIT }));
         assert_eq!(limits.upper, None);
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
@@ -299,16 +307,16 @@ mod test {
 
     #[test]
     fn test_limits_t_right() {
-        let limits = MetricLimits::new(
+        let limits = MetricsLimits::new(
             MEAN,
             STD_DEV,
             TestKind::T { freedom: FREEDOM },
             None,
-            Some(PERCENTILE),
+            Some(*PERCENTILE),
         )
         .unwrap();
         assert_eq!(limits.lower, None);
-        assert_eq!(limits.upper, Some(MetricLimit { value: T_LIMIT }));
+        assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
         assert_eq!(side, None);
@@ -328,16 +336,16 @@ mod test {
 
     #[test]
     fn test_limits_t_both() {
-        let limits = MetricLimits::new(
+        let limits = MetricsLimits::new(
             MEAN,
             STD_DEV,
             TestKind::T { freedom: FREEDOM },
-            Some(PERCENTILE),
-            Some(PERCENTILE),
+            Some(*PERCENTILE),
+            Some(*PERCENTILE),
         )
         .unwrap();
-        assert_eq!(limits.lower, Some(MetricLimit { value: -T_LIMIT }));
-        assert_eq!(limits.upper, Some(MetricLimit { value: T_LIMIT }));
+        assert_eq!(limits.lower, Some(MetricsLimit { value: -T_LIMIT }));
+        assert_eq!(limits.upper, Some(MetricsLimit { value: T_LIMIT }));
 
         let side = limits.outlier(DATUM_NEGATIVE_OUTLIER);
         assert_eq!(side, Some(Limit::Lower));
