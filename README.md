@@ -117,7 +117,7 @@ jobs:
       - BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-      - uses: bencherdev/bencher@v0.2.42
+      - uses: bencherdev/bencher@v0.3.0
       - run: bencher run --project my-project-slug "bencher mock"
 ```
 
@@ -129,7 +129,7 @@ Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/m
 ### Specify CLI Version
 
 ```yaml
-- uses: bencherdev/bencher@v0.2.42
+- uses: bencherdev/bencher@v0.3.0
 ```
 
 There is also an optional `version` argument to specify an exact version of the Bencher CLI to use.
@@ -138,12 +138,12 @@ Otherwise, it will default to using the latest CLI version.
 ```yaml
 - uses: bencherdev/bencher@main
   with:
-    version: 0.2.42
+    version: 0.3.0
 ```
 
 These two commands are functionally equivalent.
 However, the first protects you from any breaking changes in the Bencher CLI GitHub action by using a tagged release.
-Therefore, the former is the suggested method (ex: `- uses: bencherdev/bencher@v0.2.42`)
+Therefore, the former is the suggested method (ex: `- uses: bencherdev/bencher@v0.3.0`)
 
 ## Contributing
 
