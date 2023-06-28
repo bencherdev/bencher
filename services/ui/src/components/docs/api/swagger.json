@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.2.46"
+    "version": "0.3.0"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -3632,127 +3632,6 @@
         }
       }
     },
-    "/v0/projects/{project}/results/{result}": {
-      "get": {
-        "tags": [
-          "projects",
-          "results"
-        ],
-        "operationId": "get_one",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "result",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "Access-Control-Allow-Credentials": {
-                "style": "simple",
-                "schema": {
-                  "nullable": true,
-                  "type": "boolean"
-                }
-              },
-              "Access-Control-Allow-Headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Access-Control-Allow-Origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonResult"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "results"
-        ],
-        "operationId": "one_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "result",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/projects/{project}/statistics/{statistic}": {
       "get": {
         "tags": [
@@ -4727,6 +4606,89 @@
         }
       }
     },
+    "/v0/server/config/endpoint": {
+      "get": {
+        "tags": [
+          "server",
+          "config"
+        ],
+        "operationId": "get_one",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Url"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "options": {
+        "tags": [
+          "server",
+          "config"
+        ],
+        "operationId": "options",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/server/ping": {
       "get": {
         "tags": [
@@ -4955,7 +4917,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonVersion"
+                  "$ref": "#/components/schemas/JsonApiVersion"
                 }
               }
             }
@@ -5417,6 +5379,10 @@
       "BenchmarkName": {
         "type": "string"
       },
+      "Boundary": {
+        "type": "number",
+        "format": "double"
+      },
       "BranchName": {
         "type": "string"
       },
@@ -5541,28 +5507,30 @@
       "JsonAlert": {
         "type": "object",
         "properties": {
-          "boundary": {
-            "type": "number",
-            "format": "float"
+          "benchmark": {
+            "$ref": "#/components/schemas/JsonBenchmarkMetric"
           },
-          "outlier": {
-            "type": "number",
-            "format": "float"
+          "iteration": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
           },
-          "perf": {
+          "limit": {
+            "$ref": "#/components/schemas/JsonLimit"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "report": {
             "type": "string",
             "format": "uuid"
           },
-          "side": {
-            "$ref": "#/components/schemas/JsonSide"
-          },
-          "statistic": {
-            "type": "string",
-            "format": "uuid"
+          "status": {
+            "$ref": "#/components/schemas/JsonAlertStatus"
           },
           "threshold": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonThreshold"
           },
           "uuid": {
             "type": "string",
@@ -5570,13 +5538,21 @@
           }
         },
         "required": [
-          "boundary",
-          "outlier",
-          "perf",
-          "side",
-          "statistic",
+          "benchmark",
+          "iteration",
+          "limit",
+          "modified",
+          "report",
+          "status",
           "threshold",
           "uuid"
+        ]
+      },
+      "JsonAlertStatus": {
+        "type": "string",
+        "enum": [
+          "unread",
+          "read"
         ]
       },
       "JsonAllowed": {
@@ -5588,6 +5564,17 @@
         },
         "required": [
           "allowed"
+        ]
+      },
+      "JsonApiVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
         ]
       },
       "JsonAuthToken": {
@@ -5650,6 +5637,35 @@
           "uuid"
         ]
       },
+      "JsonBenchmarkMetric": {
+        "type": "object",
+        "properties": {
+          "boundary": {
+            "$ref": "#/components/schemas/JsonBoundary"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/JsonMetric"
+          },
+          "name": {
+            "$ref": "#/components/schemas/BenchmarkName"
+          },
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "boundary",
+          "metric",
+          "name",
+          "project",
+          "uuid"
+        ]
+      },
       "JsonBilling": {
         "type": "object",
         "properties": {
@@ -5664,6 +5680,21 @@
           "products",
           "secret_key"
         ]
+      },
+      "JsonBoundary": {
+        "type": "object",
+        "properties": {
+          "lower_limit": {
+            "nullable": true,
+            "type": "number",
+            "format": "double"
+          },
+          "upper_limit": {
+            "nullable": true,
+            "type": "number",
+            "format": "double"
+          }
+        }
       },
       "JsonBranch": {
         "type": "object",
@@ -5688,6 +5719,35 @@
           "project",
           "slug",
           "uuid"
+        ]
+      },
+      "JsonBranchVersion": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/BranchName"
+          },
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "$ref": "#/components/schemas/JsonVersion"
+          }
+        },
+        "required": [
+          "name",
+          "project",
+          "slug",
+          "uuid",
+          "version"
         ]
       },
       "JsonCard": {
@@ -5875,6 +5935,13 @@
           "max",
           "mean",
           "median"
+        ]
+      },
+      "JsonLimit": {
+        "type": "string",
+        "enum": [
+          "lower",
+          "upper"
         ]
       },
       "JsonLogging": {
@@ -6217,10 +6284,13 @@
           "branch": {
             "$ref": "#/components/schemas/ResourceId"
           },
-          "left_side": {
+          "lower_boundary": {
             "nullable": true,
-            "type": "number",
-            "format": "float"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
           },
           "max_sample_size": {
             "nullable": true,
@@ -6237,16 +6307,19 @@
             "format": "uint32",
             "minimum": 0
           },
-          "right_side": {
-            "nullable": true,
-            "type": "number",
-            "format": "float"
-          },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
           },
           "testbed": {
             "$ref": "#/components/schemas/ResourceId"
+          },
+          "upper_boundary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
           },
           "window": {
             "nullable": true,
@@ -6340,6 +6413,9 @@
       "JsonPerfMetric": {
         "type": "object",
         "properties": {
+          "boundary": {
+            "$ref": "#/components/schemas/JsonBoundary"
+          },
           "end_time": {
             "type": "string",
             "format": "date-time"
@@ -6352,35 +6428,34 @@
           "metric": {
             "$ref": "#/components/schemas/JsonMetric"
           },
+          "report": {
+            "type": "string",
+            "format": "uuid"
+          },
           "start_time": {
             "type": "string",
             "format": "date-time"
           },
-          "uuid": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version_hash": {
+          "threshold": {
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/GitHash"
+                "$ref": "#/components/schemas/JsonThresholdStatistic"
               }
             ]
           },
-          "version_number": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+          "version": {
+            "$ref": "#/components/schemas/JsonVersion"
           }
         },
         "required": [
+          "boundary",
           "end_time",
           "iteration",
           "metric",
+          "report",
           "start_time",
-          "uuid",
-          "version_number"
+          "version"
         ]
       },
       "JsonPerfMetrics": {
@@ -6554,17 +6629,26 @@
           "alerts": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonReportAlert"
+              "$ref": "#/components/schemas/JsonAlert"
             }
+          },
+          "branch": {
+            "$ref": "#/components/schemas/JsonBranchVersion"
           },
           "end_time": {
             "type": "string",
             "format": "date-time"
           },
+          "project": {
+            "$ref": "#/components/schemas/JsonProject"
+          },
           "results": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonReportResult"
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/JsonReportResult"
+              }
             }
           },
           "start_time": {
@@ -6572,18 +6656,12 @@
             "format": "date-time"
           },
           "testbed": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonTestbed"
           },
           "user": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonUser"
           },
           "uuid": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version": {
             "type": "string",
             "format": "uuid"
           }
@@ -6591,22 +6669,41 @@
         "required": [
           "adapter",
           "alerts",
+          "branch",
           "end_time",
+          "project",
           "results",
           "start_time",
           "testbed",
           "user",
-          "uuid",
-          "version"
+          "uuid"
         ]
       },
-      "JsonReportAlert": {
-        "type": "string",
-        "format": "uuid"
-      },
       "JsonReportResult": {
-        "type": "string",
-        "format": "uuid"
+        "type": "object",
+        "properties": {
+          "benchmarks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonBenchmarkMetric"
+            }
+          },
+          "metric_kind": {
+            "$ref": "#/components/schemas/JsonMetricKind"
+          },
+          "threshold": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonThresholdStatistic"
+              }
+            ]
+          }
+        },
+        "required": [
+          "benchmarks",
+          "metric_kind"
+        ]
       },
       "JsonReportSettings": {
         "type": "object",
@@ -6648,41 +6745,6 @@
           }
         }
       },
-      "JsonResult": {
-        "type": "object",
-        "properties": {
-          "benchmark": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "iteration": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
-          "metrics": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/JsonMetric"
-            }
-          },
-          "report": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "uuid": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "benchmark",
-          "iteration",
-          "metrics",
-          "report",
-          "uuid"
-        ]
-      },
       "JsonSecurity": {
         "type": "object",
         "properties": {
@@ -6721,13 +6783,6 @@
         "required": [
           "bind_address",
           "request_body_max_bytes"
-        ]
-      },
-      "JsonSide": {
-        "type": "string",
-        "enum": [
-          "left",
-          "right"
         ]
       },
       "JsonSignup": {
@@ -6824,10 +6879,13 @@
       "JsonStatistic": {
         "type": "object",
         "properties": {
-          "left_side": {
+          "lower_boundary": {
             "nullable": true,
-            "type": "number",
-            "format": "float"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
           },
           "max_sample_size": {
             "nullable": true,
@@ -6841,13 +6899,16 @@
             "format": "uint32",
             "minimum": 0
           },
-          "right_side": {
-            "nullable": true,
-            "type": "number",
-            "format": "float"
-          },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
+          },
+          "upper_boundary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Boundary"
+              }
+            ]
           },
           "uuid": {
             "type": "string",
@@ -6901,20 +6962,16 @@
         "type": "object",
         "properties": {
           "branch": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonBranch"
           },
           "metric_kind": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonMetricKind"
           },
           "statistic": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonStatistic"
           },
           "testbed": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/JsonTestbed"
           },
           "uuid": {
             "type": "string",
@@ -6926,6 +6983,22 @@
           "metric_kind",
           "statistic",
           "testbed",
+          "uuid"
+        ]
+      },
+      "JsonThresholdStatistic": {
+        "type": "object",
+        "properties": {
+          "statistic": {
+            "$ref": "#/components/schemas/JsonStatistic"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "statistic",
           "uuid"
         ]
       },
@@ -7087,12 +7160,22 @@
       "JsonVersion": {
         "type": "object",
         "properties": {
-          "version": {
-            "type": "string"
+          "hash": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
+              }
+            ]
+          },
+          "number": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
           }
         },
         "required": [
-          "version"
+          "number"
         ]
       },
       "JsonVisibility": {
@@ -7279,9 +7362,6 @@
     {
       "name": "reports",
       "description": "Reports"
-    },
-    {
-      "name": "results"
     },
     {
       "name": "server"
