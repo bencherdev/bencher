@@ -1,5 +1,5 @@
 import { Link } from "solid-app-router";
-import { docs, getHref } from "../config/docs";
+import { docs, getHref } from "./config/docs";
 import { For } from "solid-js";
 
 const DocsIndex = (_props) => {

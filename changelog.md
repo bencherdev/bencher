@@ -1,1 +1,1 @@
-services/ui/src/components/docs/pages/reference/Changelog.mdx
+./services/ui/src/docs/reference/Changelog.mdx

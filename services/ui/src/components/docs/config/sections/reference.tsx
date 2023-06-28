@@ -1,8 +1,8 @@
 import PageKind from "../page_kind";
-import Changelog from "../../pages/reference/Changelog.mdx";
-import PriorArt from "../../pages/reference/PriorArt.mdx";
-import Roadmap from "../../pages/reference/Roadmap.mdx";
-import ServerConfig from "../../pages/reference/ServerConfig.mdx";
+import Changelog from "../../../../docs/reference/Changelog.mdx";
+import PriorArt from "../../../../docs/reference/PriorArt.mdx";
+import Roadmap from "../../../../docs/reference/Roadmap.mdx";
+import ServerConfig from "../../../../docs/reference/ServerConfig.mdx";
 
 const Reference = [
 	{

@@ -2,7 +2,7 @@ import { Route, Navigate } from "solid-app-router";
 import DocsPage from "./DocsPage";
 import { For } from "solid-js";
 import { docs, getPath } from "./config/docs";
-import DocsIndex from "./pages/DocsIndex";
+import DocsIndex from "./DocsIndex";
 import PageKind from "./config/page_kind";
 
 const DocsRoutes = (_props) => {

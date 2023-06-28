@@ -1,11 +1,11 @@
 import PageKind from "../page_kind";
-import ContinuousBenchmarking from "../../pages/explanation/ContinuousBenchmarking.mdx";
-import BranchSelection from "../../pages/explanation/BranchSelection.mdx";
-import Talks from "../../pages/explanation/Talks.mdx";
-import Adapters from "../../pages/explanation/Adapters.mdx";
-import Thresholds from "../../pages/explanation/Thresholds.mdx";
-import Benchmarking from "../../pages/explanation/Benchmarking.mdx";
-import BencherRun from "../../pages/explanation/BencherRun.mdx";
+import ContinuousBenchmarking from "../../../../docs/explanation/ContinuousBenchmarking.mdx";
+import BranchSelection from "../../../../docs/explanation/BranchSelection.mdx";
+import Talks from "../../../../docs/explanation/Talks.mdx";
+import Adapters from "../../../../docs/explanation/Adapters.mdx";
+import Thresholds from "../../../../docs/explanation/Thresholds.mdx";
+import Benchmarking from "../../../../docs/explanation/Benchmarking.mdx";
+import BencherRun from "../../../../docs/explanation/BencherRun.mdx";
 
 const Explanation = [
 	{

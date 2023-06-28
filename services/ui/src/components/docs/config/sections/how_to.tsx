@@ -1,8 +1,8 @@
 import PageKind from "../page_kind";
-import GitHubActions from "../../pages/how_to/GitHubActions.mdx";
-import GitLabCiCd from "../../pages/how_to/GitLabCiCd.mdx";
-import InstallCli from "../../pages/how_to/InstallCli.mdx";
-import TrackBenchmarks from "../../pages/how_to/TrackBenchmarks.mdx";
+import GitHubActions from "../../../../docs/how_to/GitHubActions.mdx";
+import GitLabCiCd from "../../../../docs/how_to/GitLabCiCd.mdx";
+import InstallCli from "../../../../docs/how_to/InstallCli.mdx";
+import TrackBenchmarks from "../../../../docs/how_to/TrackBenchmarks.mdx";
 
 const HowTo = [
 	{

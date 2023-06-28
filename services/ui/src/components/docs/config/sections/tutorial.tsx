@@ -1,5 +1,5 @@
 import PageKind from "../page_kind";
-import QuickStart from "../../pages/tutorial/QuickStart.mdx";
+import QuickStart from "../../../../docs/tutorial/QuickStart.mdx";
 
 const Tutorial = [
 	{

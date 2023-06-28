@@ -63,5 +63,8 @@
     "UNIONPAY",
     "vcentered",
     "wordmark"
+  ],
+  "cSpell.enableFiletypes": [
+    "mdx"
   ]
 }
