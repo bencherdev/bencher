@@ -275,9 +275,9 @@ pub mod table {
         pub version_hash: VersionHash,
         #[tabled(rename = "Metric Value")]
         pub metric: JsonMetric,
-        #[tabled(rename = "Left Boundary Limit")]
+        #[tabled(rename = "Lower Boundary Limit")]
         pub lower_limit: BoundaryLimit,
-        #[tabled(rename = "Right Boundary Limit")]
+        #[tabled(rename = "Upper Boundary Limit")]
         pub upper_limit: BoundaryLimit,
     }
 

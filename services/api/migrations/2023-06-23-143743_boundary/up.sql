@@ -4,7 +4,7 @@ CREATE TABLE boundary (
     uuid TEXT NOT NULL UNIQUE,
     threshold_id INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
-    metric_id INTEGER NOT NULL,
+    metric_id INTEGER NOT NULL UNIQUE,
     lower_limit DOUBLE,
     upper_limit DOUBLE,
     FOREIGN KEY (metric_id) REFERENCES metric (id),

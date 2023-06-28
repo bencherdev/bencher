@@ -24,6 +24,7 @@ use crate::{
     schema,
     util::{
         cors::{get_cors, CorsResponse},
+        error::database_map,
         same_project::SameProject,
     },
     ApiError,
@@ -111,7 +112,7 @@ async fn get_ls_inner(
         .load::<QueryReport>(conn)
         .map_err(api_error!())?
         .into_iter()
-        .filter_map(|query| crate::util::error::database_map(endpoint, query.into_json(conn)))
+        .filter_map(|query| database_map(endpoint, query.into_json(conn)))
         .collect())
 }
 
@@ -165,7 +166,7 @@ async fn post_inner(
     )?;
 
     // Verify that the user is allowed
-    let _query_project = QueryProject::is_allowed_id(
+    QueryProject::is_allowed_id(
         conn,
         &context.rbac,
         project_id,

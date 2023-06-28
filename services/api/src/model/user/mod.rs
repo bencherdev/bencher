@@ -8,7 +8,11 @@ use crate::{
     context::DbConnection,
     error::api_error,
     schema::{self, user as user_table},
-    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{
+        query::{fn_get, fn_get_id},
+        resource_id::fn_resource_id,
+        slug::unwrap_slug,
+    },
     ApiError,
 };
 
@@ -57,6 +61,7 @@ pub struct QueryUser {
 }
 
 impl QueryUser {
+    fn_get!(user);
     fn_get_id!(user);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {

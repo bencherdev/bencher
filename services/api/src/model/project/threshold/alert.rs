@@ -72,7 +72,7 @@ impl QueryAlert {
             report: QueryReport::get_uuid(conn, report_id)?,
             iteration: u32::try_from(iteration).map_err(api_error!())?,
             threshold: QueryThreshold::get_json(conn, threshold_id, statistic_id)?,
-            benchmark: QueryBenchmark::metric_json(conn, metric_id)?,
+            benchmark: QueryBenchmark::get_benchmark_metric_json(conn, metric_id)?,
             limit: Limit::from(boundary_limit).into(),
             status: Status::try_from(status)?.into(),
             modified: Utc

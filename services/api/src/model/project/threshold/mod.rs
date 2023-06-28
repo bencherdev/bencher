@@ -48,7 +48,7 @@ impl QueryThreshold {
         statistic_id: i32,
     ) -> Result<Self, ApiError> {
         let mut threshold = Self::get(conn, threshold_id)?;
-        // IMPORTANT: Set the statistic ID to the one from the boundary, and not the current value!
+        // IMPORTANT: Set the statistic ID to the one specified and not the current value!
         threshold.statistic_id = statistic_id;
         Ok(threshold)
     }

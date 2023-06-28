@@ -74,23 +74,7 @@ impl QueryBranch {
             .map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, ApiError> {
-        let Self {
-            uuid,
-            project_id,
-            name,
-            slug,
-            ..
-        } = self;
-        Ok(JsonBranch {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            project: QueryProject::get_uuid(conn, project_id)?,
-            name: BranchName::from_str(&name).map_err(api_error!())?,
-            slug: Slug::from_str(&slug).map_err(api_error!())?,
-        })
-    }
-
-    pub fn branch_version_json(
+    pub fn get_branch_version_json(
         conn: &mut DbConnection,
         branch_id: i32,
         version_id: i32,
@@ -115,6 +99,22 @@ impl QueryBranch {
                     None
                 },
             },
+        })
+    }
+
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBranch, ApiError> {
+        let Self {
+            uuid,
+            project_id,
+            name,
+            slug,
+            ..
+        } = self;
+        Ok(JsonBranch {
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            project: QueryProject::get_uuid(conn, project_id)?,
+            name: BranchName::from_str(&name).map_err(api_error!())?,
+            slug: Slug::from_str(&slug).map_err(api_error!())?,
         })
     }
 }

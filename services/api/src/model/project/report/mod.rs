@@ -7,7 +7,7 @@ use bencher_json::{
             JsonAdapter, JsonReportAlerts, JsonReportIteration, JsonReportResult, JsonReportResults,
         },
     },
-    BenchmarkName, JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
+    JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
 use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
@@ -77,13 +77,9 @@ impl QueryReport {
         let testbed = QueryTestbed::get(conn, self.testbed_id)?;
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            user: schema::user::table
-                .filter(schema::user::id.eq(user_id))
-                .first::<QueryUser>(conn)
-                .map_err(api_error!())?
-                .into_json()?,
+            user: QueryUser::get(conn, user_id)?.into_json()?,
             project: QueryProject::get(conn, testbed.project_id)?.into_json(conn)?,
-            branch: QueryBranch::branch_version_json(conn, self.branch_id, self.version_id)?,
+            branch: QueryBranch::get_branch_version_json(conn, self.branch_id, self.version_id)?,
             testbed: testbed.into_json(conn)?,
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
@@ -108,8 +104,8 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
         // Get the metric kinds
         metric_kinds = get_metric_kinds(conn, perf.id)?;
 
-        // Create a stub benchmark metric to use for each metric kind
-        let stub_benchmark_metric = get_stub_benchmark_metric(conn, perf.benchmark_id)?;
+        // Get the benchmark to use for each metric kind
+        let benchmark = QueryBenchmark::get(conn, perf.benchmark_id)?.into_json(conn)?;
 
         // If the iteration is the same as the previous one, add the benchmark to the benchmarks list for all metric kinds
         // Otherwise, create a new iteration result and add it to the results list
@@ -117,12 +113,8 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
         // Only keep a single instance of the threshold statistic for each metric kind as it should be the same value for all benchmarks
         if perf.iteration == iteration {
             for metric_kind_id in metric_kinds.keys().cloned() {
-                let (threshold_statistic, benchmark_metric) = get_benchmark_metric(
-                    conn,
-                    perf.id,
-                    metric_kind_id,
-                    stub_benchmark_metric.clone(),
-                )?;
+                let (threshold_statistic, benchmark_metric) =
+                    get_benchmark_metric(conn, perf.id, metric_kind_id, benchmark.clone())?;
                 if let Some((_, benchmarks)) = metric_kind_benchmarks.get_mut(&metric_kind_id) {
                     benchmarks.push(benchmark_metric);
                 } else {
@@ -141,12 +133,8 @@ fn get_results(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportResu
             results.push(iteration_results);
             iteration = perf.iteration;
             for metric_kind_id in metric_kinds.keys().cloned() {
-                let (threshold_statistic, benchmark_metric) = get_benchmark_metric(
-                    conn,
-                    perf.id,
-                    metric_kind_id,
-                    stub_benchmark_metric.clone(),
-                )?;
+                let (threshold_statistic, benchmark_metric) =
+                    get_benchmark_metric(conn, perf.id, metric_kind_id, benchmark.clone())?;
                 metric_kind_benchmarks.insert(
                     metric_kind_id,
                     (threshold_statistic, vec![benchmark_metric]),
@@ -168,8 +156,8 @@ fn get_perfs(conn: &mut DbConnection, report_id: i32) -> Result<Vec<QueryPerf>, 
         schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
     )
     // It is important to order by the iteration first in order to make sure they are grouped together below
-    // Then ordering by the benchmark id makes sure that the benchmarks are in the same order for each iteration
-    .order((schema::perf::iteration,schema::benchmark::name))
+    // Then ordering by the benchmark name makes sure that the benchmarks are in the same order for each iteration
+    .order((schema::perf::iteration, schema::benchmark::name))
     .select((
         schema::perf::id,
         schema::perf::uuid,
@@ -206,34 +194,6 @@ fn get_metric_kinds(
         .collect())
 }
 
-#[derive(Clone)]
-struct StubBenchmarkMetric {
-    uuid: Uuid,
-    project: Uuid,
-    name: BenchmarkName,
-}
-
-fn get_stub_benchmark_metric(
-    conn: &mut DbConnection,
-    benchmark_id: i32,
-) -> Result<StubBenchmarkMetric, ApiError> {
-    let json_benchmark = schema::benchmark::table
-        .filter(schema::benchmark::id.eq(benchmark_id))
-        .first::<QueryBenchmark>(conn)
-        .map_err(api_error!())?
-        .into_json(conn)?;
-    let JsonBenchmark {
-        uuid,
-        project,
-        name,
-    } = json_benchmark;
-    Ok(StubBenchmarkMetric {
-        uuid,
-        project,
-        name,
-    })
-}
-
 struct ThresholdStatistic {
     threshold_id: i32,
     statistic_id: i32,
@@ -243,7 +203,7 @@ fn get_benchmark_metric(
     conn: &mut DbConnection,
     perf_id: i32,
     metric_kind_id: i32,
-    stub_benchmark_metric: StubBenchmarkMetric,
+    benchmark: JsonBenchmark,
 ) -> Result<(Option<ThresholdStatistic>, JsonBenchmarkMetric), ApiError> {
     let query_metric = schema::metric::table
         .filter(schema::metric::perf_id.eq(perf_id))
@@ -264,11 +224,11 @@ fn get_benchmark_metric(
         },
     );
 
-    let StubBenchmarkMetric {
+    let JsonBenchmark {
         uuid,
         project,
         name,
-    } = stub_benchmark_metric;
+    } = benchmark;
 
     Ok((
         threshold_statistic,

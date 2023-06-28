@@ -6,8 +6,12 @@ use uuid::Uuid;
 
 use super::{metric::QueryMetric, threshold::boundary::QueryBoundary, QueryProject};
 use crate::{
-    context::DbConnection, error::api_error, schema, schema::benchmark as benchmark_table,
-    util::query::fn_get_id, ApiError,
+    context::DbConnection,
+    error::api_error,
+    schema,
+    schema::benchmark as benchmark_table,
+    util::query::{fn_get, fn_get_id},
+    ApiError,
 };
 
 #[derive(Queryable)]
@@ -19,6 +23,7 @@ pub struct QueryBenchmark {
 }
 
 impl QueryBenchmark {
+    fn_get!(benchmark);
     fn_get_id!(benchmark);
 
     pub fn get_id_from_name(
@@ -55,17 +60,40 @@ impl QueryBenchmark {
             .map_err(api_error!())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
-        let QueryBenchmark {
-            uuid,
-            project_id,
-            name,
-            ..
-        } = self;
-        Self::json_benchmark(conn, uuid, project_id, name)
+    pub fn get_or_create(
+        conn: &mut DbConnection,
+        project_id: i32,
+        name: &str,
+    ) -> Result<i32, ApiError> {
+        let id = Self::get_id_from_name(conn, project_id, name);
+
+        if id.is_ok() {
+            return id;
+        }
+
+        let insert_benchmark = InsertBenchmark::from_json(project_id, name.to_string());
+        diesel::insert_into(schema::benchmark::table)
+            .values(&insert_benchmark)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        Self::get_id(conn, &insert_benchmark.uuid)
     }
 
-    pub fn metric_json(
+    fn get_benchmark_json(
+        conn: &mut DbConnection,
+        uuid: String,
+        project_id: i32,
+        name: String,
+    ) -> Result<JsonBenchmark, ApiError> {
+        Ok(JsonBenchmark {
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            project: QueryProject::get_uuid(conn, project_id)?,
+            name: BenchmarkName::from_str(&name).map_err(api_error!())?,
+        })
+    }
+
+    pub fn get_benchmark_metric_json(
         conn: &mut DbConnection,
         metric_id: i32,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
@@ -90,8 +118,8 @@ impl QueryBenchmark {
             uuid,
             project,
             name,
-        } = Self::json_benchmark(conn, uuid, project_id, name)?;
-        let metric = QueryMetric::json_metric(value, lower_bound, upper_bound);
+        } = Self::get_benchmark_json(conn, uuid, project_id, name)?;
+        let metric = QueryMetric::json(value, lower_bound, upper_bound);
         let boundary = QueryBoundary::get_json(conn, metric_id);
 
         Ok(JsonBenchmarkMetric {
@@ -103,37 +131,14 @@ impl QueryBenchmark {
         })
     }
 
-    fn json_benchmark(
-        conn: &mut DbConnection,
-        uuid: String,
-        project_id: i32,
-        name: String,
-    ) -> Result<JsonBenchmark, ApiError> {
-        Ok(JsonBenchmark {
-            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            project: QueryProject::get_uuid(conn, project_id)?,
-            name: BenchmarkName::from_str(&name).map_err(api_error!())?,
-        })
-    }
-
-    pub fn get_or_create(
-        conn: &mut DbConnection,
-        project_id: i32,
-        name: &str,
-    ) -> Result<i32, ApiError> {
-        let id = Self::get_id_from_name(conn, project_id, name);
-
-        if id.is_ok() {
-            return id;
-        }
-
-        let insert_benchmark = InsertBenchmark::from_json(project_id, name.to_string());
-        diesel::insert_into(schema::benchmark::table)
-            .values(&insert_benchmark)
-            .execute(conn)
-            .map_err(api_error!())?;
-
-        Self::get_id(conn, &insert_benchmark.uuid)
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonBenchmark, ApiError> {
+        let QueryBenchmark {
+            uuid,
+            project_id,
+            name,
+            ..
+        } = self;
+        Self::get_benchmark_json(conn, uuid, project_id, name)
     }
 }
 

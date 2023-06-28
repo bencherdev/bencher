@@ -65,7 +65,7 @@ impl Detector {
         &self,
         conn: &mut DbConnection,
         benchmark_id: i32,
-        metric: QueryMetric,
+        query_metric: QueryMetric,
     ) -> Result<(), ApiError> {
         // Query the historical population/sample data for the benchmark
         let metrics_data = MetricsData::new(
@@ -79,7 +79,7 @@ impl Detector {
 
         // Check to see if the metric has a boundary check for the given threshold statistic.
         let boundary = MetricsBoundary::new(
-            metric.value,
+            query_metric.value,
             metrics_data,
             self.threshold.statistic.test,
             self.threshold.statistic.min_sample_size,
@@ -92,7 +92,7 @@ impl Detector {
             uuid: boundary_uuid.to_string(),
             threshold_id: self.threshold.id,
             statistic_id: self.threshold.statistic.id,
-            metric_id: metric.id,
+            metric_id: query_metric.id,
             lower_limit: boundary.limits.lower.map(Into::into),
             upper_limit: boundary.limits.upper.map(Into::into),
         };

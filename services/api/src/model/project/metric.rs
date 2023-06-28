@@ -28,6 +28,14 @@ impl QueryMetric {
             .map_err(api_error!())
     }
 
+    pub fn json(value: f64, lower_bound: Option<f64>, upper_bound: Option<f64>) -> JsonMetric {
+        JsonMetric {
+            value: value.into(),
+            lower_bound: lower_bound.map(Into::into),
+            upper_bound: upper_bound.map(Into::into),
+        }
+    }
+
     pub fn into_json(self) -> JsonMetric {
         let Self {
             value,
@@ -35,19 +43,7 @@ impl QueryMetric {
             upper_bound,
             ..
         } = self;
-        Self::json_metric(value, lower_bound, upper_bound)
-    }
-
-    pub fn json_metric(
-        value: f64,
-        lower_bound: Option<f64>,
-        upper_bound: Option<f64>,
-    ) -> JsonMetric {
-        JsonMetric {
-            value: value.into(),
-            lower_bound: lower_bound.map(Into::into),
-            upper_bound: upper_bound.map(Into::into),
-        }
+        Self::json(value, lower_bound, upper_bound)
     }
 }
 
