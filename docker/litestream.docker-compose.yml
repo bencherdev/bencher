@@ -2,7 +2,7 @@ version: "3.9"
 services:
   bencher_api:
     build:
-      context: ./services/api
+      context: ../services/api
       dockerfile: litestream.Dockerfile
     image: bencher-api-litestream
     container_name: bencher_api_litestream
@@ -20,7 +20,7 @@ services:
 
   bencher_ui:
     build:
-      context: ./services/ui
+      context: ../services/ui
       dockerfile: Dockerfile
     image: bencher-ui
     container_name: bencher_ui

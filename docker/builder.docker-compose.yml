@@ -2,7 +2,7 @@ version: "3.9"
 services:
   bencher_api_builder:
     build:
-      context: .
+      context: ..
       dockerfile: ./services/api/builder.Dockerfile
       args:
         - MOLD_VERSION=1.11.0
@@ -11,7 +11,7 @@ services:
 
   bencher-ui-builder:
     build:
-      context: .
+      context: ..
       dockerfile: ./services/ui/builder.Dockerfile
       args:
         # Set this to your actual host if different

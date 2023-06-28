@@ -2,14 +2,14 @@ version: "3.9"
 services:
   bencher_api:
     build:
-      context: ./services/api
+      context: ../services/api
       dockerfile: local.Dockerfile
     image: bencher-api-local
     container_name: bencher_api_local
     ports:
       - 61016:61016
     volumes:
-      - "./services/api/data:/data"
+      - "../services/api/data:/data"
       # environment:
       # Set configuration string or filepath
       # - BENCHER_CONFIG=
@@ -17,7 +17,7 @@ services:
 
   bencher_ui:
     build:
-      context: ./services/ui
+      context: ../services/ui
       dockerfile: Dockerfile
     image: bencher-ui
     container_name: bencher_ui
