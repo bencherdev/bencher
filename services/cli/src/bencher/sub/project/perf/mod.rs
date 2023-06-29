@@ -2,14 +2,13 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_json::{JsonPerf, JsonPerfQuery, ResourceId};
-use chrono::serde::ts_milliseconds_option::deserialize as from_milli_ts;
 use chrono::{DateTime, Utc};
 use tabled::Table;
 use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println, CliError};
 
-use crate::bencher::SubCmd;
+use crate::bencher::{map_timestamp_millis, SubCmd};
 
 mod table_style;
 
@@ -49,8 +48,8 @@ impl TryFrom<CliPerf> for Perf {
             branches,
             testbeds,
             benchmarks,
-            start_time: from_milli_ts(serde_json::json!(start_time))?,
-            end_time: from_milli_ts(serde_json::json!(end_time))?,
+            start_time: map_timestamp_millis(start_time)?,
+            end_time: map_timestamp_millis(end_time)?,
             table: table.map(|t| t.map(Into::into)),
             backend: backend.try_into()?,
         })

@@ -41,6 +41,8 @@ pub enum CliError {
     MockFailure,
     #[error("Failed to process report. Please double check your report settings.")]
     Report,
+    #[error("Failed to create date time from milliseconds: {0}.")]
+    DateTimeMillis(i64),
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),

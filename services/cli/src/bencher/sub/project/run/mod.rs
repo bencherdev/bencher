@@ -5,12 +5,12 @@ use bencher_json::{
     project::{report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR},
     GitHash, JsonNewReport, ResourceId,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{backend::Backend, sub::project::run::urls::BenchmarkUrls},
+    bencher::{backend::Backend, map_timestamp_millis, sub::project::run::urls::BenchmarkUrls},
     cli::project::run::{CliRun, CliRunAdapter},
     cli_eprintln, cli_println, CliError,
 };
@@ -48,6 +48,7 @@ pub struct Run {
     average: Option<Average>,
     iter: usize,
     fold: Option<Fold>,
+    backdate: Option<DateTime<Utc>>,
     allow_failure: bool,
     err: bool,
     dry_run: bool,
@@ -68,6 +69,7 @@ impl TryFrom<CliRun> for Run {
             average,
             iter,
             fold,
+            backdate,
             allow_failure,
             err,
             dry_run,
@@ -83,6 +85,7 @@ impl TryFrom<CliRun> for Run {
             average: average.map(Into::into),
             iter: iter.unwrap_or(1),
             fold: fold.map(Into::into),
+            backdate: map_timestamp_millis(backdate)?,
             allow_failure,
             err,
             dry_run,
@@ -149,12 +152,21 @@ impl SubCmd for Run {
             cli_println!("{result}");
         }
 
+        let end_time = Utc::now();
+        // If a backdate is set then use it as the start time and calculate the end time from there
+        let (start_time, end_time) = if let Some(backdate) = self.backdate {
+            let elapsed = end_time - start_time;
+            (backdate, backdate + elapsed)
+        } else {
+            (start_time, end_time)
+        };
+
         let report = JsonNewReport {
             branch,
             hash: self.hash.clone(),
             testbed: self.testbed.clone(),
             start_time,
-            end_time: Utc::now(),
+            end_time,
             results,
             settings: Some(JsonReportSettings {
                 adapter: self.adapter.map(Into::into),

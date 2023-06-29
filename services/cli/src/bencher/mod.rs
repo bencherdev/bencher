@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use clap::Parser;
 
 use crate::{cli::CliBencher, CliError};
@@ -36,4 +37,15 @@ impl SubCmd for Bencher {
     async fn exec(&self) -> Result<(), CliError> {
         self.sub.exec().await
     }
+}
+
+fn map_timestamp_millis(timestamp: Option<i64>) -> Result<Option<DateTime<Utc>>, CliError> {
+    Ok(if let Some(timestamp) = timestamp {
+        let Some(date_time) =  NaiveDateTime::from_timestamp_millis(timestamp) else {
+            return Err(CliError::DateTimeMillis(timestamp));
+        };
+        Some(DateTime::from_utc(date_time, Utc))
+    } else {
+        None
+    })
 }
