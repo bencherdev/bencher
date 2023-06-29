@@ -2,7 +2,7 @@ mod body;
 mod email;
 mod message;
 
-pub use body::{Body, ButtonBody};
+pub use body::{Body, ButtonBody, NewUserBody};
 pub use email::Email;
 pub use message::Message;
 

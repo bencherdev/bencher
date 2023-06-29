@@ -5,6 +5,7 @@ use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
+use crate::context::NewUserBody;
 use crate::endpoints::endpoint::pub_response_accepted;
 use crate::endpoints::endpoint::ResponseAccepted;
 use crate::endpoints::Endpoint;
@@ -144,12 +145,31 @@ async fn post_inner(
             .unwrap_or_default(),
     }));
     let message = Message {
-        to_name: Some(insert_user.name),
-        to_email: insert_user.email,
+        to_name: Some(insert_user.name.clone()),
+        to_email: insert_user.email.clone(),
         subject: Some("Confirm Bencher Signup".into()),
         body: Some(body),
     };
     context.messenger.send(message).await;
+
+    if !insert_user.admin {
+        let admins = QueryUser::get_admins(conn)?;
+        for admin in admins {
+            let message = Message {
+                to_name: Some(admin.name.clone()),
+                to_email: admin.email.clone(),
+                subject: Some("\u{1f430} New Bencher User".into()),
+                body: Some(Body::NewUser(NewUserBody {
+                    admin: admin.name.clone(),
+                    endpoint: context.endpoint.clone(),
+                    name: insert_user.name.clone(),
+                    email: insert_user.email.clone(),
+                    invited: invite.is_some(),
+                })),
+            };
+            context.messenger.send(message).await;
+        }
+    }
 
     Ok(JsonEmpty::default())
 }

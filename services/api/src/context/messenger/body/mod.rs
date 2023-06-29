@@ -1,10 +1,8 @@
-#[cfg(feature = "plus")]
-mod advice;
 mod button;
+mod new_user;
 
-#[cfg(feature = "plus")]
-pub use advice::AdviceBody;
 pub use button::ButtonBody;
+pub use new_user::NewUserBody;
 
 pub trait FmtBody {
     fn text(&self) -> String;
@@ -13,24 +11,21 @@ pub trait FmtBody {
 
 pub enum Body {
     Button(Box<ButtonBody>),
-    #[cfg(feature = "plus")]
-    Advice(AdviceBody),
+    NewUser(NewUserBody),
 }
 
 impl FmtBody for Body {
     fn text(&self) -> String {
         match self {
             Self::Button(body) => body.text(),
-            #[cfg(feature = "plus")]
-            Self::Advice(body) => body.text(),
+            Self::NewUser(body) => body.text(),
         }
     }
 
     fn html(&self) -> String {
         match self {
             Self::Button(body) => body.html(),
-            #[cfg(feature = "plus")]
-            Self::Advice(body) => body.html(),
+            Self::NewUser(body) => body.html(),
         }
     }
 }

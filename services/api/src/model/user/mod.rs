@@ -96,6 +96,13 @@ impl QueryUser {
             .map_err(api_error!())
     }
 
+    pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<QueryUser>, ApiError> {
+        schema::user::table
+            .filter(schema::user::admin.eq(true))
+            .load::<QueryUser>(conn)
+            .map_err(api_error!())
+    }
+
     pub fn into_json(self) -> Result<JsonUser, ApiError> {
         let Self {
             uuid,

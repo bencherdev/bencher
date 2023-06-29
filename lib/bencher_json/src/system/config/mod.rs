@@ -33,7 +33,6 @@ pub struct JsonConfig {
     pub endpoint: Url,
     // TODO Remove deprecated secret_key
     pub secret_key: Option<Secret>,
-    // TODO Remove deprecated secret_key
     pub security: Option<JsonSecurity>,
     pub server: JsonServer,
     pub logging: JsonLogging,
