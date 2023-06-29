@@ -39,6 +39,8 @@ pub enum CliError {
     Output(Output),
     #[error("Mock failure")]
     MockFailure,
+    #[error("Failed to process report. Please double check your report settings.")]
+    Report,
 
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),

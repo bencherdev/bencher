@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 use bencher_json::{
     project::{report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR},
-    GitHash, JsonNewReport, JsonReport, ResourceId,
+    GitHash, JsonNewReport, ResourceId,
 };
 use chrono::Utc;
 use clap::ValueEnum;
@@ -175,7 +175,9 @@ impl SubCmd for Run {
             .backend
             .post(&format!("/v0/projects/{}/reports", self.project), &report)
             .await?;
-        let json_report: JsonReport = serde_json::from_value(json_value)?;
+        let Ok(json_report) = serde_json::from_value(json_value) else  {
+            return Err(CliError::Report);
+        };
 
         let json_value = self.backend.get_quiet("/v0/server/config/endpoint").await?;
         let endpoint_url: Url = serde_json::from_value(json_value)?;
