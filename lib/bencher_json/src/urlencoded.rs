@@ -1,6 +1,11 @@
+use std::str::FromStr;
+
 use chrono::{DateTime, TimeZone, Utc};
-use serde::{de::DeserializeOwned, Serialize};
+use percent_encoding::{percent_decode, utf8_percent_encode, AsciiSet, CONTROLS};
 use thiserror::Error;
+
+/// https://url.spec.whatwg.org/#fragment-percent-encode-set
+const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
 
 #[derive(Debug, Error)]
 pub enum UrlEncodedError {
@@ -22,11 +27,13 @@ pub enum UrlEncodedError {
     IntError(#[from] std::num::TryFromIntError),
     #[error("Failed to convert milliseconds to timestamp: {0}")]
     Timestamp(i64),
+    #[error("Failed to decode urlencoded: {0}")]
+    Utf8Error(#[from] std::str::Utf8Error),
 }
 
 pub fn from_urlencoded_list<T>(list: &str) -> Result<Vec<T>, UrlEncodedError>
 where
-    T: DeserializeOwned,
+    T: FromStr,
 {
     let mut values = Vec::new();
     for value in list.split(',') {
@@ -37,13 +44,13 @@ where
 
 pub fn from_urlencoded<T>(input: &str) -> Result<T, UrlEncodedError>
 where
-    T: DeserializeOwned,
+    T: FromStr,
 {
-    let urlencoded = format!("{input}=");
-    Ok(serde_urlencoded::from_str::<Vec<(T, String)>>(&urlencoded)?
-        .pop()
-        .ok_or_else(|| UrlEncodedError::Urlencoded(input.into()))?
-        .0)
+    let decoded = percent_decode(input.as_bytes());
+    let decoded = decoded.decode_utf8()?;
+    decoded
+        .parse()
+        .map_err(|_| UrlEncodedError::Urlencoded(input.into()))
 }
 
 pub fn from_millis(millis: i64) -> Result<DateTime<Utc>, UrlEncodedError> {
@@ -58,13 +65,13 @@ pub fn from_millis(millis: i64) -> Result<DateTime<Utc>, UrlEncodedError> {
     .ok_or_else(|| UrlEncodedError::Timestamp(millis))
 }
 
-pub fn to_urlencoded_list<T>(values: &[T]) -> Result<String, UrlEncodedError>
+pub fn to_urlencoded_list<T>(values: &[T]) -> String
 where
-    T: Serialize,
+    T: ToString,
 {
     let mut list: Option<String> = None;
     for value in values {
-        let element = to_urlencoded(value)?;
+        let element = to_urlencoded(value);
         if let Some(list) = list.as_mut() {
             list.push(',');
             list.push_str(&element);
@@ -72,15 +79,14 @@ where
             list = Some(element);
         }
     }
-    Ok(list.unwrap_or_default())
+    list.unwrap_or_default()
 }
 
-pub fn to_urlencoded<T>(value: &T) -> Result<String, UrlEncodedError>
+pub fn to_urlencoded<T>(value: &T) -> String
 where
-    T: Serialize,
+    T: ToString,
 {
-    Ok(serde_urlencoded::to_string([(value, "")])?
-        .strip_suffix('=')
-        .unwrap_or_default()
-        .to_string())
+    let value_str = value.to_string();
+    let encoded = utf8_percent_encode(&value_str, FRAGMENT);
+    encoded.collect()
 }

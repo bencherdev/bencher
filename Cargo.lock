@@ -703,6 +703,7 @@ dependencies = [
  "derive_more",
  "once_cell",
  "ordered-float",
+ "percent-encoding",
  "schemars",
  "serde",
  "serde_json",

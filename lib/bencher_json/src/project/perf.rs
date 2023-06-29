@@ -143,22 +143,18 @@ impl JsonPerfQuery {
             end_time,
         } = self;
 
-        let metric_kind = Some(to_urlencoded(metric_kind)?);
+        let metric_kind = Some(to_urlencoded(metric_kind));
 
-        let branches = Some(to_urlencoded_list(branches)?);
-        let testbeds = Some(to_urlencoded_list(testbeds)?);
-        let benchmarks = Some(to_urlencoded_list(benchmarks)?);
+        let branches = Some(to_urlencoded_list(branches));
+        let testbeds = Some(to_urlencoded_list(testbeds));
+        let benchmarks = Some(to_urlencoded_list(benchmarks));
 
-        let start_time = if let Some(start_time) = start_time {
-            Some(to_urlencoded(&start_time.timestamp_millis())?)
-        } else {
-            None
-        };
-        let end_time = if let Some(end_time) = end_time {
-            Some(to_urlencoded(&end_time.timestamp_millis())?)
-        } else {
-            None
-        };
+        let start_time = start_time
+            .as_ref()
+            .map(|start_time| to_urlencoded(&start_time.timestamp_millis()));
+        let end_time = end_time
+            .as_ref()
+            .map(|end_time| to_urlencoded(&end_time.timestamp_millis()));
 
         QUERY_KEYS
             .into_iter()
