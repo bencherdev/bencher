@@ -13,10 +13,15 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
+  "[javascript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rome.rome"
+  },
   "[typescript]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rome.rome"
   },
+  // Extension 'Rome' is configured as formatter but it cannot format 'TypeScript JSX'-files
   "[typescriptreact]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "rome.rome"

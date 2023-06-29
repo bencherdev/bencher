@@ -10,11 +10,12 @@ const billingConfig = {
 	[Host.SELF_HOSTED]: {
 		operation: Operation.BILLING,
 		header: {
-			title: "Billing",
+			title: "License Billing",
 			path: (pathname) => {
 				return parentPath(pathname);
 			},
 		},
+		host: Host.SELF_HOSTED,
 	},
 	[Host.BENCHER_CLOUD]: {
 		operation: Operation.BILLING,
@@ -24,6 +25,7 @@ const billingConfig = {
 				return parentPath(pathname);
 			},
 		},
+		host: Host.BENCHER_CLOUD,
 	},
 };
 

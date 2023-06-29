@@ -9,7 +9,11 @@ import { Host } from "../../config/resources/billing";
 import MeteredBilling from "./MeteredBilling";
 import LicensedBilling from "./LicensedBilling";
 import BillingHeader from "./BillingHeader";
-import { BENCHER_API_URL, get_options, validate_jwt } from "../../../site/util";
+import {
+	BENCHER_BILLING_API_URL,
+	get_options,
+	validate_jwt,
+} from "../../../site/util";
 import axios from "axios";
 import Plan from "./Plan";
 
@@ -26,16 +30,14 @@ const BillingPanel = (props) => {
 		if (!validate_jwt(props.user?.token)) {
 			return EMPTY_OBJECT;
 		}
-		const url = `${BENCHER_API_URL()}/v0/organizations/${
+		const url = `${BENCHER_BILLING_API_URL()}/v0/organizations/${
 			plan_fetcher?.organization
 		}/plan`;
 		return await axios(get_options(url, token))
 			.then((resp) => {
-				setNewBilling(false);
 				return resp?.data;
 			})
 			.catch((_error) => {
-				setNewBilling(true);
 				return EMPTY_OBJECT;
 			});
 	};
@@ -52,7 +54,6 @@ const BillingPanel = (props) => {
 		};
 	});
 	const [plan] = createResource(plan_fetcher, fetchPlan);
-	const [newBilling, setNewBilling] = createSignal(false);
 
 	return (
 		<>
@@ -71,22 +72,34 @@ const BillingPanel = (props) => {
 					</section>
 				}
 			>
-				<Match when={!plan()?.level && newBilling() === true}>
+				<Match when={props.config?.host === Host.SELF_HOSTED}>
+					<LicensedBilling />
+				</Match>
+				<Match
+					when={
+						props.config?.host === Host.BENCHER_CLOUD &&
+						typeof plan() === "object" &&
+						Object.entries(plan()).length === 0
+					}
+				>
 					<MeteredBilling
 						user={props.user}
 						organization_slug={props.organization_slug}
 						handleRefresh={handleRefresh}
 					/>
 				</Match>
-				<Match when={plan()?.level}>
+				<Match
+					when={
+						props.config?.host === Host.BENCHER_CLOUD &&
+						typeof plan() === "object" &&
+						Object.entries(plan()).length !== 0
+					}
+				>
 					<Plan
 						user={props.user}
 						organization_slug={props.organization_slug}
 						plan={plan}
 					/>
-				</Match>
-				<Match when={props.host === Host.SELF_HOSTED}>
-					<LicensedBilling />
 				</Match>
 			</Switch>
 		</>

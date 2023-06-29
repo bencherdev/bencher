@@ -7,6 +7,7 @@ import {
 } from "../../../site/util";
 import PaymentCard, { cardForm } from "./PaymentCard";
 import { PlanLevel } from "../../../../types/bencher";
+import Pricing from "./Pricing";
 
 const Billing = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();

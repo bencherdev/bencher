@@ -15,6 +15,8 @@ import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
 	validate_plan_level,
+	BENCHER_API_URL,
+	is_bencher_cloud,
 } from "../site/util";
 import { Host } from "./config/resources/billing";
 
@@ -64,7 +66,11 @@ const ConsoleRoutes = (props) => {
 			/>
 			<Route
 				path="/organizations/:organization_slug/billing"
-				element={consolePage(config?.[Resource.BILLING]?.[Host.BENCHER_CLOUD])}
+				element={consolePage(
+					config?.[Resource.BILLING]?.[
+						is_bencher_cloud() ? Host.BENCHER_CLOUD : Host.SELF_HOSTED
+					],
+				)}
 			/>
 			<Route
 				path="/organizations/:organization_slug/projects"

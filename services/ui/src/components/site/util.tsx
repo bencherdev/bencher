@@ -28,6 +28,36 @@ export const BENCHER_API_URL: () => string = () => {
 	}
 };
 
+export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";
+
+export const BENCHER_BILLING_API_URL: () => string = () => {
+	const mode = import.meta.env.MODE;
+	switch (mode) {
+		case "development":
+			return BENCHER_API_URL();
+		case "production":
+			return BENCHER_CLOUD_API_URL;
+		default:
+			console.error("Invalid mode: ", mode);
+			return "http://localhost:61016";
+	}
+};
+
+export const is_bencher_cloud = () => {
+	const mode = import.meta.env.MODE;
+	switch (mode) {
+		case "development":
+			// Toggle for testing purposes.
+			return false;
+		// return true;
+		case "production":
+			return BENCHER_BILLING_API_URL() === BENCHER_CLOUD_API_URL;
+		default:
+			console.error("Invalid mode: ", mode);
+			return false;
+	}
+};
+
 export const BENCHER_GITHUB_URL: string =
 	"https://github.com/bencherdev/bencher";
 
