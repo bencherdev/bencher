@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println, CliError};
 
-use crate::bencher::{map_timestamp_millis, SubCmd};
+use crate::bencher::{from_response, map_timestamp_millis, SubCmd};
 
 mod table_style;
 
@@ -87,7 +87,7 @@ impl SubCmd for Perf {
             .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
             .await?;
         if let Some(table_style) = self.table {
-            let json_perf: JsonPerf = serde_json::from_value(resp)?;
+            let json_perf: JsonPerf = from_response(resp)?;
             let mut perf_table: Table = json_perf.into();
             if let Some(table_style) = table_style {
                 table_style.stylize(&mut perf_table);

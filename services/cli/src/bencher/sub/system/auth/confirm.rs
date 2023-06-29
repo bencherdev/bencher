@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bencher_json::{system::auth::JsonConfirm, JsonAuthToken, Jwt};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::Backend, from_response, sub::SubCmd},
     cli::system::auth::CliAuthConfirm,
     CliError,
 };
@@ -44,7 +44,7 @@ impl SubCmd for Confirm {
     async fn exec(&self) -> Result<(), CliError> {
         let json_token: JsonAuthToken = self.clone().into();
         let res = self.backend.post(CONFIRM_PATH, &json_token).await?;
-        let _json: JsonConfirm = serde_json::from_value(res)?;
+        let _json: JsonConfirm = from_response(res)?;
         Ok(())
     }
 }

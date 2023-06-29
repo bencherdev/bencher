@@ -6,7 +6,7 @@ use bencher_json::PlanLevel;
 use bencher_json::{Email, JsonEmpty, JsonLogin, Jwt};
 
 use crate::{
-    bencher::{backend::Backend, sub::SubCmd},
+    bencher::{backend::Backend, from_response, sub::SubCmd},
     cli::system::auth::CliAuthLogin,
     CliError,
 };
@@ -66,7 +66,7 @@ impl SubCmd for Login {
     async fn exec(&self) -> Result<(), CliError> {
         let json_login: JsonLogin = self.clone().into();
         let res = self.backend.post(LOGIN_PATH, &json_login).await?;
-        let _: JsonEmpty = serde_json::from_value(res)?;
+        let _: JsonEmpty = from_response(res)?;
         Ok(())
     }
 }

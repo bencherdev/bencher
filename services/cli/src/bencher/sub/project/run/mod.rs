@@ -3,14 +3,17 @@ use std::convert::TryFrom;
 use async_trait::async_trait;
 use bencher_json::{
     project::{report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR},
-    GitHash, JsonNewReport, ResourceId,
+    GitHash, JsonNewReport, JsonReport, ResourceId,
 };
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{backend::Backend, map_timestamp_millis, sub::project::run::urls::BenchmarkUrls},
+    bencher::{
+        backend::Backend, from_response, map_timestamp_millis,
+        sub::project::run::urls::BenchmarkUrls,
+    },
     cli::project::run::{CliRun, CliRunAdapter},
     cli_eprintln, cli_println, CliError,
 };
@@ -187,9 +190,7 @@ impl SubCmd for Run {
             .backend
             .post(&format!("/v0/projects/{}/reports", self.project), &report)
             .await?;
-        let Ok(json_report) = serde_json::from_value(json_value) else  {
-            return Err(CliError::Report);
-        };
+        let json_report: JsonReport = from_response(json_value)?;
 
         let json_value = self.backend.get_quiet("/v0/server/config/endpoint").await?;
         let endpoint_url: Url = serde_json::from_value(json_value)?;

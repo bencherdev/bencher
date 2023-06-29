@@ -39,8 +39,8 @@ pub enum CliError {
     Output(Output),
     #[error("Mock failure")]
     MockFailure,
-    #[error("Failed to process report. Please double check your report settings.")]
-    Report,
+    #[error("Request failed. Please double check your parameters and try again.")]
+    RequestFailed,
     #[error("Failed to create date time from milliseconds: {0}.")]
     DateTimeMillis(i64),
 

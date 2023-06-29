@@ -45,9 +45,7 @@ For all other environments, the suggested install method is from source.
 
 <pre>
   <code>
-    {`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git
-cd bencher
-cargo install --path services/cli --locked`}
+    {`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}
   </code>
 </pre>
 

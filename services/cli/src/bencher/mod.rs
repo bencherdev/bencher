@@ -49,3 +49,13 @@ fn map_timestamp_millis(timestamp: Option<i64>) -> Result<Option<DateTime<Utc>>,
         None
     })
 }
+
+fn from_response<T>(json_value: serde_json::Value) -> Result<T, CliError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    match serde_json::from_value(json_value) {
+        Ok(value) => Ok(value),
+        Err(_) => Err(CliError::RequestFailed),
+    }
+}
