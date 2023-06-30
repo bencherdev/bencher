@@ -5790,17 +5790,19 @@
   },
   "tags": [
     {
-      "name": "alerts"
+      "name": "alerts",
+      "description": "Alerts"
     },
     {
       "name": "allowed"
     },
     {
       "name": "auth",
-      "description": "User Authentication"
+      "description": "Auth"
     },
     {
-      "name": "benchmarks"
+      "name": "benchmarks",
+      "description": "Benchmarks"
     },
     {
       "name": "branches",
@@ -5810,14 +5812,11 @@
       "name": "config"
     },
     {
-      "name": "invites",
-      "description": "Organization Invitations"
-    },
-    {
       "name": "members"
     },
     {
-      "name": "metric kinds"
+      "name": "metric kinds",
+      "description": "Metric Kinds"
     },
     {
       "name": "organizations",
@@ -5825,11 +5824,10 @@
     },
     {
       "name": "perf",
-      "description": "Benchmark Perf"
+      "description": "Perf Metrics"
     },
     {
-      "name": "ping",
-      "description": "Ping"
+      "name": "ping"
     },
     {
       "name": "plan"
@@ -5843,10 +5841,12 @@
       "description": "Reports"
     },
     {
-      "name": "server"
+      "name": "server",
+      "description": "Server"
     },
     {
-      "name": "statistics"
+      "name": "statistics",
+      "description": "Statistics"
     },
     {
       "name": "testbeds",
@@ -5857,13 +5857,15 @@
       "description": "Thresholds"
     },
     {
-      "name": "tokens"
+      "name": "tokens",
+      "description": "API Tokens"
     },
     {
       "name": "usage"
     },
     {
-      "name": "users"
+      "name": "users",
+      "description": "Users"
     },
     {
       "name": "version"

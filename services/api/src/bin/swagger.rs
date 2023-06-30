@@ -41,16 +41,21 @@ fn main() -> Result<(), SwaggerError> {
         allow_other_tags: false,
         endpoint_tag_policy: EndpointTagPolicy::AtLeastOne,
         tag_definitions: literally::hmap!{
-            "ping" => TagDetails { description: Some("Ping".into()), external_docs: None},
-            "auth" => TagDetails { description: Some("User Authentication".into()), external_docs: None},
+            "auth" => TagDetails { description: Some("Auth".into()), external_docs: None},
             "organizations" => TagDetails { description: Some("Organizations".into()), external_docs: None},
-            "invites" => TagDetails { description: Some("Organization Invitations".into()), external_docs: None},
             "projects" => TagDetails { description: Some("Projects".into()), external_docs: None},
+            "perf" => TagDetails { description: Some("Perf Metrics".into()), external_docs: None},
             "reports" => TagDetails { description: Some("Reports".into()), external_docs: None},
+            "metric kinds" => TagDetails { description: Some("Metric Kinds".into()), external_docs: None},
             "branches" => TagDetails { description: Some("Branches".into()), external_docs: None},
             "testbeds" => TagDetails { description: Some("Testbeds".into()), external_docs: None},
+            "benchmarks" => TagDetails { description: Some("Benchmarks".into()), external_docs: None},
             "thresholds" => TagDetails { description: Some("Thresholds".into()), external_docs: None},
-            "perf" => TagDetails { description: Some("Benchmark Perf".into()), external_docs: None},
+            "statistics" => TagDetails { description: Some("Statistics".into()), external_docs: None},
+            "alerts" => TagDetails { description: Some("Alerts".into()), external_docs: None},
+            "users" => TagDetails { description: Some("Users".into()), external_docs: None},
+            "tokens" => TagDetails { description: Some("API Tokens".into()), external_docs: None},
+            "server" => TagDetails { description: Some("Server".into()), external_docs: None},
     }})
         .openapi(bencher_api::config::API_NAME, API_VERSION)
         .write(&mut swagger_file)

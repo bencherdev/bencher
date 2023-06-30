@@ -54,6 +54,7 @@
     "Microbenchmark",
     "milli",
     "nanos",
+    "openapi",
     "Perfs",
     "pipenv",
     "pytest",
