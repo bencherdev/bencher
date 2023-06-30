@@ -4,7 +4,7 @@ VERSION=$(./scripts/version.sh)
 
 # Generate the API docs from the server
 cd ./services/api
-cargo run --features swagger
+cargo run --bin swagger --features swagger
 cd -
 
 # Generate the Bencher CLI GitHub Action

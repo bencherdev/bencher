@@ -10,7 +10,7 @@
         "tags": [
           "auth"
         ],
-        "operationId": "post",
+        "operationId": "auth_confirm_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -74,7 +74,7 @@
         "tags": [
           "auth"
         ],
-        "operationId": "options",
+        "operationId": "auth_confirm_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -101,7 +101,7 @@
         "tags": [
           "auth"
         ],
-        "operationId": "post",
+        "operationId": "auth_login_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -165,7 +165,7 @@
         "tags": [
           "auth"
         ],
-        "operationId": "options",
+        "operationId": "auth_login_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -192,7 +192,7 @@
         "tags": [
           "auth"
         ],
-        "operationId": "post",
+        "operationId": "auth_signup_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -256,7 +256,7 @@
         "tags": [
           "auth"
         ],
-        "operationId": "options",
+        "operationId": "auth_signup_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -283,7 +283,7 @@
         "tags": [
           "organizations"
         ],
-        "operationId": "get_ls",
+        "operationId": "organizations_get",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -341,7 +341,7 @@
         "tags": [
           "organizations"
         ],
-        "operationId": "post",
+        "operationId": "organization_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -405,7 +405,7 @@
         "tags": [
           "organizations"
         ],
-        "operationId": "dir_options",
+        "operationId": "organizations_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -432,7 +432,7 @@
         "tags": [
           "organizations"
         ],
-        "operationId": "get_one",
+        "operationId": "organization_get",
         "parameters": [
           {
             "in": "path",
@@ -496,7 +496,7 @@
         "tags": [
           "organizations"
         ],
-        "operationId": "one_options",
+        "operationId": "organization_options",
         "parameters": [
           {
             "in": "path",
@@ -534,7 +534,7 @@
           "organizations",
           "allowed"
         ],
-        "operationId": "get",
+        "operationId": "org_allowed_get",
         "parameters": [
           {
             "in": "path",
@@ -607,7 +607,7 @@
           "organizations",
           "allowed"
         ],
-        "operationId": "options",
+        "operationId": "org_allowed_options",
         "parameters": [
           {
             "in": "path",
@@ -653,7 +653,7 @@
           "organizations",
           "members"
         ],
-        "operationId": "get_ls",
+        "operationId": "org_members_get",
         "parameters": [
           {
             "in": "path",
@@ -722,7 +722,7 @@
           "organizations",
           "members"
         ],
-        "operationId": "post",
+        "operationId": "org_member_post",
         "parameters": [
           {
             "in": "path",
@@ -797,7 +797,7 @@
           "organizations",
           "members"
         ],
-        "operationId": "dir_options",
+        "operationId": "org_members_options",
         "parameters": [
           {
             "in": "path",
@@ -835,7 +835,7 @@
           "organizations",
           "members"
         ],
-        "operationId": "get_one",
+        "operationId": "org_member_get",
         "parameters": [
           {
             "in": "path",
@@ -903,12 +903,85 @@
           }
         }
       },
+      "delete": {
+        "tags": [
+          "organizations",
+          "members"
+        ],
+        "operationId": "org_member_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonMember"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "options": {
         "tags": [
           "organizations",
           "members"
         ],
-        "operationId": "one_options",
+        "operationId": "org_member_options",
         "parameters": [
           {
             "in": "path",
@@ -952,7 +1025,7 @@
           "organizations",
           "members"
         ],
-        "operationId": "patch",
+        "operationId": "org_member_patch",
         "parameters": [
           {
             "in": "path",
@@ -1037,7 +1110,7 @@
           "organizations",
           "plan"
         ],
-        "operationId": "get_one",
+        "operationId": "org_plan_get",
         "parameters": [
           {
             "in": "path",
@@ -1102,7 +1175,7 @@
           "organizations",
           "plan"
         ],
-        "operationId": "post",
+        "operationId": "org_plan_post",
         "parameters": [
           {
             "in": "path",
@@ -1177,7 +1250,7 @@
           "organizations",
           "plan"
         ],
-        "operationId": "options",
+        "operationId": "org_plan_options",
         "parameters": [
           {
             "in": "path",
@@ -1215,7 +1288,7 @@
           "organizations",
           "projects"
         ],
-        "operationId": "get_ls",
+        "operationId": "org_projects_get",
         "parameters": [
           {
             "in": "path",
@@ -1284,7 +1357,7 @@
           "organizations",
           "projects"
         ],
-        "operationId": "post",
+        "operationId": "org_project_post",
         "parameters": [
           {
             "in": "path",
@@ -1359,7 +1432,7 @@
           "organizations",
           "projects"
         ],
-        "operationId": "dir_options",
+        "operationId": "org_projects_options",
         "parameters": [
           {
             "in": "path",
@@ -1397,7 +1470,7 @@
           "organizations",
           "projects"
         ],
-        "operationId": "get_one",
+        "operationId": "org_project_get",
         "parameters": [
           {
             "in": "path",
@@ -1470,7 +1543,7 @@
           "organizations",
           "projects"
         ],
-        "operationId": "one_options",
+        "operationId": "org_project_options",
         "parameters": [
           {
             "in": "path",
@@ -1516,7 +1589,7 @@
           "organizations",
           "usage"
         ],
-        "operationId": "get",
+        "operationId": "org_usage_get",
         "parameters": [
           {
             "in": "path",
@@ -1599,7 +1672,7 @@
           "organizations",
           "usage"
         ],
-        "operationId": "options",
+        "operationId": "org_usage_options",
         "parameters": [
           {
             "in": "path",
@@ -1654,7 +1727,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "get_ls",
+        "operationId": "projects_get",
         "parameters": [
           {
             "in": "query",
@@ -1722,7 +1795,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "dir_options",
+        "operationId": "projects_options",
         "parameters": [
           {
             "in": "query",
@@ -1759,7 +1832,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "get_one",
+        "operationId": "project_get",
         "parameters": [
           {
             "in": "path",
@@ -1823,7 +1896,7 @@
         "tags": [
           "projects"
         ],
-        "operationId": "one_options",
+        "operationId": "project_options",
         "parameters": [
           {
             "in": "path",
@@ -1861,7 +1934,7 @@
           "projects",
           "alerts"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_alerts_get",
         "parameters": [
           {
             "in": "path",
@@ -1930,7 +2003,7 @@
           "projects",
           "alerts"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_alerts_options",
         "parameters": [
           {
             "in": "path",
@@ -1968,7 +2041,7 @@
           "projects",
           "alerts"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_alert_get",
         "parameters": [
           {
             "in": "path",
@@ -2042,7 +2115,7 @@
           "projects",
           "alerts"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_alert_options",
         "parameters": [
           {
             "in": "path",
@@ -2089,7 +2162,7 @@
           "projects",
           "benchmarks"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_benchmarks_get",
         "parameters": [
           {
             "in": "path",
@@ -2158,7 +2231,7 @@
           "projects",
           "benchmarks"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_benchmarks_options",
         "parameters": [
           {
             "in": "path",
@@ -2196,7 +2269,7 @@
           "projects",
           "benchmarks"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_benchmark_get",
         "parameters": [
           {
             "in": "path",
@@ -2270,7 +2343,7 @@
           "projects",
           "benchmarks"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_benchmark_options",
         "parameters": [
           {
             "in": "path",
@@ -2317,7 +2390,7 @@
           "projects",
           "branches"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_branches_get",
         "parameters": [
           {
             "in": "path",
@@ -2394,7 +2467,7 @@
           "projects",
           "branches"
         ],
-        "operationId": "post",
+        "operationId": "proj_branch_post",
         "parameters": [
           {
             "in": "path",
@@ -2469,7 +2542,7 @@
           "projects",
           "branches"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_branches_options",
         "parameters": [
           {
             "in": "path",
@@ -2515,7 +2588,7 @@
           "projects",
           "branches"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_branch_get",
         "parameters": [
           {
             "in": "path",
@@ -2588,7 +2661,7 @@
           "projects",
           "branches"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_branch_options",
         "parameters": [
           {
             "in": "path",
@@ -2634,7 +2707,7 @@
           "projects",
           "metric kinds"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_metric_kinds_get",
         "parameters": [
           {
             "in": "path",
@@ -2703,7 +2776,7 @@
           "projects",
           "metric kinds"
         ],
-        "operationId": "post",
+        "operationId": "proj_metric_kind_post",
         "parameters": [
           {
             "in": "path",
@@ -2778,7 +2851,7 @@
           "projects",
           "metric kinds"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_metric_kinds_options",
         "parameters": [
           {
             "in": "path",
@@ -2816,7 +2889,7 @@
           "projects",
           "metric kinds"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_metric_kind_get",
         "parameters": [
           {
             "in": "path",
@@ -2889,7 +2962,7 @@
           "projects",
           "metric kinds"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_metric_kind_options",
         "parameters": [
           {
             "in": "path",
@@ -2935,7 +3008,7 @@
           "projects",
           "perf"
         ],
-        "operationId": "get",
+        "operationId": "proj_perf_get",
         "parameters": [
           {
             "in": "path",
@@ -3058,7 +3131,7 @@
           "projects",
           "perf"
         ],
-        "operationId": "options",
+        "operationId": "proj_perf_options",
         "parameters": [
           {
             "in": "path",
@@ -3154,7 +3227,7 @@
           "projects",
           "perf"
         ],
-        "operationId": "get",
+        "operationId": "proj_perf_img_get",
         "parameters": [
           {
             "in": "path",
@@ -3239,7 +3312,7 @@
           "projects",
           "perf"
         ],
-        "operationId": "options",
+        "operationId": "proj_perf_img_options",
         "parameters": [
           {
             "in": "path",
@@ -3335,7 +3408,7 @@
           "projects",
           "reports"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_reports_get",
         "parameters": [
           {
             "in": "path",
@@ -3404,7 +3477,7 @@
           "projects",
           "reports"
         ],
-        "operationId": "post",
+        "operationId": "proj_report_post",
         "parameters": [
           {
             "in": "path",
@@ -3479,7 +3552,7 @@
           "projects",
           "reports"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_reports_options",
         "parameters": [
           {
             "in": "path",
@@ -3517,7 +3590,7 @@
           "projects",
           "reports"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_report_get",
         "parameters": [
           {
             "in": "path",
@@ -3591,7 +3664,7 @@
           "projects",
           "reports"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_report_options",
         "parameters": [
           {
             "in": "path",
@@ -3638,7 +3711,7 @@
           "projects",
           "statistics"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_statistic_get",
         "parameters": [
           {
             "in": "path",
@@ -3712,7 +3785,7 @@
           "projects",
           "statistics"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_statistic_options",
         "parameters": [
           {
             "in": "path",
@@ -3759,7 +3832,7 @@
           "projects",
           "testbeds"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_testbeds_get",
         "parameters": [
           {
             "in": "path",
@@ -3828,7 +3901,7 @@
           "projects",
           "testbeds"
         ],
-        "operationId": "post",
+        "operationId": "proj_testbed_post",
         "parameters": [
           {
             "in": "path",
@@ -3903,7 +3976,7 @@
           "projects",
           "testbeds"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_testbeds_options",
         "parameters": [
           {
             "in": "path",
@@ -3941,7 +4014,7 @@
           "projects",
           "testbeds"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_testbed_get",
         "parameters": [
           {
             "in": "path",
@@ -4014,7 +4087,7 @@
           "projects",
           "testbeds"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_testbed_options",
         "parameters": [
           {
             "in": "path",
@@ -4060,7 +4133,7 @@
           "projects",
           "thresholds"
         ],
-        "operationId": "get_ls",
+        "operationId": "proj_thresholds_get",
         "parameters": [
           {
             "in": "path",
@@ -4129,7 +4202,7 @@
           "projects",
           "thresholds"
         ],
-        "operationId": "post",
+        "operationId": "proj_threshold_post",
         "parameters": [
           {
             "in": "path",
@@ -4204,7 +4277,7 @@
           "projects",
           "thresholds"
         ],
-        "operationId": "dir_options",
+        "operationId": "proj_thresholds_options",
         "parameters": [
           {
             "in": "path",
@@ -4242,7 +4315,7 @@
           "projects",
           "thresholds"
         ],
-        "operationId": "get_one",
+        "operationId": "proj_threshold_get",
         "parameters": [
           {
             "in": "path",
@@ -4316,7 +4389,7 @@
           "projects",
           "thresholds"
         ],
-        "operationId": "one_options",
+        "operationId": "proj_threshold_options",
         "parameters": [
           {
             "in": "path",
@@ -4362,7 +4435,7 @@
         "tags": [
           "server"
         ],
-        "operationId": "post",
+        "operationId": "server_backup_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4426,7 +4499,7 @@
         "tags": [
           "server"
         ],
-        "operationId": "options",
+        "operationId": "server_backup_options",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4464,7 +4537,7 @@
           "server",
           "config"
         ],
-        "operationId": "get_one",
+        "operationId": "server_config_get",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4519,7 +4592,7 @@
           "server",
           "config"
         ],
-        "operationId": "put",
+        "operationId": "server_config_put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4584,7 +4657,7 @@
           "server",
           "config"
         ],
-        "operationId": "options",
+        "operationId": "server_config_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4612,7 +4685,7 @@
           "server",
           "config"
         ],
-        "operationId": "get_one",
+        "operationId": "server_config_endpoint_get",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4667,7 +4740,7 @@
           "server",
           "config"
         ],
-        "operationId": "options",
+        "operationId": "server_config_endpoint_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4695,7 +4768,7 @@
           "server",
           "ping"
         ],
-        "operationId": "get",
+        "operationId": "server_ping_get",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4751,7 +4824,7 @@
           "server",
           "ping"
         ],
-        "operationId": "options",
+        "operationId": "server_ping_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4778,7 +4851,7 @@
         "tags": [
           "server"
         ],
-        "operationId": "post",
+        "operationId": "server_restart_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4842,7 +4915,7 @@
         "tags": [
           "server"
         ],
-        "operationId": "options",
+        "operationId": "server_restart_options",
         "requestBody": {
           "content": {
             "application/json": {
@@ -4880,7 +4953,7 @@
           "server",
           "version"
         ],
-        "operationId": "get",
+        "operationId": "server_version_get",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4935,7 +5008,7 @@
           "server",
           "version"
         ],
-        "operationId": "options",
+        "operationId": "server_version_options",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -4962,7 +5035,7 @@
         "tags": [
           "users"
         ],
-        "operationId": "get_one",
+        "operationId": "user_get",
         "parameters": [
           {
             "in": "path",
@@ -5026,7 +5099,7 @@
         "tags": [
           "users"
         ],
-        "operationId": "one_options",
+        "operationId": "user_options",
         "parameters": [
           {
             "in": "path",
@@ -5064,7 +5137,7 @@
           "users",
           "tokens"
         ],
-        "operationId": "get_ls",
+        "operationId": "user_tokens_get",
         "parameters": [
           {
             "in": "path",
@@ -5133,7 +5206,7 @@
           "users",
           "tokens"
         ],
-        "operationId": "post",
+        "operationId": "user_token_post",
         "parameters": [
           {
             "in": "path",
@@ -5208,7 +5281,7 @@
           "users",
           "tokens"
         ],
-        "operationId": "dir_options",
+        "operationId": "user_tokens_options",
         "parameters": [
           {
             "in": "path",
@@ -5246,7 +5319,7 @@
           "users",
           "tokens"
         ],
-        "operationId": "get_one",
+        "operationId": "user_token_get",
         "parameters": [
           {
             "in": "path",
@@ -5320,7 +5393,7 @@
           "users",
           "tokens"
         ],
-        "operationId": "one_options",
+        "operationId": "user_token_options",
         "parameters": [
           {
             "in": "path",

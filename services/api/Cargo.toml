@@ -3,6 +3,7 @@ name = "bencher_api"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+default-run = "api"
 
 [features]
 default = ["plus"]
@@ -60,3 +61,7 @@ pretty_assertions.workspace = true
 
 [[bin]]
 name = "api"
+
+[[bin]]
+name = "swagger"
+required-features = ["swagger"]
