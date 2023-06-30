@@ -24,7 +24,6 @@ use url::Url;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
     endpoints::Api,
-    util::registrar::Registrar,
     ApiError,
 };
 
@@ -94,7 +93,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
 
         let mut api = ApiDescription::new();
         trace!("Registering server APIs");
-        Api::register(&mut api)?;
+        Api::register(&mut api, true)?;
 
         Ok(
             dropshot::HttpServerStarter::new(&config_dropshot, api, private, &log)

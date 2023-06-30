@@ -1,12 +1,22 @@
-use bencher_api::ApiError;
 use std::fs::File;
+
+use bencher_api::endpoints::Api;
+use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
 use tracing::info;
 
-use bencher_api::{endpoints::Api, util::registrar::Registrar};
-use dropshot::{ApiDescription, EndpointTagPolicy, TagConfig, TagDetails};
+#[derive(Debug, thiserror::Error)]
+pub enum SwaggerError {
+    #[error("Failed to set global default logger")]
+    SetGlobalDefault(#[from] tracing::subscriber::SetGlobalDefaultError),
+    #[error("Failed to create swagger file: {0}")]
+    CreateFile(std::io::Error),
+    #[error("Failed to register API: {0}")]
+    RegisterApi(#[from] bencher_api::ApiError),
+    #[error("Failed to create swagger file: {0}")]
+    WriteFile(serde_json::Error),
+}
 
-#[tokio::main]
-async fn main() -> Result<(), ApiError> {
+fn main() -> Result<(), SwaggerError> {
     // Install global subscriber configured based on RUST_LOG envvar.
     let subscriber = tracing_subscriber::FmtSubscriber::new();
     tracing::subscriber::set_global_default(subscriber)?;
@@ -24,8 +34,8 @@ async fn main() -> Result<(), ApiError> {
 
     info!("Generating OpenAPI JSON file at: {SWAGGER_PATH}");
     let mut api_description = ApiDescription::new();
-    Api::register(&mut api_description)?;
-    let mut swagger_file = File::create(SWAGGER_PATH).map_err(ApiError::CreateSwaggerFile)?;
+    Api::register(&mut api_description, false)?;
+    let mut swagger_file = File::create(SWAGGER_PATH).map_err(SwaggerError::CreateFile)?;
 
     api_description.tag_config(TagConfig {
         allow_other_tags: false,
@@ -44,7 +54,7 @@ async fn main() -> Result<(), ApiError> {
     }})
         .openapi(bencher_api::config::API_NAME, API_VERSION)
         .write(&mut swagger_file)
-        .map_err(ApiError::WriteSwaggerFile)?;
+        .map_err(SwaggerError::WriteFile)?;
 
     info!("Saved OpenAPI JSON file to: {SWAGGER_PATH}");
 

@@ -69,31 +69,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "auth_confirm_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/auth/login": {
@@ -160,31 +135,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "auth_login_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/auth/signup": {
@@ -240,31 +190,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonEmpty"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "auth_signup_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -400,31 +325,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "organizations"
-        ],
-        "operationId": "organizations_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/organizations/{organization}": {
@@ -480,41 +380,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonOrganization"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "organizations"
-        ],
-        "operationId": "organization_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -590,50 +455,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonAllowed"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "allowed"
-        ],
-        "operationId": "org_allowed_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "permission",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/JsonOrganizationPermission"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -791,42 +612,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
-        "operationId": "org_members_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/organizations/{organization}/members/{user}": {
@@ -964,50 +749,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonMember"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "members"
-        ],
-        "operationId": "org_member_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "user",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -1244,42 +985,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "plan"
-        ],
-        "operationId": "org_plan_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/organizations/{organization}/projects": {
@@ -1426,42 +1131,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
-        "operationId": "org_projects_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/organizations/{organization}/projects/{project}": {
@@ -1526,50 +1195,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonProject"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "projects"
-        ],
-        "operationId": "org_project_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -1666,60 +1291,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "organizations",
-          "usage"
-        ],
-        "operationId": "org_usage_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "organization",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "query",
-            "name": "end",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "in": "query",
-            "name": "start",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects": {
@@ -1779,41 +1350,6 @@
                   "items": {
                     "$ref": "#/components/schemas/JsonProject"
                   }
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects"
-        ],
-        "operationId": "projects_options",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "public",
-            "schema": {
-              "nullable": true,
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -1891,41 +1427,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects"
-        ],
-        "operationId": "project_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/alerts": {
@@ -1986,42 +1487,6 @@
                   "items": {
                     "$ref": "#/components/schemas/JsonAlert"
                   }
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
-        "operationId": "proj_alerts_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -2109,51 +1574,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "alerts"
-        ],
-        "operationId": "proj_alert_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "alert",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/benchmarks": {
@@ -2214,42 +1634,6 @@
                   "items": {
                     "$ref": "#/components/schemas/JsonBenchmark"
                   }
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "benchmarks"
-        ],
-        "operationId": "proj_benchmarks_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -2326,51 +1710,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonBenchmark"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "benchmarks"
-        ],
-        "operationId": "proj_benchmark_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "benchmark",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -2536,50 +1875,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
-        "operationId": "proj_branches_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "query",
-            "name": "name",
-            "schema": {
-              "nullable": true,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/branches/{branch}": {
@@ -2644,50 +1939,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonBranch"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "branches"
-        ],
-        "operationId": "proj_branch_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "branch",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -2845,42 +2096,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
-        "operationId": "proj_metric_kinds_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/metric-kinds/{metric_kind}": {
@@ -2945,50 +2160,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonMetricKind"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "metric kinds"
-        ],
-        "operationId": "proj_metric_kind_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "metric_kind",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -3125,100 +2296,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "perf"
-        ],
-        "operationId": "proj_perf_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "query",
-            "name": "benchmarks",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "branches",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "end_time",
-            "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "in": "query",
-            "name": "metric_kind",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "start_time",
-            "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "in": "query",
-            "name": "testbeds",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "title",
-            "schema": {
-              "nullable": true,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/perf/img": {
@@ -3304,100 +2381,6 @@
                 "schema": {}
               }
             }
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "perf"
-        ],
-        "operationId": "proj_perf_img_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "query",
-            "name": "benchmarks",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "branches",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "end_time",
-            "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "in": "query",
-            "name": "metric_kind",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "start_time",
-            "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "in": "query",
-            "name": "testbeds",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "title",
-            "schema": {
-              "nullable": true,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -3546,42 +2529,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
-        "operationId": "proj_reports_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/reports/{report_uuid}": {
@@ -3658,51 +2605,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "reports"
-        ],
-        "operationId": "proj_report_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "report_uuid",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/statistics/{statistic}": {
@@ -3768,51 +2670,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonStatistic"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "statistics"
-        ],
-        "operationId": "proj_statistic_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "statistic",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -3970,42 +2827,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
-        "operationId": "proj_testbeds_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/testbeds/{testbed}": {
@@ -4070,50 +2891,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonTestbed"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "testbeds"
-        ],
-        "operationId": "proj_testbed_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "testbed",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -4271,42 +3048,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
-        "operationId": "proj_thresholds_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/projects/{project}/thresholds/{threshold}": {
@@ -4383,51 +3124,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "projects",
-          "thresholds"
-        ],
-        "operationId": "proj_threshold_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          },
-          {
-            "in": "path",
-            "name": "threshold",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/server/backup": {
@@ -4483,41 +3179,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonEmpty"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "server"
-        ],
-        "operationId": "server_backup_options",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonRestart"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -4651,32 +3312,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "server",
-          "config"
-        ],
-        "operationId": "server_config_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/server/config/endpoint": {
@@ -4734,32 +3369,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "server",
-          "config"
-        ],
-        "operationId": "server_config_endpoint_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/server/ping": {
@@ -4802,32 +3411,6 @@
                 }
               }
             },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "server",
-          "ping"
-        ],
-        "operationId": "server_ping_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
             "content": {
               "application/json": {
                 "schema": {
@@ -4910,41 +3493,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "server"
-        ],
-        "operationId": "server_restart_options",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonRestart"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/server/version": {
@@ -4991,32 +3539,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonApiVersion"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "server",
-          "version"
-        ],
-        "operationId": "server_version_options",
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -5083,41 +3605,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonUser"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "users"
-        ],
-        "operationId": "user_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "user",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }
@@ -5275,42 +3762,6 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      },
-      "options": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
-        "operationId": "user_tokens_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "user",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
       }
     },
     "/v0/users/{user}/tokens/{token}": {
@@ -5376,51 +3827,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonToken"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      },
-      "options": {
-        "tags": [
-          "users",
-          "tokens"
-        ],
-        "operationId": "user_token_options",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "token",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "user",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ResourceId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "title": "String",
-                  "type": "string"
                 }
               }
             }

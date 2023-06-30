@@ -61,13 +61,6 @@ pub enum ApiError {
     #[error("Failed to use AWS S3: {0}")]
     AwsS3(String),
 
-    #[cfg(feature = "swagger")]
-    #[error("Failed to create swagger file: {0}")]
-    CreateSwaggerFile(std::io::Error),
-    #[cfg(feature = "swagger")]
-    #[error("Failed to create swagger file: {0}")]
-    WriteSwaggerFile(serde_json::Error),
-
     #[error("Failed to {0}")]
     Endpoint(Endpoint),
     #[error("Failed to parse resource ID")]

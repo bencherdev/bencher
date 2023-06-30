@@ -689,6 +689,7 @@ dependencies = [
 name = "bencher_client"
 version = "0.3.0"
 dependencies = [
+ "chrono",
  "futures",
  "prettyplease",
  "progenitor",
@@ -697,6 +698,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 1.0.109",
+ "uuid 1.4.0",
 ]
 
 [[package]]
