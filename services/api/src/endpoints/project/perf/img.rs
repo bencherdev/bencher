@@ -12,7 +12,7 @@ use crate::{
     ApiError,
 };
 
-use super::{DirPath, Resource};
+use super::{ProjPerfParams, Resource};
 
 const PERF_IMG_RESOURCE: Resource = Resource::PerfImg;
 
@@ -22,9 +22,9 @@ const PERF_IMG_RESOURCE: Resource = Resource::PerfImg;
     path =  "/v0/projects/{project}/perf/img",
     tags = ["projects", "perf"]
 }]
-pub async fn options(
+pub async fn proj_perf_img_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjPerfParams>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -35,9 +35,9 @@ pub async fn options(
     path =  "/v0/projects/{project}/perf/img",
     tags = ["projects", "perf"]
 }]
-pub async fn get(
+pub async fn proj_perf_img_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjPerfParams>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<Response<Body>, HttpError> {
     let mut json_perf_query_params = query_params.into_inner();
@@ -68,7 +68,7 @@ pub async fn get(
 
 async fn get_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjPerfParams,
     title: Option<&str>,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,

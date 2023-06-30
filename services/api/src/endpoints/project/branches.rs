@@ -31,7 +31,7 @@ use super::Resource;
 const BRANCH_RESOURCE: Resource = Resource::Branch;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjBranchesParams {
     pub project: ResourceId,
 }
 
@@ -41,9 +41,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/branches",
     tags = ["projects", "branches"]
 }]
-pub async fn dir_options(
+pub async fn proj_branches_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjBranchesParams>,
     _query_params: Query<JsonBranches>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -54,9 +54,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/branches",
     tags = ["projects", "branches"]
 }]
-pub async fn get_ls(
+pub async fn proj_branches_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjBranchesParams>,
     query_params: Query<JsonBranches>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -82,7 +82,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjBranchesParams,
     json_branches: JsonBranches,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
@@ -113,9 +113,9 @@ async fn get_ls_inner(
     path =  "/v0/projects/{project}/branches",
     tags = ["projects", "branches"]
 }]
-pub async fn post(
+pub async fn proj_branch_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjBranchesParams>,
     body: TypedBody<JsonNewBranch>,
 ) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -135,7 +135,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjBranchesParams,
     mut json_branch: JsonNewBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
@@ -181,7 +181,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjBranchParams {
     pub project: ResourceId,
     pub branch: ResourceId,
 }
@@ -192,9 +192,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/branches/{branch}",
     tags = ["projects", "branches"]
 }]
-pub async fn one_options(
+pub async fn proj_branch_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjBranchParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -204,9 +204,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/branches/{branch}",
     tags = ["projects", "branches"]
 }]
-pub async fn get_one(
+pub async fn proj_branch_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjBranchParams>,
 ) -> Result<ResponseOk<JsonBranch>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetOne);
@@ -230,7 +230,7 @@ fn_resource_id!(branch);
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjBranchParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBranch, ApiError> {
     let conn = &mut *context.conn().await;

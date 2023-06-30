@@ -36,7 +36,7 @@ const MEMBER_RESOURCE: Resource = Resource::Member;
 pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct OrgMembersParams {
     pub organization: ResourceId,
 }
 
@@ -46,9 +46,9 @@ pub struct DirPath {
     path =  "/v0/organizations/{organization}/members",
     tags = ["organizations", "members"]
 }]
-pub async fn dir_options(
+pub async fn org_members_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<OrgMembersParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -58,9 +58,9 @@ pub async fn dir_options(
     path =  "/v0/organizations/{organization}/members",
     tags = ["organizations", "members"]
 }]
-pub async fn get_ls(
+pub async fn org_members_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<OrgMembersParams>,
 ) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
@@ -80,7 +80,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: &AuthUser,
-    path_params: DirPath,
+    path_params: OrgMembersParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMember>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -119,9 +119,9 @@ async fn get_ls_inner(
     path =  "/v0/organizations/{organization}/members",
     tags = ["organizations", "members"]
 }]
-pub async fn post(
+pub async fn org_member_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<OrgMembersParams>,
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -141,7 +141,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: OrgMembersParams,
     mut json_new_member: JsonNewMember,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
@@ -228,7 +228,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct OrgMemberParams {
     pub organization: ResourceId,
     pub user: ResourceId,
 }
@@ -239,9 +239,9 @@ pub struct OnePath {
     path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
-pub async fn one_options(
+pub async fn org_member_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<OrgMemberParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -251,9 +251,9 @@ pub async fn one_options(
     path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
-pub async fn get_one(
+pub async fn org_member_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetOne);
@@ -267,7 +267,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: OrgMemberParams,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
     let conn = &mut *context.conn().await;
@@ -289,9 +289,9 @@ async fn get_one_inner(
     path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
-pub async fn patch(
+pub async fn org_member_patch(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<OrgMemberParams>,
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -311,7 +311,7 @@ pub async fn patch(
 
 async fn patch_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: OrgMemberParams,
     json_update: JsonUpdateMember,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
@@ -347,9 +347,9 @@ async fn patch_inner(
     path =  "/v0/organizations/{organization}/members/{user}",
     tags = ["organizations", "members"]
 }]
-pub async fn delete(
+pub async fn org_member_delete(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Patch);
@@ -363,7 +363,7 @@ pub async fn delete(
 
 async fn delete_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: OrgMemberParams,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, ApiError> {
     let conn = &mut *context.conn().await;

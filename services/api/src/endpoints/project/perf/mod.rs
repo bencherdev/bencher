@@ -43,7 +43,7 @@ use super::Resource;
 const PERF_RESOURCE: Resource = Resource::Perf;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjPerfParams {
     pub project: ResourceId,
 }
 
@@ -53,9 +53,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/perf",
     tags = ["projects", "perf"]
 }]
-pub async fn options(
+pub async fn proj_perf_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjPerfParams>,
     _query_params: Query<JsonPerfQueryParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -66,9 +66,9 @@ pub async fn options(
     path =  "/v0/projects/{project}/perf",
     tags = ["projects", "perf"]
 }]
-pub async fn get(
+pub async fn proj_perf_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjPerfParams>,
     query_params: Query<JsonPerfQueryParams>,
 ) -> Result<ResponseOk<JsonPerf>, HttpError> {
     // Second round of marshaling
@@ -98,7 +98,7 @@ pub async fn get(
 
 async fn get_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjPerfParams,
     json_perf_query: JsonPerfQuery,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonPerf, ApiError> {

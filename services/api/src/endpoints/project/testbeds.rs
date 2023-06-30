@@ -31,7 +31,7 @@ use super::Resource;
 const TESTBED_RESOURCE: Resource = Resource::Testbed;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjTestbedsParams {
     pub project: ResourceId,
 }
 
@@ -41,9 +41,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/testbeds",
     tags = ["projects", "testbeds"]
 }]
-pub async fn dir_options(
+pub async fn proj_testbeds_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjTestbedsParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -53,9 +53,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/testbeds",
     tags = ["projects", "testbeds"]
 }]
-pub async fn get_ls(
+pub async fn proj_testbeds_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjTestbedsParams>,
 ) -> Result<ResponseOk<Vec<JsonTestbed>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetLs);
@@ -79,7 +79,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjTestbedsParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonTestbed>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -102,9 +102,9 @@ async fn get_ls_inner(
     path =  "/v0/projects/{project}/testbeds",
     tags = ["projects", "testbeds"]
 }]
-pub async fn post(
+pub async fn proj_testbed_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjTestbedsParams>,
     body: TypedBody<JsonNewTestbed>,
 ) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -124,7 +124,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjTestbedsParams,
     json_testbed: JsonNewTestbed,
     auth_user: &AuthUser,
 ) -> Result<JsonTestbed, ApiError> {
@@ -153,7 +153,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjTestbedParams {
     pub project: ResourceId,
     pub testbed: ResourceId,
 }
@@ -164,9 +164,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/testbeds/{testbed}",
     tags = ["projects", "testbeds"]
 }]
-pub async fn one_options(
+pub async fn proj_testbed_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjTestbedParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -176,9 +176,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/testbeds/{testbed}",
     tags = ["projects", "testbeds"]
 }]
-pub async fn get_one(
+pub async fn proj_testbed_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjTestbedParams>,
 ) -> Result<ResponseOk<JsonTestbed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetOne);
@@ -202,7 +202,7 @@ fn_resource_id!(testbed);
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjTestbedParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonTestbed, ApiError> {
     let conn = &mut *context.conn().await;

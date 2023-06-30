@@ -35,7 +35,9 @@ const SIGNUP_RESOURCE: Resource = Resource::Signup;
     path =  "/v0/auth/signup",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+pub async fn auth_signup_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
 
@@ -44,7 +46,7 @@ pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse,
     path =  "/v0/auth/signup",
     tags = ["auth"]
 }]
-pub async fn post(
+pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {

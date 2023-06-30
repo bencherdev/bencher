@@ -40,7 +40,7 @@ use super::Resource;
 const THRESHOLD_RESOURCE: Resource = Resource::Threshold;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjThresholdsParams {
     pub project: ResourceId,
 }
 
@@ -50,9 +50,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/thresholds",
     tags = ["projects", "thresholds"]
 }]
-pub async fn dir_options(
+pub async fn proj_thresholds_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjThresholdsParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -62,9 +62,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/thresholds",
     tags = ["projects", "thresholds"]
 }]
-pub async fn get_ls(
+pub async fn proj_thresholds_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjThresholdsParams>,
 ) -> Result<ResponseOk<Vec<JsonThreshold>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetLs);
@@ -88,7 +88,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjThresholdsParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonThreshold>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -120,9 +120,9 @@ async fn get_ls_inner(
     path =  "/v0/projects/{project}/thresholds",
     tags = ["projects", "thresholds"]
 }]
-pub async fn post(
+pub async fn proj_threshold_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjThresholdsParams>,
     body: TypedBody<JsonNewThreshold>,
 ) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -142,7 +142,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjThresholdsParams,
     json_threshold: &JsonNewThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, ApiError> {
@@ -184,7 +184,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjThresholdParams {
     pub project: ResourceId,
     pub threshold: Uuid,
 }
@@ -195,9 +195,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/thresholds/{threshold}",
     tags = ["projects", "thresholds"]
 }]
-pub async fn one_options(
+pub async fn proj_threshold_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjThresholdParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -207,9 +207,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/thresholds/{threshold}",
     tags = ["projects", "thresholds"]
 }]
-pub async fn get_one(
+pub async fn proj_threshold_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjThresholdParams>,
 ) -> Result<ResponseOk<JsonThreshold>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetOne);
@@ -231,7 +231,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjThresholdParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonThreshold, ApiError> {
     let conn = &mut *context.conn().await;

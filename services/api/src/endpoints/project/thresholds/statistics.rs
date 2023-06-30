@@ -24,7 +24,7 @@ use super::Resource;
 const STATISTIC_RESOURCE: Resource = Resource::Statistic;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjStatisticParams {
     pub project: ResourceId,
     pub statistic: Uuid,
 }
@@ -35,9 +35,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/statistics/{statistic}",
     tags = ["projects", "statistics"]
 }]
-pub async fn one_options(
+pub async fn proj_statistic_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjStatisticParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -47,9 +47,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/statistics/{statistic}",
     tags = ["projects", "statistics"]
 }]
-pub async fn get_one(
+pub async fn proj_statistic_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjStatisticParams>,
 ) -> Result<ResponseOk<JsonStatistic>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(STATISTIC_RESOURCE, Method::GetOne);
@@ -71,7 +71,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjStatisticParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonStatistic, ApiError> {
     let conn = &mut *context.conn().await;

@@ -36,7 +36,9 @@ const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
     path =  "/v0/organizations",
     tags = ["organizations"]
 }]
-pub async fn dir_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+pub async fn organizations_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
 
@@ -45,7 +47,7 @@ pub async fn dir_options(_rqctx: RequestContext<ApiContext>) -> Result<CorsRespo
     path = "/v0/organizations",
     tags = ["organizations"]
 }]
-pub async fn get_ls(
+pub async fn organizations_get(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<Vec<JsonOrganization>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -86,7 +88,7 @@ async fn get_ls_inner(
     path = "/v0/organizations",
     tags = ["organizations"]
 }]
-pub async fn post(
+pub async fn organization_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonNewOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
@@ -137,7 +139,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct OrganizationParams {
     pub organization: ResourceId,
 }
 
@@ -147,9 +149,9 @@ pub struct OnePath {
     path =  "/v0/organizations/{organization}",
     tags = ["organizations"]
 }]
-pub async fn one_options(
+pub async fn organization_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<OrganizationParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -159,9 +161,9 @@ pub async fn one_options(
     path = "/v0/organizations/{organization}",
     tags = ["organizations"]
 }]
-pub async fn get_one(
+pub async fn organization_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<OrganizationParams>,
 ) -> Result<ResponseOk<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetOne);
@@ -175,7 +177,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: OrganizationParams,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
     let conn = &mut *context.conn().await;

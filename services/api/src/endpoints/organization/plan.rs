@@ -32,7 +32,7 @@ use super::Resource;
 const PLAN_RESOURCE: Resource = Resource::Plan;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct OrgPlanParams {
     pub organization: ResourceId,
 }
 
@@ -42,9 +42,9 @@ pub struct DirPath {
     path =  "/v0/organizations/{organization}/plan",
     tags = ["organizations", "plan"]
 }]
-pub async fn options(
+pub async fn org_plan_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<OrgPlanParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -54,9 +54,9 @@ pub async fn options(
     path =  "/v0/organizations/{organization}/plan",
     tags = ["organizations", "plan"]
 }]
-pub async fn post(
+pub async fn org_plan_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<OrgPlanParams>,
     body: TypedBody<JsonNewPlan>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -76,7 +76,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: OrgPlanParams,
     json_plan: JsonNewPlan,
     auth_user: &AuthUser,
 ) -> Result<JsonEmpty, ApiError> {
@@ -144,9 +144,9 @@ async fn post_inner(
     path =  "/v0/organizations/{organization}/plan",
     tags = ["organizations", "plan"]
 }]
-pub async fn get_one(
+pub async fn org_plan_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<OrgPlanParams>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PLAN_RESOURCE, Method::GetOne);
@@ -160,7 +160,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: OrgPlanParams,
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, ApiError> {
     // Check to see if there is a Biller

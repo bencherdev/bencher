@@ -30,7 +30,9 @@ const LOGIN_RESOURCE: Resource = Resource::Login;
     path =  "/v0/auth/login",
     tags = ["auth"]
 }]
-pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+pub async fn auth_login_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
 
@@ -39,7 +41,7 @@ pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse,
     path = "/v0/auth/login",
     tags = ["auth"]
 }]
-pub async fn post(
+pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {

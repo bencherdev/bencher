@@ -24,132 +24,131 @@ impl Registrar<ApiContext> for Api {
 
 fn register(api: &mut ApiDescription<ApiContext>) -> Result<(), String> {
     // Auth
-    api.register(system::auth::signup::options)?;
-    api.register(system::auth::signup::post)?;
-    api.register(system::auth::login::options)?;
-    api.register(system::auth::login::post)?;
-    api.register(system::auth::confirm::options)?;
-    api.register(system::auth::confirm::post)?;
+    api.register(system::auth::signup::auth_signup_options)?;
+    api.register(system::auth::signup::auth_signup_post)?;
+    api.register(system::auth::login::auth_login_options)?;
+    api.register(system::auth::login::auth_login_post)?;
+    api.register(system::auth::confirm::auth_confirm_options)?;
+    api.register(system::auth::confirm::auth_confirm_post)?;
 
     // Organizations
-    api.register(organization::organizations::dir_options)?;
-    api.register(organization::organizations::get_ls)?;
-    api.register(organization::organizations::post)?;
-    api.register(organization::organizations::one_options)?;
-    api.register(organization::organizations::get_one)?;
+    api.register(organization::organizations::organizations_options)?;
+    api.register(organization::organizations::organizations_get)?;
+    api.register(organization::organizations::organization_post)?;
+    api.register(organization::organizations::organization_options)?;
+    api.register(organization::organizations::organization_get)?;
     // Organization Permission
-    api.register(organization::allowed::options)?;
-    api.register(organization::allowed::get)?;
+    api.register(organization::allowed::org_allowed_options)?;
+    api.register(organization::allowed::org_allowed_get)?;
     // Organization Members
-    api.register(organization::members::dir_options)?;
-    api.register(organization::members::get_ls)?;
-    api.register(organization::members::post)?;
-    api.register(organization::members::one_options)?;
-    api.register(organization::members::get_one)?;
-    api.register(organization::members::patch)?;
+    api.register(organization::members::org_members_options)?;
+    api.register(organization::members::org_members_get)?;
+    api.register(organization::members::org_member_post)?;
+    api.register(organization::members::org_member_options)?;
+    api.register(organization::members::org_member_get)?;
+    api.register(organization::members::org_member_patch)?;
+    api.register(organization::members::org_member_delete)?;
     // Organization Projects
-    api.register(organization::projects::dir_options)?;
-    api.register(organization::projects::get_ls)?;
-    api.register(organization::projects::post)?;
-    api.register(organization::projects::one_options)?;
-    api.register(organization::projects::get_one)?;
-    // Organization Metered Subscription Plan
+    api.register(organization::projects::org_projects_options)?;
+    api.register(organization::projects::org_projects_get)?;
+    api.register(organization::projects::org_project_post)?;
+    api.register(organization::projects::org_project_options)?;
+    api.register(organization::projects::org_project_get)?;
     #[cfg(feature = "plus")]
-    api.register(organization::plan::options)?;
-    #[cfg(feature = "plus")]
-    api.register(organization::plan::post)?;
-    #[cfg(feature = "plus")]
-    api.register(organization::plan::get_one)?;
-    // Organization Usage
-    #[cfg(feature = "plus")]
-    api.register(organization::usage::options)?;
-    #[cfg(feature = "plus")]
-    api.register(organization::usage::get)?;
+    {
+        // Organization Metered Subscription Plan
+        api.register(organization::plan::org_plan_options)?;
+        api.register(organization::plan::org_plan_post)?;
+        api.register(organization::plan::org_plan_get)?;
+        // Organization Usage
+        api.register(organization::usage::org_usage_options)?;
+        api.register(organization::usage::org_usage_get)?;
+    }
 
     // Projects
     // All of a projects's GET APIs are public if the project is public
-    api.register(project::projects::dir_options)?;
-    api.register(project::projects::get_ls)?;
-    api.register(project::projects::one_options)?;
-    api.register(project::projects::get_one)?;
+    api.register(project::projects::projects_options)?;
+    api.register(project::projects::projects_get)?;
+    api.register(project::projects::project_options)?;
+    api.register(project::projects::project_get)?;
 
     // Perf
-    api.register(project::perf::options)?;
-    api.register(project::perf::get)?;
+    api.register(project::perf::proj_perf_options)?;
+    api.register(project::perf::proj_perf_get)?;
     // Perf Image
-    api.register(project::perf::img::options)?;
-    api.register(project::perf::img::get)?;
+    api.register(project::perf::img::proj_perf_img_options)?;
+    api.register(project::perf::img::proj_perf_img_get)?;
 
     // Reports
-    api.register(project::reports::dir_options)?;
-    api.register(project::reports::get_ls)?;
-    api.register(project::reports::post)?;
-    api.register(project::reports::one_options)?;
-    api.register(project::reports::get_one)?;
+    api.register(project::reports::proj_reports_options)?;
+    api.register(project::reports::proj_reports_get)?;
+    api.register(project::reports::proj_report_post)?;
+    api.register(project::reports::proj_report_options)?;
+    api.register(project::reports::proj_report_get)?;
 
     // Metric Kinds
-    api.register(project::metric_kinds::dir_options)?;
-    api.register(project::metric_kinds::get_ls)?;
-    api.register(project::metric_kinds::post)?;
-    api.register(project::metric_kinds::one_options)?;
-    api.register(project::metric_kinds::get_one)?;
+    api.register(project::metric_kinds::proj_metric_kinds_options)?;
+    api.register(project::metric_kinds::proj_metric_kinds_get)?;
+    api.register(project::metric_kinds::proj_metric_kind_post)?;
+    api.register(project::metric_kinds::proj_metric_kind_options)?;
+    api.register(project::metric_kinds::proj_metric_kind_get)?;
     // Branches
-    api.register(project::branches::dir_options)?;
-    api.register(project::branches::get_ls)?;
-    api.register(project::branches::post)?;
-    api.register(project::branches::one_options)?;
-    api.register(project::branches::get_one)?;
+    api.register(project::branches::proj_branches_options)?;
+    api.register(project::branches::proj_branches_get)?;
+    api.register(project::branches::proj_branch_post)?;
+    api.register(project::branches::proj_branch_options)?;
+    api.register(project::branches::proj_branch_get)?;
     // Testbeds
-    api.register(project::testbeds::dir_options)?;
-    api.register(project::testbeds::get_ls)?;
-    api.register(project::testbeds::post)?;
-    api.register(project::testbeds::one_options)?;
-    api.register(project::testbeds::get_one)?;
+    api.register(project::testbeds::proj_testbeds_options)?;
+    api.register(project::testbeds::proj_testbeds_get)?;
+    api.register(project::testbeds::proj_testbed_post)?;
+    api.register(project::testbeds::proj_testbed_options)?;
+    api.register(project::testbeds::proj_testbed_get)?;
     // Benchmarks
-    api.register(project::benchmarks::dir_options)?;
-    api.register(project::benchmarks::get_ls)?;
-    api.register(project::benchmarks::one_options)?;
-    api.register(project::benchmarks::get_one)?;
+    api.register(project::benchmarks::proj_benchmarks_options)?;
+    api.register(project::benchmarks::proj_benchmarks_get)?;
+    api.register(project::benchmarks::proj_benchmark_options)?;
+    api.register(project::benchmarks::proj_benchmark_get)?;
 
     // Thresholds
-    api.register(project::thresholds::dir_options)?;
-    api.register(project::thresholds::get_ls)?;
-    api.register(project::thresholds::post)?;
-    api.register(project::thresholds::one_options)?;
-    api.register(project::thresholds::get_one)?;
+    api.register(project::thresholds::proj_thresholds_options)?;
+    api.register(project::thresholds::proj_thresholds_get)?;
+    api.register(project::thresholds::proj_threshold_post)?;
+    api.register(project::thresholds::proj_threshold_options)?;
+    api.register(project::thresholds::proj_threshold_get)?;
     // Threshold Statistics
-    api.register(project::thresholds::statistics::one_options)?;
-    api.register(project::thresholds::statistics::get_one)?;
+    api.register(project::thresholds::statistics::proj_statistic_options)?;
+    api.register(project::thresholds::statistics::proj_statistic_get)?;
     // Threshold Alerts
-    api.register(project::thresholds::alerts::dir_options)?;
-    api.register(project::thresholds::alerts::get_ls)?;
-    api.register(project::thresholds::alerts::one_options)?;
-    api.register(project::thresholds::alerts::get_one)?;
+    api.register(project::thresholds::alerts::proj_alerts_options)?;
+    api.register(project::thresholds::alerts::proj_alerts_get)?;
+    api.register(project::thresholds::alerts::proj_alert_options)?;
+    api.register(project::thresholds::alerts::proj_alert_get)?;
 
     // Users
-    api.register(user::users::one_options)?;
-    api.register(user::users::get_one)?;
+    api.register(user::users::user_options)?;
+    api.register(user::users::user_get)?;
     // Tokens
-    api.register(user::tokens::dir_options)?;
-    api.register(user::tokens::get_ls)?;
-    api.register(user::tokens::post)?;
-    api.register(user::tokens::one_options)?;
-    api.register(user::tokens::get_one)?;
+    api.register(user::tokens::user_tokens_options)?;
+    api.register(user::tokens::user_tokens_get)?;
+    api.register(user::tokens::user_token_post)?;
+    api.register(user::tokens::user_token_options)?;
+    api.register(user::tokens::user_token_get)?;
 
     // Server
-    api.register(system::server::ping::options)?;
-    api.register(system::server::ping::get)?;
-    api.register(system::server::version::options)?;
-    api.register(system::server::version::get)?;
-    api.register(system::server::restart::options)?;
-    api.register(system::server::restart::post)?;
-    api.register(system::server::config::options)?;
-    api.register(system::server::config::put)?;
-    api.register(system::server::config::get_one)?;
-    api.register(system::server::config::endpoint::options)?;
-    api.register(system::server::config::endpoint::get_one)?;
-    api.register(system::server::backup::options)?;
-    api.register(system::server::backup::post)?;
+    api.register(system::server::ping::server_ping_options)?;
+    api.register(system::server::ping::server_ping_get)?;
+    api.register(system::server::version::server_version_options)?;
+    api.register(system::server::version::server_version_get)?;
+    api.register(system::server::restart::server_restart_options)?;
+    api.register(system::server::restart::server_restart_post)?;
+    api.register(system::server::config::server_config_options)?;
+    api.register(system::server::config::server_config_get)?;
+    api.register(system::server::config::server_config_put)?;
+    api.register(system::server::config::endpoint::server_config_endpoint_options)?;
+    api.register(system::server::config::endpoint::server_config_endpoint_get)?;
+    api.register(system::server::backup::server_backup_options)?;
+    api.register(system::server::backup::server_backup_post)?;
 
     Ok(())
 }

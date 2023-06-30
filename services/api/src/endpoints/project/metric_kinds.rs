@@ -31,7 +31,7 @@ use super::Resource;
 const METRIC_KIND_RESOURCE: Resource = Resource::MetricKind;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjMetricKindsParams {
     pub project: ResourceId,
 }
 
@@ -41,9 +41,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/metric-kinds",
     tags = ["projects", "metric kinds"]
 }]
-pub async fn dir_options(
+pub async fn proj_metric_kinds_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjMetricKindsParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -53,9 +53,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/metric-kinds",
     tags = ["projects", "metric kinds"]
 }]
-pub async fn get_ls(
+pub async fn proj_metric_kinds_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjMetricKindsParams>,
 ) -> Result<ResponseOk<Vec<JsonMetricKind>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetLs);
@@ -79,7 +79,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjMetricKindsParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMetricKind>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -102,9 +102,9 @@ async fn get_ls_inner(
     path =  "/v0/projects/{project}/metric-kinds",
     tags = ["projects", "metric kinds"]
 }]
-pub async fn post(
+pub async fn proj_metric_kind_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjMetricKindsParams>,
     body: TypedBody<JsonNewMetricKind>,
 ) -> Result<ResponseAccepted<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -124,7 +124,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjMetricKindsParams,
     json_metric_kind: JsonNewMetricKind,
     auth_user: &AuthUser,
 ) -> Result<JsonMetricKind, ApiError> {
@@ -154,7 +154,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjMetricKindParams {
     pub project: ResourceId,
     pub metric_kind: ResourceId,
 }
@@ -165,9 +165,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
     tags = ["projects", "metric kinds"]
 }]
-pub async fn one_options(
+pub async fn proj_metric_kind_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjMetricKindParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -177,9 +177,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
     tags = ["projects", "metric kinds"]
 }]
-pub async fn get_one(
+pub async fn proj_metric_kind_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjMetricKindParams>,
 ) -> Result<ResponseOk<JsonMetricKind>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetOne);
@@ -203,7 +203,7 @@ fn_resource_id!(metric_kind);
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjMetricKindParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonMetricKind, ApiError> {
     let conn = &mut *context.conn().await;

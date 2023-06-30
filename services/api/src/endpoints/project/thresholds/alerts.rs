@@ -27,7 +27,7 @@ use super::Resource;
 const ALERT_RESOURCE: Resource = Resource::Alert;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjAlertsParams {
     pub project: ResourceId,
 }
 
@@ -37,9 +37,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/alerts",
     tags = ["projects", "alerts"]
 }]
-pub async fn dir_options(
+pub async fn proj_alerts_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjAlertsParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -49,9 +49,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/alerts",
     tags = ["projects", "alerts"]
 }]
-pub async fn get_ls(
+pub async fn proj_alerts_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjAlertsParams>,
 ) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
@@ -75,7 +75,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjAlertsParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonAlert>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -109,7 +109,7 @@ async fn get_ls_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjAlertParams {
     pub project: ResourceId,
     pub alert: Uuid,
 }
@@ -120,9 +120,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/alerts/{alert}",
     tags = ["projects", "alerts"]
 }]
-pub async fn one_options(
+pub async fn proj_alert_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjAlertParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -132,9 +132,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/alerts/{alert}",
     tags = ["projects", "alerts"]
 }]
-pub async fn get_one(
+pub async fn proj_alert_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjAlertParams>,
 ) -> Result<ResponseOk<JsonAlert>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetOne);
@@ -156,7 +156,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjAlertParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonAlert, ApiError> {
     let conn = &mut *context.conn().await;

@@ -21,7 +21,9 @@ const API_VERSION: &str = env!("CARGO_PKG_VERSION");
     path =  "/v0/server/version",
     tags = ["server", "version"]
 }]
-pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+pub async fn server_version_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
 
@@ -31,7 +33,7 @@ pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse,
     path = "/v0/server/version",
     tags = ["server", "version"]
 }]
-pub async fn get(
+pub async fn server_version_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<JsonApiVersion>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(VERSION_RESOURCE, Method::GetOne);

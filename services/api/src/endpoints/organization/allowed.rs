@@ -19,7 +19,7 @@ use super::Resource;
 const PERMISSION_RESOURCE: Resource = Resource::OrganizationPermission;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetParams {
+pub struct OrgAllowedParams {
     pub organization: ResourceId,
     pub permission: JsonOrganizationPermission,
 }
@@ -30,9 +30,9 @@ pub struct GetParams {
     path =  "/v0/organizations/{organization}/allowed/{permission}",
     tags = ["organizations", "allowed"]
 }]
-pub async fn options(
+pub async fn org_allowed_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<GetParams>,
+    _path_params: Path<OrgAllowedParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -42,9 +42,9 @@ pub async fn options(
     path = "/v0/organizations/{organization}/allowed/{permission}",
     tags = ["organizations", "allowed"]
 }]
-pub async fn get(
+pub async fn org_allowed_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<GetParams>,
+    path_params: Path<OrgAllowedParams>,
 ) -> Result<ResponseOk<JsonAllowed>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PERMISSION_RESOURCE, Method::GetOne);
@@ -58,7 +58,7 @@ pub async fn get(
 
 async fn get_inner(
     context: &ApiContext,
-    path_params: GetParams,
+    path_params: OrgAllowedParams,
     auth_user: &AuthUser,
 ) -> Result<JsonAllowed, ApiError> {
     let conn = &mut *context.conn().await;

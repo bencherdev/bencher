@@ -35,7 +35,7 @@ use super::Resource;
 const REPORT_RESOURCE: Resource = Resource::Report;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjReportsParams {
     pub project: ResourceId,
 }
 
@@ -45,9 +45,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/reports",
     tags = ["projects", "reports"]
 }]
-pub async fn dir_options(
+pub async fn proj_reports_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjReportsParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -57,9 +57,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/reports",
     tags = ["projects", "reports"]
 }]
-pub async fn get_ls(
+pub async fn proj_reports_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjReportsParams>,
 ) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
@@ -83,7 +83,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjReportsParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonReport>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -125,9 +125,9 @@ async fn get_ls_inner(
 // chronological. That is, a report will never be posted for X after Y has
 // already been submitted when X really happened before Y. For implementing git
 // bisect more complex logic will be required.
-pub async fn post(
+pub async fn proj_report_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjReportsParams>,
     body: TypedBody<JsonNewReport>,
 ) -> Result<ResponseAccepted<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -147,7 +147,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: ProjReportsParams,
     mut json_report: JsonNewReport,
     auth_user: &AuthUser,
 ) -> Result<JsonReport, ApiError> {
@@ -324,7 +324,7 @@ mod plan_kind {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjReportParams {
     pub project: ResourceId,
     pub report_uuid: Uuid,
 }
@@ -335,9 +335,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/reports/{report_uuid}",
     tags = ["projects", "reports"]
 }]
-pub async fn one_options(
+pub async fn proj_report_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjReportParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -347,9 +347,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/reports/{report_uuid}",
     tags = ["projects", "reports"]
 }]
-pub async fn get_one(
+pub async fn proj_report_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjReportParams>,
 ) -> Result<ResponseOk<JsonReport>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetOne);
@@ -371,7 +371,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjReportParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonReport, ApiError> {
     let conn = &mut *context.conn().await;

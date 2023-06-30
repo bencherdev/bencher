@@ -29,7 +29,7 @@ use super::Resource;
 const BENCHMARK_RESOURCE: Resource = Resource::Benchmark;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct ProjBenchmarksParams {
     pub project: ResourceId,
 }
 
@@ -39,9 +39,9 @@ pub struct DirPath {
     path =  "/v0/projects/{project}/benchmarks",
     tags = ["projects", "benchmarks"]
 }]
-pub async fn dir_options(
+pub async fn proj_benchmarks_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<ProjBenchmarksParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -51,9 +51,9 @@ pub async fn dir_options(
     path =  "/v0/projects/{project}/benchmarks",
     tags = ["projects", "benchmarks"]
 }]
-pub async fn get_ls(
+pub async fn proj_benchmarks_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<ProjBenchmarksParams>,
 ) -> Result<ResponseOk<Vec<JsonBenchmark>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetLs);
@@ -77,7 +77,7 @@ pub async fn get_ls(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    path_params: DirPath,
+    path_params: ProjBenchmarksParams,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBenchmark>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -96,7 +96,7 @@ async fn get_ls_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct ProjBenchmarkParams {
     pub project: ResourceId,
     pub benchmark: Uuid,
 }
@@ -107,9 +107,9 @@ pub struct OnePath {
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",
     tags = ["projects", "benchmarks"]
 }]
-pub async fn one_options(
+pub async fn proj_benchmark_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<ProjBenchmarkParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -119,9 +119,9 @@ pub async fn one_options(
     path =  "/v0/projects/{project}/benchmarks/{benchmark}",
     tags = ["projects", "benchmarks"]
 }]
-pub async fn get_one(
+pub async fn proj_benchmark_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<ProjBenchmarkParams>,
 ) -> Result<ResponseOk<JsonBenchmark>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetOne);
@@ -143,7 +143,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: ProjBenchmarkParams,
     auth_user: Option<&AuthUser>,
 ) -> Result<JsonBenchmark, ApiError> {
     let conn = &mut *context.conn().await;

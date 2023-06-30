@@ -23,7 +23,7 @@ use super::Resource;
 const USER_RESOURCE: Resource = Resource::User;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct UserParams {
     pub user: ResourceId,
 }
 
@@ -33,9 +33,9 @@ pub struct OnePath {
     path =  "/v0/users/{user}",
     tags = ["users"]
 }]
-pub async fn one_options(
+pub async fn user_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<UserParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -45,9 +45,9 @@ pub async fn one_options(
     path =  "/v0/users/{user}",
     tags = ["users"]
 }]
-pub async fn get_one(
+pub async fn user_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<UserParams>,
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(USER_RESOURCE, Method::GetOne);
@@ -63,7 +63,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: UserParams,
     auth_user: &AuthUser,
 ) -> Result<JsonUser, ApiError> {
     let conn = &mut *context.conn().await;

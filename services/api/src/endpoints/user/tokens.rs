@@ -32,7 +32,7 @@ use super::Resource;
 const TOKEN_RESOURCE: Resource = Resource::Token;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct UserTokensParams {
     pub user: ResourceId,
 }
 
@@ -42,9 +42,9 @@ pub struct DirPath {
     path =  "/v0/users/{user}/tokens",
     tags = ["users", "tokens"]
 }]
-pub async fn dir_options(
+pub async fn user_tokens_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<UserTokensParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -54,9 +54,9 @@ pub async fn dir_options(
     path =  "/v0/users/{user}/tokens",
     tags = ["users", "tokens"]
 }]
-pub async fn get_ls(
+pub async fn user_tokens_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<UserTokensParams>,
 ) -> Result<ResponseOk<Vec<JsonToken>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
@@ -72,7 +72,7 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: UserTokensParams,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonToken>, ApiError> {
@@ -96,9 +96,9 @@ async fn get_ls_inner(
     path =  "/v0/users/{user}/tokens",
     tags = ["users", "tokens"]
 }]
-pub async fn post(
+pub async fn user_token_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<UserTokensParams>,
     body: TypedBody<JsonNewToken>,
 ) -> Result<ResponseAccepted<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -115,7 +115,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: UserTokensParams,
     json_token: JsonNewToken,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
@@ -144,7 +144,7 @@ async fn post_inner(
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct UserTokenParams {
     pub user: ResourceId,
     pub token: Uuid,
 }
@@ -155,9 +155,9 @@ pub struct OnePath {
     path =  "/v0/users/{user}/tokens/{token}",
     tags = ["users", "tokens"]
 }]
-pub async fn one_options(
+pub async fn user_token_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<UserTokenParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -167,9 +167,9 @@ pub async fn one_options(
     path =  "/v0/users/{user}/tokens/{token}",
     tags = ["users", "tokens"]
 }]
-pub async fn get_one(
+pub async fn user_token_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<UserTokenParams>,
 ) -> Result<ResponseOk<JsonToken>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetOne);
@@ -185,7 +185,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: UserTokenParams,
     auth_user: &AuthUser,
 ) -> Result<JsonToken, ApiError> {
     let conn = &mut *context.conn().await;

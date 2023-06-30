@@ -33,7 +33,7 @@ use super::Resource;
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct DirPath {
+pub struct OrgProjectsParams {
     pub organization: ResourceId,
 }
 
@@ -43,9 +43,9 @@ pub struct DirPath {
     path =  "/v0/organizations/{organization}/projects",
     tags = ["organizations", "projects"]
 }]
-pub async fn dir_options(
+pub async fn org_projects_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<DirPath>,
+    _path_params: Path<OrgProjectsParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -55,9 +55,9 @@ pub async fn dir_options(
     path =  "/v0/organizations/{organization}/projects",
     tags = ["organizations", "projects"]
 }]
-pub async fn get_ls(
+pub async fn org_projects_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<OrgProjectsParams>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
@@ -76,7 +76,7 @@ pub async fn get_ls(
 
 async fn get_ls_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: OrgProjectsParams,
     auth_user: &AuthUser,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
@@ -105,9 +105,9 @@ async fn get_ls_inner(
     path =  "/v0/organizations/{organization}/projects",
     tags = ["organizations", "projects"]
 }]
-pub async fn post(
+pub async fn org_project_post(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<DirPath>,
+    path_params: Path<OrgProjectsParams>,
     body: TypedBody<JsonNewProject>,
 ) -> Result<ResponseAccepted<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -127,7 +127,7 @@ pub async fn post(
 
 async fn post_inner(
     context: &ApiContext,
-    path_params: DirPath,
+    path_params: OrgProjectsParams,
     json_project: JsonNewProject,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
@@ -266,7 +266,7 @@ mod project_visibility {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OnePath {
+pub struct OrgProjectParams {
     pub organization: ResourceId,
     pub project: ResourceId,
 }
@@ -277,9 +277,9 @@ pub struct OnePath {
     path =  "/v0/organizations/{organization}/projects/{project}",
     tags = ["organizations", "projects"]
 }]
-pub async fn one_options(
+pub async fn org_project_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OnePath>,
+    _path_params: Path<OrgProjectParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -289,9 +289,9 @@ pub async fn one_options(
     path =  "/v0/organizations/{organization}/projects/{project}",
     tags = ["organizations", "projects"]
 }]
-pub async fn get_one(
+pub async fn org_project_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<OnePath>,
+    path_params: Path<OrgProjectParams>,
 ) -> Result<ResponseOk<JsonProject>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
@@ -305,7 +305,7 @@ pub async fn get_one(
 
 async fn get_one_inner(
     context: &ApiContext,
-    path_params: OnePath,
+    path_params: OrgProjectParams,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let conn = &mut *context.conn().await;

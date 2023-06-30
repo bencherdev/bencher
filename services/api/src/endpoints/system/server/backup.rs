@@ -33,7 +33,7 @@ const BUFFER_SIZE: usize = 1024;
     path =  "/v0/server/backup",
     tags = ["server"]
 }]
-pub async fn options(
+pub async fn server_backup_options(
     _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
@@ -45,7 +45,7 @@ pub async fn options(
     path =  "/v0/server/backup",
     tags = ["server"]
 }]
-pub async fn post(
+pub async fn server_backup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonBackup>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {

@@ -26,7 +26,9 @@ const CONFIG_RESOURCE: Resource = Resource::Config;
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+pub async fn server_config_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
 
@@ -35,7 +37,7 @@ pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse,
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn get_one(
+pub async fn server_config_get(
     rqctx: RequestContext<ApiContext>,
 ) -> Result<ResponseOk<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -62,7 +64,7 @@ async fn get_one_inner(context: &ApiContext, auth_user: &AuthUser) -> Result<Jso
     path =  "/v0/server/config",
     tags = ["server", "config"]
 }]
-pub async fn put(
+pub async fn server_config_put(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
@@ -129,7 +131,9 @@ pub mod endpoint {
         path =  "/v0/server/config/endpoint",
         tags = ["server", "config"]
     }]
-    pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+    pub async fn server_config_endpoint_options(
+        _rqctx: RequestContext<ApiContext>,
+    ) -> Result<CorsResponse, HttpError> {
         Ok(get_cors::<ApiContext>())
     }
 
@@ -138,7 +142,9 @@ pub mod endpoint {
         path =  "/v0/server/config/endpoint",
         tags = ["server", "config"]
     }]
-    pub async fn get_one(rqctx: RequestContext<ApiContext>) -> Result<ResponseOk<Url>, HttpError> {
+    pub async fn server_config_endpoint_get(
+        rqctx: RequestContext<ApiContext>,
+    ) -> Result<ResponseOk<Url>, HttpError> {
         let auth_user = AuthUser::new(&rqctx).await.ok();
         let endpoint = Endpoint::new(ENDPOINT_RESOURCE, Method::GetOne);
 

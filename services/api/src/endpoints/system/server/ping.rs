@@ -20,7 +20,9 @@ const PONG: &str = "PONG";
     path =  "/v0/server/ping",
     tags = ["server", "ping"]
 }]
-pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse, HttpError> {
+pub async fn server_ping_options(
+    _rqctx: RequestContext<ApiContext>,
+) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
 
@@ -30,7 +32,7 @@ pub async fn options(_rqctx: RequestContext<ApiContext>) -> Result<CorsResponse,
     path = "/v0/server/ping",
     tags = ["server", "ping"]
 }]
-pub async fn get(
+pub async fn server_ping_get(
     _rqctx: RequestContext<ApiContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);

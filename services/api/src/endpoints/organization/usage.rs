@@ -25,7 +25,7 @@ use crate::{
 const USAGE_RESOURCE: Resource = Resource::Usage;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct GetParams {
+pub struct OrgUsageParams {
     pub organization: ResourceId,
 }
 
@@ -35,9 +35,9 @@ pub struct GetParams {
     path =  "/v0/organizations/{organization}/usage",
     tags = ["organizations", "usage"]
 }]
-pub async fn options(
+pub async fn org_usage_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<GetParams>,
+    _path_params: Path<OrgUsageParams>,
     _query_params: Query<JsonUsage>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -48,9 +48,9 @@ pub async fn options(
     path = "/v0/organizations/{organization}/usage",
     tags = ["organizations", "usage"]
 }]
-pub async fn get(
+pub async fn org_usage_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<GetParams>,
+    path_params: Path<OrgUsageParams>,
     query_params: Query<JsonUsage>,
 ) -> Result<ResponseOk<JsonEntitlements>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -70,7 +70,7 @@ pub async fn get(
 
 async fn get_inner(
     context: &ApiContext,
-    path_params: GetParams,
+    path_params: OrgUsageParams,
     json_usage: JsonUsage,
     auth_user: &AuthUser,
 ) -> Result<JsonEntitlements, ApiError> {

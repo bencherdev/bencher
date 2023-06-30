@@ -26,7 +26,7 @@ pub const DEFAULT_DELAY: u64 = 3;
     path =  "/v0/server/restart",
     tags = ["server"]
 }]
-pub async fn options(
+pub async fn server_restart_options(
     _rqctx: RequestContext<ApiContext>,
     _body: TypedBody<JsonRestart>,
 ) -> Result<CorsResponse, HttpError> {
@@ -38,7 +38,7 @@ pub async fn options(
     path =  "/v0/server/restart",
     tags = ["server"]
 }]
-pub async fn post(
+pub async fn server_restart_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonRestart>,
 ) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
