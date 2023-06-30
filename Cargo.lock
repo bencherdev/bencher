@@ -668,6 +668,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "bencher_adapter",
+ "bencher_client",
  "bencher_json",
  "chrono",
  "clap",
@@ -697,7 +698,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "syn 1.0.109",
+ "syn 2.0.22",
  "uuid 1.4.0",
 ]
 
@@ -3624,12 +3625,12 @@ dependencies = [
 
 [[package]]
 name = "prettyplease"
-version = "0.1.25"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8646e95016a7a6c4adea95bafa8a16baab64b583356217f2c85db4a39d9a86"
+checksum = "9825a04601d60621feed79c4e6b56d65db77cdca55cef43b46b0de1096d1c282"
 dependencies = [
  "proc-macro2",
- "syn 1.0.109",
+ "syn 2.0.22",
 ]
 
 [[package]]

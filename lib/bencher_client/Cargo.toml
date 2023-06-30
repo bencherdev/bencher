@@ -5,16 +5,18 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-futures = "0.3"
+chrono = { workspace = true, features = ["serde"] }
+futures.workspace = true
+reqwest = { workspace = true, features = ["default-tls", "json", "stream"] }
+serde.workspace = true
+serde_json.workspace = true
+uuid = { workspace = true, features = ["serde", "v4"] }
+# Crate
 progenitor-client = { git = "https://github.com/oxidecomputer/progenitor", tag = "v0.3.0" }
-reqwest = { version = "0.11", features = ["json", "stream"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0.0", features = ["serde", "v4"] }
 
 [build-dependencies]
-prettyplease = "0.1.25"
+serde_json.workspace = true
+# Crate
+prettyplease = "0.2"
 progenitor = { git = "https://github.com/oxidecomputer/progenitor", tag = "v0.3.0" }
-serde_json = "1.0"
-syn = "1.0"
+syn = "2.0"

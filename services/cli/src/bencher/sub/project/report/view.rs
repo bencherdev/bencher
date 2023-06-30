@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_client;
 use bencher_json::ResourceId;
 use uuid::Uuid;
 

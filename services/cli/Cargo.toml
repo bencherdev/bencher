@@ -14,11 +14,13 @@ seed = []
 # Workspace
 async-trait.workspace = true
 bencher_adapter.workspace = true
+bencher_client.workspace = true
 bencher_json = { workspace = true, features = ["table"] }
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 literally.workspace = true
 rand.workspace = true
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde.workspace = true
 serde_json.workspace = true
 tabled.workspace = true
@@ -28,10 +30,6 @@ url.workspace = true
 uuid = { workspace = true, features = ["v4"] }
 # Crate
 clap_mangen = { version = "0.2", optional = true }
-reqwest = { version = "0.11", default-features = false, features = [
-    "json",
-    "rustls-tls",
-] }
 
 [dev-dependencies]
 # Workspace
