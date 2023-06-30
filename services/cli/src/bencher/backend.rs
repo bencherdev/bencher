@@ -60,6 +60,26 @@ fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, CliError> {
 }
 
 impl Backend {
+    pub async fn send_with<F, Fut, T>(&self, sender: F, log: bool) -> Result<T, CliError>
+    where
+        F: FnOnce(bencher_client::Client) -> Fut,
+        Fut: std::future::Future<
+            Output = Result<
+                progenitor_client::ResponseValue<T>,
+                bencher_client::Error<bencher_client::types::Error>,
+            >,
+        >,
+        T: Serialize,
+    {
+        let client = bencher_client::Client::new(self.host.as_ref());
+        let response_value = sender(client).await?;
+        let response = response_value.into_inner();
+        if log {
+            cli_println!("{}", serde_json::to_string_pretty(&response)?);
+        }
+        Ok(response)
+    }
+
     pub async fn get(&self, path: &str) -> Result<serde_json::Value, CliError> {
         self.send::<()>(Method::Get, path, true).await
     }

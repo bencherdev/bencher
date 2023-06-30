@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client;
 use bencher_json::ResourceId;
 use uuid::Uuid;
 
@@ -39,10 +38,17 @@ impl TryFrom<CliReportView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/reports/{}",
-                self.project, self.report
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_report_get()
+                        .project(self.project.clone())
+                        .report_uuid(self.report)
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

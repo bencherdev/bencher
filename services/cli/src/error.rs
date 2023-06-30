@@ -44,6 +44,9 @@ pub enum CliError {
     #[error("Failed to create date time from milliseconds: {0}.")]
     DateTimeMillis(i64),
 
+    #[error("Failed to send: {0:?}")]
+    BencherClient(#[from] bencher_client::Error<bencher_client::types::Error>),
+
     #[error("Failed to parse URL: {0}")]
     Url(#[from] url::ParseError),
     #[error("Failed to parse UUID: {0}")]

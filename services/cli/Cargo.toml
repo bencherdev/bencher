@@ -19,6 +19,7 @@ bencher_json = { workspace = true, features = ["table"] }
 chrono = { workspace = true, features = ["clock"] }
 clap.workspace = true
 literally.workspace = true
+progenitor-client.workspace = true
 rand.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde.workspace = true
