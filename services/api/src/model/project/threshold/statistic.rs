@@ -4,6 +4,7 @@ use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind},
     Boundary,
 };
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
@@ -15,6 +16,7 @@ use crate::{
     util::{
         map_u32,
         query::{fn_get, fn_get_id},
+        to_date_time,
     },
     ApiError,
 };
@@ -29,6 +31,7 @@ pub struct QueryStatistic {
     pub window: Option<i64>,
     pub lower_boundary: Option<f64>,
     pub upper_boundary: Option<f64>,
+    pub created: i64,
 }
 
 impl QueryStatistic {
@@ -54,6 +57,7 @@ impl QueryStatistic {
             window,
             lower_boundary,
             upper_boundary,
+            created,
             ..
         } = self;
         Ok(JsonStatistic {
@@ -64,6 +68,7 @@ impl QueryStatistic {
             window: map_u32(window)?,
             lower_boundary: map_boundary(lower_boundary)?,
             upper_boundary: map_boundary(upper_boundary)?,
+            created: to_date_time(created).map_err(api_error!())?,
         })
     }
 }
@@ -122,6 +127,7 @@ pub struct InsertStatistic {
     pub window: Option<i64>,
     pub lower_boundary: Option<f64>,
     pub upper_boundary: Option<f64>,
+    pub created: i64,
 }
 
 impl From<QueryStatistic> for InsertStatistic {
@@ -133,6 +139,7 @@ impl From<QueryStatistic> for InsertStatistic {
             window,
             lower_boundary,
             upper_boundary,
+            created,
             ..
         } = query_statistic;
         Self {
@@ -143,6 +150,7 @@ impl From<QueryStatistic> for InsertStatistic {
             window,
             lower_boundary,
             upper_boundary,
+            created,
         }
     }
 }
@@ -165,6 +173,7 @@ impl InsertStatistic {
             window: window.map(Into::into),
             lower_boundary: lower_boundary.map(Into::into),
             upper_boundary: upper_boundary.map(Into::into),
+            created: Utc::now().timestamp(),
         })
     }
 }

@@ -9,6 +9,7 @@ use bencher_json::{
     },
     JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -49,6 +50,7 @@ pub struct QueryReport {
     pub adapter: i32,
     pub start_time: i64,
     pub end_time: i64,
+    pub created: i64,
 }
 
 impl QueryReport {
@@ -85,6 +87,7 @@ impl QueryReport {
             end_time: to_date_time(end_time)?,
             results: get_results(conn, self.id)?,
             alerts: get_alerts(conn, self.id)?,
+            created: to_date_time(self.created).map_err(api_error!())?,
         })
     }
 }
@@ -185,6 +188,8 @@ fn get_metric_kinds(
             schema::metric_kind::name,
             schema::metric_kind::slug,
             schema::metric_kind::units,
+            schema::metric_kind::created,
+            schema::metric_kind::modified,
         ))
         .load::<QueryMetricKind>(conn)
         .map_err(api_error!())?
@@ -227,6 +232,7 @@ fn get_benchmark_metric(
         uuid,
         project,
         name,
+        created,
     } = benchmark;
 
     Ok((
@@ -237,6 +243,7 @@ fn get_benchmark_metric(
             name,
             metric: query_metric.into_json(),
             boundary: query_boundary.map(|b| b.into_json()).unwrap_or_default(),
+            created,
         },
     ))
 }
@@ -312,6 +319,7 @@ pub struct InsertReport {
     pub adapter: i32,
     pub start_time: i64,
     pub end_time: i64,
+    pub created: i64,
 }
 
 impl InsertReport {
@@ -330,8 +338,9 @@ impl InsertReport {
             version_id,
             testbed_id,
             adapter: Adapter::from(adapter) as i32,
-            start_time: report.start_time.timestamp_nanos(),
-            end_time: report.end_time.timestamp_nanos(),
+            start_time: report.start_time.timestamp(),
+            end_time: report.end_time.timestamp(),
+            created: Utc::now().timestamp(),
         }
     }
 }

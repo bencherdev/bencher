@@ -1,4 +1,5 @@
 use bencher_valid::{NonEmpty, Slug};
+use chrono::{DateTime, Utc};
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -26,6 +27,8 @@ pub struct JsonOrganization {
     pub uuid: Uuid,
     pub name: NonEmpty,
     pub slug: Slug,
+    pub created: DateTime<Utc>,
+    pub modified: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]

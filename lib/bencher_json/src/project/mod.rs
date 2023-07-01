@@ -1,6 +1,7 @@
 use std::fmt;
 
 use bencher_valid::{NonEmpty, Slug, Url};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -41,6 +42,8 @@ pub struct JsonProject {
     pub slug: Slug,
     pub url: Option<Url>,
     pub visibility: JsonVisibility,
+    pub created: DateTime<Utc>,
+    pub modified: DateTime<Utc>,
 }
 
 impl fmt::Display for JsonProject {

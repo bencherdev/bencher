@@ -30,9 +30,9 @@ pub struct MetricsStatistic {
 impl MetricsThreshold {
     pub fn new(
         conn: &mut DbConnection,
+        metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
-        metric_kind_id: i32,
     ) -> Option<Self> {
         schema::statistic::table
             .inner_join(

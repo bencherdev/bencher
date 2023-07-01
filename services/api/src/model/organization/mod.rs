@@ -7,6 +7,7 @@ use bencher_billing::SubscriptionId;
 use bencher_json::Jwt;
 use bencher_json::{JsonNewOrganization, JsonOrganization, NonEmpty, ResourceId, Slug};
 use bencher_rbac::Organization;
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -15,7 +16,7 @@ use crate::{
     error::api_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
-    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
     ApiError,
 };
 
@@ -36,18 +37,24 @@ impl InsertOrganization {
     pub fn from_json(conn: &mut DbConnection, organization: JsonNewOrganization) -> Self {
         let JsonNewOrganization { name, slug } = organization;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, organization, QueryOrganization);
+        let timestamp = Utc::now().timestamp();
         Self {
             uuid: Uuid::new_v4().to_string(),
             name: name.into(),
             slug,
+            created: timestamp,
+            modified: timestamp,
         }
     }
 
     pub fn from_user(insert_user: &InsertUser) -> Self {
+        let timestamp = Utc::now().timestamp();
         Self {
             uuid: Uuid::new_v4().to_string(),
             name: insert_user.name.clone(),
             slug: insert_user.slug.clone(),
+            created: timestamp,
+            modified: timestamp,
         }
     }
 }
@@ -149,12 +156,19 @@ impl QueryOrganization {
 
     pub fn into_json(self) -> Result<JsonOrganization, ApiError> {
         let Self {
-            uuid, name, slug, ..
+            uuid,
+            name,
+            slug,
+            created,
+            modified,
+            ..
         } = self;
         Ok(JsonOrganization {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             name: NonEmpty::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 }

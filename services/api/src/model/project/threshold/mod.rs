@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::project::threshold::{JsonNewThreshold, JsonThreshold, JsonThresholdStatistic};
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
@@ -11,7 +12,10 @@ use crate::{
     error::api_error,
     schema::threshold as threshold_table,
     schema::{self},
-    util::query::{fn_get, fn_get_id},
+    util::{
+        query::{fn_get, fn_get_id},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -27,6 +31,8 @@ pub struct QueryThreshold {
     pub branch_id: i32,
     pub testbed_id: i32,
     pub statistic_id: i32,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryThreshold {
@@ -73,10 +79,12 @@ impl QueryThreshold {
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, ApiError> {
         let Self {
             uuid,
+            metric_kind_id,
             branch_id,
             testbed_id,
-            metric_kind_id,
             statistic_id,
+            created,
+            modified,
             ..
         } = self;
         Ok(JsonThreshold {
@@ -85,6 +93,8 @@ impl QueryThreshold {
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
             statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 
@@ -93,11 +103,17 @@ impl QueryThreshold {
         conn: &mut DbConnection,
     ) -> Result<JsonThresholdStatistic, ApiError> {
         let Self {
-            uuid, statistic_id, ..
+            uuid,
+            statistic_id,
+            created,
+            modified,
+            ..
         } = self;
         Ok(JsonThresholdStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 }
@@ -110,6 +126,8 @@ pub struct InsertThreshold {
     pub branch_id: i32,
     pub testbed_id: i32,
     pub statistic_id: i32,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertThreshold {
@@ -123,12 +141,15 @@ impl InsertThreshold {
     where
         U: ToString,
     {
+        let timestamp = Utc::now().timestamp();
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             metric_kind_id,
             branch_id,
             testbed_id,
             statistic_id: QueryStatistic::get_id(conn, statistic)?,
+            created: timestamp,
+            modified: timestamp,
         })
     }
 

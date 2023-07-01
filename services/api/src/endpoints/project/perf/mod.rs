@@ -25,14 +25,16 @@ use crate::{
         benchmark::QueryBenchmark,
         branch::QueryBranch,
         metric_kind::QueryMetricKind,
-        report::to_date_time,
         testbed::QueryTestbed,
         threshold::{boundary::QueryBoundary, QueryThreshold},
         QueryProject,
     },
     model::user::auth::AuthUser,
     schema,
-    util::cors::{get_cors, CorsResponse},
+    util::{
+        cors::{get_cors, CorsResponse},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -119,8 +121,8 @@ async fn get_inner(
     let metric_kind = QueryMetricKind::from_resource_id(conn, project.id, &metric_kind)?;
 
     let times = Times {
-        start_time_nanos: start_time.as_ref().map(chrono::DateTime::timestamp_nanos),
-        end_time_nanos: end_time.as_ref().map(chrono::DateTime::timestamp_nanos),
+        start_time: start_time.as_ref().map(chrono::DateTime::timestamp),
+        end_time: end_time.as_ref().map(chrono::DateTime::timestamp),
     };
 
     let mut results = Vec::new();
@@ -256,8 +258,8 @@ struct QueryDimensions {
 
 #[derive(Clone, Copy)]
 struct Times {
-    start_time_nanos: Option<i64>,
-    end_time_nanos: Option<i64>,
+    start_time: Option<i64>,
+    end_time: Option<i64>,
 }
 
 type PerfQuery = (
@@ -302,14 +304,14 @@ fn perf_query(
         .into_boxed();
 
     let Times {
-        start_time_nanos,
-        end_time_nanos,
+        start_time,
+        end_time,
     } = times;
 
-    if let Some(start_time) = start_time_nanos {
+    if let Some(start_time) = start_time {
         query = query.filter(schema::report::start_time.ge(start_time));
     }
-    if let Some(end_time) = end_time_nanos {
+    if let Some(end_time) = end_time {
         query = query.filter(schema::report::end_time.le(end_time));
     }
 

@@ -102,10 +102,12 @@ async fn get_ls_inner(
         .select((
             schema::threshold::id,
             schema::threshold::uuid,
+            schema::threshold::metric_kind_id,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
-            schema::threshold::metric_kind_id,
             schema::threshold::statistic_id,
+            schema::threshold::created,
+            schema::threshold::modified,
         ))
         .order(schema::threshold::id)
         .load::<QueryThreshold>(conn)
@@ -249,10 +251,12 @@ async fn get_one_inner(
         .select((
             schema::threshold::id,
             schema::threshold::uuid,
+            schema::threshold::metric_kind_id,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
-            schema::threshold::metric_kind_id,
             schema::threshold::statistic_id,
+            schema::threshold::created,
+            schema::threshold::modified,
         ))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?

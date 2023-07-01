@@ -22,23 +22,23 @@ use threshold::MetricsThreshold;
 
 #[derive(Debug, Clone)]
 pub struct Detector {
+    pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
-    pub metric_kind_id: i32,
     pub threshold: MetricsThreshold,
 }
 
 impl Detector {
     pub fn new(
         conn: &mut DbConnection,
+        metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
-        metric_kind_id: i32,
     ) -> Result<Option<Self>, ApiError> {
         // Check to see if there is a threshold for the branch/testbed/metric kind grouping.
         // If not, then there will be nothing to detect.
         let threshold = if let Some(threshold) =
-            MetricsThreshold::new(conn, branch_id, testbed_id, metric_kind_id)
+            MetricsThreshold::new(conn, metric_kind_id, branch_id, testbed_id)
         {
             threshold
         } else {
@@ -46,9 +46,9 @@ impl Detector {
         };
 
         Ok(Some(Self {
+            metric_kind_id,
             branch_id,
             testbed_id,
-            metric_kind_id,
             threshold,
         }))
     }
@@ -70,9 +70,9 @@ impl Detector {
         // Query the historical population/sample data for the benchmark
         let metrics_data = MetricsData::new(
             conn,
+            self.metric_kind_id,
             self.branch_id,
             self.testbed_id,
-            self.metric_kind_id,
             benchmark_id,
             &self.threshold.statistic,
         )?;

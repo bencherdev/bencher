@@ -84,8 +84,8 @@ async fn get_inner(
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
     let JsonUsage { start, end } = json_usage;
-    let start_time = start.timestamp_nanos();
-    let end_time = end.timestamp_nanos();
+    let start_time = start.timestamp();
+    let end_time = end.timestamp();
 
     let metrics_used = schema::metric::table
         .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))

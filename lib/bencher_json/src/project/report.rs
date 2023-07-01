@@ -93,6 +93,7 @@ pub struct JsonReport {
     pub adapter: JsonAdapter,
     pub results: JsonReportResults,
     pub alerts: JsonReportAlerts,
+    pub created: DateTime<Utc>,
 }
 
 pub type JsonReportResults = Vec<JsonReportIteration>;

@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{project::benchmark::JsonBenchmarkMetric, BenchmarkName, JsonBenchmark};
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -10,7 +11,10 @@ use crate::{
     error::api_error,
     schema,
     schema::benchmark as benchmark_table,
-    util::query::{fn_get, fn_get_id},
+    util::{
+        query::{fn_get, fn_get_id},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -86,11 +90,13 @@ impl QueryBenchmark {
         uuid: String,
         project_id: i32,
         name: String,
+        created: i64,
     ) -> Result<JsonBenchmark, ApiError> {
         Ok(JsonBenchmark {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             project: QueryProject::get_uuid(conn, project_id)?,
             name: BenchmarkName::from_str(&name).map_err(api_error!())?,
+            created: to_date_time(created).map_err(api_error!())?,
         })
     }
 
@@ -98,28 +104,32 @@ impl QueryBenchmark {
         conn: &mut DbConnection,
         metric_id: i32,
     ) -> Result<JsonBenchmarkMetric, ApiError> {
-        let (uuid, project_id, name, value, lower_bound, upper_bound) = schema::metric::table
-            .filter(schema::metric::id.eq(metric_id))
-            .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
-            .inner_join(
-                schema::benchmark::table.on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
-            )
-            .select((
-                schema::benchmark::uuid,
-                schema::benchmark::project_id,
-                schema::benchmark::name,
-                schema::metric::value,
-                schema::metric::lower_bound,
-                schema::metric::upper_bound,
-            ))
-            .first(conn)
-            .map_err(api_error!())?;
+        let (uuid, project_id, name, created, value, lower_bound, upper_bound) =
+            schema::metric::table
+                .filter(schema::metric::id.eq(metric_id))
+                .left_join(schema::perf::table.on(schema::perf::id.eq(schema::metric::perf_id)))
+                .inner_join(
+                    schema::benchmark::table
+                        .on(schema::benchmark::id.eq(schema::perf::benchmark_id)),
+                )
+                .select((
+                    schema::benchmark::uuid,
+                    schema::benchmark::project_id,
+                    schema::benchmark::name,
+                    schema::benchmark::created,
+                    schema::metric::value,
+                    schema::metric::lower_bound,
+                    schema::metric::upper_bound,
+                ))
+                .first(conn)
+                .map_err(api_error!())?;
 
         let JsonBenchmark {
             uuid,
             project,
             name,
-        } = Self::get_benchmark_json(conn, uuid, project_id, name)?;
+            created,
+        } = Self::get_benchmark_json(conn, uuid, project_id, name, created)?;
         let metric = QueryMetric::json(value, lower_bound, upper_bound);
         let boundary = QueryBoundary::get_json(conn, metric_id);
 
@@ -129,6 +139,7 @@ impl QueryBenchmark {
             name,
             metric,
             boundary,
+            created,
         })
     }
 
@@ -137,9 +148,10 @@ impl QueryBenchmark {
             uuid,
             project_id,
             name,
+            created,
             ..
         } = self;
-        Self::get_benchmark_json(conn, uuid, project_id, name)
+        Self::get_benchmark_json(conn, uuid, project_id, name, created)
     }
 }
 
@@ -158,6 +170,7 @@ impl InsertBenchmark {
             uuid: Uuid::new_v4().to_string(),
             project_id,
             name,
+            created: Utc::now().timestamp(),
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::fmt;
 
 use bencher_valid::BenchmarkName;
+use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -16,6 +17,7 @@ pub struct JsonBenchmark {
     pub uuid: Uuid,
     pub project: Uuid,
     pub name: BenchmarkName,
+    pub created: DateTime<Utc>,
 }
 
 impl fmt::Display for JsonBenchmark {
@@ -32,4 +34,5 @@ pub struct JsonBenchmarkMetric {
     pub name: BenchmarkName,
     pub metric: JsonMetric,
     pub boundary: JsonBoundary,
+    pub created: DateTime<Utc>,
 }

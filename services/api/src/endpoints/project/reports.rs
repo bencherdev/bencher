@@ -104,6 +104,7 @@ async fn get_ls_inner(
             schema::report::adapter,
             schema::report::start_time,
             schema::report::end_time,
+            schema::report::created,
         ))
         .order((
             schema::report::start_time.desc(),
@@ -396,6 +397,7 @@ async fn get_one_inner(
             schema::report::adapter,
             schema::report::start_time,
             schema::report::end_time,
+            schema::report::created,
         ))
         .first::<QueryReport>(conn)
         .map_err(api_error!())?

@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug};
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -14,6 +15,7 @@ use crate::{
         query::{fn_get, fn_get_id},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
+        to_date_time,
     },
     ApiError,
 };
@@ -74,6 +76,8 @@ impl QueryTestbed {
             project_id,
             name,
             slug,
+            created,
+            modified,
             ..
         } = self;
         Ok(JsonTestbed {
@@ -81,6 +85,8 @@ impl QueryTestbed {
             project: QueryProject::get_uuid(conn, project_id)?,
             name: NonEmpty::from_str(&name)?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 }
@@ -113,11 +119,14 @@ impl InsertTestbed {
     fn from_json_inner(conn: &mut DbConnection, project_id: i32, testbed: JsonNewTestbed) -> Self {
         let JsonNewTestbed { name, slug } = testbed;
         let slug = unwrap_child_slug!(conn, project_id, name.as_ref(), slug, testbed, QueryTestbed);
+        let timestamp = Utc::now().timestamp();
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
             name: name.into(),
             slug,
+            created: timestamp,
+            modified: timestamp,
         }
     }
 }

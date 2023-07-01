@@ -191,7 +191,7 @@ impl ReportResults {
                 detector.clone()
             } else {
                 let detector =
-                    Detector::new(conn, self.branch_id, self.testbed_id, metric_kind_id)?;
+                    Detector::new(conn, metric_kind_id, self.branch_id, self.testbed_id)?;
                 self.detector_cache.insert(metric_kind_id, detector.clone());
                 detector
             },

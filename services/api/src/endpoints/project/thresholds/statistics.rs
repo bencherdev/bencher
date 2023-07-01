@@ -98,6 +98,7 @@ async fn get_one_inner(
             schema::statistic::window,
             schema::statistic::lower_boundary,
             schema::statistic::upper_boundary,
+            schema::statistic::created,
         ))
         .first::<QueryStatistic>(conn)
         .map_err(api_error!())?

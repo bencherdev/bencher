@@ -6,6 +6,7 @@ use bencher_billing::SubscriptionId;
 use bencher_json::Jwt;
 use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
 use bencher_rbac::{Organization, Project};
+use chrono::Utc;
 #[cfg(feature = "plus")]
 use diesel::JoinOnDsl;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
@@ -16,7 +17,7 @@ use crate::{
     error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema::{self, project as project_table},
-    util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug},
+    util::{query::fn_get, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
     ApiError,
 };
 
@@ -43,6 +44,8 @@ pub struct InsertProject {
     pub slug: String,
     pub url: Option<String>,
     pub visibility: i32,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertProject {
@@ -58,6 +61,7 @@ impl InsertProject {
             visibility,
         } = project;
         let slug = unwrap_slug!(conn, name.as_ref(), slug, project, QueryProject);
+        let timestamp = Utc::now().timestamp();
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
             organization_id: QueryOrganization::from_resource_id(conn, organization)?.id,
@@ -65,6 +69,8 @@ impl InsertProject {
             slug,
             url: url.map(|u| u.to_string()),
             visibility: Visibility::from(visibility.unwrap_or_default()) as i32,
+            created: timestamp,
+            modified: timestamp,
         })
     }
 }
@@ -80,6 +86,8 @@ pub struct QueryProject {
     pub slug: String,
     pub url: Option<String>,
     pub visibility: i32,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryProject {
@@ -97,6 +105,8 @@ impl QueryProject {
             slug,
             url,
             visibility,
+            created,
+            modified,
             ..
         } = self;
         Ok(JsonProject {
@@ -106,6 +116,8 @@ impl QueryProject {
             slug: Slug::from_str(&slug).map_err(api_error!())?,
             url: ok_url(url.as_deref())?,
             visibility: Visibility::try_from(visibility)?.into(),
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 

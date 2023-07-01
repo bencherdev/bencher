@@ -7,6 +7,7 @@ use bencher_json::{
     },
     JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
 };
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -20,6 +21,7 @@ use crate::{
         query::{fn_get, fn_get_id},
         resource_id::fn_resource_id,
         slug::unwrap_child_slug,
+        to_date_time,
     },
     ApiError,
 };
@@ -70,6 +72,8 @@ impl QueryMetricKind {
             name,
             slug,
             units,
+            created,
+            modified,
             ..
         } = self;
         Ok(JsonMetricKind {
@@ -78,6 +82,8 @@ impl QueryMetricKind {
             name: NonEmpty::from_str(&name).map_err(api_error!())?,
             slug: Slug::from_str(&slug).map_err(api_error!())?,
             units: NonEmpty::from_str(&units).map_err(api_error!())?,
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 
@@ -175,12 +181,15 @@ impl InsertMetricKind {
             metric_kind,
             QueryMetricKind
         );
+        let timestamp = Utc::now().timestamp();
         Self {
             uuid: Uuid::new_v4().to_string(),
             project_id,
             name: name.into(),
             slug,
             units: units.into(),
+            created: timestamp,
+            modified: timestamp,
         }
     }
 }
