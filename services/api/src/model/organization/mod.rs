@@ -28,6 +28,8 @@ pub struct InsertOrganization {
     pub uuid: String,
     pub name: String,
     pub slug: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertOrganization {
@@ -60,6 +62,8 @@ pub struct QueryOrganization {
     pub slug: String,
     pub subscription: Option<String>,
     pub license: Option<String>,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryOrganization {

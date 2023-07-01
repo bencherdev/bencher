@@ -9,7 +9,6 @@ use bencher_json::{
     },
     JsonBenchmark, JsonMetricKind, JsonNewReport, JsonReport,
 };
-use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -32,7 +31,7 @@ use crate::{
     },
     schema,
     schema::report as report_table,
-    util::{error::database_map, query::fn_get_id},
+    util::{error::database_map, query::fn_get_id, to_date_time},
     ApiError,
 };
 
@@ -300,21 +299,6 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
             database_map("QueryReport::get_alerts", alert.into_json(conn)).map(Into::into)
         })
         .collect())
-}
-
-// https://docs.rs/chrono/latest/chrono/serde/ts_nanoseconds/index.html
-#[allow(
-    clippy::cast_sign_loss,
-    clippy::integer_division,
-    clippy::modulo_arithmetic
-)]
-pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
-    Utc.timestamp_opt(
-        timestamp / 1_000_000_000,
-        (timestamp % 1_000_000_000) as u32,
-    )
-    .single()
-    .ok_or(ApiError::Timestamp(timestamp))
 }
 
 #[derive(Insertable)]

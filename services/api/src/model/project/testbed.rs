@@ -27,6 +27,8 @@ pub struct QueryTestbed {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryTestbed {
@@ -90,6 +92,8 @@ pub struct InsertTestbed {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertTestbed {

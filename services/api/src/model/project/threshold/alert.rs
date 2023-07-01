@@ -4,7 +4,7 @@ use bencher_json::project::{
     alert::{JsonAlert, JsonAlertStatus},
     boundary::JsonLimit,
 };
-use chrono::{TimeZone, Utc};
+use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, JoinOnDsl, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -15,7 +15,7 @@ use crate::{
     model::project::{benchmark::QueryBenchmark, report::QueryReport},
     schema,
     schema::alert as alert_table,
-    util::query::fn_get_id,
+    util::{query::fn_get_id, to_date_time},
     ApiError,
 };
 
@@ -75,10 +75,7 @@ impl QueryAlert {
             benchmark: QueryBenchmark::get_benchmark_metric_json(conn, metric_id)?,
             limit: Limit::from(boundary_limit).into(),
             status: Status::try_from(status)?.into(),
-            modified: Utc
-                .timestamp_opt(modified, 0)
-                .single()
-                .ok_or(ApiError::Timestamp(modified))?,
+            modified: to_date_time(modified)?,
         })
     }
 }

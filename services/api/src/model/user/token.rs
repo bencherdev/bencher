@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use bencher_json::{JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId};
-use chrono::{DateTime, TimeZone, Utc};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -10,7 +9,7 @@ use crate::{
     error::api_error,
     schema,
     schema::token as token_table,
-    util::query::fn_get_id,
+    util::{query::fn_get_id, to_date_time},
     ApiError,
 };
 
@@ -68,12 +67,6 @@ impl QueryToken {
             expiration: to_date_time(expiration)?,
         })
     }
-}
-
-pub fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, ApiError> {
-    Utc.timestamp_opt(timestamp, 0)
-        .single()
-        .ok_or(ApiError::Timestamp(timestamp))
 }
 
 #[derive(Insertable)]

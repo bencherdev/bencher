@@ -20,6 +20,7 @@ pub struct QueryBenchmark {
     pub uuid: String,
     pub project_id: i32,
     pub name: String,
+    pub created: i64,
 }
 
 impl QueryBenchmark {
@@ -148,6 +149,7 @@ pub struct InsertBenchmark {
     pub uuid: String,
     pub project_id: i32,
     pub name: String,
+    pub created: i64,
 }
 
 impl InsertBenchmark {

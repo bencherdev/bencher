@@ -23,9 +23,9 @@ pub mod statistic;
 pub struct QueryThreshold {
     pub id: i32,
     pub uuid: String,
+    pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
-    pub metric_kind_id: i32,
     pub statistic_id: i32,
 }
 
@@ -106,9 +106,9 @@ impl QueryThreshold {
 #[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid: String,
+    pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
-    pub metric_kind_id: i32,
     pub statistic_id: i32,
 }
 
@@ -125,9 +125,9 @@ impl InsertThreshold {
     {
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
+            metric_kind_id,
             branch_id,
             testbed_id,
-            metric_kind_id,
             statistic_id: QueryStatistic::get_id(conn, statistic)?,
         })
     }

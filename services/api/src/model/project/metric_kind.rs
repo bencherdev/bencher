@@ -34,6 +34,8 @@ pub struct QueryMetricKind {
     pub name: String,
     pub slug: String,
     pub units: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryMetricKind {
@@ -117,6 +119,8 @@ pub struct InsertMetricKind {
     pub name: String,
     pub slug: String,
     pub units: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertMetricKind {

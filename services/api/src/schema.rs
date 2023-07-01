@@ -17,6 +17,7 @@ diesel::table! {
         uuid -> Text,
         project_id -> Integer,
         name -> Text,
+        created -> BigInt,
     }
 }
 
@@ -39,6 +40,8 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -70,6 +73,8 @@ diesel::table! {
         name -> Text,
         slug -> Text,
         units -> Text,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -81,6 +86,8 @@ diesel::table! {
         slug -> Text,
         subscription -> Nullable<Text>,
         license -> Nullable<Text>,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -112,6 +119,8 @@ diesel::table! {
         slug -> Text,
         url -> Nullable<Text>,
         visibility -> Integer,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -135,6 +144,7 @@ diesel::table! {
         adapter -> Integer,
         start_time -> BigInt,
         end_time -> BigInt,
+        created -> BigInt,
     }
 }
 
@@ -148,6 +158,7 @@ diesel::table! {
         window -> Nullable<BigInt>,
         lower_boundary -> Nullable<Double>,
         upper_boundary -> Nullable<Double>,
+        created -> BigInt,
     }
 }
 
@@ -158,6 +169,8 @@ diesel::table! {
         project_id -> Integer,
         name -> Text,
         slug -> Text,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -165,10 +178,12 @@ diesel::table! {
     threshold (id) {
         id -> Integer,
         uuid -> Text,
+        metric_kind_id -> Integer,
         branch_id -> Integer,
         testbed_id -> Integer,
-        metric_kind_id -> Integer,
         statistic_id -> Integer,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -223,6 +238,7 @@ diesel::joinable!(perf -> report (report_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
+diesel::joinable!(report -> branch (branch_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));

@@ -35,6 +35,8 @@ pub struct QueryBranch {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryBranch {
@@ -126,6 +128,8 @@ pub struct InsertBranch {
     pub project_id: i32,
     pub name: String,
     pub slug: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertBranch {
