@@ -9,7 +9,7 @@ bencher_json.workspace = true
 chrono = { workspace = true, features = ["serde"] }
 futures.workspace = true
 progenitor-client.workspace = true
-reqwest = { workspace = true, features = ["default-tls", "json", "stream"] }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 serde.workspace = true
 serde_json.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
