@@ -4,7 +4,7 @@ use bencher_json::{Email, JsonMember, Slug, UserName};
 use diesel::Queryable;
 use uuid::Uuid;
 
-use crate::{error::api_error, ApiError};
+use crate::{error::api_error, util::to_date_time, ApiError};
 
 #[derive(Queryable)]
 pub struct QueryMember {
@@ -13,6 +13,8 @@ pub struct QueryMember {
     pub slug: String,
     pub email: String,
     pub role: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl QueryMember {
@@ -23,6 +25,8 @@ impl QueryMember {
             slug,
             email,
             role,
+            created,
+            modified,
         } = self;
         Ok(JsonMember {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
@@ -30,6 +34,8 @@ impl QueryMember {
             slug: Slug::from_str(&slug).map_err(api_error!())?,
             email: Email::from_str(&email).map_err(api_error!())?,
             role: role.parse().map_err(ApiError::OrganizationRole)?,
+            created: to_date_time(created).map_err(api_error!())?,
+            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 }

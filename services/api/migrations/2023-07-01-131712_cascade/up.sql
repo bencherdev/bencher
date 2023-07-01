@@ -42,6 +42,40 @@ FROM organization;
 DROP TABLE organization;
 ALTER TABLE up_organization
     RENAME TO organization;
+-- organization role
+CREATE TABLE up_organization_role (
+    id INTEGER PRIMARY KEY NOT NULL,
+    user_id INTEGER NOT NULL,
+    organization_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    created BIGINT NOT NULL,
+    modified BIGINT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (organization_id) REFERENCES organization (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    UNIQUE(user_id, organization_id)
+);
+INSERT INTO up_organization_role(
+        id,
+        user_id,
+        organization_id,
+        role,
+        created,
+        modified
+    )
+SELECT id,
+    user_id,
+    organization_id,
+    role,
+    (
+        SELECT strftime('%s', datetime('now', 'utc'))
+    ),
+    (
+        SELECT strftime('%s', datetime('now', 'utc'))
+    )
+FROM organization_role;
+DROP TABLE organization_role;
+ALTER TABLE up_organization_role
+    RENAME TO organization_role;
 -- project
 CREATE TABLE up_project (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -53,7 +87,7 @@ CREATE TABLE up_project (
     visibility INTEGER NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (organization_id) REFERENCES organization (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (organization_id) REFERENCES organization (id) ON UPDATE CASCADE ON DELETE CASCADE,
     UNIQUE(organization_id, name)
 );
 INSERT INTO up_project(
@@ -84,6 +118,40 @@ FROM project;
 DROP TABLE project;
 ALTER TABLE up_project
     RENAME TO project;
+-- project role
+CREATE TABLE up_project_role (
+    id INTEGER PRIMARY KEY NOT NULL,
+    user_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    created BIGINT NOT NULL,
+    modified BIGINT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    UNIQUE(user_id, project_id)
+);
+INSERT INTO up_project_role(
+        id,
+        user_id,
+        project_id,
+        role,
+        created,
+        modified
+    )
+SELECT id,
+    user_id,
+    project_id,
+    role,
+    (
+        SELECT strftime('%s', datetime('now', 'utc'))
+    ),
+    (
+        SELECT strftime('%s', datetime('now', 'utc'))
+    )
+FROM project_role;
+DROP TABLE project_role;
+ALTER TABLE up_project_role
+    RENAME TO project_role;
 -- metric kind
 CREATE TABLE up_metric_kind (
     id INTEGER PRIMARY KEY NOT NULL,

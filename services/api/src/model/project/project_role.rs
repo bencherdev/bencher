@@ -8,6 +8,8 @@ pub struct InsertProjectRole {
     pub user_id: i32,
     pub project_id: i32,
     pub role: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 #[derive(Queryable)]
@@ -16,4 +18,6 @@ pub struct QueryProjectRole {
     pub user_id: i32,
     pub project_id: i32,
     pub role: String,
+    pub created: i64,
+    pub modified: i64,
 }

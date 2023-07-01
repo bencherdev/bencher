@@ -1,6 +1,7 @@
 use bencher_json::{JsonEmpty, JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{organization::Permission, project::Role};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use chrono::Utc;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -163,11 +164,14 @@ async fn post_inner(
         .first::<QueryProject>(conn)
         .map_err(api_error!())?;
 
+    let timestamp = Utc::now().timestamp();
     // Connect the user to the project as a `Maintainer`
     let insert_proj_role = InsertProjectRole {
         user_id: auth_user.id,
         project_id: query_project.id,
         role: Role::Maintainer.to_string(),
+        created: timestamp,
+        modified: timestamp,
     };
     diesel::insert_into(schema::project_role::table)
         .values(&insert_proj_role)
@@ -355,6 +359,28 @@ async fn delete_inner(
         Permission::Delete,
     )?;
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
+
+    // Remove all reports
+    let reports = schema::report::table
+        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
+        .filter(schema::testbed::project_id.eq(query_project.id))
+        .select(schema::report::id)
+        .load::<i32>(conn)
+        .map_err(api_error!())?;
+    diesel::delete(schema::report::table.filter(schema::report::id.eq_any(&reports)))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    // Remove all thresholds
+    let thresholds = schema::threshold::table
+        .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
+        .filter(schema::testbed::project_id.eq(query_project.id))
+        .select(schema::threshold::id)
+        .load::<i32>(conn)
+        .map_err(api_error!())?;
+    diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq_any(&thresholds)))
+        .execute(conn)
+        .map_err(api_error!())?;
 
     diesel::delete(
         schema::project::table

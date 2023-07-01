@@ -105,6 +105,8 @@ async fn get_ls_inner(
             schema::user::slug,
             schema::user::email,
             schema::organization_role::role,
+            schema::organization_role::created,
+            schema::organization_role::modified,
         ))
         .order((schema::user::name, schema::user::slug))
         .load::<QueryMember>(conn)
@@ -408,6 +410,8 @@ fn json_member(
             schema::user::slug,
             schema::user::email,
             schema::organization_role::role,
+            schema::organization_role::created,
+            schema::organization_role::modified,
         ))
         .first::<QueryMember>(conn)
         .map_err(api_error!())?

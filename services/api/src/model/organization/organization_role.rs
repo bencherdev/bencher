@@ -8,6 +8,7 @@ use crate::{
     ApiError,
 };
 use bencher_json::{organization::JsonOrganizationPermission, Jwt};
+use chrono::Utc;
 use diesel::{Insertable, Queryable};
 
 use super::QueryOrganization;
@@ -18,6 +19,8 @@ pub struct InsertOrganizationRole {
     pub user_id: i32,
     pub organization_id: i32,
     pub role: String,
+    pub created: i64,
+    pub modified: i64,
 }
 
 impl InsertOrganizationRole {
@@ -46,10 +49,13 @@ impl InsertOrganizationRole {
             });
         }
 
+        let timestamp = Utc::now().timestamp();
         Ok(InsertOrganizationRole {
             user_id,
             organization_id: QueryOrganization::get_id(conn, &org_claims.uuid)?,
             role: org_claims.role.to_string(),
+            created: timestamp,
+            modified: timestamp,
         })
     }
 }
@@ -60,6 +66,8 @@ pub struct QueryOrganizationRole {
     pub user_id: i32,
     pub organization_id: i32,
     pub role: String,
+    pub created: i64,
+    pub updated: i64,
 }
 
 pub enum Permission {

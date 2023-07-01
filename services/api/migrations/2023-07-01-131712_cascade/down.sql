@@ -32,6 +32,30 @@ FROM organization;
 DROP TABLE organization;
 ALTER TABLE down_organization
     RENAME TO organization;
+-- organization role
+CREATE TABLE down_organization_role (
+    id INTEGER PRIMARY KEY NOT NULL,
+    user_id INTEGER NOT NULL,
+    organization_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (organization_id) REFERENCES organization (id),
+    UNIQUE(user_id, organization_id)
+);
+INSERT INTO down_organization_role(
+        id,
+        user_id,
+        organization_id,
+        role
+    )
+SELECT id,
+    user_id,
+    organization_id,
+    role
+FROM organization_role;
+DROP TABLE organization_role;
+ALTER TABLE down_organization_role
+    RENAME TO organization_role;
 -- project
 CREATE TABLE down_project (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -64,6 +88,30 @@ FROM project;
 DROP TABLE project;
 ALTER TABLE down_project
     RENAME TO project;
+-- project role
+CREATE TABLE down_project_role (
+    id INTEGER PRIMARY KEY NOT NULL,
+    user_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (project_id) REFERENCES project (id),
+    UNIQUE(user_id, project_id)
+);
+INSERT INTO down_project_role(
+        id,
+        user_id,
+        project_id,
+        role
+    )
+SELECT id,
+    user_id,
+    project_id,
+    role
+FROM project_role;
+DROP TABLE project_role;
+ALTER TABLE down_project_role
+    RENAME TO project_role;
 -- metric kind
 CREATE TABLE down_metric_kind (
     id INTEGER PRIMARY KEY NOT NULL,

@@ -97,6 +97,8 @@ diesel::table! {
         user_id -> Integer,
         organization_id -> Integer,
         role -> Text,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 
@@ -130,6 +132,8 @@ diesel::table! {
         user_id -> Integer,
         project_id -> Integer,
         role -> Text,
+        created -> BigInt,
+        modified -> BigInt,
     }
 }
 

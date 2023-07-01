@@ -446,7 +446,6 @@ async fn delete_inner(
         .select(schema::report::id)
         .first::<i32>(conn)
         .map_err(api_error!())?;
-    // let query = schema::report::table.filter(schema::report::id.eq_any(&[report]));
     diesel::delete(schema::report::table.filter(schema::report::id.eq_any(&[report])))
         .execute(conn)
         .map_err(api_error!())?;
