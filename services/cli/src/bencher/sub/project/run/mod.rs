@@ -11,8 +11,7 @@ use url::Url;
 
 use crate::{
     bencher::{
-        backend::Backend, from_response, map_timestamp_millis,
-        sub::project::run::urls::BenchmarkUrls,
+        backend::Backend, from_response, map_timestamp, sub::project::run::urls::BenchmarkUrls,
     },
     cli::project::run::{CliRun, CliRunAdapter},
     cli_eprintln, cli_println, CliError,
@@ -88,7 +87,7 @@ impl TryFrom<CliRun> for Run {
             average: average.map(Into::into),
             iter: iter.unwrap_or(1),
             fold: fold.map(Into::into),
-            backdate: map_timestamp_millis(backdate)?,
+            backdate: map_timestamp(backdate)?,
             allow_failure,
             err,
             dry_run,

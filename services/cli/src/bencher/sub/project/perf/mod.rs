@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println, CliError};
 
-use crate::bencher::{from_response, map_timestamp_millis, SubCmd};
+use crate::bencher::{from_response, map_timestamp, SubCmd};
 
 mod table_style;
 
@@ -48,8 +48,8 @@ impl TryFrom<CliPerf> for Perf {
             branches,
             testbeds,
             benchmarks,
-            start_time: map_timestamp_millis(start_time)?,
-            end_time: map_timestamp_millis(end_time)?,
+            start_time: map_timestamp(start_time)?,
+            end_time: map_timestamp(end_time)?,
             table: table.map(|t| t.map(Into::into)),
             backend: backend.try_into()?,
         })

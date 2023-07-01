@@ -26,11 +26,11 @@ pub struct CliPerf {
     #[clap(long)]
     pub benchmarks: Vec<Uuid>,
 
-    /// Start time (milliseconds since epoch)
+    /// Start time (seconds since epoch)
     #[clap(long)]
     pub start_time: Option<i64>,
 
-    /// End time (milliseconds since epoch)
+    /// End time (seconds since epoch)
     #[clap(long)]
     pub end_time: Option<i64>,
 

@@ -41,8 +41,8 @@ pub enum CliError {
     MockFailure,
     #[error("Request failed. Please double check your parameters and try again.")]
     RequestFailed,
-    #[error("Failed to create date time from milliseconds: {0}.")]
-    DateTimeMillis(i64),
+    #[error("Failed to create date time from seconds: {0}.")]
+    DateTime(i64),
 
     #[error("Failed to send: {0:?}")]
     BencherClient(#[from] bencher_client::Error<bencher_client::types::Error>),

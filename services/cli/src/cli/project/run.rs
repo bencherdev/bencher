@@ -39,7 +39,7 @@ pub struct CliRun {
     #[clap(value_enum, long, requires = "iter")]
     pub fold: Option<CliRunFold>,
 
-    /// Backdate the report (milliseconds since epoch)
+    /// Backdate the report (seconds since epoch)
     /// NOTE: This will *not* effect the ordering of past reports
     #[clap(long)]
     pub backdate: Option<i64>,
