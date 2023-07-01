@@ -37,6 +37,7 @@
   "sqltools.useNodeRuntime": true,
   "cSpell.words": [
     "anychar",
+    "AUTOINCREMENT",
     "bencherdev",
     "bindgen",
     "Bulma",

@@ -10,7 +10,7 @@ use bencher_json::{
     JsonConfig,
 };
 use bencher_rbac::init_rbac;
-use diesel::Connection;
+use diesel::{connection::SimpleConnection, Connection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
@@ -24,6 +24,7 @@ use url::Url;
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
     endpoints::Api,
+    error::api_error,
     ApiError,
 };
 
@@ -163,7 +164,12 @@ fn run_migrations(database: &mut DbConnection) -> Result<(), ApiError> {
     database
         .run_pending_migrations(MIGRATIONS)
         .map(|_| ())
-        .map_err(ApiError::Migrations)
+        .map_err(ApiError::Migrations)?;
+    // https://www.sqlite.org/foreignkeys.html#fk_enable
+    database
+        .batch_execute("PRAGMA foreign_keys = ON")
+        .map_err(api_error!())?;
+    Ok(())
 }
 
 fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {

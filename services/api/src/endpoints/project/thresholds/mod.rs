@@ -109,7 +109,7 @@ async fn get_ls_inner(
             schema::threshold::created,
             schema::threshold::modified,
         ))
-        .order(schema::threshold::id)
+        .order(schema::threshold::created)
         .load::<QueryThreshold>(conn)
         .map_err(api_error!())?
         .into_iter()

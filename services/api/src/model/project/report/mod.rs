@@ -290,7 +290,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
         .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
         .filter(schema::perf::report_id.eq(report_id))
-        .order(schema::alert::id)
+        .order(schema::alert::modified)
         .select((
             schema::alert::id,
             schema::alert::uuid,
