@@ -72,6 +72,7 @@ impl Api {
         api.register(organization::projects::org_projects_get)?;
         api.register(organization::projects::org_project_post)?;
         api.register(organization::projects::org_project_get)?;
+        api.register(organization::projects::org_project_delete)?;
 
         #[cfg(feature = "plus")]
         {

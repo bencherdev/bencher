@@ -24,6 +24,9 @@ pub enum CliProject {
     Create(CliProjectCreate),
     // View a project
     View(CliProjectView),
+    // Delete a project
+    #[clap(alias = "rm")]
+    Delete(CliProjectDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -80,6 +83,19 @@ pub struct CliProjectView {
     /// Organization slug or UUID
     #[clap(long)]
     pub org: Option<ResourceId>,
+
+    /// Project slug or UUID
+    pub project: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliProjectDelete {
+    /// Organization slug or UUID
+    #[clap(long)]
+    pub org: ResourceId,
 
     /// Project slug or UUID
     pub project: ResourceId,

@@ -1,4 +1,4 @@
-use bencher_json::{JsonNewProject, JsonProject, ResourceId};
+use bencher_json::{JsonEmpty, JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{organization::Permission, project::Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -319,4 +319,50 @@ async fn get_one_inner(
     )?;
 
     QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/organizations/{organization}/projects/{project}",
+    tags = ["organizations", "projects"]
+}]
+pub async fn org_project_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<OrgProjectParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: OrgProjectParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.organization,
+        auth_user,
+        Permission::Delete,
+    )?;
+    let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
+
+    diesel::delete(
+        schema::project::table
+            .filter(schema::project::organization_id.eq(query_organization.id))
+            .filter(schema::project::id.eq(query_project.id)),
+    )
+    .execute(conn)
+    .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }
