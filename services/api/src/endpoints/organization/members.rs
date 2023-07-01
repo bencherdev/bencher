@@ -352,7 +352,7 @@ pub async fn org_member_delete(
     path_params: Path<OrgMemberParams>,
 ) -> Result<ResponseAccepted<JsonMember>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Patch);
+    let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::Delete);
 
     let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await

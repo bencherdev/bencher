@@ -118,6 +118,7 @@ impl Api {
         api.register(project::reports::proj_report_post)?;
         api.register(project::reports::proj_reports_get)?;
         api.register(project::reports::proj_report_get)?;
+        api.register(project::reports::proj_report_delete)?;
 
         // Metric Kinds
         if http_options {

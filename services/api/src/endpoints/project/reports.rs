@@ -1,4 +1,4 @@
-use bencher_json::{JsonNewReport, JsonReport, ResourceId};
+use bencher_json::{JsonEmpty, JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
     expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
@@ -402,4 +402,54 @@ async fn get_one_inner(
         .first::<QueryReport>(conn)
         .map_err(api_error!())?
         .into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/reports/{report_uuid}",
+    tags = ["projects", "reports"]
+}]
+pub async fn proj_report_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjReportParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(REPORT_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjReportParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    let report = schema::report::table
+        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
+        .filter(schema::testbed::project_id.eq(query_project.id))
+        .filter(schema::report::uuid.eq(path_params.report_uuid.to_string()))
+        .select(schema::report::id)
+        .first::<i32>(conn)
+        .map_err(api_error!())?;
+    // let query = schema::report::table.filter(schema::report::id.eq_any(&[report]));
+    diesel::delete(schema::report::table.filter(schema::report::id.eq_any(&[report])))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }

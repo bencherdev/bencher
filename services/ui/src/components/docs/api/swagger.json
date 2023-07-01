@@ -2605,6 +2605,80 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "projects",
+          "reports"
+        ],
+        "operationId": "proj_report_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_uuid",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonEmpty"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     },
     "/v0/projects/{project}/statistics/{statistic}": {
@@ -4098,6 +4172,10 @@
       "JsonBenchmark": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/BenchmarkName"
           },
@@ -4111,6 +4189,7 @@
           }
         },
         "required": [
+          "created",
           "name",
           "project",
           "uuid"
@@ -4121,6 +4200,10 @@
         "properties": {
           "boundary": {
             "$ref": "#/components/schemas/JsonBoundary"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
           },
           "metric": {
             "$ref": "#/components/schemas/JsonMetric"
@@ -4139,6 +4222,7 @@
         },
         "required": [
           "boundary",
+          "created",
           "metric",
           "name",
           "project",
@@ -4178,6 +4262,14 @@
       "JsonBranch": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/BranchName"
           },
@@ -4194,6 +4286,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "name",
           "project",
           "slug",
@@ -4203,6 +4297,14 @@
       "JsonBranchVersion": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/BranchName"
           },
@@ -4222,6 +4324,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "name",
           "project",
           "slug",
@@ -4518,6 +4622,14 @@
       "JsonMetricKind": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
           },
@@ -4537,6 +4649,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "name",
           "project",
           "slug",
@@ -4834,6 +4948,14 @@
       "JsonOrganization": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
           },
@@ -4846,6 +4968,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "name",
           "slug",
           "uuid"
@@ -5065,6 +5189,14 @@
       "JsonProject": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
           },
@@ -5092,6 +5224,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "name",
           "organization",
           "slug",
@@ -5113,6 +5247,10 @@
           },
           "branch": {
             "$ref": "#/components/schemas/JsonBranchVersion"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
           },
           "end_time": {
             "type": "string",
@@ -5149,6 +5287,7 @@
           "adapter",
           "alerts",
           "branch",
+          "created",
           "end_time",
           "project",
           "results",
@@ -5358,6 +5497,10 @@
       "JsonStatistic": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
           "lower_boundary": {
             "nullable": true,
             "allOf": [
@@ -5401,6 +5544,7 @@
           }
         },
         "required": [
+          "created",
           "test",
           "uuid"
         ]
@@ -5415,6 +5559,14 @@
       "JsonTestbed": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/NonEmpty"
           },
@@ -5431,6 +5583,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "name",
           "project",
           "slug",
@@ -5443,8 +5597,16 @@
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
           },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
           "metric_kind": {
             "$ref": "#/components/schemas/JsonMetricKind"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
           },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
@@ -5459,7 +5621,9 @@
         },
         "required": [
           "branch",
+          "created",
           "metric_kind",
+          "modified",
           "statistic",
           "testbed",
           "uuid"
@@ -5468,6 +5632,14 @@
       "JsonThresholdStatistic": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
           },
@@ -5477,6 +5649,8 @@
           }
         },
         "required": [
+          "created",
+          "modified",
           "statistic",
           "uuid"
         ]

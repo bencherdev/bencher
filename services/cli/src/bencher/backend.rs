@@ -71,7 +71,21 @@ impl Backend {
         >,
         T: Serialize,
     {
-        let client = bencher_client::Client::new(self.host.as_ref());
+        let timeout = std::time::Duration::from_secs(15);
+        let mut client_builder = reqwest::ClientBuilder::new()
+            .connect_timeout(timeout)
+            .timeout(timeout);
+        if let Some(token) = &self.token {
+            let mut headers = reqwest::header::HeaderMap::new();
+            headers.insert(
+                "Authorization",
+                reqwest::header::HeaderValue::from_str(&format!("Bearer {token}"))?,
+            );
+
+            client_builder = client_builder.default_headers(headers)
+        }
+        let reqwest_client = client_builder.build()?;
+        let client = bencher_client::Client::new_with_client(self.host.as_ref(), reqwest_client);
         let response_value = sender(client).await?;
         let response = response_value.into_inner();
         if log {

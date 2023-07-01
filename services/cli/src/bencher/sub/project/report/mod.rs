@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use super::run::Run as Create;
 use crate::{bencher::sub::SubCmd, cli::project::report::CliReport, CliError};
 
+mod delete;
 mod list;
 mod view;
 
@@ -11,6 +12,7 @@ pub enum Report {
     List(list::List),
     Create(Box<Create>),
     View(view::View),
+    Delete(delete::Delete),
 }
 
 impl TryFrom<CliReport> for Report {
@@ -21,6 +23,7 @@ impl TryFrom<CliReport> for Report {
             CliReport::List(list) => Self::List(list.try_into()?),
             CliReport::Create(create) => Self::Create(Box::new((*create).try_into()?)),
             CliReport::View(view) => Self::View(view.try_into()?),
+            CliReport::Delete(delete) => Self::Delete(delete.try_into()?),
         })
     }
 }
@@ -32,6 +35,7 @@ impl SubCmd for Report {
             Self::List(list) => list.exec().await,
             Self::Create(create) => create.exec().await,
             Self::View(create) => create.exec().await,
+            Self::Delete(delete) => delete.exec().await,
         }
     }
 }

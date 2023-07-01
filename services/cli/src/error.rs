@@ -44,6 +44,8 @@ pub enum CliError {
     #[error("Failed to create date time from seconds: {0}.")]
     DateTime(i64),
 
+    #[error("Bad header: {0:?}")]
+    InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error("Failed to send: {0:?}")]
     BencherClient(#[from] bencher_client::Error<bencher_client::types::Error>),
 

@@ -15,6 +15,9 @@ pub enum CliReport {
     Create(Box<CliRun>),
     /// View a report
     View(CliReportView),
+    /// Delete a report
+    #[clap(alias = "rm")]
+    Delete(CliReportDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -29,6 +32,19 @@ pub struct CliReportList {
 
 #[derive(Parser, Debug)]
 pub struct CliReportView {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Report UUID
+    pub report: Uuid,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliReportDelete {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
