@@ -256,7 +256,17 @@ SELECT id,
                 LIMIT 1
             )
     ), number, hash
-FROM version;
+FROM version
+WHERE EXISTS(
+        SELECT project_id
+        FROM branch
+        WHERE branch.id = (
+                SELECT branch_id
+                FROM branch_version
+                WHERE version.id = branch_version.version_id
+                LIMIT 1
+            )
+    );
 DROP TABLE version;
 ALTER TABLE up_version
     RENAME TO version;
@@ -427,7 +437,17 @@ SELECT id,
     ), test, min_sample_size, max_sample_size, window, lower_boundary, upper_boundary, (
         SELECT strftime('%s', datetime('now', 'utc'))
     )
-FROM statistic;
+FROM statistic
+WHERE EXISTS(
+        SELECT project_id
+        FROM branch
+        WHERE branch.id = (
+                SELECT branch_id
+                FROM threshold
+                WHERE statistic.id = threshold.statistic_id
+                LIMIT 1
+            )
+    );
 DROP TABLE statistic;
 ALTER TABLE up_statistic
     RENAME TO statistic;
