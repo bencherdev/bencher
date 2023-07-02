@@ -1,3 +1,4 @@
+# https://mcr.microsoft.com/v2/vscode/devcontainers/rust/tags/list
 FROM mcr.microsoft.com/vscode/devcontainers/rust:0.203.9-1-bullseye
 
 RUN sudo apt-get update
