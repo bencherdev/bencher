@@ -5,6 +5,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use tracing::info;
 
 use crate::{
     context::ApiContext,
@@ -359,6 +360,7 @@ async fn delete_inner(
         Permission::Delete,
     )?;
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
+    info!("Deleting project: {:?}", query_project);
 
     // Remove all reports
     let reports = schema::report::table
@@ -370,6 +372,7 @@ async fn delete_inner(
     diesel::delete(schema::report::table.filter(schema::report::id.eq_any(&reports)))
         .execute(conn)
         .map_err(api_error!())?;
+    info!("Deleted {} reports", reports.len());
 
     // Remove all thresholds
     let thresholds = schema::threshold::table
@@ -381,7 +384,9 @@ async fn delete_inner(
     diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq_any(&thresholds)))
         .execute(conn)
         .map_err(api_error!())?;
+    info!("Deleted {} thresholds", thresholds.len());
 
+    // Remove the project
     diesel::delete(
         schema::project::table
             .filter(schema::project::organization_id.eq(query_organization.id))
@@ -389,6 +394,21 @@ async fn delete_inner(
     )
     .execute(conn)
     .map_err(api_error!())?;
+    info!("Deleted project: {:?}", query_project);
+
+    // Remove all dangling versions
+    diesel::delete(schema::version::table.filter(schema::version::project_id.eq(query_project.id)))
+        .execute(conn)
+        .map_err(api_error!())?;
+    info!("Deleted versions");
+
+    // Remove all dangling statistics
+    diesel::delete(
+        schema::statistic::table.filter(schema::statistic::project_id.eq(query_project.id)),
+    )
+    .execute(conn)
+    .map_err(api_error!())?;
+    info!("Deleted statistics");
 
     Ok(JsonEmpty {})
 }

@@ -31,6 +31,11 @@ const DEFAULT_DB_PATH: &str = "data/bencher.db";
 const DEFAULT_SMTP_PORT: u16 = 587;
 const BENCHER_DOT_DEV: &str = "bencher.dev";
 
+#[cfg(debug_assertions)]
+const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
+#[cfg(not(debug_assertions))]
+const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
+
 #[allow(clippy::panic)]
 static DEFAULT_ENDPOINT: Lazy<Url> = Lazy::new(|| {
     DEFAULT_ENDPOINT_STR.parse().unwrap_or_else(|e| {
@@ -179,7 +184,7 @@ impl Default for Config {
             logging: JsonLogging {
                 name: API_NAME.into(),
                 log: ServerLog::StderrTerminal {
-                    level: LogLevel::Info,
+                    level: DEFAULT_LOG_LEVEL,
                 },
             },
             #[cfg(feature = "plus")]
