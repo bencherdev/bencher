@@ -355,16 +355,8 @@ INSERT INTO down_report(
 SELECT id,
     uuid,
     user_id,
-    (
-        SELECT branch_id
-        FROM branch_version
-        WHERE branch_version.id = report.branch_version_id
-    ),
-    (
-        SELECT version_id
-        FROM branch_version
-        WHERE branch_version.id = report.branch_version_id
-    ),
+    branch_id,
+    version_id,
     testbed_id,
     adapter,
     (start_time * 1000000000),

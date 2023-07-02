@@ -17,7 +17,7 @@ use crate::{
     error::api_error,
     model::project::{
         report::{results::ReportResults, InsertReport, QueryReport},
-        version::InsertBranchVersion,
+        version::InsertVersion,
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -98,7 +98,8 @@ async fn get_ls_inner(
             schema::report::id,
             schema::report::uuid,
             schema::report::user_id,
-            schema::report::branch_version_id,
+            schema::report::branch_id,
+            schema::report::version_id,
             schema::report::testbed_id,
             schema::report::adapter,
             schema::report::start_time,
@@ -181,9 +182,28 @@ async fn post_inner(
         plan_kind::PlanKind::new(conn, context.biller.as_ref(), &context.licensor, project_id)
             .await?;
 
-    // Insert the branch version
-    let branch_version_id =
-        InsertBranchVersion::from_hash(conn, project_id, branch_id, json_report.hash.as_ref())?;
+    // If there is a hash then try to see if there is already a code version for
+    // this branch with that particular hash.
+    // Otherwise, create a new code version for this branch with/without the hash.
+    let version_id = if let Some(hash) = &json_report.hash {
+        if let Ok(version_id) = schema::version::table
+            .left_join(
+                schema::branch_version::table
+                    .on(schema::version::id.eq(schema::branch_version::version_id)),
+            )
+            .filter(schema::branch_version::branch_id.eq(branch_id))
+            .filter(schema::version::hash.eq(hash.as_ref()))
+            .order(schema::version::number.desc())
+            .select(schema::version::id)
+            .first::<i32>(conn)
+        {
+            version_id
+        } else {
+            InsertVersion::increment(conn, project_id, branch_id, Some(hash.clone()))?
+        }
+    } else {
+        InsertVersion::increment(conn, project_id, branch_id, None)?
+    };
 
     let json_settings = json_report.settings.take().unwrap_or_default();
     let adapter = json_settings.adapter.unwrap_or_default();
@@ -191,7 +211,8 @@ async fn post_inner(
     // Create a new report and add it to the database
     let insert_report = InsertReport::from_json(
         auth_user.id,
-        branch_version_id,
+        branch_id,
+        version_id,
         testbed_id,
         &json_report,
         adapter,
@@ -370,7 +391,8 @@ async fn get_one_inner(
             schema::report::id,
             schema::report::uuid,
             schema::report::user_id,
-            schema::report::branch_version_id,
+            schema::report::branch_id,
+            schema::report::version_id,
             schema::report::testbed_id,
             schema::report::adapter,
             schema::report::start_time,

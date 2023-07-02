@@ -42,17 +42,16 @@ impl MetricsData {
 
         let mut query = query
             .left_join(
+                schema::version::table.on(schema::report::version_id.eq(schema::version::id)),
+            )
+            .left_join(
                 schema::branch_version::table
-                    .on(schema::report::branch_version_id.eq(schema::branch_version::id)),
+                    .on(schema::version::id.eq(schema::branch_version::version_id)),
             )
             .left_join(
                 schema::branch::table.on(schema::branch_version::branch_id.eq(schema::branch::id)),
             )
             .filter(schema::branch::id.eq(branch_id))
-            .left_join(
-                schema::version::table
-                    .on(schema::branch_version::version_id.eq(schema::version::id)),
-            )
             .order((
                 schema::version::number.desc(),
                 schema::report::start_time.desc(),

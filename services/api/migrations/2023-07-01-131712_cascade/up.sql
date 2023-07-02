@@ -436,21 +436,24 @@ CREATE TABLE up_report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
-    branch_version_id INTEGER NOT NULL,
+    branch_id INTEGER NOT NULL,
+    version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
     adapter INTEGER NOT NULL,
     start_time BIGINT NOT NULL,
     end_time BIGINT NOT NULL,
     created BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (branch_version_id) REFERENCES branch_version (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (branch_id) REFERENCES branch (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (version_id) REFERENCES version (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
     FOREIGN KEY (testbed_id) REFERENCES testbed (id) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 INSERT INTO up_report(
         id,
         uuid,
         user_id,
-        branch_version_id,
+        branch_id,
+        version_id,
         testbed_id,
         adapter,
         start_time,
@@ -460,12 +463,8 @@ INSERT INTO up_report(
 SELECT id,
     uuid,
     user_id,
-    (
-        SELECT id
-        FROM branch_version
-        WHERE branch_version.branch_id = report.branch_id
-            AND branch_version.version_id = report.version_id
-    ),
+    branch_id,
+    version_id,
     testbed_id,
     adapter,
     (start_time / 1000000000),
