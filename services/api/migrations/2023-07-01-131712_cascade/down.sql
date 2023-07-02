@@ -169,6 +169,27 @@ FROM branch;
 DROP TABLE branch;
 ALTER TABLE down_branch
     RENAME TO branch;
+-- version
+CREATE TABLE down_version (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    number INTEGER NOT NULL,
+    hash TEXT
+);
+INSERT INTO down_version(
+        id,
+        uuid,
+        number,
+        hash
+    )
+SELECT id,
+    uuid,
+    number,
+    hash
+FROM version;
+DROP TABLE version;
+ALTER TABLE down_version
+    RENAME TO version;
 -- branch version
 CREATE TABLE down_branch_version (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -334,8 +355,16 @@ INSERT INTO down_report(
 SELECT id,
     uuid,
     user_id,
-    branch_id,
-    version_id,
+    (
+        SELECT branch_id
+        FROM branch_version
+        WHERE branch_version.id = report.branch_version_id
+    ),
+    (
+        SELECT version_id
+        FROM branch_version
+        WHERE branch_version.id = report.branch_version_id
+    ),
     testbed_id,
     adapter,
     (start_time * 1000000000),

@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::{
     threshold::statistic::{InsertStatistic, QueryStatistic},
-    version::{InsertBranchVersion, QueryVersion},
+    version::{InsertBranchVersion, QueryBranchVersion, QueryVersion},
     QueryProject,
 };
 use crate::{
@@ -80,9 +80,13 @@ impl QueryBranch {
 
     pub fn get_branch_version_json(
         conn: &mut DbConnection,
-        branch_id: i32,
-        version_id: i32,
+        branch_version_id: i32,
     ) -> Result<JsonBranchVersion, ApiError> {
+        let QueryBranchVersion {
+            branch_id,
+            version_id,
+            ..
+        } = QueryBranchVersion::get(conn, branch_version_id)?;
         let JsonBranch {
             uuid,
             project,

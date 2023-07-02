@@ -18,6 +18,7 @@ use crate::{
 pub struct QueryVersion {
     pub id: i32,
     pub uuid: String,
+    pub project_id: i32,
     pub number: i32,
     pub hash: Option<String>,
 }
@@ -43,10 +44,15 @@ impl QueryVersion {
     }
 }
 
+impl QueryBranchVersion {
+    fn_get!(branch_version);
+}
+
 #[derive(Insertable)]
 #[diesel(table_name = version_table)]
 pub struct InsertVersion {
     pub uuid: String,
+    pub project_id: i32,
     pub number: i32,
     pub hash: Option<String>,
 }
@@ -58,11 +64,40 @@ pub struct InsertBranchVersion {
     pub version_id: i32,
 }
 
-impl InsertVersion {
-    pub fn increment(
+impl InsertBranchVersion {
+    pub fn from_hash(
         conn: &mut DbConnection,
+        project_id: i32,
         branch_id: i32,
-        hash: Option<GitHash>,
+        hash: Option<&GitHash>,
+    ) -> Result<i32, ApiError> {
+        // If there is a hash then try to see if there is already a code version for
+        // this branch with that particular hash.
+        // Otherwise, create a new code version for this branch with/without the hash.
+        if let Some(hash) = hash {
+            if let Ok(version_id) = schema::branch_version::table
+                .filter(schema::branch_version::branch_id.eq(branch_id))
+                .left_join(
+                    schema::version::table
+                        .on(schema::version::id.eq(schema::branch_version::version_id)),
+                )
+                .filter(schema::version::hash.eq(hash.as_ref()))
+                .order(schema::version::number.desc())
+                .select(schema::branch_version::id)
+                .first::<i32>(conn)
+            {
+                return Ok(version_id);
+            }
+        }
+
+        Self::increment(conn, project_id, branch_id, hash)
+    }
+
+    fn increment(
+        conn: &mut DbConnection,
+        project_id: i32,
+        branch_id: i32,
+        hash: Option<&GitHash>,
     ) -> Result<i32, ApiError> {
         // Get the most recent code version number for this branch and increment it.
         // Otherwise, start a new branch code version number count from zero.
@@ -84,8 +119,9 @@ impl InsertVersion {
         let uuid = Uuid::new_v4();
         let insert_version = InsertVersion {
             uuid: uuid.to_string(),
+            project_id,
             number,
-            hash: hash.map(Into::into),
+            hash: hash.cloned().map(Into::into),
         };
 
         diesel::insert_into(schema::version::table)
@@ -105,6 +141,11 @@ impl InsertVersion {
             .execute(conn)
             .map_err(api_error!())?;
 
-        Ok(version_id)
+        schema::branch_version::table
+            .filter(schema::branch_version::branch_id.eq(branch_id))
+            .filter(schema::branch_version::version_id.eq(version_id))
+            .select(schema::branch_version::id)
+            .first::<i32>(conn)
+            .map_err(api_error!())
     }
 }

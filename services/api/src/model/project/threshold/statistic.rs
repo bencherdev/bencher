@@ -25,6 +25,7 @@ use crate::{
 pub struct QueryStatistic {
     pub id: i32,
     pub uuid: String,
+    pub project_id: i32,
     pub test: i32,
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
@@ -121,6 +122,7 @@ pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError>
 #[diesel(table_name = statistic_table)]
 pub struct InsertStatistic {
     pub uuid: String,
+    pub project_id: i32,
     pub test: i32,
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
@@ -133,6 +135,7 @@ pub struct InsertStatistic {
 impl From<QueryStatistic> for InsertStatistic {
     fn from(query_statistic: QueryStatistic) -> Self {
         let QueryStatistic {
+            project_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -144,6 +147,7 @@ impl From<QueryStatistic> for InsertStatistic {
         } = query_statistic;
         Self {
             uuid: Uuid::new_v4().to_string(),
+            project_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -156,7 +160,7 @@ impl From<QueryStatistic> for InsertStatistic {
 }
 
 impl InsertStatistic {
-    pub fn from_json(json_statistic: JsonNewStatistic) -> Result<Self, ApiError> {
+    pub fn from_json(project_id: i32, json_statistic: JsonNewStatistic) -> Result<Self, ApiError> {
         let JsonNewStatistic {
             test,
             min_sample_size,
@@ -167,6 +171,7 @@ impl InsertStatistic {
         } = json_statistic;
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
+            project_id,
             test: StatisticKind::from(test) as i32,
             min_sample_size: min_sample_size.map(Into::into),
             max_sample_size: max_sample_size.map(Into::into),

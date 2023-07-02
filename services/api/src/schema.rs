@@ -142,8 +142,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
-        branch_id -> Integer,
-        version_id -> Integer,
+        branch_version_id -> Integer,
         testbed_id -> Integer,
         adapter -> Integer,
         start_time -> BigInt,
@@ -156,6 +155,7 @@ diesel::table! {
     statistic (id) {
         id -> Integer,
         uuid -> Text,
+        project_id -> Integer,
         test -> Integer,
         min_sample_size -> Nullable<BigInt>,
         max_sample_size -> Nullable<BigInt>,
@@ -219,6 +219,7 @@ diesel::table! {
     version (id) {
         id -> Integer,
         uuid -> Text,
+        project_id -> Integer,
         number -> Integer,
         hash -> Nullable<Text>,
     }
@@ -242,10 +243,9 @@ diesel::joinable!(perf -> report (report_id));
 diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
-diesel::joinable!(report -> branch (branch_id));
+diesel::joinable!(report -> branch_version (branch_version_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
-diesel::joinable!(report -> version (version_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(threshold -> branch (branch_id));
 diesel::joinable!(threshold -> metric_kind (metric_kind_id));

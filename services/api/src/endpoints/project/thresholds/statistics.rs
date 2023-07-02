@@ -1,5 +1,5 @@
 use bencher_json::{project::threshold::JsonStatistic, ResourceId};
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -80,26 +80,8 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::statistic::table
-        .left_join(
-            schema::threshold::table.on(schema::statistic::id.eq(schema::threshold::statistic_id)),
-        )
-        .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
-        .filter(
-            schema::testbed::project_id
-                .eq(query_project.id)
-                .and(schema::statistic::uuid.eq(path_params.statistic.to_string())),
-        )
-        .select((
-            schema::statistic::id,
-            schema::statistic::uuid,
-            schema::statistic::test,
-            schema::statistic::min_sample_size,
-            schema::statistic::max_sample_size,
-            schema::statistic::window,
-            schema::statistic::lower_boundary,
-            schema::statistic::upper_boundary,
-            schema::statistic::created,
-        ))
+        .filter(schema::statistic::project_id.eq(query_project.id))
+        .filter(schema::statistic::uuid.eq(path_params.statistic.to_string()))
         .first::<QueryStatistic>(conn)
         .map_err(api_error!())?
         .into_json()

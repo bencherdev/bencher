@@ -229,6 +229,37 @@ FROM branch;
 DROP TABLE branch;
 ALTER TABLE up_branch
     RENAME TO branch;
+-- version
+CREATE TABLE up_version (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    number INTEGER NOT NULL,
+    hash TEXT
+);
+INSERT INTO up_version(
+        id,
+        uuid,
+        project_id,
+        number,
+        hash
+    )
+SELECT id,
+    uuid,
+    (
+        SELECT project_id
+        FROM branch
+        WHERE branch.id = (
+                SELECT branch_id
+                FROM branch_version
+                WHERE version.id = branch_version.version_id
+                LIMIT 1
+            )
+    ), number, hash
+FROM version;
+DROP TABLE version;
+ALTER TABLE up_version
+    RENAME TO version;
 -- branch version
 CREATE TABLE up_branch_version (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -361,6 +392,7 @@ ALTER TABLE up_threshold
 CREATE TABLE up_statistic (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
     test INTEGER NOT NULL,
     min_sample_size BIGINT,
     max_sample_size BIGINT,
@@ -372,6 +404,7 @@ CREATE TABLE up_statistic (
 INSERT INTO up_statistic(
         id,
         uuid,
+        project_id,
         test,
         min_sample_size,
         max_sample_size,
@@ -382,13 +415,16 @@ INSERT INTO up_statistic(
     )
 SELECT id,
     uuid,
-    test,
-    min_sample_size,
-    max_sample_size,
-    window,
-    lower_boundary,
-    upper_boundary,
     (
+        SELECT project_id
+        FROM branch
+        WHERE branch.id = (
+                SELECT branch_id
+                FROM threshold
+                WHERE statistic.id = threshold.statistic_id
+                LIMIT 1
+            )
+    ), test, min_sample_size, max_sample_size, window, lower_boundary, upper_boundary, (
         SELECT strftime('%s', datetime('now', 'utc'))
     )
 FROM statistic;
@@ -400,24 +436,21 @@ CREATE TABLE up_report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
-    branch_id INTEGER NOT NULL,
-    version_id INTEGER NOT NULL,
+    branch_version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
     adapter INTEGER NOT NULL,
     start_time BIGINT NOT NULL,
     end_time BIGINT NOT NULL,
     created BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (branch_id) REFERENCES branch (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (version_id) REFERENCES version (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (branch_version_id) REFERENCES branch_version (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
     FOREIGN KEY (testbed_id) REFERENCES testbed (id) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 INSERT INTO up_report(
         id,
         uuid,
         user_id,
-        branch_id,
-        version_id,
+        branch_version_id,
         testbed_id,
         adapter,
         start_time,
@@ -427,8 +460,12 @@ INSERT INTO up_report(
 SELECT id,
     uuid,
     user_id,
-    branch_id,
-    version_id,
+    (
+        SELECT id
+        FROM branch_version
+        WHERE branch_version.branch_id = report.branch_id
+            AND branch_version.version_id = report.version_id
+    ),
     testbed_id,
     adapter,
     (start_time / 1000000000),

@@ -163,7 +163,7 @@ impl InsertThreshold {
         let metric_kind_id =
             QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
 
-        let insert_statistic = InsertStatistic::from_json(json_threshold.statistic)?;
+        let insert_statistic = InsertStatistic::from_json(project_id, json_threshold.statistic)?;
         diesel::insert_into(schema::statistic::table)
             .values(&insert_statistic)
             .execute(conn)
