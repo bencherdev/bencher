@@ -6,7 +6,9 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 use self::statistic::{InsertStatistic, QueryStatistic};
-use super::{branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed};
+use super::{
+    branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed, QueryProject,
+};
 use crate::{
     context::DbConnection,
     error::api_error,
@@ -27,6 +29,7 @@ pub mod statistic;
 pub struct QueryThreshold {
     pub id: i32,
     pub uuid: String,
+    pub project_id: i32,
     pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -79,6 +82,7 @@ impl QueryThreshold {
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonThreshold, ApiError> {
         let Self {
             uuid,
+            project_id,
             metric_kind_id,
             branch_id,
             testbed_id,
@@ -89,10 +93,11 @@ impl QueryThreshold {
         } = self;
         Ok(JsonThreshold {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            project: QueryProject::get_uuid(conn, project_id)?,
             metric_kind: QueryMetricKind::get(conn, metric_kind_id)?.into_json(conn)?,
             branch: QueryBranch::get(conn, branch_id)?.into_json(conn)?,
             testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
-            statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
+            statistic: QueryStatistic::get(conn, statistic_id)?.into_json(conn)?,
             created: to_date_time(created).map_err(api_error!())?,
             modified: to_date_time(modified).map_err(api_error!())?,
         })
@@ -104,13 +109,15 @@ impl QueryThreshold {
     ) -> Result<JsonThresholdStatistic, ApiError> {
         let Self {
             uuid,
+            project_id,
             statistic_id,
             created,
             ..
         } = self;
         Ok(JsonThresholdStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
+            project: QueryProject::get_uuid(conn, project_id)?,
+            statistic: QueryStatistic::get(conn, statistic_id)?.into_json(conn)?,
             created: to_date_time(created).map_err(api_error!())?,
         })
     }
@@ -120,6 +127,7 @@ impl QueryThreshold {
 #[diesel(table_name = threshold_table)]
 pub struct InsertThreshold {
     pub uuid: String,
+    pub project_id: i32,
     pub metric_kind_id: i32,
     pub branch_id: i32,
     pub testbed_id: i32,
@@ -131,6 +139,7 @@ pub struct InsertThreshold {
 impl InsertThreshold {
     pub fn new<U>(
         conn: &mut DbConnection,
+        project_id: i32,
         metric_kind_id: i32,
         branch_id: i32,
         testbed_id: i32,
@@ -142,6 +151,7 @@ impl InsertThreshold {
         let timestamp = Utc::now().timestamp();
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
+            project_id,
             metric_kind_id,
             branch_id,
             testbed_id,
@@ -169,6 +179,7 @@ impl InsertThreshold {
 
         Self::new(
             conn,
+            project_id,
             metric_kind_id,
             branch_id,
             testbed_id,

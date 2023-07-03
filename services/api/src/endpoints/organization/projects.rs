@@ -1,7 +1,7 @@
 use bencher_json::{JsonEmpty, JsonNewProject, JsonProject, ResourceId};
 use bencher_rbac::{organization::Permission, project::Role};
 use chrono::Utc;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -362,31 +362,6 @@ async fn delete_inner(
     let query_project = QueryProject::from_resource_id(conn, &path_params.project)?;
     info!("Deleting project: {:?}", query_project);
 
-    // Remove all reports
-    let reports = schema::report::table
-        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
-        .select(schema::report::id)
-        .load::<i32>(conn)
-        .map_err(api_error!())?;
-    diesel::delete(schema::report::table.filter(schema::report::id.eq_any(&reports)))
-        .execute(conn)
-        .map_err(api_error!())?;
-    info!("Deleted {} reports", reports.len());
-
-    // Remove all thresholds
-    let thresholds = schema::threshold::table
-        .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
-        .select(schema::threshold::id)
-        .load::<i32>(conn)
-        .map_err(api_error!())?;
-    diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq_any(&thresholds)))
-        .execute(conn)
-        .map_err(api_error!())?;
-    info!("Deleted {} thresholds", thresholds.len());
-
-    // Remove the project
     diesel::delete(
         schema::project::table
             .filter(schema::project::organization_id.eq(query_organization.id))

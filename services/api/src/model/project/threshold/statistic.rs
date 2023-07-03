@@ -11,6 +11,7 @@ use uuid::Uuid;
 use crate::{
     context::DbConnection,
     error::api_error,
+    model::project::QueryProject,
     schema,
     schema::statistic as statistic_table,
     util::{
@@ -49,9 +50,10 @@ impl QueryStatistic {
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn into_json(self) -> Result<JsonStatistic, ApiError> {
+    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
         let Self {
             uuid,
+            project_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -63,6 +65,7 @@ impl QueryStatistic {
         } = self;
         Ok(JsonStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            project: QueryProject::get_uuid(conn, project_id)?,
             test: StatisticKind::try_from(test)?.into(),
             min_sample_size: map_u32(min_sample_size)?,
             max_sample_size: map_u32(max_sample_size)?,

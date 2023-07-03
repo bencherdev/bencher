@@ -361,12 +361,14 @@ ALTER TABLE up_benchmark
 CREATE TABLE up_threshold (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
     metric_kind_id INTEGER NOT NULL,
     branch_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
     statistic_id INTEGER NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id),
     FOREIGN KEY (branch_id) REFERENCES branch (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id),
@@ -376,6 +378,7 @@ CREATE TABLE up_threshold (
 INSERT INTO up_threshold(
         id,
         uuid,
+        project_id,
         metric_kind_id,
         branch_id,
         testbed_id,
@@ -385,6 +388,11 @@ INSERT INTO up_threshold(
     )
 SELECT id,
     uuid,
+    (
+        SELECT project_id
+        FROM branch
+        WHERE branch.id = threshold.branch_id
+    ),
     metric_kind_id,
     branch_id,
     testbed_id,
@@ -458,6 +466,7 @@ CREATE TABLE up_report (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
     branch_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
@@ -466,6 +475,7 @@ CREATE TABLE up_report (
     end_time BIGINT NOT NULL,
     created BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     FOREIGN KEY (branch_id) REFERENCES branch (id),
     FOREIGN KEY (version_id) REFERENCES version (id),
     FOREIGN KEY (testbed_id) REFERENCES testbed (id)
@@ -474,6 +484,7 @@ INSERT INTO up_report(
         id,
         uuid,
         user_id,
+        project_id,
         branch_id,
         version_id,
         testbed_id,
@@ -485,6 +496,11 @@ INSERT INTO up_report(
 SELECT id,
     uuid,
     user_id,
+    (
+        SELECT project_id
+        FROM branch
+        WHERE branch.id = report.branch_id
+    ),
     branch_id,
     version_id,
     testbed_id,

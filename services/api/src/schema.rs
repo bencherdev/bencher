@@ -142,6 +142,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         user_id -> Integer,
+        project_id -> Integer,
         branch_id -> Integer,
         version_id -> Integer,
         testbed_id -> Integer,
@@ -183,6 +184,7 @@ diesel::table! {
     threshold (id) {
         id -> Integer,
         uuid -> Text,
+        project_id -> Integer,
         metric_kind_id -> Integer,
         branch_id -> Integer,
         testbed_id -> Integer,
@@ -245,6 +247,7 @@ diesel::joinable!(project -> organization (organization_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(report -> branch (branch_id));
+diesel::joinable!(report -> project (project_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
@@ -252,6 +255,7 @@ diesel::joinable!(statistic -> project (project_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(threshold -> branch (branch_id));
 diesel::joinable!(threshold -> metric_kind (metric_kind_id));
+diesel::joinable!(threshold -> project (project_id));
 diesel::joinable!(threshold -> statistic (statistic_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));

@@ -3,9 +3,7 @@ use bencher_json::{
     ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{
-    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
-};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -97,11 +95,11 @@ async fn get_ls_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     Ok(schema::threshold::table
-        .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
+        .filter(schema::threshold::project_id.eq(query_project.id))
         .select((
             schema::threshold::id,
             schema::threshold::uuid,
+            schema::threshold::project_id,
             schema::threshold::metric_kind_id,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,
@@ -242,15 +240,12 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::threshold::table
-        .left_join(schema::testbed::table.on(schema::threshold::testbed_id.eq(schema::testbed::id)))
-        .filter(
-            schema::testbed::project_id
-                .eq(query_project.id)
-                .and(schema::threshold::uuid.eq(path_params.threshold.to_string())),
-        )
+        .filter(schema::threshold::project_id.eq(query_project.id))
+        .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .select((
             schema::threshold::id,
             schema::threshold::uuid,
+            schema::threshold::project_id,
             schema::threshold::metric_kind_id,
             schema::threshold::branch_id,
             schema::threshold::testbed_id,

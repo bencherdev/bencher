@@ -44,6 +44,7 @@ pub struct QueryReport {
     pub id: i32,
     pub uuid: String,
     pub user_id: i32,
+    pub project_id: i32,
     pub branch_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
@@ -67,27 +68,31 @@ impl QueryReport {
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonReport, ApiError> {
         let Self {
+            id,
             uuid,
             user_id,
+            project_id,
+            branch_id,
+            version_id,
+            testbed_id,
             adapter,
             start_time,
             end_time,
-            ..
+            created,
         } = self;
 
-        let testbed = QueryTestbed::get(conn, self.testbed_id)?;
         Ok(JsonReport {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             user: QueryUser::get(conn, user_id)?.into_json()?,
-            project: QueryProject::get(conn, testbed.project_id)?.into_json(conn)?,
-            branch: QueryBranch::get_branch_version_json(conn, self.branch_id, self.version_id)?,
-            testbed: testbed.into_json(conn)?,
+            project: QueryProject::get(conn, project_id)?.into_json(conn)?,
+            branch: QueryBranch::get_branch_version_json(conn, branch_id, version_id)?,
+            testbed: QueryTestbed::get(conn, testbed_id)?.into_json(conn)?,
             adapter: Adapter::try_from(adapter)?.into(),
             start_time: to_date_time(start_time)?,
             end_time: to_date_time(end_time)?,
-            results: get_results(conn, self.id)?,
-            alerts: get_alerts(conn, self.id)?,
-            created: to_date_time(self.created).map_err(api_error!())?,
+            results: get_results(conn, id)?,
+            alerts: get_alerts(conn, id)?,
+            created: to_date_time(created).map_err(api_error!())?,
         })
     }
 }
@@ -313,6 +318,7 @@ fn get_alerts(conn: &mut DbConnection, report_id: i32) -> Result<JsonReportAlert
 pub struct InsertReport {
     pub uuid: String,
     pub user_id: i32,
+    pub project_id: i32,
     pub branch_id: i32,
     pub version_id: i32,
     pub testbed_id: i32,
@@ -325,6 +331,7 @@ pub struct InsertReport {
 impl InsertReport {
     pub fn from_json(
         user_id: i32,
+        project_id: i32,
         branch_id: i32,
         version_id: i32,
         testbed_id: i32,
@@ -334,6 +341,7 @@ impl InsertReport {
         Self {
             uuid: Uuid::new_v4().to_string(),
             user_id,
+            project_id,
             branch_id,
             version_id,
             testbed_id,

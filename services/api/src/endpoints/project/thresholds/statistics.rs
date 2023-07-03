@@ -84,5 +84,5 @@ async fn get_one_inner(
         .filter(schema::statistic::uuid.eq(path_params.statistic.to_string()))
         .first::<QueryStatistic>(conn)
         .map_err(api_error!())?
-        .into_json()
+        .into_json(conn)
 }

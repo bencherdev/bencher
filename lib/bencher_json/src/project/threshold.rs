@@ -32,6 +32,7 @@ pub struct JsonNewStatistic {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThreshold {
     pub uuid: Uuid,
+    pub project: Uuid,
     pub metric_kind: JsonMetricKind,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
@@ -44,6 +45,7 @@ pub struct JsonThreshold {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStatistic {
     pub uuid: Uuid,
+    pub project: Uuid,
     pub test: JsonStatisticKind,
     pub min_sample_size: Option<u32>,
     pub max_sample_size: Option<u32>,
@@ -65,6 +67,7 @@ pub enum JsonStatisticKind {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThresholdStatistic {
     pub uuid: Uuid,
+    pub project: Uuid,
     pub statistic: JsonStatistic,
     pub created: DateTime<Utc>,
 }

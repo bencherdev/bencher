@@ -1,9 +1,6 @@
 use bencher_json::{JsonEmpty, JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
-use diesel::{
-    dsl::count, expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
-    RunQueryDsl,
-};
+use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -93,12 +90,12 @@ async fn get_ls_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     Ok(schema::report::table
-        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
+        .filter(schema::report::project_id.eq(query_project.id))
         .select((
             schema::report::id,
             schema::report::uuid,
             schema::report::user_id,
+            schema::report::project_id,
             schema::report::branch_id,
             schema::report::version_id,
             schema::report::testbed_id,
@@ -212,6 +209,7 @@ async fn post_inner(
     // Create a new report and add it to the database
     let insert_report = InsertReport::from_json(
         auth_user.id,
+        project_id,
         branch_id,
         version_id,
         testbed_id,
@@ -382,16 +380,13 @@ async fn get_one_inner(
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
     schema::report::table
-        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(
-            schema::testbed::project_id
-                .eq(query_project.id)
-                .and(schema::report::uuid.eq(path_params.report_uuid.to_string())),
-        )
+        .filter(schema::report::project_id.eq(query_project.id))
+        .filter(schema::report::uuid.eq(path_params.report_uuid.to_string()))
         .select((
             schema::report::id,
             schema::report::uuid,
             schema::report::user_id,
+            schema::report::project_id,
             schema::report::branch_id,
             schema::report::version_id,
             schema::report::testbed_id,
@@ -441,8 +436,7 @@ async fn delete_inner(
     )?;
 
     let (report_id, version_id) = schema::report::table
-        .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
-        .filter(schema::testbed::project_id.eq(query_project.id))
+        .filter(schema::report::project_id.eq(query_project.id))
         .filter(schema::report::uuid.eq(path_params.report_uuid.to_string()))
         .select((schema::report::id, schema::report::version_id))
         .first::<(i32, i32)>(conn)
