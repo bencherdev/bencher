@@ -106,14 +106,12 @@ impl QueryThreshold {
             uuid,
             statistic_id,
             created,
-            modified,
             ..
         } = self;
         Ok(JsonThresholdStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             statistic: QueryStatistic::get(conn, statistic_id)?.into_json()?,
             created: to_date_time(created).map_err(api_error!())?,
-            modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
 }

@@ -67,5 +67,4 @@ pub struct JsonThresholdStatistic {
     pub uuid: Uuid,
     pub statistic: JsonStatistic,
     pub created: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
 }
