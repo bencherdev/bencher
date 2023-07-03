@@ -25,7 +25,7 @@ git add ./services/action/dist/index.js
 git add ./services/ui/package.json
 git add ./services/ui/package-lock.json
 git add ./services/ui/src/components/docs/api/swagger.json
-git add ./services/ui/src/components/docs/pages/reference/Changelog.mdx
+git add ./services/ui/src/docs/reference/Changelog.mdx
 git add ./services/ui/src/types/bencher.ts
 
 TAG="v$VERSION"
