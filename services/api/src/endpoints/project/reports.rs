@@ -1,7 +1,8 @@
 use bencher_json::{JsonEmpty, JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{
-    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
+    dsl::count, expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl,
+    RunQueryDsl,
 };
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -439,16 +440,31 @@ async fn delete_inner(
         Permission::Delete,
     )?;
 
-    let report = schema::report::table
+    let (report_id, version_id) = schema::report::table
         .left_join(schema::testbed::table.on(schema::report::testbed_id.eq(schema::testbed::id)))
         .filter(schema::testbed::project_id.eq(query_project.id))
         .filter(schema::report::uuid.eq(path_params.report_uuid.to_string()))
-        .select(schema::report::id)
-        .first::<i32>(conn)
+        .select((schema::report::id, schema::report::version_id))
+        .first::<(i32, i32)>(conn)
         .map_err(api_error!())?;
-    diesel::delete(schema::report::table.filter(schema::report::id.eq_any(&[report])))
+    diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
         .execute(conn)
         .map_err(api_error!())?;
+
+    // If there are no more reports for this version, delete the version
+    // This is necessary because multiple reports can use the same version via a git hash
+    // This will cascade and delete all branch versions for this version
+    if schema::report::table
+        .filter(schema::report::version_id.eq(version_id))
+        .select(count(schema::report::id))
+        .first::<i64>(conn)
+        .map_err(api_error!())?
+        == 0
+    {
+        diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
+            .execute(conn)
+            .map_err(api_error!())?;
+    }
 
     Ok(JsonEmpty {})
 }

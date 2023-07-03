@@ -277,7 +277,7 @@ CREATE TABLE up_branch_version (
     branch_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
     FOREIGN KEY (branch_id) REFERENCES branch (id) ON DELETE CASCADE,
-    FOREIGN KEY (version_id) REFERENCES version (id),
+    FOREIGN KEY (version_id) REFERENCES version (id) ON DELETE CASCADE,
     UNIQUE(branch_id, version_id)
 );
 INSERT INTO up_branch_version(

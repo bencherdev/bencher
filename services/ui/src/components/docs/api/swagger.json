@@ -4645,8 +4645,16 @@
       "JsonMember": {
         "type": "object",
         "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
           "email": {
             "$ref": "#/components/schemas/Email"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
           },
           "name": {
             "$ref": "#/components/schemas/UserName"
@@ -4663,7 +4671,9 @@
           }
         },
         "required": [
+          "created",
           "email",
+          "modified",
           "name",
           "role",
           "slug",
@@ -5709,10 +5719,6 @@
             "type": "string",
             "format": "date-time"
           },
-          "modified": {
-            "type": "string",
-            "format": "date-time"
-          },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
           },
@@ -5723,7 +5729,6 @@
         },
         "required": [
           "created",
-          "modified",
           "statistic",
           "uuid"
         ]
