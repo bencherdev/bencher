@@ -396,19 +396,5 @@ async fn delete_inner(
     .map_err(api_error!())?;
     info!("Deleted project: {:?}", query_project);
 
-    // Remove all dangling versions
-    diesel::delete(schema::version::table.filter(schema::version::project_id.eq(query_project.id)))
-        .execute(conn)
-        .map_err(api_error!())?;
-    info!("Deleted versions");
-
-    // Remove all dangling statistics
-    diesel::delete(
-        schema::statistic::table.filter(schema::statistic::project_id.eq(query_project.id)),
-    )
-    .execute(conn)
-    .map_err(api_error!())?;
-    info!("Deleted statistics");
-
     Ok(JsonEmpty {})
 }

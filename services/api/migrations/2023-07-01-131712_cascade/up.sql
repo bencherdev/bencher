@@ -50,8 +50,8 @@ CREATE TABLE up_organization_role (
     role TEXT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (organization_id) REFERENCES organization (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (organization_id) REFERENCES organization (id) ON DELETE CASCADE,
     UNIQUE(user_id, organization_id)
 );
 INSERT INTO up_organization_role(
@@ -87,7 +87,7 @@ CREATE TABLE up_project (
     visibility INTEGER NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (organization_id) REFERENCES organization (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organization (id) ON DELETE CASCADE,
     UNIQUE(organization_id, name)
 );
 INSERT INTO up_project(
@@ -126,8 +126,8 @@ CREATE TABLE up_project_role (
     role TEXT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     UNIQUE(user_id, project_id)
 );
 INSERT INTO up_project_role(
@@ -162,7 +162,7 @@ CREATE TABLE up_metric_kind (
     units TEXT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     UNIQUE(project_id, name),
     UNIQUE(project_id, slug)
 );
@@ -201,7 +201,7 @@ CREATE TABLE up_branch (
     slug TEXT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     UNIQUE(project_id, name),
     UNIQUE(project_id, slug)
 );
@@ -235,7 +235,8 @@ CREATE TABLE up_version (
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,
     number INTEGER NOT NULL,
-    hash TEXT
+    hash TEXT,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE
 );
 INSERT INTO up_version(
         id,
@@ -275,8 +276,8 @@ CREATE TABLE up_branch_version (
     id INTEGER PRIMARY KEY NOT NULL,
     branch_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
-    FOREIGN KEY (branch_id) REFERENCES branch (id) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (version_id) REFERENCES version (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (branch_id) REFERENCES branch (id) ON DELETE CASCADE,
+    FOREIGN KEY (version_id) REFERENCES version (id),
     UNIQUE(branch_id, version_id)
 );
 INSERT INTO up_branch_version(
@@ -300,7 +301,7 @@ CREATE TABLE up_testbed (
     slug TEXT NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     UNIQUE(project_id, name),
     UNIQUE(project_id, slug)
 );
@@ -335,7 +336,7 @@ CREATE TABLE up_benchmark (
     project_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     created BIGINT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
     UNIQUE(project_id, name)
 );
 INSERT INTO up_benchmark(
@@ -366,10 +367,10 @@ CREATE TABLE up_threshold (
     statistic_id INTEGER NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (branch_id) REFERENCES branch (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (testbed_id) REFERENCES testbed (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (statistic_id) REFERENCES statistic (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id),
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id),
     UNIQUE(metric_kind_id, branch_id, testbed_id)
 );
 INSERT INTO up_threshold(
@@ -409,7 +410,8 @@ CREATE TABLE up_statistic (
     window BIGINT,
     lower_boundary DOUBLE,
     upper_boundary DOUBLE,
-    created BIGINT NOT NULL
+    created BIGINT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE
 );
 INSERT INTO up_statistic(
         id,
@@ -463,10 +465,10 @@ CREATE TABLE up_report (
     start_time BIGINT NOT NULL,
     end_time BIGINT NOT NULL,
     created BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (branch_id) REFERENCES branch (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (version_id) REFERENCES version (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (testbed_id) REFERENCES testbed (id) ON UPDATE RESTRICT ON DELETE RESTRICT
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    FOREIGN KEY (version_id) REFERENCES version (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id)
 );
 INSERT INTO up_report(
         id,
@@ -501,8 +503,8 @@ CREATE TABLE up_perf (
     report_id INTEGER NOT NULL,
     iteration INTEGER NOT NULL,
     benchmark_id INTEGER NOT NULL,
-    FOREIGN KEY (report_id) REFERENCES report (id) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (benchmark_id) REFERENCES benchmark (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,
+    FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
     UNIQUE(report_id, iteration, benchmark_id)
 );
 INSERT INTO up_perf(
@@ -530,8 +532,8 @@ CREATE TABLE up_metric (
     value DOUBLE NOT NULL,
     lower_bound DOUBLE,
     upper_bound DOUBLE,
-    FOREIGN KEY (perf_id) REFERENCES perf (id) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (perf_id) REFERENCES perf (id) ON DELETE CASCADE,
+    FOREIGN KEY (metric_kind_id) REFERENCES metric_kind (id),
     UNIQUE(perf_id, metric_kind_id)
 );
 INSERT INTO up_metric(
@@ -563,9 +565,9 @@ CREATE TABLE up_boundary (
     metric_id INTEGER NOT NULL UNIQUE,
     lower_limit DOUBLE,
     upper_limit DOUBLE,
-    FOREIGN KEY (metric_id) REFERENCES metric (id) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (threshold_id) REFERENCES threshold (id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (statistic_id) REFERENCES statistic (id) ON UPDATE RESTRICT ON DELETE RESTRICT
+    FOREIGN KEY (metric_id) REFERENCES metric (id) ON DELETE CASCADE,
+    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
+    FOREIGN KEY (statistic_id) REFERENCES statistic (id)
 );
 INSERT INTO up_boundary(
         id,
@@ -595,7 +597,7 @@ CREATE TABLE up_alert (
     boundary_limit BOOLEAN NOT NULL,
     status INTEGER NOT NULL,
     modified BIGINT NOT NULL,
-    FOREIGN KEY (boundary_id) REFERENCES boundary (id) ON UPDATE CASCADE ON DELETE CASCADE
+    FOREIGN KEY (boundary_id) REFERENCES boundary (id) ON DELETE CASCADE
 );
 INSERT INTO up_alert(
         id,

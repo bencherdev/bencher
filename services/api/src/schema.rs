@@ -248,12 +248,14 @@ diesel::joinable!(report -> branch (branch_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
+diesel::joinable!(statistic -> project (project_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(threshold -> branch (branch_id));
 diesel::joinable!(threshold -> metric_kind (metric_kind_id));
 diesel::joinable!(threshold -> statistic (statistic_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));
+diesel::joinable!(version -> project (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     alert,
