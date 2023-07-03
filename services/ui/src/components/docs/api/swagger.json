@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -5604,6 +5604,10 @@
             "format": "uint32",
             "minimum": 0
           },
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
           },
@@ -5628,6 +5632,7 @@
         },
         "required": [
           "created",
+          "project",
           "test",
           "uuid"
         ]
@@ -5691,6 +5696,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
           },
@@ -5707,6 +5716,7 @@
           "created",
           "metric_kind",
           "modified",
+          "project",
           "statistic",
           "testbed",
           "uuid"
@@ -5719,6 +5729,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "project": {
+            "type": "string",
+            "format": "uuid"
+          },
           "statistic": {
             "$ref": "#/components/schemas/JsonStatistic"
           },
@@ -5729,6 +5743,7 @@
         },
         "required": [
           "created",
+          "project",
           "statistic",
           "uuid"
         ]
