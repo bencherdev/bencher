@@ -489,6 +489,7 @@ async fn delete_inner(
                 });
         }
 
+        // For each version greater than this one, decrement the version number
         for (version_id, version_number) in version_map {
             diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
                 .set(schema::version::number.eq(version_number - 1))
@@ -497,6 +498,7 @@ async fn delete_inner(
                 .unwrap();
         }
 
+        // Finally delete the dangling version
         diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
             .execute(conn)
             .map_err(api_error!())?;

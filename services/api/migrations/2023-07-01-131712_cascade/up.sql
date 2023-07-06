@@ -467,6 +467,11 @@ CREATE TABLE up_report (
     uuid TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
     project_id INTEGER NOT NULL,
+    -- Connect to the branch and version individually and not to their branch_version
+    -- This is necessary in order for cloned branches to work
+    -- Cloned branches will *not* have a report tied to their specific branch_version
+    -- So we don't want to have to query through the branch_version table
+    -- to filter on the branch and list all of the versions
     branch_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
