@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bencher_json::{JsonEmpty, JsonNewReport, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -15,7 +17,7 @@ use crate::{
     error::api_error,
     model::project::{
         report::{results::ReportResults, InsertReport, QueryReport},
-        version::InsertVersion,
+        version::{InsertVersion, QueryVersion},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -448,6 +450,7 @@ async fn delete_inner(
     // If there are no more reports for this version, delete the version
     // This is necessary because multiple reports can use the same version via a git hash
     // This will cascade and delete all branch versions for this version
+    // Before doing so, decrement all greater versions
     if schema::report::table
         .filter(schema::report::version_id.eq(version_id))
         .select(count(schema::report::id))
@@ -455,6 +458,45 @@ async fn delete_inner(
         .map_err(api_error!())?
         == 0
     {
+        let query_version = QueryVersion::get(conn, version_id)?;
+        // Get all branches that use this version
+        let branches = schema::branch::table
+            .inner_join(
+                schema::branch_version::table
+                    .on(schema::branch_version::branch_id.eq(schema::branch::id)),
+            )
+            .filter(schema::branch_version::version_id.eq(version_id))
+            .select(schema::branch::id)
+            .load::<i32>(conn)
+            .map_err(api_error!())?;
+
+        let mut version_map = HashMap::new();
+        // Get all versions greater than this one for each of the branches
+        for branch_id in branches {
+            schema::version::table
+                .filter(schema::version::number.gt(query_version.number))
+                .inner_join(
+                    schema::branch_version::table
+                        .on(schema::branch_version::version_id.eq(schema::version::id)),
+                )
+                .filter(schema::branch_version::branch_id.eq(branch_id))
+                .select((schema::version::id, schema::version::number))
+                .load::<(i32, i32)>(conn)
+                .map_err(api_error!())?
+                .into_iter()
+                .for_each(|(version_id, version_number)| {
+                    version_map.insert(version_id, version_number);
+                });
+        }
+
+        for (version_id, version_number) in version_map {
+            diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
+                .set(schema::version::number.eq(version_number - 1))
+                .execute(conn)
+                .map_err(api_error!())
+                .unwrap();
+        }
+
         diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
             .execute(conn)
             .map_err(api_error!())?;
