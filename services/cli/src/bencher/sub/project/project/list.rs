@@ -45,17 +45,18 @@ impl From<List> for JsonProjects {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        if let Some(org) = &self.org {
-            self.backend
-                .get(&format!("/v0/organizations/{org}/projects"))
-                .await?;
-        } else {
-            let json_projects: JsonProjects = self.clone().into();
-            self.backend
-                .get_query("/v0/projects", &json_projects)
-                .await?;
-        }
-
+        self.backend
+            .send_with(
+                |client| async move {
+                    if let Some(org) = self.org.clone() {
+                        client.org_projects_get().organization(org).send().await
+                    } else {
+                        client.projects_get().public(self.public).send().await
+                    }
+                },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

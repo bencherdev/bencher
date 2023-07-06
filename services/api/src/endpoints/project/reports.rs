@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{JsonEmpty, JsonNewReport, JsonReport, ResourceId};
+use bencher_json::{JsonEmpty, JsonNewReport, JsonPagination, JsonReport, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
@@ -37,6 +37,20 @@ const REPORT_RESOURCE: Resource = Resource::Report;
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportsParams {
     pub project: ResourceId,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjReportsQuery {
+    #[serde(flatten)]
+    pub pagination: JsonPagination<ProjReportsOrder>,
+}
+
+#[derive(Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjReportsOrder {
+    DateTimeAsc,
+    #[default]
+    DateTimeDesc,
 }
 
 #[allow(clippy::unused_async)]

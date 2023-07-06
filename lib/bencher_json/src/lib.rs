@@ -51,6 +51,17 @@ pub struct JsonAllowed {
     pub allowed: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPagination<T>
+where
+    T: Default,
+{
+    pub page: Option<usize>,
+    pub limit: Option<usize>,
+    pub order: Option<T>,
+}
+
 pub fn sanitize_json<T>(json: &T) -> serde_json::Value
 where
     T: Clone + Serialize + Sanitize,
