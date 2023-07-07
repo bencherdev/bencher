@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use bencher_json::{JsonEmpty, JsonNewReport, JsonPagination, JsonReport, ResourceId};
+use bencher_json::{
+    JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, ResourceId,
+};
 use bencher_rbac::project::Permission;
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -39,18 +41,13 @@ pub struct ProjReportsParams {
     pub project: ResourceId,
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct ProjReportsQuery {
-    #[serde(flatten)]
-    pub pagination: JsonPagination<ProjReportsOrder>,
-}
+pub type ProjReportsQuery = JsonPagination<ProjReportsSort>;
 
-#[derive(Default, Deserialize, JsonSchema)]
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum ProjReportsOrder {
-    DateTimeAsc,
+pub enum ProjReportsSort {
     #[default]
-    DateTimeDesc,
+    DateTime,
 }
 
 #[allow(clippy::unused_async)]
@@ -62,6 +59,7 @@ pub enum ProjReportsOrder {
 pub async fn proj_reports_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjReportsParams>,
+    _query_params: Query<ProjReportsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -74,6 +72,7 @@ pub async fn proj_reports_options(
 pub async fn proj_reports_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjReportsParams>,
+    query_params: Query<ProjReportsQuery>,
 ) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
@@ -82,6 +81,7 @@ pub async fn proj_reports_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
+        query_params.into_inner(),
         endpoint,
     )
     .await
@@ -98,6 +98,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjReportsParams,
+    query_params: ProjReportsQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonReport>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -105,7 +106,7 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    Ok(schema::report::table
+    let mut query = schema::report::table
         .filter(schema::report::project_id.eq(query_project.id))
         .select((
             schema::report::id,
@@ -120,10 +121,26 @@ async fn get_ls_inner(
             schema::report::end_time,
             schema::report::created,
         ))
-        .order((
-            schema::report::start_time.desc(),
-            schema::report::end_time.desc(),
-        ))
+        .into_boxed();
+
+    query = match query_params.order() {
+        ProjReportsSort::DateTime => match query_params.direction {
+            Some(JsonDirection::Asc) => query.order((
+                schema::report::start_time.asc(),
+                schema::report::end_time.asc(),
+                schema::report::created.asc(),
+            )),
+            Some(JsonDirection::Desc) | None => query.order((
+                schema::report::start_time.desc(),
+                schema::report::end_time.desc(),
+                schema::report::created.desc(),
+            )),
+        },
+    };
+
+    Ok(query
+        .offset(query_params.offset())
+        .limit(query_params.limit())
         .load::<QueryReport>(conn)
         .map_err(api_error!())?
         .into_iter()

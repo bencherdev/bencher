@@ -11,12 +11,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod organization;
+pub mod pagination;
 pub mod project;
 pub mod system;
 pub mod urlencoded;
 pub mod user;
 
 pub use organization::{member::JsonMember, JsonNewOrganization, JsonOrganization};
+pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
     alert::JsonAlert,
     benchmark::JsonBenchmark,
@@ -49,17 +51,6 @@ pub struct JsonEmpty {}
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAllowed {
     pub allowed: bool,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPagination<T>
-where
-    T: Default,
-{
-    pub page: Option<usize>,
-    pub limit: Option<usize>,
-    pub order: Option<T>,
 }
 
 pub fn sanitize_json<T>(json: &T) -> serde_json::Value
