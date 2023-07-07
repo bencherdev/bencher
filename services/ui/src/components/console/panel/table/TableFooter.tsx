@@ -7,37 +7,90 @@ const TableFooter = (props) => {
 					role="navigation"
 					aria-label="pagination"
 				>
-					<a class="pagination-previous">Previous</a>
+					<button
+						class="pagination-previous"
+						aria-label="Go to previous page"
+						disabled={props.page() < 2}
+						onClick={(e) => {
+							e.preventDefault();
+							props.handlePage(props.page() - 1);
+						}}
+					>
+						Previous
+					</button>
 					<ul class="pagination-list">
+						{props.page() > 2 && (
+							<li>
+								<button
+									class="pagination-link"
+									aria-label="Go to page 1"
+									onClick={(e) => {
+										e.preventDefault();
+										props.handlePage(1);
+									}}
+								>
+									1
+								</button>
+							</li>
+						)}
+						{props.page() > 3 && (
+							<li>
+								<span class="pagination-ellipsis">&hellip;</span>
+							</li>
+						)}
+						{props.page() > 1 && (
+							<li>
+								<button
+									class="pagination-link"
+									aria-label={`Go to page ${props.page() - 1}`}
+									onClick={(e) => {
+										e.preventDefault();
+										props.handlePage(props.page() - 1);
+									}}
+								>
+									{props.page() - 1}
+								</button>
+							</li>
+						)}
 						<li>
-							<a class="pagination-link" aria-label="Goto page 1">
-								1
-							</a>
-						</li>
-						<li>
-							<span class="pagination-ellipsis">&hellip;</span>
-						</li>
-						<li>
-							<a class="pagination-link" aria-label="Goto page 45">
-								45
-							</a>
-						</li>
-						<li>
-							<a
+							<button
 								class="pagination-link is-current"
-								aria-label="Page 46"
+								aria-label={`Page ${props.page()}`}
 								aria-current="page"
+								onClick={(e) => {
+									e.preventDefault();
+									props.handleRefresh();
+								}}
 							>
-								46
-							</a>
+								{props.page()}
+							</button>
 						</li>
-						<li>
-							<a class="pagination-link" aria-label="Goto page 47">
-								47
-							</a>
-						</li>
+						{props.table_data_len == props.per_page() && (
+							<li>
+								<button
+									class="pagination-link"
+									aria-label={`Go to page ${props.page + 1}`}
+									onClick={(e) => {
+										e.preventDefault();
+										props.handlePage(props.page() + 1);
+									}}
+								>
+									{props.page() + 1}
+								</button>
+							</li>
+						)}
 					</ul>
-					<a class="pagination-next">Next page</a>
+					<button
+						class="pagination-next"
+						aria-label="Go to next page"
+						disabled={props.table_data_len < props.per_page()}
+						onClick={(e) => {
+							e.preventDefault();
+							props.handlePage(props.page() + 1);
+						}}
+					>
+						Next page
+					</button>
 				</nav>
 			</div>
 		</section>

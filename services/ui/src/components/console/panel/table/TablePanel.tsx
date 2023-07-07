@@ -22,20 +22,29 @@ import TableFooter from "./TableFooter";
 
 // const SORT_PARAM = "sort";
 // const DIRECTION_PARAM = "direction";
-// const PER_PAGE_PARAM = "per_page";
+const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
+
+const DEFAULT_PER_PAGE = 8;
+const DEFAULT_PAGE = 1;
 
 const TablePanel = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
 
-	if (!validate_u32(searchParams[PAGE_PARAM])) {
-		setSearchParams({ [PAGE_PARAM]: 1 });
+	if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
+		setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
 	}
-	const page = createMemo(() => searchParams[PAGE_PARAM]);
+	if (!validate_u32(searchParams[PAGE_PARAM])) {
+		setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
+	}
+
+	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
+	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
 
 	const pagination_query = createMemo(() => {
 		return {
+			per_page: per_page(),
 			page: page(),
 		};
 	});
@@ -81,6 +90,17 @@ const TablePanel = (props) => {
 	};
 	const [table_data] = createResource(fetcher, getLs);
 
+	createEffect(() => {
+		if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
+			setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+		}
+	});
+	createEffect(() => {
+		if (!validate_u32(searchParams[PAGE_PARAM])) {
+			setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
+		}
+	});
+
 	const handlePage = (page: number) => {
 		if (validate_u32(page.toString())) {
 			setSearchParams({ [PAGE_PARAM]: page });
@@ -114,7 +134,13 @@ const TablePanel = (props) => {
 				table_data={table_data}
 				state={state}
 			/>
-			<TableFooter page={page} handlePage={handlePage} />
+			<TableFooter
+				per_page={per_page}
+				page={page}
+				handlePage={handlePage}
+				handleRefresh={handleRefresh}
+				table_data_len={table_data()?.length}
+			/>
 		</>
 	);
 };
