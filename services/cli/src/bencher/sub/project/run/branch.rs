@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use bencher_json::{
-    project::branch::{JsonBranches, JsonStartPoint, BRANCH_MAIN_STR},
+    project::branch::{JsonStartPoint, BRANCH_MAIN_STR},
     BranchName, JsonBranch, JsonNewBranch, ResourceId,
 };
 
@@ -144,15 +144,20 @@ async fn get_branch(
     branch_name: &BranchName,
     backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
-    let value = backend
-        .get_query_quiet(
-            &format!("/v0/projects/{project}/branches"),
-            &JsonBranches {
-                name: Some(branch_name.to_string()),
+    let mut json_branches = backend
+        .send_with(
+            |client| async move {
+                client
+                    .proj_branches_get()
+                    .project(project.clone())
+                    .name(branch_name.as_ref())
+                    .send()
+                    .await
             },
+            true,
         )
         .await?;
-    let mut json_branches: Vec<JsonBranch> = serde_json::from_value(value)?;
+
     let branch_count = json_branches.len();
     if let Some(branch) = json_branches.pop() {
         if branch_count == 1 {

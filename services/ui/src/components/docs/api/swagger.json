@@ -1814,10 +1814,44 @@
           },
           {
             "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
             "name": "name",
             "schema": {
               "nullable": true,
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjBranchesSort"
             }
           }
         ],
@@ -2497,7 +2531,7 @@
             "schema": {
               "nullable": true,
               "type": "integer",
-              "format": "uint32",
+              "format": "uint8",
               "minimum": 0
             }
           },
@@ -6092,6 +6126,12 @@
         "enum": [
           "asc",
           "desc"
+        ]
+      },
+      "ProjBranchesSort": {
+        "type": "string",
+        "enum": [
+          "name"
         ]
       },
       "ProjReportsSort": {

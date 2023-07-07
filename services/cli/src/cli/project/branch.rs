@@ -1,7 +1,7 @@
 use bencher_json::{BranchName, ResourceId, Slug};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBranch {
@@ -21,8 +21,22 @@ pub struct CliBranchList {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Branch name
+    #[clap(long)]
+    pub name: Option<BranchName>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliBranchesSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliBranchesSort {
+    /// Name of the branch
+    Name,
 }
 
 #[derive(Parser, Debug)]

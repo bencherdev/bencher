@@ -7,7 +7,7 @@ use bencher_json::ResourceId;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     cli::{
-        project::report::{CliReportList, CliReportSort},
+        project::report::{CliReportList, CliReportsSort},
         CliPagination,
     },
     CliError,
@@ -45,8 +45,8 @@ impl TryFrom<CliReportList> for List {
     }
 }
 
-impl From<CliPagination<CliReportSort>> for Pagination {
-    fn from(pagination: CliPagination<CliReportSort>) -> Self {
+impl From<CliPagination<CliReportsSort>> for Pagination {
+    fn from(pagination: CliPagination<CliReportsSort>) -> Self {
         let CliPagination {
             sort,
             direction,
@@ -55,7 +55,7 @@ impl From<CliPagination<CliReportSort>> for Pagination {
         } = pagination;
         Self {
             sort: sort.map(|sort| match sort {
-                CliReportSort::DateTime => ProjReportsSort::DateTime,
+                CliReportsSort::DateTime => ProjReportsSort::DateTime,
             }),
             direction: direction.map(Into::into),
             page,

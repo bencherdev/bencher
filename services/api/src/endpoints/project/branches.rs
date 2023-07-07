@@ -1,4 +1,4 @@
-use bencher_json::{project::branch::JsonBranches, JsonBranch, JsonNewBranch, ResourceId};
+use bencher_json::{JsonBranch, JsonDirection, JsonNewBranch, JsonPagination, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -35,6 +35,20 @@ pub struct ProjBranchesParams {
     pub project: ResourceId,
 }
 
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjBranchesQuery {
+    pub name: Option<String>,
+    #[serde(flatten)]
+    pub pagination: JsonPagination<ProjBranchesSort>,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjBranchesSort {
+    #[default]
+    Name,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -44,7 +58,7 @@ pub struct ProjBranchesParams {
 pub async fn proj_branches_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBranchesParams>,
-    _query_params: Query<JsonBranches>,
+    _query_params: Query<ProjBranchesQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -57,7 +71,7 @@ pub async fn proj_branches_options(
 pub async fn proj_branches_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjBranchesParams>,
-    query_params: Query<JsonBranches>,
+    query_params: Query<ProjBranchesQuery>,
 ) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
@@ -83,7 +97,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjBranchesParams,
-    json_branches: JsonBranches,
+    query_params: ProjBranchesQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonBranch>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -95,12 +109,20 @@ async fn get_ls_inner(
         .filter(schema::branch::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = json_branches.name {
+    if let Some(name) = query_params.name {
         query = query.filter(schema::branch::name.eq(name));
     }
 
+    query = match query_params.pagination.order() {
+        ProjBranchesSort::Name => match query_params.pagination.direction {
+            Some(JsonDirection::Asc) | None => query.order(schema::branch::name.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::branch::name.desc()),
+        },
+    };
+
     Ok(query
-        .order((schema::branch::name, schema::branch::slug))
+        .offset(query_params.pagination.offset())
+        .limit(query_params.pagination.limit())
         .load::<QueryBranch>(conn)
         .map_err(api_error!())?
         .into_iter()

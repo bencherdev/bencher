@@ -27,7 +27,7 @@ pub struct CliReportList {
     pub project: ResourceId,
 
     #[clap(flatten)]
-    pub pagination: CliPagination<CliReportSort>,
+    pub pagination: CliPagination<CliReportsSort>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -35,7 +35,7 @@ pub struct CliReportList {
 
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
-pub enum CliReportSort {
+pub enum CliReportsSort {
     /// Date time of the report
     DateTime,
 }
