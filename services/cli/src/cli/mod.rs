@@ -1,5 +1,5 @@
 use bencher_json::{Jwt, Url};
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 pub mod docs;
 pub mod mock;
@@ -116,4 +116,45 @@ pub struct CliBackend {
     /// Retry after second(s) (default 3)
     #[clap(long)]
     pub retry_after: Option<u64>,
+}
+
+#[derive(Args, Debug)]
+pub struct CliPagination<T>
+where
+    T: ValueEnum + Clone + std::marker::Send + std::marker::Sync + 'static,
+{
+    /// What to sort results by
+    #[clap(long)]
+    pub sort: Option<T>,
+
+    /// The direction to sort the results by
+    #[clap(long)]
+    pub direction: Option<CliDirection>,
+
+    /// The number of results per page (default 8 max 128)
+    #[clap(long)]
+    pub per_page: Option<u32>,
+
+    /// Page number of the results to fetch
+    #[clap(long)]
+    pub page: Option<u32>,
+}
+
+/// The direction to sort the results by
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliDirection {
+    /// Ascending
+    Asc,
+    /// Descending
+    Desc,
+}
+
+impl From<CliDirection> for bencher_client::types::JsonDirection {
+    fn from(direction: CliDirection) -> Self {
+        match direction {
+            CliDirection::Asc => Self::Asc,
+            CliDirection::Desc => Self::Desc,
+        }
+    }
 }

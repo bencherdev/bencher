@@ -1,9 +1,9 @@
 use bencher_json::ResourceId;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
 use super::run::CliRun;
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliReport {
@@ -27,7 +27,17 @@ pub struct CliReportList {
     pub project: ResourceId,
 
     #[clap(flatten)]
+    pub pagination: CliPagination<CliReportSort>,
+
+    #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliReportSort {
+    /// Date time of the report
+    DateTime,
 }
 
 #[derive(Parser, Debug)]
