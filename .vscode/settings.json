@@ -24,7 +24,7 @@
   // Extension 'Rome' is configured as formatter but it cannot format 'TypeScript JSX'-files
   "[typescriptreact]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rome.rome"
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   },
   "sqltools.connections": [
     {

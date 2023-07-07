@@ -1,0 +1,47 @@
+const TableFooter = (props) => {
+	return (
+		<section class="section">
+			<div class="container">
+				<nav
+					class="pagination is-centered is-rounded"
+					role="navigation"
+					aria-label="pagination"
+				>
+					<a class="pagination-previous">Previous</a>
+					<ul class="pagination-list">
+						<li>
+							<a class="pagination-link" aria-label="Goto page 1">
+								1
+							</a>
+						</li>
+						<li>
+							<span class="pagination-ellipsis">&hellip;</span>
+						</li>
+						<li>
+							<a class="pagination-link" aria-label="Goto page 45">
+								45
+							</a>
+						</li>
+						<li>
+							<a
+								class="pagination-link is-current"
+								aria-label="Page 46"
+								aria-current="page"
+							>
+								46
+							</a>
+						</li>
+						<li>
+							<a class="pagination-link" aria-label="Goto page 47">
+								47
+							</a>
+						</li>
+					</ul>
+					<a class="pagination-next">Next page</a>
+				</nav>
+			</div>
+		</section>
+	);
+};
+
+export default TableFooter;

@@ -209,7 +209,7 @@ export const validate_boundary = (boundary: string): boolean => {
 };
 
 export const validate_u32 = (input: string) => {
-	if (input.length === 0) {
+	if (input?.length === 0) {
 		return false;
 	}
 	const num = Number(input);
