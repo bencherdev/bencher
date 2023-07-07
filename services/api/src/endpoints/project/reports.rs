@@ -41,7 +41,7 @@ pub struct ProjReportsParams {
     pub project: ResourceId,
 }
 
-pub type ProjReportsQuery = JsonPagination<ProjReportsSort>;
+pub type ProjReportsQuery = JsonPagination<ProjReportsSort, ()>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

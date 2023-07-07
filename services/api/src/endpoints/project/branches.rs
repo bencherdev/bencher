@@ -35,18 +35,18 @@ pub struct ProjBranchesParams {
     pub project: ResourceId,
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct ProjBranchesQuery {
-    pub name: Option<String>,
-    #[serde(flatten)]
-    pub pagination: JsonPagination<ProjBranchesSort>,
-}
+pub type ProjBranchesQuery = JsonPagination<ProjBranchesSort, ProjBranchesQueryParams>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjBranchesSort {
     #[default]
     Name,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjBranchesQueryParams {
+    pub name: Option<String>,
 }
 
 #[allow(clippy::unused_async)]
@@ -109,20 +109,20 @@ async fn get_ls_inner(
         .filter(schema::branch::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = query_params.name {
+    if let Some(name) = &query_params.query.name {
         query = query.filter(schema::branch::name.eq(name));
     }
 
-    query = match query_params.pagination.order() {
-        ProjBranchesSort::Name => match query_params.pagination.direction {
+    query = match query_params.order() {
+        ProjBranchesSort::Name => match query_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::branch::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::branch::name.desc()),
         },
     };
 
     Ok(query
-        .offset(query_params.pagination.offset())
-        .limit(query_params.pagination.limit())
+        .offset(query_params.offset())
+        .limit(query_params.limit())
         .load::<QueryBranch>(conn)
         .map_err(api_error!())?
         .into_iter()

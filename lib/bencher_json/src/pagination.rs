@@ -4,11 +4,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPagination<T> {
-    pub sort: Option<T>,
+pub struct JsonPagination<S, Q> {
+    pub sort: Option<S>,
     pub direction: Option<JsonDirection>,
     pub per_page: Option<u8>,
     pub page: Option<u32>,
+
+    #[serde(flatten)]
+    // WARNING: DO NOT USE INTEGERS IN THE NESTED QUERY STRUCT
+    // https://github.com/oxidecomputer/dropshot/issues/721
+    pub query: Q,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -19,10 +24,10 @@ pub enum JsonDirection {
     Desc,
 }
 
-impl<T> JsonPagination<T> {
-    pub fn order(&self) -> T
+impl<S, Q> JsonPagination<S, Q> {
+    pub fn order(&self) -> S
     where
-        T: Clone + Copy + Default,
+        S: Clone + Copy + Default,
     {
         self.sort.unwrap_or_default()
     }
