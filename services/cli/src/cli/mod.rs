@@ -131,9 +131,9 @@ where
     #[clap(long)]
     pub direction: Option<CliDirection>,
 
-    /// The number of results per page (default 8 max 128)
+    /// The number of results per page (default 8 max 255)
     #[clap(long)]
-    pub per_page: Option<u32>,
+    pub per_page: Option<u8>,
 
     /// Page number of the results to fetch
     #[clap(long)]

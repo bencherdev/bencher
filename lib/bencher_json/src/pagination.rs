@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct JsonPagination<T> {
     pub sort: Option<T>,
     pub direction: Option<JsonDirection>,
-    pub per_page: Option<u32>,
+    pub per_page: Option<u8>,
     pub page: Option<u32>,
 }
 
@@ -29,7 +29,7 @@ impl<T> JsonPagination<T> {
 
     pub fn offset(&self) -> i64 {
         match self.page {
-            Some(page @ 2_u32..=u32::MAX) => i64::from((page - 1) * self.per_page()),
+            Some(page @ 2_u32..=u32::MAX) => i64::from((page - 1) * u32::from(self.per_page())),
             Some(0 | 1) | None => 0,
         }
     }
@@ -38,7 +38,7 @@ impl<T> JsonPagination<T> {
         i64::from(self.per_page())
     }
 
-    fn per_page(&self) -> u32 {
+    fn per_page(&self) -> u8 {
         self.per_page.unwrap_or(8)
     }
 }

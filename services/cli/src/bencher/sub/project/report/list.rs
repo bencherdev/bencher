@@ -24,7 +24,7 @@ pub struct List {
 pub struct Pagination {
     pub sort: Option<ProjReportsSort>,
     pub direction: Option<JsonDirection>,
-    pub per_page: Option<u32>,
+    pub per_page: Option<u8>,
     pub page: Option<u32>,
 }
 
