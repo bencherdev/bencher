@@ -2,6 +2,7 @@ import { Link } from "solid-app-router";
 import { For, Match, Show, Switch } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
+import TabFooter from "./TabFooter";
 
 const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
 
@@ -34,7 +35,7 @@ const PlotTab = (props) => {
 
 	return (
 		<>
-			<p class="panel-tabs">
+			<div class="panel-tabs">
 				<For each={perf_tabs}>
 					{(tab) => (
 						<a
@@ -45,7 +46,7 @@ const PlotTab = (props) => {
 						</a>
 					)}
 				</For>
-			</p>
+			</div>
 			<Switch
 				fallback={
 					<div class="box">
@@ -80,6 +81,15 @@ const PlotTab = (props) => {
 					</For>
 				</Match>
 			</Switch>
+			<div class="panel-block">
+				<TabFooter
+					per_page={() => 8}
+					page={() => 1}
+					handlePage={(page) => console.log(page)}
+					handleRefresh={() => console.log("refresh")}
+					table_data_len={getTab().length}
+				/>
+			</div>
 		</>
 	);
 };
