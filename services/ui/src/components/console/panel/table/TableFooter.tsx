@@ -57,10 +57,6 @@ const TableFooter = (props) => {
 								class="pagination-link is-current"
 								aria-label={`Page ${props.page()}`}
 								aria-current="page"
-								onClick={(e) => {
-									e.preventDefault();
-									props.handleRefresh();
-								}}
 							>
 								{props.page()}
 							</button>

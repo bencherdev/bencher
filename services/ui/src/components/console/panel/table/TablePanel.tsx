@@ -138,7 +138,6 @@ const TablePanel = (props) => {
 				per_page={per_page}
 				page={page}
 				handlePage={handlePage}
-				handleRefresh={handleRefresh}
 				table_data_len={table_data()?.length}
 			/>
 		</>

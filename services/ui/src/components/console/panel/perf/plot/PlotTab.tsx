@@ -20,6 +20,33 @@ const PlotTab = (props) => {
 		}
 	};
 
+	const getPage = () => {
+		switch (props.tab()) {
+			case PerfTab.BRANCHES:
+				return props.branches_page;
+			case PerfTab.TESTBEDS:
+				return props.testbeds_page;
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks_page;
+			default:
+				return 1;
+		}
+	};
+
+	const getHandlePage = () => {
+		switch (props.tab()) {
+			case PerfTab.BRANCHES:
+				return props.handleBranchesPage;
+			case PerfTab.TESTBEDS:
+				return props.handleTestbedsPage;
+			case PerfTab.BENCHMARKS:
+				return props.handleBenchmarksPage;
+			default:
+				return (page: number) =>
+					console.error("No handle for tab", props.tab(), page);
+		}
+	};
+
 	const handleChecked = (index: number, uuid: string) => {
 		switch (props.tab()) {
 			case PerfTab.BRANCHES:
@@ -83,10 +110,9 @@ const PlotTab = (props) => {
 			</Switch>
 			<div class="panel-block">
 				<TabFooter
-					per_page={() => 8}
-					page={() => 1}
-					handlePage={(page) => console.log(page)}
-					handleRefresh={() => console.log("refresh")}
+					per_page={props.per_page}
+					page={getPage()}
+					handlePage={getHandlePage()}
 					table_data_len={getTab().length}
 				/>
 			</div>

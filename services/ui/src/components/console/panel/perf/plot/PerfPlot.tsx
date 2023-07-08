@@ -57,10 +57,17 @@ const PerfPlot = (props) => {
 						branches_tab={props.branches_tab}
 						testbeds_tab={props.testbeds_tab}
 						benchmarks_tab={props.benchmarks_tab}
+						per_page={props.per_page}
+						branches_page={props.branches_page}
+						testbeds_page={props.testbeds_page}
+						benchmarks_page={props.benchmarks_page}
 						handleTab={props.handleTab}
 						handleBranchChecked={props.handleBranchChecked}
 						handleTestbedChecked={props.handleTestbedChecked}
 						handleBenchmarkChecked={props.handleBenchmarkChecked}
+						handleBranchesPage={props.handleBranchesPage}
+						handleTestbedsPage={props.handleTestbedsPage}
+						handleBenchmarksPage={props.handleBenchmarksPage}
 					/>
 				</nav>
 			</div>

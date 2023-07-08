@@ -8,17 +8,21 @@ import {
 } from "solid-js";
 import { isPerfTab, is_range, PerfTab, Range } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
-import { get_options, validate_string } from "../../../site/util";
+import { get_options, validate_string, validate_u32 } from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 
+const METRIC_KIND_PARAM = "metric_kind";
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
 const BENCHMARKS_PARAM = "benchmarks";
-const METRIC_KIND_PARAM = "metric_kind";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
+
+const BRANCHES_PAGE_PARAM = "branches_page";
+const TESTBEDS_PAGE_PARAM = "testbeds_page";
+const BENCHMARKS_PAGE_PARAM = "benchmarks_page";
 
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
@@ -27,6 +31,9 @@ const RANGE_PARAM = "range";
 const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
+
+const DEFAULT_PER_PAGE = 8;
+const DEFAULT_PAGE = 1;
 
 const addToArray = (array: any[], add: any) => {
 	if (!array.includes(add)) {
@@ -107,6 +114,9 @@ const PerfPanel = (props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	// Sanitize all query params at init
+	if (!validate_string(searchParams[METRIC_KIND_PARAM], is_valid_slug)) {
+		setSearchParams({ [METRIC_KIND_PARAM]: null });
+	}
 	if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
 		setSearchParams({ [BRANCHES_PARAM]: null });
 	}
@@ -115,9 +125,6 @@ const PerfPanel = (props) => {
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
 		setSearchParams({ [BENCHMARKS_PARAM]: null });
-	}
-	if (!validate_string(searchParams[METRIC_KIND_PARAM], is_valid_slug)) {
-		setSearchParams({ [METRIC_KIND_PARAM]: null });
 	}
 	if (!time_to_date(searchParams[START_TIME_PARAM])) {
 		setSearchParams({ [START_TIME_PARAM]: null });
@@ -137,7 +144,19 @@ const PerfPanel = (props) => {
 		setSearchParams({ [RANGE_PARAM]: null });
 	}
 
+	// Sanitize all pagination query params
+	if (!validate_u32(searchParams[BRANCHES_PAGE_PARAM])) {
+		setSearchParams({ [BRANCHES_PAGE_PARAM]: DEFAULT_PAGE });
+	}
+	if (!validate_u32(searchParams[TESTBEDS_PAGE_PARAM])) {
+		setSearchParams({ [TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE });
+	}
+	if (!validate_u32(searchParams[BENCHMARKS_PAGE_PARAM])) {
+		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE });
+	}
+
 	// Create marshalized memos of all query params
+	const metric_kind = createMemo(() => searchParams[METRIC_KIND_PARAM]);
 	const branches = createMemo(() =>
 		arrayFromString(searchParams[BRANCHES_PARAM]),
 	);
@@ -147,7 +166,6 @@ const PerfPanel = (props) => {
 	const benchmarks = createMemo(() =>
 		arrayFromString(searchParams[BENCHMARKS_PARAM]),
 	);
-	const metric_kind = createMemo(() => searchParams[METRIC_KIND_PARAM]);
 	// start/end_time is used for the query
 	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
 	const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
@@ -185,13 +203,25 @@ const PerfPanel = (props) => {
 		}
 	});
 
+	// Pagination query params
+	const per_page = createMemo(() => DEFAULT_PER_PAGE);
+	const branches_page = createMemo(() =>
+		Number(searchParams[BRANCHES_PAGE_PARAM]),
+	);
+	const testbeds_page = createMemo(() =>
+		Number(searchParams[TESTBEDS_PAGE_PARAM]),
+	);
+	const benchmarks_page = createMemo(() =>
+		Number(searchParams[BENCHMARKS_PAGE_PARAM]),
+	);
+
 	// The perf query sent to the server
 	const perf_query = createMemo(() => {
 		return {
+			metric_kind: metric_kind(),
 			branches: branches(),
 			testbeds: testbeds(),
 			benchmarks: benchmarks(),
-			metric_kind: metric_kind(),
 			start_time: start_time(),
 			end_time: end_time(),
 		};
@@ -268,8 +298,21 @@ const PerfPanel = (props) => {
 			token: props.user?.token,
 		};
 	});
-	const getPerfTab = async (perf_tab: PerfTab, token: null | string) => {
-		const url = props.config?.plot?.tab_url(project_slug(), perf_tab);
+	const getPerfTab = async (
+		perf_tab: PerfTab,
+		token: null | string,
+		query: object,
+	) => {
+		const search_params = new URLSearchParams();
+		for (const [key, value] of Object.entries(query)) {
+			if (value) {
+				search_params.set(key, value);
+			}
+		}
+		const url = `${props.config?.plot?.tab_url(
+			project_slug(),
+			perf_tab,
+		)}?${search_params.toString()}`;
 		return await axios(get_options(url, token))
 			.then((resp) => {
 				return resp?.data;
@@ -282,7 +325,10 @@ const PerfPanel = (props) => {
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
 	const [branches_data] = createResource(tab_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BRANCHES, fetcher.token),
+		getPerfTab(PerfTab.BRANCHES, fetcher.token, {
+			page: branches_page(),
+			per_page: DEFAULT_PER_PAGE,
+		}),
 	);
 	createEffect(() => {
 		const data = branches_data();
@@ -291,7 +337,10 @@ const PerfPanel = (props) => {
 		}
 	});
 	const [testbeds_data] = createResource(tab_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.TESTBEDS, fetcher.token),
+		getPerfTab(PerfTab.TESTBEDS, fetcher.token, {
+			page: testbeds_page(),
+			per_page: DEFAULT_PER_PAGE,
+		}),
 	);
 	createEffect(() => {
 		const data = testbeds_data();
@@ -300,7 +349,10 @@ const PerfPanel = (props) => {
 		}
 	});
 	const [benchmarks_data] = createResource(tab_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BENCHMARKS, fetcher.token),
+		getPerfTab(PerfTab.BENCHMARKS, fetcher.token, {
+			page: benchmarks_page(),
+			per_page: DEFAULT_PER_PAGE,
+		}),
 	);
 	createEffect(() => {
 		const data = benchmarks_data();
@@ -308,6 +360,14 @@ const PerfPanel = (props) => {
 			setBenchmarksTab(resourcesToCheckable(data, benchmarks()));
 		}
 	});
+
+	const handleMetricKind = (metric_kind: string) => {
+		setSearchParams({
+			[METRIC_KIND_PARAM]: validate_string(metric_kind, is_valid_slug)
+				? metric_kind
+				: null,
+		});
+	};
 
 	const handleChecked = (
 		resource_tab: any[],
@@ -330,7 +390,6 @@ const PerfPanel = (props) => {
 			});
 		}
 	};
-
 	const handleBranchChecked = (index: number, uuid: string) => {
 		handleChecked(branches_tab, index, BRANCHES_PARAM, branches(), uuid);
 	};
@@ -341,13 +400,13 @@ const PerfPanel = (props) => {
 		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks(), uuid);
 	};
 
-	const handleMetricKind = (metric_kind: string) => {
-		setSearchParams({
-			[METRIC_KIND_PARAM]: validate_string(metric_kind, is_valid_slug)
-				? metric_kind
-				: null,
-		});
-	};
+	const handleBranchesPage = (page: number) =>
+		setSearchParams({ [BRANCHES_PAGE_PARAM]: page });
+	const handleTestbedsPage = (page: number) =>
+		setSearchParams({ [TESTBEDS_PAGE_PARAM]: page });
+	const handleBenchmarksPage = (page: number) =>
+		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
+
 	const handleStartTime = (date: string) =>
 		setSearchParams({ [START_TIME_PARAM]: date_to_time(date) });
 	const handleEndTime = (date: string) =>
@@ -389,10 +448,10 @@ const PerfPanel = (props) => {
 				path_params={props.path_params}
 				is_console={props.is_console}
 				isPlotInit={isPlotInit}
+				metric_kind={metric_kind}
 				branches={branches}
 				testbeds={testbeds}
 				benchmarks={benchmarks}
-				metric_kind={metric_kind}
 				start_date={start_date}
 				end_date={end_date}
 				refresh={refresh}
@@ -403,6 +462,10 @@ const PerfPanel = (props) => {
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}
+				per_page={per_page}
+				branches_page={branches_page}
+				testbeds_page={testbeds_page}
+				benchmarks_page={benchmarks_page}
 				handleMetricKind={handleMetricKind}
 				handleStartTime={handleStartTime}
 				handleEndTime={handleEndTime}
@@ -412,6 +475,9 @@ const PerfPanel = (props) => {
 				handleBranchChecked={handleBranchChecked}
 				handleTestbedChecked={handleTestbedChecked}
 				handleBenchmarkChecked={handleBenchmarkChecked}
+				handleBranchesPage={handleBranchesPage}
+				handleTestbedsPage={handleTestbedsPage}
+				handleBenchmarksPage={handleBenchmarksPage}
 			/>
 		</>
 	);
