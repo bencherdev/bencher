@@ -8,7 +8,12 @@ import {
 } from "solid-js";
 import { isPerfTab, is_range, PerfTab, Range } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
-import { get_options, validate_string, validate_u32 } from "../../../site/util";
+import {
+	get_options,
+	validate_jwt,
+	validate_string,
+	validate_u32,
+} from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
@@ -253,6 +258,9 @@ const PerfPanel = (props) => {
 
 	const get_perf = async (fetcher) => {
 		const EMPTY_OBJECT = {};
+		if (!validate_jwt(fetcher.token)) {
+			return EMPTY_OBJECT;
+		}
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
 			const url = `${props.config?.plot?.project_url(fetcher.project_slug)}`;
@@ -291,70 +299,99 @@ const PerfPanel = (props) => {
 	const [testbeds_tab, setTestbedsTab] = createStore([]);
 	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
 
-	const tab_fetcher = createMemo(() => {
-		return {
-			project_slug: project_slug(),
-			refresh: refresh(),
-			token: props.user?.token,
-		};
-	});
+	// Resource tabs data: Branches, Testbeds, Benchmarks
 	const getPerfTab = async (
 		perf_tab: PerfTab,
-		token: null | string,
-		query: object,
+		fetcher: { per_page: number; page: number; token: string },
 	) => {
-		const search_params = new URLSearchParams();
-		for (const [key, value] of Object.entries(query)) {
-			if (value) {
-				search_params.set(key, value);
-			}
+		const EMPTY_ARRAY = [];
+		if (!validate_jwt(fetcher.token)) {
+			return EMPTY_ARRAY;
 		}
+		if (!validate_u32(fetcher.per_page.toString())) {
+			return EMPTY_ARRAY;
+		}
+		if (!validate_u32(fetcher.page.toString())) {
+			return EMPTY_ARRAY;
+		}
+		const search_params = new URLSearchParams();
+		search_params.set("per_page", fetcher.per_page.toString());
+		search_params.set("page", fetcher.page.toString());
 		const url = `${props.config?.plot?.tab_url(
 			project_slug(),
 			perf_tab,
 		)}?${search_params.toString()}`;
-		return await axios(get_options(url, token))
+		return await axios(get_options(url, fetcher.token))
 			.then((resp) => {
 				return resp?.data;
 			})
 			.catch((error) => {
 				console.error(error);
-				return [];
+				return EMPTY_ARRAY;
 			});
 	};
 
-	// Resource tabs data: Branches, Testbeds, Benchmarks
-	const [branches_data] = createResource(tab_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BRANCHES, fetcher.token, {
+	const branches_fetcher = createMemo(() => {
+		return {
+			project_slug: project_slug(),
+			per_page: per_page(),
 			page: branches_page(),
-			per_page: DEFAULT_PER_PAGE,
-		}),
+			refresh: refresh(),
+			token: props.user?.token,
+		};
+	});
+	const [branches_data] = createResource(branches_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.BRANCHES, fetcher),
 	);
 	createEffect(() => {
+		if (!validate_u32(searchParams[BRANCHES_PAGE_PARAM])) {
+			setSearchParams({ [BRANCHES_PAGE_PARAM]: DEFAULT_PAGE });
+		}
 		const data = branches_data();
 		if (data) {
 			setBranchesTab(resourcesToCheckable(data, branches()));
 		}
 	});
-	const [testbeds_data] = createResource(tab_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.TESTBEDS, fetcher.token, {
+
+	const testbeds_fetcher = createMemo(() => {
+		return {
+			project_slug: project_slug(),
+			per_page: per_page(),
 			page: testbeds_page(),
-			per_page: DEFAULT_PER_PAGE,
-		}),
+			refresh: refresh(),
+			token: props.user?.token,
+		};
+	});
+	const [testbeds_data] = createResource(testbeds_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.TESTBEDS, fetcher),
 	);
 	createEffect(() => {
+		if (!validate_u32(searchParams[TESTBEDS_PAGE_PARAM])) {
+			setSearchParams({ [TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE });
+		}
 		const data = testbeds_data();
 		if (data) {
 			setTestbedsTab(resourcesToCheckable(data, testbeds()));
 		}
 	});
-	const [benchmarks_data] = createResource(tab_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BENCHMARKS, fetcher.token, {
+
+	const benchmarks_fetcher = createMemo(() => {
+		return {
+			project_slug: project_slug(),
+			per_page: per_page(),
 			page: benchmarks_page(),
-			per_page: DEFAULT_PER_PAGE,
-		}),
+			refresh: refresh(),
+			token: props.user?.token,
+		};
+	});
+	const [benchmarks_data] = createResource(
+		benchmarks_fetcher,
+		async (fetcher) => getPerfTab(PerfTab.BENCHMARKS, fetcher),
 	);
 	createEffect(() => {
+		if (!validate_u32(searchParams[BENCHMARKS_PAGE_PARAM])) {
+			setSearchParams({ [BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE });
+		}
 		const data = benchmarks_data();
 		if (data) {
 			setBenchmarksTab(resourcesToCheckable(data, benchmarks()));
@@ -400,13 +437,6 @@ const PerfPanel = (props) => {
 		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks(), uuid);
 	};
 
-	const handleBranchesPage = (page: number) =>
-		setSearchParams({ [BRANCHES_PAGE_PARAM]: page });
-	const handleTestbedsPage = (page: number) =>
-		setSearchParams({ [TESTBEDS_PAGE_PARAM]: page });
-	const handleBenchmarksPage = (page: number) =>
-		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
-
 	const handleStartTime = (date: string) =>
 		setSearchParams({ [START_TIME_PARAM]: date_to_time(date) });
 	const handleEndTime = (date: string) =>
@@ -429,6 +459,13 @@ const PerfPanel = (props) => {
 			setSearchParams({ [RANGE_PARAM]: range });
 		}
 	};
+
+	const handleBranchesPage = (page: number) =>
+		setSearchParams({ [BRANCHES_PAGE_PARAM]: page });
+	const handleTestbedsPage = (page: number) =>
+		setSearchParams({ [TESTBEDS_PAGE_PARAM]: page });
+	const handleBenchmarksPage = (page: number) =>
+		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: page });
 
 	return (
 		<>
