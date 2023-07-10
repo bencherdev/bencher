@@ -1375,10 +1375,52 @@
         "parameters": [
           {
             "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
             "name": "public",
             "schema": {
               "nullable": true,
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjectsSort"
             }
           }
         ],
@@ -1516,6 +1558,40 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjAlertsSort"
             }
           }
         ],
@@ -2115,6 +2191,48 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjMetricKindsSort"
             }
           }
         ],
@@ -3217,6 +3335,40 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjThresholdsSort"
             }
           }
         ],
@@ -6212,6 +6364,18 @@
           "desc"
         ]
       },
+      "ProjectsSort": {
+        "type": "string",
+        "enum": [
+          "name"
+        ]
+      },
+      "ProjAlertsSort": {
+        "type": "string",
+        "enum": [
+          "created"
+        ]
+      },
       "ProjBenchmarksSort": {
         "type": "string",
         "enum": [
@@ -6219,6 +6383,12 @@
         ]
       },
       "ProjBranchesSort": {
+        "type": "string",
+        "enum": [
+          "name"
+        ]
+      },
+      "ProjMetricKindsSort": {
         "type": "string",
         "enum": [
           "name"
@@ -6234,6 +6404,12 @@
         "type": "string",
         "enum": [
           "name"
+        ]
+      },
+      "ProjThresholdsSort": {
+        "type": "string",
+        "enum": [
+          "created"
         ]
       }
     }

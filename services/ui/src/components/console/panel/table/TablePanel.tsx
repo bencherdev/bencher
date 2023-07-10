@@ -79,7 +79,13 @@ const TablePanel = (props) => {
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => {
 				const data = resp?.data;
-				setState(data.length === 0 ? TableState.EMPTY : TableState.OK);
+				setState(
+					data.length === 0
+						? page() === 1
+							? TableState.EMPTY
+							: TableState.END
+						: TableState.OK,
+				);
 				return data;
 			})
 			.catch((error) => {
@@ -133,6 +139,8 @@ const TablePanel = (props) => {
 				config={props.config?.table}
 				table_data={table_data}
 				state={state}
+				page={page}
+				handlePage={handlePage}
 			/>
 			<TableFooter
 				per_page={per_page}

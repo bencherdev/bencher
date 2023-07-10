@@ -7,7 +7,8 @@ export enum TableState {
 	LOADING = 0,
 	EMPTY = 1,
 	OK = 2,
-	ERR = 3,
+	END = 3,
+	ERR = 4,
 }
 
 const Table = (props) => {
@@ -78,6 +79,16 @@ const Table = (props) => {
 				</div>
 			</Match>
 
+			<Match when={props.state() === TableState.END}>
+				<div class="box">
+					<BackButton
+						name={props.config?.name}
+						page={props.page}
+						handlePage={props.handlePage}
+					/>
+				</div>
+			</Match>
+
 			<Match when={props.state() === TableState.ERR}>
 				<LogoutButton />
 			</Match>
@@ -132,6 +143,20 @@ const RowButton = (props) => {
 			}}
 		>
 			{props.config?.text}
+		</button>
+	);
+};
+
+const BackButton = (props) => {
+	return (
+		<button
+			class="button is-primary is-fullwidth"
+			onClick={(e) => {
+				e.preventDefault();
+				props.handlePage(props.page() - 1);
+			}}
+		>
+			That's all the {props.name}. Go back.
 		</button>
 	);
 };

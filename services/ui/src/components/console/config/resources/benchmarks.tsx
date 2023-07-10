@@ -41,6 +41,7 @@ const benchmarksConfig = {
 					},
 				},
 			},
+			name: "benchmarks",
 		},
 	},
 	[Operation.VIEW]: {

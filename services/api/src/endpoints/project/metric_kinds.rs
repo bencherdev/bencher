@@ -1,7 +1,7 @@
-use bencher_json::{JsonMetricKind, JsonNewMetricKind, ResourceId};
+use bencher_json::{JsonDirection, JsonMetricKind, JsonNewMetricKind, JsonPagination, ResourceId};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -35,6 +35,20 @@ pub struct ProjMetricKindsParams {
     pub project: ResourceId,
 }
 
+pub type ProjMetricKindsQuery = JsonPagination<ProjMetricKindsSort, ProjMetricKindsQueryParams>;
+
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjMetricKindsSort {
+    #[default]
+    Name,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjMetricKindsQueryParams {
+    pub name: Option<String>,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -44,6 +58,7 @@ pub struct ProjMetricKindsParams {
 pub async fn proj_metric_kinds_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjMetricKindsParams>,
+    _query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -56,6 +71,7 @@ pub async fn proj_metric_kinds_options(
 pub async fn proj_metric_kinds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjMetricKindsParams>,
+    query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<ResponseOk<Vec<JsonMetricKind>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetLs);
@@ -64,6 +80,7 @@ pub async fn proj_metric_kinds_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
+        query_params.into_inner(),
         endpoint,
     )
     .await
@@ -80,6 +97,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjMetricKindsParams,
+    query_params: ProjMetricKindsQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMetricKind>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -87,9 +105,24 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    Ok(schema::metric_kind::table
-        .filter(schema::metric_kind::project_id.eq(query_project.id))
-        .order((schema::metric_kind::name, schema::metric_kind::slug))
+    let mut query = schema::metric_kind::table
+        .filter(schema::metric_kind::project_id.eq(&query_project.id))
+        .into_boxed();
+
+    if let Some(name) = &query_params.query.name {
+        query = query.filter(schema::metric_kind::name.eq(name));
+    }
+
+    query = match query_params.order() {
+        ProjMetricKindsSort::Name => match query_params.direction {
+            Some(JsonDirection::Asc) | None => query.order(schema::metric_kind::name.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::metric_kind::name.desc()),
+        },
+    };
+
+    Ok(query
+        .offset(query_params.offset())
+        .limit(query_params.limit())
         .load::<QueryMetricKind>(conn)
         .map_err(api_error!())?
         .into_iter()

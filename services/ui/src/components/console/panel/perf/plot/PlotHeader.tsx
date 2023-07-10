@@ -25,7 +25,13 @@ const PlotHeader = (props) => {
 			name: "Metric Kind",
 			slug: BENCHER_METRIC_KIND,
 		};
-		const url = props.config?.metric_kinds_url(fetcher.project);
+		// Always use the first page and the max number of results per page
+		const search_params = new URLSearchParams();
+		search_params.set("per_page", "255");
+		search_params.set("page", "1");
+		const url = `${props.config?.metric_kinds_url(
+			fetcher.project,
+		)}?${search_params.toString()}`;
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => {
 				let data = resp?.data;

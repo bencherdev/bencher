@@ -77,6 +77,7 @@ const thresholdsConfig = {
 					path: (pathname, datum) => viewUuidPath(pathname, datum),
 				},
 			},
+			name: "thresholds",
 		},
 	},
 	[Operation.ADD]: {

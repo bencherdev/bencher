@@ -42,6 +42,7 @@ const reportsConfig = {
 					path: viewUuidPath,
 				},
 			},
+			name: "reports",
 		},
 	},
 	[Operation.VIEW]: {

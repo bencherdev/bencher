@@ -3,6 +3,8 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::cli::CliBackend;
 
+use super::CliPagination;
+
 pub mod alert;
 pub mod benchmark;
 pub mod branch;
@@ -39,8 +41,22 @@ pub struct CliProjectList {
     #[clap(long, conflicts_with = "org")]
     pub public: bool,
 
+    /// Project name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliProjectsSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliProjectsSort {
+    /// Name of the project
+    Name,
 }
 
 #[derive(Parser, Debug)]

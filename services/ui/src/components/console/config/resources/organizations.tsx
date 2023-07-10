@@ -32,6 +32,7 @@ const organizationsConfig = {
 						viewSlugPath(pathname, datum) + "/projects",
 				},
 			},
+			name: "organizations",
 		},
 	},
 	[Operation.VIEW]: {

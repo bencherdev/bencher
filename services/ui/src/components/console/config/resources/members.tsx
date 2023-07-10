@@ -83,6 +83,7 @@ const MembersConfig = {
 					path: (pathname, datum) => viewSlugPath(pathname, datum),
 				},
 			},
+			name: "members",
 		},
 	},
 	[Operation.ADD]: {

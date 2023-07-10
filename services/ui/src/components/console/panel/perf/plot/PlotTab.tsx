@@ -3,6 +3,7 @@ import { For, Match, Show, Switch } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
 import TabFooter from "./TabFooter";
+import { DEFAULT_PAGE } from "../PerfPanel";
 
 const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
 
@@ -81,9 +82,30 @@ const PlotTab = (props) => {
 					</div>
 				}
 			>
-				<Match when={props.is_console && getTab().length === 0}>
+				<Match
+					when={
+						props.is_console &&
+						getTab().length === 0 &&
+						getPage() === DEFAULT_PAGE
+					}
+				>
 					<div class="box">
 						<AddButton project_slug={props.project_slug} tab={props.tab} />
+					</div>
+				</Match>
+				<Match
+					when={
+						props.is_console &&
+						getTab().length === 0 &&
+						getPage() !== DEFAULT_PAGE
+					}
+				>
+					<div class="box">
+						<BackButton
+							tab={props.tab}
+							page={getPage()}
+							handlePage={getHandlePage()}
+						/>
 					</div>
 				</Match>
 				<Match when={getTab().length > 0}>
@@ -136,13 +158,13 @@ const AddButton = (props) => {
 	const getText = () => {
 		switch (props.tab()) {
 			case PerfTab.BRANCHES:
-				return "Create a Branch";
+				return "Add a Branch";
 			case PerfTab.TESTBEDS:
-				return "Create a Testbed";
+				return "Add a Testbed";
 			case PerfTab.BENCHMARKS:
 				return "Track Your Benchmarks";
 			default:
-				return "Ello Poppet";
+				return "Unknown Tab";
 		}
 	};
 
@@ -150,6 +172,20 @@ const AddButton = (props) => {
 		<Link class="button is-primary is-fullwidth" href={getHref()}>
 			{getText()}
 		</Link>
+	);
+};
+
+const BackButton = (props) => {
+	return (
+		<button
+			class="button is-primary is-fullwidth"
+			onClick={(e) => {
+				e.preventDefault();
+				props.handlePage(props.page() - 1);
+			}}
+		>
+			That's all the {props.tab()}. Go back.
+		</button>
 	);
 };
 

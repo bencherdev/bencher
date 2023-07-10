@@ -58,6 +58,7 @@ const alertsConfig = {
 					},
 				},
 			},
+			name: "alerts",
 		},
 	},
 	[Operation.VIEW]: {

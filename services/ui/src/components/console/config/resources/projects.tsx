@@ -73,6 +73,7 @@ const projectsConfig = {
 					path: (_pathname, datum) => `/console/projects/${datum?.slug}/perf`,
 				},
 			},
+			name: "projects",
 		},
 	},
 	[Operation.ADD]: {

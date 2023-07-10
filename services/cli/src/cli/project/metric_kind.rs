@@ -1,7 +1,7 @@
 use bencher_json::{NonEmpty, ResourceId, Slug};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliMetricKind {
@@ -21,8 +21,22 @@ pub struct CliMetricKindList {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Metric kind name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliMetricKindsSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliMetricKindsSort {
+    /// Name of the metric kind
+    Name,
 }
 
 #[derive(Parser, Debug)]

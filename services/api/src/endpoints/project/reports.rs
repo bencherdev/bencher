@@ -108,19 +108,6 @@ async fn get_ls_inner(
 
     let mut query = schema::report::table
         .filter(schema::report::project_id.eq(query_project.id))
-        .select((
-            schema::report::id,
-            schema::report::uuid,
-            schema::report::user_id,
-            schema::report::project_id,
-            schema::report::branch_id,
-            schema::report::version_id,
-            schema::report::testbed_id,
-            schema::report::adapter,
-            schema::report::start_time,
-            schema::report::end_time,
-            schema::report::created,
-        ))
         .into_boxed();
 
     query = match query_params.order() {

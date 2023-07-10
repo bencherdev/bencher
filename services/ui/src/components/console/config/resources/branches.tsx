@@ -52,6 +52,7 @@ const branchesConfig = {
 					path: (pathname, datum) => viewSlugPath(pathname, datum),
 				},
 			},
+			name: "branches",
 		},
 	},
 	[Operation.ADD]: {

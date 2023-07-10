@@ -1,6 +1,6 @@
-use bencher_json::{JsonAlert, ResourceId};
+use bencher_json::{JsonAlert, JsonDirection, JsonPagination, ResourceId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -31,6 +31,15 @@ pub struct ProjAlertsParams {
     pub project: ResourceId,
 }
 
+pub type ProjAlertsQuery = JsonPagination<ProjAlertsSort, ()>;
+
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjAlertsSort {
+    #[default]
+    Created,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -40,6 +49,7 @@ pub struct ProjAlertsParams {
 pub async fn proj_alerts_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjAlertsParams>,
+    _query_params: Query<ProjAlertsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -52,6 +62,7 @@ pub async fn proj_alerts_options(
 pub async fn proj_alerts_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjAlertsParams>,
+    query_params: Query<ProjAlertsQuery>,
 ) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
@@ -60,6 +71,7 @@ pub async fn proj_alerts_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
+        query_params.into_inner(),
         endpoint,
     )
     .await
@@ -76,6 +88,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjAlertsParams,
+    query_params: ProjAlertsQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonAlert>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -83,7 +96,7 @@ async fn get_ls_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    Ok(schema::alert::table
+    let mut query = schema::alert::table
         .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
         .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
@@ -92,7 +105,6 @@ async fn get_ls_inner(
         )
         .filter(schema::benchmark::project_id.eq(query_project.id))
         .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
-        .order((schema::report::start_time.desc(), schema::perf::iteration))
         .select((
             schema::alert::id,
             schema::alert::uuid,
@@ -101,6 +113,24 @@ async fn get_ls_inner(
             schema::alert::status,
             schema::alert::modified,
         ))
+        .into_boxed();
+
+    query = match query_params.order() {
+        ProjAlertsSort::Created => match query_params.direction {
+            Some(JsonDirection::Asc) => query.order((
+                schema::report::start_time.asc(),
+                schema::perf::iteration.asc(),
+            )),
+            Some(JsonDirection::Desc) | None => query.order((
+                schema::report::start_time.desc(),
+                schema::perf::iteration.asc(),
+            )),
+        },
+    };
+
+    Ok(query
+        .offset(query_params.offset())
+        .limit(query_params.limit())
         .load::<QueryAlert>(conn)
         .map_err(api_error!())?
         .into_iter()

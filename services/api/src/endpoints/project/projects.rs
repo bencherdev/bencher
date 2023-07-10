@@ -1,4 +1,4 @@
-use bencher_json::{project::JsonProjects, JsonProject, ResourceId};
+use bencher_json::{JsonDirection, JsonPagination, JsonProject, ResourceId};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -27,6 +27,43 @@ use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
+#[derive(Clone, Deserialize, JsonSchema)]
+pub struct ProjectsQuery {
+    pub sort: Option<ProjectsSort>,
+    pub direction: Option<JsonDirection>,
+    pub per_page: Option<u8>,
+    pub page: Option<u32>,
+
+    pub name: Option<String>,
+    pub public: Option<bool>,
+}
+
+impl From<&ProjectsQuery> for JsonPagination<ProjectsSort, ()> {
+    fn from(query: &ProjectsQuery) -> Self {
+        let ProjectsQuery {
+            sort,
+            direction,
+            per_page,
+            page,
+            ..
+        } = *query;
+        Self {
+            sort,
+            direction,
+            per_page,
+            page,
+            query: (),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectsSort {
+    #[default]
+    Name,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -35,7 +72,7 @@ const PROJECT_RESOURCE: Resource = Resource::Project;
 }]
 pub async fn projects_options(
     _rqctx: RequestContext<ApiContext>,
-    _query_params: Query<JsonProjects>,
+    _query_params: Query<ProjectsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -47,7 +84,7 @@ pub async fn projects_options(
 }]
 pub async fn projects_get(
     rqctx: RequestContext<ApiContext>,
-    query_params: Query<JsonProjects>,
+    query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
@@ -71,7 +108,7 @@ pub async fn projects_get(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
-    json_projects: JsonProjects,
+    query_params: ProjectsQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonProject>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -79,7 +116,7 @@ async fn get_ls_inner(
     let mut query = schema::project::table.into_boxed();
 
     // All users should just see the public projects if the query is for public projects
-    if let Some(true) = json_projects.public {
+    if let Some(true) = query_params.public {
         query = query.filter(schema::project::visibility.eq(Visibility::Public as i32));
     } else if let Some(auth_user) = auth_user {
         if !auth_user.is_admin(&context.rbac) {
@@ -91,8 +128,21 @@ async fn get_ls_inner(
         return Err(ApiError::PrivateProjects);
     }
 
+    if let Some(name) = &query_params.name {
+        query = query.filter(schema::project::name.eq(name));
+    }
+
+    let json_pagination = JsonPagination::from(&query_params);
+    query = match json_pagination.order() {
+        ProjectsSort::Name => match json_pagination.direction {
+            Some(JsonDirection::Asc) | None => query.order(schema::project::name.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::project::name.desc()),
+        },
+    };
+
     Ok(query
-        .order((schema::project::name, schema::project::slug))
+        .offset(json_pagination.offset())
+        .limit(json_pagination.limit())
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
         .into_iter()

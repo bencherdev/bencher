@@ -55,6 +55,7 @@ const metricKindsConfig = {
 					path: (pathname, datum) => viewSlugPath(pathname, datum),
 				},
 			},
+			name: "metric kinds",
 		},
 	},
 	[Operation.ADD]: {

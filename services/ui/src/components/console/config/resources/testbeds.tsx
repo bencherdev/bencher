@@ -54,6 +54,7 @@ const testbedsConfig = {
 					path: (pathname, datum) => viewSlugPath(pathname, datum),
 				},
 			},
+			name: "testbeds",
 		},
 	},
 	[Operation.ADD]: {

@@ -38,7 +38,7 @@ const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 
 const DEFAULT_PER_PAGE = 8;
-const DEFAULT_PAGE = 1;
+export const DEFAULT_PAGE = 1;
 
 const addToArray = (array: any[], add: any) => {
 	if (!array.includes(add)) {

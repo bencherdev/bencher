@@ -1,8 +1,8 @@
-use bencher_json::ResourceId;
-use clap::{Parser, Subcommand};
+use bencher_json::{NonEmpty, ResourceId};
+use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBenchmark {
@@ -19,8 +19,22 @@ pub struct CliBenchmarkList {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Benchmark name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliBenchmarksSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliBenchmarksSort {
+    /// Name of the benchmark
+    Name,
 }
 
 #[derive(Parser, Debug)]

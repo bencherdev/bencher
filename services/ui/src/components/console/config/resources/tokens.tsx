@@ -42,6 +42,7 @@ const tokensConfig = {
 					path: (pathname, datum) => viewUuidPath(pathname, datum),
 				},
 			},
+			name: "tokens",
 		},
 	},
 	[Operation.ADD]: {

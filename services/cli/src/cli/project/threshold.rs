@@ -2,7 +2,7 @@ use bencher_json::ResourceId;
 use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliThreshold {
@@ -23,7 +23,17 @@ pub struct CliThresholdList {
     pub project: ResourceId,
 
     #[clap(flatten)]
+    pub pagination: CliPagination<CliThresholdsSort>,
+
+    #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliThresholdsSort {
+    /// Creation date time of the threshold
+    Created,
 }
 
 #[derive(Parser, Debug)]

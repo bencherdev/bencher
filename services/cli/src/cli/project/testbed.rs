@@ -1,7 +1,7 @@
 use bencher_json::{NonEmpty, ResourceId, Slug};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliTestbed {
@@ -21,8 +21,22 @@ pub struct CliTestbedList {
     #[clap(long)]
     pub project: ResourceId,
 
+    /// Testbed name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliTestbedsSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliTestbedsSort {
+    /// Name of the testbed
+    Name,
 }
 
 #[derive(Parser, Debug)]
