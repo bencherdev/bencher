@@ -1664,6 +1664,48 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjBenchmarksSort"
+            }
           }
         ],
         "responses": {
@@ -2912,6 +2954,48 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/ProjTestbedsSort"
             }
           }
         ],
@@ -6128,6 +6212,12 @@
           "desc"
         ]
       },
+      "ProjBenchmarksSort": {
+        "type": "string",
+        "enum": [
+          "name"
+        ]
+      },
       "ProjBranchesSort": {
         "type": "string",
         "enum": [
@@ -6138,6 +6228,12 @@
         "type": "string",
         "enum": [
           "date_time"
+        ]
+      },
+      "ProjTestbedsSort": {
+        "type": "string",
+        "enum": [
+          "name"
         ]
       }
     }
