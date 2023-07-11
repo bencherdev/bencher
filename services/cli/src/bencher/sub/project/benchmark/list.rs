@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjBenchmarksSort};
-use bencher_json::{NonEmpty, ResourceId};
+use bencher_json::{BenchmarkName, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -16,7 +16,7 @@ use crate::{
 #[derive(Debug)]
 pub struct List {
     pub project: ResourceId,
-    pub name: Option<NonEmpty>,
+    pub name: Option<BenchmarkName>,
     pub pagination: Pagination,
     pub backend: Backend,
 }
@@ -74,8 +74,8 @@ impl SubCmd for List {
             .send_with(
                 |client| async move {
                     let mut client = client.proj_benchmarks_get().project(self.project.clone());
-                    if let Some(name) = &self.name {
-                        client = client.name(name.as_ref());
+                    if let Some(name) = self.name.clone() {
+                        client = client.name(name);
                     }
                     if let Some(sort) = self.pagination.sort {
                         client = client.sort(sort);

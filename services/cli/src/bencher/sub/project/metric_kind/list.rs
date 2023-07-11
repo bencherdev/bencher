@@ -74,8 +74,8 @@ impl SubCmd for List {
             .send_with(
                 |client| async move {
                     let mut client = client.proj_metric_kinds_get().project(self.project.clone());
-                    if let Some(name) = &self.name {
-                        client = client.name(name.as_ref());
+                    if let Some(name) = self.name.clone() {
+                        client = client.name(name);
                     }
                     if let Some(sort) = self.pagination.sort {
                         client = client.sort(sort);

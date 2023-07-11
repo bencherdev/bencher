@@ -1,4 +1,4 @@
-use bencher_json::{JsonBenchmark, JsonDirection, JsonPagination, ResourceId};
+use bencher_json::{BenchmarkName, JsonBenchmark, JsonDirection, JsonPagination, ResourceId};
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -44,7 +44,7 @@ pub enum ProjBenchmarksSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarksQueryParams {
-    pub name: Option<String>,
+    pub name: Option<BenchmarkName>,
 }
 
 #[allow(clippy::unused_async)]
@@ -107,8 +107,8 @@ async fn get_ls_inner(
         .filter(schema::benchmark::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = &query_params.query.name {
-        query = query.filter(schema::benchmark::name.eq(name));
+    if let Some(name) = query_params.query.name.as_ref() {
+        query = query.filter(schema::benchmark::name.eq(name.as_ref()));
     }
 
     query = match query_params.order() {

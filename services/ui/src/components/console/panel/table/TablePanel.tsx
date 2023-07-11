@@ -19,6 +19,7 @@ import {
 import { useNavigate, useSearchParams } from "solid-app-router";
 import { forward_path } from "../../../site/Forward";
 import TableFooter from "./TableFooter";
+import Pagination, { PaginationSize } from "../../../site/Pagination";
 
 // const SORT_PARAM = "sort";
 // const DIRECTION_PARAM = "direction";
@@ -142,12 +143,17 @@ const TablePanel = (props) => {
 				page={page}
 				handlePage={handlePage}
 			/>
-			<TableFooter
-				per_page={per_page}
-				page={page}
-				handlePage={handlePage}
-				table_data_len={table_data()?.length}
-			/>
+			<section class="section">
+				<div class="container">
+					<Pagination
+						size={PaginationSize.REGULAR}
+						data_len={table_data()?.length}
+						per_page={per_page()}
+						page={page()}
+						handlePage={handlePage}
+					/>
+				</div>
+			</section>
 		</>
 	);
 };

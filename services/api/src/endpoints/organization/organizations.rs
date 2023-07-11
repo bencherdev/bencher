@@ -1,8 +1,10 @@
-use bencher_json::{JsonNewOrganization, JsonOrganization, ResourceId};
+use bencher_json::{
+    JsonDirection, JsonNewOrganization, JsonOrganization, JsonPagination, NonEmpty, ResourceId,
+};
 use bencher_rbac::organization::{Permission, Role};
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -31,6 +33,20 @@ use super::Resource;
 
 const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
 
+pub type OrganizationsQuery = JsonPagination<OrganizationsSort, OrganizationsQueryParams>;
+
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OrganizationsSort {
+    #[default]
+    Name,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct OrganizationsQueryParams {
+    pub name: Option<NonEmpty>,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -39,6 +55,7 @@ const ORGANIZATION_RESOURCE: Resource = Resource::Organization;
 }]
 pub async fn organizations_options(
     _rqctx: RequestContext<ApiContext>,
+    _query_params: Query<OrganizationsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -50,13 +67,19 @@ pub async fn organizations_options(
 }]
 pub async fn organizations_get(
     rqctx: RequestContext<ApiContext>,
+    query_params: Query<OrganizationsQuery>,
 ) -> Result<ResponseOk<Vec<JsonOrganization>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
 
-    let json = get_ls_inner(rqctx.context(), &auth_user, endpoint)
-        .await
-        .map_err(|e| endpoint.err(e))?;
+    let json = get_ls_inner(
+        rqctx.context(),
+        &auth_user,
+        query_params.into_inner(),
+        endpoint,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
 
     response_ok!(endpoint, json)
 }
@@ -64,19 +87,38 @@ pub async fn organizations_get(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: &AuthUser,
+    query_params: OrganizationsQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonOrganization>, ApiError> {
     let conn = &mut *context.conn().await;
 
-    let mut sql = schema::organization::table.into_boxed();
+    let mut query = schema::organization::table.into_boxed();
 
     if !auth_user.is_admin(&context.rbac) {
         let organizations = auth_user.organizations(&context.rbac, Permission::View);
-        sql = sql.filter(schema::organization::id.eq_any(organizations));
+        query = query.filter(schema::organization::id.eq_any(organizations));
     }
 
-    Ok(sql
-        .order((schema::organization::name, schema::organization::slug))
+    if let Some(name) = query_params.query.name.as_ref() {
+        query = query.filter(schema::organization::name.eq(name.as_ref()));
+    }
+
+    query = match query_params.order() {
+        OrganizationsSort::Name => match query_params.direction {
+            Some(JsonDirection::Asc) | None => query.order((
+                schema::organization::name.asc(),
+                schema::organization::slug.asc(),
+            )),
+            Some(JsonDirection::Desc) => query.order((
+                schema::organization::name.desc(),
+                schema::organization::slug.desc(),
+            )),
+        },
+    };
+
+    Ok(query
+        .offset(query_params.offset())
+        .limit(query_params.limit())
         .load::<QueryOrganization>(conn)
         .map_err(api_error!())?
         .into_iter()

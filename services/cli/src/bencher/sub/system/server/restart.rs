@@ -1,15 +1,13 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::JsonRestart;
+use bencher_client::types::JsonRestart;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::CliRestart,
     CliError,
 };
-
-const RESTART_PATH: &str = "/v0/server/restart";
 
 #[derive(Debug, Clone)]
 pub struct Restart {
@@ -39,8 +37,12 @@ impl From<Restart> for JsonRestart {
 #[async_trait]
 impl SubCmd for Restart {
     async fn exec(&self) -> Result<(), CliError> {
-        let restart: JsonRestart = self.clone().into();
-        self.backend.post(RESTART_PATH, &restart).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.server_restart_post().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

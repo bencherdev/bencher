@@ -1,4 +1,4 @@
-use bencher_json::{JsonDirection, JsonPagination, JsonProject, ResourceId};
+use bencher_json::{JsonDirection, JsonPagination, JsonProject, NonEmpty, ResourceId};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -34,7 +34,7 @@ pub struct ProjectsQuery {
     pub per_page: Option<u8>,
     pub page: Option<u32>,
 
-    pub name: Option<String>,
+    pub name: Option<NonEmpty>,
     pub public: Option<bool>,
 }
 
@@ -128,8 +128,8 @@ async fn get_ls_inner(
         return Err(ApiError::PrivateProjects);
     }
 
-    if let Some(name) = &query_params.name {
-        query = query.filter(schema::project::name.eq(name));
+    if let Some(name) = query_params.name.as_ref() {
+        query = query.filter(schema::project::name.eq(name.as_ref()));
     }
 
     let json_pagination = JsonPagination::from(&query_params);

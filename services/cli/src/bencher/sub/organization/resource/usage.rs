@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Usage {
-    pub organization: ResourceId,
+    pub org: ResourceId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
     pub backend: Backend,
@@ -26,14 +26,14 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 
     fn try_from(usage: CliOrganizationUsage) -> Result<Self, Self::Error> {
         let CliOrganizationUsage {
-            organization,
+            org,
             start,
             end,
             backend,
         } = usage;
 
         Ok(Self {
-            organization,
+            org,
             start: from_milli_ts(serde_json::json!(start))?,
             end: from_milli_ts(serde_json::json!(end))?,
             backend: backend.try_into()?,
@@ -54,7 +54,7 @@ impl SubCmd for Usage {
         let json_usage: JsonUsage = self.clone().into();
         self.backend
             .get_query(
-                &format!("/v0/organizations/{}/usage", self.organization),
+                &format!("/v0/organizations/{}/usage", self.org),
                 &json_usage,
             )
             .await?;

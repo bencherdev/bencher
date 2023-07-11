@@ -1,15 +1,13 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{system::backup::JsonDataStore, JsonBackup};
+use bencher_client::types::{JsonBackup, JsonDataStore};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::{CliBackup, CliBackupDataStore},
     CliError,
 };
-
-const BACKUP_PATH: &str = "/v0/server/backup";
 
 #[derive(Debug, Clone)]
 pub struct Backup {
@@ -78,14 +76,12 @@ impl From<BackupDataStore> for JsonDataStore {
 #[async_trait]
 impl SubCmd for Backup {
     async fn exec(&self) -> Result<(), CliError> {
-        let backup: JsonBackup = self.clone().into();
-        let value = self.backend.post(BACKUP_PATH, &backup).await?;
-        if let Some(error_code) = value.as_object().and_then(|resp| resp.get("error_code")) {
-            Err(CliError::ErrorCode(
-                error_code.as_str().unwrap_or_default().into(),
-            ))
-        } else {
-            Ok(())
-        }
+        self.backend
+            .send_with(
+                |client| async move { client.server_backup_post().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
+        Ok(())
     }
 }

@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
-    JsonEmpty, JsonMember, ResourceId,
+    JsonDirection, JsonEmpty, JsonMember, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, RequestContext, TypedBody};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -40,6 +40,20 @@ pub struct OrgMembersParams {
     pub organization: ResourceId,
 }
 
+pub type OrgMembersQuery = JsonPagination<OrgMembersSort, OrgMembersQueryParams>;
+
+#[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OrgMembersSort {
+    #[default]
+    Name,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct OrgMembersQueryParams {
+    pub name: Option<UserName>,
+}
+
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
@@ -49,6 +63,7 @@ pub struct OrgMembersParams {
 pub async fn org_members_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgMembersParams>,
+    _query_params: Query<OrgMembersQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -61,6 +76,7 @@ pub async fn org_members_options(
 pub async fn org_members_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgMembersParams>,
+    query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
@@ -69,6 +85,7 @@ pub async fn org_members_get(
         rqctx.context(),
         &auth_user,
         path_params.into_inner(),
+        query_params.into_inner(),
         endpoint,
     )
     .await
@@ -81,6 +98,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: &AuthUser,
     path_params: OrgMembersParams,
+    query_params: OrgMembersQuery,
     endpoint: Endpoint,
 ) -> Result<Vec<JsonMember>, ApiError> {
     let conn = &mut *context.conn().await;
@@ -93,7 +111,7 @@ async fn get_ls_inner(
         Permission::ViewRole,
     )?;
 
-    Ok(schema::user::table
+    let mut query = schema::user::table
         .inner_join(
             schema::organization_role::table
                 .on(schema::user::id.eq(schema::organization_role::user_id)),
@@ -108,7 +126,26 @@ async fn get_ls_inner(
             schema::organization_role::created,
             schema::organization_role::modified,
         ))
-        .order((schema::user::name, schema::user::slug))
+        .into_boxed();
+
+    if let Some(name) = query_params.query.name.as_ref() {
+        query = query.filter(schema::user::name.eq(name.as_ref()));
+    }
+
+    query = match query_params.order() {
+        OrgMembersSort::Name => match query_params.direction {
+            Some(JsonDirection::Asc) | None => {
+                query.order((schema::user::name.asc(), schema::user::slug.asc()))
+            },
+            Some(JsonDirection::Desc) => {
+                query.order((schema::user::name.desc(), schema::user::slug.desc()))
+            },
+        },
+    };
+
+    Ok(query
+        .offset(query_params.offset())
+        .limit(query_params.limit())
         .load::<QueryMember>(conn)
         .map_err(api_error!())?
         .into_iter()

@@ -12,6 +12,8 @@ pub mod usage;
 #[cfg(feature = "plus")]
 use self::{plan::CliOrganizationPlan, usage::CliOrganizationUsage};
 
+use super::CliPagination;
+
 #[derive(Subcommand, Debug)]
 pub enum CliOrganization {
     /// List organizations
@@ -37,8 +39,22 @@ pub enum CliOrganization {
 
 #[derive(Parser, Debug)]
 pub struct CliOrganizationList {
+    /// Organization name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliOrganizationsSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliOrganizationsSort {
+    /// Name of the organization
+    Name,
 }
 
 #[derive(Parser, Debug)]

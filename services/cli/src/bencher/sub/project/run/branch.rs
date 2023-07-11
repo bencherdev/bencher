@@ -1,9 +1,7 @@
 use std::{convert::TryFrom, str::FromStr};
 
-use bencher_json::{
-    project::branch::{JsonStartPoint, BRANCH_MAIN_STR},
-    BranchName, JsonBranch, JsonNewBranch, ResourceId,
-};
+use bencher_client::types::{JsonNewBranch, JsonStartPoint};
+use bencher_json::{project::branch::BRANCH_MAIN_STR, BranchName, ResourceId};
 
 use uuid::Uuid;
 
@@ -150,11 +148,11 @@ async fn get_branch(
                 client
                     .proj_branches_get()
                     .project(project.clone())
-                    .name(branch_name.as_ref())
+                    .name(branch_name.clone())
                     .send()
                     .await
             },
-            true,
+            false,
         )
         .await?;
 
@@ -182,20 +180,29 @@ async fn create_branch(
 ) -> Result<Uuid, CliError> {
     // Default to cloning the thresholds from the start point branch
     let start_point = start_point.map(|branch| JsonStartPoint {
-        branch,
+        branch: branch.into(),
         thresholds: Some(true),
     });
     let new_branch = JsonNewBranch {
-        name: branch_name.clone(),
+        name: branch_name.clone().into(),
         slug: None,
         soft: Some(true),
         start_point,
     };
 
-    let value = backend
-        .post(&format!("/v0/projects/{project}/branches"), &new_branch)
+    let json_branch = backend
+        .send_with(
+            |client| async move {
+                client
+                    .proj_branch_post()
+                    .project(project.clone())
+                    .body(new_branch)
+                    .send()
+                    .await
+            },
+            false,
+        )
         .await?;
-    let json_branch: JsonBranch = serde_json::from_value(value)?;
 
     Ok(json_branch.uuid)
 }

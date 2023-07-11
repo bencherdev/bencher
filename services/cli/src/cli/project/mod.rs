@@ -52,7 +52,7 @@ pub struct CliProjectList {
     pub backend: CliBackend,
 }
 
-#[derive(ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone, Copy)]
 #[clap(rename_all = "snake_case")]
 pub enum CliProjectsSort {
     /// Name of the project

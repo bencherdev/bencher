@@ -6,7 +6,7 @@ mod allowed;
 mod create;
 mod list;
 #[cfg(feature = "plus")]
-mod plan;
+pub mod plan;
 #[cfg(feature = "plus")]
 mod usage;
 mod view;

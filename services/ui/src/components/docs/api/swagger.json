@@ -209,6 +209,49 @@
           "organizations"
         ],
         "operationId": "organizations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/OrganizationsSort"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "successful operation",
@@ -482,6 +525,47 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/UserName"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/OrgMembersSort"
             }
           }
         ],
@@ -1002,6 +1086,47 @@
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
             }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/OrgProjectsSort"
+            }
           }
         ],
         "responses": {
@@ -1384,8 +1509,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "nullable": true,
-              "type": "string"
+              "$ref": "#/components/schemas/NonEmpty"
             }
           },
           {
@@ -1752,8 +1876,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "nullable": true,
-              "type": "string"
+              "$ref": "#/components/schemas/BenchmarkName"
             }
           },
           {
@@ -1941,8 +2064,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "nullable": true,
-              "type": "string"
+              "$ref": "#/components/schemas/BranchName"
             }
           },
           {
@@ -2204,8 +2326,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "nullable": true,
-              "type": "string"
+              "$ref": "#/components/schemas/NonEmpty"
             }
           },
           {
@@ -3085,8 +3206,7 @@
             "in": "query",
             "name": "name",
             "schema": {
-              "nullable": true,
-              "type": "string"
+              "$ref": "#/components/schemas/NonEmpty"
             }
           },
           {
@@ -4083,6 +4203,47 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/UserTokensSort"
             }
           }
         ],
@@ -6343,6 +6504,19 @@
       "UserName": {
         "type": "string"
       },
+      "JsonDirection": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ]
+      },
+      "OrganizationsSort": {
+        "type": "string",
+        "enum": [
+          "name"
+        ]
+      },
       "JsonOrganizationPermission": {
         "type": "string",
         "enum": [
@@ -6357,11 +6531,16 @@
           "delete_role"
         ]
       },
-      "JsonDirection": {
+      "OrgMembersSort": {
         "type": "string",
         "enum": [
-          "asc",
-          "desc"
+          "name"
+        ]
+      },
+      "OrgProjectsSort": {
+        "type": "string",
+        "enum": [
+          "name"
         ]
       },
       "ProjectsSort": {
@@ -6410,6 +6589,12 @@
         "type": "string",
         "enum": [
           "created"
+        ]
+      },
+      "UserTokensSort": {
+        "type": "string",
+        "enum": [
+          "name"
         ]
       }
     }

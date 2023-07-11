@@ -1,4 +1,4 @@
-use bencher_json::project::report::JsonAdapter;
+use bencher_client::types::JsonAdapter;
 
 use crate::cli::project::run::CliRunAdapter;
 

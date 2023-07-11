@@ -143,6 +143,12 @@ const projectsConfig = {
 				},
 				{
 					kind: Card.FIELD,
+					label: "Project UUID",
+					key: "uuid",
+					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
 					label: "Project URL",
 					key: "url",
 					display: Display.RAW,

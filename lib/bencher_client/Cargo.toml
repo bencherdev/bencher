@@ -4,6 +4,9 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 
+[features]
+plus = ["bencher_json/plus"]
+
 [dependencies]
 bencher_json.workspace = true
 chrono = { workspace = true, features = ["serde"] }

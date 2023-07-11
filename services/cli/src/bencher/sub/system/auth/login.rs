@@ -1,23 +1,22 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-#[cfg(feature = "plus")]
-use bencher_json::PlanLevel;
-use bencher_json::{Email, JsonEmpty, JsonLogin, Jwt};
+use bencher_client::types::JsonLogin;
+use bencher_json::{Email, Jwt};
 
+#[cfg(feature = "plus")]
+use crate::bencher::sub::organization::resource::plan::level::Level;
 use crate::{
-    bencher::{backend::Backend, from_response, sub::SubCmd},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::auth::CliAuthLogin,
     CliError,
 };
-
-const LOGIN_PATH: &str = "/v0/auth/login";
 
 #[derive(Debug, Clone)]
 pub struct Login {
     pub email: Email,
     #[cfg(feature = "plus")]
-    pub plan: Option<PlanLevel>,
+    pub plan: Option<Level>,
     pub invite: Option<Jwt>,
     pub backend: Backend,
 }
@@ -36,7 +35,7 @@ impl TryFrom<CliAuthLogin> for Login {
         Ok(Self {
             email,
             #[cfg(feature = "plus")]
-            plan,
+            plan: plan.map(Into::into),
             invite,
             backend: backend.try_into()?,
         })
@@ -53,10 +52,10 @@ impl From<Login> for JsonLogin {
             ..
         } = login;
         Self {
-            email,
+            email: email.into(),
             #[cfg(feature = "plus")]
-            plan,
-            invite,
+            plan: plan.map(Into::into),
+            invite: invite.map(Into::into),
         }
     }
 }
@@ -64,9 +63,12 @@ impl From<Login> for JsonLogin {
 #[async_trait]
 impl SubCmd for Login {
     async fn exec(&self) -> Result<(), CliError> {
-        let json_login: JsonLogin = self.clone().into();
-        let res = self.backend.post(LOGIN_PATH, &json_login).await?;
-        let _: JsonEmpty = from_response(res)?;
+        self.backend
+            .send_with(
+                |client| async move { client.auth_login_post().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

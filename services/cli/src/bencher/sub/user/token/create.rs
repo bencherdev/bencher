@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewToken, NonEmpty, ResourceId};
+use bencher_client::types::JsonNewToken;
+use bencher_json::{NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -39,16 +40,28 @@ impl TryFrom<CliTokenCreate> for Create {
 impl From<Create> for JsonNewToken {
     fn from(create: Create) -> Self {
         let Create { name, ttl, .. } = create;
-        Self { name, ttl }
+        Self {
+            name: name.into(),
+            ttl,
+        }
     }
 }
 
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let token: JsonNewToken = self.clone().into();
         self.backend
-            .post(&format!("/v0/users/{}/tokens", self.user), &token)
+            .send_with(
+                |client| async move {
+                    client
+                        .user_token_post()
+                        .user(self.user.clone())
+                        .body(self.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

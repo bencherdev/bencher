@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonDirection, ProjectsSort};
+use bencher_client::types::{JsonDirection, OrgProjectsSort, ProjectsSort};
 use bencher_json::{NonEmpty, ResourceId};
 
 use crate::{
@@ -24,7 +24,8 @@ pub struct List {
 
 #[derive(Debug)]
 pub struct Pagination {
-    pub sort: Option<ProjectsSort>,
+    pub org_projects_sort: Option<OrgProjectsSort>,
+    pub projects_sort: Option<ProjectsSort>,
     pub direction: Option<JsonDirection>,
     pub per_page: Option<u8>,
     pub page: Option<u32>,
@@ -60,7 +61,10 @@ impl From<CliPagination<CliProjectsSort>> for Pagination {
             page,
         } = pagination;
         Self {
-            sort: sort.map(|sort| match sort {
+            org_projects_sort: sort.map(|sort| match sort {
+                CliProjectsSort::Name => OrgProjectsSort::Name,
+            }),
+            projects_sort: sort.map(|sort| match sort {
                 CliProjectsSort::Name => ProjectsSort::Name,
             }),
             direction: direction.map(Into::into),
@@ -77,16 +81,32 @@ impl SubCmd for List {
             .send_with(
                 |client| async move {
                     if let Some(org) = self.org.clone() {
-                        client.org_projects_get().organization(org).send().await
+                        let mut client = client.org_projects_get().organization(org);
+                        if let Some(name) = self.name.clone() {
+                            client = client.name(name);
+                        }
+                        if let Some(sort) = self.pagination.org_projects_sort {
+                            client = client.sort(sort);
+                        }
+                        if let Some(direction) = self.pagination.direction {
+                            client = client.direction(direction);
+                        }
+                        if let Some(per_page) = self.pagination.per_page {
+                            client = client.per_page(per_page);
+                        }
+                        if let Some(page) = self.pagination.page {
+                            client = client.page(page);
+                        }
+                        client.send().await
                     } else {
                         let mut client = client.projects_get();
                         if let Some(public) = self.public {
                             client = client.public(public);
                         }
-                        if let Some(name) = &self.name {
-                            client = client.name(name.as_ref());
+                        if let Some(name) = self.name.clone() {
+                            client = client.name(name);
                         }
-                        if let Some(sort) = self.pagination.sort {
+                        if let Some(sort) = self.pagination.projects_sort {
                             client = client.sort(sort);
                         }
                         if let Some(direction) = self.pagination.direction {

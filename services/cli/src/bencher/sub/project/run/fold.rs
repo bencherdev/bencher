@@ -1,4 +1,4 @@
-use bencher_json::project::report::JsonFold;
+use bencher_client::types::JsonFold;
 
 use crate::cli::project::run::CliRunFold;
 

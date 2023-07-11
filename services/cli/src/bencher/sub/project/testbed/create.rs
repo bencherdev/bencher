@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewTestbed, NonEmpty, ResourceId, Slug};
+use bencher_client::types::JsonNewTestbed;
+use bencher_json::{NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -39,16 +40,28 @@ impl TryFrom<CliTestbedCreate> for Create {
 impl From<Create> for JsonNewTestbed {
     fn from(create: Create) -> Self {
         let Create { name, slug, .. } = create;
-        Self { name, slug }
+        Self {
+            name: name.into(),
+            slug: slug.map(Into::into),
+        }
     }
 }
 
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let testbed: JsonNewTestbed = self.clone().into();
         self.backend
-            .post(&format!("/v0/projects/{}/testbeds", self.project), &testbed)
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_testbed_post()
+                        .project(self.project.clone())
+                        .body(self.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

@@ -33,10 +33,17 @@ impl TryFrom<CliMemberRemove> for Remove {
 impl SubCmd for Remove {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .delete(&format!(
-                "/v0/organizations/{}/members/{}",
-                self.org, self.user
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .org_member_delete()
+                        .organization(self.org.clone())
+                        .user(self.user.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

@@ -1,4 +1,6 @@
-use bencher_json::{JsonBranch, JsonDirection, JsonNewBranch, JsonPagination, ResourceId};
+use bencher_json::{
+    BranchName, JsonBranch, JsonDirection, JsonNewBranch, JsonPagination, ResourceId,
+};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -46,7 +48,7 @@ pub enum ProjBranchesSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBranchesQueryParams {
-    pub name: Option<String>,
+    pub name: Option<BranchName>,
 }
 
 #[allow(clippy::unused_async)]
@@ -109,8 +111,8 @@ async fn get_ls_inner(
         .filter(schema::branch::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = &query_params.query.name {
-        query = query.filter(schema::branch::name.eq(name));
+    if let Some(name) = query_params.query.name.as_ref() {
+        query = query.filter(schema::branch::name.eq(name.as_ref()));
     }
 
     query = match query_params.order() {

@@ -7,7 +7,7 @@ edition.workspace = true
 [features]
 default = ["plus"]
 docs = ["dep:clap_mangen"]
-plus = ["bencher_json/plus"]
+plus = ["bencher_client/plus", "bencher_json/plus"]
 seed = []
 
 [dependencies]

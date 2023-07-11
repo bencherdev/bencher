@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewMetricKind, NonEmpty, ResourceId, Slug};
+use bencher_client::types::JsonNewMetricKind;
+use bencher_json::{NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -44,18 +45,28 @@ impl From<Create> for JsonNewMetricKind {
         let Create {
             name, slug, units, ..
         } = create;
-        Self { name, slug, units }
+        Self {
+            name: name.into(),
+            slug: slug.map(Into::into),
+            units: units.into(),
+        }
     }
 }
 
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let metric_kind: JsonNewMetricKind = self.clone().into();
         self.backend
-            .post(
-                &format!("/v0/projects/{}/metric-kinds", self.project),
-                &metric_kind,
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_metric_kind_post()
+                        .project(self.project.clone())
+                        .body(self.clone())
+                        .send()
+                        .await
+                },
+                true,
             )
             .await?;
         Ok(())

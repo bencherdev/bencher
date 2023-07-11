@@ -1,18 +1,14 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{
-    project::{report::JsonReportSettings, testbed::TESTBED_LOCALHOST_STR},
-    GitHash, JsonNewReport, JsonReport, ResourceId,
-};
+use bencher_client::types::{JsonNewReport, JsonReportSettings};
+use bencher_json::{project::testbed::TESTBED_LOCALHOST_STR, GitHash, ResourceId};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{
-        backend::Backend, from_response, map_timestamp, sub::project::run::urls::BenchmarkUrls,
-    },
+    bencher::{backend::Backend, map_timestamp, sub::project::run::urls::BenchmarkUrls},
     cli::project::run::{CliRun, CliRunAdapter},
     cli_eprintln, cli_println, CliError,
 };
@@ -164,9 +160,9 @@ impl SubCmd for Run {
         };
 
         let report = JsonNewReport {
-            branch,
-            hash: self.hash.clone(),
-            testbed: self.testbed.clone(),
+            branch: branch.into(),
+            hash: self.hash.clone().map(Into::into),
+            testbed: self.testbed.clone().into(),
             start_time,
             end_time,
             results,
@@ -185,14 +181,29 @@ impl SubCmd for Run {
             return Ok(());
         }
 
-        let json_value = self
+        let json_report = self
             .backend
-            .post(&format!("/v0/projects/{}/reports", self.project), &report)
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_report_post()
+                        .project(self.project.clone())
+                        .body(report)
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
-        let json_report: JsonReport = from_response(json_value)?;
 
-        let json_value = self.backend.get_quiet("/v0/server/config/endpoint").await?;
-        let endpoint_url: Url = serde_json::from_value(json_value)?;
+        let json_endpoint = self
+            .backend
+            .send_with(
+                |client| async move { client.server_config_endpoint_get().send().await },
+                false,
+            )
+            .await?;
+        let endpoint_url: Url = json_endpoint.as_str().parse()?;
         let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), &json_report).await?;
 
         cli_println!("\nView results:");
@@ -209,9 +220,10 @@ impl SubCmd for Run {
             let mut url = endpoint_url.clone();
             url.set_path(&format!(
                 "/console/projects/{}/alerts/{}",
-                json_report.project.slug, alert.uuid
+                json_report.project.slug.as_str(),
+                alert.uuid
             ));
-            cli_println!("- {}: {url}", alert.benchmark.name,);
+            cli_println!("- {}: {url}", alert.benchmark.name.as_str());
         }
         cli_println!("\n");
 

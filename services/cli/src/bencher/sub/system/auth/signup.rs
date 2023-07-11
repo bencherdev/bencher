@@ -1,17 +1,16 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-#[cfg(feature = "plus")]
-use bencher_json::PlanLevel;
-use bencher_json::{Email, JsonEmpty, JsonSignup, Jwt, Slug, UserName};
+use bencher_client::types::JsonSignup;
+use bencher_json::{Email, Jwt, Slug, UserName};
 
+#[cfg(feature = "plus")]
+use crate::bencher::sub::organization::resource::plan::level::Level;
 use crate::{
-    bencher::{backend::Backend, from_response, sub::SubCmd},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::auth::CliAuthSignup,
     CliError,
 };
-
-const SIGNUP_PATH: &str = "/v0/auth/signup";
 
 #[derive(Debug, Clone)]
 pub struct Signup {
@@ -19,7 +18,7 @@ pub struct Signup {
     pub slug: Option<Slug>,
     pub email: Email,
     #[cfg(feature = "plus")]
-    pub plan: Option<PlanLevel>,
+    pub plan: Option<Level>,
     pub invite: Option<Jwt>,
     pub backend: Backend,
 }
@@ -42,7 +41,7 @@ impl TryFrom<CliAuthSignup> for Signup {
             slug,
             email,
             #[cfg(feature = "plus")]
-            plan,
+            plan: plan.map(Into::into),
             invite,
             backend: backend.try_into()?,
         })
@@ -61,12 +60,12 @@ impl From<Signup> for JsonSignup {
             ..
         } = signup;
         Self {
-            name,
-            slug,
-            email,
+            name: name.into(),
+            slug: slug.map(Into::into),
+            email: email.into(),
             #[cfg(feature = "plus")]
-            plan,
-            invite,
+            plan: plan.map(Into::into),
+            invite: invite.map(Into::into),
         }
     }
 }
@@ -74,9 +73,12 @@ impl From<Signup> for JsonSignup {
 #[async_trait]
 impl SubCmd for Signup {
     async fn exec(&self) -> Result<(), CliError> {
-        let json_signup: JsonSignup = self.clone().into();
-        let res = self.backend.post(SIGNUP_PATH, &json_signup).await?;
-        let _: JsonEmpty = from_response(res)?;
+        self.backend
+            .send_with(
+                |client| async move { client.auth_signup_post().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

@@ -1,15 +1,14 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonNewOrganization, NonEmpty, Slug};
+use bencher_client::types::JsonNewOrganization;
+use bencher_json::{NonEmpty, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     cli::organization::CliOrganizationCreate,
     CliError,
 };
-
-const ORGANIZATIONS_PATH: &str = "/v0/organizations";
 
 #[derive(Debug, Clone)]
 pub struct Create {
@@ -38,15 +37,22 @@ impl TryFrom<CliOrganizationCreate> for Create {
 impl From<Create> for JsonNewOrganization {
     fn from(create: Create) -> Self {
         let Create { name, slug, .. } = create;
-        Self { name, slug }
+        Self {
+            name: name.into(),
+            slug: slug.map(Into::into),
+        }
     }
 }
 
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let organization: JsonNewOrganization = self.clone().into();
-        self.backend.post(ORGANIZATIONS_PATH, &organization).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.organization_post().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

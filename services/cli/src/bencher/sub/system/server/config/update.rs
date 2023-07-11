@@ -1,15 +1,13 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{system::config::JsonUpdateConfig, JsonConfig};
+use bencher_client::types::{JsonConfig, JsonUpdateConfig};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     cli::system::server::CliConfigUpdate,
     CliError,
 };
-
-use super::CONFIG_PATH;
 
 #[derive(Debug, Clone)]
 pub struct Update {
@@ -48,8 +46,12 @@ impl From<Update> for JsonUpdateConfig {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let update_config: JsonUpdateConfig = self.clone().into();
-        self.backend.put(CONFIG_PATH, &update_config).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.server_config_put().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

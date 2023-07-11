@@ -17,7 +17,7 @@ pub enum CliOrganizationPlan {
 #[derive(Parser, Debug)]
 pub struct CliPlanCreate {
     /// Organization slug or UUID
-    pub organization: ResourceId,
+    pub org: ResourceId,
 
     #[clap(flatten)]
     pub card: CliPlanCard,

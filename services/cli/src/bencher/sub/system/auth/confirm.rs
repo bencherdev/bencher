@@ -1,15 +1,14 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{system::auth::JsonConfirm, JsonAuthToken, Jwt};
+use bencher_client::types::JsonAuthToken;
+use bencher_json::Jwt;
 
 use crate::{
-    bencher::{backend::Backend, from_response, sub::SubCmd},
+    bencher::{backend::Backend, sub::SubCmd},
     cli::system::auth::CliAuthConfirm,
     CliError,
 };
-
-const CONFIRM_PATH: &str = "/v0/auth/confirm";
 
 #[derive(Debug, Clone)]
 pub struct Confirm {
@@ -35,16 +34,21 @@ impl TryFrom<CliAuthConfirm> for Confirm {
 impl From<Confirm> for JsonAuthToken {
     fn from(confirm: Confirm) -> Self {
         let Confirm { token, .. } = confirm;
-        Self { token }
+        Self {
+            token: token.into(),
+        }
     }
 }
 
 #[async_trait]
 impl SubCmd for Confirm {
     async fn exec(&self) -> Result<(), CliError> {
-        let json_token: JsonAuthToken = self.clone().into();
-        let res = self.backend.post(CONFIRM_PATH, &json_token).await?;
-        let _json: JsonConfirm = from_response(res)?;
+        self.backend
+            .send_with(
+                |client| async move { client.auth_confirm_post().body(self.clone()).send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

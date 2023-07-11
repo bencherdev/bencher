@@ -2,8 +2,8 @@ import { Link } from "solid-app-router";
 import { For, Match, Show, Switch } from "solid-js";
 import { PerfTab } from "../../../config/types";
 import { toCapitalized } from "../../../config/util";
-import TabFooter from "./TabFooter";
 import { DEFAULT_PAGE } from "../PerfPanel";
+import Pagination, { PaginationSize } from "../../../../site/Pagination";
 
 const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
 
@@ -131,12 +131,21 @@ const PlotTab = (props) => {
 				</Match>
 			</Switch>
 			<div class="panel-block">
-				<TabFooter
-					per_page={props.per_page}
-					page={getPage()}
-					handlePage={getHandlePage()}
-					table_data_len={getTab().length}
-				/>
+				<div class="container">
+					<div class="columns is-centered">
+						<div class="column is-11">
+							<br />
+							<Pagination
+								size={PaginationSize.SMALL}
+								data_len={getTab()?.length}
+								per_page={props.per_page()}
+								page={getPage()()}
+								handlePage={getHandlePage()}
+							/>
+							<br />
+						</div>
+					</div>
+				</div>
 			</div>
 		</>
 	);

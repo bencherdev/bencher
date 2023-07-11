@@ -8,7 +8,7 @@ import {
 	validate_jwt,
 	validate_u32,
 } from "../site/util";
-import ProjectsFooter from "./ProjectsFooter";
+import Pagination, { PaginationSize } from "../site/Pagination";
 
 // const SORT_PARAM = "sort";
 // const DIRECTION_PARAM = "direction";
@@ -116,11 +116,12 @@ const ProjectsPage = (props) => {
 						</div>
 					</div>
 				</div>
-				<ProjectsFooter
-					page={page}
-					per_page={per_page}
+				<Pagination
+					size={PaginationSize.REGULAR}
+					data_len={projects()?.length}
+					per_page={per_page()}
+					page={page()}
 					handlePage={handlePage}
-					table_data_len={projects()?.length}
 				/>
 			</div>
 		</section>

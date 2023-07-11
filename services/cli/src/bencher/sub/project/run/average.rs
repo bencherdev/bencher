@@ -1,4 +1,4 @@
-use bencher_json::project::report::JsonAverage;
+use bencher_client::types::JsonAverage;
 
 use crate::cli::project::run::CliRunAverage;
 

@@ -1,8 +1,8 @@
 use bencher_json::{NonEmpty, ResourceId};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliToken {
@@ -22,8 +22,22 @@ pub struct CliTokenList {
     #[clap(long)]
     pub user: ResourceId,
 
+    /// Token name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliTokensSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliTokensSort {
+    /// Name of the API token
+    Name,
 }
 
 #[derive(Parser, Debug)]

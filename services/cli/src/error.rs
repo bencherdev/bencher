@@ -46,7 +46,7 @@ pub enum CliError {
 
     #[error("Bad header: {0:?}")]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
-    #[error("Failed to send: {0:?}")]
+    #[error("Bencher API client failed to send: {0:?}")]
     BencherClient(#[from] bencher_client::Error<bencher_client::types::Error>),
 
     #[error("Failed to parse URL: {0}")]

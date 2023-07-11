@@ -1,10 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{
-    organization::metered::{JsonCard, JsonNewPlan},
-    CardCvc, CardNumber, ExpirationMonth, ExpirationYear, ResourceId,
-};
+use bencher_client::types::{JsonCard, JsonNewPlan};
+use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -16,7 +14,7 @@ use super::level::Level;
 
 #[derive(Debug, Clone)]
 pub struct Create {
-    pub organization: ResourceId,
+    pub org: ResourceId,
     pub card: Card,
     pub level: Level,
     pub backend: Backend,
@@ -35,13 +33,13 @@ impl TryFrom<CliPlanCreate> for Create {
 
     fn try_from(create: CliPlanCreate) -> Result<Self, Self::Error> {
         let CliPlanCreate {
-            organization,
+            org,
             card,
             level,
             backend,
         } = create;
         Ok(Self {
-            organization,
+            org,
             card: card.into(),
             level: level.into(),
             backend: backend.try_into()?,
@@ -85,10 +83,10 @@ impl From<Card> for JsonCard {
             cvc,
         } = card;
         Self {
-            number,
-            exp_month,
-            exp_year,
-            cvc,
+            number: number.into(),
+            exp_month: exp_month.into(),
+            exp_year: exp_year.into(),
+            cvc: cvc.into(),
         }
     }
 }
@@ -96,11 +94,17 @@ impl From<Card> for JsonCard {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        let plan: JsonNewPlan = self.clone().into();
         self.backend
-            .post(
-                &format!("/v0/organizations/{}/plan", self.organization),
-                &plan,
+            .send_with(
+                |client| async move {
+                    client
+                        .org_plan_post()
+                        .organization(self.org.clone())
+                        .body(self.clone())
+                        .send()
+                        .await
+                },
+                true,
             )
             .await?;
         Ok(())

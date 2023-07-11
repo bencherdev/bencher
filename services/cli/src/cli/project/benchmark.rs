@@ -1,4 +1,4 @@
-use bencher_json::{NonEmpty, ResourceId};
+use bencher_json::{BenchmarkName, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
@@ -21,7 +21,7 @@ pub struct CliBenchmarkList {
 
     /// Benchmark name
     #[clap(long)]
-    pub name: Option<NonEmpty>,
+    pub name: Option<BenchmarkName>,
 
     #[clap(flatten)]
     pub pagination: CliPagination<CliBenchmarksSort>,

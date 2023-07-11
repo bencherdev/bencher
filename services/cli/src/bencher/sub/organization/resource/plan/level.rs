@@ -1,4 +1,4 @@
-use bencher_json::PlanLevel;
+use bencher_client::types::PlanLevel;
 
 use crate::cli::organization::plan::CliPlanLevel;
 

@@ -1,4 +1,6 @@
-use bencher_json::{JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, ResourceId};
+use bencher_json::{
+    JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, NonEmpty, ResourceId,
+};
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
@@ -46,7 +48,7 @@ pub enum ProjTestbedsSort {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjTestbedsQueryParams {
-    pub name: Option<String>,
+    pub name: Option<NonEmpty>,
 }
 
 #[allow(clippy::unused_async)]
@@ -109,8 +111,8 @@ async fn get_ls_inner(
         .filter(schema::testbed::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = &query_params.query.name {
-        query = query.filter(schema::testbed::name.eq(name));
+    if let Some(name) = query_params.query.name.as_ref() {
+        query = query.filter(schema::testbed::name.eq(name.as_ref()));
     }
 
     query = match query_params.order() {

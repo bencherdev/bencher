@@ -1,7 +1,7 @@
 use bencher_json::{Email, ResourceId, UserName};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::cli::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliMember {
@@ -26,8 +26,22 @@ pub struct CliMemberList {
     #[clap(long)]
     pub org: ResourceId,
 
+    /// Member name
+    #[clap(long)]
+    pub name: Option<UserName>,
+
+    #[clap(flatten)]
+    pub pagination: CliPagination<CliMembersSort>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliMembersSort {
+    /// Name of the member
+    Name,
 }
 
 #[derive(Parser, Debug)]

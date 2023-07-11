@@ -1,10 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{
-    organization::member::{JsonNewMember, JsonOrganizationRole},
-    Email, ResourceId, UserName,
-};
+use bencher_client::types::{JsonNewMember, JsonOrganizationRole};
+use bencher_json::{Email, ResourceId, UserName};
 
 use crate::{
     bencher::backend::Backend,
@@ -59,16 +57,29 @@ impl From<Invite> for JsonNewMember {
         let Invite {
             name, email, role, ..
         } = invite;
-        Self { name, email, role }
+        Self {
+            name: name.map(Into::into),
+            email: email.into(),
+            role,
+        }
     }
 }
 
 #[async_trait]
 impl SubCmd for Invite {
     async fn exec(&self) -> Result<(), CliError> {
-        let invite: JsonNewMember = self.clone().into();
         self.backend
-            .post(&format!("/v0/organizations/{}/members", &self.org), &invite)
+            .send_with(
+                |client| async move {
+                    client
+                        .org_member_post()
+                        .organization(self.org.clone())
+                        .body(self.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

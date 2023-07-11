@@ -4,7 +4,7 @@ pub use bencher_valid::{
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
-    CardCvc, CardNumber, ExpirationMonth, ExpirationYear, PlanLevel, PlanStatus,
+    CardBrand, CardCvc, CardNumber, ExpirationMonth, ExpirationYear, PlanLevel, PlanStatus,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
