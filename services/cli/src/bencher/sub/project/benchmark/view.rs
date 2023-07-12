@@ -38,10 +38,17 @@ impl TryFrom<CliBenchmarkView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/benchmarks/{}",
-                self.project, self.benchmark
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_benchmark_get()
+                        .project(self.project.clone())
+                        .benchmark(self.benchmark)
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

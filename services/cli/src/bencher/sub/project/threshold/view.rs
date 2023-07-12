@@ -38,10 +38,17 @@ impl TryFrom<CliThresholdView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/thresholds/{}",
-                self.project, self.threshold
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_threshold_get()
+                        .project(self.project.clone())
+                        .threshold(self.threshold)
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

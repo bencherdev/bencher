@@ -81,12 +81,12 @@ pub struct CliOrganizationView {
 
 #[derive(Parser, Debug)]
 pub struct CliOrganizationAllowed {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
     /// Organization permission
     #[clap(long)]
     pub perm: CliOrganizationPermission,
-
-    /// Organization slug or UUID
-    pub organization: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

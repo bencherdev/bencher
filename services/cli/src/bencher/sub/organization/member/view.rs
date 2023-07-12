@@ -33,10 +33,17 @@ impl TryFrom<CliMemberView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/organizations/{}/members/{}",
-                self.org, self.user
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .org_member_get()
+                        .organization(self.org.clone())
+                        .user(self.user.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

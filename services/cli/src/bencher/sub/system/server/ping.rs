@@ -8,8 +8,6 @@ use crate::{
     CliError,
 };
 
-const PING_PATH: &str = "/v0/server/ping";
-
 #[derive(Debug, Clone)]
 pub struct Ping {
     pub backend: Backend,
@@ -29,7 +27,12 @@ impl TryFrom<CliPing> for Ping {
 #[async_trait]
 impl SubCmd for Ping {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend.get(PING_PATH).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.server_ping_get().send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

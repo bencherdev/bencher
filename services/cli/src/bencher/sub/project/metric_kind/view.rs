@@ -37,10 +37,17 @@ impl TryFrom<CliMetricKindView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/metric-kinds/{}",
-                self.project, self.metric_kind
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_metric_kind_get()
+                        .project(self.project.clone())
+                        .metric_kind(self.metric_kind.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

@@ -34,7 +34,16 @@ impl TryFrom<CliOrganizationView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!("/v0/organizations/{}", self.organization))
+            .send_with(
+                |client| async move {
+                    client
+                        .organization_get()
+                        .organization(self.organization.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

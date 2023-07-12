@@ -34,7 +34,16 @@ impl TryFrom<CliPlanView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!("/v0/organizations/{}/plan", self.organization))
+            .send_with(
+                |client| async move {
+                    client
+                        .org_plan_get()
+                        .organization(self.organization.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

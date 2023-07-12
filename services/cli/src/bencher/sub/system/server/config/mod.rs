@@ -6,8 +6,6 @@ mod endpoint;
 mod update;
 mod view;
 
-const CONFIG_PATH: &str = "/v0/server/config";
-
 #[derive(Debug)]
 pub enum Config {
     Update(update::Update),

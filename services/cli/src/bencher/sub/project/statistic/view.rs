@@ -38,10 +38,17 @@ impl TryFrom<CliStatisticView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/statistics/{}",
-                self.project, self.statistic
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_statistic_get()
+                        .project(self.project.clone())
+                        .statistic(self.statistic)
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

@@ -8,8 +8,6 @@ use crate::{
     CliError,
 };
 
-use super::CONFIG_PATH;
-
 #[derive(Debug, Clone)]
 pub struct View {
     pub backend: Backend,
@@ -29,7 +27,12 @@ impl TryFrom<CliConfigView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend.get(CONFIG_PATH).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.server_config_get().send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

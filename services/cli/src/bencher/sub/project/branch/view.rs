@@ -37,10 +37,17 @@ impl TryFrom<CliBranchView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/branches/{}",
-                self.project, self.branch
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_branch_get()
+                        .project(self.project.clone())
+                        .branch(self.branch.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

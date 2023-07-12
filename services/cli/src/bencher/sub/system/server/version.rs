@@ -8,8 +8,6 @@ use crate::{
     CliError,
 };
 
-const VERSION_PATH: &str = "/v0/server/version";
-
 #[derive(Debug, Clone)]
 pub struct Version {
     pub backend: Backend,
@@ -29,7 +27,12 @@ impl TryFrom<CliVersion> for Version {
 #[async_trait]
 impl SubCmd for Version {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend.get(VERSION_PATH).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.server_version_get().send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }

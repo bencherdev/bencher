@@ -37,10 +37,17 @@ impl TryFrom<CliTestbedView> for View {
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
         self.backend
-            .get(&format!(
-                "/v0/projects/{}/testbeds/{}",
-                self.project, self.testbed
-            ))
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_testbed_get()
+                        .project(self.project.clone())
+                        .testbed(self.testbed.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
             .await?;
         Ok(())
     }

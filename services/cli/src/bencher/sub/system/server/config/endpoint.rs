@@ -8,8 +8,6 @@ use crate::{
     CliError,
 };
 
-use super::CONFIG_PATH;
-
 #[derive(Debug, Clone)]
 pub struct Endpoint {
     pub backend: Backend,
@@ -29,7 +27,12 @@ impl TryFrom<CliConfigEndpoint> for Endpoint {
 #[async_trait]
 impl SubCmd for Endpoint {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend.get(&format!("{CONFIG_PATH}/endpoint")).await?;
+        self.backend
+            .send_with(
+                |client| async move { client.server_config_endpoint_get().send().await },
+                true,
+            )
+            .await?;
         Ok(())
     }
 }
