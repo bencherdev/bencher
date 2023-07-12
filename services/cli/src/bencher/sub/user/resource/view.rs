@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::ResourceId;
+use bencher_json::{JsonUser, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -30,7 +30,8 @@ impl TryFrom<CliUserView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonUser = self
+            .backend
             .send_with(
                 |client| async move { client.user_get().user(self.user.clone()).send().await },
                 true,

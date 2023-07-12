@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewTestbed;
-use bencher_json::{NonEmpty, ResourceId, Slug};
+use bencher_json::{JsonTestbed, NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -50,7 +50,8 @@ impl From<Create> for JsonNewTestbed {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonTestbed = self
+            .backend
             .send_with(
                 |client| async move {
                     client

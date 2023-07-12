@@ -27,7 +27,8 @@ impl TryFrom<CliPing> for Ping {
 #[async_trait]
 impl SubCmd for Ping {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: String = self
+            .backend
             .send_with(
                 |client| async move { client.server_ping_get().send().await },
                 true,

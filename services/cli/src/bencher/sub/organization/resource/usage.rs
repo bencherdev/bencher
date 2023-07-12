@@ -3,10 +3,11 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{organization::usage::JsonUsage, ResourceId};
-use chrono::serde::ts_milliseconds::deserialize as from_milli_ts;
+use bencher_json::organization::entitlements::JsonEntitlements;
+use bencher_json::ResourceId;
 use chrono::{DateTime, Utc};
 
+use crate::bencher::to_date_time;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     cli::organization::usage::CliOrganizationUsage,
@@ -15,7 +16,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Usage {
-    pub org: ResourceId,
+    pub organization: ResourceId,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
     pub backend: Backend,
@@ -26,36 +27,37 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 
     fn try_from(usage: CliOrganizationUsage) -> Result<Self, Self::Error> {
         let CliOrganizationUsage {
-            org,
+            organization,
             start,
             end,
             backend,
         } = usage;
 
         Ok(Self {
-            org,
-            start: from_milli_ts(serde_json::json!(start))?,
-            end: from_milli_ts(serde_json::json!(end))?,
+            organization,
+            start: to_date_time(start)?,
+            end: to_date_time(end)?,
             backend: backend.try_into()?,
         })
-    }
-}
-
-impl From<Usage> for JsonUsage {
-    fn from(usage: Usage) -> Self {
-        let Usage { start, end, .. } = usage;
-        Self { start, end }
     }
 }
 
 #[async_trait]
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
-        let json_usage: JsonUsage = self.clone().into();
-        self.backend
-            .get_query(
-                &format!("/v0/organizations/{}/usage", self.org),
-                &json_usage,
+        let _: JsonEntitlements = self
+            .backend
+            .send_with(
+                |client| async move {
+                    client
+                        .org_usage_get()
+                        .organization(self.organization.clone())
+                        .start(self.start.timestamp())
+                        .end(self.end.timestamp())
+                        .send()
+                        .await
+                },
+                true,
             )
             .await?;
         Ok(())

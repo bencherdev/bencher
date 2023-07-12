@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::ResourceId;
+use bencher_json::{JsonProject, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -36,7 +36,8 @@ impl TryFrom<CliProjectView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonProject = self
+            .backend
             .send_with(
                 |client| async move {
                     if let Some(org) = self.org.clone() {

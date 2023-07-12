@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonOrganizationPermission;
-use bencher_json::ResourceId;
+use bencher_json::{JsonAllowed, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -82,7 +82,8 @@ impl From<Permission> for JsonOrganizationPermission {
 #[async_trait]
 impl SubCmd for Allowed {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonAllowed = self
+            .backend
             .send_with(
                 |client| async move {
                     client

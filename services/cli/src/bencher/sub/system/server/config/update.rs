@@ -46,7 +46,8 @@ impl From<Update> for JsonUpdateConfig {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: bencher_json::JsonConfig = self
+            .backend
             .send_with(
                 |client| async move { client.server_config_put().body(self.clone()).send().await },
                 true,

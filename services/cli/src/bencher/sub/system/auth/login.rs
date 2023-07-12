@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonLogin;
-use bencher_json::{Email, Jwt};
+use bencher_json::{Email, JsonEmpty, Jwt};
 
 #[cfg(feature = "plus")]
 use crate::bencher::sub::organization::resource::plan::level::Level;
@@ -63,7 +63,8 @@ impl From<Login> for JsonLogin {
 #[async_trait]
 impl SubCmd for Login {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonEmpty = self
+            .backend
             .send_with(
                 |client| async move { client.auth_login_post().body(self.clone()).send().await },
                 true,

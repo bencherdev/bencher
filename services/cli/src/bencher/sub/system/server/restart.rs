@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonRestart;
+use bencher_json::JsonEmpty;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -37,7 +38,7 @@ impl From<Restart> for JsonRestart {
 #[async_trait]
 impl SubCmd for Restart {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonEmpty=  self.backend
             .send_with(
                 |client| async move { client.server_restart_post().body(self.clone()).send().await },
                 true,

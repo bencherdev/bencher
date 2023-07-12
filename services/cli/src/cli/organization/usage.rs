@@ -8,13 +8,13 @@ use crate::cli::CliBackend;
 #[derive(Parser, Debug)]
 pub struct CliOrganizationUsage {
     /// Organization slug or UUID
-    pub org: ResourceId,
+    pub organization: ResourceId,
 
-    /// Start time
+    /// Start time (seconds since epoch)
     #[clap(long)]
     pub start: i64,
 
-    /// End time
+    /// End time (seconds since epoch)
     #[clap(long)]
     pub end: i64,
 

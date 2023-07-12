@@ -41,22 +41,14 @@ impl SubCmd for Bencher {
 
 fn map_timestamp(timestamp: Option<i64>) -> Result<Option<DateTime<Utc>>, CliError> {
     Ok(if let Some(timestamp) = timestamp {
-        Some(
-            Utc.timestamp_opt(timestamp, 0)
-                .single()
-                .ok_or(CliError::DateTime(timestamp))?,
-        )
+        Some(to_date_time(timestamp)?)
     } else {
         None
     })
 }
 
-fn from_response<T>(json_value: serde_json::Value) -> Result<T, CliError>
-where
-    T: serde::de::DeserializeOwned,
-{
-    match serde_json::from_value(json_value) {
-        Ok(value) => Ok(value),
-        Err(_) => Err(CliError::RequestFailed),
-    }
+fn to_date_time(timestamp: i64) -> Result<DateTime<Utc>, CliError> {
+    Utc.timestamp_opt(timestamp, 0)
+        .single()
+        .ok_or(CliError::DateTime(timestamp))
 }

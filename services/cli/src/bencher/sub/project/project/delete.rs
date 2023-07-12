@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::ResourceId;
+use bencher_json::{JsonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -36,7 +36,8 @@ impl TryFrom<CliProjectDelete> for Delete {
 #[async_trait]
 impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonEmpty = self
+            .backend
             .send_with(
                 |client| async move {
                     client

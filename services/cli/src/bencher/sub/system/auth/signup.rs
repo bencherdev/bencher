@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonSignup;
-use bencher_json::{Email, Jwt, Slug, UserName};
+use bencher_json::{Email, JsonEmpty, Jwt, Slug, UserName};
 
 #[cfg(feature = "plus")]
 use crate::bencher::sub::organization::resource::plan::level::Level;
@@ -73,7 +73,8 @@ impl From<Signup> for JsonSignup {
 #[async_trait]
 impl SubCmd for Signup {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonEmpty = self
+            .backend
             .send_with(
                 |client| async move { client.auth_signup_post().body(self.clone()).send().await },
                 true,

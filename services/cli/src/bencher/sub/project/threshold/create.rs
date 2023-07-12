@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonNewThreshold;
-use bencher_json::ResourceId;
+use bencher_json::{JsonThreshold, ResourceId};
 
 use super::statistic::Statistic;
 use crate::{
@@ -78,7 +78,8 @@ impl From<Create> for JsonNewThreshold {
 #[async_trait]
 impl SubCmd for Create {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonThreshold = self
+            .backend
             .send_with(
                 |client| async move {
                     client

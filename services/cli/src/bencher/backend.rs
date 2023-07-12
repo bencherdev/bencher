@@ -1,8 +1,7 @@
 use std::convert::TryFrom;
 
 use bencher_json::{Jwt, Url};
-use reqwest::{Client, RequestBuilder};
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
 use crate::{cli::CliBackend, cli_println, CliError};
@@ -60,9 +59,9 @@ fn map_token(token: Option<Jwt>) -> Result<Option<Jwt>, CliError> {
 }
 
 impl Backend {
-    pub async fn send_with<F, Fut, T>(&self, sender: F, log: bool) -> Result<T, CliError>
+    pub async fn send_with<F, Fut, T, Json>(&self, sender: F, log: bool) -> Result<Json, CliError>
     where
-        F: FnOnce(bencher_client::Client) -> Fut,
+        F: Fn(bencher_client::Client) -> Fut,
         Fut: std::future::Future<
             Output = Result<
                 progenitor_client::ResponseValue<T>,
@@ -70,6 +69,7 @@ impl Backend {
             >,
         >,
         T: Serialize,
+        Json: Serialize + DeserializeOwned,
     {
         let timeout = std::time::Duration::from_secs(15);
         let mut client_builder = reqwest::ClientBuilder::new()
@@ -86,87 +86,22 @@ impl Backend {
         }
         let reqwest_client = client_builder.build()?;
         let client = bencher_client::Client::new_with_client(self.host.as_ref(), reqwest_client);
-        let response_value = sender(client).await?;
-        let response = response_value.into_inner();
-        if log {
-            cli_println!("{}", serde_json::to_string_pretty(&response)?);
-        }
-        Ok(response)
-    }
-
-    pub async fn get(&self, path: &str) -> Result<serde_json::Value, CliError> {
-        self.send::<()>(Method::Get, path, true).await
-    }
-
-    pub async fn get_quiet(&self, path: &str) -> Result<serde_json::Value, CliError> {
-        self.send::<()>(Method::Get, path, false).await
-    }
-
-    pub async fn get_query<T: Serialize + ?Sized>(
-        &self,
-        path: &str,
-        query: &T,
-    ) -> Result<serde_json::Value, CliError> {
-        self.send(Method::GetQuery(query), path, true).await
-    }
-
-    pub async fn get_query_quiet<T: Serialize + ?Sized>(
-        &self,
-        path: &str,
-        query: &T,
-    ) -> Result<serde_json::Value, CliError> {
-        self.send(Method::GetQuery(query), path, false).await
-    }
-
-    pub async fn post<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
-    where
-        T: Serialize + ?Sized,
-    {
-        self.send(Method::Post(json), path, true).await
-    }
-
-    pub async fn put<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
-    where
-        T: Serialize + ?Sized,
-    {
-        self.send(Method::Put(json), path, true).await
-    }
-
-    pub async fn patch<T>(&self, path: &str, json: &T) -> Result<serde_json::Value, CliError>
-    where
-        T: Serialize + ?Sized,
-    {
-        self.send(Method::Patch(json), path, true).await
-    }
-
-    pub async fn delete(&self, path: &str) -> Result<serde_json::Value, CliError> {
-        self.send::<()>(Method::Delete, path, true).await
-    }
-
-    async fn send<T>(
-        &self,
-        method: Method<&T>,
-        path: &str,
-        verbose: bool,
-    ) -> Result<serde_json::Value, CliError>
-    where
-        T: Serialize + ?Sized,
-    {
-        let client = reqwest::Client::new();
-        let url = self.host.join(path)?.to_string();
 
         let attempts = self.attempts.unwrap_or(DEFAULT_ATTEMPTS);
         let max_attempts = attempts.checked_sub(1).ok_or(CliError::BadMath)?;
         let retry_after = self.retry_after.unwrap_or(DEFAULT_RETRY_AFTER);
 
         for attempt in 0..attempts {
-            match self.builder(&client, &method, &url).send().await {
-                Ok(res) => {
-                    let json = res.json().await?;
-                    if verbose {
-                        cli_println!("{}", serde_json::to_string_pretty(&json)?);
+            match sender(client.clone()).await {
+                Ok(response_value) => {
+                    let response = response_value.into_inner();
+                    // This is a bit of a kludge to convert from a `bencher_client` type to a `bencher_json` type when desired.
+                    // TODO make this a `From` impl
+                    let json_response: Json = serde_json::from_value(serde_json::json!(response))?;
+                    if log {
+                        cli_println!("{}", serde_json::to_string_pretty(&json_response)?);
                     }
-                    return Ok(json);
+                    return Ok(json_response);
                 },
                 Err(e) => {
                     cli_println!("Send attempt #{}: {e}", attempt + 1);
@@ -180,31 +115,4 @@ impl Backend {
 
         Err(CliError::Send(attempts))
     }
-
-    fn builder<T>(&self, client: &Client, method: &Method<T>, url: &str) -> RequestBuilder
-    where
-        T: Serialize,
-    {
-        let mut builder = match method {
-            Method::Get => client.get(url),
-            Method::GetQuery(query) => client.get(url).query(&query),
-            Method::Post(json) => client.post(url).json(json),
-            Method::Put(json) => client.put(url).json(json),
-            Method::Patch(json) => client.patch(url).json(json),
-            Method::Delete => client.delete(url),
-        };
-        if let Some(token) = &self.token {
-            builder = builder.header("Authorization", format!("Bearer {token}"));
-        }
-        builder
-    }
-}
-
-enum Method<T> {
-    Get,
-    GetQuery(T),
-    Post(T),
-    Put(T),
-    Patch(T),
-    Delete,
 }

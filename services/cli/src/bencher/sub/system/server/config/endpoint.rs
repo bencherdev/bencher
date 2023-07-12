@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use url::Url;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -27,7 +28,8 @@ impl TryFrom<CliConfigEndpoint> for Endpoint {
 #[async_trait]
 impl SubCmd for Endpoint {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: Url = self
+            .backend
             .send_with(
                 |client| async move { client.server_config_endpoint_get().send().await },
                 true,

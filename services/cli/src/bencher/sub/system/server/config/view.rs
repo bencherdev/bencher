@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_json::JsonConfig;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -27,7 +28,8 @@ impl TryFrom<CliConfigView> for View {
 #[async_trait]
 impl SubCmd for View {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonConfig = self
+            .backend
             .send_with(
                 |client| async move { client.server_config_get().send().await },
                 true,

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonOrganizationRole, JsonUpdateMember};
-use bencher_json::ResourceId;
+use bencher_json::{JsonMember, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -46,7 +46,8 @@ impl From<Update> for JsonUpdateMember {
 #[async_trait]
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonMember = self
+            .backend
             .send_with(
                 |client| async move {
                     client

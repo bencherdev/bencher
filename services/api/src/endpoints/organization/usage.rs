@@ -1,6 +1,5 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::organization::usage::JsonUsage;
 use bencher_json::{organization::entitlements::JsonEntitlements, ResourceId};
 use bencher_rbac::organization::Permission;
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -18,7 +17,10 @@ use crate::{
     error::api_error,
     model::{organization::QueryOrganization, user::auth::AuthUser},
     schema,
-    util::cors::{get_cors, CorsResponse},
+    util::{
+        cors::{get_cors, CorsResponse},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -27,6 +29,12 @@ const USAGE_RESOURCE: Resource = Resource::Usage;
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgUsageParams {
     pub organization: ResourceId,
+}
+
+#[derive(Clone, Deserialize, JsonSchema)]
+pub struct OrgUsageQuery {
+    pub start: i64,
+    pub end: i64,
 }
 
 #[allow(clippy::unused_async)]
@@ -38,7 +46,7 @@ pub struct OrgUsageParams {
 pub async fn org_usage_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgUsageParams>,
-    _query_params: Query<JsonUsage>,
+    _query_params: Query<OrgUsageQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -51,7 +59,7 @@ pub async fn org_usage_options(
 pub async fn org_usage_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgUsageParams>,
-    query_params: Query<JsonUsage>,
+    query_params: Query<OrgUsageQuery>,
 ) -> Result<ResponseOk<JsonEntitlements>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(USAGE_RESOURCE, Method::GetOne);
@@ -71,7 +79,7 @@ pub async fn org_usage_get(
 async fn get_inner(
     context: &ApiContext,
     path_params: OrgUsageParams,
-    json_usage: JsonUsage,
+    query_params: OrgUsageQuery,
     auth_user: &AuthUser,
 ) -> Result<JsonEntitlements, ApiError> {
     let conn = &mut *context.conn().await;
@@ -83,9 +91,9 @@ async fn get_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_org)?;
 
-    let JsonUsage { start, end } = json_usage;
-    let start_time = start.timestamp();
-    let end_time = end.timestamp();
+    let OrgUsageQuery { start, end } = query_params;
+    let start_time = to_date_time(start)?.timestamp();
+    let end_time = to_date_time(end)?.timestamp();
 
     let metrics_used = schema::metric::table
         .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))

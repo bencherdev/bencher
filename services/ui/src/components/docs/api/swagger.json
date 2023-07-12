@@ -1427,8 +1427,8 @@
             "name": "end",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "date-time"
+              "type": "integer",
+              "format": "int64"
             }
           },
           {
@@ -1436,8 +1436,8 @@
             "name": "start",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "date-time"
+              "type": "integer",
+              "format": "int64"
             }
           }
         ],

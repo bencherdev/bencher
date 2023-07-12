@@ -134,44 +134,54 @@ impl JsonPerfQuery {
     }
 
     fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 6], UrlEncodedError> {
-        let JsonPerfQuery {
-            metric_kind,
-            branches,
-            testbeds,
-            benchmarks,
-            start_time,
-            end_time,
-        } = self;
-
-        let metric_kind = Some(to_urlencoded(metric_kind));
-
-        let branches = Some(to_urlencoded_list(branches));
-        let testbeds = Some(to_urlencoded_list(testbeds));
-        let benchmarks = Some(to_urlencoded_list(benchmarks));
-
-        let start_time = start_time
-            .as_ref()
-            .map(|start_time| to_urlencoded(&start_time.timestamp_millis()));
-        let end_time = end_time
-            .as_ref()
-            .map(|end_time| to_urlencoded(&end_time.timestamp_millis()));
-
         QUERY_KEYS
             .into_iter()
             .zip(
                 [
-                    metric_kind,
-                    branches,
-                    testbeds,
-                    benchmarks,
-                    start_time,
-                    end_time,
+                    Some(self.metric_kind()),
+                    Some(self.branches()),
+                    Some(self.testbeds()),
+                    Some(self.benchmarks()),
+                    self.start_time_str(),
+                    self.end_time_str(),
                 ]
                 .into_iter(),
             )
             .collect::<Vec<_>>()
             .try_into()
             .map_err(UrlEncodedError::Vec)
+    }
+
+    pub fn metric_kind(&self) -> String {
+        to_urlencoded(&self.metric_kind)
+    }
+
+    pub fn branches(&self) -> String {
+        to_urlencoded_list(&self.branches)
+    }
+
+    pub fn testbeds(&self) -> String {
+        to_urlencoded_list(&self.testbeds)
+    }
+
+    pub fn benchmarks(&self) -> String {
+        to_urlencoded_list(&self.benchmarks)
+    }
+
+    pub fn start_time(&self) -> Option<i64> {
+        self.start_time.as_ref().map(DateTime::timestamp_millis)
+    }
+
+    pub fn end_time(&self) -> Option<i64> {
+        self.end_time.as_ref().map(DateTime::timestamp_millis)
+    }
+
+    fn start_time_str(&self) -> Option<String> {
+        self.start_time().as_ref().map(to_urlencoded)
+    }
+
+    fn end_time_str(&self) -> Option<String> {
+        self.end_time().as_ref().map(to_urlencoded)
     }
 }
 

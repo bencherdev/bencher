@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::JsonAuthToken;
-use bencher_json::Jwt;
+use bencher_json::{system::auth::JsonConfirm, Jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -43,7 +43,8 @@ impl From<Confirm> for JsonAuthToken {
 #[async_trait]
 impl SubCmd for Confirm {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonConfirm = self
+            .backend
             .send_with(
                 |client| async move { client.auth_confirm_post().body(self.clone()).send().await },
                 true,

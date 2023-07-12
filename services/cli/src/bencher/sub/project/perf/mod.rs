@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println, CliError};
 
-use crate::bencher::{from_response, map_timestamp, SubCmd};
+use crate::bencher::{map_timestamp, SubCmd};
 
 mod table_style;
 
@@ -81,13 +81,33 @@ impl From<Perf> for JsonPerfQuery {
 #[async_trait]
 impl SubCmd for Perf {
     async fn exec(&self) -> Result<(), CliError> {
-        let perf: JsonPerfQuery = self.clone().into();
-        let resp = self
+        let json_perf_query: &JsonPerfQuery = &self.clone().into();
+        let json_perf: JsonPerf = self
             .backend
-            .get_query(&format!("/v0/projects/{}/perf", self.project), &perf)
+            .send_with(
+                |client| async move {
+                    let mut client = client
+                        .proj_perf_get()
+                        .project(self.project.clone())
+                        .metric_kind(json_perf_query.metric_kind())
+                        .branches(json_perf_query.branches())
+                        .testbeds(json_perf_query.testbeds())
+                        .benchmarks(json_perf_query.benchmarks());
+
+                    if let Some(start_time) = json_perf_query.start_time() {
+                        client = client.start_time(start_time);
+                    }
+                    if let Some(end_time) = json_perf_query.end_time() {
+                        client = client.end_time(end_time);
+                    }
+
+                    client.send().await
+                },
+                true,
+            )
             .await?;
+
         if let Some(table_style) = self.table {
-            let json_perf: JsonPerf = from_response(resp)?;
             let mut perf_table: Table = json_perf.into();
             if let Some(table_style) = table_style {
                 table_style.stylize(&mut perf_table);

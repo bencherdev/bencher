@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_json::JsonApiVersion;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -27,7 +28,8 @@ impl TryFrom<CliVersion> for Version {
 #[async_trait]
 impl SubCmd for Version {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonApiVersion = self
+            .backend
             .send_with(
                 |client| async move { client.server_version_get().send().await },
                 true,

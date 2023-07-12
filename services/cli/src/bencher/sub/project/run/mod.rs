@@ -159,7 +159,7 @@ impl SubCmd for Run {
             (start_time, end_time)
         };
 
-        let report = JsonNewReport {
+        let report = &JsonNewReport {
             branch: branch.into(),
             hash: self.hash.clone().map(Into::into),
             testbed: self.testbed.clone().into(),
@@ -174,7 +174,7 @@ impl SubCmd for Run {
         };
 
         // TODO disable when quiet
-        cli_println!("{}", serde_json::to_string_pretty(&report)?);
+        cli_println!("{}", serde_json::to_string_pretty(report)?);
 
         // If performing a dry run, don't actually send the report
         if self.dry_run {
@@ -188,7 +188,7 @@ impl SubCmd for Run {
                     client
                         .proj_report_post()
                         .project(self.project.clone())
-                        .body(report)
+                        .body(report.clone())
                         .send()
                         .await
                 },
@@ -196,14 +196,13 @@ impl SubCmd for Run {
             )
             .await?;
 
-        let json_endpoint = self
+        let endpoint_url: Url = self
             .backend
             .send_with(
                 |client| async move { client.server_config_endpoint_get().send().await },
                 false,
             )
             .await?;
-        let endpoint_url: Url = json_endpoint.as_str().parse()?;
         let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), &json_report).await?;
 
         cli_println!("\nView results:");

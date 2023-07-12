@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonBackup, JsonDataStore};
+use bencher_json::JsonEmpty;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -76,7 +77,8 @@ impl From<BackupDataStore> for JsonDataStore {
 #[async_trait]
 impl SubCmd for Backup {
     async fn exec(&self) -> Result<(), CliError> {
-        self.backend
+        let _: JsonEmpty = self
+            .backend
             .send_with(
                 |client| async move { client.server_backup_post().body(self.clone()).send().await },
                 true,
