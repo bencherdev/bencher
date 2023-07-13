@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-mod cli;
+mod parser;
 mod task;
 
 use task::Task;

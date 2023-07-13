@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use crate::cli::{CliSub, CliTask};
+use crate::parser::{CliSub, CliTask};
 
 #[derive(Debug)]
 pub struct Task {
