@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::report::CliReportView,
+    parser::project::report::CliReportView,
     CliError,
 };
 

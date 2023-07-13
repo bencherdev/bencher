@@ -6,7 +6,7 @@ use bencher_json::{system::auth::JsonConfirm, Jwt};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::auth::CliAuthConfirm,
+    parser::system::auth::CliAuthConfirm,
     CliError,
 };
 

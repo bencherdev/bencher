@@ -6,7 +6,7 @@ use bencher_json::{JsonAlert, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::{
+    parser::{
         project::alert::{CliAlertList, CliAlertsSort},
         CliPagination,
     },

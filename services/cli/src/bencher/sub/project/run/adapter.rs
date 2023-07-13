@@ -1,6 +1,6 @@
 use bencher_client::types::JsonAdapter;
 
-use crate::cli::project::run::CliRunAdapter;
+use crate::parser::project::run::CliRunAdapter;
 
 #[derive(Debug, Clone, Copy)]
 pub enum RunAdapter {

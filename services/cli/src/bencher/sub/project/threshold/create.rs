@@ -7,7 +7,7 @@ use bencher_json::{JsonThreshold, ResourceId};
 use super::statistic::Statistic;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::threshold::CliThresholdCreate,
+    parser::project::threshold::CliThresholdCreate,
     CliError,
 };
 

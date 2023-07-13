@@ -9,7 +9,7 @@ use bencher_json::JsonMetric;
 use literally::hmap;
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 
-use crate::{cli::mock::CliMock, cli_println, CliError};
+use crate::{cli_println, parser::mock::CliMock, CliError};
 
 use super::SubCmd;
 

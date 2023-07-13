@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use super::run::Run as Create;
-use crate::{bencher::sub::SubCmd, cli::project::report::CliReport, CliError};
+use crate::{bencher::sub::SubCmd, parser::project::report::CliReport, CliError};
 
 mod delete;
 mod list;

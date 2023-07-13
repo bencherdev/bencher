@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::organization::CliOrganization, CliError};
+use crate::{bencher::sub::SubCmd, parser::organization::CliOrganization, CliError};
 
 mod allowed;
 mod create;

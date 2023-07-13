@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
 use super::run::CliRun;
-use crate::cli::{CliBackend, CliPagination};
+use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliReport {

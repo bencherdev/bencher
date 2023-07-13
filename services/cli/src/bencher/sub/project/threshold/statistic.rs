@@ -4,7 +4,7 @@ use bencher_client::types::JsonStatisticKind;
 use bencher_json::Boundary;
 
 use crate::{
-    cli::project::threshold::{CliStatisticCreate, CliStatisticKind},
+    parser::project::threshold::{CliStatisticCreate, CliStatisticKind},
     CliError,
 };
 

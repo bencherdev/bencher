@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::organization::plan::CliOrganizationPlan, CliError};
+use crate::{bencher::sub::SubCmd, parser::organization::plan::CliOrganizationPlan, CliError};
 
 mod create;
 pub mod level;

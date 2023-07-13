@@ -6,7 +6,7 @@ use bencher_json::{BranchName, JsonBranch, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::branch::CliBranchCreate,
+    parser::project::branch::CliBranchCreate,
     CliError,
 };
 

@@ -6,7 +6,7 @@ use bencher_json::{Email, JsonEmpty, ResourceId, UserName};
 
 use crate::{
     bencher::backend::Backend,
-    cli::organization::member::{CliMemberInvite, CliMemberRole},
+    parser::organization::member::{CliMemberInvite, CliMemberRole},
     CliError,
 };
 

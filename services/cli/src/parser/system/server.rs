@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliServer {

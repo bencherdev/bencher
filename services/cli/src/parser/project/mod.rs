@@ -1,7 +1,7 @@
 use bencher_json::{NonEmpty, ResourceId, Slug, Url};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 use super::CliPagination;
 

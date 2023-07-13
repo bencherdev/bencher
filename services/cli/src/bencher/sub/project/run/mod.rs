@@ -9,8 +9,9 @@ use url::Url;
 
 use crate::{
     bencher::{backend::Backend, map_timestamp, sub::project::run::urls::BenchmarkUrls},
-    cli::project::run::{CliRun, CliRunAdapter},
-    cli_eprintln, cli_println, CliError,
+    cli_eprintln, cli_println,
+    parser::project::run::{CliRun, CliRunAdapter},
+    CliError,
 };
 
 mod adapter;

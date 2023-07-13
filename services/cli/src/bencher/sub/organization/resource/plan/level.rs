@@ -1,6 +1,6 @@
 use bencher_client::types::PlanLevel;
 
-use crate::cli::organization::plan::CliPlanLevel;
+use crate::parser::organization::plan::CliPlanLevel;
 
 #[derive(Debug, Clone)]
 pub enum Level {

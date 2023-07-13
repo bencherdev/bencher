@@ -2,7 +2,7 @@ use bencher_json::{NonEmpty, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use crate::cli::{CliBackend, CliPagination};
+use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliToken {

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 
-use crate::{cli::CliSub, CliError};
+use crate::{parser::CliSub, CliError};
 
 #[cfg(feature = "docs")]
 mod docs;

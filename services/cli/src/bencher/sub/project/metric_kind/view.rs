@@ -5,7 +5,7 @@ use bencher_json::{JsonMetricKind, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::metric_kind::CliMetricKindView,
+    parser::project::metric_kind::CliMetricKindView,
     CliError,
 };
 

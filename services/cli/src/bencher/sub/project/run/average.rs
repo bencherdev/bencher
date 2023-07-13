@@ -1,6 +1,6 @@
 use bencher_client::types::JsonAverage;
 
-use crate::cli::project::run::CliRunAverage;
+use crate::parser::project::run::CliRunAverage;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Average {

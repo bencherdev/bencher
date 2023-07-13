@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::project::statistic::CliStatistic, CliError};
+use crate::{bencher::sub::SubCmd, parser::project::statistic::CliStatistic, CliError};
 
 mod view;
 

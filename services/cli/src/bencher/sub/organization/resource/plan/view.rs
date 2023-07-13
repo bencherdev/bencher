@@ -5,7 +5,7 @@ use bencher_json::{organization::metered::JsonPlan, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::plan::CliPlanView,
+    parser::organization::plan::CliPlanView,
     CliError,
 };
 

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::system::server::CliConfig, CliError};
+use crate::{bencher::sub::SubCmd, parser::system::server::CliConfig, CliError};
 
 mod endpoint;
 mod update;

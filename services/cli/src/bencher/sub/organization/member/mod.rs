@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::organization::member::CliMember, CliError};
+use crate::{bencher::sub::SubCmd, parser::organization::member::CliMember, CliError};
 
 mod invite;
 mod list;

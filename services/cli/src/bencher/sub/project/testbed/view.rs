@@ -5,7 +5,7 @@ use bencher_json::{JsonTestbed, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::testbed::CliTestbedView,
+    parser::project::testbed::CliTestbedView,
     CliError,
 };
 

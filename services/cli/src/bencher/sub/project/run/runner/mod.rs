@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{cli::project::run::CliRunCommand, CliError};
+use crate::{parser::project::run::CliRunCommand, CliError};
 
 mod command;
 mod flag;

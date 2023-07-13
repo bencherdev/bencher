@@ -6,7 +6,7 @@ use bencher_json::{JsonProject, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::{
+    parser::{
         project::{CliProjectList, CliProjectsSort},
         CliPagination,
     },

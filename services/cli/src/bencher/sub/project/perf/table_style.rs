@@ -1,6 +1,6 @@
 use tabled::{Style, Table};
 
-use crate::cli::project::perf::CliPerfTableStyle;
+use crate::parser::project::perf::CliPerfTableStyle;
 
 #[derive(Debug, Clone, Copy)]
 pub enum TableStyle {

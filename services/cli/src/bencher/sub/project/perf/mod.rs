@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use tabled::Table;
 use uuid::Uuid;
 
-use crate::{bencher::backend::Backend, cli::project::perf::CliPerf, cli_println, CliError};
+use crate::{bencher::backend::Backend, cli_println, parser::project::perf::CliPerf, CliError};
 
 use crate::bencher::{map_timestamp, SubCmd};
 

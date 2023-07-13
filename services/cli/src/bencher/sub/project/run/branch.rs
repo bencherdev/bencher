@@ -5,7 +5,7 @@ use bencher_json::{project::branch::BRANCH_MAIN_STR, BranchName, JsonBranch, Res
 
 use uuid::Uuid;
 
-use crate::{bencher::backend::Backend, cli::project::run::CliRunBranch, cli_println, CliError};
+use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch, CliError};
 
 use super::BENCHER_BRANCH;
 

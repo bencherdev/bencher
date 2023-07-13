@@ -6,7 +6,7 @@ use bencher_json::{JsonMetricKind, NonEmpty, ResourceId, Slug};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::metric_kind::CliMetricKindCreate,
+    parser::project::metric_kind::CliMetricKindCreate,
     CliError,
 };
 

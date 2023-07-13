@@ -6,7 +6,7 @@ use bencher_json::{JsonAllowed, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::{CliOrganizationAllowed, CliOrganizationPermission},
+    parser::organization::{CliOrganizationAllowed, CliOrganizationPermission},
     CliError,
 };
 

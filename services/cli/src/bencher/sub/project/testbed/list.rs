@@ -6,7 +6,7 @@ use bencher_json::{JsonTestbed, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::{
+    parser::{
         project::testbed::{CliTestbedList, CliTestbedsSort},
         CliPagination,
     },

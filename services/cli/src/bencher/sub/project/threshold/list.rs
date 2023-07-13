@@ -6,7 +6,7 @@ use bencher_json::{JsonThreshold, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::{
+    parser::{
         project::threshold::{CliThresholdList, CliThresholdsSort},
         CliPagination,
     },

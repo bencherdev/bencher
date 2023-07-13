@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::server::CliPing,
+    parser::system::server::CliPing,
     CliError,
 };
 

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::system::server::CliServer, CliError};
+use crate::{bencher::sub::SubCmd, parser::system::server::CliServer, CliError};
 
 mod backup;
 mod config;

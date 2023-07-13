@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::system::auth::CliAuth, CliError};
+use crate::{bencher::sub::SubCmd, parser::system::auth::CliAuth, CliError};
 
 mod confirm;
 mod login;

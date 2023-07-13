@@ -6,7 +6,7 @@ use bencher_json::{JsonOrganization, NonEmpty};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::{
+    parser::{
         organization::{CliOrganizationList, CliOrganizationsSort},
         CliPagination,
     },

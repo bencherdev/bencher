@@ -2,7 +2,7 @@ use bencher_json::{BenchmarkName, ResourceId};
 use clap::{Parser, Subcommand, ValueEnum};
 use uuid::Uuid;
 
-use crate::cli::{CliBackend, CliPagination};
+use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBenchmark {

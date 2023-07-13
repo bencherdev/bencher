@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 
-use crate::{cli::CliBencher, CliError};
+use crate::{parser::CliBencher, CliError};
 
 pub mod backend;
 pub mod sub;

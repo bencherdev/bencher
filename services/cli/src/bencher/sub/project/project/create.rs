@@ -6,7 +6,7 @@ use bencher_json::{JsonProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::{CliProjectCreate, CliProjectVisibility},
+    parser::project::{CliProjectCreate, CliProjectVisibility},
     CliError,
 };
 

@@ -1,8 +1,8 @@
 use std::{io, process::ExitCode};
 
 mod bencher;
-mod cli;
 mod error;
+mod parser;
 
 use bencher::{sub::SubCmd, Bencher};
 pub use error::CliError;

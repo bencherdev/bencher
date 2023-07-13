@@ -1,7 +1,7 @@
 use bencher_json::{BranchName, ResourceId, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::{CliBackend, CliPagination};
+use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
 pub enum CliBranch {

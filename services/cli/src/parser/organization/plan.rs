@@ -3,7 +3,7 @@
 use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, ResourceId};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliOrganizationPlan {

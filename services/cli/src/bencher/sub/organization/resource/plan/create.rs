@@ -6,7 +6,7 @@ use bencher_json::{CardCvc, CardNumber, ExpirationMonth, ExpirationYear, JsonEmp
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::plan::{CliPlanCard, CliPlanCreate},
+    parser::organization::plan::{CliPlanCard, CliPlanCreate},
     CliError,
 };
 

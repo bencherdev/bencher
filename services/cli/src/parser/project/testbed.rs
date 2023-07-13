@@ -1,32 +1,32 @@
 use bencher_json::{NonEmpty, ResourceId, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::{CliBackend, CliPagination};
+use crate::parser::{CliBackend, CliPagination};
 
 #[derive(Subcommand, Debug)]
-pub enum CliMetricKind {
-    /// List metric kinds
+pub enum CliTestbed {
+    /// List testbeds
     #[clap(alias = "ls")]
-    List(CliMetricKindList),
-    /// Create a metric kind
+    List(CliTestbedList),
+    /// Create a testbed
     #[clap(alias = "add")]
-    Create(CliMetricKindCreate),
-    /// View a metric kind
-    View(CliMetricKindView),
+    Create(CliTestbedCreate),
+    /// View a testbed
+    View(CliTestbedView),
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindList {
+pub struct CliTestbedList {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind name
+    /// Testbed name
     #[clap(long)]
     pub name: Option<NonEmpty>,
 
     #[clap(flatten)]
-    pub pagination: CliPagination<CliMetricKindsSort>,
+    pub pagination: CliPagination<CliTestbedsSort>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -34,40 +34,36 @@ pub struct CliMetricKindList {
 
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
-pub enum CliMetricKindsSort {
-    /// Name of the metric kind
+pub enum CliTestbedsSort {
+    /// Name of the testbed
     Name,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindCreate {
+pub struct CliTestbedCreate {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind name
+    /// Testbed name
     pub name: NonEmpty,
 
-    /// Metric kind slug
+    /// Testbed slug
     #[clap(long)]
     pub slug: Option<Slug>,
-
-    /// Metric kind unit of measure
-    #[clap(long)]
-    pub units: NonEmpty,
 
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
 #[derive(Parser, Debug)]
-pub struct CliMetricKindView {
+pub struct CliTestbedView {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
-    /// Metric kind slug or UUID
-    pub metric_kind: ResourceId,
+    /// Testbed slug or UUID
+    pub testbed: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

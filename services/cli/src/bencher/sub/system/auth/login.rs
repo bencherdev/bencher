@@ -8,7 +8,7 @@ use bencher_json::{Email, JsonEmpty, Jwt};
 use crate::bencher::sub::organization::resource::plan::level::Level;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::auth::CliAuthLogin,
+    parser::system::auth::CliAuthLogin,
     CliError,
 };
 

@@ -1,6 +1,6 @@
 use bencher_client::types::JsonFold;
 
-use crate::cli::project::run::CliRunFold;
+use crate::parser::project::run::CliRunFold;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Fold {

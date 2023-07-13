@@ -1,7 +1,7 @@
 use bencher_json::{NonEmpty, ResourceId, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 pub mod member;
 #[cfg(feature = "plus")]

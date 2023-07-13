@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{bencher::sub::SubCmd, cli::project::metric_kind::CliMetricKind, CliError};
+use crate::{bencher::sub::SubCmd, parser::project::metric_kind::CliMetricKind, CliError};
 
 mod create;
 mod list;

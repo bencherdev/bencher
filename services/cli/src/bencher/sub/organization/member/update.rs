@@ -6,7 +6,7 @@ use bencher_json::{JsonMember, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::member::CliMemberUpdate,
+    parser::organization::member::CliMemberUpdate,
     CliError,
 };
 

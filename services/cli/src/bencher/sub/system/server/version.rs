@@ -5,7 +5,7 @@ use bencher_json::JsonApiVersion;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::server::CliVersion,
+    parser::system::server::CliVersion,
     CliError,
 };
 

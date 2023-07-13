@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::server::CliConfigEndpoint,
+    parser::system::server::CliConfigEndpoint,
     CliError,
 };
 

@@ -2,7 +2,7 @@ use bencher_json::ResourceId;
 use clap::{Parser, Subcommand};
 use uuid::Uuid;
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 #[derive(Subcommand, Debug)]
 pub enum CliStatistic {

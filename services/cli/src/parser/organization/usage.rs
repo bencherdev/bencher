@@ -3,7 +3,7 @@
 use bencher_json::ResourceId;
 use clap::Parser;
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 #[derive(Parser, Debug)]
 pub struct CliOrganizationUsage {

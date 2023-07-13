@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::user::token::CliTokenView,
+    parser::user::token::CliTokenView,
     CliError,
 };
 

@@ -5,7 +5,7 @@ use bencher_json::{JsonBranch, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::branch::CliBranchView,
+    parser::project::branch::CliBranchView,
     CliError,
 };
 

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use bencher_json::{BranchName, GitHash, ResourceId};
 use clap::{Args, Parser, ValueEnum};
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 #[allow(clippy::option_option, clippy::struct_excessive_bools)]
 #[derive(Parser, Debug)]

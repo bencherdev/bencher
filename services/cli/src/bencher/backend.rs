@@ -4,7 +4,7 @@ use bencher_json::{Jwt, Url};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
-use crate::{cli::CliBackend, cli_println, CliError};
+use crate::{cli_println, parser::CliBackend, CliError};
 
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";

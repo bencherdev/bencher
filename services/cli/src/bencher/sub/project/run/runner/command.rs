@@ -1,7 +1,7 @@
 use std::convert::{TryFrom, TryInto};
 
 use super::{flag::Flag, shell::Shell};
-use crate::{cli::project::run::CliRunShell, CliError};
+use crate::{parser::project::run::CliRunShell, CliError};
 
 #[derive(Debug)]
 pub struct Command {

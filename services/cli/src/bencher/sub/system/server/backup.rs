@@ -6,7 +6,7 @@ use bencher_json::JsonEmpty;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::server::{CliBackup, CliBackupDataStore},
+    parser::system::server::{CliBackup, CliBackupDataStore},
     CliError,
 };
 

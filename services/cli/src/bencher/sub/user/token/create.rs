@@ -6,7 +6,7 @@ use bencher_json::{JsonToken, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::user::token::CliTokenCreate,
+    parser::user::token::CliTokenCreate,
     CliError,
 };
 

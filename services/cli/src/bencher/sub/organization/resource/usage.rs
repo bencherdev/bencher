@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use crate::bencher::to_date_time;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::organization::usage::CliOrganizationUsage,
+    parser::organization::usage::CliOrganizationUsage,
     CliError,
 };
 

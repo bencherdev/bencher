@@ -5,7 +5,7 @@ use bencher_json::{JsonUser, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::user::CliUserView,
+    parser::user::CliUserView,
     CliError,
 };
 

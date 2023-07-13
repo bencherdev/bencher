@@ -5,7 +5,7 @@ use bencher_json::JsonConfig;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::system::server::CliConfigView,
+    parser::system::server::CliConfigView,
     CliError,
 };
 

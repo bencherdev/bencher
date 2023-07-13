@@ -5,7 +5,7 @@ use bencher_json::{JsonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    cli::project::CliProjectDelete,
+    parser::project::CliProjectDelete,
     CliError,
 };
 

@@ -1,7 +1,7 @@
 use bencher_json::ResourceId;
 use clap::{Parser, Subcommand};
 
-use crate::cli::CliBackend;
+use crate::parser::CliBackend;
 
 pub mod token;
 
