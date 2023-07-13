@@ -2,6 +2,10 @@ use clap::Parser;
 
 use crate::parser::{CliSub, CliTask};
 
+mod release_notes;
+
+use release_notes::ReleaseNotes;
+
 #[derive(Debug)]
 pub struct Task {
     sub: Sub,
@@ -10,6 +14,7 @@ pub struct Task {
 #[derive(Debug)]
 pub enum Sub {
     Fmt,
+    ReleaseNotes(ReleaseNotes),
 }
 
 impl TryFrom<CliTask> for Task {
@@ -28,6 +33,7 @@ impl TryFrom<CliSub> for Sub {
     fn try_from(sub: CliSub) -> Result<Self, Self::Error> {
         Ok(match sub {
             CliSub::Fmt => Self::Fmt,
+            CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
         })
     }
 }
@@ -46,6 +52,7 @@ impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
             Self::Fmt => Ok(()),
+            Self::ReleaseNotes(release_notes) => release_notes.exec().await,
         }
     }
 }

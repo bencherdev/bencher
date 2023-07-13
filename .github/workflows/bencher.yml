@@ -606,9 +606,12 @@ jobs:
           docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+      - name: Generate Release Notes
+        run: cargo xtask release-notes
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          body_path: release-notes.md
           files: |
             ${{ env.API_LOCAL_DOCKER_IMAGE }}.tar.gz
             ${{ env.API_LITESTREAM_DOCKER_IMAGE }}.tar.gz

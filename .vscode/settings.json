@@ -42,6 +42,7 @@
     "bencherdev",
     "bindgen",
     "Bulma",
+    "camino",
     "chrono",
     "codegen",
     "devel",

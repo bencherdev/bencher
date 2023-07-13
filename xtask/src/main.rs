@@ -1,16 +1,14 @@
-use anyhow::Result;
-
 mod parser;
 mod task;
 
 use task::Task;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     exec().await
 }
 
-async fn exec() -> Result<()> {
+async fn exec() -> anyhow::Result<()> {
     let task = Task::new()?;
     task.exec().await
 }

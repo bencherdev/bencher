@@ -21,6 +21,7 @@ bencher_plus = { path = "plus/bencher_plus" }
 # crates.io
 anyhow = "1.0"
 async-trait = "0.1"
+camino = "1.1"
 chrono = { version = "0.4", default-features = false }
 clap = { version = "4.3", features = ["derive"] }
 derive_more = "0.99"
