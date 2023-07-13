@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, ResourceId,
+    JsonDirection, JsonEmpty, JsonNewReport, JsonPagination, JsonReport, JsonReports, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -73,7 +73,7 @@ pub async fn proj_reports_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjReportsParams>,
     query_params: Query<ProjReportsQuery>,
-) -> Result<ResponseOk<Vec<JsonReport>>, HttpError> {
+) -> Result<ResponseOk<JsonReports>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(REPORT_RESOURCE, Method::GetLs);
 
@@ -100,7 +100,7 @@ async fn get_ls_inner(
     path_params: ProjReportsParams,
     query_params: ProjReportsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonReport>, ApiError> {
+) -> Result<JsonReports, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

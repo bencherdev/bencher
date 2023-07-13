@@ -51,6 +51,12 @@ pub struct JsonStartPoint {
     pub thresholds: Option<bool>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonBranches(pub Vec<JsonBranch>);
+
+crate::from_vec!(JsonBranches[JsonBranch]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranch {

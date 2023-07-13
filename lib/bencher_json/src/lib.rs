@@ -17,29 +17,36 @@ pub mod system;
 pub mod urlencoded;
 pub mod user;
 
-pub use organization::{member::JsonMember, JsonNewOrganization, JsonOrganization};
+#[cfg(feature = "plus")]
+pub use organization::{entitlements::JsonEntitlements, metered::JsonPlan};
+
+pub use organization::{
+    member::{JsonMember, JsonMembers},
+    JsonNewOrganization, JsonOrganization, JsonOrganizations,
+};
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
-    alert::JsonAlert,
-    benchmark::JsonBenchmark,
-    branch::{JsonBranch, JsonNewBranch},
+    alert::{JsonAlert, JsonAlerts},
+    benchmark::{JsonBenchmark, JsonBenchmarks},
+    branch::{JsonBranch, JsonBranches, JsonNewBranch},
     metric::JsonMetric,
-    metric_kind::{JsonMetricKind, JsonNewMetricKind},
+    metric_kind::{JsonMetricKind, JsonMetricKinds, JsonNewMetricKind},
     perf::{JsonPerf, JsonPerfQuery},
-    report::{JsonNewReport, JsonReport},
-    testbed::{JsonNewTestbed, JsonTestbed},
-    threshold::{JsonNewThreshold, JsonThreshold},
-    JsonNewProject, JsonProject,
+    report::{JsonNewReport, JsonReport, JsonReports},
+    testbed::{JsonNewTestbed, JsonTestbed, JsonTestbeds},
+    threshold::{JsonNewThreshold, JsonStatistic, JsonThreshold, JsonThresholds},
+    JsonNewProject, JsonProject, JsonProjects,
 };
 pub use system::{
-    auth::{JsonAuthToken, JsonLogin, JsonSignup},
+    auth::{JsonAuthToken, JsonConfirm, JsonLogin, JsonSignup},
     backup::JsonBackup,
-    config::JsonConfig,
+    config::{JsonConfig, JsonEndpoint},
+    ping::JsonPing,
     restart::JsonRestart,
     version::JsonApiVersion,
 };
 pub use user::{
-    token::{JsonNewToken, JsonToken},
+    token::{JsonNewToken, JsonToken, JsonTokens},
     JsonUser,
 };
 
@@ -64,4 +71,27 @@ where
         sanitized.sanitize();
         serde_json::json!(sanitized)
     }
+}
+
+#[macro_export]
+macro_rules! from_vec {
+    ($list:ty[$single:ty]) => {
+        impl From<Vec<$single>> for $list {
+            fn from(vector: Vec<$single>) -> Self {
+                Self(vector)
+            }
+        }
+
+        impl FromIterator<$single> for $list {
+            fn from_iter<I: IntoIterator<Item = $single>>(iter: I) -> Self {
+                Self(iter.into_iter().collect())
+            }
+        }
+
+        impl $list {
+            pub fn into_inner(self) -> Vec<$single> {
+                self.0
+            }
+        }
+    };
 }

@@ -1,4 +1,4 @@
-use bencher_json::{JsonAlert, JsonDirection, JsonPagination, ResourceId};
+use bencher_json::{JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -63,7 +63,7 @@ pub async fn proj_alerts_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjAlertsParams>,
     query_params: Query<ProjAlertsQuery>,
-) -> Result<ResponseOk<Vec<JsonAlert>>, HttpError> {
+) -> Result<ResponseOk<JsonAlerts>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
 
@@ -90,7 +90,7 @@ async fn get_ls_inner(
     path_params: ProjAlertsParams,
     query_params: ProjAlertsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonAlert>, ApiError> {
+) -> Result<JsonAlerts, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

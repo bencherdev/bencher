@@ -7,7 +7,7 @@ use bencher_json::{
         IfExists, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp, JsonTls, LogLevel,
         ServerLog,
     },
-    JsonConfig,
+    JsonConfig, Url,
 };
 use bencher_rbac::init_rbac;
 use diesel::{connection::SimpleConnection, Connection};
@@ -19,7 +19,6 @@ use dropshot::{
 use slog::Logger;
 use tokio::sync::mpsc::Sender;
 use tracing::{trace, warn};
-use url::Url;
 
 use crate::{
     context::{ApiContext, Database, DbConnection, Email, Messenger, SecretKey},
@@ -112,6 +111,7 @@ fn into_private(
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ApiError> {
+    let endpoint = endpoint.into();
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(&database_path);
     let mut database_connection = DbConnection::establish(&database_path)?;

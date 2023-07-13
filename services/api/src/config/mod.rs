@@ -165,7 +165,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self(JsonConfig {
-            endpoint: DEFAULT_ENDPOINT.clone(),
+            endpoint: DEFAULT_ENDPOINT.clone().into(),
             secret_key: None,
             security: Some(JsonSecurity {
                 issuer: Some(BENCHER_DOT_DEV.into()),

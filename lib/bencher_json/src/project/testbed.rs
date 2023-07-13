@@ -40,6 +40,12 @@ impl JsonNewTestbed {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTestbeds(pub Vec<JsonTestbed>);
+
+crate::from_vec!(JsonTestbeds[JsonTestbed]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTestbed {

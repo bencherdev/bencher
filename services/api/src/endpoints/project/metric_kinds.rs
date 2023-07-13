@@ -1,5 +1,6 @@
 use bencher_json::{
-    JsonDirection, JsonMetricKind, JsonNewMetricKind, JsonPagination, NonEmpty, ResourceId,
+    JsonDirection, JsonMetricKind, JsonMetricKinds, JsonNewMetricKind, JsonPagination, NonEmpty,
+    ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -74,7 +75,7 @@ pub async fn proj_metric_kinds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjMetricKindsParams>,
     query_params: Query<ProjMetricKindsQuery>,
-) -> Result<ResponseOk<Vec<JsonMetricKind>>, HttpError> {
+) -> Result<ResponseOk<JsonMetricKinds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::GetLs);
 
@@ -101,7 +102,7 @@ async fn get_ls_inner(
     path_params: ProjMetricKindsParams,
     query_params: ProjMetricKindsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonMetricKind>, ApiError> {
+) -> Result<JsonMetricKinds, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

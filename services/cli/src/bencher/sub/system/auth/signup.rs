@@ -65,6 +65,8 @@ impl From<Signup> for JsonSignup {
             email: email.into(),
             #[cfg(feature = "plus")]
             plan: plan.map(Into::into),
+            #[cfg(not(feature = "plus"))]
+            plan: None,
             invite: invite.map(Into::into),
         }
     }

@@ -1,8 +1,7 @@
-use bencher_valid::{Sanitize, Secret};
+use bencher_valid::{Sanitize, Secret, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 mod database;
 mod logging;
@@ -51,3 +50,7 @@ impl Sanitize for JsonConfig {
         self.plus.sanitize();
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonEndpoint(pub Url);

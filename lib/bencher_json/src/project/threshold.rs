@@ -28,6 +28,12 @@ pub struct JsonNewStatistic {
     pub upper_boundary: Option<Boundary>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonThresholds(pub Vec<JsonThreshold>);
+
+crate::from_vec!(JsonThresholds[JsonThreshold]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThreshold {

@@ -11,6 +11,12 @@ use crate::JsonMetric;
 
 use super::boundary::JsonBoundary;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonBenchmarks(pub Vec<JsonBenchmark>);
+
+crate::from_vec!(JsonBenchmarks[JsonBenchmark]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmark {

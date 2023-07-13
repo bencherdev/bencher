@@ -1,5 +1,5 @@
 use bencher_json::{
-    JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, NonEmpty, ResourceId,
+    JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, JsonTestbeds, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -74,7 +74,7 @@ pub async fn proj_testbeds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjTestbedsParams>,
     query_params: Query<ProjTestbedsQuery>,
-) -> Result<ResponseOk<Vec<JsonTestbed>>, HttpError> {
+) -> Result<ResponseOk<JsonTestbeds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::GetLs);
 
@@ -101,7 +101,7 @@ async fn get_ls_inner(
     path_params: ProjTestbedsParams,
     query_params: ProjTestbedsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonTestbed>, ApiError> {
+) -> Result<JsonTestbeds, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

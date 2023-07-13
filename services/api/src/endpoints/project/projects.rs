@@ -1,4 +1,6 @@
-use bencher_json::{JsonDirection, JsonPagination, JsonProject, NonEmpty, ResourceId};
+use bencher_json::{
+    JsonDirection, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
+};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -85,7 +87,7 @@ pub async fn projects_options(
 pub async fn projects_get(
     rqctx: RequestContext<ApiContext>,
     query_params: Query<ProjectsQuery>,
-) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
+) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
@@ -110,7 +112,7 @@ async fn get_ls_inner(
     auth_user: Option<&AuthUser>,
     query_params: ProjectsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonProject>, ApiError> {
+) -> Result<JsonProjects, ApiError> {
     let conn = &mut *context.conn().await;
 
     let mut query = schema::project::table.into_boxed();

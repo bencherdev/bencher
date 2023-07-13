@@ -181,6 +181,12 @@ impl JsonNewMetricKind {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonMetricKinds(pub Vec<JsonMetricKind>);
+
+crate::from_vec!(JsonMetricKinds[JsonMetricKind]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetricKind {

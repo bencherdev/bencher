@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     organization::member::{JsonNewMember, JsonUpdateMember},
-    JsonDirection, JsonEmpty, JsonMember, JsonPagination, ResourceId, UserName,
+    JsonDirection, JsonEmpty, JsonMember, JsonMembers, JsonPagination, ResourceId, UserName,
 };
 use bencher_rbac::organization::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -77,7 +77,7 @@ pub async fn org_members_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgMembersParams>,
     query_params: Query<OrgMembersQuery>,
-) -> Result<ResponseOk<Vec<JsonMember>>, HttpError> {
+) -> Result<ResponseOk<JsonMembers>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(MEMBER_RESOURCE, Method::GetLs);
 
@@ -100,7 +100,7 @@ async fn get_ls_inner(
     path_params: OrgMembersParams,
     query_params: OrgMembersQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonMember>, ApiError> {
+) -> Result<JsonMembers, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(

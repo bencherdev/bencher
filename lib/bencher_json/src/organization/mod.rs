@@ -19,6 +19,12 @@ pub struct JsonNewOrganization {
     pub slug: Option<Slug>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonOrganizations(pub Vec<JsonOrganization>);
+
+crate::from_vec!(JsonOrganizations[JsonOrganization]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganization {

@@ -108,7 +108,7 @@ async fn put_inner(
 }
 
 pub mod endpoint {
-    use bencher_json::Url;
+    use bencher_json::JsonEndpoint;
     use dropshot::{endpoint, HttpError, RequestContext};
 
     use crate::{
@@ -144,7 +144,7 @@ pub mod endpoint {
     }]
     pub async fn server_config_endpoint_get(
         rqctx: RequestContext<ApiContext>,
-    ) -> Result<ResponseOk<Url>, HttpError> {
+    ) -> Result<ResponseOk<JsonEndpoint>, HttpError> {
         let auth_user = AuthUser::new(&rqctx).await.ok();
         let endpoint = Endpoint::new(ENDPOINT_RESOURCE, Method::GetOne);
 
@@ -158,7 +158,7 @@ pub mod endpoint {
         }
     }
 
-    async fn get_one_inner(context: &ApiContext) -> Result<Url, ApiError> {
-        Ok(context.endpoint.clone().into())
+    async fn get_one_inner(context: &ApiContext) -> Result<JsonEndpoint, ApiError> {
+        Ok(JsonEndpoint(context.endpoint.clone().into()))
     }
 }

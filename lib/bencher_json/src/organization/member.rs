@@ -20,6 +20,12 @@ pub struct JsonNewMember {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonMembers(pub Vec<JsonMember>);
+
+crate::from_vec!(JsonMembers[JsonMember]);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMember {
     pub uuid: Uuid,
     pub name: UserName,

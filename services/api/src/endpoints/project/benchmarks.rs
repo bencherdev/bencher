@@ -1,4 +1,6 @@
-use bencher_json::{BenchmarkName, JsonBenchmark, JsonDirection, JsonPagination, ResourceId};
+use bencher_json::{
+    BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonPagination, ResourceId,
+};
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
 use schemars::JsonSchema;
@@ -70,7 +72,7 @@ pub async fn proj_benchmarks_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjBenchmarksParams>,
     query_params: Query<ProjBenchmarksQuery>,
-) -> Result<ResponseOk<Vec<JsonBenchmark>>, HttpError> {
+) -> Result<ResponseOk<JsonBenchmarks>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::GetLs);
 
@@ -97,7 +99,7 @@ async fn get_ls_inner(
     path_params: ProjBenchmarksParams,
     query_params: ProjBenchmarksQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonBenchmark>, ApiError> {
+) -> Result<JsonBenchmarks, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

@@ -1,5 +1,6 @@
 use bencher_json::{
-    JsonDirection, JsonNewOrganization, JsonOrganization, JsonPagination, NonEmpty, ResourceId,
+    JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
+    NonEmpty, ResourceId,
 };
 use bencher_rbac::organization::{Permission, Role};
 use chrono::Utc;
@@ -68,7 +69,7 @@ pub async fn organizations_options(
 pub async fn organizations_get(
     rqctx: RequestContext<ApiContext>,
     query_params: Query<OrganizationsQuery>,
-) -> Result<ResponseOk<Vec<JsonOrganization>>, HttpError> {
+) -> Result<ResponseOk<JsonOrganizations>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::GetLs);
 
@@ -89,7 +90,7 @@ async fn get_ls_inner(
     auth_user: &AuthUser,
     query_params: OrganizationsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonOrganization>, ApiError> {
+) -> Result<JsonOrganizations, ApiError> {
     let conn = &mut *context.conn().await;
 
     let mut query = schema::organization::table.into_boxed();

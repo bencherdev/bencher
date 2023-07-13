@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonNewReport, JsonReportSettings};
-use bencher_json::{project::testbed::TESTBED_LOCALHOST_STR, GitHash, ResourceId};
+use bencher_json::{project::testbed::TESTBED_LOCALHOST_STR, GitHash, JsonEndpoint, ResourceId};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use url::Url;
@@ -197,13 +197,14 @@ impl SubCmd for Run {
             )
             .await?;
 
-        let endpoint_url: Url = self
+        let json_endpoint: JsonEndpoint = self
             .backend
             .send_with(
                 |client| async move { client.server_config_endpoint_get().send().await },
                 false,
             )
             .await?;
+        let endpoint_url: Url = json_endpoint.0.into();
         let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), &json_report).await?;
 
         cli_println!("\nView results:");
@@ -220,10 +221,9 @@ impl SubCmd for Run {
             let mut url = endpoint_url.clone();
             url.set_path(&format!(
                 "/console/projects/{}/alerts/{}",
-                json_report.project.slug.as_str(),
-                alert.uuid
+                json_report.project.slug, alert.uuid
             ));
-            cli_println!("- {}: {url}", alert.benchmark.name.as_str());
+            cli_println!("- {}: {url}", alert.benchmark.name);
         }
         cli_println!("\n");
 

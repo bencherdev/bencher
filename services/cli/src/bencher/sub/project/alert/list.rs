@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjAlertsSort};
-use bencher_json::{JsonAlert, ResourceId};
+use bencher_json::{JsonAlerts, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -67,7 +67,7 @@ impl From<CliPagination<CliAlertsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: Vec<JsonAlert> = self
+        let _: JsonAlerts = self
             .backend
             .send_with(
                 |client| async move {

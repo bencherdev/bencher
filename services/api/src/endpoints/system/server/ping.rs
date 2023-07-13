@@ -1,3 +1,4 @@
+use bencher_json::JsonPing;
 use dropshot::{endpoint, HttpError, HttpResponseHeaders, HttpResponseOk, RequestContext};
 
 use crate::{
@@ -12,7 +13,6 @@ use crate::{
 use super::Resource;
 
 const PING_RESOURCE: Resource = Resource::Ping;
-const PONG: &str = "PONG";
 
 #[allow(clippy::unused_async)]
 #[endpoint {
@@ -34,7 +34,7 @@ pub async fn server_ping_options(
 }]
 pub async fn server_ping_get(
     _rqctx: RequestContext<ApiContext>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<String>, CorsHeaders>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<JsonPing>, CorsHeaders>, HttpError> {
     let endpoint = Endpoint::new(PING_RESOURCE, Method::GetOne);
-    pub_response_ok!(endpoint, PONG.into())
+    pub_response_ok!(endpoint, JsonPing::Pong)
 }

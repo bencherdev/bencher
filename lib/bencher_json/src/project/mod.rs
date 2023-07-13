@@ -29,6 +29,12 @@ pub struct JsonNewProject {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonProjects(pub Vec<JsonProject>);
+
+crate::from_vec!(JsonProjects[JsonProject]);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProject {
     pub uuid: Uuid,
     pub organization: Uuid,

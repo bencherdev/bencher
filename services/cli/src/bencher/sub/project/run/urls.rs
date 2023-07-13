@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
-use bencher_client::types::{JsonReport, Slug};
-use bencher_json::JsonPerfQuery;
+use bencher_json::{JsonPerfQuery, JsonReport, Slug};
 use url::Url;
 use uuid::Uuid;
 
@@ -25,7 +24,7 @@ impl BenchmarkUrls {
                 for benchmark_metric in &result.benchmarks {
                     urls.insert(
                         benchmark_metric.name.to_string(),
-                        benchmark_url.to_url(metric_kind.clone(), benchmark_metric.uuid)?,
+                        benchmark_url.to_url(metric_kind.clone(), benchmark_metric.uuid),
                     );
                 }
             }
@@ -52,9 +51,9 @@ impl BenchmarkUrl {
         }
     }
 
-    fn to_url(&self, metric_kind: Slug, benchmark: Uuid) -> Result<Url, CliError> {
+    fn to_url(&self, metric_kind: Slug, benchmark: Uuid) -> Url {
         let json_perf_query = JsonPerfQuery {
-            metric_kind: metric_kind.as_str().parse()?,
+            metric_kind: metric_kind.into(),
             branches: vec![self.branch],
             testbeds: vec![self.testbed],
             benchmarks: vec![benchmark],
@@ -63,10 +62,7 @@ impl BenchmarkUrl {
         };
 
         let mut url = self.endpoint.clone();
-        url.set_path(&format!(
-            "/console/projects/{}/perf",
-            self.project_slug.as_str()
-        ));
+        url.set_path(&format!("/console/projects/{}/perf", self.project_slug));
         url.set_query(Some(
             &json_perf_query
                 .to_query_string(&[
@@ -75,6 +71,6 @@ impl BenchmarkUrl {
                 .unwrap_or_default(),
         ));
 
-        Ok(url)
+        url
     }
 }

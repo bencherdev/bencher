@@ -12,6 +12,12 @@ pub struct JsonNewToken {
     pub ttl: Option<u32>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonTokens(pub Vec<JsonToken>);
+
+crate::from_vec!(JsonTokens[JsonToken]);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonToken {

@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
+use bencher_json::JsonPing;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -27,7 +28,7 @@ impl TryFrom<CliPing> for Ping {
 #[async_trait]
 impl SubCmd for Ping {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: String = self
+        let _: JsonPing = self
             .backend
             .send_with(
                 |client| async move { client.server_ping_get().send().await },

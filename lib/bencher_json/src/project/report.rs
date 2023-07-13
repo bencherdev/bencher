@@ -82,6 +82,12 @@ pub enum JsonFold {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReports(pub Vec<JsonReport>);
+
+crate::from_vec!(JsonReports[JsonReport]);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
     pub uuid: Uuid,
     pub user: JsonUser,

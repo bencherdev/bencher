@@ -1,7 +1,9 @@
 use std::{convert::TryFrom, str::FromStr};
 
 use bencher_client::types::{JsonNewBranch, JsonStartPoint};
-use bencher_json::{project::branch::BRANCH_MAIN_STR, BranchName, JsonBranch, ResourceId};
+use bencher_json::{
+    project::branch::BRANCH_MAIN_STR, BranchName, JsonBranch, JsonBranches, ResourceId,
+};
 
 use uuid::Uuid;
 
@@ -142,7 +144,7 @@ async fn get_branch(
     branch_name: &BranchName,
     backend: &Backend,
 ) -> Result<Option<Uuid>, CliError> {
-    let mut json_branches: Vec<JsonBranch> = backend
+    let json_branches: JsonBranches = backend
         .send_with(
             |client| async move {
                 client
@@ -156,6 +158,7 @@ async fn get_branch(
         )
         .await?;
 
+    let mut json_branches = json_branches.into_inner();
     let branch_count = json_branches.len();
     if let Some(branch) = json_branches.pop() {
         if branch_count == 1 {

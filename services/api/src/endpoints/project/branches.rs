@@ -1,5 +1,5 @@
 use bencher_json::{
-    BranchName, JsonBranch, JsonDirection, JsonNewBranch, JsonPagination, ResourceId,
+    BranchName, JsonBranch, JsonBranches, JsonDirection, JsonNewBranch, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -74,7 +74,7 @@ pub async fn proj_branches_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjBranchesParams>,
     query_params: Query<ProjBranchesQuery>,
-) -> Result<ResponseOk<Vec<JsonBranch>>, HttpError> {
+) -> Result<ResponseOk<JsonBranches>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::GetLs);
 
@@ -101,7 +101,7 @@ async fn get_ls_inner(
     path_params: ProjBranchesParams,
     query_params: ProjBranchesQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonBranch>, ApiError> {
+) -> Result<JsonBranches, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

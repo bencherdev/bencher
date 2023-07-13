@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, UserTokensSort};
-use bencher_json::{JsonToken, NonEmpty, ResourceId};
+use bencher_json::{JsonTokens, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -70,7 +70,7 @@ impl From<CliPagination<CliTokensSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: Vec<JsonToken> = self
+        let _: JsonTokens = self
             .backend
             .send_with(
                 |client| async move {

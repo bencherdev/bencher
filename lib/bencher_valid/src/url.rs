@@ -47,6 +47,12 @@ impl From<url::Url> for Url {
     }
 }
 
+impl From<Url> for url::Url {
+    fn from(url: Url) -> Self {
+        ::url::Url::from_str(url.as_ref()).expect("URL was already validated but failed to parse")
+    }
+}
+
 impl<'de> Deserialize<'de> for Url {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

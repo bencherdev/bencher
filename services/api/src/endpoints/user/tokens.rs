@@ -1,4 +1,6 @@
-use bencher_json::{JsonDirection, JsonNewToken, JsonPagination, JsonToken, NonEmpty, ResourceId};
+use bencher_json::{
+    JsonDirection, JsonNewToken, JsonPagination, JsonToken, JsonTokens, NonEmpty, ResourceId,
+};
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
@@ -73,7 +75,7 @@ pub async fn user_tokens_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<UserTokensParams>,
     query_params: Query<UserTokensQuery>,
-) -> Result<ResponseOk<Vec<JsonToken>>, HttpError> {
+) -> Result<ResponseOk<JsonTokens>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::GetLs);
 
@@ -97,7 +99,7 @@ async fn get_ls_inner(
     query_params: UserTokensQuery,
     auth_user: &AuthUser,
     endpoint: Endpoint,
-) -> Result<Vec<JsonToken>, ApiError> {
+) -> Result<JsonTokens, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;

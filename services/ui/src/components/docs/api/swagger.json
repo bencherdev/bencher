@@ -288,11 +288,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonOrganization",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonOrganization"
-                  }
+                  "$ref": "#/components/schemas/JsonOrganizations"
                 }
               }
             }
@@ -605,11 +601,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonMember",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonMember"
-                  }
+                  "$ref": "#/components/schemas/JsonMembers"
                 }
               }
             }
@@ -1165,11 +1157,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonProject",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonProject"
-                  }
+                  "$ref": "#/components/schemas/JsonProjects"
                 }
               }
             }
@@ -1584,11 +1572,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonProject",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonProject"
-                  }
+                  "$ref": "#/components/schemas/JsonProjects"
                 }
               }
             }
@@ -1755,11 +1739,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonAlert",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonAlert"
-                  }
+                  "$ref": "#/components/schemas/JsonAlerts"
                 }
               }
             }
@@ -1943,11 +1923,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonBenchmark",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonBenchmark"
-                  }
+                  "$ref": "#/components/schemas/JsonBenchmarks"
                 }
               }
             }
@@ -2131,11 +2107,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonBranch",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonBranch"
-                  }
+                  "$ref": "#/components/schemas/JsonBranches"
                 }
               }
             }
@@ -2393,11 +2365,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonMetricKind",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonMetricKind"
-                  }
+                  "$ref": "#/components/schemas/JsonMetricKinds"
                 }
               }
             }
@@ -2860,11 +2828,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonReport",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonReport"
-                  }
+                  "$ref": "#/components/schemas/JsonReports"
                 }
               }
             }
@@ -3273,11 +3237,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonTestbed",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonTestbed"
-                  }
+                  "$ref": "#/components/schemas/JsonTestbeds"
                 }
               }
             }
@@ -3528,11 +3488,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonThreshold",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonThreshold"
-                  }
+                  "$ref": "#/components/schemas/JsonThresholds"
                 }
               }
             }
@@ -3928,7 +3884,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Url"
+                  "$ref": "#/components/schemas/JsonEndpoint"
                 }
               }
             }
@@ -3985,8 +3941,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "String",
-                  "type": "string"
+                  "$ref": "#/components/schemas/JsonPing"
                 }
               }
             }
@@ -4283,11 +4238,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Array_of_JsonToken",
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/JsonToken"
-                  }
+                  "$ref": "#/components/schemas/JsonTokens"
                 }
               }
             }
@@ -4646,6 +4597,12 @@
           "read"
         ]
       },
+      "JsonAlerts": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonAlert"
+        }
+      },
       "JsonAllowed": {
         "type": "object",
         "properties": {
@@ -4767,6 +4724,12 @@
           "uuid"
         ]
       },
+      "JsonBenchmarks": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonBenchmark"
+        }
+      },
       "JsonBilling": {
         "type": "object",
         "properties": {
@@ -4871,6 +4834,12 @@
           "version"
         ]
       },
+      "JsonBranches": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonBranch"
+        }
+      },
       "JsonCard": {
         "type": "object",
         "properties": {
@@ -4924,8 +4893,7 @@
             "$ref": "#/components/schemas/JsonDatabase"
           },
           "endpoint": {
-            "type": "string",
-            "format": "uri"
+            "$ref": "#/components/schemas/Url"
           },
           "logging": {
             "$ref": "#/components/schemas/JsonLogging"
@@ -5036,6 +5004,9 @@
       "JsonEmpty": {
         "type": "object"
       },
+      "JsonEndpoint": {
+        "$ref": "#/components/schemas/Url"
+      },
       "JsonEntitlements": {
         "type": "object",
         "properties": {
@@ -5145,6 +5116,12 @@
           "uuid"
         ]
       },
+      "JsonMembers": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonMember"
+        }
+      },
       "JsonMetric": {
         "type": "object",
         "properties": {
@@ -5205,6 +5182,12 @@
           "units",
           "uuid"
         ]
+      },
+      "JsonMetricKinds": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonMetricKind"
+        }
       },
       "JsonNewBranch": {
         "type": "object",
@@ -5529,6 +5512,12 @@
           "leader"
         ]
       },
+      "JsonOrganizations": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonOrganization"
+        }
+      },
       "JsonPerf": {
         "type": "object",
         "properties": {
@@ -5633,6 +5622,12 @@
           "branch",
           "metrics",
           "testbed"
+        ]
+      },
+      "JsonPing": {
+        "type": "string",
+        "enum": [
+          "pong"
         ]
       },
       "JsonPlan": {
@@ -5781,6 +5776,12 @@
           "visibility"
         ]
       },
+      "JsonProjects": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonProject"
+        }
+      },
       "JsonReport": {
         "type": "object",
         "properties": {
@@ -5898,6 +5899,12 @@
               }
             ]
           }
+        }
+      },
+      "JsonReports": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonReport"
         }
       },
       "JsonRestart": {
@@ -6144,6 +6151,12 @@
           "uuid"
         ]
       },
+      "JsonTestbeds": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonTestbed"
+        }
+      },
       "JsonThreshold": {
         "type": "object",
         "properties": {
@@ -6212,6 +6225,12 @@
           "statistic",
           "uuid"
         ]
+      },
+      "JsonThresholds": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonThreshold"
+        }
       },
       "JsonTls": {
         "oneOf": [
@@ -6305,6 +6324,12 @@
           "user",
           "uuid"
         ]
+      },
+      "JsonTokens": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonToken"
+        }
       },
       "JsonUpdateConfig": {
         "type": "object",

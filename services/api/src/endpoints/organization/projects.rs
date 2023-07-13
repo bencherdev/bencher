@@ -1,5 +1,6 @@
 use bencher_json::{
-    JsonDirection, JsonEmpty, JsonNewProject, JsonPagination, JsonProject, NonEmpty, ResourceId,
+    JsonDirection, JsonEmpty, JsonNewProject, JsonPagination, JsonProject, JsonProjects, NonEmpty,
+    ResourceId,
 };
 use bencher_rbac::{organization::Permission, project::Role};
 use chrono::Utc;
@@ -78,7 +79,7 @@ pub async fn org_projects_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgProjectsParams>,
     query_params: Query<OrgProjectsQuery>,
-) -> Result<ResponseOk<Vec<JsonProject>>, HttpError> {
+) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetLs);
 
@@ -101,7 +102,7 @@ async fn get_ls_inner(
     query_params: OrgProjectsQuery,
     auth_user: &AuthUser,
     endpoint: Endpoint,
-) -> Result<Vec<JsonProject>, ApiError> {
+) -> Result<JsonProjects, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_organization = QueryOrganization::is_allowed_resource_id(

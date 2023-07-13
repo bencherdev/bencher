@@ -700,6 +700,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.22",
+ "url",
  "uuid 1.4.0",
 ]
 

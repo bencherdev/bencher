@@ -1,6 +1,6 @@
 use bencher_json::{
     project::threshold::{JsonNewThreshold, JsonThreshold},
-    JsonDirection, JsonPagination, ResourceId,
+    JsonDirection, JsonPagination, JsonThresholds, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -74,7 +74,7 @@ pub async fn proj_thresholds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjThresholdsParams>,
     query_params: Query<ProjThresholdsQuery>,
-) -> Result<ResponseOk<Vec<JsonThreshold>>, HttpError> {
+) -> Result<ResponseOk<JsonThresholds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetLs);
 
@@ -101,7 +101,7 @@ async fn get_ls_inner(
     path_params: ProjThresholdsParams,
     query_params: ProjThresholdsQuery,
     endpoint: Endpoint,
-) -> Result<Vec<JsonThreshold>, ApiError> {
+) -> Result<JsonThresholds, ApiError> {
     let conn = &mut *context.conn().await;
 
     let query_project =

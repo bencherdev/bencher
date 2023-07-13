@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use bencher_json::{Jwt, Url};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::Serialize;
 use tokio::time::{sleep, Duration};
 
 use crate::{cli_println, parser::CliBackend, CliError};
@@ -69,7 +69,7 @@ impl Backend {
             >,
         >,
         T: Serialize,
-        Json: Serialize + DeserializeOwned,
+        Json: Serialize + TryFrom<T, Error = serde_json::Error>,
     {
         let timeout = std::time::Duration::from_secs(15);
         let mut client_builder = reqwest::ClientBuilder::new()
@@ -95,9 +95,7 @@ impl Backend {
             match sender(client.clone()).await {
                 Ok(response_value) => {
                     let response = response_value.into_inner();
-                    // This is a bit of a kludge to convert from a `bencher_client` type to a `bencher_json` type when desired.
-                    // TODO make this a `From` impl
-                    let json_response: Json = serde_json::from_value(serde_json::json!(response))?;
+                    let json_response = Json::try_from(response)?;
                     if log {
                         cli_println!("{}", serde_json::to_string_pretty(&json_response)?);
                     }

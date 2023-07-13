@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonDirection, ProjMetricKindsSort};
-use bencher_json::{JsonMetricKind, NonEmpty, ResourceId};
+use bencher_json::{JsonMetricKinds, NonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
@@ -70,7 +70,7 @@ impl From<CliPagination<CliMetricKindsSort>> for Pagination {
 #[async_trait]
 impl SubCmd for List {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: Vec<JsonMetricKind> = self
+        let _: JsonMetricKinds = self
             .backend
             .send_with(
                 |client| async move {

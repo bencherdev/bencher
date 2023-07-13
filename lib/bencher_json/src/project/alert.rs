@@ -10,6 +10,12 @@ use super::{benchmark::JsonBenchmarkMetric, boundary::JsonLimit};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAlerts(pub Vec<JsonAlert>);
+
+crate::from_vec!(JsonAlerts[JsonAlert]);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAlert {
     pub uuid: Uuid,
     pub report: Uuid,
