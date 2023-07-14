@@ -2,7 +2,9 @@ use std::convert::TryFrom;
 
 use async_trait::async_trait;
 use bencher_client::types::{JsonNewReport, JsonReportSettings};
-use bencher_json::{project::testbed::TESTBED_LOCALHOST_STR, GitHash, JsonEndpoint, ResourceId};
+use bencher_json::{
+    project::testbed::TESTBED_LOCALHOST_STR, GitHash, JsonEndpoint, JsonReport, ResourceId,
+};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use url::Url;
@@ -17,6 +19,7 @@ use crate::{
 mod adapter;
 mod average;
 mod branch;
+mod error;
 mod fold;
 pub mod runner;
 mod urls;
@@ -24,6 +27,7 @@ mod urls;
 use adapter::RunAdapter;
 use average::Average;
 use branch::Branch;
+pub use error::RunError;
 use fold::Fold;
 use runner::Runner;
 
@@ -92,23 +96,28 @@ impl TryFrom<CliRun> for Run {
     }
 }
 
-fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, CliError> {
+fn unwrap_project(project: Option<ResourceId>) -> Result<ResourceId, RunError> {
     Ok(if let Some(project) = project {
         project
     } else if let Ok(env_project) = std::env::var(BENCHER_PROJECT) {
-        env_project.parse()?
+        env_project.parse().map_err(RunError::ParseProject)?
     } else {
-        return Err(CliError::ProjectNotFound);
+        return Err(RunError::ProjectNotFound);
     })
 }
 
-fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, CliError> {
+fn unwrap_testbed(testbed: Option<ResourceId>) -> Result<ResourceId, RunError> {
     Ok(if let Some(testbed) = testbed {
         testbed
     } else if let Ok(env_testbed) = std::env::var(BENCHER_TESTBED) {
-        env_testbed.as_str().parse()?
+        env_testbed
+            .as_str()
+            .parse()
+            .map_err(RunError::ParseTestbed)?
     } else {
-        TESTBED_LOCALHOST_STR.parse()?
+        TESTBED_LOCALHOST_STR
+            .parse()
+            .map_err(RunError::ParseTestbed)?
     })
 }
 
@@ -129,20 +138,68 @@ fn map_adapter(adapter: Option<CliRunAdapter>) -> Option<RunAdapter> {
 #[async_trait]
 impl SubCmd for Run {
     async fn exec(&self) -> Result<(), CliError> {
+        self.exec().await.map_err(Into::into)
+    }
+}
+
+impl Run {
+    async fn exec(&self) -> Result<(), RunError> {
+        let Some(json_new_report) = &self.generate_report().await? else {
+            return Ok(());
+        };
+
+        // TODO disable when quiet
+        cli_println!(
+            "{}",
+            serde_json::to_string_pretty(json_new_report).map_err(RunError::SerializeReport)?
+        );
+
+        // If performing a dry run, don't actually send the report
+        if self.dry_run {
+            return Ok(());
+        }
+
+        let json_report = self
+            .backend
+            .send_with(
+                |client| async move {
+                    client
+                        .proj_report_post()
+                        .project(self.project.clone())
+                        .body(json_new_report.clone())
+                        .send()
+                        .await
+                },
+                true,
+            )
+            .await
+            .map_err(RunError::SendReport)?;
+
+        // TODO disable when quiet
+        self.display_results(&json_report).await?;
+
+        if self.err {
+            Err(RunError::Alerts(json_report.alerts.len()))
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn generate_report(&self) -> Result<Option<JsonNewReport>, RunError> {
         let Some(branch) = self.branch.resource_id(&self.project, self.dry_run, &self.backend).await? else {
-            return Ok(())
+            return Ok(None)
         };
 
         let start_time = Utc::now();
         let mut results = Vec::with_capacity(self.iter);
         for _ in 0..self.iter {
             let output = self.runner.run()?;
-            if output.success() {
+            if output.is_success() {
                 results.push(output.stdout)
             } else if self.allow_failure {
                 cli_eprintln!("Skipping failure:\n{}", output);
             } else {
-                return Err(CliError::Output(output));
+                return Err(RunError::ExitStatus(output));
             }
         }
 
@@ -160,7 +217,7 @@ impl SubCmd for Run {
             (start_time, end_time)
         };
 
-        let report = &JsonNewReport {
+        Ok(Some(JsonNewReport {
             branch: branch.into(),
             hash: self.hash.clone().map(Into::into),
             testbed: self.testbed.clone().into(),
@@ -172,40 +229,20 @@ impl SubCmd for Run {
                 average: self.average.map(Into::into),
                 fold: self.fold.map(Into::into),
             }),
-        };
+        }))
+    }
 
-        // TODO disable when quiet
-        cli_println!("{}", serde_json::to_string_pretty(report)?);
-
-        // If performing a dry run, don't actually send the report
-        if self.dry_run {
-            return Ok(());
-        }
-
-        let json_report = self
-            .backend
-            .send_with(
-                |client| async move {
-                    client
-                        .proj_report_post()
-                        .project(self.project.clone())
-                        .body(report.clone())
-                        .send()
-                        .await
-                },
-                true,
-            )
-            .await?;
-
+    async fn display_results(&self, json_report: &JsonReport) -> Result<(), RunError> {
         let json_endpoint: JsonEndpoint = self
             .backend
             .send_with(
                 |client| async move { client.server_config_endpoint_get().send().await },
                 false,
             )
-            .await?;
+            .await
+            .map_err(RunError::GetEndpoint)?;
         let endpoint_url: Url = json_endpoint.0.into();
-        let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), &json_report).await?;
+        let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), json_report);
 
         cli_println!("\nView results:");
         for (name, url) in &benchmark_urls.0 {
@@ -226,10 +263,6 @@ impl SubCmd for Run {
             cli_println!("- {}: {url}", alert.benchmark.name);
         }
         cli_println!("\n");
-
-        if self.err {
-            return Err(CliError::Alerts(json_report.alerts.len()));
-        }
 
         Ok(())
     }

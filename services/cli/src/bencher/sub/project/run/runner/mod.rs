@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{parser::project::run::CliRunCommand, CliError};
+use crate::parser::project::run::CliRunCommand;
 
 mod command;
 mod flag;
@@ -17,7 +17,7 @@ use command::Command;
 use output::Output;
 use pipe::Pipe;
 
-use super::BENCHER_CMD;
+use super::{RunError, BENCHER_CMD};
 
 #[derive(Debug)]
 pub enum Runner {
@@ -27,7 +27,7 @@ pub enum Runner {
 }
 
 impl TryFrom<CliRunCommand> for Runner {
-    type Error = CliError;
+    type Error = RunError;
 
     fn try_from(mut command: CliRunCommand) -> Result<Self, Self::Error> {
         if let Some(cmd) = command.cmd.take() {
@@ -37,13 +37,13 @@ impl TryFrom<CliRunCommand> for Runner {
         } else if let Some(pipe) = Pipe::new() {
             Ok(Self::Pipe(pipe))
         } else {
-            Err(CliError::NoCommand)
+            Err(RunError::NoCommand)
         }
     }
 }
 
 impl TryFrom<(CliRunCommand, String)> for Runner {
-    type Error = CliError;
+    type Error = RunError;
 
     fn try_from((command, cmd): (CliRunCommand, String)) -> Result<Self, Self::Error> {
         let cmd = Command::try_from((command.shell, cmd))?;
@@ -56,19 +56,24 @@ impl TryFrom<(CliRunCommand, String)> for Runner {
 }
 
 impl Runner {
-    pub fn run(&self) -> Result<Output, CliError> {
+    pub fn run(&self) -> Result<Output, RunError> {
         Ok(match self {
             Self::Pipe(pipe) => pipe.output(),
             Self::Command(command) => command.try_into()?,
             Self::CommandToFile(command, file_path) => {
                 let mut output: Output = command.try_into()?;
-                let capacity = usize::try_from(std::fs::metadata(file_path)?.len())?;
+                let capacity = std::fs::metadata(file_path)
+                    .ok()
+                    .and_then(|metadata| usize::try_from(metadata.len()).ok())
+                    .unwrap_or_default();
                 output.stdout = String::with_capacity(capacity);
 
-                let output_file = File::open(file_path)?;
+                let output_file = File::open(file_path).map_err(RunError::OutputFileOpen)?;
                 let buffered = BufReader::new(output_file);
                 for line in buffered.lines() {
-                    output.stdout.push_str(&line?);
+                    output
+                        .stdout
+                        .push_str(&line.map_err(RunError::OutputFileRead)?);
                 }
 
                 output

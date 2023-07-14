@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt};
 
-use crate::CliError;
+use crate::bencher::sub::RunError;
 
 const UNIX_SHELL: &str = "/bin/sh";
 const WINDOWS_SHELL: &str = "cmd";
@@ -13,7 +13,7 @@ pub enum Shell {
 }
 
 impl TryFrom<Option<String>> for Shell {
-    type Error = CliError;
+    type Error = RunError;
 
     fn try_from(shell: Option<String>) -> Result<Self, Self::Error> {
         Ok(if let Some(shell) = shell {
@@ -23,7 +23,7 @@ impl TryFrom<Option<String>> for Shell {
         } else if cfg!(target_family = "windows") {
             Self::Windows
         } else {
-            return Err(CliError::Shell);
+            return Err(RunError::Shell);
         })
     }
 }

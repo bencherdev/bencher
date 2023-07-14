@@ -4,7 +4,10 @@ mod bencher;
 mod error;
 mod parser;
 
-use bencher::{sub::SubCmd, Bencher};
+use bencher::{
+    sub::{RunError, SubCmd},
+    Bencher,
+};
 pub use error::CliError;
 
 #[allow(clippy::print_stderr)]
@@ -13,7 +16,11 @@ async fn main() -> ExitCode {
     match exec().await {
         Ok(_) => ExitCode::SUCCESS,
         // https://github.com/rust-lang/rust/issues/46016#issuecomment-1242039016
-        Err(CliError::Io(err)) if err.kind() == io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
+        Err(CliError::Run(RunError::RunCommand(err)))
+            if err.kind() == io::ErrorKind::BrokenPipe =>
+        {
+            ExitCode::SUCCESS
+        },
         Err(err) => {
             eprintln!("\n{err}");
             ExitCode::FAILURE

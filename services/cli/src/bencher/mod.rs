@@ -9,6 +9,7 @@ use crate::{parser::CliBencher, CliError};
 pub mod backend;
 pub mod sub;
 
+pub use backend::BackendError;
 use sub::{Sub, SubCmd};
 
 #[derive(Debug)]

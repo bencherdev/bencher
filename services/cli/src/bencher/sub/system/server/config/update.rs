@@ -26,7 +26,7 @@ impl TryFrom<CliConfigUpdate> for Update {
             backend,
         } = update;
         Ok(Self {
-            config: serde_json::from_str(&config)?,
+            config: serde_json::from_str(&config).map_err(CliError::SerializeConfig)?,
             delay,
             backend: backend.try_into()?,
         })

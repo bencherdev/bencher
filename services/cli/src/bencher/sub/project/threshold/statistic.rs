@@ -43,7 +43,7 @@ impl TryFrom<CliStatisticCreate> for Statistic {
 
 fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, CliError> {
     Ok(if let Some(boundary) = boundary {
-        Some(boundary.try_into()?)
+        Some(boundary.try_into().map_err(CliError::Boundary)?)
     } else {
         None
     })

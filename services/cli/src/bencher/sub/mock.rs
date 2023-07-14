@@ -23,6 +23,18 @@ pub struct Mock {
     pub flaky: bool,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum MockError {
+    #[error("Failed to parse benchmark name: {0}")]
+    ParseBenchmarkName(bencher_json::ValidError),
+
+    #[error("Failed to serialize mock results: {0}")]
+    SerializeResults(serde_json::Error),
+
+    #[error("Mock failure")]
+    MockFailure,
+}
+
 impl From<CliMock> for Mock {
     fn from(mock: CliMock) -> Self {
         let CliMock {
@@ -42,12 +54,34 @@ impl From<CliMock> for Mock {
 
 #[async_trait]
 impl SubCmd for Mock {
+    async fn exec(&self) -> Result<(), CliError> {
+        self.exec().map_err(Into::into)
+    }
+}
+
+impl Mock {
+    fn exec(&self) -> Result<(), MockError> {
+        let adapter_results = self.generate_results()?;
+
+        // TODO disable when quiet
+        cli_println!(
+            "{}",
+            serde_json::to_string_pretty(&adapter_results).map_err(MockError::SerializeResults)?
+        );
+
+        if self.fail || (self.flaky && rand::thread_rng().gen::<bool>()) {
+            Err(MockError::MockFailure)
+        } else {
+            Ok(())
+        }
+    }
+
     #[allow(
         clippy::arithmetic_side_effects,
         clippy::cast_precision_loss,
         clippy::float_arithmetic
     )]
-    async fn exec(&self) -> Result<(), CliError> {
+    fn generate_results(&self) -> Result<AdapterResults, MockError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
         let pow = self.pow.unwrap_or(1);
         let ten_pow = 10.0f64.powi(pow);
@@ -60,7 +94,10 @@ impl SubCmd for Mock {
             let value: f64 = uniform.sample(&mut rng);
             let variance = value * 0.1;
             results.insert(
-                format!("bencher::mock_{c}").as_str().parse()?,
+                format!("bencher::mock_{c}")
+                    .as_str()
+                    .parse()
+                    .map_err(MockError::ParseBenchmarkName)?,
                 AdapterMetrics {
                     inner: hmap! {
                         LATENCY_RESOURCE_ID.clone() => JsonMetric {
@@ -73,15 +110,6 @@ impl SubCmd for Mock {
             );
         }
 
-        cli_println!(
-            "{}",
-            serde_json::to_string_pretty(&AdapterResults::from(results))?
-        );
-
-        if self.fail || (self.flaky && rng.gen::<bool>()) {
-            return Err(CliError::MockFailure);
-        }
-
-        Ok(())
+        Ok(AdapterResults::from(results))
     }
 }

@@ -4,12 +4,10 @@ use bencher_json::{JsonPerfQuery, JsonReport, Slug};
 use url::Url;
 use uuid::Uuid;
 
-use crate::CliError;
-
 pub struct BenchmarkUrls(pub BTreeMap<String, Url>);
 
 impl BenchmarkUrls {
-    pub async fn new(endpoint_url: Url, json_report: &JsonReport) -> Result<Self, CliError> {
+    pub fn new(endpoint_url: Url, json_report: &JsonReport) -> Self {
         let benchmark_url = BenchmarkUrl::new(
             endpoint_url,
             json_report.project.slug.clone(),
@@ -30,7 +28,7 @@ impl BenchmarkUrls {
             }
         }
 
-        Ok(Self(urls))
+        Self(urls)
     }
 }
 

@@ -7,9 +7,9 @@ use bencher_json::{
 
 use uuid::Uuid;
 
-use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch, CliError};
+use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch};
 
-use super::BENCHER_BRANCH;
+use super::{RunError, BENCHER_BRANCH};
 
 #[derive(Debug, Clone)]
 pub enum Branch {
@@ -23,7 +23,7 @@ pub enum Branch {
 }
 
 impl TryFrom<CliRunBranch> for Branch {
-    type Error = CliError;
+    type Error = RunError;
 
     fn try_from(run_branch: CliRunBranch) -> Result<Self, Self::Error> {
         let CliRunBranch {
@@ -36,7 +36,11 @@ impl TryFrom<CliRunBranch> for Branch {
         Ok(if let Some(branch) = branch {
             Self::ResourceId(branch)
         } else if let Ok(env_branch) = std::env::var(BENCHER_BRANCH) {
-            env_branch.as_str().parse().map(Self::ResourceId)?
+            env_branch
+                .as_str()
+                .parse()
+                .map(Self::ResourceId)
+                .map_err(RunError::ParseBranch)?
         } else if let Some(branch_name) = if_branch {
             if let Some(name) = branch_name {
                 Self::Name {
@@ -48,7 +52,10 @@ impl TryFrom<CliRunBranch> for Branch {
                 Self::None
             }
         } else {
-            BRANCH_MAIN_STR.parse().map(Self::ResourceId)?
+            BRANCH_MAIN_STR
+                .parse()
+                .map(Self::ResourceId)
+                .map_err(RunError::ParseBranch)?
         })
     }
 }
@@ -59,7 +66,7 @@ impl Branch {
         project: &ResourceId,
         dry_run: bool,
         backend: &Backend,
-    ) -> Result<Option<ResourceId>, CliError> {
+    ) -> Result<Option<ResourceId>, RunError> {
         Ok(match self {
             Self::ResourceId(resource_id) => Some(resource_id.clone()),
             Self::Name {
@@ -93,7 +100,7 @@ async fn if_branch(
     create: bool,
     dry_run: bool,
     backend: &Backend,
-) -> Result<Option<Uuid>, CliError> {
+) -> Result<Option<Uuid>, RunError> {
     let branch = get_branch(project, branch_name, backend).await?;
 
     if branch.is_some() {
@@ -143,7 +150,7 @@ async fn get_branch(
     project: &ResourceId,
     branch_name: &BranchName,
     backend: &Backend,
-) -> Result<Option<Uuid>, CliError> {
+) -> Result<Option<Uuid>, RunError> {
     let json_branches: JsonBranches = backend
         .send_with(
             |client| async move {
@@ -156,7 +163,8 @@ async fn get_branch(
             },
             false,
         )
-        .await?;
+        .await
+        .map_err(RunError::GetBranches)?;
 
     let mut json_branches = json_branches.into_inner();
     let branch_count = json_branches.len();
@@ -164,11 +172,11 @@ async fn get_branch(
         if branch_count == 1 {
             Ok(Some(branch.uuid))
         } else {
-            Err(CliError::BranchName(
-                project.to_string(),
-                branch_name.as_ref().into(),
-                branch_count,
-            ))
+            Err(RunError::BranchName {
+                project: project.to_string(),
+                branch_name: branch_name.as_ref().into(),
+                count: branch_count,
+            })
         }
     } else {
         Ok(None)
@@ -180,7 +188,7 @@ async fn create_branch(
     branch_name: &BranchName,
     start_point: Option<ResourceId>,
     backend: &Backend,
-) -> Result<Uuid, CliError> {
+) -> Result<Uuid, RunError> {
     // Default to cloning the thresholds from the start point branch
     let start_point = start_point.map(|branch| JsonStartPoint {
         branch: branch.into(),
@@ -205,7 +213,8 @@ async fn create_branch(
             },
             false,
         )
-        .await?;
+        .await
+        .map_err(RunError::CreateBranch)?;
 
     Ok(json_branch.uuid)
 }

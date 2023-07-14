@@ -1,6 +1,6 @@
 use std::{fmt, process};
 
-use crate::CliError;
+use crate::bencher::sub::RunError;
 
 use super::command::Command;
 
@@ -15,7 +15,7 @@ pub struct Output {
 pub struct ExitStatus(i32);
 
 impl TryFrom<&Command> for Output {
-    type Error = CliError;
+    type Error = RunError;
 
     fn try_from(command: &Command) -> Result<Self, Self::Error> {
         std::process::Command::new(command.shell.to_string())
@@ -23,7 +23,7 @@ impl TryFrom<&Command> for Output {
             .arg(&command.cmd)
             .output()
             .map(Into::into)
-            .map_err(Into::into)
+            .map_err(RunError::RunCommand)
     }
 }
 
@@ -50,7 +50,7 @@ impl From<process::ExitStatus> for ExitStatus {
 
 impl fmt::Display for Output {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\n{}\n{}", self.stdout, self.stderr, self.status)
+        write!(f, "{}\n{}\n{}", self.status, self.stdout, self.stderr)
     }
 }
 
@@ -61,13 +61,13 @@ impl fmt::Display for ExitStatus {
 }
 
 impl Output {
-    pub fn success(&self) -> bool {
-        self.status.success()
+    pub fn is_success(&self) -> bool {
+        self.status.is_success()
     }
 }
 
 impl ExitStatus {
-    pub fn success(&self) -> bool {
+    pub fn is_success(&self) -> bool {
         self.0 == 0
     }
 }
