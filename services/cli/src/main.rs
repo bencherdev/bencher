@@ -15,7 +15,7 @@ async fn main() -> ExitCode {
         // https://github.com/rust-lang/rust/issues/46016#issuecomment-1242039016
         Err(CliError::Io(err)) if err.kind() == io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("{err}");
+            eprintln!("\n{err}");
             ExitCode::FAILURE
         },
     }
@@ -44,7 +44,7 @@ macro_rules! cli_println {
 pub(crate) use cli_println;
 
 macro_rules! cli_eprintln {
-    () => (print!("\n"));
+    () => (eprint!("\n"));
     ($fmt:expr) => ({
         use std::io::Write;
         let _w = writeln!(std::io::stderr(), $fmt);

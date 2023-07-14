@@ -4,7 +4,7 @@ use bencher_json::{Jwt, Url};
 use serde::Serialize;
 use tokio::time::{sleep, Duration};
 
-use crate::{cli_println, parser::CliBackend, CliError};
+use crate::{cli_eprintln, cli_println, parser::CliBackend, CliError};
 
 pub const BENCHER_API_TOKEN: &str = "BENCHER_API_TOKEN";
 pub const BENCHER_HOST: &str = "BENCHER_HOST";
@@ -101,13 +101,14 @@ impl Backend {
                     }
                     return Ok(json_response);
                 },
-                Err(e) => {
-                    cli_println!("Send attempt #{}: {e}", attempt + 1);
+                Err(bencher_client::Error::CommunicationError(e)) => {
+                    cli_eprintln!("\nSend attempt #{}/{attempts}: {e}", attempt + 1);
                     if attempt != max_attempts {
-                        cli_println!("Will retry after {retry_after} second(s).");
+                        cli_eprintln!("Will retry after {retry_after} second(s).");
                         sleep(Duration::from_secs(retry_after)).await;
                     }
                 },
+                Err(e) => return Err(e.into()),
             }
         }
 
