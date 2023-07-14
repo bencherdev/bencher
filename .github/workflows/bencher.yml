@@ -606,6 +606,9 @@ jobs:
           docker tag ${{ env.UI_DOCKER_IMAGE }} ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
           docker push ${GITHUB_IMAGE}:latest
           docker push ${GITHUB_IMAGE}:${GITHUB_REF#refs/*/}
+      - uses: rui314/setup-mold@v1
+        with:
+          mold-version: ${{ env.MOLD_VERSION }}
       - name: Generate Release Notes
         run: cargo xtask release-notes
       - name: GitHub Release
