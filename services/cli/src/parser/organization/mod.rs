@@ -19,11 +19,14 @@ pub enum CliOrganization {
     /// List organizations
     #[clap(alias = "ls")]
     List(CliOrganizationList),
-    /// Create a organization
+    /// Create an organization
     #[clap(alias = "add")]
     Create(CliOrganizationCreate),
-    /// View a organization
+    /// View an organization
     View(CliOrganizationView),
+    /// Update an organization
+    #[clap(alias = "edit")]
+    Update(CliOrganizationUpdate),
     /// Check organization permission
     Allowed(CliOrganizationAllowed),
 
@@ -74,6 +77,23 @@ pub struct CliOrganizationCreate {
 pub struct CliOrganizationView {
     /// Organization slug or UUID
     pub organization: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliOrganizationUpdate {
+    /// Organization slug or UUID
+    pub organization: ResourceId,
+
+    /// New organization name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    /// New organization slug
+    #[clap(long)]
+    pub slug: Option<Slug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

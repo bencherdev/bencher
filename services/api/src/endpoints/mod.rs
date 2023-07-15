@@ -46,6 +46,7 @@ impl Api {
         api.register(organization::organizations::organizations_get)?;
         api.register(organization::organizations::organization_post)?;
         api.register(organization::organizations::organization_get)?;
+        api.register(organization::organizations::organization_patch)?;
 
         // Organization Permission
         if http_options {

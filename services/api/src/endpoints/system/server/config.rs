@@ -69,7 +69,7 @@ pub async fn server_config_put(
     body: TypedBody<JsonUpdateConfig>,
 ) -> Result<ResponseAccepted<JsonConfig>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::Post);
+    let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::Put);
 
     let context = rqctx.context();
     let json_update_config = body.into_inner();

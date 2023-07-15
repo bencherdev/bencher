@@ -58,3 +58,10 @@ pub enum JsonOrganizationPermission {
     #[display(fmt = "delete_role")]
     DeleteRole,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateOrganization {
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+}

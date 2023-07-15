@@ -1,6 +1,6 @@
 use bencher_json::{
-    JsonDirection, JsonNewOrganization, JsonOrganization, JsonOrganizations, JsonPagination,
-    NonEmpty, ResourceId,
+    organization::JsonUpdateOrganization, JsonDirection, JsonNewOrganization, JsonOrganization,
+    JsonOrganizations, JsonPagination, NonEmpty, ResourceId,
 };
 use bencher_rbac::organization::{Permission, Role};
 use chrono::Utc;
@@ -237,4 +237,69 @@ async fn get_one_inner(
         Permission::View,
     )?
     .into_json()
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/organizations/{organization}",
+    tags = ["organizations"]
+}]
+pub async fn organization_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<OrganizationParams>,
+    body: TypedBody<JsonUpdateOrganization>,
+) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Put);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: OrganizationParams,
+    json_update_organization: JsonUpdateOrganization,
+    auth_user: &AuthUser,
+) -> Result<JsonOrganization, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.organization,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let JsonUpdateOrganization { name, slug } = json_update_organization;
+
+    if let Some(name) = name {
+        diesel::update(
+            schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
+        )
+        .set(schema::organization::name.eq(name.as_ref()))
+        .execute(conn)
+        .map_err(api_error!())?;
+    }
+
+    if let Some(slug) = slug {
+        diesel::update(
+            schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
+        )
+        .set(schema::organization::slug.eq(slug.as_ref()))
+        .execute(conn)
+        .map_err(api_error!())?;
+    }
+
+    QueryOrganization::get(conn, query_organization.id)?.into_json()
 }

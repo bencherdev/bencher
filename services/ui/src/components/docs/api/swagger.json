@@ -430,6 +430,80 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "organizations"
+        ],
+        "operationId": "organization_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateOrganization"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonOrganization"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     },
     "/v0/organizations/{organization}/allowed/{permission}": {
@@ -4889,11 +4963,24 @@
       "JsonConfig": {
         "type": "object",
         "properties": {
+          "console": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonConsole"
+              }
+            ]
+          },
           "database": {
             "$ref": "#/components/schemas/JsonDatabase"
           },
           "endpoint": {
-            "$ref": "#/components/schemas/Url"
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
           },
           "logging": {
             "$ref": "#/components/schemas/JsonLogging"
@@ -4936,7 +5023,6 @@
         },
         "required": [
           "database",
-          "endpoint",
           "logging",
           "server"
         ]
@@ -4954,6 +5040,17 @@
         "required": [
           "token",
           "user"
+        ]
+      },
+      "JsonConsole": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "$ref": "#/components/schemas/Url"
+          }
+        },
+        "required": [
+          "url"
         ]
       },
       "JsonCustomer": {
@@ -6356,6 +6453,27 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonOrganizationRole"
+              }
+            ]
+          }
+        }
+      },
+      "JsonUpdateOrganization": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
               }
             ]
           }

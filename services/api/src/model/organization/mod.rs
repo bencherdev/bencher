@@ -16,7 +16,12 @@ use crate::{
     error::api_error,
     model::user::{auth::AuthUser, InsertUser},
     schema::{self, organization as organization_table},
-    util::{query::fn_get_id, resource_id::fn_resource_id, slug::unwrap_slug, to_date_time},
+    util::{
+        query::{fn_get, fn_get_id},
+        resource_id::fn_resource_id,
+        slug::unwrap_slug,
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -74,6 +79,7 @@ pub struct QueryOrganization {
 }
 
 impl QueryOrganization {
+    fn_get!(organization);
     fn_get_id!(organization);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
