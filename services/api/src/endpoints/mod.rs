@@ -153,6 +153,7 @@ impl Api {
         api.register(project::testbeds::proj_testbeds_get)?;
         api.register(project::testbeds::proj_testbed_post)?;
         api.register(project::testbeds::proj_testbed_get)?;
+        api.register(project::testbeds::proj_testbed_patch)?;
 
         // Benchmarks
         if http_options {

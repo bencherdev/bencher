@@ -62,3 +62,10 @@ impl fmt::Display for JsonTestbed {
         write!(f, "{}", self.name)
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateTestbed {
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+}

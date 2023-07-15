@@ -214,6 +214,8 @@ pub enum ApiError {
     SystemMetricKind,
     #[error("Cannot update a system Branch")]
     SystemBranch,
+    #[error("Cannot update a system Testbed")]
+    SystemTestbed,
 }
 
 impl From<ApiError> for HttpError {

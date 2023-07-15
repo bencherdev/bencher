@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug};
+use bencher_json::{
+    project::testbed::{JsonUpdateTestbed, TESTBED_LOCALHOST_STR},
+    JsonNewTestbed, JsonTestbed, NonEmpty, ResourceId, Slug,
+};
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
@@ -89,6 +92,10 @@ impl QueryTestbed {
             modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
+
+    pub fn is_system(&self) -> bool {
+        matches!(self.slug.as_ref(), TESTBED_LOCALHOST_STR)
+    }
 }
 
 #[derive(Insertable)]
@@ -127,6 +134,25 @@ impl InsertTestbed {
             slug,
             created: timestamp,
             modified: timestamp,
+        }
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = testbed_table)]
+pub struct UpdateTestbed {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub modified: i64,
+}
+
+impl From<JsonUpdateTestbed> for UpdateTestbed {
+    fn from(update: JsonUpdateTestbed) -> Self {
+        let JsonUpdateTestbed { name, slug } = update;
+        Self {
+            name: name.map(Into::into),
+            slug: slug.map(Into::into),
+            modified: Utc::now().timestamp(),
         }
     }
 }

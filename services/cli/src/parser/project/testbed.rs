@@ -13,6 +13,9 @@ pub enum CliTestbed {
     Create(CliTestbedCreate),
     /// View a testbed
     View(CliTestbedView),
+    // Update a testbed
+    #[clap(alias = "edit")]
+    Update(CliTestbedUpdate),
 }
 
 #[derive(Parser, Debug)]
@@ -64,6 +67,27 @@ pub struct CliTestbedView {
 
     /// Testbed slug or UUID
     pub testbed: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTestbedUpdate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Testbed slug or UUID
+    pub testbed: ResourceId,
+
+    /// Testbed name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
+
+    /// Testbed slug
+    #[clap(long)]
+    pub slug: Option<Slug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

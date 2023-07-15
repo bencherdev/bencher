@@ -4,6 +4,7 @@ use crate::{bencher::sub::SubCmd, parser::project::testbed::CliTestbed, CliError
 
 mod create;
 mod list;
+mod update;
 mod view;
 
 #[derive(Debug)]
@@ -11,6 +12,7 @@ pub enum Testbed {
     List(list::List),
     Create(create::Create),
     View(view::View),
+    Update(update::Update),
 }
 
 impl TryFrom<CliTestbed> for Testbed {
@@ -21,6 +23,7 @@ impl TryFrom<CliTestbed> for Testbed {
             CliTestbed::List(list) => Self::List(list.try_into()?),
             CliTestbed::Create(create) => Self::Create(create.try_into()?),
             CliTestbed::View(view) => Self::View(view.try_into()?),
+            CliTestbed::Update(update) => Self::Update(update.try_into()?),
         })
     }
 }
@@ -32,6 +35,7 @@ impl SubCmd for Testbed {
             Self::List(list) => list.exec().await,
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Update(update) => update.exec().await,
         }
     }
 }

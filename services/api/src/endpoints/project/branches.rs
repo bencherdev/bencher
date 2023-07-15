@@ -319,7 +319,7 @@ async fn patch_inner(
 
     let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
     if query_branch.is_system() {
-        return Err(ApiError::SystemMetricKind);
+        return Err(ApiError::SystemBranch);
     }
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
         .set(&UpdateBranch::from(json_update_branch))

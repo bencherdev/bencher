@@ -1,5 +1,6 @@
 use bencher_json::{
-    JsonDirection, JsonNewTestbed, JsonPagination, JsonTestbed, JsonTestbeds, NonEmpty, ResourceId,
+    project::testbed::JsonUpdateTestbed, JsonDirection, JsonNewTestbed, JsonPagination,
+    JsonTestbed, JsonTestbeds, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -15,7 +16,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        testbed::{InsertTestbed, QueryTestbed},
+        testbed::{InsertTestbed, QueryTestbed, UpdateTestbed},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -254,4 +255,60 @@ async fn get_one_inner(
         .first::<QueryTestbed>(conn)
         .map_err(api_error!())?
         .into_json(conn)
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}/testbeds/{testbed}",
+    tags = ["projects", "testbeds"]
+}]
+pub async fn proj_testbed_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjTestbedParams>,
+    body: TypedBody<JsonUpdateTestbed>,
+) -> Result<ResponseAccepted<JsonTestbed>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjTestbedParams,
+    json_update_testbed: JsonUpdateTestbed,
+    auth_user: &AuthUser,
+) -> Result<JsonTestbed, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let query_testbed =
+        QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
+    if query_testbed.is_system() {
+        return Err(ApiError::SystemTestbed);
+    }
+    diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
+        .set(&UpdateTestbed::from(json_update_testbed))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    QueryTestbed::get(conn, query_testbed.id)?.into_json(conn)
 }
