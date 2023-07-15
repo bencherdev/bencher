@@ -5,13 +5,16 @@ use crate::{bencher::sub::SubCmd, parser::project::CliProject, CliError};
 mod create;
 mod delete;
 mod list;
+mod update;
 mod view;
+mod visibility;
 
 #[derive(Debug)]
 pub enum Project {
     Create(create::Create),
     List(list::List),
     View(view::View),
+    Update(update::Update),
     Delete(delete::Delete),
 }
 
@@ -23,6 +26,7 @@ impl TryFrom<CliProject> for Project {
             CliProject::Create(create) => Self::Create(create.try_into()?),
             CliProject::List(list) => Self::List(list.try_into()?),
             CliProject::View(view) => Self::View(view.try_into()?),
+            CliProject::Update(update) => Self::Update(update.try_into()?),
             CliProject::Delete(delete) => Self::Delete(delete.try_into()?),
         })
     }
@@ -35,6 +39,7 @@ impl SubCmd for Project {
             Self::Create(create) => create.exec().await,
             Self::List(list) => list.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Update(update) => update.exec().await,
             Self::Delete(delete) => delete.exec().await,
         }
     }

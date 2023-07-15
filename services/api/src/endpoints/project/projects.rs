@@ -1,15 +1,18 @@
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
+    project::JsonUpdateProject, JsonDirection, JsonEmpty, JsonPagination, JsonProject,
+    JsonProjects, NonEmpty, ResourceId,
 };
+use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use tracing::info;
 
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
@@ -206,4 +209,131 @@ async fn get_one_inner(
 
     QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?
         .into_json(conn)
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}",
+    tags = ["projects"]
+}]
+pub async fn project_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjectParams>,
+    body: TypedBody<JsonUpdateProject>,
+) -> Result<ResponseAccepted<JsonProject>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjectParams,
+    json_update_project: JsonUpdateProject,
+    auth_user: &AuthUser,
+) -> Result<JsonProject, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let JsonUpdateProject {
+        name,
+        slug,
+        url,
+        visibility,
+    } = json_update_project;
+
+    let project_query = schema::project::table.filter(schema::project::id.eq(query_project.id));
+
+    if let Some(name) = name {
+        diesel::update(project_query)
+            .set(schema::project::name.eq(name.as_ref()))
+            .execute(conn)
+            .map_err(api_error!())?;
+    }
+
+    if let Some(slug) = slug {
+        diesel::update(project_query)
+            .set(schema::project::slug.eq(slug.as_ref()))
+            .execute(conn)
+            .map_err(api_error!())?;
+    }
+
+    if let Some(url) = url {
+        diesel::update(project_query)
+            .set(schema::project::url.eq(url.as_ref()))
+            .execute(conn)
+            .map_err(api_error!())?;
+    }
+
+    if let Some(visibility) = visibility {
+        diesel::update(project_query)
+            .set(schema::project::visibility.eq(Visibility::from(visibility) as i32))
+            .execute(conn)
+            .map_err(api_error!())?;
+    }
+
+    QueryProject::get(conn, query_project.id)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}",
+    tags = [ "projects"]
+}]
+pub async fn project_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjectParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjectParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        bencher_rbac::project::Permission::Delete,
+    )?;
+    info!("Deleting project: {:?}", query_project);
+
+    diesel::delete(schema::project::table.filter(schema::project::id.eq(query_project.id)))
+        .execute(conn)
+        .map_err(api_error!())?;
+    info!("Deleted project: {:?}", query_project);
+
+    Ok(JsonEmpty {})
 }

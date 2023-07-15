@@ -207,6 +207,9 @@ pub enum ApiError {
     DimensionBenchmark,
     #[error("Missing dimension: less than three")]
     DimensionMissing,
+
+    #[error("Project ({1}) does not belong to the organization ({0})")]
+    ProjectOrganizationMismatch(ResourceId, ResourceId),
 }
 
 impl From<ApiError> for HttpError {

@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Delete {
-    pub org: ResourceId,
+    pub org: Option<ResourceId>,
     pub project: ResourceId,
     pub backend: Backend,
 }
@@ -40,12 +40,20 @@ impl SubCmd for Delete {
             .backend
             .send_with(
                 |client| async move {
-                    client
-                        .org_project_delete()
-                        .organization(self.org.clone())
-                        .project(self.project.clone())
-                        .send()
-                        .await
+                    if let Some(org) = self.org.clone() {
+                        client
+                            .org_project_delete()
+                            .organization(org)
+                            .project(self.project.clone())
+                            .send()
+                            .await
+                    } else {
+                        client
+                            .project_delete()
+                            .project(self.project.clone())
+                            .send()
+                            .await
+                    }
                 },
                 true,
             )

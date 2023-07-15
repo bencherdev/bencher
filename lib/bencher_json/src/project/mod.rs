@@ -52,6 +52,15 @@ impl fmt::Display for JsonProject {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateProject {
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+    pub url: Option<Url>,
+    pub visibility: Option<JsonVisibility>,
+}
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

@@ -73,6 +73,7 @@ impl Api {
         api.register(organization::projects::org_projects_get)?;
         api.register(organization::projects::org_project_post)?;
         api.register(organization::projects::org_project_get)?;
+        api.register(organization::projects::org_project_patch)?;
         api.register(organization::projects::org_project_delete)?;
 
         #[cfg(feature = "plus")]
@@ -99,6 +100,8 @@ impl Api {
         }
         api.register(project::projects::projects_get)?;
         api.register(project::projects::project_get)?;
+        api.register(project::projects::project_patch)?;
+        api.register(project::projects::project_delete)?;
 
         // Perf
         if http_options {

@@ -250,7 +250,7 @@ pub async fn organization_patch(
     body: TypedBody<JsonUpdateOrganization>,
 ) -> Result<ResponseAccepted<JsonOrganization>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Put);
+    let endpoint = Endpoint::new(ORGANIZATION_RESOURCE, Method::Patch);
 
     let context = rqctx.context();
     let json = patch_inner(
@@ -283,22 +283,21 @@ async fn patch_inner(
 
     let JsonUpdateOrganization { name, slug } = json_update_organization;
 
+    let organization_query =
+        schema::organization::table.filter(schema::organization::id.eq(query_organization.id));
+
     if let Some(name) = name {
-        diesel::update(
-            schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
-        )
-        .set(schema::organization::name.eq(name.as_ref()))
-        .execute(conn)
-        .map_err(api_error!())?;
+        diesel::update(organization_query)
+            .set(schema::organization::name.eq(name.as_ref()))
+            .execute(conn)
+            .map_err(api_error!())?;
     }
 
     if let Some(slug) = slug {
-        diesel::update(
-            schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
-        )
-        .set(schema::organization::slug.eq(slug.as_ref()))
-        .execute(conn)
-        .map_err(api_error!())?;
+        diesel::update(organization_query)
+            .set(schema::organization::slug.eq(slug.as_ref()))
+            .execute(conn)
+            .map_err(api_error!())?;
     }
 
     QueryOrganization::get(conn, query_organization.id)?.into_json()
