@@ -13,6 +13,9 @@ pub enum CliBranch {
     Create(CliBranchCreate),
     /// View a branch
     View(CliBranchView),
+    // Update a branch
+    #[clap(alias = "edit")]
+    Update(CliBranchUpdate),
 }
 
 #[derive(Parser, Debug)]
@@ -78,6 +81,27 @@ pub struct CliBranchView {
 
     /// Branch slug or UUID
     pub branch: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliBranchUpdate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Branch slug or UUID
+    pub branch: ResourceId,
+
+    /// Branch name
+    #[clap(long)]
+    pub name: Option<BranchName>,
+
+    /// Branch slug
+    #[clap(long)]
+    pub slug: Option<Slug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

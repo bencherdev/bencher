@@ -92,3 +92,10 @@ pub struct JsonVersion {
     pub number: u32,
     pub hash: Option<GitHash>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateBranch {
+    pub name: Option<BranchName>,
+    pub slug: Option<Slug>,
+}

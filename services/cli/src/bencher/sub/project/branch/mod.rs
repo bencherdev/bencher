@@ -4,6 +4,7 @@ use crate::{bencher::sub::SubCmd, parser::project::branch::CliBranch, CliError};
 
 mod create;
 mod list;
+mod update;
 mod view;
 
 #[derive(Debug)]
@@ -11,6 +12,7 @@ pub enum Branch {
     List(list::List),
     Create(create::Create),
     View(view::View),
+    Update(update::Update),
 }
 
 impl TryFrom<CliBranch> for Branch {
@@ -21,6 +23,7 @@ impl TryFrom<CliBranch> for Branch {
             CliBranch::List(list) => Self::List(list.try_into()?),
             CliBranch::Create(create) => Self::Create(create.try_into()?),
             CliBranch::View(view) => Self::View(view.try_into()?),
+            CliBranch::Update(update) => Self::Update(update.try_into()?),
         })
     }
 }
@@ -32,6 +35,7 @@ impl SubCmd for Branch {
             Self::List(list) => list.exec().await,
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Update(update) => update.exec().await,
         }
     }
 }

@@ -143,6 +143,7 @@ impl Api {
         api.register(project::branches::proj_branches_get)?;
         api.register(project::branches::proj_branch_post)?;
         api.register(project::branches::proj_branch_get)?;
+        api.register(project::branches::proj_branch_patch)?;
 
         // Testbeds
         if http_options {

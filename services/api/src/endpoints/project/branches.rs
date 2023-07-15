@@ -1,5 +1,6 @@
 use bencher_json::{
-    BranchName, JsonBranch, JsonBranches, JsonDirection, JsonNewBranch, JsonPagination, ResourceId,
+    project::branch::JsonUpdateBranch, BranchName, JsonBranch, JsonBranches, JsonDirection,
+    JsonNewBranch, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -15,7 +16,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        branch::{InsertBranch, QueryBranch},
+        branch::{InsertBranch, QueryBranch, UpdateBranch},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -271,4 +272,59 @@ async fn get_one_inner(
         .first::<QueryBranch>(conn)
         .map_err(api_error!())?
         .into_json(conn)
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}/branches/{branch}",
+    tags = ["projects", "branches"]
+}]
+pub async fn proj_branch_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjBranchParams>,
+    body: TypedBody<JsonUpdateBranch>,
+) -> Result<ResponseAccepted<JsonBranch>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjBranchParams,
+    json_update_branch: JsonUpdateBranch,
+    auth_user: &AuthUser,
+) -> Result<JsonBranch, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+    if query_branch.is_system() {
+        return Err(ApiError::SystemMetricKind);
+    }
+    diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
+        .set(&UpdateBranch::from(json_update_branch))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    QueryBranch::get(conn, query_branch.id)?.into_json(conn)
 }

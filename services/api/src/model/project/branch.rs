@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
 use bencher_json::{
-    project::branch::{JsonBranchVersion, JsonStartPoint, JsonVersion},
+    project::branch::{
+        JsonBranchVersion, JsonStartPoint, JsonUpdateBranch, JsonVersion, BRANCH_MAIN_STR,
+    },
     BranchName, GitHash, JsonBranch, JsonNewBranch, ResourceId, Slug,
 };
 use chrono::Utc;
@@ -129,6 +131,10 @@ impl QueryBranch {
             modified: to_date_time(modified).map_err(api_error!())?,
         })
     }
+
+    pub fn is_system(&self) -> bool {
+        matches!(self.slug.as_ref(), BRANCH_MAIN_STR)
+    }
 }
 
 #[derive(Insertable)]
@@ -238,5 +244,24 @@ impl InsertBranch {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = branch_table)]
+pub struct UpdateBranch {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub modified: i64,
+}
+
+impl From<JsonUpdateBranch> for UpdateBranch {
+    fn from(update: JsonUpdateBranch) -> Self {
+        let JsonUpdateBranch { name, slug } = update;
+        Self {
+            name: name.map(Into::into),
+            slug: slug.map(Into::into),
+            modified: Utc::now().timestamp(),
+        }
     }
 }
