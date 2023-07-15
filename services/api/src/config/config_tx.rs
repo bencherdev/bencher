@@ -4,10 +4,10 @@ use std::convert::TryFrom;
 use bencher_json::system::config::JsonPlus;
 use bencher_json::{
     system::config::{
-        IfExists, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp, JsonTls, LogLevel,
-        ServerLog,
+        IfExists, JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, JsonSmtp,
+        JsonTls, LogLevel, ServerLog,
     },
-    JsonConfig, Url,
+    JsonConfig,
 };
 use bencher_rbac::init_rbac;
 use diesel::{connection::SimpleConnection, Connection};
@@ -48,6 +48,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
         let Config(JsonConfig {
             endpoint,
             secret_key,
+            console,
             security,
             server,
             database,
@@ -57,6 +58,23 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
             plus,
         }) = config;
 
+        // TODO Remove deprecated endpoint
+        let console = if let Some(console) = console {
+            if endpoint.is_some() {
+                warn!(
+                    "DEPRECATED: The `endpoint` is now `console.url`. This value will be ignored."
+                );
+            }
+            console
+        } else if let Some(endpoint) = endpoint {
+            warn!(
+                "DEPRECATED: The `endpoint` is now `console.url`. This value will be used for now."
+            );
+            JsonConsole { url: endpoint }
+        } else {
+            return Err(ApiError::MissingConfigKey("console.url".into()));
+        };
+
         // TODO Remove deprecated secret_key
         let security = if let Some(security) = security {
             if secret_key.is_some() {
@@ -64,13 +82,11 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
                 "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be ignored."
                 );
             }
-
             security
         } else if let Some(secret_key) = secret_key {
             warn!(
                 "DEPRECATED: The `secret_key` is now `security.secret_key`. This value will be used for now."
             );
-
             JsonSecurity {
                 issuer: None,
                 secret_key,
@@ -80,7 +96,7 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
         };
 
         let private = into_private(
-            endpoint,
+            console,
             security,
             smtp,
             database,
@@ -104,14 +120,14 @@ impl TryFrom<ConfigTx> for HttpServer<ApiContext> {
 }
 
 fn into_private(
-    endpoint: Url,
+    console: JsonConsole,
     security: JsonSecurity,
     smtp: Option<JsonSmtp>,
     json_database: JsonDatabase,
     restart_tx: Sender<()>,
     #[cfg(feature = "plus")] plus: Option<JsonPlus>,
 ) -> Result<ApiContext, ApiError> {
-    let endpoint = endpoint.into();
+    let endpoint = console.url.into();
     let database_path = json_database.file.to_string_lossy();
     diesel_database_url(&database_path);
     let mut database_connection = DbConnection::establish(&database_path)?;

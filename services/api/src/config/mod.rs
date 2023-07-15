@@ -2,7 +2,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use bencher_json::{
     sanitize_json,
-    system::config::{JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog},
+    system::config::{
+        JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog,
+    },
     JsonConfig, Secret,
 };
 use once_cell::sync::Lazy;
@@ -21,7 +23,7 @@ pub const BENCHER_CONFIG: &str = "BENCHER_CONFIG";
 pub const BENCHER_CONFIG_PATH: &str = "BENCHER_CONFIG_PATH";
 
 const DEFAULT_CONFIG_PATH: &str = "bencher.json";
-const DEFAULT_ENDPOINT_STR: &str = "http://localhost:3000";
+const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
 // Dynamic and/or Private Ports (49152-65535)
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=61016
 const DEFAULT_PORT: u16 = 61016;
@@ -37,9 +39,9 @@ const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
 
 #[allow(clippy::panic)]
-static DEFAULT_ENDPOINT: Lazy<Url> = Lazy::new(|| {
-    DEFAULT_ENDPOINT_STR.parse().unwrap_or_else(|e| {
-        panic!("Failed to parse default endpoint \"{DEFAULT_ENDPOINT_STR}\": {e}")
+static DEFAULT_CONSOLE_URL: Lazy<Url> = Lazy::new(|| {
+    DEFAULT_CONSOLE_URL_STR.parse().unwrap_or_else(|e| {
+        panic!("Failed to parse default console URL \"{DEFAULT_CONSOLE_URL_STR}\": {e}")
     })
 });
 
@@ -165,8 +167,11 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self(JsonConfig {
-            endpoint: DEFAULT_ENDPOINT.clone().into(),
+            endpoint: None,
             secret_key: None,
+            console: Some(JsonConsole {
+                url: DEFAULT_CONSOLE_URL.clone().into(),
+            }),
             security: Some(JsonSecurity {
                 issuer: Some(BENCHER_DOT_DEV.into()),
                 secret_key: DEFAULT_SECRET_KEY.clone(),
