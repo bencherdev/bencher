@@ -2,8 +2,9 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::metric_kind::{
-        ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_SLUG_STR,
-        L2_ACCESSES_SLUG_STR, RAM_ACCESSES_SLUG_STR,
+        JsonUpdateMetricKind, ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR,
+        L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, LATENCY_SLUG_STR, RAM_ACCESSES_SLUG_STR,
+        THROUGHPUT_SLUG_STR,
     },
     JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
 };
@@ -115,6 +116,19 @@ impl QueryMetricKind {
 
         Self::get_id(conn, &insert_metric_kind.uuid)
     }
+
+    pub fn is_system(&self) -> bool {
+        matches!(
+            self.slug.as_ref(),
+            LATENCY_SLUG_STR
+                | THROUGHPUT_SLUG_STR
+                | INSTRUCTIONS_SLUG_STR
+                | L1_ACCESSES_SLUG_STR
+                | L2_ACCESSES_SLUG_STR
+                | RAM_ACCESSES_SLUG_STR
+                | ESTIMATED_CYCLES_SLUG_STR
+        )
+    }
 }
 
 #[derive(Insertable)]
@@ -190,6 +204,27 @@ impl InsertMetricKind {
             units: units.into(),
             created: timestamp,
             modified: timestamp,
+        }
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = metric_kind_table)]
+pub struct UpdateMetricKind {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub units: Option<String>,
+    pub modified: i64,
+}
+
+impl From<JsonUpdateMetricKind> for UpdateMetricKind {
+    fn from(update: JsonUpdateMetricKind) -> Self {
+        let JsonUpdateMetricKind { name, slug, units } = update;
+        Self {
+            name: name.map(Into::into),
+            slug: slug.map(Into::into),
+            units: units.map(Into::into),
+            modified: Utc::now().timestamp(),
         }
     }
 }

@@ -204,3 +204,11 @@ impl fmt::Display for JsonMetricKind {
         write!(f, "{}: {}", self.name, self.units)
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateMetricKind {
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+    pub units: Option<NonEmpty>,
+}

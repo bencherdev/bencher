@@ -210,6 +210,8 @@ pub enum ApiError {
 
     #[error("Project ({1}) does not belong to the organization ({0})")]
     ProjectOrganizationMismatch(ResourceId, ResourceId),
+    #[error("Cannot update a system Metric Kind")]
+    SystemMetricKind,
 }
 
 impl From<ApiError> for HttpError {

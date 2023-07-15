@@ -133,6 +133,7 @@ impl Api {
         api.register(project::metric_kinds::proj_metric_kinds_get)?;
         api.register(project::metric_kinds::proj_metric_kind_post)?;
         api.register(project::metric_kinds::proj_metric_kind_get)?;
+        api.register(project::metric_kinds::proj_metric_kind_patch)?;
 
         // Branches
         if http_options {

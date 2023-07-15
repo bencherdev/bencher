@@ -4,6 +4,7 @@ use crate::{bencher::sub::SubCmd, parser::project::metric_kind::CliMetricKind, C
 
 mod create;
 mod list;
+mod update;
 mod view;
 
 #[derive(Debug)]
@@ -11,6 +12,7 @@ pub enum MetricKind {
     List(list::List),
     Create(create::Create),
     View(view::View),
+    Update(update::Update),
 }
 
 impl TryFrom<CliMetricKind> for MetricKind {
@@ -21,6 +23,7 @@ impl TryFrom<CliMetricKind> for MetricKind {
             CliMetricKind::List(list) => Self::List(list.try_into()?),
             CliMetricKind::Create(create) => Self::Create(create.try_into()?),
             CliMetricKind::View(view) => Self::View(view.try_into()?),
+            CliMetricKind::Update(update) => Self::Update(update.try_into()?),
         })
     }
 }
@@ -32,6 +35,7 @@ impl SubCmd for MetricKind {
             Self::List(list) => list.exec().await,
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Update(update) => update.exec().await,
         }
     }
 }
