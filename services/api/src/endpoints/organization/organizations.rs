@@ -19,6 +19,7 @@ use crate::{
     model::{
         organization::{
             organization_role::InsertOrganizationRole, InsertOrganization, QueryOrganization,
+            UpdateOrganization,
         },
         user::auth::AuthUser,
     },
@@ -281,24 +282,13 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
-    let JsonUpdateOrganization { name, slug } = json_update_organization;
-
     let organization_query =
         schema::organization::table.filter(schema::organization::id.eq(query_organization.id));
-
-    if let Some(name) = name {
-        diesel::update(organization_query)
-            .set(schema::organization::name.eq(name.as_ref()))
-            .execute(conn)
-            .map_err(api_error!())?;
-    }
-
-    if let Some(slug) = slug {
-        diesel::update(organization_query)
-            .set(schema::organization::slug.eq(slug.as_ref()))
-            .execute(conn)
-            .map_err(api_error!())?;
-    }
+    let update_organization = UpdateOrganization::from(json_update_organization);
+    diesel::update(organization_query)
+        .set(&update_organization)
+        .execute(conn)
+        .map_err(api_error!())?;
 
     QueryOrganization::get(conn, query_organization.id)?.into_json()
 }

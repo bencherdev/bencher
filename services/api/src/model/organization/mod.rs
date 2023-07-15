@@ -5,7 +5,10 @@ use std::string::ToString;
 use bencher_billing::SubscriptionId;
 #[cfg(feature = "plus")]
 use bencher_json::Jwt;
-use bencher_json::{JsonNewOrganization, JsonOrganization, NonEmpty, ResourceId, Slug};
+use bencher_json::{
+    organization::JsonUpdateOrganization, JsonNewOrganization, JsonOrganization, NonEmpty,
+    ResourceId, Slug,
+};
 use bencher_rbac::Organization;
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
@@ -183,6 +186,25 @@ impl From<&QueryOrganization> for Organization {
     fn from(organization: &QueryOrganization) -> Self {
         Organization {
             id: organization.id.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = organization_table)]
+pub struct UpdateOrganization {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub modified: i64,
+}
+
+impl From<JsonUpdateOrganization> for UpdateOrganization {
+    fn from(update: JsonUpdateOrganization) -> Self {
+        let JsonUpdateOrganization { name, slug } = update;
+        Self {
+            name: name.map(Into::into),
+            slug: slug.map(Into::into),
+            modified: Utc::now().timestamp(),
         }
     }
 }

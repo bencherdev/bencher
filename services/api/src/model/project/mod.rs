@@ -4,7 +4,9 @@ use std::{str::FromStr, string::ToString};
 use bencher_billing::SubscriptionId;
 #[cfg(feature = "plus")]
 use bencher_json::Jwt;
-use bencher_json::{JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url};
+use bencher_json::{
+    project::JsonUpdateProject, JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
+};
 use bencher_rbac::{Organization, Project};
 use chrono::Utc;
 #[cfg(feature = "plus")]
@@ -281,6 +283,34 @@ impl From<&QueryProject> for Project {
         Project {
             id: project.id.to_string(),
             organization_id: project.organization_id.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = project_table)]
+pub struct UpdateProject {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub url: Option<String>,
+    pub visibility: Option<i32>,
+    pub modified: i64,
+}
+
+impl From<JsonUpdateProject> for UpdateProject {
+    fn from(update: JsonUpdateProject) -> Self {
+        let JsonUpdateProject {
+            name,
+            slug,
+            url,
+            visibility,
+        } = update;
+        Self {
+            name: name.map(Into::into),
+            slug: slug.map(Into::into),
+            url: url.map(Into::into),
+            visibility: visibility.map(|v| Visibility::from(v) as i32),
+            modified: Utc::now().timestamp(),
         }
     }
 }

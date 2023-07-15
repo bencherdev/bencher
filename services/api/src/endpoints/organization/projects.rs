@@ -21,7 +21,7 @@ use crate::{
         organization::QueryOrganization,
         project::{
             branch::InsertBranch, metric_kind::InsertMetricKind, project_role::InsertProjectRole,
-            testbed::InsertTestbed, visibility::Visibility, InsertProject, QueryProject,
+            testbed::InsertTestbed, InsertProject, QueryProject, UpdateProject,
         },
         user::auth::AuthUser,
     },
@@ -420,44 +420,14 @@ async fn patch_inner(
         ));
     }
 
-    let JsonUpdateProject {
-        name,
-        slug,
-        url,
-        visibility,
-    } = json_update_project;
-
     let project_query = schema::project::table
         .filter(schema::project::organization_id.eq(query_organization.id))
         .filter(schema::project::id.eq(query_project.id));
-
-    if let Some(name) = name {
-        diesel::update(project_query)
-            .set(schema::project::name.eq(name.as_ref()))
-            .execute(conn)
-            .map_err(api_error!())?;
-    }
-
-    if let Some(slug) = slug {
-        diesel::update(project_query)
-            .set(schema::project::slug.eq(slug.as_ref()))
-            .execute(conn)
-            .map_err(api_error!())?;
-    }
-
-    if let Some(url) = url {
-        diesel::update(project_query)
-            .set(schema::project::url.eq(url.as_ref()))
-            .execute(conn)
-            .map_err(api_error!())?;
-    }
-
-    if let Some(visibility) = visibility {
-        diesel::update(project_query)
-            .set(schema::project::visibility.eq(Visibility::from(visibility) as i32))
-            .execute(conn)
-            .map_err(api_error!())?;
-    }
+    let update_project = UpdateProject::from(json_update_project);
+    diesel::update(project_query)
+        .set(&update_project)
+        .execute(conn)
+        .map_err(api_error!())?;
 
     QueryProject::get(conn, query_project.id)?.into_json(conn)
 }
