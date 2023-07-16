@@ -10,6 +10,7 @@ pub enum CliAlert {
     #[clap(alias = "ls")]
     List(CliAlertList),
     /// View an alert
+    #[clap(alias = "cat")]
     View(CliAlertView),
 }
 

@@ -11,6 +11,7 @@ pub enum CliOrganizationPlan {
     #[clap(alias = "add")]
     Create(CliPlanCreate),
     /// View a metered subscription plan
+    #[clap(alias = "cat")]
     View(CliPlanView),
 }
 

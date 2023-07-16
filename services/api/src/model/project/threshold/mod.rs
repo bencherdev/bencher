@@ -187,3 +187,19 @@ impl InsertThreshold {
         )
     }
 }
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = threshold_table)]
+pub struct UpdateThreshold {
+    pub statistic_id: i32,
+    pub modified: i64,
+}
+
+impl UpdateThreshold {
+    pub fn new_statistic(conn: &mut DbConnection, statistic: &str) -> Result<Self, ApiError> {
+        Ok(Self {
+            statistic_id: QueryStatistic::get_id(conn, &statistic)?,
+            modified: Utc::now().timestamp(),
+        })
+    }
+}

@@ -13,7 +13,11 @@ pub enum CliThreshold {
     #[clap(alias = "add")]
     Create(CliThresholdCreate),
     /// View a threshold
+    #[clap(alias = "cat")]
     View(CliThresholdView),
+    // Update a threshold
+    #[clap(alias = "edit")]
+    Update(CliThresholdUpdate),
 }
 
 #[derive(Parser, Debug)]
@@ -50,7 +54,7 @@ pub struct CliThresholdCreate {
     #[clap(long)]
     pub branch: ResourceId,
 
-    /// Threshold slug or UUID
+    /// Testbed slug or UUID
     #[clap(long)]
     pub testbed: ResourceId,
 
@@ -105,6 +109,22 @@ pub struct CliThresholdView {
 
     /// Threshold UUID
     pub threshold: Uuid,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliThresholdUpdate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Threshold UUID
+    pub threshold: Uuid,
+
+    #[clap(flatten)]
+    pub statistic: CliStatisticCreate,
 
     #[clap(flatten)]
     pub backend: CliBackend,

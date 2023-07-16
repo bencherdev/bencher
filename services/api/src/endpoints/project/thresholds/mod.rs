@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::threshold::{JsonNewThreshold, JsonThreshold},
+    project::threshold::{JsonNewThreshold, JsonThreshold, JsonUpdateThreshold},
     JsonDirection, JsonPagination, JsonThresholds, ResourceId,
 };
 use bencher_rbac::project::Permission;
@@ -17,7 +17,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        threshold::{InsertThreshold, QueryThreshold},
+        threshold::{statistic::InsertStatistic, InsertThreshold, QueryThreshold, UpdateThreshold},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -255,18 +255,74 @@ async fn get_one_inner(
     schema::threshold::table
         .filter(schema::threshold::project_id.eq(query_project.id))
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
-        .select((
-            schema::threshold::id,
-            schema::threshold::uuid,
-            schema::threshold::project_id,
-            schema::threshold::metric_kind_id,
-            schema::threshold::branch_id,
-            schema::threshold::testbed_id,
-            schema::threshold::statistic_id,
-            schema::threshold::created,
-            schema::threshold::modified,
-        ))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?
         .into_json(conn)
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}/thresholds/{threshold}",
+    tags = ["projects", "thresholds"]
+}]
+pub async fn proj_threshold_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjThresholdParams>,
+    body: TypedBody<JsonUpdateThreshold>,
+) -> Result<ResponseAccepted<JsonThreshold>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjThresholdParams,
+    json_update_threshold: JsonUpdateThreshold,
+    auth_user: &AuthUser,
+) -> Result<JsonThreshold, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let query_threshold = schema::threshold::table
+        .filter(schema::threshold::project_id.eq(query_project.id))
+        .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
+        .first::<QueryThreshold>(conn)
+        .map_err(api_error!())?;
+
+    let insert_statistic =
+        InsertStatistic::from_json(query_project.id, json_update_threshold.statistic)?;
+    diesel::insert_into(schema::statistic::table)
+        .values(&insert_statistic)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
+        .set(&UpdateThreshold::new_statistic(
+            conn,
+            &insert_statistic.uuid,
+        )?)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)
 }

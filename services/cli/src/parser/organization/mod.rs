@@ -23,6 +23,7 @@ pub enum CliOrganization {
     #[clap(alias = "add")]
     Create(CliOrganizationCreate),
     /// View an organization
+    #[clap(alias = "cat")]
     View(CliOrganizationView),
     /// Update an organization
     #[clap(alias = "edit")]

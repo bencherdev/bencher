@@ -7,6 +7,7 @@ use crate::parser::CliBackend;
 #[derive(Subcommand, Debug)]
 pub enum CliStatistic {
     /// View a statistic
+    #[clap(alias = "cat")]
     View(CliStatisticView),
 }
 

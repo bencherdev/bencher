@@ -5,6 +5,7 @@ use crate::{bencher::sub::SubCmd, parser::project::threshold::CliThreshold, CliE
 mod create;
 mod list;
 mod statistic;
+mod update;
 mod view;
 
 #[derive(Debug)]
@@ -12,6 +13,7 @@ pub enum Threshold {
     List(list::List),
     Create(create::Create),
     View(view::View),
+    Update(update::Update),
 }
 
 impl TryFrom<CliThreshold> for Threshold {
@@ -22,6 +24,7 @@ impl TryFrom<CliThreshold> for Threshold {
             CliThreshold::List(list) => Self::List(list.try_into()?),
             CliThreshold::Create(create) => Self::Create(create.try_into()?),
             CliThreshold::View(view) => Self::View(view.try_into()?),
+            CliThreshold::Update(update) => Self::Update(update.try_into()?),
         })
     }
 }
@@ -33,6 +36,7 @@ impl SubCmd for Threshold {
             Self::List(list) => list.exec().await,
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
+            Self::Update(update) => update.exec().await,
         }
     }
 }

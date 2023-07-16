@@ -198,6 +198,12 @@ const thresholdsConfig = {
 				}/thresholds/${path_params?.threshold_uuid}`,
 			cards: [
 				{
+					kind: Card.FIELD,
+					label: "Threshold UUID",
+					key: "uuid",
+					display: Display.RAW,
+				},
+				{
 					kind: Card.NESTED_FIELD,
 					label: "Metric Kind",
 					keys: ["metric_kind", "name"],

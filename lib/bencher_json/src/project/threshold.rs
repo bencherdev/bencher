@@ -77,3 +77,10 @@ pub struct JsonThresholdStatistic {
     pub statistic: JsonStatistic,
     pub created: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateThreshold {
+    #[serde(flatten)]
+    pub statistic: JsonNewStatistic,
+}
