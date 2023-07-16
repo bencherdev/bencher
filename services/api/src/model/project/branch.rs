@@ -133,7 +133,8 @@ impl QueryBranch {
     }
 
     pub fn is_system(&self) -> bool {
-        matches!(self.slug.as_ref(), BRANCH_MAIN_STR)
+        matches!(self.name.as_ref(), BRANCH_MAIN_STR)
+            || matches!(self.slug.as_ref(), BRANCH_MAIN_STR)
     }
 }
 

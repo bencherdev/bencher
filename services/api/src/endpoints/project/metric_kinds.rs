@@ -177,6 +177,10 @@ async fn post_inner(
         Permission::Create,
     )?;
 
+    // This check is required because not all system metric kinds are created at project init
+    if insert_metric_kind.is_system() {
+        return Err(ApiError::SystemMetricKind);
+    }
     diesel::insert_into(schema::metric_kind::table)
         .values(&insert_metric_kind)
         .execute(conn)

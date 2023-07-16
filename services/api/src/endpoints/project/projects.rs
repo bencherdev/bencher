@@ -254,10 +254,8 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
-    let project_query = schema::project::table.filter(schema::project::id.eq(query_project.id));
-    let update_project = UpdateProject::from(json_project);
-    diesel::update(project_query)
-        .set(&update_project)
+    diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
+        .set(&UpdateProject::from(json_project))
         .execute(conn)
         .map_err(api_error!())?;
 

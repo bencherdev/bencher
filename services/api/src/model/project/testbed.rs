@@ -94,7 +94,8 @@ impl QueryTestbed {
     }
 
     pub fn is_system(&self) -> bool {
-        matches!(self.slug.as_ref(), TESTBED_LOCALHOST_STR)
+        matches!(self.name.as_ref(), TESTBED_LOCALHOST_STR)
+            || matches!(self.slug.as_ref(), TESTBED_LOCALHOST_STR)
     }
 }
 

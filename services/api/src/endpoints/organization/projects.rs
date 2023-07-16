@@ -420,14 +420,14 @@ async fn patch_inner(
         ));
     }
 
-    let project_query = schema::project::table
-        .filter(schema::project::organization_id.eq(query_organization.id))
-        .filter(schema::project::id.eq(query_project.id));
-    let update_project = UpdateProject::from(json_project);
-    diesel::update(project_query)
-        .set(&update_project)
-        .execute(conn)
-        .map_err(api_error!())?;
+    diesel::update(
+        schema::project::table
+            .filter(schema::project::organization_id.eq(query_organization.id))
+            .filter(schema::project::id.eq(query_project.id)),
+    )
+    .set(&UpdateProject::from(json_project))
+    .execute(conn)
+    .map_err(api_error!())?;
 
     QueryProject::get(conn, query_project.id)?.into_json(conn)
 }

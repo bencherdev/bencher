@@ -2,9 +2,10 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::metric_kind::{
-        JsonUpdateMetricKind, ESTIMATED_CYCLES_SLUG_STR, INSTRUCTIONS_SLUG_STR,
-        L1_ACCESSES_SLUG_STR, L2_ACCESSES_SLUG_STR, LATENCY_SLUG_STR, RAM_ACCESSES_SLUG_STR,
-        THROUGHPUT_SLUG_STR,
+        JsonUpdateMetricKind, ESTIMATED_CYCLES_NAME_STR, ESTIMATED_CYCLES_SLUG_STR,
+        INSTRUCTIONS_NAME_STR, INSTRUCTIONS_SLUG_STR, L1_ACCESSES_NAME_STR, L1_ACCESSES_SLUG_STR,
+        L2_ACCESSES_NAME_STR, L2_ACCESSES_SLUG_STR, LATENCY_NAME_STR, LATENCY_SLUG_STR,
+        RAM_ACCESSES_NAME_STR, RAM_ACCESSES_SLUG_STR, THROUGHPUT_NAME_STR, THROUGHPUT_SLUG_STR,
     },
     JsonMetricKind, JsonNewMetricKind, NonEmpty, ResourceId, Slug,
 };
@@ -118,16 +119,7 @@ impl QueryMetricKind {
     }
 
     pub fn is_system(&self) -> bool {
-        matches!(
-            self.slug.as_ref(),
-            LATENCY_SLUG_STR
-                | THROUGHPUT_SLUG_STR
-                | INSTRUCTIONS_SLUG_STR
-                | L1_ACCESSES_SLUG_STR
-                | L2_ACCESSES_SLUG_STR
-                | RAM_ACCESSES_SLUG_STR
-                | ESTIMATED_CYCLES_SLUG_STR
-        )
+        is_system(self.name.as_ref(), self.slug.as_ref())
     }
 }
 
@@ -206,6 +198,32 @@ impl InsertMetricKind {
             modified: timestamp,
         }
     }
+
+    pub fn is_system(&self) -> bool {
+        is_system(self.name.as_ref(), self.slug.as_ref())
+    }
+}
+
+fn is_system(name: &str, slug: &str) -> bool {
+    matches!(
+        name,
+        LATENCY_NAME_STR
+            | THROUGHPUT_NAME_STR
+            | INSTRUCTIONS_NAME_STR
+            | L1_ACCESSES_NAME_STR
+            | L2_ACCESSES_NAME_STR
+            | RAM_ACCESSES_NAME_STR
+            | ESTIMATED_CYCLES_NAME_STR
+    ) || matches!(
+        slug,
+        LATENCY_SLUG_STR
+            | THROUGHPUT_SLUG_STR
+            | INSTRUCTIONS_SLUG_STR
+            | L1_ACCESSES_SLUG_STR
+            | L2_ACCESSES_SLUG_STR
+            | RAM_ACCESSES_SLUG_STR
+            | ESTIMATED_CYCLES_SLUG_STR
+    )
 }
 
 #[derive(Debug, Clone, AsChangeset)]
