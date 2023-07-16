@@ -98,6 +98,12 @@ const benchmarksConfig = {
 				},
 				{
 					kind: Card.FIELD,
+					label: "Benchmark Slug",
+					key: "slug",
+					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
 					label: "Benchmark UUID",
 					key: "uuid",
 					display: Display.RAW,
