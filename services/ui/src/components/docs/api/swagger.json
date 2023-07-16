@@ -4353,12 +4353,12 @@
           }
         }
       },
-      "patch": {
+      "put": {
         "tags": [
           "projects",
           "thresholds"
         ],
-        "operationId": "proj_threshold_patch",
+        "operationId": "proj_threshold_put",
         "parameters": [
           {
             "in": "path",

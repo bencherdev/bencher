@@ -261,11 +261,11 @@ async fn get_one_inner(
 }
 
 #[endpoint {
-    method = PATCH,
+    method = PUT,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
     tags = ["projects", "thresholds"]
 }]
-pub async fn proj_threshold_patch(
+pub async fn proj_threshold_put(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjThresholdParams>,
     body: TypedBody<JsonUpdateThreshold>,
@@ -274,7 +274,7 @@ pub async fn proj_threshold_patch(
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::Patch);
 
     let context = rqctx.context();
-    let json = patch_inner(
+    let json = put_inner(
         context,
         path_params.into_inner(),
         body.into_inner(),
@@ -286,7 +286,7 @@ pub async fn proj_threshold_patch(
     response_accepted!(endpoint, json)
 }
 
-async fn patch_inner(
+async fn put_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     json_update_threshold: JsonUpdateThreshold,

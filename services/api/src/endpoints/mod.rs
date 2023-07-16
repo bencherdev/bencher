@@ -173,7 +173,7 @@ impl Api {
         api.register(project::thresholds::proj_thresholds_get)?;
         api.register(project::thresholds::proj_threshold_post)?;
         api.register(project::thresholds::proj_threshold_get)?;
-        api.register(project::thresholds::proj_threshold_patch)?;
+        api.register(project::thresholds::proj_threshold_put)?;
 
         // Threshold Statistics
         if http_options {

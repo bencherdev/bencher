@@ -69,7 +69,7 @@ impl SubCmd for Update {
             .send_with(
                 |client| async move {
                     client
-                        .proj_threshold_patch()
+                        .proj_threshold_put()
                         .project(self.project.clone())
                         .threshold(self.threshold)
                         .body(self.clone())
