@@ -18,10 +18,7 @@ use crate::{
     error::api_error,
     model::project::{
         metric_kind::QueryMetricKind,
-        threshold::{
-            statistic::{InsertStatistic, QueryStatistic},
-            InsertThreshold, QueryThreshold, UpdateThreshold,
-        },
+        threshold::{statistic::InsertStatistic, InsertThreshold, QueryThreshold, UpdateThreshold},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -189,39 +186,18 @@ async fn post_inner(
     )?;
 
     // Create the new threshold
-    let insert_threshold = InsertThreshold::new(project_id, metric_kind_id, branch_id, testbed_id);
-    diesel::insert_into(schema::threshold::table)
-        .values(&insert_threshold)
-        .execute(conn)
-        .map_err(api_error!())?;
-
-    // Get the new threshold
-    let new_threshold = schema::threshold::table
-        .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
-        .first::<QueryThreshold>(conn)
-        .map_err(api_error!())?;
-
-    // Create the new statistic
-    let insert_statistic = InsertStatistic::from_json(new_threshold.id, json_threshold.statistic)?;
-    diesel::insert_into(schema::statistic::table)
-        .values(&insert_statistic)
-        .execute(conn)
-        .map_err(api_error!())?;
-
-    // Get the new threshold statistic
-    let new_statistic = schema::statistic::table
-        .filter(schema::statistic::uuid.eq(&insert_statistic.uuid))
-        .first::<QueryStatistic>(conn)?;
-
-    // Set the new statistic for the new threshold
-    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(new_threshold.id)))
-        .set(schema::threshold::statistic_id.eq(new_statistic.id))
-        .execute(conn)
-        .map_err(api_error!())?;
+    let threshold_id = InsertThreshold::from_json(
+        conn,
+        project_id,
+        metric_kind_id,
+        branch_id,
+        testbed_id,
+        json_threshold.statistic,
+    )?;
 
     // Return the new threshold with the new statistic
     schema::threshold::table
-        .filter(schema::threshold::id.eq(new_threshold.id))
+        .filter(schema::threshold::id.eq(threshold_id))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?
         .into_json(conn)

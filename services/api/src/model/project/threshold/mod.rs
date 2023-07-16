@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
-use bencher_json::project::threshold::{JsonThreshold, JsonThresholdStatistic};
+use bencher_json::project::threshold::{JsonNewStatistic, JsonThreshold, JsonThresholdStatistic};
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
-use self::statistic::QueryStatistic;
+use self::statistic::{InsertStatistic, QueryStatistic};
 use super::{
     branch::QueryBranch, metric_kind::QueryMetricKind, testbed::QueryTestbed, QueryProject,
 };
@@ -157,6 +157,78 @@ impl InsertThreshold {
             created: timestamp,
             modified: timestamp,
         }
+    }
+
+    pub fn from_json(
+        conn: &mut DbConnection,
+        project_id: i32,
+        metric_kind_id: i32,
+        branch_id: i32,
+        testbed_id: i32,
+        json_statistic: JsonNewStatistic,
+    ) -> Result<i32, ApiError> {
+        // Create the new threshold
+        let insert_threshold =
+            InsertThreshold::new(project_id, metric_kind_id, branch_id, testbed_id);
+        diesel::insert_into(schema::threshold::table)
+            .values(&insert_threshold)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        // Get the new threshold ID
+        let threshold_id = QueryThreshold::get_id(conn, &insert_threshold.uuid)?;
+
+        // Create the new statistic
+        let insert_statistic = InsertStatistic::from_json(threshold_id, json_statistic)?;
+        diesel::insert_into(schema::statistic::table)
+            .values(&insert_statistic)
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        // Get the new statistic ID
+        let statistic_id = QueryStatistic::get_id(conn, &insert_statistic.uuid)?;
+
+        // Set the new statistic for the new threshold
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+            .set(schema::threshold::statistic_id.eq(statistic_id))
+            .execute(conn)
+            .map_err(api_error!())?;
+
+        Ok(threshold_id)
+    }
+
+    pub fn lower_boundary(
+        conn: &mut DbConnection,
+        project_id: i32,
+        metric_kind_id: i32,
+        branch_id: i32,
+        testbed_id: i32,
+    ) -> Result<i32, ApiError> {
+        Self::from_json(
+            conn,
+            project_id,
+            metric_kind_id,
+            branch_id,
+            testbed_id,
+            JsonNewStatistic::lower_boundary(),
+        )
+    }
+
+    pub fn upper_boundary(
+        conn: &mut DbConnection,
+        project_id: i32,
+        metric_kind_id: i32,
+        branch_id: i32,
+        testbed_id: i32,
+    ) -> Result<i32, ApiError> {
+        Self::from_json(
+            conn,
+            project_id,
+            metric_kind_id,
+            branch_id,
+            testbed_id,
+            JsonNewStatistic::upper_boundary(),
+        )
     }
 }
 

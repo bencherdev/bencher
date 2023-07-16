@@ -20,8 +20,12 @@ use crate::{
     model::{
         organization::QueryOrganization,
         project::{
-            branch::InsertBranch, metric_kind::InsertMetricKind, project_role::InsertProjectRole,
-            testbed::InsertTestbed, InsertProject, QueryProject, UpdateProject,
+            branch::{InsertBranch, QueryBranch},
+            metric_kind::{InsertMetricKind, QueryMetricKind},
+            project_role::InsertProjectRole,
+            testbed::{InsertTestbed, QueryTestbed},
+            threshold::InsertThreshold,
+            InsertProject, QueryProject, UpdateProject,
         },
         user::auth::AuthUser,
     },
@@ -221,6 +225,7 @@ async fn post_inner(
         .values(&insert_branch)
         .execute(conn)
         .map_err(api_error!())?;
+    let branch_id = QueryBranch::get_id(conn, &insert_branch.uuid)?;
 
     // Add a `localhost` testbed to the project
     let insert_testbed = InsertTestbed::localhost(conn, query_project.id);
@@ -228,6 +233,7 @@ async fn post_inner(
         .values(&insert_testbed)
         .execute(conn)
         .map_err(api_error!())?;
+    let testbed_id = QueryTestbed::get_id(conn, &insert_testbed.uuid)?;
 
     // Add a `latency` metric kind to the project
     let insert_metric_kind = InsertMetricKind::latency(conn, query_project.id);
@@ -235,6 +241,15 @@ async fn post_inner(
         .values(&insert_metric_kind)
         .execute(conn)
         .map_err(api_error!())?;
+    let metric_kind_id = QueryMetricKind::get_id(conn, &insert_metric_kind.uuid)?;
+    // Add a `latency` threshold to the project
+    InsertThreshold::upper_boundary(
+        conn,
+        query_project.id,
+        metric_kind_id,
+        branch_id,
+        testbed_id,
+    )?;
 
     // Add a `throughput` metric kind to the project
     let insert_metric_kind = InsertMetricKind::throughput(conn, query_project.id);
@@ -242,6 +257,15 @@ async fn post_inner(
         .values(&insert_metric_kind)
         .execute(conn)
         .map_err(api_error!())?;
+    let metric_kind_id = QueryMetricKind::get_id(conn, &insert_metric_kind.uuid)?;
+    // Add a `throughput` threshold to the project
+    InsertThreshold::lower_boundary(
+        conn,
+        query_project.id,
+        metric_kind_id,
+        branch_id,
+        testbed_id,
+    )?;
 
     query_project.into_json(conn)
 }

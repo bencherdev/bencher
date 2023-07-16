@@ -34,6 +34,27 @@ impl From<Boundary> for f64 {
     }
 }
 
+impl Boundary {
+    pub const MIN: Self = Self::FIFTY;
+    pub const FIFTY: Self = Self(OrderedFloat(0.5));
+    pub const FIFTY_FIVE: Self = Self(OrderedFloat(0.55));
+    pub const SIXTY: Self = Self(OrderedFloat(0.6));
+    pub const SIXTY_FIVE: Self = Self(OrderedFloat(0.65));
+    pub const SEVENTY: Self = Self(OrderedFloat(0.7));
+    pub const SEVENTY_FIVE: Self = Self(OrderedFloat(0.75));
+    pub const EIGHTY: Self = Self(OrderedFloat(0.8));
+    pub const EIGHTY_FIVE: Self = Self(OrderedFloat(0.85));
+    pub const NINETY: Self = Self(OrderedFloat(0.9));
+    pub const NINETY_FIVE: Self = Self(OrderedFloat(0.95));
+    pub const NINETY_EIGHT: Self = Self(OrderedFloat(0.98));
+    pub const NINETY_NINE: Self = Self(OrderedFloat(0.99));
+    pub const THREE_NINES: Self = Self(OrderedFloat(0.999));
+    pub const FOUR_NINES: Self = Self(OrderedFloat(0.9999));
+    pub const FIVE_NINES: Self = Self(OrderedFloat(0.99999));
+    pub const SIXTEEN_NINES: Self = Self(OrderedFloat(0.9999999999999999));
+    pub const MAX: Self = Self::SIXTEEN_NINES;
+}
+
 impl<'de> Deserialize<'de> for Boundary {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -80,12 +101,12 @@ mod test {
     #[allow(clippy::excessive_precision)]
     fn test_boundary() {
         assert_eq!(true, is_valid_boundary(0.49999999999999999));
-        assert_eq!(true, is_valid_boundary(0.5));
-        assert_eq!(true, is_valid_boundary(0.6));
-        assert_eq!(true, is_valid_boundary(0.7));
-        assert_eq!(true, is_valid_boundary(0.8));
-        assert_eq!(true, is_valid_boundary(0.9));
-        assert_eq!(true, is_valid_boundary(0.9999999999999999));
+        assert_eq!(true, is_valid_boundary(Boundary::MIN.into()));
+        assert_eq!(true, is_valid_boundary(Boundary::SIXTY.into()));
+        assert_eq!(true, is_valid_boundary(Boundary::SEVENTY.into()));
+        assert_eq!(true, is_valid_boundary(Boundary::EIGHTY.into()));
+        assert_eq!(true, is_valid_boundary(Boundary::NINETY.into()));
+        assert_eq!(true, is_valid_boundary(Boundary::MAX.into()));
 
         assert_eq!(false, is_valid_boundary(-1.0));
         assert_eq!(false, is_valid_boundary(0.0));

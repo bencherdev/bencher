@@ -235,10 +235,7 @@ impl InsertBranch {
                 };
 
                 // Get the new threshold
-                let new_threshold = schema::threshold::table
-                    .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
-                    .first::<QueryThreshold>(conn)
-                    .map_err(api_error!())?;
+                let threshold_id = QueryThreshold::get_id(conn, &insert_threshold.uuid)?;
 
                 // Get the current threshold statistic
                 let query_statistic = schema::statistic::table
@@ -248,22 +245,20 @@ impl InsertBranch {
                 // Clone the current threshold statistic
                 let mut insert_statistic = InsertStatistic::from(query_statistic);
                 // For the new threshold
-                insert_statistic.threshold_id = new_threshold.id;
+                insert_statistic.threshold_id = threshold_id;
                 diesel::insert_into(schema::statistic::table)
                     .values(&insert_statistic)
                     .execute(conn)
                     .map_err(api_error!())?;
 
                 // Get the new threshold statistic
-                let new_statistic = schema::statistic::table
-                    .filter(schema::statistic::uuid.eq(&insert_statistic.uuid))
-                    .first::<QueryStatistic>(conn)?;
+                let statistic_id = QueryStatistic::get_id(conn, &insert_statistic.uuid)?;
 
                 // Set the new statistic for the new threshold
                 diesel::update(
-                    schema::threshold::table.filter(schema::threshold::id.eq(new_threshold.id)),
+                    schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)),
                 )
-                .set(schema::threshold::statistic_id.eq(new_statistic.id))
+                .set(schema::threshold::statistic_id.eq(statistic_id))
                 .execute(conn)
                 .map_err(api_error!())?;
             }

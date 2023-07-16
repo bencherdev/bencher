@@ -28,6 +28,30 @@ pub struct JsonNewStatistic {
     pub upper_boundary: Option<Boundary>,
 }
 
+impl JsonNewStatistic {
+    pub fn lower_boundary() -> Self {
+        Self {
+            test: JsonStatisticKind::T,
+            min_sample_size: None,
+            max_sample_size: Some(32),
+            window: None,
+            lower_boundary: Some(Boundary::NINETY_FIVE),
+            upper_boundary: None,
+        }
+    }
+
+    pub fn upper_boundary() -> Self {
+        Self {
+            test: JsonStatisticKind::T,
+            min_sample_size: None,
+            max_sample_size: Some(32),
+            window: None,
+            lower_boundary: None,
+            upper_boundary: Some(Boundary::NINETY_FIVE),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThresholds(pub Vec<JsonThreshold>);
