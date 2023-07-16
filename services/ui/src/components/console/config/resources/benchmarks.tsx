@@ -1,13 +1,21 @@
+import FieldKind from "../../../field/kind";
 import { BENCHER_API_URL } from "../../../site/util";
 import { Button, Card, Display, Operation } from "../types";
-import { parentPath, viewUuidPath } from "../util";
+import { addPath, parentPath, viewSlugPath } from "../util";
+import BENCHMARK_FIELDS from "./fields/benchmark";
 
 const benchmarksConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
 		header: {
 			title: "Benchmarks",
-			buttons: [{ kind: Button.REFRESH }],
+			buttons: [
+				{
+					kind: Button.ADD,
+					path: addPath,
+				},
+				{ kind: Button.REFRESH },
+			],
 		},
 		table: {
 			url: (path_params) => {
@@ -36,12 +44,35 @@ const benchmarksConfig = {
 				items: [{}, {}, {}, {}],
 				button: {
 					text: "View",
-					path: (pathname, datum) => {
-						return viewUuidPath(pathname, datum);
-					},
+					path: (pathname, datum) => viewSlugPath(pathname, datum),
 				},
 			},
 			name: "benchmarks",
+		},
+	},
+	[Operation.ADD]: {
+		operation: Operation.ADD,
+		header: {
+			title: "Add Benchmark",
+			path: parentPath,
+		},
+		form: {
+			url: (path_params) =>
+				`${BENCHER_API_URL()}/v0/projects/${
+					path_params?.project_slug
+				}/benchmarks`,
+			fields: [
+				{
+					kind: FieldKind.INPUT,
+					label: "Name",
+					key: "name",
+					value: "",
+					valid: null,
+					validate: true,
+					config: BENCHMARK_FIELDS.name,
+				},
+			],
+			path: parentPath,
 		},
 	},
 	[Operation.VIEW]: {
@@ -56,7 +87,7 @@ const benchmarksConfig = {
 			url: (path_params) => {
 				return `${BENCHER_API_URL()}/v0/projects/${
 					path_params?.project_slug
-				}/benchmarks/${path_params?.benchmark_uuid}`;
+				}/benchmarks/${path_params?.benchmark_slug}`;
 			},
 			cards: [
 				{

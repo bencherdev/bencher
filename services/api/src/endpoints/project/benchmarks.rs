@@ -1,27 +1,32 @@
 use bencher_json::{
+    project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
     BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonPagination, ResourceId,
 };
+use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
     model::{
-        project::{benchmark::QueryBenchmark, QueryProject},
+        project::{
+            benchmark::{InsertBenchmark, QueryBenchmark, UpdateBenchmark},
+            QueryProject,
+        },
         user::auth::AuthUser,
     },
     schema,
     util::{
         cors::{get_cors, CorsResponse},
         error::into_json,
+        resource_id::fn_resource_id,
     },
     ApiError,
 };
@@ -130,10 +135,65 @@ async fn get_ls_inner(
         .collect())
 }
 
+#[endpoint {
+    method = POST,
+    path =  "/v0/projects/{project}/benchmarks",
+    tags = ["projects", "benchmarks"]
+}]
+pub async fn proj_benchmark_post(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjBenchmarksParams>,
+    body: TypedBody<JsonNewBenchmark>,
+) -> Result<ResponseAccepted<JsonBenchmark>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::Post);
+
+    let json = post_inner(
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn post_inner(
+    context: &ApiContext,
+    path_params: ProjBenchmarksParams,
+    json_benchmark: JsonNewBenchmark,
+    auth_user: &AuthUser,
+) -> Result<JsonBenchmark, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    let insert_benchmark = InsertBenchmark::from_json(conn, &path_params.project, json_benchmark)?;
+    // Verify that the user is allowed
+    QueryProject::is_allowed_id(
+        conn,
+        &context.rbac,
+        insert_benchmark.project_id,
+        auth_user,
+        Permission::Create,
+    )?;
+
+    diesel::insert_into(schema::benchmark::table)
+        .values(&insert_benchmark)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    schema::benchmark::table
+        .filter(schema::benchmark::uuid.eq(&insert_benchmark.uuid))
+        .first::<QueryBenchmark>(conn)
+        .map_err(api_error!())?
+        .into_json(conn)
+}
+
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjBenchmarkParams {
     pub project: ResourceId,
-    pub benchmark: Uuid,
+    pub benchmark: ResourceId,
 }
 
 #[allow(clippy::unused_async)]
@@ -176,6 +236,8 @@ pub async fn proj_benchmark_get(
     }
 }
 
+fn_resource_id!(benchmark);
+
 async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBenchmarkParams,
@@ -190,9 +252,62 @@ async fn get_one_inner(
         .filter(
             schema::benchmark::project_id
                 .eq(query_project.id)
-                .and(schema::benchmark::uuid.eq(path_params.benchmark.to_string())),
+                .and(resource_id(&path_params.benchmark)?),
         )
         .first::<QueryBenchmark>(conn)
         .map_err(api_error!())?
         .into_json(conn)
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}",
+    tags = ["projects", "benchmarks"]
+}]
+pub async fn proj_benchmark_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjBenchmarkParams>,
+    body: TypedBody<JsonUpdateBenchmark>,
+) -> Result<ResponseAccepted<JsonBenchmark>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjBenchmarkParams,
+    json_update_benchmark: JsonUpdateBenchmark,
+    auth_user: &AuthUser,
+) -> Result<JsonBenchmark, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let query_benchmark =
+        QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
+    diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
+        .set(&UpdateBenchmark::from(json_update_benchmark))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    QueryBenchmark::get(conn, query_benchmark.id)?.into_json(conn)
 }

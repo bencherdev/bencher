@@ -154,7 +154,11 @@ const ConsoleRoutes = (props) => {
 				element={consolePage(config?.[Resource.BENCHMARKS]?.[Operation.LIST])}
 			/>
 			<Route
-				path="/projects/:project_slug/benchmarks/:benchmark_uuid"
+				path="/projects/:project_slug/benchmarks/add"
+				element={consolePage(config?.[Resource.BENCHMARKS]?.[Operation.ADD])}
+			/>
+			<Route
+				path="/projects/:project_slug/benchmarks/:benchmark_slug"
 				element={consolePage(config?.[Resource.BENCHMARKS]?.[Operation.VIEW])}
 			/>
 			<Route

@@ -27,9 +27,9 @@ const alertsConfig = {
 					</div>
 				),
 				path: (_pathname) => {
-					return "/docs/how-to/track-benchmarks";
+					return "/docs/explanation/thresholds";
 				},
-				text: "Track Your Benchmarks",
+				text: "Learn about Thresholds & Alerts",
 			},
 			row: {
 				keys: [["benchmark", "name"]],

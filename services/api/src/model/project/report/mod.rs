@@ -237,7 +237,9 @@ fn get_benchmark_metric(
         uuid,
         project,
         name,
+        slug,
         created,
+        modified,
     } = benchmark;
 
     Ok((
@@ -246,9 +248,11 @@ fn get_benchmark_metric(
             uuid,
             project,
             name,
+            slug,
             metric: query_metric.into_json(),
             boundary: query_boundary.map(|b| b.into_json()).unwrap_or_default(),
             created,
+            modified,
         },
     ))
 }

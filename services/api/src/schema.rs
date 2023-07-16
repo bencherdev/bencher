@@ -17,7 +17,9 @@ diesel::table! {
         uuid -> Text,
         project_id -> Integer,
         name -> Text,
+        slug -> Text,
         created -> BigInt,
+        modified -> BigInt,
     }
 }
 

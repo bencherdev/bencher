@@ -1,6 +1,5 @@
-use bencher_json::{BenchmarkName, ResourceId};
+use bencher_json::{BenchmarkName, ResourceId, Slug};
 use clap::{Parser, Subcommand, ValueEnum};
-use uuid::Uuid;
 
 use crate::parser::{CliBackend, CliPagination};
 
@@ -9,8 +8,14 @@ pub enum CliBenchmark {
     /// List benchmarks
     #[clap(alias = "ls")]
     List(CliBenchmarkList),
+    /// Create a benchmark
+    #[clap(alias = "add")]
+    Create(CliBenchmarkCreate),
     /// View a benchmark
     View(CliBenchmarkView),
+    // Update a benchmark
+    #[clap(alias = "edit")]
+    Update(CliBenchmarkUpdate),
 }
 
 #[derive(Parser, Debug)]
@@ -38,13 +43,51 @@ pub enum CliBenchmarksSort {
 }
 
 #[derive(Parser, Debug)]
+pub struct CliBenchmarkCreate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Benchmark name
+    pub name: BenchmarkName,
+
+    /// Benchmark slug
+    #[clap(long)]
+    pub slug: Option<Slug>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
 pub struct CliBenchmarkView {
     /// Project slug or UUID
     #[clap(long)]
     pub project: ResourceId,
 
     /// Benchmark UUID
-    pub benchmark: Uuid,
+    pub benchmark: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliBenchmarkUpdate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Benchmark slug or UUID
+    pub benchmark: ResourceId,
+
+    /// Benchmark name
+    #[clap(long)]
+    pub name: Option<BenchmarkName>,
+
+    /// Benchmark slug
+    #[clap(long)]
+    pub slug: Option<Slug>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

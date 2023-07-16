@@ -161,7 +161,9 @@ impl Api {
             api.register(project::benchmarks::proj_benchmark_options)?;
         }
         api.register(project::benchmarks::proj_benchmarks_get)?;
+        api.register(project::benchmarks::proj_benchmark_post)?;
         api.register(project::benchmarks::proj_benchmark_get)?;
+        api.register(project::benchmarks::proj_benchmark_patch)?;
 
         // Thresholds
         if http_options {

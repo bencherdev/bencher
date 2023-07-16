@@ -2230,6 +2230,81 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "projects",
+          "benchmarks"
+        ],
+        "operationId": "proj_benchmark_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewBenchmark"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonBenchmark"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     },
     "/v0/projects/{project}/benchmarks/{benchmark}": {
@@ -2245,8 +2320,7 @@
             "name": "benchmark",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "$ref": "#/components/schemas/ResourceId"
             }
           },
           {
@@ -2261,6 +2335,89 @@
         "responses": {
           "200": {
             "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonBenchmark"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects",
+          "benchmarks"
+        ],
+        "operationId": "proj_benchmark_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "benchmark",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateBenchmark"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
             "headers": {
               "Access-Control-Allow-Credentials": {
                 "style": "simple",
@@ -5215,12 +5372,19 @@
             "type": "string",
             "format": "date-time"
           },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/BenchmarkName"
           },
           "project": {
             "type": "string",
             "format": "uuid"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -5229,8 +5393,10 @@
         },
         "required": [
           "created",
+          "modified",
           "name",
           "project",
+          "slug",
           "uuid"
         ]
       },
@@ -5247,12 +5413,19 @@
           "metric": {
             "$ref": "#/components/schemas/JsonMetric"
           },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
           "name": {
             "$ref": "#/components/schemas/BenchmarkName"
           },
           "project": {
             "type": "string",
             "format": "uuid"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/Slug"
           },
           "uuid": {
             "type": "string",
@@ -5263,8 +5436,10 @@
           "boundary",
           "created",
           "metric",
+          "modified",
           "name",
           "project",
+          "slug",
           "uuid"
         ]
       },
@@ -5755,6 +5930,25 @@
         "items": {
           "$ref": "#/components/schemas/JsonMetricKind"
         }
+      },
+      "JsonNewBenchmark": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/BenchmarkName"
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
       },
       "JsonNewBranch": {
         "type": "object",
@@ -6896,6 +7090,27 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/JsonToken"
+        }
+      },
+      "JsonUpdateBenchmark": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkName"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          }
         }
       },
       "JsonUpdateBranch": {
