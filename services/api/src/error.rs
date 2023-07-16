@@ -216,6 +216,8 @@ pub enum ApiError {
     SystemBranch,
     #[error("Cannot update a system Testbed")]
     SystemTestbed,
+    #[error("No statistic for threshold: {0}")]
+    NoThresholdStatistic(String),
 }
 
 impl From<ApiError> for HttpError {

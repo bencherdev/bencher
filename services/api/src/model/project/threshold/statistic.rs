@@ -11,7 +11,6 @@ use uuid::Uuid;
 use crate::{
     context::DbConnection,
     error::api_error,
-    model::project::QueryProject,
     schema,
     schema::statistic as statistic_table,
     util::{
@@ -22,11 +21,13 @@ use crate::{
     ApiError,
 };
 
+use super::QueryThreshold;
+
 #[derive(Queryable, Debug, Clone)]
 pub struct QueryStatistic {
     pub id: i32,
     pub uuid: String,
-    pub project_id: i32,
+    pub threshold_id: i32,
     pub test: i32,
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
@@ -53,7 +54,7 @@ impl QueryStatistic {
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonStatistic, ApiError> {
         let Self {
             uuid,
-            project_id,
+            threshold_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -65,7 +66,7 @@ impl QueryStatistic {
         } = self;
         Ok(JsonStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
-            project: QueryProject::get_uuid(conn, project_id)?,
+            threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             test: StatisticKind::try_from(test)?.into(),
             min_sample_size: map_u32(min_sample_size)?,
             max_sample_size: map_u32(max_sample_size)?,
@@ -125,7 +126,7 @@ pub fn map_boundary(boundary: Option<f64>) -> Result<Option<Boundary>, ApiError>
 #[diesel(table_name = statistic_table)]
 pub struct InsertStatistic {
     pub uuid: String,
-    pub project_id: i32,
+    pub threshold_id: i32,
     pub test: i32,
     pub min_sample_size: Option<i64>,
     pub max_sample_size: Option<i64>,
@@ -138,7 +139,7 @@ pub struct InsertStatistic {
 impl From<QueryStatistic> for InsertStatistic {
     fn from(query_statistic: QueryStatistic) -> Self {
         let QueryStatistic {
-            project_id,
+            threshold_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -150,7 +151,7 @@ impl From<QueryStatistic> for InsertStatistic {
         } = query_statistic;
         Self {
             uuid: Uuid::new_v4().to_string(),
-            project_id,
+            threshold_id,
             test,
             min_sample_size,
             max_sample_size,
@@ -163,7 +164,10 @@ impl From<QueryStatistic> for InsertStatistic {
 }
 
 impl InsertStatistic {
-    pub fn from_json(project_id: i32, json_statistic: JsonNewStatistic) -> Result<Self, ApiError> {
+    pub fn from_json(
+        threshold_id: i32,
+        json_statistic: JsonNewStatistic,
+    ) -> Result<Self, ApiError> {
         let JsonNewStatistic {
             test,
             min_sample_size,
@@ -174,7 +178,7 @@ impl InsertStatistic {
         } = json_statistic;
         Ok(Self {
             uuid: Uuid::new_v4().to_string(),
-            project_id,
+            threshold_id,
             test: StatisticKind::from(test) as i32,
             min_sample_size: min_sample_size.map(Into::into),
             max_sample_size: max_sample_size.map(Into::into),

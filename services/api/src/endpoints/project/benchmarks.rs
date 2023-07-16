@@ -289,7 +289,7 @@ pub async fn proj_benchmark_patch(
 async fn patch_inner(
     context: &ApiContext,
     path_params: ProjBenchmarkParams,
-    json_update_benchmark: JsonUpdateBenchmark,
+    json_benchmark: JsonUpdateBenchmark,
     auth_user: &AuthUser,
 ) -> Result<JsonBenchmark, ApiError> {
     let conn = &mut *context.conn().await;
@@ -306,7 +306,7 @@ async fn patch_inner(
     let query_benchmark =
         QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
     diesel::update(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
-        .set(&UpdateBenchmark::from(json_update_benchmark))
+        .set(&UpdateBenchmark::from(json_benchmark))
         .execute(conn)
         .map_err(api_error!())?;
 

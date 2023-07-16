@@ -269,7 +269,7 @@ pub async fn organization_patch(
 async fn patch_inner(
     context: &ApiContext,
     path_params: OrganizationParams,
-    json_update_organization: JsonUpdateOrganization,
+    json_organization: JsonUpdateOrganization,
     auth_user: &AuthUser,
 ) -> Result<JsonOrganization, ApiError> {
     let conn = &mut *context.conn().await;
@@ -284,7 +284,7 @@ async fn patch_inner(
 
     let organization_query =
         schema::organization::table.filter(schema::organization::id.eq(query_organization.id));
-    let update_organization = UpdateOrganization::from(json_update_organization);
+    let update_organization = UpdateOrganization::from(json_organization);
     diesel::update(organization_query)
         .set(&update_organization)
         .execute(conn)

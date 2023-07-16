@@ -287,7 +287,7 @@ pub async fn proj_metric_kind_patch(
 async fn patch_inner(
     context: &ApiContext,
     path_params: ProjMetricKindParams,
-    json_update_metric_kind: JsonUpdateMetricKind,
+    json_metric_kind: JsonUpdateMetricKind,
     auth_user: &AuthUser,
 ) -> Result<JsonMetricKind, ApiError> {
     let conn = &mut *context.conn().await;
@@ -309,7 +309,7 @@ async fn patch_inner(
     diesel::update(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
     )
-    .set(&UpdateMetricKind::from(json_update_metric_kind))
+    .set(&UpdateMetricKind::from(json_metric_kind))
     .execute(conn)
     .map_err(api_error!())?;
 

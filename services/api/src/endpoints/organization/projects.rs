@@ -399,7 +399,7 @@ pub async fn org_project_patch(
 async fn patch_inner(
     context: &ApiContext,
     path_params: OrgProjectParams,
-    json_update_project: JsonUpdateProject,
+    json_project: JsonUpdateProject,
     auth_user: &AuthUser,
 ) -> Result<JsonProject, ApiError> {
     let conn = &mut *context.conn().await;
@@ -423,7 +423,7 @@ async fn patch_inner(
     let project_query = schema::project::table
         .filter(schema::project::organization_id.eq(query_organization.id))
         .filter(schema::project::id.eq(query_project.id));
-    let update_project = UpdateProject::from(json_update_project);
+    let update_project = UpdateProject::from(json_project);
     diesel::update(project_query)
         .set(&update_project)
         .execute(conn)

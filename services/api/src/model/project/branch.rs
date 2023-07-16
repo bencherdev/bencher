@@ -214,32 +214,57 @@ impl InsertBranch {
 
             // Add new branch to cloned thresholds with cloned statistics
             for query_threshold in query_thresholds {
+                // Clone the threshold for the new branch
+                let insert_threshold = InsertThreshold::new(
+                    self.project_id,
+                    query_threshold.metric_kind_id,
+                    new_branch_id,
+                    query_threshold.testbed_id,
+                );
+
+                // Create the new threshold
+                diesel::insert_into(schema::threshold::table)
+                    .values(&insert_threshold)
+                    .execute(conn)
+                    .map_err(api_error!())?;
+
+                // If there is a statistic, clone that too
+                let Some(statistic_id) = query_threshold.statistic_id else {
+                    continue;
+                };
+
+                // Get the new threshold
+                let new_threshold = schema::threshold::table
+                    .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
+                    .first::<QueryThreshold>(conn)
+                    .map_err(api_error!())?;
+
                 // Get the current threshold statistic
                 let query_statistic = schema::statistic::table
-                    .filter(schema::statistic::id.eq(query_threshold.statistic_id))
+                    .filter(schema::statistic::id.eq(statistic_id))
                     .first::<QueryStatistic>(conn)?;
 
                 // Clone the current threshold statistic
-                let insert_statistic = InsertStatistic::from(query_statistic);
+                let mut insert_statistic = InsertStatistic::from(query_statistic);
+                // For the new threshold
+                insert_statistic.threshold_id = new_threshold.id;
                 diesel::insert_into(schema::statistic::table)
                     .values(&insert_statistic)
                     .execute(conn)
                     .map_err(api_error!())?;
 
-                // Clone the threshold for the new branch using the newly cloned statistic
-                let insert_threshold = InsertThreshold::new(
-                    conn,
-                    self.project_id,
-                    query_threshold.metric_kind_id,
-                    new_branch_id,
-                    query_threshold.testbed_id,
-                    &insert_statistic.uuid,
-                )?;
+                // Get the new threshold statistic
+                let new_statistic = schema::statistic::table
+                    .filter(schema::statistic::uuid.eq(&insert_statistic.uuid))
+                    .first::<QueryStatistic>(conn)?;
 
-                diesel::insert_into(schema::threshold::table)
-                    .values(&insert_threshold)
-                    .execute(conn)
-                    .map_err(api_error!())?;
+                // Set the new statistic for the new threshold
+                diesel::update(
+                    schema::threshold::table.filter(schema::threshold::id.eq(new_threshold.id)),
+                )
+                .set(schema::threshold::statistic_id.eq(new_statistic.id))
+                .execute(conn)
+                .map_err(api_error!())?;
             }
         }
 

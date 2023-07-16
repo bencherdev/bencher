@@ -126,7 +126,7 @@ const alertsConfig = {
 				},
 				{
 					kind: Card.NESTED_FIELD,
-					label: "Upper Boundary",
+					label: "Upper Boundary Limit",
 					keys: ["benchmark", "boundary", "upper_limit"],
 					display: Display.RAW,
 				},

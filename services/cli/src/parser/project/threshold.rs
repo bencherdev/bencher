@@ -18,6 +18,9 @@ pub enum CliThreshold {
     // Update a threshold
     #[clap(alias = "edit")]
     Update(CliThresholdUpdate),
+    /// Delete a threshold
+    #[clap(alias = "rm")]
+    Delete(CliThresholdDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -125,6 +128,19 @@ pub struct CliThresholdUpdate {
 
     #[clap(flatten)]
     pub statistic: CliStatisticCreate,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliThresholdDelete {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Threshold UUID
+    pub threshold: Uuid,
 
     #[clap(flatten)]
     pub backend: CliBackend,

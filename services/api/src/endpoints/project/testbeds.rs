@@ -286,7 +286,7 @@ pub async fn proj_testbed_patch(
 async fn patch_inner(
     context: &ApiContext,
     path_params: ProjTestbedParams,
-    json_update_testbed: JsonUpdateTestbed,
+    json_testbed: JsonUpdateTestbed,
     auth_user: &AuthUser,
 ) -> Result<JsonTestbed, ApiError> {
     let conn = &mut *context.conn().await;
@@ -306,7 +306,7 @@ async fn patch_inner(
         return Err(ApiError::SystemTestbed);
     }
     diesel::update(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
-        .set(&UpdateTestbed::from(json_update_testbed))
+        .set(&UpdateTestbed::from(json_testbed))
         .execute(conn)
         .map_err(api_error!())?;
 

@@ -1,7 +1,5 @@
 use bencher_json::Boundary;
-use diesel::{
-    expression_methods::BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
-};
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::{
     context::DbConnection,
@@ -36,15 +34,13 @@ impl MetricsThreshold {
     ) -> Option<Self> {
         schema::statistic::table
             .inner_join(
-                schema::threshold::table
-                    .on(schema::statistic::id.eq(schema::threshold::statistic_id)),
+                schema::threshold::table.on(schema::statistic::id
+                    .nullable()
+                    .eq(schema::threshold::statistic_id)),
             )
-            .filter(
-                schema::threshold::branch_id
-                    .eq(branch_id)
-                    .and(schema::threshold::testbed_id.eq(testbed_id))
-                    .and(schema::threshold::metric_kind_id.eq(metric_kind_id)),
-            )
+            .filter(schema::threshold::metric_kind_id.eq(metric_kind_id))
+            .filter(schema::threshold::branch_id.eq(branch_id))
+            .filter(schema::threshold::testbed_id.eq(testbed_id))
             .select((
                 schema::threshold::id,
                 schema::statistic::id,

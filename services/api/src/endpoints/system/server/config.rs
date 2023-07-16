@@ -72,8 +72,8 @@ pub async fn server_config_put(
     let endpoint = Endpoint::new(CONFIG_RESOURCE, Method::Put);
 
     let context = rqctx.context();
-    let json_update_config = body.into_inner();
-    let json = put_inner(context, json_update_config, &auth_user)
+    let json_config = body.into_inner();
+    let json = put_inner(context, json_config, &auth_user)
         .await
         .map_err(|e| endpoint.err(e))?;
 
@@ -82,14 +82,14 @@ pub async fn server_config_put(
 
 async fn put_inner(
     context: &ApiContext,
-    json_update_config: JsonUpdateConfig,
+    json_config: JsonUpdateConfig,
     auth_user: &AuthUser,
 ) -> Result<JsonConfig, ApiError> {
     if !auth_user.is_admin(&context.rbac) {
         return Err(ApiError::Admin(auth_user.id));
     }
 
-    let JsonUpdateConfig { config, delay } = json_update_config;
+    let JsonUpdateConfig { config, delay } = json_config;
 
     // todo() -> add validation here
     let config_str = serde_json::to_string(&config).map_err(ApiError::Serialize)?;

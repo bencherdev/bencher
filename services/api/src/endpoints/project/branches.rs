@@ -303,7 +303,7 @@ pub async fn proj_branch_patch(
 async fn patch_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
-    json_update_branch: JsonUpdateBranch,
+    json_branch: JsonUpdateBranch,
     auth_user: &AuthUser,
 ) -> Result<JsonBranch, ApiError> {
     let conn = &mut *context.conn().await;
@@ -322,7 +322,7 @@ async fn patch_inner(
         return Err(ApiError::SystemBranch);
     }
     diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-        .set(&UpdateBranch::from(json_update_branch))
+        .set(&UpdateBranch::from(json_branch))
         .execute(conn)
         .map_err(api_error!())?;
 

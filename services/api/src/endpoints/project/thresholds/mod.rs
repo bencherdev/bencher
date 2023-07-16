@@ -1,6 +1,6 @@
 use bencher_json::{
     project::threshold::{JsonNewThreshold, JsonThreshold, JsonUpdateThreshold},
-    JsonDirection, JsonPagination, JsonThresholds, ResourceId,
+    JsonDirection, JsonEmpty, JsonPagination, JsonThresholds, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -17,7 +17,11 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        threshold::{statistic::InsertStatistic, InsertThreshold, QueryThreshold, UpdateThreshold},
+        metric_kind::QueryMetricKind,
+        threshold::{
+            statistic::{InsertStatistic, QueryStatistic},
+            InsertThreshold, QueryThreshold, UpdateThreshold,
+        },
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -172,6 +176,8 @@ async fn post_inner(
         &json_threshold.branch,
         &json_threshold.testbed,
     )?;
+    let metric_kind_id =
+        QueryMetricKind::from_resource_id(conn, project_id, &json_threshold.metric_kind)?.id;
 
     // Verify that the user is allowed
     QueryProject::is_allowed_id(
@@ -182,15 +188,40 @@ async fn post_inner(
         Permission::Create,
     )?;
 
-    let insert_threshold =
-        InsertThreshold::from_json(conn, project_id, branch_id, testbed_id, json_threshold)?;
+    // Create the new threshold
+    let insert_threshold = InsertThreshold::new(project_id, metric_kind_id, branch_id, testbed_id);
     diesel::insert_into(schema::threshold::table)
         .values(&insert_threshold)
         .execute(conn)
         .map_err(api_error!())?;
 
-    schema::threshold::table
+    // Get the new threshold
+    let new_threshold = schema::threshold::table
         .filter(schema::threshold::uuid.eq(&insert_threshold.uuid))
+        .first::<QueryThreshold>(conn)
+        .map_err(api_error!())?;
+
+    // Create the new statistic
+    let insert_statistic = InsertStatistic::from_json(new_threshold.id, json_threshold.statistic)?;
+    diesel::insert_into(schema::statistic::table)
+        .values(&insert_statistic)
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    // Get the new threshold statistic
+    let new_statistic = schema::statistic::table
+        .filter(schema::statistic::uuid.eq(&insert_statistic.uuid))
+        .first::<QueryStatistic>(conn)?;
+
+    // Set the new statistic for the new threshold
+    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(new_threshold.id)))
+        .set(schema::threshold::statistic_id.eq(new_statistic.id))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    // Return the new threshold with the new statistic
+    schema::threshold::table
+        .filter(schema::threshold::id.eq(new_threshold.id))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?
         .into_json(conn)
@@ -289,7 +320,7 @@ pub async fn proj_threshold_put(
 async fn put_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
-    json_update_threshold: JsonUpdateThreshold,
+    json_threshold: JsonUpdateThreshold,
     auth_user: &AuthUser,
 ) -> Result<JsonThreshold, ApiError> {
     let conn = &mut *context.conn().await;
@@ -303,19 +334,21 @@ async fn put_inner(
         Permission::Edit,
     )?;
 
+    // Get the current threshold
     let query_threshold = schema::threshold::table
         .filter(schema::threshold::project_id.eq(query_project.id))
         .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
         .first::<QueryThreshold>(conn)
         .map_err(api_error!())?;
 
-    let insert_statistic =
-        InsertStatistic::from_json(query_project.id, json_update_threshold.statistic)?;
+    // Insert the new statistic
+    let insert_statistic = InsertStatistic::from_json(query_project.id, json_threshold.statistic)?;
     diesel::insert_into(schema::statistic::table)
         .values(&insert_statistic)
         .execute(conn)
         .map_err(api_error!())?;
 
+    // Update the current threshold to use the new statistic
     diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
         .set(&UpdateThreshold::new_statistic(
             conn,
@@ -325,4 +358,51 @@ async fn put_inner(
         .map_err(api_error!())?;
 
     QueryThreshold::get(conn, query_threshold.id)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/thresholds/{threshold}",
+    tags = ["projects", "thresholds"]
+}]
+pub async fn proj_threshold_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjThresholdParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjThresholdParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    let query_threshold = schema::threshold::table
+        .filter(schema::threshold::project_id.eq(query_project.id))
+        .filter(schema::threshold::uuid.eq(path_params.threshold.to_string()))
+        .first::<QueryThreshold>(conn)
+        .map_err(api_error!())?;
+    diesel::delete(schema::threshold::table.filter(schema::threshold::id.eq(query_threshold.id)))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }
