@@ -44,7 +44,7 @@ impl SubCmd for Delete {
                     client
                         .proj_report_delete()
                         .project(self.project.clone())
-                        .report_uuid(self.report)
+                        .report(self.report)
                         .send()
                         .await
                 },

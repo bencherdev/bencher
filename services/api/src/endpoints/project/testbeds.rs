@@ -1,5 +1,5 @@
 use bencher_json::{
-    project::testbed::JsonUpdateTestbed, JsonDirection, JsonNewTestbed, JsonPagination,
+    project::testbed::JsonUpdateTestbed, JsonDirection, JsonEmpty, JsonNewTestbed, JsonPagination,
     JsonTestbed, JsonTestbeds, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
@@ -311,4 +311,51 @@ async fn patch_inner(
         .map_err(api_error!())?;
 
     QueryTestbed::get(conn, query_testbed.id)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/testbeds/{testbed}",
+    tags = ["projects", "testbeds"]
+}]
+pub async fn proj_testbed_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjTestbedParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(TESTBED_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjTestbedParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    let query_testbed =
+        QueryTestbed::from_resource_id(conn, query_project.id, &path_params.testbed)?;
+    if query_testbed.is_system() {
+        return Err(ApiError::SystemTestbed);
+    }
+    diesel::delete(schema::testbed::table.filter(schema::testbed::id.eq(query_testbed.id)))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }

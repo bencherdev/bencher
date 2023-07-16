@@ -17,6 +17,9 @@ pub enum CliBranch {
     // Update a branch
     #[clap(alias = "edit")]
     Update(CliBranchUpdate),
+    /// Delete a branch
+    #[clap(alias = "rm")]
+    Delete(CliBranchDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -103,6 +106,19 @@ pub struct CliBranchUpdate {
     /// Branch slug
     #[clap(long)]
     pub slug: Option<Slug>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliBranchDelete {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Branch slug or UUID
+    pub branch: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

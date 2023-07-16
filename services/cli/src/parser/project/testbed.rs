@@ -17,6 +17,9 @@ pub enum CliTestbed {
     // Update a testbed
     #[clap(alias = "edit")]
     Update(CliTestbedUpdate),
+    /// Delete a testbed
+    #[clap(alias = "rm")]
+    Delete(CliTestbedDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -89,6 +92,19 @@ pub struct CliTestbedUpdate {
     /// Testbed slug
     #[clap(long)]
     pub slug: Option<Slug>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTestbedDelete {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Testbed slug or UUID
+    pub testbed: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

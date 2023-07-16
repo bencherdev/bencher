@@ -1,6 +1,6 @@
 use bencher_json::{
     project::branch::JsonUpdateBranch, BranchName, JsonBranch, JsonBranches, JsonDirection,
-    JsonNewBranch, JsonPagination, ResourceId,
+    JsonEmpty, JsonNewBranch, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -327,4 +327,50 @@ async fn patch_inner(
         .map_err(api_error!())?;
 
     QueryBranch::get(conn, query_branch.id)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/branches/{branch}",
+    tags = ["projects", "branches"]
+}]
+pub async fn proj_branch_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjBranchParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BRANCH_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjBranchParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    let query_branch = QueryBranch::from_resource_id(conn, query_project.id, &path_params.branch)?;
+    if query_branch.is_system() {
+        return Err(ApiError::SystemBranch);
+    }
+    diesel::delete(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }

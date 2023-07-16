@@ -17,6 +17,9 @@ pub enum CliMetricKind {
     /// View a metric kind
     #[clap(alias = "cat")]
     View(CliMetricKindView),
+    /// Delete a metric kind
+    #[clap(alias = "rm")]
+    Delete(CliMetricKindDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -97,6 +100,19 @@ pub struct CliMetricKindUpdate {
     /// Metric kind unit of measure
     #[clap(long)]
     pub units: Option<NonEmpty>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliMetricKindDelete {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Metric kind slug or UUID
+    pub metric_kind: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use crate::{bencher::sub::SubCmd, parser::project::branch::CliBranch, CliError};
 
 mod create;
+mod delete;
 mod list;
 mod update;
 mod view;
@@ -13,6 +14,7 @@ pub enum Branch {
     Create(create::Create),
     View(view::View),
     Update(update::Update),
+    Delete(delete::Delete),
 }
 
 impl TryFrom<CliBranch> for Branch {
@@ -24,6 +26,7 @@ impl TryFrom<CliBranch> for Branch {
             CliBranch::Create(create) => Self::Create(create.try_into()?),
             CliBranch::View(view) => Self::View(view.try_into()?),
             CliBranch::Update(update) => Self::Update(update.try_into()?),
+            CliBranch::Delete(delete) => Self::Delete(delete.try_into()?),
         })
     }
 }
@@ -36,6 +39,7 @@ impl SubCmd for Branch {
             Self::Create(create) => create.exec().await,
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
+            Self::Delete(delete) => delete.exec().await,
         }
     }
 }

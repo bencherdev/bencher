@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use crate::{bencher::sub::SubCmd, parser::project::benchmark::CliBenchmark, CliError};
 
 mod create;
+mod delete;
 mod list;
 mod update;
 mod view;
@@ -13,6 +14,7 @@ pub enum Benchmark {
     Create(create::Create),
     View(view::View),
     Update(update::Update),
+    Delete(delete::Delete),
 }
 
 impl TryFrom<CliBenchmark> for Benchmark {
@@ -24,6 +26,7 @@ impl TryFrom<CliBenchmark> for Benchmark {
             CliBenchmark::Create(create) => Self::Create(create.try_into()?),
             CliBenchmark::View(view) => Self::View(view.try_into()?),
             CliBenchmark::Update(update) => Self::Update(update.try_into()?),
+            CliBenchmark::Delete(delete) => Self::Delete(delete.try_into()?),
         })
     }
 }
@@ -36,6 +39,7 @@ impl SubCmd for Benchmark {
             Self::Create(create) => create.exec().await,
             Self::View(create) => create.exec().await,
             Self::Update(update) => update.exec().await,
+            Self::Delete(delete) => delete.exec().await,
         }
     }
 }

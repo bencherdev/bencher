@@ -1,6 +1,7 @@
 use bencher_json::{
     project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark},
-    BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonPagination, ResourceId,
+    BenchmarkName, JsonBenchmark, JsonBenchmarks, JsonDirection, JsonEmpty, JsonPagination,
+    ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -310,4 +311,48 @@ async fn patch_inner(
         .map_err(api_error!())?;
 
     QueryBenchmark::get(conn, query_benchmark.id)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}",
+    tags = ["projects", "benchmarks"]
+}]
+pub async fn proj_benchmark_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjBenchmarkParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(BENCHMARK_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjBenchmarkParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    let query_benchmark =
+        QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
+    diesel::delete(schema::benchmark::table.filter(schema::benchmark::id.eq(query_benchmark.id)))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }

@@ -134,6 +134,7 @@ impl Api {
         api.register(project::metric_kinds::proj_metric_kind_post)?;
         api.register(project::metric_kinds::proj_metric_kind_get)?;
         api.register(project::metric_kinds::proj_metric_kind_patch)?;
+        api.register(project::metric_kinds::proj_metric_kind_delete)?;
 
         // Branches
         if http_options {
@@ -144,6 +145,7 @@ impl Api {
         api.register(project::branches::proj_branch_post)?;
         api.register(project::branches::proj_branch_get)?;
         api.register(project::branches::proj_branch_patch)?;
+        api.register(project::branches::proj_branch_delete)?;
 
         // Testbeds
         if http_options {
@@ -154,6 +156,7 @@ impl Api {
         api.register(project::testbeds::proj_testbed_post)?;
         api.register(project::testbeds::proj_testbed_get)?;
         api.register(project::testbeds::proj_testbed_patch)?;
+        api.register(project::testbeds::proj_testbed_delete)?;
 
         // Benchmarks
         if http_options {
@@ -164,6 +167,7 @@ impl Api {
         api.register(project::benchmarks::proj_benchmark_post)?;
         api.register(project::benchmarks::proj_benchmark_get)?;
         api.register(project::benchmarks::proj_benchmark_patch)?;
+        api.register(project::benchmarks::proj_benchmark_delete)?;
 
         // Thresholds
         if http_options {

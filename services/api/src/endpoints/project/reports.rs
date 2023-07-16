@@ -346,13 +346,13 @@ mod plan_kind {
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjReportParams {
     pub project: ResourceId,
-    pub report_uuid: Uuid,
+    pub report: Uuid,
 }
 
 #[allow(clippy::unused_async)]
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/reports/{report_uuid}",
+    path =  "/v0/projects/{project}/reports/{report}",
     tags = ["projects", "reports"]
 }]
 pub async fn proj_report_options(
@@ -364,7 +364,7 @@ pub async fn proj_report_options(
 
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/reports/{report_uuid}",
+    path =  "/v0/projects/{project}/reports/{report}",
     tags = ["projects", "reports"]
 }]
 pub async fn proj_report_get(
@@ -401,7 +401,7 @@ async fn get_one_inner(
 
     schema::report::table
         .filter(schema::report::project_id.eq(query_project.id))
-        .filter(schema::report::uuid.eq(path_params.report_uuid.to_string()))
+        .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((
             schema::report::id,
             schema::report::uuid,
@@ -422,7 +422,7 @@ async fn get_one_inner(
 
 #[endpoint {
     method = DELETE,
-    path =  "/v0/projects/{project}/reports/{report_uuid}",
+    path =  "/v0/projects/{project}/reports/{report}",
     tags = ["projects", "reports"]
 }]
 pub async fn proj_report_delete(
@@ -457,7 +457,7 @@ async fn delete_inner(
 
     let (report_id, version_id) = schema::report::table
         .filter(schema::report::project_id.eq(query_project.id))
-        .filter(schema::report::uuid.eq(path_params.report_uuid.to_string()))
+        .filter(schema::report::uuid.eq(path_params.report.to_string()))
         .select((schema::report::id, schema::report::version_id))
         .first::<(i32, i32)>(conn)
         .map_err(api_error!())?;

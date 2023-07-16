@@ -1,50 +1,49 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{JsonReport, ResourceId};
-use uuid::Uuid;
+use bencher_json::{JsonEmpty, ResourceId};
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    parser::project::report::CliReportView,
+    parser::project::benchmark::CliBenchmarkDelete,
     CliError,
 };
 
 #[derive(Debug)]
-pub struct View {
+pub struct Delete {
     pub project: ResourceId,
-    pub report: Uuid,
+    pub benchmark: ResourceId,
     pub backend: Backend,
 }
 
-impl TryFrom<CliReportView> for View {
+impl TryFrom<CliBenchmarkDelete> for Delete {
     type Error = CliError;
 
-    fn try_from(view: CliReportView) -> Result<Self, Self::Error> {
-        let CliReportView {
+    fn try_from(delete: CliBenchmarkDelete) -> Result<Self, Self::Error> {
+        let CliBenchmarkDelete {
             project,
-            report,
+            benchmark,
             backend,
-        } = view;
+        } = delete;
         Ok(Self {
             project,
-            report,
+            benchmark,
             backend: backend.try_into()?,
         })
     }
 }
 
 #[async_trait]
-impl SubCmd for View {
+impl SubCmd for Delete {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonReport = self
+        let _: JsonEmpty = self
             .backend
             .send_with(
                 |client| async move {
                     client
-                        .proj_report_get()
+                        .proj_benchmark_delete()
                         .project(self.project.clone())
-                        .report(self.report)
+                        .benchmark(self.benchmark.clone())
                         .send()
                         .await
                 },

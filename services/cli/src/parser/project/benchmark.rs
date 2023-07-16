@@ -17,6 +17,9 @@ pub enum CliBenchmark {
     // Update a benchmark
     #[clap(alias = "edit")]
     Update(CliBenchmarkUpdate),
+    /// Delete a benchmark
+    #[clap(alias = "rm")]
+    Delete(CliBenchmarkDelete),
 }
 
 #[derive(Parser, Debug)]
@@ -89,6 +92,19 @@ pub struct CliBenchmarkUpdate {
     /// Benchmark slug
     #[clap(long)]
     pub slug: Option<Slug>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliBenchmarkDelete {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Benchmark slug or UUID
+    pub benchmark: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,

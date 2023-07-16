@@ -1,6 +1,6 @@
 use bencher_json::{
-    project::metric_kind::JsonUpdateMetricKind, JsonDirection, JsonMetricKind, JsonMetricKinds,
-    JsonNewMetricKind, JsonPagination, NonEmpty, ResourceId,
+    project::metric_kind::JsonUpdateMetricKind, JsonDirection, JsonEmpty, JsonMetricKind,
+    JsonMetricKinds, JsonNewMetricKind, JsonPagination, NonEmpty, ResourceId,
 };
 use bencher_rbac::project::Permission;
 use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -314,4 +314,53 @@ async fn patch_inner(
     .map_err(api_error!())?;
 
     QueryMetricKind::get(conn, query_metric_kind.id)?.into_json(conn)
+}
+
+#[endpoint {
+    method = DELETE,
+    path =  "/v0/projects/{project}/metric-kinds/{metric_kind}",
+    tags = ["projects", "metric kinds"]
+}]
+pub async fn proj_metric_kind_delete(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjMetricKindParams>,
+) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(METRIC_KIND_RESOURCE, Method::Delete);
+
+    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
+        .await
+        .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn delete_inner(
+    context: &ApiContext,
+    path_params: ProjMetricKindParams,
+    auth_user: &AuthUser,
+) -> Result<JsonEmpty, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Delete,
+    )?;
+
+    let query_metric_kind =
+        QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
+    if query_metric_kind.is_system() {
+        return Err(ApiError::SystemMetricKind);
+    }
+    diesel::delete(
+        schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
+    )
+    .execute(conn)
+    .map_err(api_error!())?;
+
+    Ok(JsonEmpty {})
 }
