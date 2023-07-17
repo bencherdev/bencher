@@ -201,13 +201,13 @@ fn into_messenger(smtp: Option<JsonSmtp>) -> Messenger {
              from_email,
          }| {
             Messenger::Email(Email {
-                hostname,
+                hostname: hostname.into(),
                 port: port.unwrap_or(DEFAULT_SMTP_PORT),
                 starttls: starttls.unwrap_or(true),
-                username,
+                username: username.into(),
                 secret,
-                from_name: Some(from_name),
-                from_email,
+                from_name: Some(from_name.into()),
+                from_email: from_email.into(),
             })
         },
     )
