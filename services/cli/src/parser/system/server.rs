@@ -8,6 +8,8 @@ pub enum CliServer {
     Ping(CliPing),
     /// Server version
     Version(CliVersion),
+    /// View server endpoint
+    Endpoint(CliEndpoint),
     /// Restart server
     Restart(CliRestart),
     /// Manager server config
@@ -30,6 +32,12 @@ pub struct CliVersion {
 }
 
 #[derive(Parser, Debug)]
+pub struct CliEndpoint {
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
 pub struct CliRestart {
     /// Server restart delay seconds (default: 3)
     #[clap(long)]
@@ -45,8 +53,6 @@ pub enum CliConfig {
     Update(CliConfigUpdate),
     /// View server config
     View(CliConfigView),
-    /// View server endpoint
-    Endpoint(CliConfigEndpoint),
 }
 
 #[derive(Parser, Debug)]
@@ -65,12 +71,6 @@ pub struct CliConfigUpdate {
 
 #[derive(Parser, Debug)]
 pub struct CliConfigView {
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliConfigEndpoint {
     #[clap(flatten)]
     pub backend: CliBackend,
 }

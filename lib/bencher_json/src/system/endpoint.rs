@@ -5,6 +5,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonConsole {
-    pub url: Url,
+pub struct JsonEndpoint {
+    pub endpoint: Url,
 }

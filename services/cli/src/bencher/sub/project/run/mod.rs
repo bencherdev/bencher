@@ -236,12 +236,12 @@ impl Run {
         let json_endpoint: JsonEndpoint = self
             .backend
             .send_with(
-                |client| async move { client.server_config_endpoint_get().send().await },
+                |client| async move { client.server_endpoint_get().send().await },
                 false,
             )
             .await
             .map_err(RunError::GetEndpoint)?;
-        let endpoint_url: Url = json_endpoint.0.into();
+        let endpoint_url: Url = json_endpoint.endpoint.into();
         let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), json_report);
 
         cli_println!("\nView results:");

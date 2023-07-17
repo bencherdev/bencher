@@ -4992,13 +4992,13 @@
         }
       }
     },
-    "/v0/server/config/endpoint": {
+    "/v0/server/endpoint": {
       "get": {
         "tags": [
           "server",
-          "config"
+          "endpoint"
         ],
-        "operationId": "server_config_endpoint_get",
+        "operationId": "server_endpoint_get",
         "responses": {
           "200": {
             "description": "successful operation",
@@ -6197,7 +6197,15 @@
         "type": "object"
       },
       "JsonEndpoint": {
-        "$ref": "#/components/schemas/Url"
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "$ref": "#/components/schemas/Url"
+          }
+        },
+        "required": [
+          "endpoint"
+        ]
       },
       "JsonEntitlements": {
         "type": "object",
@@ -7212,13 +7220,13 @@
         "type": "object",
         "properties": {
           "from_email": {
-            "type": "string"
+            "$ref": "#/components/schemas/Email"
           },
           "from_name": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "hostname": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           },
           "port": {
             "nullable": true,
@@ -7234,7 +7242,7 @@
             "type": "boolean"
           },
           "username": {
-            "type": "string"
+            "$ref": "#/components/schemas/NonEmpty"
           }
         },
         "required": [
@@ -8052,6 +8060,9 @@
     },
     {
       "name": "config"
+    },
+    {
+      "name": "endpoint"
     },
     {
       "name": "members"

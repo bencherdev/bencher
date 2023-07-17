@@ -12,7 +12,7 @@ mod security;
 mod server;
 mod smtp;
 
-pub use console::{JsonConsole, JsonEndpoint};
+pub use console::JsonConsole;
 pub use database::{DataStore, JsonDatabase};
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]

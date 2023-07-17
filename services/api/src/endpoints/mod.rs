@@ -213,17 +213,17 @@ impl Api {
         if http_options {
             api.register(system::server::ping::server_ping_options)?;
             api.register(system::server::version::server_version_options)?;
+            api.register(system::server::endpoint::server_endpoint_options)?;
             api.register(system::server::restart::server_restart_options)?;
             api.register(system::server::config::server_config_options)?;
-            api.register(system::server::config::endpoint::server_config_endpoint_options)?;
             api.register(system::server::backup::server_backup_options)?;
         }
         api.register(system::server::ping::server_ping_get)?;
         api.register(system::server::version::server_version_get)?;
+        api.register(system::server::endpoint::server_endpoint_get)?;
         api.register(system::server::restart::server_restart_post)?;
         api.register(system::server::config::server_config_get)?;
         api.register(system::server::config::server_config_put)?;
-        api.register(system::server::config::endpoint::server_config_endpoint_get)?;
         api.register(system::server::backup::server_backup_post)?;
 
         Ok(())

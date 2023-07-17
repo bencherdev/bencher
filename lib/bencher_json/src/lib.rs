@@ -40,7 +40,8 @@ pub use project::{
 pub use system::{
     auth::{JsonAuthToken, JsonConfirm, JsonLogin, JsonSignup},
     backup::JsonBackup,
-    config::{JsonConfig, JsonEndpoint},
+    config::JsonConfig,
+    endpoint::JsonEndpoint,
     ping::JsonPing,
     restart::JsonRestart,
     version::JsonApiVersion,

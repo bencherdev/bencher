@@ -5,7 +5,7 @@ use bencher_json::JsonEndpoint;
 
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
-    parser::system::server::CliConfigEndpoint,
+    parser::system::server::CliEndpoint,
     CliError,
 };
 
@@ -14,11 +14,11 @@ pub struct Endpoint {
     pub backend: Backend,
 }
 
-impl TryFrom<CliConfigEndpoint> for Endpoint {
+impl TryFrom<CliEndpoint> for Endpoint {
     type Error = CliError;
 
-    fn try_from(endpoint: CliConfigEndpoint) -> Result<Self, Self::Error> {
-        let CliConfigEndpoint { backend } = endpoint;
+    fn try_from(endpoint: CliEndpoint) -> Result<Self, Self::Error> {
+        let CliEndpoint { backend } = endpoint;
         Ok(Self {
             backend: backend.try_into()?,
         })
@@ -31,7 +31,7 @@ impl SubCmd for Endpoint {
         let _: JsonEndpoint = self
             .backend
             .send_with(
-                |client| async move { client.server_config_endpoint_get().send().await },
+                |client| async move { client.server_endpoint_get().send().await },
                 true,
             )
             .await?;
