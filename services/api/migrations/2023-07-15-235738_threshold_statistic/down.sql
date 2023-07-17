@@ -1,46 +1,13 @@
 PRAGMA foreign_keys = off;
--- benchmark
-CREATE TABLE up_benchmark (
-    id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
-    project_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    created BIGINT NOT NULL,
-    modified BIGINT NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
-    UNIQUE(project_id, name),
-    UNIQUE(project_id, slug)
-);
-INSERT INTO up_benchmark(
-        id,
-        uuid,
-        project_id,
-        name,
-        slug,
-        created,
-        modified
-    )
-SELECT id,
-    uuid,
-    project_id,
-    name,
-    uuid,
-    created,
-    created
-FROM benchmark;
-DROP TABLE benchmark;
-ALTER TABLE up_benchmark
-    RENAME TO benchmark;
 -- threshold
-CREATE TABLE up_threshold (
+CREATE TABLE down_threshold (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     project_id INTEGER NOT NULL,
     metric_kind_id INTEGER NOT NULL,
     branch_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
-    statistic_id INTEGER,
+    statistic_id INTEGER NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
@@ -50,7 +17,7 @@ CREATE TABLE up_threshold (
     FOREIGN KEY (statistic_id) REFERENCES statistic (id),
     UNIQUE(metric_kind_id, branch_id, testbed_id)
 );
-INSERT INTO up_threshold(
+INSERT INTO down_threshold(
         id,
         uuid,
         project_id,
@@ -70,15 +37,16 @@ SELECT id,
     statistic_id,
     created,
     modified
-FROM threshold;
+FROM threshold
+WHERE threshold.statistic_id IS NOT NULL;
 DROP TABLE threshold;
-ALTER TABLE up_threshold
+ALTER TABLE down_threshold
     RENAME TO threshold;
 -- statistic
-CREATE TABLE up_statistic (
+CREATE TABLE down_statistic (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
-    threshold_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
     test INTEGER NOT NULL,
     min_sample_size BIGINT,
     max_sample_size BIGINT,
@@ -86,12 +54,12 @@ CREATE TABLE up_statistic (
     lower_boundary DOUBLE,
     upper_boundary DOUBLE,
     created BIGINT NOT NULL,
-    FOREIGN KEY (threshold_id) REFERENCES threshold (id) ON DELETE CASCADE
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE
 );
-INSERT INTO up_statistic(
+INSERT INTO down_statistic(
         id,
         uuid,
-        threshold_id,
+        project_id,
         test,
         min_sample_size,
         max_sample_size,
@@ -103,9 +71,9 @@ INSERT INTO up_statistic(
 SELECT id,
     uuid,
     (
-        SELECT id
+        SELECT project_id
         FROM threshold
-        WHERE threshold.statistic_id = statistic.id
+        WHERE threshold.id = statistic.threshold_id
     ),
     test,
     min_sample_size,
@@ -116,11 +84,11 @@ SELECT id,
     created
 FROM statistic
 WHERE EXISTS(
-        SELECT id
+        SELECT project_id
         FROM threshold
-        WHERE threshold.statistic_id = statistic.id
+        WHERE threshold.id = statistic.threshold_id
     );
 DROP TABLE statistic;
-ALTER TABLE up_statistic
+ALTER TABLE down_statistic
     RENAME TO statistic;
 PRAGMA foreign_keys = on;

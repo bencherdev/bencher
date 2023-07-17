@@ -42,7 +42,9 @@
                 "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "bencher::mock_0",
-                "created": "2023-07-02T12:53:33Z"
+                "slug": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
             },
             "metrics": [
                 {
@@ -168,7 +170,9 @@
                 "uuid": "0d680df6-432b-4335-bb37-afd2453c0db1",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "bencher::mock_1",
-                "created": "2023-07-02T12:53:33Z"
+                "slug": "0d680df6-432b-4335-bb37-afd2453c0db1",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
             },
             "metrics": [
                 {
@@ -294,7 +298,9 @@
                 "uuid": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
                 "name": "bencher::mock_2",
-                "created": "2023-07-02T12:53:33Z"
+                "slug": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
             },
             "metrics": [
                 {
