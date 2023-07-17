@@ -1,0 +1,8 @@
+goos: darwin
+goarch: arm64
+pkg: bencher.dev
+BenchmarkFib10-8                         5604217               210.2 ns/op
+BenchmarkFib20-8                           46113             26264 ns/op
+BenchmarkFib20WithAuxMetric-8              46714             25829 ns/op                 4.000 auxMetricUnits
+PASS
+ok      bencher.dev     4.441s

@@ -1,8 +1,10 @@
 use bencher_json::{project::report::JsonAverage, BenchmarkName, JsonMetric};
 use nom::{
+    branch::alt,
     bytes::complete::{tag, take_till1},
-    character::complete::space1,
-    combinator::{eof, map_res},
+    character::complete::{anychar, space1},
+    combinator::{eof, map, map_res},
+    multi::many_till,
     sequence::tuple,
     IResult,
 };
@@ -46,7 +48,13 @@ fn parse_go(input: &str) -> IResult<&str, (BenchmarkName, JsonMetric)> {
             parse_u64,
             space1,
             parse_go_bench,
-            eof,
+            alt((
+                map(eof, |_| ()),
+                map(
+                    tuple((space1, parse_f64, space1, many_till(anychar, eof))),
+                    |_| (),
+                ),
+            )),
         )),
         |(name, _, _iter, _, json_metric, _)| -> Result<(BenchmarkName, JsonMetric), NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
@@ -159,6 +167,20 @@ pub(crate) mod test_go_bench {
                 )),
                 "BenchmarkFib/my/tabled/benchmark_-_20		30001		40537.456 ns/op",
             ),
+            (
+                Ok((
+                    "",
+                    (
+                        "BenchmarkFib20WithAuxMetric-8".parse().unwrap(),
+                        JsonMetric {
+                            value: 25_829.0.into(),
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
+                    ),
+                )),
+                "BenchmarkFib20WithAuxMetric-8              46714             25829 ns/op                 4.000 auxMetricUnits",
+            ),
         ]
         .into_iter()
         .enumerate()
@@ -219,5 +241,20 @@ pub(crate) mod test_go_bench {
             .get("BenchmarkFib/my/tabled/benchmark_-_20")
             .unwrap();
         validate_latency(metrics, 40_537.456, None, None);
+    }
+
+    #[test]
+    fn test_adapter_go_bench_aux() {
+        let results = convert_go_bench("aux");
+        assert_eq!(results.inner.len(), 3);
+
+        let metrics = results.get("BenchmarkFib10-8").unwrap();
+        validate_latency(metrics, 210.2, None, None);
+
+        let metrics = results.get("BenchmarkFib20-8").unwrap();
+        validate_latency(metrics, 26264.0, None, None);
+
+        let metrics = results.get("BenchmarkFib20WithAuxMetric-8").unwrap();
+        validate_latency(metrics, 25829.0, None, None);
     }
 }
