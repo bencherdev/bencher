@@ -4,29 +4,45 @@ import {
 	validate_u32,
 } from "../../../../site/util";
 
+const pagination_url = (
+	path_params,
+	dimension: string,
+	per_page: number,
+	page: number,
+) => {
+	const search_params = new URLSearchParams();
+	search_params.set("per_page", per_page?.toString());
+	search_params.set("page", page?.toString());
+	const url = `${BENCHER_API_URL()}/v0/projects/${
+		path_params?.project_slug
+	}/${dimension}?${search_params.toString()}`;
+	return url;
+};
+
 const THRESHOLD_FIELDS = {
-	branch: {
-		icon: "fas fa-code-branch",
-		option_key: "name",
-		value_key: "uuid",
-		url: (path_params) =>
-			`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/branches`,
-	},
-	testbed: {
-		icon: "fas fa-server",
-		option_key: "name",
-		value_key: "uuid",
-		url: (path_params) =>
-			`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/testbeds`,
-	},
 	metric_kind: {
+		name: "metric kinds",
 		icon: "fas fa-shapes",
 		option_key: "name",
 		value_key: "uuid",
-		url: (path_params) =>
-			`${BENCHER_API_URL()}/v0/projects/${
-				path_params?.project_slug
-			}/metric-kinds`,
+		url: (path_params, per_page, page) =>
+			pagination_url(path_params, "metric-kinds", per_page, page),
+	},
+	branch: {
+		name: "branches",
+		icon: "fas fa-code-branch",
+		option_key: "name",
+		value_key: "uuid",
+		url: (path_params, per_page, page) =>
+			pagination_url(path_params, "branches", per_page, page),
+	},
+	testbed: {
+		name: "testbeds",
+		icon: "fas fa-server",
+		option_key: "name",
+		value_key: "uuid",
+		url: (path_params, per_page, page) =>
+			pagination_url(path_params, "testbeds", per_page, page),
 	},
 	test: {
 		icon: "fas fa-vial",
