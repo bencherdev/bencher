@@ -3,7 +3,7 @@ import { BENCHER_VERSION } from "../../components/site/util";
 ## Debian
 
 Bencher provides a convenient `deb` file for installing on Debian
-and Debain based distributions like Ubuntu.
+and Debian based distributions like Ubuntu.
 
 <pre>
   <code>
@@ -17,11 +17,9 @@ sudo dpkg -i bencher_${BENCHER_VERSION}_amd64.deb`}
 Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
 See [how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions) for more details.
 
-<pre>
-  <code>
-    {`- uses: bencherdev/bencher@v${BENCHER_VERSION}`}
-  </code>
-</pre>
+```yaml
+- uses: bencherdev/bencher@main
+```
 
 There is an optional `version` argument to specify an exact version of the Bencher CLI to use.
 Otherwise, it will default to using the latest CLI version.
@@ -34,10 +32,8 @@ Otherwise, it will default to using the latest CLI version.
   </code>
 </pre>
 
-
-These two commands are functionally equivalent.
-However, the first protects you from any breaking changes in the Bencher CLI GitHub action by using a tagged release.
-Therefore, the former is the suggested method (ex: <code>{`- uses: bencherdev/bencher@v${BENCHER_VERSION}`}</code>)
+Specify an exact version if using Bencher *Self-Hosted*.
+Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
 
 ## From Source
 
