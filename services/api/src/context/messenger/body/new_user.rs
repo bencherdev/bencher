@@ -37,6 +37,37 @@ impl FmtBody for NewUserBody {
     }
 
     fn html(&self) -> String {
-        self.text()
+        let Self {
+            admin,
+            endpoint,
+            name,
+            email,
+            invited,
+        } = self;
+        let invited_or_joined = if *invited {
+            "was invited to"
+        } else {
+            "has joined"
+        };
+        format!(
+            "<!doctype html>
+<html>
+    <head>
+        <meta charset=\"utf-8\" />
+        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\" />
+        <meta name=\"theme-color\" content=\"#ffffff\" />
+        <title>New user {invited_or_joined} Bencher</title>
+    </head>
+    <body>
+        <p>Ahoy {admin}</p>,
+        <p>A new user {invited_or_joined} your Bencher instance ({endpoint})!</p>
+        <br />
+        <p>Name: {name}</p>
+        <p>Email: {email}</p>
+        <br/>
+        <p>🐰 Bencher</p>
+    </body>
+</html>"
+        )
     }
 }

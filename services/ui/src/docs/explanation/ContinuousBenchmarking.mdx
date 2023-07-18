@@ -9,7 +9,7 @@ At a fundamental level, CI is about detecting and preventing software feature re
 Similarly, continuous benchmarking (CB) is about detecting and preventing software _performance_ regressions before they make it to production.
 For the same reasons that unit tests are run in CI for each code change,
 performance tests should be run in CB for each code change.
-This analogy is so apt in fact, that the first paragraph of this section is just a Mad Libs version of [Martin Fowler's 2006 intro to Continous Integration](https://martinfowler.com/articles/continuousIntegration.html).
+This analogy is so apt in fact, that the first paragraph of this section is just a Mad Libs version of [Martin Fowler's 2006 intro to Continuous Integration](https://martinfowler.com/articles/continuousIntegration.html).
 
 > 🐰 Performance bugs are bugs!
 
@@ -52,7 +52,7 @@ A [Nielsen Group article on response times](https://www.nngroup.com/articles/res
 
 But that simply is not true.
 On some tasks, people can perceive [as little as 2ms of latency](https://pdfs.semanticscholar.org/386a/15fd85c162b8e4ebb6023acdce9df2bd43ee.pdf).
-An easy way to prove this is an [expiriment from Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): open your terminal and run `sleep 0; echo "ping"` and then run `sleep 0.1; echo "pong"`. You noticed the difference right‽
+An easy way to prove this is an [experiment from Dan Luu](https://danluu.com/input-lag/#appendix-why-measure-latency): open your terminal and run `sleep 0; echo "ping"` and then run `sleep 0.1; echo "pong"`. You noticed the difference right‽
 
 Another common point of confusion is the distinction between the perception of latency and human reaction times. Even though it takes [around 200ms to respond to a visual stimulus](https://humanbenchmark.com/tests/reactiontime), that is independent from the perception of the event itself. By analogy, you can notice that your train is two minutes late (perceived latency) even though the train ride takes two hours (reaction time).
 
@@ -99,7 +99,7 @@ See [prior art](/docs/reference/prior-art) from a comprehensive list of the exis
 
 Tools like Bencher have been developed internally at
 Microsoft, Facebook (now Meta), Apple, Amazon, Netflix, and Google among countless others.
-As the titans of the indusry, they understand the importance of monitoring performance during development
+As the titans of the industry, they understand the importance of monitoring performance during development
 and integrating these insights into the development process through CB.
 We built Bencher to bring continuous benchmarking from behind the walls of Big Tech to the open source community.
 For links to posts related to continuous benchmarking from Big Tech see [prior art](/docs/reference/prior-art).
@@ -112,16 +112,16 @@ However, it should not be relied on to catch performance regressions on an ongoi
 Just as being able to run unit tests locally doesn't obviate the need for CI,
 being able to run and compare benchmarks locally doesn't obviate the need for CB.
 
-There are several features Bencher offers that local benchmark comaprison tools cannot:
-- Comparsion of the same benchmark between different testbeds
+There are several features Bencher offers that local benchmark comparison tools cannot:
+- Comparison of the same benchmark between different testbeds
 - Comparison of benchmarks across languages and harnesses
-- Collaboration and sharing of benchmark resuts
+- Collaboration and sharing of benchmark results
 - Running benchmarks on dedicated testbeds to minimize noise
 - No more copypasta
 
 ## Continuous Benchmarking vs Application Performance Management (APM)
 
-Application Performance Management (APM) is a vital tool for modern sofware services.
+Application Performance Management (APM) is a vital tool for modern software services.
 However, APM is designed to be used in production.
 By the time a performance regression is detected, it is already impacting your customers.
 
@@ -145,7 +145,7 @@ See Continuous Benchmarking vs Application Performance Management above.
 
 ## Continuous Benchmarking vs Continuous Integration (CI)
 
-Continous Benchmarking (CB) is complimentary to Continuous Integration (CI).
+Continuous Benchmarking (CB) is complimentary to Continuous Integration (CI).
 For the same reasons that unit tests are run in CI for each code change,
 performance tests should be run in CB for each code change.
 

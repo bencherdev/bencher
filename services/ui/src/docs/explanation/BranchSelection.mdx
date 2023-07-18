@@ -8,10 +8,10 @@ If none of these options or flags are used then `main` is used as the default br
 <br />
 
 The simplest way is to set the `--branch` option or the `BENCHER_BRANCH` environment variable to the slug or UUID of an already existing branch.
-If both are defined, the `--branch` option takes precedence over the `BENCHER_BRANCH` environement variable.
+If both are defined, the `--branch` option takes precedence over the `BENCHER_BRANCH` environment variable.
 
 However, if both of these are missing or the provided value is invalid, then the `bencher run` command will error.
-This is not the most convient in CI/CD environments, where new branches are popping up all the time.
+This is not the most convenient in CI/CD environments, where new branches are popping up all the time.
 Instead of using `--branch` or the `BENCHER_BRANCH` environment variable, there is an `--if-branch` option.
 
 <br />
@@ -26,11 +26,11 @@ Otherwise, `bencher run` will simply log and exit successfully.
 
 For example, if `main` exists then using `--if-branch main` would find it. Then `bencher run` would proceed using `main`.
 
-The `--branch` option conflicts with the `--if-branch` option, but the `BENCHER_BRANCH` environment variable takes precident over the `--if-branch` option.
+The `--branch` option conflicts with the `--if-branch` option, but the `BENCHER_BRANCH` environment variable takes precedent over the `--if-branch` option.
 
 <br />
 
-> 🐰 Note: Whenever using environement variables they should be wrapped in double qutes (ie `--if-branch "$MY_ENV_VAR"`).
+> 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--if-branch "$MY_ENV_VAR"`).
 
 <br />
 
@@ -49,15 +49,15 @@ Then using `--if-branch feature_branch --else-if-branch main`, would create a ne
 and it would have a copy of all the data and thresholds from `main`.
 Then `bencher run` would proceed using `feature_branch`.
 
-It is also possible to use mutliple `--else-if-branch` options.
+It is also possible to use multiple `--else-if-branch` options.
 For example if `mia_branch` does not exist, `--if-branch feature_branch --else-if-branch mia_branch --else-if-branch main`
 would effectively function the same as the previous example, copying all of the data and thresholds from `main` and proceeding.
 
-If the `--if-branch` query succeededs then `--else-if-branch` is never run, and if both `--if-branch` and `--else-if-branch` fail, `bencher run` will simply log and exit successfully.
+If the `--if-branch` query succeeds then `--else-if-branch` is never run, and if both `--if-branch` and `--else-if-branch` fail, `bencher run` will simply log and exit successfully.
 
 <br />
 
-> 🐰 Note: Whenever using environement variables they should be wrapped in double qutes (ie `--else-if-branch "$MY_ENV_VAR"`).
+> 🐰 Note: Whenever using environment variables they should be wrapped in double quotes (ie `--else-if-branch "$MY_ENV_VAR"`).
 
 <br />
 
@@ -77,7 +77,7 @@ Then `bencher run` would proceed using `feature_branch`.
 It is also possible to chain all three flags together: `--if-branch`, `--else-if-branch`, and `--else-branch`.
 For example, `--if-branch feature_branch --else-if-branch main --else-branch`.
 
-If the `--if-branch` query succeededs then `--else-branch` is never run, and likewise, if `--if-else-branch` succeeds then `--else-branch` is never run.
+If the `--if-branch` query succeeds then `--else-branch` is never run, and likewise, if `--if-else-branch` succeeds then `--else-branch` is never run.
 And `--else-branch` is expected to always succeed and exit successfully.
 
 <br />

@@ -1,5 +1,5 @@
 Most benchmark results are ephemeral.
-They disapear as soon as your terminal reaches its scrollback limit.
+They disappear as soon as your terminal reaches its scrollback limit.
 Some benchmark harnesses let you cache results, but most only do so locally.
 Bencher allows you to track your benchmarks from both local and CI runs and compare against historical results.
 
@@ -9,7 +9,8 @@ This Report is then sent to the Bencher API server,
 where the benchmark harness output is parsed using a [benchmark harness adapter](/docs/explanation/adapters).
 The benchmark harness adapter detects all of the Benchmarks that are present and their corresponding Metrics.
 These Benchmarks and Metrics are then saved along with the Report.
-If there is a [Threshold](/docs/explanation/thresholds) set, then the new Metrics are compared against the historical Metrics for each Benchmark present in the Report. If a regression is detected, then an Alert will be generated.
+If there is a [Threshold](/docs/explanation/thresholds) set, then the new Metrics are compared against the historical Metrics for each Benchmark present in the Report.
+If a regression is detected, then an Alert will be generated.
 
 From here on out we will refer to your "benchmarks" as "performance regression tests" to avoid any confusion.
 
@@ -19,16 +20,12 @@ If the performance regression test is new to Bencher, then a Benchmark is automa
 Otherwise, the name of the performance regression test is used as the unique identifier for the Benchmark.
 
 Be careful when changing the name of your performance regression tests.
-There is currently no way for Bencher to track this change,
-so the renamed performance regression test will be considered a new Benchmark.
+You will need to manually rename the Benchmark in Bencher to match this new name.
+Otherwise, the renamed performance regression test will be considered a new Benchmark.
 This same word of caution also applies to _moving_ some performance regression tests.
 Depending on the benchmark harness, the path to the performance regression test may be a part of its name.
 
 The only exception to the above caveat is ignoring a Benchmark. See [suppressing alerts](/docs/explanation/thresholds) for a full overview.
-
-<br />
-
-> 🐰 Let Us Know: Would like [a way to map an old Benchmark to a new Benchmark](https://github.com/bencherdev/bencher/issues/71)?
 
 ### Metrics
 A Metric is a single, point-in-time performance regression test result.

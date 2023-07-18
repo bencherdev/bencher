@@ -7,7 +7,7 @@
 - Add `DELETE` API endpoint for Metric Kinds, Branches, Testbeds, Benchmarks, and Thresholds
 - Create two default Thresholds for all new Projects
 - Add a Go benchmark example
-- Fix go auxillary data parse error
+- Fix Go auxillary data parse error
 
 ##  `v0.3.2`
 - Decrement all proceeding Branch versions after the final Report is deleted for a Branch version
@@ -104,7 +104,7 @@
 ## `v0.2.31`
 - Prevent leaking secrets by obfuscating them in the server logs (ie `************`)
 - Move run failure detection to the CLI, adapter parsing will no longer attempt error detection
-- New harness specific adapter targets (ie `rust_bech` and `rust_criterion`)
+- New harness specific adapter targets (ie `rust_bench` and `rust_criterion`)
 - Add additional options to `bencher mock`, `--fail` and `--flaky` to easily test parsing failing and flaky benchmarks respectively
 - Wrote [continuous benchmarking](/docs/explanation/continuous-benchmarking) and [how to install the CLI](/docs/how-to/install-cli) pages
 - Update server framework, dropshot, and Rust to `1.67.0`

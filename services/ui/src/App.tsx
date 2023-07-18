@@ -6,9 +6,13 @@ import { Routes, Route, useLocation } from "solid-app-router";
 import { Navbar } from "./components/site/navbar/Navbar";
 import Footer from "./components/site/pages/Footer";
 import { projectSlug } from "./components/console/ConsolePage";
-import { BENCHER_USER_KEY, validate_user } from "./components/site/util";
+import {
+	BENCHER_USER_KEY,
+	default_user,
+	load_user,
+	validate_user,
+} from "./components/site/util";
 import { createStore } from "solid-js/store";
-import { JsonConfirm, JsonUser, Jwt } from "./types/bencher";
 
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
@@ -19,29 +23,6 @@ const PerfRoutes = lazy(() => import("./components/perf/PerfRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
 const Repo = lazy(() => import("./components/site/pages/Repo"));
 const Demo = lazy(() => import("./components/site/pages/Demo"));
-
-export const defaultUser = (): JsonConfirm => {
-	return {
-		user: {
-			uuid: null,
-			name: null,
-			slug: null,
-			email: null,
-			admin: null,
-			locked: null,
-		},
-		token: null,
-	};
-};
-
-export const loadUser = (): JsonConfirm => {
-	const cookie_user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
-	if (validate_user(cookie_user)) {
-		return cookie_user;
-	} else {
-		return defaultUser();
-	}
-};
 
 const App: Component = () => {
 	const location = useLocation();
@@ -55,7 +36,7 @@ const App: Component = () => {
 		projectSlug(pathname),
 	);
 
-	const [user, setUser] = createStore(loadUser());
+	const [user, setUser] = createStore(load_user());
 
 	const handleUser = (user): boolean => {
 		if (validate_user(user)) {
@@ -69,7 +50,7 @@ const App: Component = () => {
 
 	const removeUser = () => {
 		window.localStorage.clear();
-		setUser(defaultUser());
+		setUser(default_user());
 	};
 
 	return (

@@ -12,6 +12,7 @@ import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
 
 import swagger from "../docs/api/swagger.json";
+import { JsonConfirm } from "../../types/bencher";
 
 export const PLAN_PARAM = "plan";
 
@@ -104,6 +105,31 @@ export const pageTitle = (new_title: string) => {
 
 	site_analytics()?.page();
 };
+
+export const default_user = (): JsonConfirm => {
+	return {
+		user: {
+			uuid: null,
+			name: null,
+			slug: null,
+			email: null,
+			admin: null,
+			locked: null,
+		},
+		token: null,
+	};
+};
+
+export const load_user = (): JsonConfirm => {
+	const cookie_user = JSON.parse(window.localStorage.getItem(BENCHER_USER_KEY));
+	if (validate_user(cookie_user)) {
+		return cookie_user;
+	} else {
+		return default_user();
+	}
+};
+
+export const USER_SLUG: () => null | string = () => load_user()?.user?.slug;
 
 export const validate_string = (
 	input: string,
@@ -200,7 +226,7 @@ export const validate_card_cvc = (card_cvc: string): boolean => {
 };
 
 // TODO improve this validation
-export const validate_user = (user: {}) => {
+export const validate_user = (user: JsonConfirm) => {
 	return validate_jwt(user?.token);
 };
 

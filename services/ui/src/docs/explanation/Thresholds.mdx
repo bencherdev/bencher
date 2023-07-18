@@ -2,7 +2,7 @@ Thresholds can be created for the unique combination of a Metric Kind, Branch, a
 They are statistical significance tests that use either a
 [Z-score](https://en.wikipedia.org/wiki/Standard_score)
 or [Student's t-test](https://en.wikipedia.org/wiki/Student%27s_t-test)
-in order to detect performance regressions and gerenerate Alerts.
+in order to detect performance regressions and generate Alerts.
 When a Metric is below a Threshold's Lower Boundary Limit or above a Threshold's Upper Boundary Limit,
 an Alert is generated for that Metric.
 
@@ -126,7 +126,7 @@ Alerts are generated when a Metric is below a Threshold's Lower Boundary Limit o
 To fail a CI build in the event of an Alert set the `--err` flag when using the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand.
 
 ### Suppressing Alerts
-Sometimes it can be useful to supress Alerts for a particular Benchmark.
+Sometimes it can be useful to suppress Alerts for a particular Benchmark.
 The best way to do this is by adding one of these special suffixes to that Benchmark's name:
 
 - `_bencher_ignore`

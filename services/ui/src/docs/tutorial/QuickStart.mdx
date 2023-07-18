@@ -1,48 +1,11 @@
-import { BENCHER_VERSION } from "../../components/site/util";
+import { BENCHER_VERSION, USER_SLUG } from "../../components/site/util";
 
 ## What is Bencher?
 
-Bencher is a suite of open source [continuous benchmarking](/docs/explanation/continuous-benchmarking) tools designed to catch performance regressions in CI. That is, Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
-
-## Clone the Repo
-
-In order to work through this tutorial you will need to have `git` installed. Check to see if you have `git` installed.
-
-Run: `git --version`
-
-You should see something like:
-
-```
-$ git --version
-git version 2.37.3
-```
-
-It is okay if your version number is different. It's just important that this command works. If not follow the [instructions for installing `git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+Bencher is a suite of open source [continuous benchmarking](/docs/explanation/continuous-benchmarking) tools designed to catch performance regressions in CI.
+That is, Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
 
 <br />
-
-With `git` installed, we can now clone the Bencher repository.
-
-Run:   <code>{`git clone --branch v${BENCHER_VERSION} https://github.com/bencherdev/bencher.git`}</code>
-
-You should see something like:
-
-```
-$ git clone https://github.com/bencherdev/bencher.git
-Cloning into 'bencher'...
-remote: Enumerating objects: 24752, done.
-remote: Counting objects: 100% (7363/7363), done.
-remote: Compressing objects: 100% (2396/2396), done.
-remote: Total 24752 (delta 4862), reused 7274 (delta 4785), pack-reused 17389
-Receiving objects: 100% (24752/24752), 4.92 MiB | 12.43 MiB/s, done.
-Resolving deltas: 100% (16108/16108), done.
-```
-
-Again, it is okay if your output is different. It's just important that this command works.
-
-Finally, navigate into the Bencher repo that you just cloned.
-
-Run: `cd bencher`
 
 ## Install `bencher` CLI
 
@@ -52,24 +15,36 @@ Run: `cargo --version`
 
 You should see something like:
 
-```
+```bash
 $ cargo --version
 cargo 1.65.0 (4bc8f24d3 2022-10-20)
 ```
 
-It is okay if your version number is different. It's just important that this command works. If not follow the [instructions for installing `cargo` via `rustup`](https://rustup.rs/).
+It is okay if your version number is different. It's just important that this command works.
+If not follow the [instructions for installing `cargo` via `rustup`](https://rustup.rs/).
+
+On Linux or macOS, run:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
 <br />
 
 With `cargo` installed, we can install the `bencher` CLI.
 
-Run: `cargo install --path services/cli --locked`
+Run:
+<pre>
+  <code>
+    {`cargo install --git https://github.com/bencherdev/bencher --tag v${BENCHER_VERSION} --locked bencher_cli`}
+  </code>
+</pre>
 
 You should see something like:
 
 <pre>
   <code>
-    {`$ cargo install --path services/cli --locked
+    {`$ cargo install --git https://github.com/bencherdev/bencher --tag v0.3.3 --locked bencher_cli
   Installing bencher_cli v${BENCHER_VERSION} (/workspace/bencher/services/cli)
     Updating crates.io index
     ...
@@ -80,8 +55,6 @@ You should see something like:
 </pre>
 
 Again, it is okay if your output is different. It's just important that this command works.
-
-> 🐰 Note: When running this command, you should be in the root folder of the Bencher repo.
 
 <br />
 
@@ -98,168 +71,35 @@ bencher ${BENCHER_VERSION}`}
   </code>
 </pre>
 
-## Run UI & API Servers
+<br />
 
-In order to run the UI and API servers in this tutorial you will need to have `docker` installed. Check to see if you have `docker` installed.
+## Create a Bencher Cloud Account
 
-Run: `docker --version`
+Bencher is open source and self-hostable.
+If you are interested in self-hosting, check out the [Bencher Docker tutorial](/docs/tutorial/docker).
+For this tutorial though, we are going to use Bencher Cloud.
 
-You should see something like:
 
-```
-$ docker --version
-Docker version 20.10.17, build 100c701
-```
+### <a href="/auth/signup" target="_blank">Signup for Bencher Cloud</a>
+<br />
 
-It is okay if your version number is different. It's just important that this command works. If not follow the [instructions for installing `docker`](https://docs.docker.com/get-docker/).
+Once you have created an account, you will need to confirm your email address.
+Check your email for a confirmation link.
+After that, you should be logged in to Bencher Cloud.
+If you refresh this page, you should now see a `Log out` button in the top right corner.
 
 <br />
 
-With `docker` installed, we can now run the UI and API servers.
+## Create an API Token
 
-Run: `docker compose up -d`
+In order to use the Bencher API, you will need to create an API token.
+Navigate to `User` > `API Tokens` and click `➕ Add` button.
 
-You should see something like:
-
-```
-$ docker compose up -d
-[+] Running 16/16
- ⠿ bencher_ui Pulled                                           5.9s
- ...
- ⠿ bencher_api Pulled                                          6.3s
- ...
-[+] Running 3/3
- ⠿ Network bencher_default      Started                        0.1s
- ⠿ Container bencher_ui         Started                        0.8s
- ⠿ Container bencher_api_local  Started                        0.4s
-```
-
-Again, it is okay if your output is different. It's just important that this command works.
-
+### <a href={USER_SLUG() ? `/console/users/${USER_SLUG()}/tokens/add` : "/auth/signup"} target="_blank">Add an API Token</a>
 <br />
 
-Next, check to see both docker containers are running.
-
-Run: `docker ps`
-
-You should see something like:
-
-```
-$ docker ps
-CONTAINER ID   IMAGE                                 COMMAND                  CREATED              STATUS              PORTS                                           NAMES
-1d2ed7c7481e   bencherdev/bencher-ui:latest          "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:3000->80/tcp, :::3000->80/tcp           bencher_ui
-7a8590d7021a   bencherdev/bencher-api-local:latest   "/api"                   About a minute ago   Up About a minute   0.0.0.0:61016->61016/tcp, :::61016->61016/tcp   bencher_api_local
-```
-
-As before, it is okay if your output is different. It's just important that this command works.
-
-<br />
-
-With the `bencher` CLI installed and the services running, we should now be able to run a command from the `bencher` CLI that talks to our Bencher API server.
-
-Run: `bencher server version --host http://localhost:61016`
-
-You should see:
-
-<pre>
-  <code>
-    {`$ bencher server version --host http://localhost:61016
-{
-  "version": "${BENCHER_VERSION}"
-}`}
-  </code>
-</pre>
-
-It is okay if the version number is different. It's just important that this command works.
-
-## Create an Account
-
-In order to use the Bencher API server beyond a few basic commands, like checking the version number, you will need to create an account on your API server.
-
-<br />
-
-First, lets set our hostname as an environment variable, so we don't have to provide it with the `--host` flag on every single command.
-
-Run: `export BENCHER_HOST=http://localhost:61016`
-
-If you then run: `echo $BENCHER_HOST`
-
-You should see:
-
-```
-$ echo $BENCHER_HOST
-http://localhost:61016
-```
-
-<br />
-
-> 🐰 Note: The `bencher` CLI default host is Bencher Cloud (ie [https://api.bencher.dev](https://api.bencher.dev)).
-
-<br />
-
-Now lets create an account.
-
-Run: `bencher auth signup --name "Saul Goodman" saul@bettercallsaul.com`
-
-You should see:
-
-```
-$ bencher auth signup --name "Saul Goodman" saul@bettercallsaul.com
-{}
-```
-
-Because we haven't set up email on the API server yet, the invite code that we need is going to be in the server logs.
-
-Run: `docker compose logs bencher_api`
-
-You should see something like:
-
-```
-bencher_api_local  | 2022-12-19T16:45:19.353613Z  INFO bencher_api::context::messenger:
-bencher_api_local  | To: Saul Goodman <saul@bettercallsaul.com>>
-bencher_api_local  | Subject: Confirm Bencher Signup
-bencher_api_local  | Body:
-bencher_api_local  | Ahoy Saul Goodman,
-bencher_api_local  | Please, click the button below or use the provided code to signup for Bencher.
-bencher_api_local  | Confirm Email: http://localhost:3000/auth/confirm?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjcxNDcwMTE5LCJpYXQiOjE2NzE0NjgzMTksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoic2F1bEBiZXR0ZXJjYWxsc2F1bC5jb20iLCJvcmciOm51bGx9.WrLWRINLwa9Nzo6GDzKtNE8b9y732PBMFxlimvru63s
-bencher_api_local  | Confirmation Code: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjcxNDcwMTE5LCJpYXQiOjE2NzE0NjgzMTksImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoic2F1bEBiZXR0ZXJjYWxsc2F1bC5jb20iLCJvcmciOm51bGx9.WrLWRINLwa9Nzo6GDzKtNE8b9y732PBMFxlimvru63s
-bencher_api_local  |
-bencher_api_local  | See you soon,
-bencher_api_local  | The Bencher Team
-bencher_api_local  | Bencher - Continuous Benchmarking
-bencher_api_local  | Manage email settings (http://localhost:3000/console/settings/email)
-```
-
-Your output should be sligtly different than the above, namely the Confirmation Code. It's just important that this command works. Take note of the Confirmation Code.
-
-<br />
-
-Next, we will use the Confirmation Code from the API server logs to confirm your signup. Substitute your Confirmation Code for `YOUR_CONFIRMATION_CODE` in the following command.
-
-Run: `bencher auth confirm YOUR_CONFIRMATION_CODE`
-
-You should see something like:
-
-```
-$ bencher auth confirm YOUR_CONFIRMATION_CODE
-{
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjE2NzQwNjA3NTAsImlhdCI6MTY3MTQ2ODc1MCwiaXNzIjoiYmVuY2hlci5kZXYiLCJzdWIiOiJzYXVsQGJldHRlcmNhbGxzYXVsLmNvbSIsIm9yZyI6bnVsbH0.CABcvWlPobAHs7wsdR6wX5p0R2jaCd7RmpsnMp5pwEc",
-  "user": {
-    "name": "Saul Goodman",
-    "slug": "saul-goodman",
-    "uuid": "e8938f3a-d8cb-4ba5-b09e-5b5a29169c51"
-    "email": "saul@bettercallsaul.com",
-    "admin": true,
-    "locked": false,
-  }
-}
-```
-
-Again, your output should be sligtly different than the above. It's just important that this command works. Take note of the `token` field.
-
-<br />
-
-Finally, lets set our session token as an environment variable, so we don't have to provide it with the `--token` flag on every single command. Substitute your `token` field for `YOUR_TOKEN` in the following command.
+Once you have created your new API token, you will need to copy it to your clipboard.
+In the terminal you plan to work in, export the API token as an environment variable.
 
 Run: `export BENCHER_API_TOKEN=YOUR_TOKEN`
 
@@ -267,245 +107,294 @@ If you then run: `echo $BENCHER_API_TOKEN`
 
 You should see:
 
-```
+```bash
 $ echo $BENCHER_API_TOKEN
 YOUR_TOKEN
 ```
 
 <br />
 
-> 🐰 Note: This this is only a session token, and it will expire within a few weeks. Longer lived API tokens are available, but they will not be covered in this tutorial.
+> 🐰 Note: If you move to a different terminal, you will need to export the API token again.
+
+<br />
 
 ## Create a Project
 
-Now that we have a user account and API token, we can create a project. First, we need to know which organization our new project will belong to.
+Now that we have a user account and API token, we can create a Project.
+First, we need to know which organization our new project will belong to.
 
 Run: `bencher org ls`
 
 You should see something like:
 
-```
+```bash
 $ bencher org ls
 [
   {
     "name": "Saul Goodman",
     "slug": "saul-goodman",
     "uuid": "4581feb0-6cac-40a9-bd8a-d7865183b01e"
+    "created": "2022-07-06T11:24:36Z",
+    "modified": "2022-07-06T11:24:36Z"
   }
 ]
 ```
 
-Your output should be sligtly different than the above, as the `uuid` is pseudorandom. It's just important that this command works. Take note of the `slug` field, `saul-goodman`.
+Your output should be slightly different than the above:
+- The `uuid` is pseudorandom
+- The `name` and `slug` will be based on your username
+- The `created` and `modified` timestamps will be from when you just signed up
 
 <br />
 
-We can now create a new project inside of this organization.
+We can now create a new Project inside of your Organization.
+Substitute your Organization `slug` for the `--org` argument (ie `YOUR_ORG_SLUG`) in the command below.
 
-Run: `bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"`
+Run: `bencher project create --org YOUR_ORG_SLUG --url http://www.savewalterwhite.com "Save Walter White"`
 
 You should see something like:
 
-```
+```bash
 $ bencher project create --org saul-goodman --url http://www.savewalterwhite.com "Save Walter White"
 {
   "organization": "4581feb0-6cac-40a9-bd8a-d7865183b01e",
   "name": "Save Walter White",
-  "slug": "save-walter-white",
+  "slug": "save-walter-white-12345",
   "uuid": "c6c2a8e8-685e-4413-9a19-5b79053a71b1"
   "url": "http://www.savewalterwhite.com",
   "public": true,
+  "created": "2022-07-06T11:36:24Z",
+  "modified": "2022-07-06T11:36:24Z"
 }
 ```
 
-Again, your output should be sligtly different than the above, as the `uuid` is pseudorandom. It's just important that this command works. Take note of the `slug` field (ie `save-walter-white`).
+Again, your output should be slightly different than the above.
+It's just important that this command works.
+Take note of the Project `slug` field (ie `save-walter-white-12345`).
+
+<br />
 
 ## Run a Report
 
-We are finally ready to collect some benchmark metrics! For simplicity's sake, we will be using mock data in this tutorial.
+We are finally ready to collect some benchmark metrics!
+For simplicity's sake, we will be using mock data in this tutorial.
 
 Run: `bencher mock`
 
 You should see something like:
 
-```
+```json
 $ bencher mock
 {
   "bencher::mock_0": {
     "latency": {
-      "value": 506.876116608852,
-      "lower_bound": 479.6595339197462,
-      "upper_bound": 534.0926992979578
+      "value": 3.7865423396154463,
+      "lower_bound": 3.4078881056539014,
+      "upper_bound": 4.165196573576991
     }
   },
   "bencher::mock_1": {
     "latency": {
-      "value": 207.5098520049996,
-      "lower_bound": 202.9429996814694,
-      "upper_bound": 212.07670432852981
+      "value": 16.398332128878437,
+      "lower_bound": 14.758498915990593,
+      "upper_bound": 18.03816534176628
     }
   },
   "bencher::mock_2": {
     "latency": {
-      "value": 2204.9953162182187,
-      "lower_bound": 2080.9181820897516,
-      "upper_bound": 2329.072450346686
+      "value": 20.88091359871672,
+      "lower_bound": 18.792822238845048,
+      "upper_bound": 22.969004958588393
     }
-  }
+  },
   "bencher::mock_3": {
     "latency": {
-      "value": 1101.3243640332075,
-      "lower_bound": 1091.7884305874131,
-      "upper_bound": 1110.860297479002
+      "value": 33.88103801203782,
+      "lower_bound": 30.492934210834036,
+      "upper_bound": 37.2691418132416
     }
   },
   "bencher::mock_4": {
     "latency": {
-      "value": 182.36903617911693,
-      "lower_bound": 172.65530563428618,
-      "upper_bound": 192.08276672394769
+      "value": 40.90515638867921,
+      "lower_bound": 36.81464074981129,
+      "upper_bound": 44.99567202754713
     }
   }
 }
 ```
 
-Your output should be sligtly different than the above, as the data are pseudorandom. It's just important that this command works.
+Your output should be slightly different than the above, as the data are pseudorandom.
+It's just important that this command works.
 
 <br />
 
 Now lets run a report using mock benchmark metric data.
-Pass the `slug` field (ie `save-walter-white`) that we noted eariler to the `--project` argument.
+Substitute your Project `slug` for the `--project` argument (ie `YOUR_PROJECT_SLUG`) in the command below.
 
-Run: `bencher run --project save-walter-white "bencher mock"`
+Run: `bencher run --project YOUR_PROJECT_SLUG "bencher mock"`
 
 You should see something like:
 
-```
-$ bencher run --project save-walter-white "bencher mock"
+```json
+$ bencher run --project save-walter-white-12345 "bencher mock"
 {
   "bencher::mock_0": {
     "latency": {
-      "value": 550.9386870323959,
-      "lower_bound": 523.4050559446542,
-      "upper_bound": 578.4723181201376
+      "value": 0.15496641529475275,
+      "lower_bound": 0.13946977376527747,
+      "upper_bound": 0.17046305682422802
     }
   },
   "bencher::mock_1": {
     "latency": {
-      "value": 659.2390251410347,
-      "lower_bound": 657.5172723361218,
-      "upper_bound": 660.9607779459477
+      "value": 18.648298578180437,
+      "lower_bound": 16.783468720362393,
+      "upper_bound": 20.513128435998482
     }
   },
   "bencher::mock_2": {
     "latency": {
-      "value": 1837.850537908266,
-      "lower_bound": 1679.3581823266893,
-      "upper_bound": 1996.3428934898427
+      "value": 28.20328182167366,
+      "lower_bound": 25.382953639506294,
+      "upper_bound": 31.023610003841025
     }
   },
   "bencher::mock_3": {
     "latency": {
-      "value": 1356.976684331241,
-      "lower_bound": 1314.4915123223968,
-      "upper_bound": 1399.461856340085
+      "value": 34.45732560787596,
+      "lower_bound": 31.01159304708836,
+      "upper_bound": 37.903058168663556
     }
   },
   "bencher::mock_4": {
     "latency": {
-      "value": 3849.2087495791616,
-      "lower_bound": 3646.5361513563394,
-      "upper_bound": 4051.881347801984
+      "value": 44.9237520767597,
+      "lower_bound": 40.43137686908373,
+      "upper_bound": 49.41612728443567
     }
   }
 }
 
 {
-  "branch": "main",
-  "hash": null,
-  "testbed": "localhost",
-  "start_time": "2023-01-18T13:52:57.678003725Z",
-  "end_time": "2023-01-18T13:52:57.682390145Z",
+  "branch": "master",
+  "end_time": "2023-07-18T14:21:27.796871Z",
   "results": [
-    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 550.9386870323959,\n      \"lower_bound\": 523.4050559446542,\n      \"upper_bound\": 578.4723181201376\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 659.2390251410347,\n      \"lower_bound\": 657.5172723361218,\n      \"upper_bound\": 660.9607779459477\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 1837.850537908266,\n      \"lower_bound\": 1679.3581823266893,\n      \"upper_bound\": 1996.3428934898427\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 1356.976684331241,\n      \"lower_bound\": 1314.4915123223968,\n      \"upper_bound\": 1399.461856340085\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 3849.2087495791616,\n      \"lower_bound\": 3646.5361513563394,\n      \"upper_bound\": 4051.881347801984\n    }\n  }\n}\n"
+    "{\n  \"bencher::mock_0\": {\n    \"latency\": {\n      \"value\": 0.15496641529475275,\n      \"lower_bound\": 0.13946977376527747,\n      \"upper_bound\": 0.17046305682422802\n    }\n  },\n  \"bencher::mock_1\": {\n    \"latency\": {\n      \"value\": 18.648298578180437,\n      \"lower_bound\": 16.783468720362393,\n      \"upper_bound\": 20.513128435998482\n    }\n  },\n  \"bencher::mock_2\": {\n    \"latency\": {\n      \"value\": 28.20328182167366,\n      \"lower_bound\": 25.382953639506294,\n      \"upper_bound\": 31.023610003841025\n    }\n  },\n  \"bencher::mock_3\": {\n    \"latency\": {\n      \"value\": 34.45732560787596,\n      \"lower_bound\": 31.01159304708836,\n      \"upper_bound\": 37.903058168663556\n    }\n  },\n  \"bencher::mock_4\": {\n    \"latency\": {\n      \"value\": 44.9237520767597,\n      \"lower_bound\": 40.43137686908373,\n      \"upper_bound\": 49.41612728443567\n    }\n  }\n}\n"
   ],
-  "settings": {
-    "adapter": null,
-    "fold": null,
-    "allow_failure": false
-  }
+  "settings": {},
+  "start_time": "2023-07-18T14:21:27.773930Z",
+  "testbed": "base"
 }
 {
-  "user": "e8938f3a-d8cb-4ba5-b09e-5b5a29169c51",
-  "uuid": "524b5016-87af-4484-8817-247b0e0d01c7",
-  "version": "70a228ed-eb20-42a3-89b9-3ebebc5c2593"
-  "testbed": "abb0fbe0-0550-4f80-b53f-37d89303e6b8",
-  "start_time": "2022-12-20T16:01:21.523728845Z",
-  "end_time": "2022-12-20T16:01:21.526691505Z",
+  "uuid": "5554a92c-6f5c-481d-bd47-990f0a9bac6d",
+  "user": { ... },
+  "project": { ... },
+  "branch": { ... },
+  "testbed": { ...},
+  "start_time": "2023-07-18T14:21:27Z",
+  "end_time": "2023-07-18T14:21:27Z",
   "adapter": "magic",
   "results": [
-    "babf3c2c-30c2-4e2a-ada4-17c7ad0fafff",
-    "3d86b33a-4505-4762-8132-830cfd0dc6d6",
-    "b5aef1a4-ec01-41c2-9adf-f9eb26f97893",
-    "d9a6e82a-2dc6-4e40-a059-6282a62e30c0",
-    "2aca6972-835a-4f97-bb0d-d452ef73eac9"
+    [
+      {
+        "metric_kind": { ... },
+        "threshold": null,
+        "benchmarks": [ ... ]
+      }
+    ]
   ],
   "alerts": [],
+  "created": "2023-07-18T14:21:27Z"
 }
+
+View results:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=88375e7c-f1e0-4cbb-bde1-bdb7773022ae
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=e81c7863-cc4b-4e22-b507-c1e238871137
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=31dede44-d23a-4baf-b639-63f2ac742e42
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=c7e32369-f3dd-473d-99a3-6289ae32b38e
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/perf?metric_kind=latency&branches=95521eff-09fa-4c02-abe1-dd824108869d&testbeds=5b4a6f3e-a27d-4cc3-a2ce-851dc6421e6e&benchmarks=779bc477-4964-4bae-aa8c-4da3e388822c
 ```
 
-Again, your output should be sligtly different than the above, as the data are pseudorandom. It's just important that this command works.
+<br />
+
+You can now view the results from each of the benchmarks in the browser.
+Click or copy and paste the links from `View results`.
+There should only be a single data point for each benchmark, so lets add some more data!
 
 <br />
 
-> 🐰 Note: Because we didn't specify a benchmark harness adapter, the `magic` adapter was used by default.
-For more details see the [explanation of benchmark harness adapters](https://bencher.dev/docs/explanation/adapters).
+First, lets set our Project slug as an environment variable, so we don't have to provide it with the `--project` on every single run.
 
-<br />
-
-Lets set our project slug as an environment variable, so we don't have to provide it with the `--project` on every single run.
-
-Run: `export BENCHER_PROJECT=save-walter-white`
+Run: `export BENCHER_PROJECT=save-walter-white-12345`
 
 If you then run: `echo $BENCHER_PROJECT`
 
 You should see:
 
-```
+```bash
 $ echo $BENCHER_PROJECT
-save-walter-white
+save-walter-white-12345
 ```
 
 <br />
 
-Now, lets rerun this same command again without `--project` to generate more data.
+Lets rerun the same command again without `--project` to generate more data.
 
 Run: `bencher run "bencher mock"`
 
 <br />
 
-Finally, lets generate more data, but this time we will pipe our results into `bencher run`.
+Now, lets generate more data, but this time we will pipe our results into `bencher run`.
 
 Run: `bencher mock | bencher run`
 
 <br />
 
-You can now view your results on your project's perf page at [localhost:3000/perf/save-walter-white](http://localhost:3000/perf/save-walter-white).
+Finally, lets seed a lot of data using the `bencher run` `--iter` argument.
 
-Select:
-
-- `Latency` from the `Metric Kind` dropdown
-- `main` from the `Branches` tab
-- `localhost` from the `Testbeds` tab
-- `bencher::mock_0` and `bencher::mock_1` from the `Benchmarks` tab
+Run: `bencher run --iter 16 "bencher mock"`
 
 <br />
 
-> 🐰 Note: The project's perf page URL is based off of the project `slug`, that is why it is `save-walter-white`.
+> 🐰 Tip: Checkout the [`bencher run` CLI Subcommand docs](/docs/explanation/bencher-run) for a full overview of all that `bencher run` can do!
+
+<br />
+
+## Generate an Alert
+
+Now that we have some historical data for our benchmarks, lets generate an Alert!
+Alerts are generated when a benchmark results is determined to be a performance regression.
+So lets simulate a performance regression!
+
+Run: `bencher run "bencher mock --pow 8"`
+
+<br />
+
+There should be a new section at the end of the output called `View alerts`:
+
+```
+View alerts:
+- bencher::mock_0: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b2329d5a-4471-48ab-bfbd-959d46ba1aa6
+- bencher::mock_1: https://bencher.dev/console/projects/save-walter-white-12345/alerts/181b1cf5-d984-402a-b0f1-68f6f119fa66
+- bencher::mock_2: https://bencher.dev/console/projects/save-walter-white-12345/alerts/b9b6c904-c657-4908-97db-dbeca40f8782
+- bencher::mock_3: https://bencher.dev/console/projects/save-walter-white-12345/alerts/5567ff32-2829-4b6a-969a-af33ce3828db
+- bencher::mock_4: https://bencher.dev/console/projects/save-walter-white-12345/alerts/49f2768f-ccda-4933-8e1d-08948f57a74d
+```
+
+<br />
+
+You can now view the Alerts for each benchmark in the browser.
+Click or copy and paste the links from `View alerts`.
+
+<br />
+
+> 🐰 Tip: Checkout the [Threshold & Alerts docs](/docs/explanation/thresholds) for a full overview of how performance regressions are detected!
 
 <br />
 <br />
 
-> 🐰 Congrats! You tracked your first benchmarks! 🎉
+> 🐰 Congrats! You caught your first perform regression! 🎉
 
 <br />
 
