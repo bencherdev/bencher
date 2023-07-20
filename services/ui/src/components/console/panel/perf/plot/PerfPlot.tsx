@@ -13,6 +13,7 @@ const PerfPlot = (props) => {
 						user={props.user}
 						config={props.config}
 						path_params={props.path_params}
+						is_console={props.is_console}
 						metric_kind={props.metric_kind}
 						start_date={props.start_date}
 						end_date={props.end_date}

@@ -6,7 +6,7 @@ import {
 	createSignal,
 	For,
 } from "solid-js";
-import { get_options } from "../../../../site/util";
+import { get_options, validate_jwt } from "../../../../site/util";
 import { Range } from "../../../config/types";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
@@ -25,6 +25,9 @@ const PlotHeader = (props) => {
 			name: "Metric Kind",
 			slug: BENCHER_METRIC_KIND,
 		};
+		if (props.is_console && !validate_jwt(fetcher.token)) {
+			return [SELECT_METRIC_KIND];
+		}
 		// Always use the first page and the max number of results per page
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", "255");

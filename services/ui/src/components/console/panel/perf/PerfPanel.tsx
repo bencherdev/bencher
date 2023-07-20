@@ -258,6 +258,9 @@ const PerfPanel = (props) => {
 
 	const get_perf = async (fetcher) => {
 		const EMPTY_OBJECT = {};
+		if (props.is_console && !validate_jwt(fetcher.token)) {
+			return EMPTY_OBJECT;
+		}
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
 			const url = `${props.config?.plot?.project_url(fetcher.project_slug)}`;
@@ -302,6 +305,9 @@ const PerfPanel = (props) => {
 		fetcher: { per_page: number; page: number; token: string },
 	) => {
 		const EMPTY_ARRAY = [];
+		if (props.is_console && !validate_jwt(fetcher.token)) {
+			return EMPTY_ARRAY;
+		}
 		if (!validate_u32(fetcher.per_page.toString())) {
 			return EMPTY_ARRAY;
 		}
