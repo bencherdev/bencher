@@ -35,6 +35,7 @@ export enum Resource {
 
 export enum Row {
 	TEXT,
+	DATE_TIME,
 	BOOL,
 	SELECT,
 	NESTED_TEXT,
@@ -53,12 +54,14 @@ export enum Display {
 }
 
 export enum PerfTab {
+	REPORTS = "reports",
 	BRANCHES = "branches",
 	TESTBEDS = "testbeds",
 	BENCHMARKS = "benchmarks",
 }
 
 export const isPerfTab = (tab: string) =>
+	tab === PerfTab.REPORTS ||
 	tab === PerfTab.BRANCHES ||
 	tab === PerfTab.TESTBEDS ||
 	tab === PerfTab.BENCHMARKS;

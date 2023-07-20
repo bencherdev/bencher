@@ -18,6 +18,7 @@ import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 
+const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
 const BRANCHES_PARAM = "branches";
 const TESTBEDS_PARAM = "testbeds";
@@ -25,6 +26,7 @@ const BENCHMARKS_PARAM = "benchmarks";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 
+const REPORTS_PAGE_PARAM = "reports_page";
 const BRANCHES_PAGE_PARAM = "branches_page";
 const TESTBEDS_PAGE_PARAM = "testbeds_page";
 const BENCHMARKS_PAGE_PARAM = "benchmarks_page";
@@ -33,7 +35,7 @@ const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 const RANGE_PARAM = "range";
 
-const DEFAULT_PERF_TAB = PerfTab.BRANCHES;
+const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 
@@ -63,7 +65,7 @@ const arrayFromString = (array_str: undefined | string) => {
 };
 const arrayToString = (array: any[]) => array.join();
 
-const time_to_date = (time_str: undefined | string): Date => {
+const time_to_date = (time_str: undefined | string): null | Date => {
 	if (typeof time_str === "string") {
 		const time = parseInt(time_str);
 		if (Number.isInteger(time)) {
@@ -76,7 +78,7 @@ const time_to_date = (time_str: undefined | string): Date => {
 	return null;
 };
 
-const time_to_date_iso = (time_str: undefined | string): string => {
+const time_to_date_iso = (time_str: undefined | string): null | string => {
 	const date = time_to_date(time_str);
 	if (date) {
 		return date.toISOString();
@@ -84,7 +86,7 @@ const time_to_date_iso = (time_str: undefined | string): string => {
 	return null;
 };
 
-const time_to_date_only_iso = (time_str: undefined | string): string => {
+const time_to_date_only_iso = (time_str: undefined | string): null | string => {
 	const iso_date = time_to_date_iso(time_str);
 	if (iso_date) {
 		return iso_date.split("T")?.[0];
@@ -92,7 +94,7 @@ const time_to_date_only_iso = (time_str: undefined | string): string => {
 	return null;
 };
 
-const date_to_time = (date_str: undefined | string): string => {
+const date_to_time = (date_str: undefined | string): null | string => {
 	if (typeof date_str === "string") {
 		const time = Date.parse(date_str);
 		if (time) {
@@ -105,8 +107,7 @@ const date_to_time = (date_str: undefined | string): string => {
 const resourcesToCheckable = (resources, params) =>
 	resources.map((resource) => {
 		return {
-			uuid: resource?.uuid,
-			name: resource?.name,
+			resource: resource,
 			checked: params.includes(resource?.uuid),
 		};
 	});
@@ -150,6 +151,9 @@ const PerfPanel = (props) => {
 	}
 
 	// Sanitize all pagination query params
+	if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
+		setSearchParams({ [REPORTS_PAGE_PARAM]: DEFAULT_PAGE });
+	}
 	if (!validate_u32(searchParams[BRANCHES_PAGE_PARAM])) {
 		setSearchParams({ [BRANCHES_PAGE_PARAM]: DEFAULT_PAGE });
 	}
@@ -162,6 +166,7 @@ const PerfPanel = (props) => {
 
 	// Create marshalized memos of all query params
 	const metric_kind = createMemo(() => searchParams[METRIC_KIND_PARAM]);
+	const report = createMemo(() => searchParams[REPORT_PARAM]);
 	const branches = createMemo(() =>
 		arrayFromString(searchParams[BRANCHES_PARAM]),
 	);
@@ -210,6 +215,9 @@ const PerfPanel = (props) => {
 
 	// Pagination query params
 	const per_page = createMemo(() => DEFAULT_PER_PAGE);
+	const reports_page = createMemo(() =>
+		Number(searchParams[REPORTS_PAGE_PARAM]),
+	);
 	const branches_page = createMemo(() =>
 		Number(searchParams[BRANCHES_PAGE_PARAM]),
 	);
@@ -295,6 +303,7 @@ const PerfPanel = (props) => {
 	const [perf_data] = createResource(perf_query_fetcher, get_perf);
 
 	// Initialize as empty, wait for resources to load
+	const [reports_tab, setReportsTab] = createStore([]);
 	const [branches_tab, setBranchesTab] = createStore([]);
 	const [testbeds_tab, setTestbedsTab] = createStore([]);
 	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
@@ -330,6 +339,43 @@ const PerfPanel = (props) => {
 				return EMPTY_ARRAY;
 			});
 	};
+
+	const reports_fetcher = createMemo(() => {
+		return {
+			project_slug: project_slug(),
+			per_page: per_page(),
+			page: reports_page(),
+			refresh: refresh(),
+			token: props.user?.token,
+		};
+	});
+	const [reports_data] = createResource(reports_fetcher, async (fetcher) =>
+		getPerfTab(PerfTab.REPORTS, fetcher),
+	);
+	createEffect(() => {
+		if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
+			setSearchParams({ [REPORTS_PAGE_PARAM]: DEFAULT_PAGE });
+		}
+		const data = reports_data();
+		if (data) {
+			setReportsTab(resourcesToCheckable(data, [report()]));
+		}
+		const first = 0;
+		const first_report = data?.[first];
+		if (
+			first_report &&
+			tab() === DEFAULT_PERF_TAB &&
+			reports_page() === 1 &&
+			!metric_kind() &&
+			branches().length === 0 &&
+			testbeds().length === 0 &&
+			benchmarks().length === 0
+		) {
+			const first_metric_kind =
+				first_report?.results?.[first]?.[first].metric_kind?.slug;
+			handleReportChecked(first, first_metric_kind);
+		}
+	});
 
 	const branches_fetcher = createMemo(() => {
 		return {
@@ -406,35 +452,52 @@ const PerfPanel = (props) => {
 		});
 	};
 
+	const handleReportChecked = (index: number, metric_kind_slug: string) => {
+		let report = reports_tab?.[index]?.resource;
+		setSearchParams({
+			[METRIC_KIND_PARAM]: metric_kind_slug,
+			[REPORT_PARAM]: report?.uuid,
+			[BRANCHES_PARAM]: report?.branch?.uuid,
+			[TESTBEDS_PARAM]: report?.testbed?.uuid,
+			[BENCHMARKS_PARAM]: arrayToString(
+				report?.results?.[0]
+					?.find((result) => result.metric_kind?.slug === metric_kind_slug)
+					?.benchmarks?.map((benchmark) => benchmark.uuid),
+			),
+		});
+	};
 	const handleChecked = (
 		resource_tab: any[],
 		index: number,
 		param: string,
 		param_array: string[],
-		uuid: string,
 	) => {
-		const checked = resource_tab?.[index].checked;
+		const item = resource_tab?.[index];
+		const checked = item.checked;
 		if (typeof checked !== "boolean") {
 			return;
 		}
+		const uuid = item.resource.uuid;
 		if (checked) {
 			setSearchParams({
+				[REPORT_PARAM]: null,
 				[param]: arrayToString(removeFromArray(param_array, uuid)),
 			});
 		} else {
 			setSearchParams({
+				[REPORT_PARAM]: null,
 				[param]: arrayToString(addToArray(param_array, uuid)),
 			});
 		}
 	};
-	const handleBranchChecked = (index: number, uuid: string) => {
-		handleChecked(branches_tab, index, BRANCHES_PARAM, branches(), uuid);
+	const handleBranchChecked = (index: number) => {
+		handleChecked(branches_tab, index, BRANCHES_PARAM, branches());
 	};
-	const handleTestbedChecked = (index: number, uuid: string) => {
-		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds(), uuid);
+	const handleTestbedChecked = (index: number) => {
+		handleChecked(testbeds_tab, index, TESTBEDS_PARAM, testbeds());
 	};
-	const handleBenchmarkChecked = (index: number, uuid: string) => {
-		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks(), uuid);
+	const handleBenchmarkChecked = (index: number) => {
+		handleChecked(benchmarks_tab, index, BENCHMARKS_PARAM, benchmarks());
 	};
 
 	const handleStartTime = (date: string) =>
@@ -460,6 +523,8 @@ const PerfPanel = (props) => {
 		}
 	};
 
+	const handleReportsPage = (page: number) =>
+		setSearchParams({ [REPORTS_PAGE_PARAM]: page });
 	const handleBranchesPage = (page: number) =>
 		setSearchParams({ [BRANCHES_PAGE_PARAM]: page });
 	const handleTestbedsPage = (page: number) =>
@@ -486,6 +551,7 @@ const PerfPanel = (props) => {
 				is_console={props.is_console}
 				isPlotInit={isPlotInit}
 				metric_kind={metric_kind}
+				report={report}
 				branches={branches}
 				testbeds={testbeds}
 				benchmarks={benchmarks}
@@ -496,10 +562,12 @@ const PerfPanel = (props) => {
 				tab={tab}
 				key={key}
 				range={range}
+				reports_tab={reports_tab}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}
 				per_page={per_page}
+				reports_page={reports_page}
 				branches_page={branches_page}
 				testbeds_page={testbeds_page}
 				benchmarks_page={benchmarks_page}
@@ -509,9 +577,11 @@ const PerfPanel = (props) => {
 				handleTab={handleTab}
 				handleKey={handleKey}
 				handleRange={handleRange}
+				handleReportChecked={handleReportChecked}
 				handleBranchChecked={handleBranchChecked}
 				handleTestbedChecked={handleTestbedChecked}
 				handleBenchmarkChecked={handleBenchmarkChecked}
+				handleReportsPage={handleReportsPage}
 				handleBranchesPage={handleBranchesPage}
 				handleTestbedsPage={handleTestbedsPage}
 				handleBenchmarksPage={handleBenchmarksPage}

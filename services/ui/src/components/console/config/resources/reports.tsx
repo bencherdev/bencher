@@ -28,14 +28,21 @@ const reportsConfig = {
 			},
 			row: {
 				key: "start_time",
+				kind: Row.DATE_TIME,
 				items: [
 					{
 						kind: Row.TEXT,
 						key: "adapter",
 					},
 					{},
-					{},
-					{},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["branch", "name"],
+					},
+					{
+						kind: Row.NESTED_TEXT,
+						keys: ["testbed", "name"],
+					},
 				],
 				button: {
 					text: "View",

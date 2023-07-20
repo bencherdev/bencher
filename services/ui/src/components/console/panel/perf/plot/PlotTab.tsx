@@ -1,15 +1,22 @@
 import { Link } from "solid-app-router";
-import { For, Match, Show, Switch } from "solid-js";
+import { For, Match, Switch } from "solid-js";
 import { PerfTab } from "../../../config/types";
-import { toCapitalized } from "../../../config/util";
+import { date_time_fmt, toCapitalized } from "../../../config/util";
 import { DEFAULT_PAGE } from "../PerfPanel";
 import Pagination, { PaginationSize } from "../../../../site/Pagination";
 
-const perf_tabs = [PerfTab.BRANCHES, PerfTab.TESTBEDS, PerfTab.BENCHMARKS];
+const perf_tabs = [
+	PerfTab.REPORTS,
+	PerfTab.BRANCHES,
+	PerfTab.TESTBEDS,
+	PerfTab.BENCHMARKS,
+];
 
 const PlotTab = (props) => {
 	const getTab = () => {
 		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_tab;
 			case PerfTab.BRANCHES:
 				return props.branches_tab;
 			case PerfTab.TESTBEDS:
@@ -23,6 +30,8 @@ const PlotTab = (props) => {
 
 	const getPage = () => {
 		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_page;
 			case PerfTab.BRANCHES:
 				return props.branches_page;
 			case PerfTab.TESTBEDS:
@@ -36,6 +45,8 @@ const PlotTab = (props) => {
 
 	const getHandlePage = () => {
 		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.handleReportsPage;
 			case PerfTab.BRANCHES:
 				return props.handleBranchesPage;
 			case PerfTab.TESTBEDS:
@@ -48,14 +59,16 @@ const PlotTab = (props) => {
 		}
 	};
 
-	const handleChecked = (index: number, uuid: string) => {
+	const handleChecked = (index: number, slug: void | string) => {
 		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.handleReportChecked(index, slug);
 			case PerfTab.BRANCHES:
-				return props.handleBranchChecked(index, uuid);
+				return props.handleBranchChecked(index);
 			case PerfTab.TESTBEDS:
-				return props.handleTestbedChecked(index, uuid);
+				return props.handleTestbedChecked(index);
 			case PerfTab.BENCHMARKS:
-				return props.handleBenchmarkChecked(index, uuid);
+				return props.handleBenchmarkChecked(index);
 			default:
 				return [];
 		}
@@ -65,71 +78,30 @@ const PlotTab = (props) => {
 		<>
 			<div class="panel-tabs">
 				<For each={perf_tabs}>
-					{(tab) => (
-						<a
-							class={props.tab() === tab ? "is-active" : ""}
-							onClick={() => props.handleTab(tab)}
-						>
-							{toCapitalized(tab)}
-						</a>
+					{(tab, index) => (
+						<>
+							<a
+								class={props.tab() === tab ? "is-active" : ""}
+								onClick={() => props.handleTab(tab)}
+							>
+								{toCapitalized(tab)}
+							</a>
+							{index() === 0 && (
+								<a style="pointer-events:none;color:#fdb07e;">||</a>
+							)}
+						</>
 					)}
 				</For>
 			</div>
-			<Switch
-				fallback={
-					<div class="box">
-						<p>No {props.tab()} found</p>
-					</div>
-				}
-			>
-				<Match
-					when={
-						props.is_console &&
-						getTab().length === 0 &&
-						getPage() === DEFAULT_PAGE
-					}
-				>
-					<div class="box">
-						<AddButton project_slug={props.project_slug} tab={props.tab} />
-					</div>
-				</Match>
-				<Match
-					when={
-						props.is_console &&
-						getTab().length === 0 &&
-						getPage() !== DEFAULT_PAGE
-					}
-				>
-					<div class="box">
-						<BackButton
-							tab={props.tab}
-							page={getPage()}
-							handlePage={getHandlePage()}
-						/>
-					</div>
-				</Match>
-				<Match when={getTab().length > 0}>
-					<For each={getTab()}>
-						{(item, index) => (
-							// TODO maybe move over to a store and see if this works?
-							// https://www.solidjs.com/tutorial/stores_createstore
-							<a
-								class="panel-block"
-								onClick={(e) => handleChecked(index(), item.uuid)}
-							>
-								<div class="columns is-vcentered is-mobile">
-									<div class="column is-narrow">
-										<input type="checkbox" checked={item.checked} />
-									</div>
-									<div class="column">
-										<small style="overflow-wrap:anywhere;">{item.name}</small>
-									</div>
-								</div>
-							</a>
-						)}
-					</For>
-				</Match>
-			</Switch>
+			<Tab
+				project_slug={props.project_slug}
+				is_console={props.is_console}
+				tab={props.tab}
+				getTab={getTab}
+				getPage={getPage}
+				getHandlePage={getHandlePage}
+				handleChecked={handleChecked}
+			/>
 			<div class="panel-block">
 				<div class="container">
 					<div class="columns is-centered">
@@ -151,12 +123,125 @@ const PlotTab = (props) => {
 	);
 };
 
+const Tab = (props: {
+	project_slug: string;
+	is_console: boolean;
+	tab: () => PerfTab;
+	getTab: () => any[];
+	getPage: () => number;
+	getHandlePage: () => (page: number) => void;
+	handleChecked: (index: number, slug: void | string) => void;
+}) => {
+	return (
+		<Switch
+			fallback={
+				<div class="box">
+					<p>No {props.tab()} found</p>
+				</div>
+			}
+		>
+			<Match
+				when={
+					props.is_console &&
+					props.getTab().length === 0 &&
+					props.getPage() === DEFAULT_PAGE
+				}
+			>
+				<div class="box">
+					<AddButton project_slug={props.project_slug} tab={props.tab} />
+				</div>
+			</Match>
+			<Match
+				when={
+					props.is_console &&
+					props.getTab().length === 0 &&
+					props.getPage() !== DEFAULT_PAGE
+				}
+			>
+				<div class="box">
+					<BackButton
+						tab={props.tab}
+						page={props.getPage()}
+						handlePage={props.getHandlePage()}
+					/>
+				</div>
+			</Match>
+			<Match
+				when={props.tab() === PerfTab.REPORTS && props.getTab().length > 0}
+			>
+				<For each={props.getTab()}>
+					{(report, index) => (
+						<For each={report.resource?.results?.[0]}>
+							{(result, _index) => (
+								<a
+									class="panel-block"
+									onClick={(_e) =>
+										// Send the Metric Kind slug instead of the Report UUID
+										props.handleChecked(index(), result.metric_kind?.slug)
+									}
+								>
+									<div class="columns is-vcentered is-mobile">
+										<div class="column is-narrow">
+											<input type="radio" checked={report.checked} />
+										</div>
+										<div class="column">
+											<small style="overflow-wrap:anywhere;">
+												{date_time_fmt(report.resource?.start_time)}
+											</small>
+											<ReportDimension
+												icon="fas fa-shapes"
+												name={result.metric_kind?.name}
+											/>
+											<ReportDimension
+												icon="fas fa-code-branch"
+												name={report.resource?.branch?.name}
+											/>
+											<ReportDimension
+												icon="fas fa-server"
+												name={report.resource?.testbed?.name}
+											/>
+										</div>
+									</div>
+								</a>
+							)}
+						</For>
+					)}
+				</For>
+			</Match>
+			<Match
+				when={props.tab() !== PerfTab.REPORTS && props.getTab().length > 0}
+			>
+				<For each={props.getTab()}>
+					{(dimension, index) => (
+						<a
+							class="panel-block"
+							onClick={(_e) => props.handleChecked(index())}
+						>
+							<div class="columns is-vcentered is-mobile">
+								<div class="column is-narrow">
+									<input type="checkbox" checked={dimension.checked} />
+								</div>
+								<div class="column">
+									<small style="overflow-wrap:anywhere;">
+										{dimension.resource?.name}
+									</small>
+								</div>
+							</div>
+						</a>
+					)}
+				</For>
+			</Match>
+		</Switch>
+	);
+};
+
 const AddButton = (props) => {
 	const getHref = () => {
 		switch (props.tab()) {
 			case PerfTab.BRANCHES:
 			case PerfTab.TESTBEDS:
 				return `/console/projects/${props.project_slug}/${props.tab()}/add`;
+			case PerfTab.REPORTS:
 			case PerfTab.BENCHMARKS:
 				return "/docs/how-to/track-benchmarks";
 			default:
@@ -170,6 +255,7 @@ const AddButton = (props) => {
 				return "Add a Branch";
 			case PerfTab.TESTBEDS:
 				return "Add a Testbed";
+			case PerfTab.REPORTS:
 			case PerfTab.BENCHMARKS:
 				return "Track Your Benchmarks";
 			default:
@@ -195,6 +281,17 @@ const BackButton = (props) => {
 		>
 			That's all the {props.tab()}. Go back.
 		</button>
+	);
+};
+
+const ReportDimension = (props: { icon: string; name: string }) => {
+	return (
+		<div>
+			<span class="icon">
+				<i class={props.icon} aria-hidden="true" />
+			</span>
+			<small style="overflow-wrap:anywhere;">{props.name}</small>
+		</div>
 	);
 };
 

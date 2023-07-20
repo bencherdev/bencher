@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "solid-app-router";
 import { For, Switch, Match, createMemo, Show, JSX } from "solid-js";
 import { Row } from "../../config/types";
 import { concat_values, nested_value } from "../../../site/util";
+import { date_time_fmt } from "../../config/util";
 
 export enum TableState {
 	LOADING = 0,
@@ -122,6 +123,9 @@ const LogoutButton = (_props) => {
 };
 
 const RowHeader = (props: { datum: any; row: any }) => {
+	if (props.row?.kind === Row.DATE_TIME) {
+		return date_time_fmt(props.datum[props.row.key]);
+	}
 	const header = concat_values(
 		props.datum,
 		props.row?.key,

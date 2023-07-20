@@ -72,7 +72,7 @@ const Pagination = (props: {
 						{props.page}
 					</button>
 				</li>
-				{props.data_len == props.per_page && (
+				{props.data_len === props.per_page && (
 					<li>
 						<button
 							class="pagination-link"
