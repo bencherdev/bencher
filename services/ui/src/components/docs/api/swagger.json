@@ -219,13 +219,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -249,6 +242,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/OrganizationsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
             }
           }
         ],
@@ -606,13 +606,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/UserName"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -636,6 +629,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/OrgMembersSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/UserName"
             }
           }
         ],
@@ -1162,13 +1162,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -1192,6 +1185,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/OrgProjectsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
             }
           }
         ],
@@ -1652,13 +1652,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -1679,17 +1672,24 @@
           },
           {
             "in": "query",
-            "name": "public",
+            "name": "sort",
             "schema": {
-              "nullable": true,
-              "type": "boolean"
+              "$ref": "#/components/schemas/ProjectsSort"
             }
           },
           {
             "in": "query",
-            "name": "sort",
+            "name": "name",
             "schema": {
-              "$ref": "#/components/schemas/ProjectsSort"
+              "$ref": "#/components/schemas/NonEmpty"
+            }
+          },
+          {
+            "in": "query",
+            "name": "public",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           }
         ],
@@ -2149,13 +2149,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/BenchmarkName"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -2179,6 +2172,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/ProjBenchmarksSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/BenchmarkName"
             }
           }
         ],
@@ -2563,13 +2563,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/BranchName"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -2593,6 +2586,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/ProjBranchesSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/BranchName"
             }
           }
         ],
@@ -2977,13 +2977,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -3007,6 +3000,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/ProjMetricKindsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
             }
           }
         ],
@@ -4005,13 +4005,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -4035,6 +4028,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/ProjTestbedsSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
             }
           }
         ],
@@ -5320,13 +5320,6 @@
           },
           {
             "in": "query",
-            "name": "name",
-            "schema": {
-              "$ref": "#/components/schemas/NonEmpty"
-            }
-          },
-          {
-            "in": "query",
             "name": "page",
             "schema": {
               "nullable": true,
@@ -5350,6 +5343,13 @@
             "name": "sort",
             "schema": {
               "$ref": "#/components/schemas/UserTokensSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "$ref": "#/components/schemas/NonEmpty"
             }
           }
         ],
@@ -6695,6 +6695,16 @@
           "name"
         ]
       },
+      "JsonNullable_for_Url": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/Url"
+          },
+          {
+            "$ref": "#/components/schemas/JsonEmpty"
+          }
+        ]
+      },
       "JsonOrganization": {
         "type": "object",
         "properties": {
@@ -7695,7 +7705,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/Url"
+                "$ref": "#/components/schemas/JsonNullable_for_Url"
               }
             ]
           },

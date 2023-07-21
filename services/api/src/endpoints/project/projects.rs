@@ -32,41 +32,19 @@ use super::Resource;
 
 const PROJECT_RESOURCE: Resource = Resource::Project;
 
-#[derive(Clone, Deserialize, JsonSchema)]
-pub struct ProjectsQuery {
-    pub sort: Option<ProjectsSort>,
-    pub direction: Option<JsonDirection>,
-    pub per_page: Option<u8>,
-    pub page: Option<u32>,
-
-    pub name: Option<NonEmpty>,
-    pub public: Option<bool>,
-}
-
-impl From<&ProjectsQuery> for JsonPagination<ProjectsSort, ()> {
-    fn from(query: &ProjectsQuery) -> Self {
-        let ProjectsQuery {
-            sort,
-            direction,
-            per_page,
-            page,
-            ..
-        } = *query;
-        Self {
-            sort,
-            direction,
-            per_page,
-            page,
-            query: (),
-        }
-    }
-}
+pub type ProjectsPagination = JsonPagination<ProjectsSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectsSort {
     #[default]
     Name,
+}
+
+#[derive(Clone, Deserialize, JsonSchema)]
+pub struct ProjectsQuery {
+    pub name: Option<NonEmpty>,
+    pub public: Option<bool>,
 }
 
 #[allow(clippy::unused_async)]
@@ -77,6 +55,7 @@ pub enum ProjectsSort {
 }]
 pub async fn projects_options(
     _rqctx: RequestContext<ApiContext>,
+    _pagination_params: Query<ProjectsPagination>,
     _query_params: Query<ProjectsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -89,6 +68,7 @@ pub async fn projects_options(
 }]
 pub async fn projects_get(
     rqctx: RequestContext<ApiContext>,
+    pagination_params: Query<ProjectsPagination>,
     query_params: Query<ProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -97,6 +77,7 @@ pub async fn projects_get(
     let json = get_ls_inner(
         rqctx.context(),
         auth_user.as_ref(),
+        pagination_params.into_inner(),
         query_params.into_inner(),
         endpoint,
     )
@@ -113,6 +94,7 @@ pub async fn projects_get(
 async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
+    pagination_params: ProjectsPagination,
     query_params: ProjectsQuery,
     endpoint: Endpoint,
 ) -> Result<JsonProjects, ApiError> {
@@ -137,17 +119,16 @@ async fn get_ls_inner(
         query = query.filter(schema::project::name.eq(name.as_ref()));
     }
 
-    let json_pagination = JsonPagination::from(&query_params);
-    query = match json_pagination.order() {
-        ProjectsSort::Name => match json_pagination.direction {
+    query = match pagination_params.order() {
+        ProjectsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::project::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::project::name.desc()),
         },
     };
 
     Ok(query
-        .offset(json_pagination.offset())
-        .limit(json_pagination.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
         .into_iter()

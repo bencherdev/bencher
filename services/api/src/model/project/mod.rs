@@ -292,7 +292,7 @@ impl From<&QueryProject> for Project {
 pub struct UpdateProject {
     pub name: Option<String>,
     pub slug: Option<String>,
-    pub url: Option<String>,
+    pub url: Option<Option<String>>,
     pub visibility: Option<i32>,
     pub modified: i64,
 }
@@ -308,7 +308,7 @@ impl From<JsonUpdateProject> for UpdateProject {
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
-            url: url.map(Into::into),
+            url: url.map(|url| Option::<Url>::from(url).map(Into::into)),
             visibility: visibility.map(|v| Visibility::from(v) as i32),
             modified: Utc::now().timestamp(),
         }

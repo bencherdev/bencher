@@ -124,7 +124,7 @@ const LogoutButton = (_props) => {
 
 const RowHeader = (props: { datum: any; row: any }) => {
 	if (props.row?.kind === Row.DATE_TIME) {
-		return date_time_fmt(props.datum[props.row.key]);
+		return date_time_fmt(props.datum[props.row?.key]);
 	}
 	const header = concat_values(
 		props.datum,

@@ -38,7 +38,7 @@ pub struct ProjMetricKindsParams {
     pub project: ResourceId,
 }
 
-pub type ProjMetricKindsQuery = JsonPagination<ProjMetricKindsSort, ProjMetricKindsQueryParams>;
+pub type ProjMetricKindsPagination = JsonPagination<ProjMetricKindsSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -48,7 +48,7 @@ pub enum ProjMetricKindsSort {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjMetricKindsQueryParams {
+pub struct ProjMetricKindsQuery {
     pub name: Option<NonEmpty>,
 }
 
@@ -61,6 +61,7 @@ pub struct ProjMetricKindsQueryParams {
 pub async fn proj_metric_kinds_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjMetricKindsParams>,
+    _pagination_params: Query<ProjMetricKindsPagination>,
     _query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -74,6 +75,7 @@ pub async fn proj_metric_kinds_options(
 pub async fn proj_metric_kinds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjMetricKindsParams>,
+    pagination_params: Query<ProjMetricKindsPagination>,
     query_params: Query<ProjMetricKindsQuery>,
 ) -> Result<ResponseOk<JsonMetricKinds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -83,6 +85,7 @@ pub async fn proj_metric_kinds_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
+        pagination_params.into_inner(),
         query_params.into_inner(),
         endpoint,
     )
@@ -100,6 +103,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjMetricKindsParams,
+    pagination_params: ProjMetricKindsPagination,
     query_params: ProjMetricKindsQuery,
     endpoint: Endpoint,
 ) -> Result<JsonMetricKinds, ApiError> {
@@ -112,20 +116,20 @@ async fn get_ls_inner(
         .filter(schema::metric_kind::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = query_params.query.name.as_ref() {
+    if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::metric_kind::name.eq(name.as_ref()));
     }
 
-    query = match query_params.order() {
-        ProjMetricKindsSort::Name => match query_params.direction {
+    query = match pagination_params.order() {
+        ProjMetricKindsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::metric_kind::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::metric_kind::name.desc()),
         },
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryMetricKind>(conn)
         .map_err(api_error!())?
         .into_iter()

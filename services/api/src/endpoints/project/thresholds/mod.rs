@@ -43,7 +43,7 @@ pub struct ProjThresholdsParams {
     pub project: ResourceId,
 }
 
-pub type ProjThresholdsQuery = JsonPagination<ProjThresholdsSort, ()>;
+pub type ProjThresholdsPagination = JsonPagination<ProjThresholdsSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -61,7 +61,7 @@ pub enum ProjThresholdsSort {
 pub async fn proj_thresholds_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjThresholdsParams>,
-    _query_params: Query<ProjThresholdsQuery>,
+    _pagination_params: Query<ProjThresholdsPagination>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -74,7 +74,7 @@ pub async fn proj_thresholds_options(
 pub async fn proj_thresholds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjThresholdsParams>,
-    query_params: Query<ProjThresholdsQuery>,
+    pagination_params: Query<ProjThresholdsPagination>,
 ) -> Result<ResponseOk<JsonThresholds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(THRESHOLD_RESOURCE, Method::GetLs);
@@ -83,7 +83,7 @@ pub async fn proj_thresholds_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
-        query_params.into_inner(),
+        pagination_params.into_inner(),
         endpoint,
     )
     .await
@@ -100,7 +100,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjThresholdsParams,
-    query_params: ProjThresholdsQuery,
+    pagination_params: ProjThresholdsPagination,
     endpoint: Endpoint,
 ) -> Result<JsonThresholds, ApiError> {
     let conn = &mut *context.conn().await;
@@ -112,16 +112,16 @@ async fn get_ls_inner(
         .filter(schema::threshold::project_id.eq(query_project.id))
         .into_boxed();
 
-    query = match query_params.order() {
-        ProjThresholdsSort::Created => match query_params.direction {
+    query = match pagination_params.order() {
+        ProjThresholdsSort::Created => match pagination_params.direction {
             Some(JsonDirection::Asc) => query.order(schema::threshold::created.asc()),
             Some(JsonDirection::Desc) | None => query.order(schema::threshold::created.desc()),
         },
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryThreshold>(conn)
         .map_err(api_error!())?
         .into_iter()

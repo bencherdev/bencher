@@ -40,7 +40,7 @@ pub struct OrgMembersParams {
     pub organization: ResourceId,
 }
 
-pub type OrgMembersQuery = JsonPagination<OrgMembersSort, OrgMembersQueryParams>;
+pub type OrgMembersPagination = JsonPagination<OrgMembersSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -50,7 +50,7 @@ pub enum OrgMembersSort {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OrgMembersQueryParams {
+pub struct OrgMembersQuery {
     pub name: Option<UserName>,
 }
 
@@ -63,6 +63,7 @@ pub struct OrgMembersQueryParams {
 pub async fn org_members_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgMembersParams>,
+    _pagination_params: Query<OrgMembersPagination>,
     _query_params: Query<OrgMembersQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -76,6 +77,7 @@ pub async fn org_members_options(
 pub async fn org_members_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgMembersParams>,
+    pagination_params: Query<OrgMembersPagination>,
     query_params: Query<OrgMembersQuery>,
 ) -> Result<ResponseOk<JsonMembers>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -85,6 +87,7 @@ pub async fn org_members_get(
         rqctx.context(),
         &auth_user,
         path_params.into_inner(),
+        pagination_params.into_inner(),
         query_params.into_inner(),
         endpoint,
     )
@@ -98,6 +101,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: &AuthUser,
     path_params: OrgMembersParams,
+    pagination_params: OrgMembersPagination,
     query_params: OrgMembersQuery,
     endpoint: Endpoint,
 ) -> Result<JsonMembers, ApiError> {
@@ -128,12 +132,12 @@ async fn get_ls_inner(
         ))
         .into_boxed();
 
-    if let Some(name) = query_params.query.name.as_ref() {
+    if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::user::name.eq(name.as_ref()));
     }
 
-    query = match query_params.order() {
-        OrgMembersSort::Name => match query_params.direction {
+    query = match pagination_params.order() {
+        OrgMembersSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => {
                 query.order((schema::user::name.asc(), schema::user::slug.asc()))
             },
@@ -144,8 +148,8 @@ async fn get_ls_inner(
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryMember>(conn)
         .map_err(api_error!())?
         .into_iter()

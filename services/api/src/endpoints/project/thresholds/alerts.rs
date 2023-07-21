@@ -31,7 +31,7 @@ pub struct ProjAlertsParams {
     pub project: ResourceId,
 }
 
-pub type ProjAlertsQuery = JsonPagination<ProjAlertsSort, ()>;
+pub type ProjAlertsPagination = JsonPagination<ProjAlertsSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -49,7 +49,7 @@ pub enum ProjAlertsSort {
 pub async fn proj_alerts_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjAlertsParams>,
-    _query_params: Query<ProjAlertsQuery>,
+    _pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
 }
@@ -62,7 +62,7 @@ pub async fn proj_alerts_options(
 pub async fn proj_alerts_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjAlertsParams>,
-    query_params: Query<ProjAlertsQuery>,
+    pagination_params: Query<ProjAlertsPagination>,
 ) -> Result<ResponseOk<JsonAlerts>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
     let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
@@ -71,7 +71,7 @@ pub async fn proj_alerts_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
-        query_params.into_inner(),
+        pagination_params.into_inner(),
         endpoint,
     )
     .await
@@ -88,7 +88,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjAlertsParams,
-    query_params: ProjAlertsQuery,
+    pagination_params: ProjAlertsPagination,
     endpoint: Endpoint,
 ) -> Result<JsonAlerts, ApiError> {
     let conn = &mut *context.conn().await;
@@ -115,8 +115,8 @@ async fn get_ls_inner(
         ))
         .into_boxed();
 
-    query = match query_params.order() {
-        ProjAlertsSort::Created => match query_params.direction {
+    query = match pagination_params.order() {
+        ProjAlertsSort::Created => match pagination_params.direction {
             Some(JsonDirection::Asc) => query.order((
                 schema::report::start_time.asc(),
                 schema::perf::iteration.asc(),
@@ -129,8 +129,8 @@ async fn get_ls_inner(
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryAlert>(conn)
         .map_err(api_error!())?
         .into_iter()

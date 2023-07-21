@@ -41,7 +41,7 @@ pub struct ProjBenchmarksParams {
     pub project: ResourceId,
 }
 
-pub type ProjBenchmarksQuery = JsonPagination<ProjBenchmarksSort, ProjBenchmarksQueryParams>;
+pub type ProjBenchmarksPagination = JsonPagination<ProjBenchmarksSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -51,7 +51,7 @@ pub enum ProjBenchmarksSort {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjBenchmarksQueryParams {
+pub struct ProjBenchmarksQuery {
     pub name: Option<BenchmarkName>,
 }
 
@@ -64,6 +64,7 @@ pub struct ProjBenchmarksQueryParams {
 pub async fn proj_benchmarks_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjBenchmarksParams>,
+    _pagination_params: Query<ProjBenchmarksPagination>,
     _query_params: Query<ProjBenchmarksQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -77,6 +78,7 @@ pub async fn proj_benchmarks_options(
 pub async fn proj_benchmarks_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjBenchmarksParams>,
+    pagination_params: Query<ProjBenchmarksPagination>,
     query_params: Query<ProjBenchmarksQuery>,
 ) -> Result<ResponseOk<JsonBenchmarks>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -86,6 +88,7 @@ pub async fn proj_benchmarks_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
+        pagination_params.into_inner(),
         query_params.into_inner(),
         endpoint,
     )
@@ -103,6 +106,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjBenchmarksParams,
+    pagination_params: ProjBenchmarksPagination,
     query_params: ProjBenchmarksQuery,
     endpoint: Endpoint,
 ) -> Result<JsonBenchmarks, ApiError> {
@@ -115,20 +119,20 @@ async fn get_ls_inner(
         .filter(schema::benchmark::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = query_params.query.name.as_ref() {
+    if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::benchmark::name.eq(name.as_ref()));
     }
 
-    query = match query_params.order() {
-        ProjBenchmarksSort::Name => match query_params.direction {
+    query = match pagination_params.order() {
+        ProjBenchmarksSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::benchmark::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::benchmark::name.desc()),
         },
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryBenchmark>(conn)
         .map_err(api_error!())?
         .into_iter()

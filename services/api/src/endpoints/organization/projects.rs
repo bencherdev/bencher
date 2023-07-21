@@ -46,7 +46,7 @@ pub struct OrgProjectsParams {
     pub organization: ResourceId,
 }
 
-pub type OrgProjectsQuery = JsonPagination<OrgProjectsSort, OrgProjectsQueryParams>;
+pub type OrgProjectsPagination = JsonPagination<OrgProjectsSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -56,7 +56,7 @@ pub enum OrgProjectsSort {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct OrgProjectsQueryParams {
+pub struct OrgProjectsQuery {
     pub name: Option<NonEmpty>,
 }
 
@@ -69,6 +69,7 @@ pub struct OrgProjectsQueryParams {
 pub async fn org_projects_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<OrgProjectsParams>,
+    _pagination_params: Query<OrgProjectsPagination>,
     _query_params: Query<OrgProjectsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -82,6 +83,7 @@ pub async fn org_projects_options(
 pub async fn org_projects_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgProjectsParams>,
+    pagination_params: Query<OrgProjectsPagination>,
     query_params: Query<OrgProjectsQuery>,
 ) -> Result<ResponseOk<JsonProjects>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
@@ -90,6 +92,7 @@ pub async fn org_projects_get(
     let json = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
+        pagination_params.into_inner(),
         query_params.into_inner(),
         &auth_user,
         endpoint,
@@ -103,6 +106,7 @@ pub async fn org_projects_get(
 async fn get_ls_inner(
     context: &ApiContext,
     path_params: OrgProjectsParams,
+    pagination_params: OrgProjectsPagination,
     query_params: OrgProjectsQuery,
     auth_user: &AuthUser,
     endpoint: Endpoint,
@@ -121,20 +125,20 @@ async fn get_ls_inner(
         .filter(schema::project::organization_id.eq(query_organization.id))
         .into_boxed();
 
-    if let Some(name) = query_params.query.name.as_ref() {
+    if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::project::name.eq(name.as_ref()));
     }
 
-    query = match query_params.order() {
-        OrgProjectsSort::Name => match query_params.direction {
+    query = match pagination_params.order() {
+        OrgProjectsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::project::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::project::name.desc()),
         },
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryProject>(conn)
         .map_err(api_error!())?
         .into_iter()

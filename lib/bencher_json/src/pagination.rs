@@ -2,18 +2,17 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+const DEFAULT_PER_PAGE: u8 = 8;
+
+// TODO allow flattened, nested query params once possible
+// https://github.com/oxidecomputer/dropshot/issues/721#issuecomment-1641027867
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonPagination<S, Q> {
+pub struct JsonPagination<S> {
     pub sort: Option<S>,
     pub direction: Option<JsonDirection>,
     pub per_page: Option<u8>,
     pub page: Option<u32>,
-
-    #[serde(flatten)]
-    // WARNING: DO NOT USE INTEGERS IN THE NESTED QUERY STRUCT
-    // https://github.com/oxidecomputer/dropshot/issues/721
-    pub query: Q,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -24,7 +23,7 @@ pub enum JsonDirection {
     Desc,
 }
 
-impl<S, Q> JsonPagination<S, Q> {
+impl<S> JsonPagination<S> {
     pub fn order(&self) -> S
     where
         S: Clone + Copy + Default,
@@ -44,6 +43,6 @@ impl<S, Q> JsonPagination<S, Q> {
     }
 
     fn per_page(&self) -> u8 {
-        self.per_page.unwrap_or(8)
+        self.per_page.unwrap_or(DEFAULT_PER_PAGE)
     }
 }

@@ -127,9 +127,9 @@ pub struct CliProjectUpdate {
     #[clap(long)]
     pub slug: Option<Slug>,
 
-    /// Project URL
+    /// Project URL (null to remove)
     #[clap(long)]
-    pub url: Option<Url>,
+    pub url: Option<Option<Url>>,
 
     /// Project visibility (default public)
     #[clap(long)]

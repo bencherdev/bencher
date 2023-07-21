@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::JsonUpdateProject;
+use bencher_client::types::{JsonEmpty, JsonNullableForUrl, JsonUpdateProject};
 use bencher_json::{JsonProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
@@ -19,7 +19,7 @@ pub struct Update {
     pub project: ResourceId,
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub url: Option<Url>,
+    pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
     pub backend: Backend,
 }
@@ -61,7 +61,10 @@ impl From<Update> for JsonUpdateProject {
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
-            url: url.map(Into::into),
+            url: url.map(|url| match url {
+                Some(url) => JsonNullableForUrl::Url(url.into()),
+                None => JsonNullableForUrl::JsonEmpty(JsonEmpty(serde_json::Map::default())),
+            }),
             visibility: visibility.map(Into::into),
         }
     }

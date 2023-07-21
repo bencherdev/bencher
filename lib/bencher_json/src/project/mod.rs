@@ -7,6 +7,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::JsonNullable;
+
 pub mod alert;
 pub mod benchmark;
 pub mod boundary;
@@ -57,7 +59,7 @@ impl fmt::Display for JsonProject {
 pub struct JsonUpdateProject {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub url: Option<Url>,
+    pub url: Option<JsonNullable<Url>>,
     pub visibility: Option<JsonVisibility>,
 }
 

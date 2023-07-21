@@ -38,7 +38,7 @@ pub struct ProjTestbedsParams {
     pub project: ResourceId,
 }
 
-pub type ProjTestbedsQuery = JsonPagination<ProjTestbedsSort, ProjTestbedsQueryParams>;
+pub type ProjTestbedsPagination = JsonPagination<ProjTestbedsSort>;
 
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -48,7 +48,7 @@ pub enum ProjTestbedsSort {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjTestbedsQueryParams {
+pub struct ProjTestbedsQuery {
     pub name: Option<NonEmpty>,
 }
 
@@ -61,6 +61,7 @@ pub struct ProjTestbedsQueryParams {
 pub async fn proj_testbeds_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<ProjTestbedsParams>,
+    _pagination_params: Query<ProjTestbedsPagination>,
     _query_params: Query<ProjTestbedsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(get_cors::<ApiContext>())
@@ -74,6 +75,7 @@ pub async fn proj_testbeds_options(
 pub async fn proj_testbeds_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<ProjTestbedsParams>,
+    pagination_params: Query<ProjTestbedsPagination>,
     query_params: Query<ProjTestbedsQuery>,
 ) -> Result<ResponseOk<JsonTestbeds>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await.ok();
@@ -83,6 +85,7 @@ pub async fn proj_testbeds_get(
         rqctx.context(),
         auth_user.as_ref(),
         path_params.into_inner(),
+        pagination_params.into_inner(),
         query_params.into_inner(),
         endpoint,
     )
@@ -100,6 +103,7 @@ async fn get_ls_inner(
     context: &ApiContext,
     auth_user: Option<&AuthUser>,
     path_params: ProjTestbedsParams,
+    pagination_params: ProjTestbedsPagination,
     query_params: ProjTestbedsQuery,
     endpoint: Endpoint,
 ) -> Result<JsonTestbeds, ApiError> {
@@ -112,20 +116,20 @@ async fn get_ls_inner(
         .filter(schema::testbed::project_id.eq(&query_project.id))
         .into_boxed();
 
-    if let Some(name) = query_params.query.name.as_ref() {
+    if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::testbed::name.eq(name.as_ref()));
     }
 
-    query = match query_params.order() {
-        ProjTestbedsSort::Name => match query_params.direction {
+    query = match pagination_params.order() {
+        ProjTestbedsSort::Name => match pagination_params.direction {
             Some(JsonDirection::Asc) | None => query.order(schema::testbed::name.asc()),
             Some(JsonDirection::Desc) => query.order(schema::testbed::name.desc()),
         },
     };
 
     Ok(query
-        .offset(query_params.offset())
-        .limit(query_params.limit())
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
         .load::<QueryTestbed>(conn)
         .map_err(api_error!())?
         .into_iter()
