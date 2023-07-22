@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonEmpty, JsonNullableForUrl, JsonUpdateProject};
-use bencher_json::{JsonProject, NonEmpty, ResourceId, Slug, Url};
+use bencher_client::types::{JsonEmpty, JsonUpdateProject};
+use bencher_json::{JsonMaybe, JsonProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
     bencher::{
@@ -58,14 +58,15 @@ impl From<Update> for JsonUpdateProject {
             visibility,
             ..
         } = create;
+        // Self {
+        //     name: name.map(Into::into),
+        //     slug: slug.map(Into::into),
+        //     url: None,
+        //     visibility: visibility.map(Into::into),
+        // }
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
-            url: url.map(|url| match url {
-                Some(url) => JsonNullableForUrl::Url(url.into()),
-                None => JsonNullableForUrl::JsonEmpty(JsonEmpty(serde_json::Map::default())),
-            }),
-            visibility: visibility.map(Into::into),
+            subtype_0: None,
+            subtype_1: None,
         }
     }
 }
@@ -86,10 +87,12 @@ impl SubCmd for Update {
                             .send()
                             .await
                     } else {
+                        let body = JsonUpdateProject::from(self.clone());
+                        println!("{:?}", serde_json::to_string_pretty(&body).unwrap());
                         client
                             .project_patch()
                             .project(self.project.clone())
-                            .body(self.clone())
+                            .body(body)
                             .send()
                             .await
                     }

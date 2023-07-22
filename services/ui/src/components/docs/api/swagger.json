@@ -6695,16 +6695,6 @@
           "name"
         ]
       },
-      "JsonNullable_for_Url": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/Url"
-          },
-          {
-            "$ref": "#/components/schemas/JsonEmpty"
-          }
-        ]
-      },
       "JsonOrganization": {
         "type": "object",
         "properties": {
@@ -6745,6 +6735,81 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/JsonOrganization"
+        }
+      },
+      "JsonPatchProject": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          },
+          "url": {
+            "type": "string",
+            "enum": [
+              null
+            ]
+          },
+          "visibility": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVisibility"
+              }
+            ]
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "JsonPatchProjectUrl": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          },
+          "url": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
+          "visibility": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVisibility"
+              }
+            ]
+          }
         }
       },
       "JsonPerf": {
@@ -7683,41 +7748,14 @@
         }
       },
       "JsonUpdateProject": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
-              }
-            ]
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPatchProjectUrl"
           },
-          "slug": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Slug"
-              }
-            ]
-          },
-          "url": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonNullable_for_Url"
-              }
-            ]
-          },
-          "visibility": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonVisibility"
-              }
-            ]
+          {
+            "$ref": "#/components/schemas/JsonPatchProject"
           }
-        }
+        ]
       },
       "JsonUpdateTestbed": {
         "type": "object",

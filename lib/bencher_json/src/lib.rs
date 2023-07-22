@@ -10,7 +10,7 @@ pub use bencher_valid::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub mod nullable;
+pub mod maybe;
 pub mod organization;
 pub mod pagination;
 pub mod project;
@@ -21,7 +21,7 @@ pub mod user;
 #[cfg(feature = "plus")]
 pub use organization::{entitlements::JsonEntitlements, metered::JsonPlan};
 
-pub use nullable::JsonNullable;
+pub use maybe::JsonMaybe;
 pub use organization::{
     member::{JsonMember, JsonMembers},
     JsonNewOrganization, JsonOrganization, JsonOrganizations,

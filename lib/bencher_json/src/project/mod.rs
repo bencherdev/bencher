@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::JsonNullable;
+use crate::JsonMaybe;
 
 pub mod alert;
 pub mod benchmark;
@@ -56,10 +56,27 @@ impl fmt::Display for JsonProject {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateProject {
+#[serde(untagged)]
+pub enum JsonUpdateProject {
+    Patch(JsonPatchProject),
+    Url(JsonPatchProjectUrl),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPatchProject {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub url: Option<JsonNullable<Url>>,
+    pub url: (),
+    pub visibility: Option<JsonVisibility>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPatchProjectUrl {
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+    pub url: Option<Url>,
     pub visibility: Option<JsonVisibility>,
 }
 

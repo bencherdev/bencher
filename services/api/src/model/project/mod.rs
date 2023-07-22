@@ -299,17 +299,24 @@ pub struct UpdateProject {
 
 impl From<JsonUpdateProject> for UpdateProject {
     fn from(update: JsonUpdateProject) -> Self {
-        let JsonUpdateProject {
-            name,
-            slug,
-            url,
-            visibility,
-        } = update;
+        // let JsonUpdateProject {
+        //     name,
+        //     slug,
+        //     url,
+        //     visibility,
+        // } = update;
+        // Self {
+        //     name: name.map(Into::into),
+        //     slug: slug.map(Into::into),
+        //     url: None,
+        //     visibility: visibility.map(|v| Visibility::from(v) as i32),
+        //     modified: Utc::now().timestamp(),
+        // }
         Self {
-            name: name.map(Into::into),
-            slug: slug.map(Into::into),
-            url: url.map(|url| Option::<Url>::from(url).map(Into::into)),
-            visibility: visibility.map(|v| Visibility::from(v) as i32),
+            name: None,
+            slug: None,
+            url: None,
+            visibility: None,
             modified: Utc::now().timestamp(),
         }
     }
