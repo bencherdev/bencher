@@ -57,7 +57,7 @@ impl fmt::Display for JsonProject {
 #[serde(untagged)]
 pub enum JsonUpdateProject {
     Patch(JsonProjectPatch),
-    UrlNull(JsonProjectPatchUrlNull),
+    Null(JsonProjectPatchNull),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -71,7 +71,7 @@ pub struct JsonProjectPatch {
 
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonProjectPatchUrlNull {
+pub struct JsonProjectPatchNull {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
     pub url: (),
@@ -97,43 +97,6 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
             Url,
             Visibility,
         }
-
-        // // This part could also be generated independently by:
-        // //
-        // //    #[derive(Deserialize)]
-        // //    #[serde(field_identifier, rename_all = "lowercase")]
-        // //    enum Field { Secs, Nanos }
-        // impl<'de> Deserialize<'de> for Field {
-        //     fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-        //     where
-        //         D: Deserializer<'de>,
-        //     {
-        //         struct FieldVisitor;
-
-        //         impl<'de> Visitor<'de> for FieldVisitor {
-        //             type Value = Field;
-
-        //             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        //                 formatter.write_str("`name`, `slug`, `url`, or `visibility`")
-        //             }
-
-        //             fn visit_str<E>(self, value: &str) -> Result<Field, E>
-        //             where
-        //                 E: serde::de::Error,
-        //             {
-        //                 match value {
-        //                     NAME_FIELD => Ok(Field::Name),
-        //                     SLUG_FIELD => Ok(Field::Slug),
-        //                     URL_FIELD => Ok(Field::Url),
-        //                     VISIBILITY_FIELD => Ok(Field::Visibility),
-        //                     _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-        //                 }
-        //             }
-        //         }
-
-        //         deserializer.deserialize_identifier(FieldVisitor)
-        //     }
-        // }
 
         struct UpdateProjectVisitor;
 
@@ -189,7 +152,7 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
                         url: Some(url),
                         visibility,
                     }),
-                    Some(None) => Self::Value::UrlNull(JsonProjectPatchUrlNull {
+                    Some(None) => Self::Value::Null(JsonProjectPatchNull {
                         name,
                         slug,
                         url: (),

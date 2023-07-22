@@ -7032,7 +7032,7 @@
           }
         }
       },
-      "JsonProjectPatchUrlNull": {
+      "JsonProjectPatchNull": {
         "type": "object",
         "properties": {
           "name": {
@@ -7753,7 +7753,7 @@
             "$ref": "#/components/schemas/JsonProjectPatch"
           },
           {
-            "$ref": "#/components/schemas/JsonProjectPatchUrlNull"
+            "$ref": "#/components/schemas/JsonProjectPatchNull"
           }
         ]
       },
