@@ -446,6 +446,7 @@ const PerfPanel = (props) => {
 
 	const handleMetricKind = (metric_kind: string) => {
 		setSearchParams({
+			[REPORT_PARAM]: null,
 			[METRIC_KIND_PARAM]: validate_string(metric_kind, is_valid_slug)
 				? metric_kind
 				: null,
