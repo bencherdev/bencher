@@ -7014,6 +7014,14 @@
               }
             ]
           },
+          "url": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
           "visibility": {
             "nullable": true,
             "allOf": [
@@ -7024,7 +7032,7 @@
           }
         }
       },
-      "JsonProjectPatchUrl": {
+      "JsonProjectPatchUrlNull": {
         "type": "object",
         "properties": {
           "name": {
@@ -7044,11 +7052,9 @@
             ]
           },
           "url": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Url"
-              }
+            "type": "string",
+            "enum": [
+              null
             ]
           },
           "visibility": {
@@ -7059,7 +7065,10 @@
               }
             ]
           }
-        }
+        },
+        "required": [
+          "url"
+        ]
       },
       "JsonProjects": {
         "type": "array",
@@ -7744,7 +7753,7 @@
             "$ref": "#/components/schemas/JsonProjectPatch"
           },
           {
-            "$ref": "#/components/schemas/JsonProjectPatchUrl"
+            "$ref": "#/components/schemas/JsonProjectPatchUrlNull"
           }
         ]
       },

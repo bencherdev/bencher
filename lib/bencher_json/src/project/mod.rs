@@ -57,7 +57,7 @@ impl fmt::Display for JsonProject {
 #[serde(untagged)]
 pub enum JsonUpdateProject {
     Patch(JsonProjectPatch),
-    Url(JsonProjectPatchUrl),
+    UrlNull(JsonProjectPatchUrlNull),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -65,17 +65,16 @@ pub enum JsonUpdateProject {
 pub struct JsonProjectPatch {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    #[serde(skip)]
-    pub url: (),
+    pub url: Option<Url>,
     pub visibility: Option<JsonVisibility>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonProjectPatchUrl {
+pub struct JsonProjectPatchUrlNull {
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
-    pub url: Option<Url>,
+    pub url: (),
     pub visibility: Option<JsonVisibility>,
 }
 
@@ -183,20 +182,25 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
                     }
                 }
 
-                Ok(if let Some(url) = url {
-                    Self::Value::Url(JsonProjectPatchUrl {
+                Ok(match url {
+                    Some(Some(url)) => Self::Value::Patch(JsonProjectPatch {
                         name,
                         slug,
-                        url,
+                        url: Some(url),
                         visibility,
-                    })
-                } else {
-                    Self::Value::Patch(JsonProjectPatch {
+                    }),
+                    Some(None) => Self::Value::UrlNull(JsonProjectPatchUrlNull {
                         name,
                         slug,
                         url: (),
                         visibility,
-                    })
+                    }),
+                    None => Self::Value::Patch(JsonProjectPatch {
+                        name,
+                        slug,
+                        url: None,
+                        visibility,
+                    }),
                 })
             }
         }

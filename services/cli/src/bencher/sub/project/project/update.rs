@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_client::types::{JsonEmpty, JsonProjectPatch, JsonProjectPatchUrl, JsonUpdateProject};
+use bencher_client::types::{
+    JsonEmpty, JsonProjectPatch, JsonProjectPatchUrlNull, JsonUpdateProject,
+};
 use bencher_json::{JsonMaybe, JsonProject, NonEmpty, ResourceId, Slug, Url};
 
 use crate::{
@@ -59,12 +61,21 @@ impl From<Update> for JsonUpdateProject {
             ..
         } = create;
         match url {
-            Some(url) => Self {
-                subtype_0: None,
-                subtype_1: Some(JsonProjectPatchUrl {
+            Some(Some(url)) => Self {
+                subtype_0: Some(JsonProjectPatch {
                     name: name.map(Into::into),
                     slug: slug.map(Into::into),
-                    url: url.map(Into::into),
+                    url: Some(url.into()),
+                    visibility: visibility.map(Into::into),
+                }),
+                subtype_1: None,
+            },
+            Some(None) => Self {
+                subtype_0: None,
+                subtype_1: Some(JsonProjectPatchUrlNull {
+                    name: name.map(Into::into),
+                    slug: slug.map(Into::into),
+                    url: (),
                     visibility: visibility.map(Into::into),
                 }),
             },
@@ -72,6 +83,7 @@ impl From<Update> for JsonUpdateProject {
                 subtype_0: Some(JsonProjectPatch {
                     name: name.map(Into::into),
                     slug: slug.map(Into::into),
+                    url: None,
                     visibility: visibility.map(Into::into),
                 }),
                 subtype_1: None,

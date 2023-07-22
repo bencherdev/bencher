@@ -5,7 +5,7 @@ use bencher_billing::SubscriptionId;
 #[cfg(feature = "plus")]
 use bencher_json::Jwt;
 use bencher_json::{
-    project::{JsonProjectPatch, JsonProjectPatchUrl, JsonUpdateProject},
+    project::{JsonProjectPatch, JsonProjectPatchUrlNull, JsonUpdateProject},
     JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
@@ -305,19 +305,19 @@ impl From<JsonUpdateProject> for UpdateProject {
                 let JsonProjectPatch {
                     name,
                     slug,
-                    url: _,
-                    visibility,
-                } = patch;
-                (name, slug, None, visibility)
-            },
-            JsonUpdateProject::Url(patch_url) => {
-                let JsonProjectPatchUrl {
-                    name,
-                    slug,
                     url,
                     visibility,
+                } = patch;
+                (name, slug, url.map(Some), visibility)
+            },
+            JsonUpdateProject::UrlNull(patch_url) => {
+                let JsonProjectPatchUrlNull {
+                    name,
+                    slug,
+                    url: _,
+                    visibility,
                 } = patch_url;
-                (name, slug, Some(url), visibility)
+                (name, slug, Some(None), visibility)
             },
         };
         Self {
