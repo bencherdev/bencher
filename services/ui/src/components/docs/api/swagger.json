@@ -6737,81 +6737,6 @@
           "$ref": "#/components/schemas/JsonOrganization"
         }
       },
-      "JsonPatchProject": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
-              }
-            ]
-          },
-          "slug": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Slug"
-              }
-            ]
-          },
-          "url": {
-            "type": "string",
-            "enum": [
-              null
-            ]
-          },
-          "visibility": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonVisibility"
-              }
-            ]
-          }
-        },
-        "required": [
-          "url"
-        ]
-      },
-      "JsonPatchProjectUrl": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NonEmpty"
-              }
-            ]
-          },
-          "slug": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Slug"
-              }
-            ]
-          },
-          "url": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Url"
-              }
-            ]
-          },
-          "visibility": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonVisibility"
-              }
-            ]
-          }
-        }
-      },
       "JsonPerf": {
         "type": "object",
         "properties": {
@@ -7069,6 +6994,72 @@
           "uuid",
           "visibility"
         ]
+      },
+      "JsonProjectPatch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          },
+          "visibility": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVisibility"
+              }
+            ]
+          }
+        }
+      },
+      "JsonProjectPatchUrl": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          },
+          "slug": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Slug"
+              }
+            ]
+          },
+          "url": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
+          "visibility": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVisibility"
+              }
+            ]
+          }
+        }
       },
       "JsonProjects": {
         "type": "array",
@@ -7750,10 +7741,10 @@
       "JsonUpdateProject": {
         "anyOf": [
           {
-            "$ref": "#/components/schemas/JsonPatchProjectUrl"
+            "$ref": "#/components/schemas/JsonProjectPatch"
           },
           {
-            "$ref": "#/components/schemas/JsonPatchProject"
+            "$ref": "#/components/schemas/JsonProjectPatchUrl"
           }
         ]
       },

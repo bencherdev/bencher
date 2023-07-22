@@ -5,7 +5,8 @@ use bencher_billing::SubscriptionId;
 #[cfg(feature = "plus")]
 use bencher_json::Jwt;
 use bencher_json::{
-    project::JsonUpdateProject, JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
+    project::{JsonProjectPatch, JsonProjectPatchUrl, JsonUpdateProject},
+    JsonNewProject, JsonProject, NonEmpty, ResourceId, Slug, Url,
 };
 use bencher_rbac::{Organization, Project};
 use chrono::Utc;
@@ -299,24 +300,31 @@ pub struct UpdateProject {
 
 impl From<JsonUpdateProject> for UpdateProject {
     fn from(update: JsonUpdateProject) -> Self {
-        // let JsonUpdateProject {
-        //     name,
-        //     slug,
-        //     url,
-        //     visibility,
-        // } = update;
-        // Self {
-        //     name: name.map(Into::into),
-        //     slug: slug.map(Into::into),
-        //     url: None,
-        //     visibility: visibility.map(|v| Visibility::from(v) as i32),
-        //     modified: Utc::now().timestamp(),
-        // }
+        let (name, slug, url, visibility) = match update {
+            JsonUpdateProject::Patch(patch) => {
+                let JsonProjectPatch {
+                    name,
+                    slug,
+                    url: _,
+                    visibility,
+                } = patch;
+                (name, slug, None, visibility)
+            },
+            JsonUpdateProject::Url(patch_url) => {
+                let JsonProjectPatchUrl {
+                    name,
+                    slug,
+                    url,
+                    visibility,
+                } = patch_url;
+                (name, slug, Some(url), visibility)
+            },
+        };
         Self {
-            name: None,
-            slug: None,
-            url: None,
-            visibility: None,
+            name: name.map(Into::into),
+            slug: slug.map(Into::into),
+            url: url.map(|url| url.map(Into::into)),
+            visibility: visibility.map(|v| Visibility::from(v) as i32),
             modified: Utc::now().timestamp(),
         }
     }
