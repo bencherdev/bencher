@@ -1,5 +1,9 @@
 import FieldKind from "../../../field/kind";
-import { BENCHER_API_URL } from "../../../site/util";
+import {
+	BENCHER_API_URL,
+	ProjectPermission,
+	is_allowed_project,
+} from "../../../site/util";
 import METRIC_KIND_FIELDS from "./fields/metric_kind";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
@@ -112,12 +116,36 @@ const metricKindsConfig = {
 					label: "Metric Kind Name",
 					key: "name",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Name",
+						key: "name",
+						value: "",
+						valid: null,
+						validate: true,
+						config: METRIC_KIND_FIELDS.name,
+					},
 				},
 				{
 					kind: Card.FIELD,
 					label: "Metric Kind Slug",
 					key: "slug",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Slug",
+						key: "slug",
+						value: "",
+						valid: null,
+						validate: true,
+						config: METRIC_KIND_FIELDS.slug,
+					},
+					path: (path_params, data) =>
+						`/console/projects/${path_params.project_slug}/metric-kinds/${data.slug}`,
 				},
 				{
 					kind: Card.FIELD,
@@ -130,6 +158,17 @@ const metricKindsConfig = {
 					label: "Metric Kind Units",
 					key: "units",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Units",
+						key: "units",
+						value: "",
+						valid: null,
+						validate: true,
+						config: METRIC_KIND_FIELDS.units,
+					},
 				},
 			],
 		},

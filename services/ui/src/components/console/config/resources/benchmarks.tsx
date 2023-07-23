@@ -1,5 +1,9 @@
 import FieldKind from "../../../field/kind";
-import { BENCHER_API_URL } from "../../../site/util";
+import {
+	BENCHER_API_URL,
+	ProjectPermission,
+	is_allowed_project,
+} from "../../../site/util";
 import { Button, Card, Display, Operation } from "../types";
 import { addPath, parentPath, viewSlugPath } from "../util";
 import BENCHMARK_FIELDS from "./fields/benchmark";
@@ -98,12 +102,36 @@ const benchmarksConfig = {
 					label: "Benchmark Name",
 					key: "name",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Name",
+						key: "name",
+						value: "",
+						valid: null,
+						validate: true,
+						config: BENCHMARK_FIELDS.name,
+					},
 				},
 				{
 					kind: Card.FIELD,
 					label: "Benchmark Slug",
 					key: "slug",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Slug",
+						key: "slug",
+						value: "",
+						valid: null,
+						validate: true,
+						config: BENCHMARK_FIELDS.slug,
+					},
+					path: (path_params, data) =>
+						`/console/projects/${path_params.project_slug}/benchmarks/${data.slug}`,
 				},
 				{
 					kind: Card.FIELD,

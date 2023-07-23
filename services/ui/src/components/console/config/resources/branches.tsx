@@ -1,7 +1,11 @@
 import BRANCH_FIELDS from "./fields/branch";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
-import { BENCHER_API_URL } from "../../../site/util";
+import {
+	BENCHER_API_URL,
+	ProjectPermission,
+	is_allowed_project,
+} from "../../../site/util";
 import FieldKind from "../../../field/kind";
 
 const branchesConfig = {
@@ -100,12 +104,36 @@ const branchesConfig = {
 					label: "Branch Name",
 					key: "name",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Name",
+						key: "name",
+						value: "",
+						valid: null,
+						validate: true,
+						config: BRANCH_FIELDS.name,
+					},
 				},
 				{
 					kind: Card.FIELD,
 					label: "Branch Slug",
 					key: "slug",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Slug",
+						key: "slug",
+						value: "",
+						valid: null,
+						validate: true,
+						config: BRANCH_FIELDS.slug,
+					},
+					path: (path_params, data) =>
+						`/console/projects/${path_params.project_slug}/branches/${data.slug}`,
 				},
 				{
 					kind: Card.FIELD,

@@ -1,5 +1,5 @@
 import { validate_string } from "../../../../site/util";
-import { is_valid_non_empty } from "bencher_valid";
+import { is_valid_non_empty, is_valid_slug } from "bencher_valid";
 
 const METRIC_KIND_FIELDS = {
 	name: {
@@ -8,6 +8,13 @@ const METRIC_KIND_FIELDS = {
 		icon: "fas fa-shapes",
 		help: "Must be non-empty string",
 		validate: (input) => validate_string(input, is_valid_non_empty),
+	},
+	slug: {
+		type: "text",
+		placeholder: "Metric Kind Slug",
+		icon: "fas fa-exclamation-triangle",
+		help: "Must be a valid slug",
+		validate: (input) => validate_string(input, is_valid_slug),
 	},
 	units: {
 		type: "text",

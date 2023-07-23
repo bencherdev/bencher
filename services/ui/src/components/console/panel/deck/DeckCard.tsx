@@ -28,6 +28,7 @@ const DeckCard = (props) => {
 					value={nested_value(props.data(), props.card?.keys)}
 					path_params={props.path_params}
 					url={props.url}
+					refresh={props.refresh}
 					handleRefresh={props.handleRefresh}
 				/>
 			</Match>
