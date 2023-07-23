@@ -587,7 +587,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "bencher_adapter"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "bencher_json",
  "criterion",
@@ -604,7 +604,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_api"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "async-compression",
  "aws-credential-types",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_billing"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "async-stripe",
  "bencher_json",
@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_cli"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "assert_cmd",
  "async-trait",
@@ -689,7 +689,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_client"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -706,7 +706,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_json"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "bencher_valid",
  "chrono",
@@ -728,7 +728,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_license"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "bencher_plus",
  "bencher_valid",
@@ -744,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_plot"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "bencher_json",
  "chrono",
@@ -759,7 +759,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_plus"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "once_cell",
  "url",
@@ -767,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_rbac"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "bencher_json",
  "literally",
@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "bencher_valid"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "base64 0.21.2",
  "chrono",
@@ -5856,7 +5856,7 @@ checksum = "4d25c75bf9ea12c4040a97f829154768bbbce366287e2dc044af160cd79a13fd"
 
 [[package]]
 name = "xtask"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "anyhow",
  "camino",
