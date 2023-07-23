@@ -175,13 +175,13 @@ const UpdateCard = (props) => {
 					data[key] = value?.selected;
 					break;
 				case FieldKind.NUMBER:
-					if (form()?.[key]?.nullable && !value) {
+					if (form()?.[key]?.nullable && !value && value !== null) {
 						continue;
 					}
 					data[key] = Number(value);
 					break;
 				default:
-					if (form()?.[key]?.nullable && !value) {
+					if (form()?.[key]?.nullable && !value && value !== null) {
 						continue;
 					}
 					if (typeof value === "string") {

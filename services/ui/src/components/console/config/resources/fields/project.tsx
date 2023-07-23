@@ -21,7 +21,8 @@ const PROJECT_FIELDS = {
 		placeholder: "https://www.example.com",
 		icon: "fas fa-link",
 		help: "Must be a valid URL",
-		validate: (input) => validate_string(input, is_valid_url),
+		validate: (input) =>
+			validate_string(input, (i) => i.length === 0 || is_valid_url(i)),
 	},
 	visibility: {
 		icon: "fas fa-eye",

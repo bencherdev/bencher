@@ -1,9 +1,7 @@
 import PROJECT_FIELDS from "./fields/project";
 import {
 	BENCHER_API_URL,
-	is_allowed_organization,
 	is_allowed_project,
-	OrganizationPermission,
 	ProjectPermission,
 } from "../../../site/util";
 import { Button, Card, Display, Operation, PerfTab, Row } from "../types";
@@ -181,6 +179,18 @@ const projectsConfig = {
 					label: "Project URL",
 					key: "url",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "URL",
+						key: "url",
+						value: "",
+						valid: null,
+						validate: true,
+						nullable: true,
+						config: PROJECT_FIELDS.url,
+					},
 				},
 				{
 					kind: Card.FIELD,
@@ -188,7 +198,7 @@ const projectsConfig = {
 					key: "visibility",
 					display: Display.SELECT,
 					is_allowed: (path_params) =>
-						is_allowed_organization(path_params, OrganizationPermission.EDIT),
+						is_allowed_project(path_params, ProjectPermission.EDIT),
 					field: {
 						kind: FieldKind.SELECT,
 						key: "visibility",
