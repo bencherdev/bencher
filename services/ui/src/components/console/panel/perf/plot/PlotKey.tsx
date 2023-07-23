@@ -82,6 +82,7 @@ const MinimizedKey = (props) => {
 const MinimizeKeyButton = (props) => {
 	return (
 		<button
+			title="Minimize Key"
 			class="button is-small is-fullwidth is-primary is-inverted"
 			onClick={() => props.handleKey(false)}
 		>
@@ -95,6 +96,7 @@ const MinimizeKeyButton = (props) => {
 const MaximizeKeyButton = (props) => {
 	return (
 		<button
+			title="Expand Key"
 			class="button is-small is-fullwidth is-primary is-inverted"
 			onClick={() => props.handleKey(true)}
 		>
@@ -122,12 +124,17 @@ const KeyResource = (props) => {
 
 const KeyButton = (props) => {
 	const color = d3.schemeTableau10[props.index() % 10];
-
+	const number = props.index() + 1;
 	return (
 		<button
 			// On click toggle visibility of key
 			// move button over to being is-outlined
 			class="button is-small is-fullwidth"
+			title={
+				props.perf_active[props.index()]
+					? `Hide Plot ${number}`
+					: `Show Plot ${number}`
+			}
 			style={
 				props.perf_active[props.index()]
 					? `background-color:${color};`
@@ -135,7 +142,7 @@ const KeyButton = (props) => {
 			}
 			onClick={() => props.handlePerfActive(props.index())}
 		>
-			{props.index() + 1}
+			{number}
 		</button>
 	);
 };

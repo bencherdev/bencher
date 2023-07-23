@@ -110,10 +110,34 @@ const PlotHeader = (props) => {
 				</select>
 			</div>
 			<div class="level-right">
+				<Show when={!props.is_plot_init()} fallback={<></>}>
+					<div class="level-item">
+						<button
+							class="button is-outlined is-fullwidth"
+							title={
+								props.range() === Range.DATE_TIME
+									? "Switch to Version Range"
+									: "Switch to Date Range"
+							}
+							onClick={(e) => {
+								e.preventDefault();
+								switch (props.range()) {
+									case Range.DATE_TIME:
+										props.handleRange(Range.VERSION);
+										break;
+									case Range.VERSION:
+										props.handleRange(Range.DATE_TIME);
+										break;
+								}
+							}}
+						>
+							<span class="icon">{icon()}</span>
+						</button>
+					</div>
+				</Show>
 				<div class="level-item">
 					<nav class="level is-mobile">
-						<div class="level-item has-text-centered">
-							<p class="card-header-title">Start Date</p>
+						<div class="level-item">
 							<input
 								title="Start Date"
 								type="date"
@@ -121,12 +145,10 @@ const PlotHeader = (props) => {
 								onInput={(e) => props.handleStartTime(e.currentTarget?.value)}
 							/>
 						</div>
-					</nav>
-				</div>
-				<div class="level-item">
-					<nav class="level is-mobile">
 						<div class="level-item has-text-centered">
-							<p class="card-header-title">End Date</p>
+							<p>-</p>
+						</div>
+						<div class="level-item">
 							<input
 								title="End Date"
 								type="date"
@@ -136,34 +158,11 @@ const PlotHeader = (props) => {
 						</div>
 					</nav>
 				</div>
-				<div class="level-item">
-					<button
-						class="button is-outlined "
-						title={
-							props.range() === Range.DATE_TIME
-								? "Switch to Version Range"
-								: "Switch to Date Range"
-						}
-						onClick={(e) => {
-							e.preventDefault();
-							switch (props.range()) {
-								case Range.DATE_TIME:
-									props.handleRange(Range.VERSION);
-									break;
-								case Range.VERSION:
-									props.handleRange(Range.DATE_TIME);
-									break;
-							}
-						}}
-					>
-						<span class="icon">{icon()}</span>
-					</button>
-				</div>
 				<Show when={!props.is_plot_init()} fallback={<></>}>
 					<div class="level-item">
 						<button
-							class="button is-outlined "
-							title="Clear Perf Plot"
+							class="button is-outlined is-fullwidth"
+							title="Clear Query"
 							onClick={(e) => {
 								e.preventDefault();
 								props.handleClear(true);

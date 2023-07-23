@@ -550,6 +550,8 @@ const PerfPanel = (props) => {
 					[BRANCHES_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
+					[START_TIME_PARAM]: null,
+					[END_TIME_PARAM]: null,
 				});
 			} else {
 				setSearchParams({ [CLEAR_PARAM]: clear });

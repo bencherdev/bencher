@@ -82,6 +82,7 @@ const PlotTab = (props) => {
 						<>
 							<a
 								class={props.tab() === tab ? "is-active" : ""}
+								title={`View ${toCapitalized(tab)}`}
 								onClick={() => props.handleTab(tab)}
 							>
 								{toCapitalized(tab)}
@@ -152,11 +153,7 @@ const Tab = (props: {
 				</div>
 			</Match>
 			<Match
-				when={
-					props.is_console &&
-					props.getTab().length === 0 &&
-					props.getPage() !== DEFAULT_PAGE
-				}
+				when={props.getTab().length === 0 && props.getPage() !== DEFAULT_PAGE}
 			>
 				<div class="box">
 					<BackButton
@@ -175,6 +172,9 @@ const Tab = (props: {
 							{(result, _index) => (
 								<a
 									class="panel-block"
+									title={`View Report from ${date_time_fmt(
+										report.resource?.start_time,
+									)}`}
 									onClick={(_e) =>
 										// Send the Metric Kind slug instead of the Report UUID
 										props.handleChecked(index(), result.metric_kind?.slug)
@@ -215,6 +215,9 @@ const Tab = (props: {
 					{(dimension, index) => (
 						<a
 							class="panel-block"
+							title={`${dimension.checked ? "Remove" : "Add"} ${
+								dimension.resource?.name
+							}`}
 							onClick={(_e) => props.handleChecked(index())}
 						>
 							<div class="columns is-vcentered is-mobile">
@@ -264,7 +267,11 @@ const AddButton = (props) => {
 	};
 
 	return (
-		<Link class="button is-primary is-fullwidth" href={getHref()}>
+		<Link
+			class="button is-primary is-fullwidth"
+			title={getText()}
+			href={getHref()}
+		>
 			{getText()}
 		</Link>
 	);
@@ -274,6 +281,7 @@ const BackButton = (props) => {
 	return (
 		<button
 			class="button is-primary is-fullwidth"
+			title="Go back to the previous page"
 			onClick={(e) => {
 				e.preventDefault();
 				props.handlePage(props.page() - 1);
