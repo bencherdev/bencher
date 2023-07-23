@@ -8,7 +8,7 @@ const DeckHeader = (props) => {
 	const pathname = createMemo(() => location.pathname);
 
 	const title = createMemo(() =>
-		concat_values(props.data, props.config?.key, props.config?.keys, " | "),
+		concat_values(props.data(), props.config?.key, props.config?.keys, " | "),
 	);
 
 	createEffect(() => {

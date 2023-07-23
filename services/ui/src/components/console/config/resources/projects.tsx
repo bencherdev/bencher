@@ -156,6 +156,19 @@ const projectsConfig = {
 					label: "Project Slug",
 					key: "slug",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Slug",
+						key: "slug",
+						value: "",
+						valid: null,
+						validate: true,
+						config: PROJECT_FIELDS.slug,
+					},
+					path: (_path_params, data) =>
+						`/console/projects/${data?.slug}/settings`,
 				},
 				{
 					kind: Card.FIELD,

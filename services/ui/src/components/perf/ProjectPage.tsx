@@ -5,10 +5,8 @@ import { Operation } from "../console/config/types";
 import PerfPanel from "../console/panel/perf/PerfPanel";
 
 const ProjectPage = (props) => {
-	const params = useParams();
-	const path_params = createMemo(() => params);
-
-	const project_slug = createMemo(() => path_params().project_slug);
+	const path_params = useParams();
+	const project_slug = createMemo(() => path_params.project_slug);
 
 	return (
 		<section class="section">

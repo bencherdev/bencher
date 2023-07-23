@@ -49,7 +49,7 @@ const Poster = (props) => {
 		if (!validate_jwt(props.user?.token)) {
 			return;
 		}
-		const url = props.config?.url?.(props.path_params());
+		const url = props.config?.url?.(props.path_params);
 		return await axios(post_options(url, token, data));
 	};
 

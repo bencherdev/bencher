@@ -23,7 +23,9 @@ const Deck = (props) => {
 									data={props.data}
 									path_params={props.path_params}
 									url={props.url}
+									refresh={props.refresh}
 									handleRefresh={props.handleRefresh}
+									handleLoopback={props.handleLoopback}
 								/>
 							</div>
 						</div>

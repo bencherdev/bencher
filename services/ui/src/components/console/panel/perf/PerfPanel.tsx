@@ -269,7 +269,7 @@ const PerfPanel = (props) => {
 		setRefresh(refresh() + 1);
 	};
 
-	const project_slug = createMemo(() => props.path_params()?.project_slug);
+	const project_slug = createMemo(() => props.path_params?.project_slug);
 	const perf_query_fetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),

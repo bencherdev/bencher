@@ -75,7 +75,7 @@ const TablePanel = (props) => {
 			}
 		}
 		const url = `${props.config?.table?.url(
-			props.path_params(),
+			props.path_params,
 		)}?${search_params.toString()}`;
 		return await axios(get_options(url, fetcher.token))
 			.then((resp) => {

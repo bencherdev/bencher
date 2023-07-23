@@ -46,8 +46,7 @@ const ConsolePage = (props) => {
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
-	const params = useParams();
-	const path_params = createMemo(() => params);
+	const path_params = useParams();
 
 	const fetchProject = async (project_slug: string) => {
 		const EMPTY_OBJECT = {};

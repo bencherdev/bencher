@@ -10,10 +10,12 @@ const DeckCard = (props) => {
 				<FieldCard
 					user={props.user}
 					card={props.card}
-					value={props.data?.[props.card?.key]}
+					value={props.data()?.[props.card?.key]}
 					path_params={props.path_params}
 					url={props.url}
+					refresh={props.refresh}
 					handleRefresh={props.handleRefresh}
+					handleLoopback={props.handleLoopback}
 				/>
 			</Match>
 			<Match when={props.card?.kind === Card.TABLE}>
@@ -23,7 +25,7 @@ const DeckCard = (props) => {
 				<FieldCard
 					user={props.user}
 					card={props.card}
-					value={nested_value(props.data, props.card?.keys)}
+					value={nested_value(props.data(), props.card?.keys)}
 					path_params={props.path_params}
 					url={props.url}
 					handleRefresh={props.handleRefresh}

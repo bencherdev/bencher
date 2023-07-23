@@ -9,7 +9,7 @@ const Radio = (props) => {
 
 	const radioFetcher = createMemo(() => {
 		return {
-			url: props.config?.url(props.path_params(), per_page, page()),
+			url: props.config?.url(props.path_params, per_page, page()),
 			token: props.user?.token,
 		};
 	});

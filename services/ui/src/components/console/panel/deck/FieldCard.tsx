@@ -1,4 +1,5 @@
 import {
+	createEffect,
 	createMemo,
 	createResource,
 	createSignal,
@@ -29,6 +30,7 @@ const FieldCard = (props) => {
 					card={props.card}
 					value={props.value}
 					path_params={props.path_params}
+					refresh={props.refresh}
 					toggleUpdate={toggleUpdate}
 				/>
 			}
@@ -41,14 +43,21 @@ const FieldCard = (props) => {
 				url={props.url}
 				toggleUpdate={toggleUpdate}
 				handleRefresh={props.handleRefresh}
+				handleLoopback={props.handleLoopback}
 			/>
 		</Show>
 	);
 };
 
 const ViewCard = (props) => {
-	const [is_allowed] = createResource(props.path_params, (path_params) =>
-		props.card?.is_allowed?.(path_params),
+	const fetcher = createMemo(() => {
+		return {
+			refresh: props.refresh(),
+			path_params: props.path_params,
+		};
+	});
+	const [is_allowed] = createResource(fetcher, (fetcher) =>
+		props.card?.is_allowed?.(fetcher.path_params),
 	);
 
 	return (
@@ -127,13 +136,7 @@ const initForm = (field, value) => {
 const UpdateCard = (props) => {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const pathname = createMemo(() => {
-		if (props.card?.path) {
-			return props.card?.path(props.path_params);
-		} else {
-			return location.pathname;
-		}
-	});
+	const pathname = createMemo(() => location.pathname);
 
 	const [form, setForm] = createSignal(
 		initForm(props.card?.field, props.value),
@@ -193,10 +196,9 @@ const UpdateCard = (props) => {
 			.then((_resp) => {
 				handleFormSubmitting(false);
 				props.toggleUpdate();
-				props.handleRefresh();
 				navigate(
 					notification_path(
-						pathname(),
+						update_path(data),
 						[],
 						[],
 						NotifyKind.OK,
@@ -227,6 +229,17 @@ const UpdateCard = (props) => {
 				);
 			default:
 				return props.value === form()?.[props.card?.field?.key]?.value;
+		}
+	};
+
+	const update_path = (data) => {
+		if (props.card?.path) {
+			const path = props.card?.path(props.path_params, data);
+			props.handleLoopback(path);
+			return path;
+		} else {
+			props.handleRefresh();
+			return pathname();
 		}
 	};
 

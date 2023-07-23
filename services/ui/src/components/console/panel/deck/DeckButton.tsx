@@ -13,7 +13,7 @@ const DeckButton = (props) => {
 								class="button is-fullwidth is-primary"
 								onClick={(e) => {
 									e.preventDefault();
-									navigate(props.config.path(props.path_params()));
+									navigate(props.config.path(props.path_params));
 								}}
 							>
 								Select

@@ -231,8 +231,7 @@ const NavigateToOrganizations = () => {
 
 const NavigateToOrganization = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const params = useParams();
-	const path_params = createMemo(() => params);
+	const path_params = useParams();
 	const navigate = useNavigate();
 
 	if (!validate_plan_level(searchParams[PLAN_PARAM])) {
@@ -252,7 +251,7 @@ const NavigateToOrganization = () => {
 		navigate(
 			forward_path(
 				`/console/organizations/${
-					path_params().organization_slug
+					path_params.organization_slug
 				}/${org_section()}`,
 				[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
 				[],
@@ -263,10 +262,9 @@ const NavigateToOrganization = () => {
 };
 
 const NavigateToProject = () => {
-	const params = useParams();
-	const path_params = createMemo(() => params);
+	const path_params = useParams();
 
 	return (
-		<Navigate href={`/console/projects/${path_params().project_slug}/perf`} />
+		<Navigate href={`/console/projects/${path_params.project_slug}/perf`} />
 	);
 };

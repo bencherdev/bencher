@@ -15,7 +15,7 @@ const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 const PlotHeader = (props) => {
 	const metric_kinds_fetcher = createMemo(() => {
 		return {
-			project: props.path_params()?.project_slug,
+			project: props.path_params?.project_slug,
 			refresh: props.refresh(),
 			token: props.user?.token,
 		};

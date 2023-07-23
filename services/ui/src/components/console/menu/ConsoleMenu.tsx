@@ -83,7 +83,7 @@ const ConsoleMenu = (props) => {
 							</li>
 							<Show
 								when={is_allowed_organization(
-									props.path_params(),
+									props.path_params,
 									OrganizationPermission.MANAGE,
 								)}
 								fallback={<></>}
