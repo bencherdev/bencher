@@ -58,26 +58,17 @@ const ConsoleMenu = (props) => {
 						<p class="menu-label">Organization</p>
 						<ul class="menu-list">
 							<li>
-								<Link
-									title="Organization Projects"
-									href={organizations_path(OrganizationSection.PROJECTS)}
-								>
+								<Link href={organizations_path(OrganizationSection.PROJECTS)}>
 									Projects
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Organization Members"
-									href={organizations_path(OrganizationSection.MEMBERS)}
-								>
+								<Link href={organizations_path(OrganizationSection.MEMBERS)}>
 									Members
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Organization Settings"
-									href={organizations_path(OrganizationSection.SETTINGS)}
-								>
+								<Link href={organizations_path(OrganizationSection.SETTINGS)}>
 									Settings
 								</Link>
 							</li>
@@ -89,10 +80,7 @@ const ConsoleMenu = (props) => {
 								fallback={<></>}
 							>
 								<li>
-									<Link
-										title="Organization Billing"
-										href={organizations_path(OrganizationSection.BILLING)}
-									>
+									<Link href={organizations_path(OrganizationSection.BILLING)}>
 										Billing
 									</Link>
 								</li>
@@ -119,66 +107,40 @@ const ConsoleMenu = (props) => {
 						<p class="menu-label">Project</p>
 						<ul class="menu-list">
 							<li>
-								<Link
-									title="Project Reports"
-									href={projects_path(ProjectSection.REPORTS)}
-								>
+								<Link href={projects_path(ProjectSection.REPORTS)}>
 									Reports
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Metric Kinds"
-									href={projects_path(ProjectSection.METRIC_KINDS)}
-								>
+								<Link href={projects_path(ProjectSection.METRIC_KINDS)}>
 									Metric Kinds
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Branches"
-									href={projects_path(ProjectSection.BRANCHES)}
-								>
+								<Link href={projects_path(ProjectSection.BRANCHES)}>
 									Branches
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Testbeds"
-									href={projects_path(ProjectSection.TESTBEDS)}
-								>
+								<Link href={projects_path(ProjectSection.TESTBEDS)}>
 									Testbeds
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Benchmarks"
-									href={projects_path(ProjectSection.BENCHMARKS)}
-								>
+								<Link href={projects_path(ProjectSection.BENCHMARKS)}>
 									Benchmarks
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Thresholds"
-									href={projects_path(ProjectSection.THRESHOLDS)}
-								>
+								<Link href={projects_path(ProjectSection.THRESHOLDS)}>
 									Thresholds
 								</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Alerts"
-									href={projects_path(ProjectSection.ALERTS)}
-								>
-									Alerts
-								</Link>
+								<Link href={projects_path(ProjectSection.ALERTS)}>Alerts</Link>
 							</li>
 							<li>
-								<Link
-									title="Project Settings"
-									href={projects_path(ProjectSection.SETTINGS)}
-								>
+								<Link href={projects_path(ProjectSection.SETTINGS)}>
 									Settings
 								</Link>
 							</li>
@@ -189,19 +151,13 @@ const ConsoleMenu = (props) => {
 			<p class="menu-label">User</p>
 			<ul class="menu-list">
 				<li>
-					<Link title="User API Tokens" href={users_path(UserSection.TOKENS)}>
-						API Tokens
-					</Link>
+					<Link href={users_path(UserSection.TOKENS)}>API Tokens</Link>
 				</li>
 				<li>
-					<Link title="User Settings" href={users_path(UserSection.SETTINGS)}>
-						Settings
-					</Link>
+					<Link href={users_path(UserSection.SETTINGS)}>Settings</Link>
 				</li>
 				<li>
-					<Link title="Get Help" href={users_path(UserSection.HELP)}>
-						Help
-					</Link>
+					<Link href={users_path(UserSection.HELP)}>Help</Link>
 				</li>
 			</ul>
 		</aside>

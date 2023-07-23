@@ -51,22 +51,21 @@ export const Navbar = (props) => {
 
 			<div class={`navbar-menu ${burger() && "is-active"}`}>
 				<div class="navbar-start">
-					<a class="navbar-item" title="Bencher Docs" href="/docs">
+					<a class="navbar-item" href="/docs">
 						Docs
 					</a>
 					<Show
 						when={is_valid_jwt()}
 						fallback={
 							<>
-								<a class="navbar-item" title="Bencher Projects" href="/perf">
+								<a class="navbar-item" href="/perf">
 									Projects
 								</a>
-								<a class="navbar-item" title="Bencher Pricing" href="/pricing">
+								<a class="navbar-item" href="/pricing">
 									Pricing
 								</a>
 								<a
 									class="navbar-item"
-									title="Bencher GitHub Repository"
 									href={BENCHER_GITHUB_URL}
 									target="_blank"
 									rel="noreferrer"
@@ -76,7 +75,7 @@ export const Navbar = (props) => {
 							</>
 						}
 					>
-						<a class="navbar-item" title="Public Projects" href="/perf">
+						<a class="navbar-item" href="/perf">
 							Public Projects
 						</a>
 						<Show when={props.organization_slug()} fallback={<></>}>
@@ -102,28 +101,16 @@ export const Navbar = (props) => {
 								when={is_valid_jwt()}
 								fallback={
 									<>
-										<Link
-											class="button is-light"
-											title="Bencher Log in"
-											href="/auth/login"
-										>
+										<Link class="button is-light" href="/auth/login">
 											Log in
 										</Link>
-										<Link
-											class="button is-primary"
-											title="Bencher Sign up"
-											href="/auth/signup"
-										>
+										<Link class="button is-primary" href="/auth/signup">
 											<strong>Sign up</strong>
 										</Link>
 									</>
 								}
 							>
-								<Link
-									class="button is-light"
-									title="Log out"
-									href="/auth/logout"
-								>
+								<Link class="button is-light" href="/auth/logout">
 									Log out
 								</Link>
 							</Show>
