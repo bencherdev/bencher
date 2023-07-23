@@ -32,10 +32,11 @@ const PerfHeader = (props) => {
 			<div class="column is-narrow">
 				<nav class="level">
 					<div class="level-right">
-						{project()?.url && (
+						<Show when={project()?.url} fallback={<></>}>
 							<div class="level-item">
 								<a
 									class="button is-outlined is-fullwidth"
+									title={`View ${project()?.name} website`}
 									href={project()?.url}
 									rel="noreferrer nofollow"
 									target="_blank"
@@ -46,39 +47,47 @@ const PerfHeader = (props) => {
 									<span>Website</span>
 								</a>
 							</div>
-						)}
-						<nav class="level is-mobile">
-							{project()?.visibility === "public" && !props.is_plot_init() && (
+						</Show>
+						<Show when={!props.is_plot_init()} fallback={<></>}>
+							<nav class="level is-mobile">
+								<Show
+									when={project()?.visibility === "public"}
+									fallback={<></>}
+								>
+									<div class="level-item">
+										<button
+											class="button is-outlined is-fullwidth"
+											title={`Share ${project()?.name}`}
+											onClick={(e) => {
+												e.preventDefault();
+												set_share(true);
+											}}
+										>
+											<span class="icon">
+												<i class="fas fa-share" aria-hidden="true" />
+											</span>
+											<span>Share</span>
+										</button>
+									</div>
+								</Show>
+
 								<div class="level-item">
 									<button
 										class="button is-outlined is-fullwidth"
+										title={`Refresh Query`}
 										onClick={(e) => {
 											e.preventDefault();
-											set_share(true);
+											props.handleRefresh();
 										}}
 									>
 										<span class="icon">
-											<i class="fas fa-share" aria-hidden="true" />
+											<i class="fas fa-sync-alt" aria-hidden="true" />
 										</span>
-										<span>Share</span>
+										<span>Refresh</span>
 									</button>
 								</div>
-							)}
-							<div class="level-item">
-								<button
-									class="button is-outlined is-fullwidth"
-									onClick={(e) => {
-										e.preventDefault();
-										props.handleRefresh();
-									}}
-								>
-									<span class="icon">
-										<i class="fas fa-sync-alt" aria-hidden="true" />
-									</span>
-									<span>Refresh</span>
-								</button>
-							</div>
-						</nav>
+							</nav>
+						</Show>
 					</div>
 				</nav>
 			</div>
