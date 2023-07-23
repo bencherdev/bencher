@@ -5,6 +5,7 @@ import {
 	createResource,
 	createSignal,
 	For,
+	Show,
 } from "solid-js";
 import { get_options, validate_jwt } from "../../../../site/util";
 import { Range } from "../../../config/types";
@@ -135,6 +136,11 @@ const PlotHeader = (props) => {
 				<div class="level-item">
 					<button
 						class="button is-outlined "
+						title={
+							props.range() === Range.DATE_TIME
+								? "Switch to Version Range"
+								: "Switch to Date Range"
+						}
 						onClick={(e) => {
 							e.preventDefault();
 							switch (props.range()) {
@@ -150,6 +156,22 @@ const PlotHeader = (props) => {
 						<span class="icon">{icon()}</span>
 					</button>
 				</div>
+				<Show when={!props.is_plot_init()} fallback={<></>}>
+					<div class="level-item">
+						<button
+							class="button is-outlined "
+							title="Clear Perf Plot"
+							onClick={(e) => {
+								e.preventDefault();
+								props.handleClear(true);
+							}}
+						>
+							<span class="icon">
+								<i class="fas fa-times-circle" aria-hidden="true" />
+							</span>
+						</button>
+					</div>
+				</Show>
 			</div>
 		</nav>
 	);

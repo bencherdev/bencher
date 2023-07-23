@@ -14,15 +14,18 @@ const PerfPlot = (props) => {
 						config={props.config}
 						path_params={props.path_params}
 						is_console={props.is_console}
+						is_plot_init={props.is_plot_init}
 						metric_kind={props.metric_kind}
 						start_date={props.start_date}
 						end_date={props.end_date}
 						refresh={props.refresh}
 						range={props.range}
+						clear={props.clear}
 						handleMetricKind={props.handleMetricKind}
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
 						handleRange={props.handleRange}
+						handleClear={props.handleClear}
 					/>
 					<div class="panel-block">
 						<Show

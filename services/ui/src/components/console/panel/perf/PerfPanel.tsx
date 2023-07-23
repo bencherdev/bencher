@@ -221,8 +221,8 @@ const PerfPanel = (props) => {
 	const clear = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (is_range(searchParams[CLEAR_PARAM])) {
-			return searchParams[CLEAR_PARAM];
+		if (is_bool_param(searchParams[CLEAR_PARAM])) {
+			return searchParams[CLEAR_PARAM] === "true";
 		} else {
 			return DEFAULT_PERF_CLEAR;
 		}
@@ -472,8 +472,8 @@ const PerfPanel = (props) => {
 	const handleReportChecked = (index: number, metric_kind_slug: string) => {
 		let report = reports_tab?.[index]?.resource;
 		setSearchParams({
-			[METRIC_KIND_PARAM]: metric_kind_slug,
 			[REPORT_PARAM]: report?.uuid,
+			[METRIC_KIND_PARAM]: metric_kind_slug,
 			[BRANCHES_PARAM]: report?.branch?.uuid,
 			[TESTBEDS_PARAM]: report?.testbed?.uuid,
 			[BENCHMARKS_PARAM]: arrayToString(
@@ -540,17 +540,19 @@ const PerfPanel = (props) => {
 		}
 	};
 
-	const handleClear = (key: boolean) => {
-		if (typeof key === "boolean") {
-			if (key) {
+	const handleClear = (clear: boolean) => {
+		if (typeof clear === "boolean") {
+			if (clear) {
 				setSearchParams({
-					[CLEAR_PARAM]: key,
+					[CLEAR_PARAM]: true,
 					[REPORT_PARAM]: null,
 					[METRIC_KIND_PARAM]: null,
 					[BRANCHES_PARAM]: null,
 					[TESTBEDS_PARAM]: null,
 					[BENCHMARKS_PARAM]: null,
 				});
+			} else {
+				setSearchParams({ [CLEAR_PARAM]: clear });
 			}
 		}
 	};
@@ -594,6 +596,7 @@ const PerfPanel = (props) => {
 				tab={tab}
 				key={key}
 				range={range}
+				clear={clear}
 				reports_tab={reports_tab}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
@@ -609,6 +612,7 @@ const PerfPanel = (props) => {
 				handleTab={handleTab}
 				handleKey={handleKey}
 				handleRange={handleRange}
+				handleClear={handleClear}
 				handleReportChecked={handleReportChecked}
 				handleBranchChecked={handleBranchChecked}
 				handleTestbedChecked={handleTestbedChecked}
