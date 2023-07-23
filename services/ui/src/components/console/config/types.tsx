@@ -60,7 +60,7 @@ export enum PerfTab {
 	BENCHMARKS = "benchmarks",
 }
 
-export const isPerfTab = (tab: string) =>
+export const is_perf_tab = (tab: string) =>
 	tab === PerfTab.REPORTS ||
 	tab === PerfTab.BRANCHES ||
 	tab === PerfTab.TESTBEDS ||

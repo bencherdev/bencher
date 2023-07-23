@@ -12,6 +12,7 @@ const benchmarksConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "Benchmark",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -55,6 +56,7 @@ const benchmarksConfig = {
 		header: {
 			title: "Add Benchmark",
 			path: parentPath,
+			path_to: "Benchmarks",
 		},
 		form: {
 			url: (path_params) =>
@@ -82,6 +84,7 @@ const benchmarksConfig = {
 			path: (pathname) => {
 				return parentPath(pathname);
 			},
+			path_to: "Benchmarks",
 		},
 		deck: {
 			url: (path_params) => {

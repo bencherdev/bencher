@@ -26,6 +26,7 @@ const thresholdsConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "Threshold",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -85,6 +86,7 @@ const thresholdsConfig = {
 		header: {
 			title: "Add Threshold",
 			path: parentPath,
+			path_to: "Thresholds",
 		},
 		form: {
 			url: (path_params) =>
@@ -190,6 +192,7 @@ const thresholdsConfig = {
 				["testbed", "name"],
 			],
 			path: parentPath,
+			path_to: "Thresholds",
 		},
 		deck: {
 			url: (path_params) =>

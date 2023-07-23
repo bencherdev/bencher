@@ -31,6 +31,7 @@ const MembersConfig = {
 			buttons: [
 				{
 					kind: Button.INVITE,
+					title: "Organization",
 					path: invitePath,
 					is_allowed: (path_params) =>
 						is_allowed_organization(
@@ -91,6 +92,7 @@ const MembersConfig = {
 		header: {
 			title: "Invite to Organization",
 			path: parentPath,
+			path_to: "Organization Members",
 		},
 		form: {
 			url: (path_params) =>
@@ -134,6 +136,7 @@ const MembersConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "Organization Members",
 		},
 		deck: {
 			url: (path_params) =>

@@ -12,6 +12,7 @@ const branchesConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "Branch",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -60,6 +61,7 @@ const branchesConfig = {
 		header: {
 			title: "Add Branch",
 			path: parentPath,
+			path_to: "Branches",
 		},
 		form: {
 			url: (path_params) =>
@@ -85,6 +87,7 @@ const branchesConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "Branches",
 		},
 		deck: {
 			url: (path_params) =>

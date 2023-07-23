@@ -30,6 +30,7 @@ const projectsConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "Project",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -81,6 +82,7 @@ const projectsConfig = {
 		header: {
 			title: "Add Project",
 			path: parentPath,
+			path_to: "Projects",
 		},
 		form: {
 			url: (path_params) =>
@@ -124,6 +126,7 @@ const projectsConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "Projects",
 		},
 		deck: {
 			url: (path_params) =>

@@ -40,6 +40,7 @@ const organizationsConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "Organizations",
 		},
 		deck: {
 			url: (path_params) =>

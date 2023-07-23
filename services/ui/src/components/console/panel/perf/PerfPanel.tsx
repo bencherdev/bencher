@@ -6,7 +6,7 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { isPerfTab, is_range, PerfTab, Range } from "../../config/types";
+import { is_perf_tab, is_range, PerfTab, Range } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
 import {
 	get_options,
@@ -142,7 +142,7 @@ const PerfPanel = (props) => {
 	}
 
 	// Sanitize all UI state query params
-	if (!isPerfTab(searchParams[TAB_PARAM])) {
+	if (!is_perf_tab(searchParams[TAB_PARAM])) {
 		setSearchParams({ [TAB_PARAM]: null });
 	}
 	if (!is_bool_param(searchParams[KEY_PARAM])) {
@@ -191,7 +191,7 @@ const PerfPanel = (props) => {
 	const tab = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (isPerfTab(searchParams[TAB_PARAM])) {
+		if (is_perf_tab(searchParams[TAB_PARAM])) {
 			return searchParams[TAB_PARAM];
 		} else {
 			return DEFAULT_PERF_TAB;
@@ -523,7 +523,7 @@ const PerfPanel = (props) => {
 		setSearchParams({ [END_TIME_PARAM]: date_to_time(date) });
 
 	const handleTab = (tab: PerfTab) => {
-		if (isPerfTab(tab)) {
+		if (is_perf_tab(tab)) {
 			setSearchParams({ [TAB_PARAM]: tab });
 		}
 	};

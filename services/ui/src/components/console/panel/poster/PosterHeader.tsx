@@ -16,6 +16,7 @@ const PosterHeader = (props) => {
 			<div class="level-left">
 				<button
 					class="button is-outlined"
+					title={`Back to ${props.config?.path_to}`}
 					onClick={(e) => {
 						e.preventDefault();
 						navigate(props.config?.path(pathname()));

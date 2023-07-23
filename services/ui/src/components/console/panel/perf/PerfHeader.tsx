@@ -74,7 +74,7 @@ const PerfHeader = (props) => {
 								<div class="level-item">
 									<button
 										class="button is-outlined is-fullwidth"
-										title={`Refresh Query`}
+										title={`Refresh ${project()?.name} Query`}
 										onClick={(e) => {
 											e.preventDefault();
 											props.handleRefresh();

@@ -11,15 +11,16 @@ import { pageTitle } from "../../../site/util";
 import { Button } from "../../config/types";
 
 const TableHeader = (props) => {
+	const title = props.config?.title;
 	createEffect(() => {
-		pageTitle(props.config?.title);
+		pageTitle(title);
 	});
 
 	return (
 		<nav class="level">
 			<div class="level-left">
 				<div class="level-item">
-					<h3 class="title is-3">{props.config?.title}</h3>
+					<h3 class="title is-3">{title}</h3>
 				</div>
 			</div>
 
@@ -27,6 +28,7 @@ const TableHeader = (props) => {
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<TableHeaderButton
+							title={title}
 							path_params={props.path_params}
 							handleRefresh={props.handleRefresh}
 							button={button}
@@ -53,6 +55,7 @@ const TableHeaderButton = (props) => {
 				<Match when={props.button.kind === Button.ADD}>
 					<button
 						class="button is-outlined"
+						title={`Add ${props.button.title}`}
 						onClick={(e) => {
 							e.preventDefault();
 							navigate(props.button.path(pathname()));
@@ -67,6 +70,7 @@ const TableHeaderButton = (props) => {
 				<Match when={props.button.kind === Button.INVITE && is_allowed()}>
 					<button
 						class="button is-outlined"
+						title={`Invite to ${props.button.title}`}
 						onClick={(e) => {
 							e.preventDefault();
 							navigate(props.button.path(pathname()));
@@ -81,7 +85,7 @@ const TableHeaderButton = (props) => {
 				<Match when={props.button.kind === Button.REFRESH}>
 					<button
 						class="button is-outlined"
-						// disabled={props.refresh() > 0}
+						title={`Refresh ${props.title}`}
 						onClick={(e) => {
 							e.preventDefault();
 							props.handleRefresh();

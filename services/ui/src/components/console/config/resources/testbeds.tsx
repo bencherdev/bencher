@@ -12,6 +12,7 @@ const testbedsConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "Testbed",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -62,6 +63,7 @@ const testbedsConfig = {
 		header: {
 			title: "Add Testbed",
 			path: parentPath,
+			path_to: "Testbeds",
 		},
 		form: {
 			url: (path_params) =>
@@ -87,6 +89,7 @@ const testbedsConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "Testbeds",
 		},
 		deck: {
 			url: (path_params) =>

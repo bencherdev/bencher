@@ -12,6 +12,7 @@ const metricKindsConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "Metric Kind",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -63,6 +64,7 @@ const metricKindsConfig = {
 		header: {
 			title: "Add Metric Kind",
 			path: parentPath,
+			path_to: "Metric Kinds",
 		},
 		form: {
 			url: (path_params) =>
@@ -97,6 +99,7 @@ const metricKindsConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "Metric Kinds",
 		},
 		deck: {
 			url: (path_params) =>

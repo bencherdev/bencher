@@ -57,6 +57,7 @@ const reportsConfig = {
 		header: {
 			key: "start_time",
 			path: parentPath,
+			path_to: "Reports",
 		},
 		deck: {
 			url: (path_params) =>

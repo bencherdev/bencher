@@ -7,12 +7,12 @@ const DeckHeader = (props) => {
 	const location = useLocation();
 	const pathname = createMemo(() => location.pathname);
 
-	const header = createMemo(() =>
+	const title = createMemo(() =>
 		concat_values(props.data, props.config?.key, props.config?.keys, " | "),
 	);
 
 	createEffect(() => {
-		pageTitle(header());
+		pageTitle(title());
 	});
 
 	return (
@@ -20,6 +20,7 @@ const DeckHeader = (props) => {
 			<div class="column is-narrow">
 				<button
 					class="button is-outlined is-fullwidth"
+					title={`Back to ${props.config?.path_to}`}
 					onClick={(e) => {
 						e.preventDefault();
 						navigate(props.config?.path(pathname()));
@@ -34,13 +35,14 @@ const DeckHeader = (props) => {
 			<div class="column">
 				<div class="content has-text-centered">
 					<h3 class="title is-3" style="overflow-wrap:anywhere;">
-						{header()}
+						{title()}
 					</h3>
 				</div>
 			</div>
 			<div class="column is-narrow">
 				<button
 					class="button is-outlined is-fullwidth"
+					title={`Refresh ${title()}`}
 					onClick={(e) => {
 						e.preventDefault();
 						props.handleRefresh();

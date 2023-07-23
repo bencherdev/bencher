@@ -68,6 +68,7 @@ const alertsConfig = {
 			path: (pathname) => {
 				return parentPath(pathname);
 			},
+			path_to: "Alerts",
 		},
 		deck: {
 			url: (path_params) => {

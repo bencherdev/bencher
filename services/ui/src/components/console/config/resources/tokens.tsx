@@ -12,6 +12,7 @@ const tokensConfig = {
 			buttons: [
 				{
 					kind: Button.ADD,
+					title: "API Token",
 					path: addPath,
 				},
 				{ kind: Button.REFRESH },
@@ -50,6 +51,7 @@ const tokensConfig = {
 		header: {
 			title: "Add API Token",
 			path: parentPath,
+			path_to: "API Tokens",
 		},
 		form: {
 			url: (path_params) =>
@@ -83,6 +85,7 @@ const tokensConfig = {
 		header: {
 			key: "name",
 			path: parentPath,
+			path_to: "API Tokens",
 		},
 		deck: {
 			url: (path_params) =>
