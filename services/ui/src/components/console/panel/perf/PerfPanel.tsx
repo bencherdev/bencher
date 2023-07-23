@@ -240,7 +240,7 @@ const PerfPanel = (props) => {
 		};
 	});
 
-	const isPlotInit = createMemo(
+	const is_plot_init = createMemo(
 		() =>
 			!metric_kind() ||
 			branches().length === 0 ||
@@ -270,7 +270,7 @@ const PerfPanel = (props) => {
 			return EMPTY_OBJECT;
 		}
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
-		if (isPlotInit()) {
+		if (is_plot_init()) {
 			const url = `${props.config?.plot?.project_url(fetcher.project_slug)}`;
 			return await axios(get_options(url, fetcher.token))
 				.then((resp) => {
@@ -365,11 +365,11 @@ const PerfPanel = (props) => {
 		if (
 			first_report &&
 			tab() === DEFAULT_PERF_TAB &&
-			reports_page() === 1 &&
-			!metric_kind() &&
-			branches().length === 0 &&
-			testbeds().length === 0 &&
-			benchmarks().length === 0
+			reports_page() === DEFAULT_PAGE &&
+			branches_page() === DEFAULT_PAGE &&
+			testbeds_page() === DEFAULT_PAGE &&
+			benchmarks_page() === DEFAULT_PAGE &&
+			is_plot_init()
 		) {
 			const first_metric_kind =
 				first_report?.results?.[first]?.[first].metric_kind?.slug;
@@ -540,7 +540,7 @@ const PerfPanel = (props) => {
 				config={props.config?.header}
 				path_params={props.path_params}
 				perf_data={perf_data}
-				isPlotInit={isPlotInit}
+				is_plot_init={is_plot_init}
 				perf_query={perf_query}
 				handleRefresh={handleRefresh}
 			/>
@@ -550,7 +550,7 @@ const PerfPanel = (props) => {
 				config={props.config?.plot}
 				path_params={props.path_params}
 				is_console={props.is_console}
-				isPlotInit={isPlotInit}
+				is_plot_init={is_plot_init}
 				metric_kind={metric_kind}
 				report={report}
 				branches={branches}

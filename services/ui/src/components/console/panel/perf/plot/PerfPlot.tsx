@@ -26,7 +26,7 @@ const PerfPlot = (props) => {
 					/>
 					<div class="panel-block">
 						<Show
-							when={props.isPlotInit()}
+							when={props.is_plot_init()}
 							fallback={
 								<Plot
 									user={props.user}

@@ -24,7 +24,7 @@ const PerfHeader = (props) => {
 				user={props.user}
 				config={props.config}
 				perf_query={props.perf_query}
-				isPlotInit={props.isPlotInit}
+				is_plot_init={props.is_plot_init}
 				project={project}
 				share={share}
 				set_share={set_share}
@@ -48,7 +48,7 @@ const PerfHeader = (props) => {
 							</div>
 						)}
 						<nav class="level is-mobile">
-							{project()?.visibility === "public" && !props.isPlotInit() && (
+							{project()?.visibility === "public" && !props.is_plot_init() && (
 								<div class="level-item">
 									<button
 										class="button is-outlined is-fullwidth"
@@ -107,7 +107,7 @@ const ShareModal = (props) => {
 
 	const perf_img_url = createMemo(() => {
 		if (
-			props.isPlotInit() ||
+			props.is_plot_init() ||
 			!(props.share() && props.project()?.slug && props.perf_query())
 		) {
 			return null;
