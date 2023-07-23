@@ -349,7 +349,7 @@ export enum ProjectPermission {
 	DELETE_ROLE = "delete_role",
 }
 
-export const isAllowedProject = async (
+export const is_allowed_project = async (
 	path_params,
 	permission: ProjectPermission,
 ) => {

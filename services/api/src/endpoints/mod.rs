@@ -68,13 +68,9 @@ impl Api {
         // Organization Projects
         if http_options {
             api.register(organization::projects::org_projects_options)?;
-            api.register(organization::projects::org_project_options)?;
         }
         api.register(organization::projects::org_projects_get)?;
         api.register(organization::projects::org_project_post)?;
-        api.register(organization::projects::org_project_get)?;
-        api.register(organization::projects::org_project_patch)?;
-        api.register(organization::projects::org_project_delete)?;
 
         #[cfg(feature = "plus")]
         {
@@ -102,6 +98,12 @@ impl Api {
         api.register(project::projects::project_get)?;
         api.register(project::projects::project_patch)?;
         api.register(project::projects::project_delete)?;
+
+        // Project Permission
+        if http_options {
+            api.register(project::allowed::proj_allowed_options)?;
+        }
+        api.register(project::allowed::proj_allowed_get)?;
 
         // Perf
         if http_options {

@@ -2,7 +2,9 @@ import PROJECT_FIELDS from "./fields/project";
 import {
 	BENCHER_API_URL,
 	is_allowed_organization,
+	is_allowed_project,
 	OrganizationPermission,
+	ProjectPermission,
 } from "../../../site/util";
 import { Button, Card, Display, Operation, PerfTab, Row } from "../types";
 import { parentPath, addPath } from "../util";
@@ -137,6 +139,17 @@ const projectsConfig = {
 					label: "Project Name",
 					key: "name",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_project(path_params, ProjectPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Name",
+						key: "name",
+						value: "",
+						valid: null,
+						validate: true,
+						config: PROJECT_FIELDS.name,
+					},
 				},
 				{
 					kind: Card.FIELD,

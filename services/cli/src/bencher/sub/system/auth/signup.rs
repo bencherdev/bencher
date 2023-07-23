@@ -5,7 +5,7 @@ use bencher_client::types::JsonSignup;
 use bencher_json::{Email, JsonEmpty, Jwt, Slug, UserName};
 
 #[cfg(feature = "plus")]
-use crate::bencher::sub::organization::resource::plan::level::Level;
+use crate::bencher::sub::organization::organization::plan::level::Level;
 use crate::{
     bencher::{backend::Backend, sub::SubCmd},
     parser::system::auth::CliAuthSignup,

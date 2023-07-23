@@ -17,7 +17,7 @@ mod user;
 use docs::Docs;
 use mock::Mock;
 pub use mock::MockError;
-use organization::{member::Member, resource::Organization};
+use organization::{member::Member, organization::Organization};
 pub use project::run::{runner::output::Output, RunError};
 use project::{
     alert::Alert, benchmark::Benchmark, branch::Branch, metric_kind::MetricKind, perf::Perf,

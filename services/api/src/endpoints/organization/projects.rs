@@ -1,6 +1,5 @@
 use bencher_json::{
-    project::JsonUpdateProject, JsonDirection, JsonEmpty, JsonNewProject, JsonPagination,
-    JsonProject, JsonProjects, NonEmpty, ResourceId,
+    JsonDirection, JsonNewProject, JsonPagination, JsonProject, JsonProjects, NonEmpty, ResourceId,
 };
 use bencher_rbac::{organization::Permission, project::Role};
 use chrono::Utc;
@@ -8,7 +7,6 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use tracing::info;
 
 use crate::{
     context::ApiContext,
@@ -25,7 +23,7 @@ use crate::{
             project_role::InsertProjectRole,
             testbed::{InsertTestbed, QueryTestbed},
             threshold::InsertThreshold,
-            InsertProject, QueryProject, UpdateProject,
+            InsertProject, QueryProject,
         },
         user::auth::AuthUser,
     },
@@ -332,185 +330,4 @@ mod project_visibility {
             Err(ApiError::NoPlanOrganization(organization.clone()))
         }
     }
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct OrgProjectParams {
-    pub organization: ResourceId,
-    pub project: ResourceId,
-}
-
-#[allow(clippy::unused_async)]
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/organizations/{organization}/projects/{project}",
-    tags = ["organizations", "projects"]
-}]
-pub async fn org_project_options(
-    _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<OrgProjectParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(get_cors::<ApiContext>())
-}
-
-#[endpoint {
-    method = GET,
-    path =  "/v0/organizations/{organization}/projects/{project}",
-    tags = ["organizations", "projects"]
-}]
-pub async fn org_project_get(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<OrgProjectParams>,
-) -> Result<ResponseOk<JsonProject>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::GetOne);
-
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
-
-    response_ok!(endpoint, json)
-}
-
-async fn get_one_inner(
-    context: &ApiContext,
-    path_params: OrgProjectParams,
-    auth_user: &AuthUser,
-) -> Result<JsonProject, ApiError> {
-    let conn = &mut *context.conn().await;
-
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
-        conn,
-        &context.rbac,
-        &path_params.project,
-        auth_user,
-        bencher_rbac::project::Permission::View,
-    )?;
-    if query_organization.id != query_project.organization_id {
-        return Err(ApiError::ProjectOrganizationMismatch(
-            path_params.organization,
-            path_params.project,
-        ));
-    }
-
-    QueryProject::from_resource_id(conn, &path_params.project)?.into_json(conn)
-}
-
-#[endpoint {
-    method = PATCH,
-    path =  "/v0/organizations/{organization}/projects/{project}",
-    tags = ["organizations", "projects"]
-}]
-pub async fn org_project_patch(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<OrgProjectParams>,
-    body: TypedBody<JsonUpdateProject>,
-) -> Result<ResponseAccepted<JsonProject>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Patch);
-
-    let context = rqctx.context();
-    let json = patch_inner(
-        context,
-        path_params.into_inner(),
-        body.into_inner(),
-        &auth_user,
-    )
-    .await
-    .map_err(|e| endpoint.err(e))?;
-
-    response_accepted!(endpoint, json)
-}
-
-async fn patch_inner(
-    context: &ApiContext,
-    path_params: OrgProjectParams,
-    json_project: JsonUpdateProject,
-    auth_user: &AuthUser,
-) -> Result<JsonProject, ApiError> {
-    let conn = &mut *context.conn().await;
-
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
-        conn,
-        &context.rbac,
-        &path_params.project,
-        auth_user,
-        bencher_rbac::project::Permission::Edit,
-    )?;
-    if query_organization.id != query_project.organization_id {
-        return Err(ApiError::ProjectOrganizationMismatch(
-            path_params.organization,
-            path_params.project,
-        ));
-    }
-
-    diesel::update(
-        schema::project::table
-            .filter(schema::project::organization_id.eq(query_organization.id))
-            .filter(schema::project::id.eq(query_project.id)),
-    )
-    .set(&UpdateProject::from(json_project))
-    .execute(conn)
-    .map_err(api_error!())?;
-
-    QueryProject::get(conn, query_project.id)?.into_json(conn)
-}
-
-#[endpoint {
-    method = DELETE,
-    path =  "/v0/organizations/{organization}/projects/{project}",
-    tags = ["organizations", "projects"]
-}]
-pub async fn org_project_delete(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<OrgProjectParams>,
-) -> Result<ResponseAccepted<JsonEmpty>, HttpError> {
-    let auth_user = AuthUser::new(&rqctx).await?;
-    let endpoint = Endpoint::new(PROJECT_RESOURCE, Method::Delete);
-
-    let json = delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
-        .await
-        .map_err(|e| endpoint.err(e))?;
-
-    response_accepted!(endpoint, json)
-}
-
-async fn delete_inner(
-    context: &ApiContext,
-    path_params: OrgProjectParams,
-    auth_user: &AuthUser,
-) -> Result<JsonEmpty, ApiError> {
-    let conn = &mut *context.conn().await;
-
-    let query_organization = QueryOrganization::from_resource_id(conn, &path_params.organization)?;
-    // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed_resource_id(
-        conn,
-        &context.rbac,
-        &path_params.project,
-        auth_user,
-        bencher_rbac::project::Permission::Delete,
-    )?;
-    if query_organization.id != query_project.organization_id {
-        return Err(ApiError::ProjectOrganizationMismatch(
-            path_params.organization,
-            path_params.project,
-        ));
-    }
-    info!("Deleting project: {:?}", query_project);
-
-    diesel::delete(
-        schema::project::table
-            .filter(schema::project::organization_id.eq(query_organization.id))
-            .filter(schema::project::id.eq(query_project.id)),
-    )
-    .execute(conn)
-    .map_err(api_error!())?;
-    info!("Deleted project: {:?}", query_project);
-
-    Ok(JsonEmpty {})
 }

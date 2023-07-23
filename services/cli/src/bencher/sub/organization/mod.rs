@@ -1,2 +1,3 @@
 pub mod member;
-pub mod resource;
+#[allow(clippy::module_inception)]
+pub mod organization;

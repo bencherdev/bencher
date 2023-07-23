@@ -32,6 +32,8 @@ pub enum CliProject {
     // Delete a project
     #[clap(alias = "rm")]
     Delete(CliProjectDelete),
+    /// Check project permission
+    Allowed(CliProjectAllowed),
 }
 
 #[derive(Parser, Debug)]
@@ -99,10 +101,6 @@ pub enum CliProjectVisibility {
 
 #[derive(Parser, Debug)]
 pub struct CliProjectView {
-    /// Organization slug or UUID
-    #[clap(long)]
-    pub org: Option<ResourceId>,
-
     /// Project slug or UUID
     pub project: ResourceId,
 
@@ -112,10 +110,6 @@ pub struct CliProjectView {
 
 #[derive(Parser, Debug)]
 pub struct CliProjectUpdate {
-    /// Organization slug or UUID
-    #[clap(long)]
-    pub org: Option<ResourceId>,
-
     /// Project slug or UUID
     pub project: ResourceId,
 
@@ -141,13 +135,37 @@ pub struct CliProjectUpdate {
 
 #[derive(Parser, Debug)]
 pub struct CliProjectDelete {
-    /// Organization slug or UUID
-    #[clap(long)]
-    pub org: Option<ResourceId>,
-
     /// Project slug or UUID
     pub project: ResourceId,
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliProjectAllowed {
+    /// Project slug or UUID
+    pub project: ResourceId,
+
+    /// Project permission
+    #[clap(long)]
+    pub perm: CliProjectPermission,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+/// Project permission
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliProjectPermission {
+    View,
+    Create,
+    Edit,
+    Delete,
+    Manage,
+    ViewRole,
+    CreateRole,
+    EditRole,
+    DeleteRole,
 }

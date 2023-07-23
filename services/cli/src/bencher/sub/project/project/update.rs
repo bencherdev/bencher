@@ -15,7 +15,6 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Update {
-    pub org: Option<ResourceId>,
     pub project: ResourceId,
     pub name: Option<NonEmpty>,
     pub slug: Option<Slug>,
@@ -29,7 +28,6 @@ impl TryFrom<CliProjectUpdate> for Update {
 
     fn try_from(create: CliProjectUpdate) -> Result<Self, Self::Error> {
         let CliProjectUpdate {
-            org,
             project,
             name,
             slug,
@@ -38,7 +36,6 @@ impl TryFrom<CliProjectUpdate> for Update {
             backend,
         } = create;
         Ok(Self {
-            org,
             project,
             name,
             slug,
@@ -97,24 +94,12 @@ impl SubCmd for Update {
             .backend
             .send_with(
                 |client| async move {
-                    if let Some(org) = self.org.clone() {
-                        client
-                            .org_project_patch()
-                            .organization(org)
-                            .project(self.project.clone())
-                            .body(self.clone())
-                            .send()
-                            .await
-                    } else {
-                        let body = JsonUpdateProject::from(self.clone());
-                        println!("{:?}", serde_json::to_string_pretty(&body).unwrap());
-                        client
-                            .project_patch()
-                            .project(self.project.clone())
-                            .body(body)
-                            .send()
-                            .await
-                    }
+                    client
+                        .project_patch()
+                        .project(self.project.clone())
+                        .body(self.clone())
+                        .send()
+                        .await
                 },
                 true,
             )

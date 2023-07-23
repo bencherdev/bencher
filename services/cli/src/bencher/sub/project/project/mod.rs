@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use crate::{bencher::sub::SubCmd, parser::project::CliProject, CliError};
 
+mod allowed;
 mod create;
 mod delete;
 mod list;
@@ -16,6 +17,7 @@ pub enum Project {
     View(view::View),
     Update(update::Update),
     Delete(delete::Delete),
+    Allowed(allowed::Allowed),
 }
 
 impl TryFrom<CliProject> for Project {
@@ -28,6 +30,7 @@ impl TryFrom<CliProject> for Project {
             CliProject::View(view) => Self::View(view.try_into()?),
             CliProject::Update(update) => Self::Update(update.try_into()?),
             CliProject::Delete(delete) => Self::Delete(delete.try_into()?),
+            CliProject::Allowed(allowed) => Self::Allowed(allowed.try_into()?),
         })
     }
 }
@@ -41,6 +44,7 @@ impl SubCmd for Project {
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
             Self::Delete(delete) => delete.exec().await,
+            Self::Allowed(allowed) => allowed.exec().await,
         }
     }
 }

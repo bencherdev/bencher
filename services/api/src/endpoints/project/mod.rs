@@ -2,6 +2,7 @@ use derive_more::Display;
 
 use crate::WordStr;
 
+pub mod allowed;
 pub mod benchmarks;
 pub mod branches;
 pub mod metric_kinds;
@@ -20,6 +21,7 @@ pub enum Resource {
     Perf,
     PerfImg,
     Project,
+    ProjectPermission,
     Report,
     Result,
     Statistic,
@@ -37,6 +39,7 @@ impl WordStr for Resource {
             Self::Perf => "benchmark perf",
             Self::PerfImg => "benchmark perf image",
             Self::Project => "project",
+            Self::ProjectPermission => "project permission",
             Self::Report => "report",
             Self::Result => "result",
             Self::Statistic => "statistic",
@@ -54,6 +57,7 @@ impl WordStr for Resource {
             Self::Perf => "benchmark perfs",
             Self::PerfImg => "benchmark perfs image",
             Self::Project => "projects",
+            Self::ProjectPermission => "project permissions",
             Self::Report => "reports",
             Self::Result => "results",
             Self::Statistic => "statistics",

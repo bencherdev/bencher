@@ -11,7 +11,6 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Delete {
-    pub org: Option<ResourceId>,
     pub project: ResourceId,
     pub backend: Backend,
 }
@@ -20,13 +19,8 @@ impl TryFrom<CliProjectDelete> for Delete {
     type Error = CliError;
 
     fn try_from(view: CliProjectDelete) -> Result<Self, Self::Error> {
-        let CliProjectDelete {
-            org,
-            project,
-            backend,
-        } = view;
+        let CliProjectDelete { project, backend } = view;
         Ok(Self {
-            org,
             project,
             backend: backend.try_into()?,
         })
@@ -40,20 +34,11 @@ impl SubCmd for Delete {
             .backend
             .send_with(
                 |client| async move {
-                    if let Some(org) = self.org.clone() {
-                        client
-                            .org_project_delete()
-                            .organization(org)
-                            .project(self.project.clone())
-                            .send()
-                            .await
-                    } else {
-                        client
-                            .project_delete()
-                            .project(self.project.clone())
-                            .send()
-                            .await
-                    }
+                    client
+                        .project_delete()
+                        .project(self.project.clone())
+                        .send()
+                        .await
                 },
                 true,
             )

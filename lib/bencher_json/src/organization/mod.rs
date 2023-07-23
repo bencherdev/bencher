@@ -35,6 +35,13 @@ pub struct JsonOrganization {
     pub modified: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateOrganization {
+    pub name: Option<NonEmpty>,
+    pub slug: Option<Slug>,
+}
+
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -57,11 +64,4 @@ pub enum JsonOrganizationPermission {
     EditRole,
     #[display(fmt = "delete_role")]
     DeleteRole,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateOrganization {
-    pub name: Option<NonEmpty>,
-    pub slug: Option<Slug>,
 }
