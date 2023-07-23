@@ -196,6 +196,7 @@ export const AuthForm = (props: Props) => {
 
 			<button
 				class="button is-primary is-fullwidth"
+				title={props.new_user ? "Sign up for Bencher" : "Log in to Bencher"}
 				disabled={!form()?.valid || form()?.submitting}
 				onClick={handleAuthFormSubmit}
 			>

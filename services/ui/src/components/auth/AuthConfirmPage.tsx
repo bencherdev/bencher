@@ -221,6 +221,7 @@ const AuthConfirmPage = (props: {
 
 								<button
 									class="button is-primary is-fullwidth"
+									title="Submit token"
 									disabled={!form()?.valid || form()?.submitting}
 									onClick={(e) => {
 										e.preventDefault();

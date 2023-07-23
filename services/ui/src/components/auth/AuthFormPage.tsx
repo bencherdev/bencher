@@ -50,9 +50,13 @@ const AuthFormPage = (props: {
 								<small>
 									switch to{" "}
 									{props.new_user ? (
-										<Link href="/auth/login">log in</Link>
+										<Link title="Switch to Log in" href="/auth/login">
+											log in
+										</Link>
 									) : (
-										<Link href="/auth/signup">sign up</Link>
+										<Link title="Switch to Sign up" href="/auth/signup">
+											sign up
+										</Link>
 									)}
 								</small>
 							</p>
