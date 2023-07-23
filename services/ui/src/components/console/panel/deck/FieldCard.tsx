@@ -276,7 +276,8 @@ const UpdateCard = (props) => {
 			</div>
 			<div class="card-footer">
 				<a
-					class={`card-footer-item ${is_sendable ? "" : "disabled"}`}
+					class="card-footer-item"
+					style={!is_sendable() && "pointer-events:none;color:#fdb07e;"}
 					onClick={sendForm}
 				>
 					Save

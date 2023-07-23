@@ -170,15 +170,19 @@ const Poster = (props) => {
 						)}
 					</For>
 					<br />
-					<button
-						class="button is-primary is-fullwidth"
-						disabled={!is_sendable()}
-						onClick={sendForm}
-					>
-						<Show when={props.config?.button} fallback={"Save"}>
-							{props.config?.button}
-						</Show>
-					</button>
+					<div class="field">
+						<p class="control">
+							<button
+								class="button is-primary is-fullwidth"
+								disabled={!is_sendable()}
+								onClick={sendForm}
+							>
+								<Show when={props.config?.button} fallback={"Save"}>
+									{props.config?.button}
+								</Show>
+							</button>
+						</p>
+					</div>
 				</form>
 			</div>
 		</div>

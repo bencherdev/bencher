@@ -76,6 +76,17 @@ const organizationsConfig = {
 					label: "Organization Slug",
 					key: "slug",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_organization(path_params, OrganizationPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Slug",
+						key: "slug",
+						value: "",
+						valid: null,
+						validate: true,
+						config: ORGANIZATION_FIELDS.slug,
+					},
 				},
 				{
 					kind: Card.FIELD,

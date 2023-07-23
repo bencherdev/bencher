@@ -219,17 +219,21 @@ const AuthConfirmPage = (props: {
 									handleField={handleField}
 								/>
 
-								<button
-									class="button is-primary is-fullwidth"
-									title="Submit token"
-									disabled={!form()?.valid || form()?.submitting}
-									onClick={(e) => {
-										e.preventDefault();
-										handleFormSubmit();
-									}}
-								>
-									Submit
-								</button>
+								<div class="field">
+									<p class="control">
+										<button
+											class="button is-primary is-fullwidth"
+											title="Submit token"
+											disabled={!form()?.valid || form()?.submitting}
+											onClick={(e) => {
+												e.preventDefault();
+												handleFormSubmit();
+											}}
+										>
+											Submit
+										</button>
+									</p>
+								</div>
 							</form>
 
 							{email() && (
