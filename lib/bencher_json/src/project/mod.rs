@@ -52,6 +52,18 @@ impl fmt::Display for JsonProject {
     }
 }
 
+// Unfortunately, we have to use a complex, custom type and deserializer here.
+// Due to some limitations in JSON Schema, we can't just use an `Option<Option<Url>>`.
+// We need to be able to disambiguate between:
+// - a missing `url` key
+// - a `url` key with the value of `null`
+// If we were writing our own client, we could do something like this:
+// https://docs.rs/serde_with/latest/serde_with/rust/double_option/index.html
+// However, we need `progenitor` to create a client that can accommodate both use cases.
+// Just isolating the variants to the `url` field doesn't work either
+// because `dropshot` doesn't like a flattened and untagged inner struct enum.
+// So we are left with this solution, a top-level, untagged enum.
+// In the future, avoid this by not having nullable fields in the API that need to be individually modified.
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
