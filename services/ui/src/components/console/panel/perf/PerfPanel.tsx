@@ -34,10 +34,12 @@ const BENCHMARKS_PAGE_PARAM = "benchmarks_page";
 const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 const RANGE_PARAM = "range";
+const CLEAR_PARAM = "clear";
 
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
+const DEFAULT_PERF_CLEAR = false;
 
 const DEFAULT_PER_PAGE = 8;
 export const DEFAULT_PAGE = 1;
@@ -149,6 +151,9 @@ const PerfPanel = (props) => {
 	if (!is_range(searchParams[RANGE_PARAM])) {
 		setSearchParams({ [RANGE_PARAM]: null });
 	}
+	if (!is_bool_param(searchParams[CLEAR_PARAM])) {
+		setSearchParams({ [CLEAR_PARAM]: null });
+	}
 
 	// Sanitize all pagination query params
 	if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
@@ -210,6 +215,16 @@ const PerfPanel = (props) => {
 			return searchParams[RANGE_PARAM];
 		} else {
 			return DEFAULT_PERF_RANGE;
+		}
+	});
+
+	const clear = createMemo(() => {
+		// This check is required for the initial load
+		// before the query params have been sanitized
+		if (is_range(searchParams[CLEAR_PARAM])) {
+			return searchParams[CLEAR_PARAM];
+		} else {
+			return DEFAULT_PERF_CLEAR;
 		}
 	});
 
@@ -363,13 +378,14 @@ const PerfPanel = (props) => {
 		const first = 0;
 		const first_report = data?.[first];
 		if (
+			!clear() &&
 			first_report &&
+			is_plot_init() &&
 			tab() === DEFAULT_PERF_TAB &&
 			reports_page() === DEFAULT_PAGE &&
 			branches_page() === DEFAULT_PAGE &&
 			testbeds_page() === DEFAULT_PAGE &&
-			benchmarks_page() === DEFAULT_PAGE &&
-			is_plot_init()
+			benchmarks_page() === DEFAULT_PAGE
 		) {
 			const first_metric_kind =
 				first_report?.results?.[first]?.[first].metric_kind?.slug;
@@ -521,6 +537,21 @@ const PerfPanel = (props) => {
 	const handleRange = (range: Range) => {
 		if (is_range(range)) {
 			setSearchParams({ [RANGE_PARAM]: range });
+		}
+	};
+
+	const handleClear = (key: boolean) => {
+		if (typeof key === "boolean") {
+			if (key) {
+				setSearchParams({
+					[CLEAR_PARAM]: key,
+					[REPORT_PARAM]: null,
+					[METRIC_KIND_PARAM]: null,
+					[BRANCHES_PARAM]: null,
+					[TESTBEDS_PARAM]: null,
+					[BENCHMARKS_PARAM]: null,
+				});
+			}
 		}
 	};
 
