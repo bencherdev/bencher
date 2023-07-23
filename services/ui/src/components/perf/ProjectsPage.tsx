@@ -102,7 +102,11 @@ const ProjectsPage = (props) => {
 							<br />
 							<For each={projects()}>
 								{(project) => (
-									<Link class="box" href={`/perf/${project.slug}`}>
+									<Link
+										class="box"
+										title={`View ${project.name}`}
+										href={`/perf/${project.slug}`}
+									>
 										{project.name}
 									</Link>
 								)}

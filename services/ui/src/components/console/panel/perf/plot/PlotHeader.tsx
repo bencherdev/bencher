@@ -94,6 +94,7 @@ const PlotHeader = (props) => {
 			<div class="level-left">
 				<select
 					class="card-header-title level-item"
+					title="Select Metric Kind"
 					onInput={(e) => handleInput(e)}
 				>
 					<For each={metric_kinds()}>
@@ -114,6 +115,7 @@ const PlotHeader = (props) => {
 						<div class="level-item has-text-centered">
 							<p class="card-header-title">Start Date</p>
 							<input
+								title="Start Date"
 								type="date"
 								value={props.start_date()}
 								onInput={(e) => props.handleStartTime(e.currentTarget?.value)}
@@ -126,6 +128,7 @@ const PlotHeader = (props) => {
 						<div class="level-item has-text-centered">
 							<p class="card-header-title">End Date</p>
 							<input
+								title="End Date"
 								type="date"
 								value={props.end_date()}
 								onInput={(e) => props.handleEndTime(e.currentTarget?.value)}

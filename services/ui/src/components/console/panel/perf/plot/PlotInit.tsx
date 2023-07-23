@@ -21,6 +21,7 @@ const PlotInit = (props) => {
 					/>
 					Select at least one{" "}
 					<a
+						title="View Branches"
 						onClick={() => {
 							props.handleTab(PerfTab.BRANCHES);
 						}}
@@ -37,6 +38,7 @@ const PlotInit = (props) => {
 					/>
 					Select at least one{" "}
 					<a
+						title="View Testbeds"
 						onClick={() => {
 							props.handleTab(PerfTab.TESTBEDS);
 						}}
@@ -53,6 +55,7 @@ const PlotInit = (props) => {
 					/>
 					Select at least one{" "}
 					<a
+						title="View Benchmarks"
 						onClick={() => {
 							props.handleTab(PerfTab.BENCHMARKS);
 						}}

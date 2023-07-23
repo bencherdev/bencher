@@ -20,7 +20,15 @@ export const Navbar = (props) => {
 	return (
 		<nav class="navbar" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
-				<Link class="navbar-item" href="/" aria-label="home">
+				<Link
+					class="navbar-item"
+					title={
+						is_valid_jwt()
+							? "Console Home"
+							: "Bencher - Continuous Benchmarking"
+					}
+					href="/"
+				>
 					<img
 						src={BENCHER_LOGO_URL}
 						width="152"
@@ -33,7 +41,7 @@ export const Navbar = (props) => {
 					class={`navbar-burger ${burger() && "is-active"}`}
 					aria-label="menu"
 					aria-expanded="false"
-					onClick={() => setBurger(!burger())}
+					onClick={(_e) => setBurger(!burger())}
 				>
 					<span aria-hidden="true" />
 					<span aria-hidden="true" />
@@ -43,45 +51,46 @@ export const Navbar = (props) => {
 
 			<div class={`navbar-menu ${burger() && "is-active"}`}>
 				<div class="navbar-start">
-					<a class="navbar-item" href="/docs">
+					<a class="navbar-item" title="Bencher Docs" href="/docs">
 						Docs
 					</a>
 					<Show
-						when={!is_valid_jwt()}
+						when={is_valid_jwt()}
 						fallback={
-							<a class="navbar-item" href="/perf">
-								Public Projects
-							</a>
+							<>
+								<a class="navbar-item" title="Bencher Projects" href="/perf">
+									Projects
+								</a>
+								<a class="navbar-item" title="Bencher Pricing" href="/pricing">
+									Pricing
+								</a>
+								<a
+									class="navbar-item"
+									title="Bencher GitHub Repository"
+									href={BENCHER_GITHUB_URL}
+									target="_blank"
+									rel="noreferrer"
+								>
+									GitHub
+								</a>
+							</>
 						}
 					>
-						<>
-							<a class="navbar-item" href="/perf">
-								Projects
-							</a>
-							<a class="navbar-item" href="/pricing">
-								Pricing
-							</a>
-							<a
-								class="navbar-item"
-								href={BENCHER_GITHUB_URL}
-								target="_blank"
-								rel="noreferrer"
-							>
-								GitHub
-							</a>
-						</>
+						<a class="navbar-item" title="Public Projects" href="/perf">
+							Public Projects
+						</a>
+						<Show when={props.organization_slug()} fallback={<></>}>
+							<div class="navbar-item">
+								<ProjectSelect
+									user={props.user}
+									organization_slug={props.organization_slug}
+									project_slug={props?.project_slug}
+									handleRedirect={props?.handleRedirect}
+									handleProjectSlug={props?.handleProjectSlug}
+								/>
+							</div>
+						</Show>
 					</Show>
-					{is_valid_jwt() && props.organization_slug() && (
-						<div class="navbar-item">
-							<ProjectSelect
-								user={props.user}
-								organization_slug={props.organization_slug}
-								project_slug={props?.project_slug}
-								handleRedirect={props?.handleRedirect}
-								handleProjectSlug={props?.handleProjectSlug}
-							/>
-						</div>
-					)}
 				</div>
 
 				<div class="navbar-end">
@@ -89,20 +98,35 @@ export const Navbar = (props) => {
 						<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
 						<div class="navbar-item" />
 						<div class="buttons">
-							{props.user?.token === null ? (
-								<>
-									<Link class="button is-light" href="/auth/login">
-										Log in
-									</Link>
-									<Link class="button is-primary" href="/auth/signup">
-										<strong>Sign up</strong>
-									</Link>
-								</>
-							) : (
-								<Link class="button is-light" href="/auth/logout">
+							<Show
+								when={is_valid_jwt()}
+								fallback={
+									<>
+										<Link
+											class="button is-light"
+											title="Bencher Log in"
+											href="/auth/login"
+										>
+											Log in
+										</Link>
+										<Link
+											class="button is-primary"
+											title="Bencher Sign up"
+											href="/auth/signup"
+										>
+											<strong>Sign up</strong>
+										</Link>
+									</>
+								}
+							>
+								<Link
+									class="button is-light"
+									title="Log out"
+									href="/auth/logout"
+								>
 									Log out
 								</Link>
-							)}
+							</Show>
 						</div>
 					</div>
 				</div>
