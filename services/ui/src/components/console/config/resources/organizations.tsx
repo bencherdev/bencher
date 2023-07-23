@@ -1,6 +1,12 @@
-import { BENCHER_API_URL } from "../../../site/util";
+import FieldKind from "../../../field/kind";
+import {
+	BENCHER_API_URL,
+	OrganizationPermission,
+	is_allowed_organization,
+} from "../../../site/util";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewSlugPath } from "../util";
+import ORGANIZATION_FIELDS from "./fields/organization";
 
 const organizationsConfig = {
 	[Operation.LIST]: {
@@ -53,6 +59,17 @@ const organizationsConfig = {
 					label: "Organization Name",
 					key: "name",
 					display: Display.RAW,
+					is_allowed: (path_params) =>
+						is_allowed_organization(path_params, OrganizationPermission.EDIT),
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Name",
+						key: "name",
+						value: "",
+						valid: null,
+						validate: true,
+						config: ORGANIZATION_FIELDS.name,
+					},
 				},
 				{
 					kind: Card.FIELD,

@@ -58,9 +58,10 @@ const ViewCard = (props) => {
 			</div>
 			<div class="card-content">
 				<div class="content">
-					<Switch
-						fallback={<p style="overflow-wrap:anywhere;">{props.value}</p>}
-					>
+					<Switch fallback={<></>}>
+						<Match when={props.card?.display === Display.RAW}>
+							<p style="overflow-wrap:anywhere;">{props.value}</p>
+						</Match>
 						<Match when={props.card?.display === Display.SWITCH}>
 							<div class="field">
 								<input
@@ -185,6 +186,7 @@ const UpdateCard = (props) => {
 		patch(data)
 			.then((_resp) => {
 				handleFormSubmitting(false);
+				props.toggleUpdate();
 				props.handleRefresh();
 				navigate(
 					notification_path(

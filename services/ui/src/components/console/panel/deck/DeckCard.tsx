@@ -5,8 +5,8 @@ import { nested_value } from "../../../site/util";
 
 const DeckCard = (props) => {
 	return (
-		<Switch
-			fallback={
+		<Switch fallback={<></>}>
+			<Match when={props.card?.kind === Card.FIELD}>
 				<FieldCard
 					user={props.user}
 					card={props.card}
@@ -15,8 +15,7 @@ const DeckCard = (props) => {
 					url={props.url}
 					handleRefresh={props.handleRefresh}
 				/>
-			}
-		>
+			</Match>
 			<Match when={props.card?.kind === Card.TABLE}>
 				<div>Table Card</div>
 			</Match>
