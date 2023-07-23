@@ -87,6 +87,7 @@ const organizationsConfig = {
 						validate: true,
 						config: ORGANIZATION_FIELDS.slug,
 					},
+					path: (_path_params) => "/auth/logout",
 				},
 				{
 					kind: Card.FIELD,

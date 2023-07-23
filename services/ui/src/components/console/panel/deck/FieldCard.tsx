@@ -127,7 +127,13 @@ const initForm = (field, value) => {
 const UpdateCard = (props) => {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const pathname = createMemo(() => location.pathname);
+	const pathname = createMemo(() => {
+		if (props.card?.path) {
+			return props.card?.path(props.path_params);
+		} else {
+			return location.pathname;
+		}
+	});
 
 	const [form, setForm] = createSignal(
 		initForm(props.card?.field, props.value),
