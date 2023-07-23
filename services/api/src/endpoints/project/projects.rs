@@ -17,7 +17,10 @@ use crate::{
     },
     error::api_error,
     model::{
-        project::{visibility::Visibility, QueryProject, UpdateProject},
+        project::{
+            visibility::{project_visibility::project_visibility, Visibility},
+            QueryProject, UpdateProject,
+        },
         user::auth::AuthUser,
     },
     schema,
@@ -234,6 +237,26 @@ async fn patch_inner(
         auth_user,
         Permission::Edit,
     )?;
+
+    // Check project visibility
+    #[cfg(not(feature = "plus"))]
+    project_visibility(json_project.visibility())?;
+    #[cfg(feature = "plus")]
+    {
+        let organization = crate::model::organization::QueryOrganization::get_uuid(
+            conn,
+            query_project.organization_id,
+        )?
+        .into();
+        project_visibility(
+            conn,
+            context.biller.as_ref(),
+            &context.licensor,
+            &organization,
+            json_project.visibility(),
+        )
+        .await?;
+    }
 
     diesel::update(schema::project::table.filter(schema::project::id.eq(query_project.id)))
         .set(&UpdateProject::from(json_project))

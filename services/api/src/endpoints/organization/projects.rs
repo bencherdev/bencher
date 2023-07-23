@@ -179,9 +179,11 @@ async fn post_inner(
 
     // Check project visibility
     #[cfg(not(feature = "plus"))]
-    project_visibility(json_project.visibility)?;
+    crate::model::project::visibility::project_visibility::project_visibility(
+        json_project.visibility,
+    )?;
     #[cfg(feature = "plus")]
-    project_visibility::project_visibility(
+    crate::model::project::visibility::project_visibility::project_visibility(
         conn,
         context.biller.as_ref(),
         &context.licensor,
@@ -270,64 +272,4 @@ async fn post_inner(
     )?;
 
     query_project.into_json(conn)
-}
-
-#[cfg(not(feature = "plus"))]
-fn project_visibility(
-    visibility: Option<bencher_json::project::JsonVisibility>,
-) -> Result<(), ApiError> {
-    visibility
-        .unwrap_or_default()
-        .is_public()
-        .then_some(())
-        .ok_or(ApiError::CreatePrivateProject)
-}
-
-#[cfg(feature = "plus")]
-mod project_visibility {
-    use bencher_billing::Biller;
-    use bencher_json::{project::JsonVisibility, ResourceId};
-    use bencher_license::Licensor;
-
-    use crate::{context::DbConnection, model::organization::QueryOrganization, ApiError};
-
-    pub async fn project_visibility(
-        conn: &mut DbConnection,
-        biller: Option<&Biller>,
-        licensor: &Licensor,
-        organization: &ResourceId,
-        visibility: Option<JsonVisibility>,
-    ) -> Result<(), ApiError> {
-        if visibility.unwrap_or_default().is_public() {
-            Ok(())
-        } else {
-            check_plan(conn, biller, licensor, organization).await
-        }
-    }
-
-    async fn check_plan(
-        conn: &mut DbConnection,
-        biller: Option<&Biller>,
-        licensor: &Licensor,
-        organization: &ResourceId,
-    ) -> Result<(), ApiError> {
-        if let Some(subscription) = QueryOrganization::get_subscription(conn, organization)? {
-            if let Some(biller) = biller {
-                let plan_status = biller.get_plan_status(&subscription).await?;
-                if plan_status.is_active() {
-                    Ok(())
-                } else {
-                    Err(ApiError::InactivePlanOrganization(organization.clone()))
-                }
-            } else {
-                Err(ApiError::NoBillerOrganization(organization.clone()))
-            }
-        } else if let Some((uuid, license)) = QueryOrganization::get_license(conn, organization)? {
-            let _token_data = licensor.validate_organization(&license, uuid)?;
-            // TODO check license entitlements for usage so far
-            Ok(())
-        } else {
-            Err(ApiError::NoPlanOrganization(organization.clone()))
-        }
-    }
 }

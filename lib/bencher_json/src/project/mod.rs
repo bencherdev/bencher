@@ -185,6 +185,15 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
     }
 }
 
+impl JsonUpdateProject {
+    pub fn visibility(&self) -> Option<JsonVisibility> {
+        match self {
+            Self::Patch(patch) => patch.visibility,
+            Self::Null(patch) => patch.visibility,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
