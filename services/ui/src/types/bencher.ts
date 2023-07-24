@@ -4,7 +4,7 @@
 
 export type BenchmarkName = string;
 
-export type Boundary = OrderedFloat<number>;
+export type Boundary = number;
 
 export type BranchName = string;
 
@@ -32,6 +32,125 @@ export type UserName = string;
  * For all other use cases, use `uuid::Uuid` instead
  */
 export type Uuid = string;
+
+export interface JsonBenchmark {
+	uuid: Uuid;
+	project: Uuid;
+	name: BenchmarkName;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
+export interface JsonBoundary {
+	lower_limit?: number;
+	upper_limit?: number;
+}
+
+export interface JsonBranch {
+	uuid: Uuid;
+	project: Uuid;
+	name: BranchName;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
+export interface JsonVersion {
+	number: number;
+	hash?: GitHash;
+}
+
+export interface JsonMetric {
+	value: number;
+	lower_bound?: number;
+	upper_bound?: number;
+}
+
+export interface JsonMetricKind {
+	uuid: Uuid;
+	project: Uuid;
+	name: NonEmpty;
+	slug: Slug;
+	units: NonEmpty;
+	created: string;
+	modified: string;
+}
+
+export enum JsonVisibility {
+	Public = "public",
+	Private = "private",
+}
+
+export interface JsonProject {
+	uuid: Uuid;
+	organization: Uuid;
+	name: NonEmpty;
+	slug: Slug;
+	url?: Url;
+	visibility: JsonVisibility;
+	created: string;
+	modified: string;
+}
+
+export interface JsonTestbed {
+	uuid: Uuid;
+	project: Uuid;
+	name: NonEmpty;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
+export enum JsonStatisticKind {
+	Z = "z",
+	T = "t",
+}
+
+export interface JsonStatistic {
+	uuid: Uuid;
+	threshold: Uuid;
+	test: JsonStatisticKind;
+	min_sample_size?: number;
+	max_sample_size?: number;
+	window?: number;
+	lower_boundary?: Boundary;
+	upper_boundary?: Boundary;
+	created: string;
+}
+
+export interface JsonThresholdStatistic {
+	uuid: Uuid;
+	project: Uuid;
+	statistic: JsonStatistic;
+	created: string;
+}
+
+export interface JsonPerfMetric {
+	report: Uuid;
+	iteration: number;
+	start_time: string;
+	end_time: string;
+	version: JsonVersion;
+	threshold?: JsonThresholdStatistic;
+	metric: JsonMetric;
+	boundary: JsonBoundary;
+}
+
+export interface JsonPerfMetrics {
+	branch: JsonBranch;
+	testbed: JsonTestbed;
+	benchmark: JsonBenchmark;
+	metrics: JsonPerfMetric[];
+}
+
+export interface JsonPerf {
+	project: JsonProject;
+	metric_kind: JsonMetricKind;
+	start_time?: string;
+	end_time?: string;
+	results: JsonPerfMetrics[];
+}
 
 export enum PlanLevel {
 	Free = "free",

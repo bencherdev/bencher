@@ -11,6 +11,7 @@ mod median;
 pub use mean::Mean;
 pub use median::Median;
 
+#[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Default, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetric {

@@ -13,6 +13,7 @@ pub struct CliTask {
 pub enum CliSub {
     Fmt,
     ReleaseNotes(CliReleaseNotes),
+    Swagger(CliSwagger),
 }
 
 #[derive(Parser, Debug)]
@@ -21,6 +22,13 @@ pub struct CliReleaseNotes {
     #[clap(long)]
     pub changelog: Option<String>,
 
+    /// File output path
+    #[clap(long)]
+    pub path: Option<String>,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliSwagger {
     /// File output path
     #[clap(long)]
     pub path: Option<String>,

@@ -71,6 +71,7 @@ pub struct JsonThreshold {
     pub modified: DateTime<Utc>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonStatistic {
@@ -85,6 +86,7 @@ pub struct JsonStatistic {
     pub created: DateTime<Utc>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -93,6 +95,7 @@ pub enum JsonStatisticKind {
     T,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThresholdStatistic {

@@ -57,6 +57,7 @@ pub struct JsonBranches(pub Vec<JsonBranch>);
 
 crate::from_vec!(JsonBranches[JsonBranch]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranch {
@@ -86,6 +87,7 @@ pub struct JsonBranchVersion {
     pub modified: DateTime<Utc>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonVersion {

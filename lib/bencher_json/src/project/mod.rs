@@ -34,6 +34,7 @@ pub struct JsonProjects(pub Vec<JsonProject>);
 
 crate::from_vec!(JsonProjects[JsonProject]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProject {
@@ -194,6 +195,7 @@ impl JsonUpdateProject {
     }
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

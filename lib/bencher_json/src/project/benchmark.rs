@@ -17,6 +17,7 @@ pub struct JsonBenchmarks(pub Vec<JsonBenchmark>);
 
 crate::from_vec!(JsonBenchmarks[JsonBenchmark]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmark {

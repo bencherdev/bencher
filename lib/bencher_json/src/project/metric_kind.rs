@@ -187,6 +187,7 @@ pub struct JsonMetricKinds(pub Vec<JsonMetricKind>);
 
 crate::from_vec!(JsonMetricKinds[JsonMetricKind]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetricKind {

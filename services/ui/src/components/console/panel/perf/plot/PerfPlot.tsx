@@ -21,11 +21,15 @@ const PerfPlot = (props) => {
 						refresh={props.refresh}
 						range={props.range}
 						clear={props.clear}
+						lower_boundary={props.lower_boundary}
+						upper_boundary={props.upper_boundary}
 						handleMetricKind={props.handleMetricKind}
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
 						handleRange={props.handleRange}
 						handleClear={props.handleClear}
+						handleLowerBoundary={props.handleLowerBoundary}
+						handleUpperBoundary={props.handleUpperBoundary}
 					/>
 					<div class="panel-block">
 						<Show
@@ -39,6 +43,8 @@ const PerfPlot = (props) => {
 									testbeds={props.testbeds}
 									benchmarks={props.benchmarks}
 									range={props.range}
+									lower_boundary={props.lower_boundary}
+									upper_boundary={props.upper_boundary}
 									perf_data={props.perf_data}
 									key={props.key}
 									handleKey={props.handleKey}

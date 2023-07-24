@@ -80,7 +80,7 @@ const PlotHeader = (props) => {
 		props.handleMetricKind(target_slug);
 	};
 
-	const icon = createMemo(() => {
+	const range_icon = createMemo(() => {
 		switch (props.range()) {
 			case Range.DATE_TIME:
 				return <i class="far fa-calendar" aria-hidden="true" />;
@@ -111,29 +111,45 @@ const PlotHeader = (props) => {
 			</div>
 			<div class="level-right">
 				<Show when={!props.is_plot_init()} fallback={<></>}>
-					<div class="level-item">
-						<button
-							class="button is-outlined is-fullwidth"
-							title={
-								props.range() === Range.DATE_TIME
-									? "Switch to Version Range"
-									: "Switch to Date Range"
-							}
-							onClick={(e) => {
-								e.preventDefault();
-								switch (props.range()) {
-									case Range.DATE_TIME:
-										props.handleRange(Range.VERSION);
-										break;
-									case Range.VERSION:
-										props.handleRange(Range.DATE_TIME);
-										break;
+					<>
+						<div class="level-item">
+							<BoundaryButton
+								boundary={props.lower_boundary}
+								handleBoundary={props.handleLowerBoundary}
+								position="Lower"
+								arrow="down"
+							/>
+							<BoundaryButton
+								boundary={props.upper_boundary}
+								handleBoundary={props.handleUpperBoundary}
+								position="Upper"
+								arrow="up"
+							/>
+						</div>
+						<div class="level-item">
+							<button
+								class="button is-outlined is-fullwidth"
+								title={
+									props.range() === Range.DATE_TIME
+										? "Switch to Version Range"
+										: "Switch to Date Range"
 								}
-							}}
-						>
-							<span class="icon">{icon()}</span>
-						</button>
-					</div>
+								onClick={(e) => {
+									e.preventDefault();
+									switch (props.range()) {
+										case Range.DATE_TIME:
+											props.handleRange(Range.VERSION);
+											break;
+										case Range.VERSION:
+											props.handleRange(Range.DATE_TIME);
+											break;
+									}
+								}}
+							>
+								<span class="icon">{range_icon()}</span>
+							</button>
+						</div>
+					</>
 				</Show>
 				<div class="level-item">
 					<nav class="level is-mobile">
@@ -179,4 +195,22 @@ const PlotHeader = (props) => {
 	);
 };
 
+const BoundaryButton = (props) => {
+	return (
+		<button
+			class={`button ${
+				props.boundary() ? "is-primary" : "is-outlined"
+			} is-fullwidth`}
+			title={`${props.boundary() ? "Hide" : "Show"} ${props.position} Boundary`}
+			onClick={(e) => {
+				e.preventDefault();
+				props.handleBoundary(!props.boundary());
+			}}
+		>
+			<span class="icon">
+				<i class={`fas fa-arrow-${props.arrow}`} aria-hidden="true" />
+			</span>
+		</button>
+	);
+};
 export default PlotHeader;

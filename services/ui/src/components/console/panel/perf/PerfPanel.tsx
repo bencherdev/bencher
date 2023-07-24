@@ -35,11 +35,14 @@ const TAB_PARAM = "tab";
 const KEY_PARAM = "key";
 const RANGE_PARAM = "range";
 const CLEAR_PARAM = "clear";
+const LOWER_BOUNDARY_PARAM = "lower_boundary";
+const UPPER_BOUNDARY_PARAM = "upper_boundary";
 
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
 const DEFAULT_PERF_RANGE = Range.DATE_TIME;
 const DEFAULT_PERF_CLEAR = false;
+const DEFAULT_PERF_BOUNDARY = false;
 
 const DEFAULT_PER_PAGE = 8;
 export const DEFAULT_PAGE = 1;
@@ -154,6 +157,12 @@ const PerfPanel = (props) => {
 	if (!is_bool_param(searchParams[CLEAR_PARAM])) {
 		setSearchParams({ [CLEAR_PARAM]: null });
 	}
+	if (!is_bool_param(searchParams[LOWER_BOUNDARY_PARAM])) {
+		setSearchParams({ [LOWER_BOUNDARY_PARAM]: null });
+	}
+	if (!is_bool_param(searchParams[UPPER_BOUNDARY_PARAM])) {
+		setSearchParams({ [UPPER_BOUNDARY_PARAM]: null });
+	}
 
 	// Sanitize all pagination query params
 	if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
@@ -198,15 +207,19 @@ const PerfPanel = (props) => {
 		}
 	});
 
-	const key = createMemo(() => {
-		// This check is required for the initial load
-		// before the query params have been sanitized
-		if (is_bool_param(searchParams[KEY_PARAM])) {
-			return searchParams[KEY_PARAM] === "true";
+	// This check is required for the initial load
+	// before the query params have been sanitized
+	const is_bool_param_or_default = (param: string, default_value: boolean) => {
+		if (is_bool_param(searchParams[param])) {
+			return searchParams[param] === "true";
 		} else {
-			return DEFAULT_PERF_KEY;
+			return default_value;
 		}
-	});
+	};
+
+	const key = createMemo(() =>
+		is_bool_param_or_default(KEY_PARAM, DEFAULT_PERF_KEY),
+	);
 
 	const range = createMemo(() => {
 		// This check is required for the initial load
@@ -218,15 +231,18 @@ const PerfPanel = (props) => {
 		}
 	});
 
-	const clear = createMemo(() => {
-		// This check is required for the initial load
-		// before the query params have been sanitized
-		if (is_bool_param(searchParams[CLEAR_PARAM])) {
-			return searchParams[CLEAR_PARAM] === "true";
-		} else {
-			return DEFAULT_PERF_CLEAR;
-		}
-	});
+	// Ironically, a better name for the `clear` param would actually be `dirty`.
+	// It works as a "dirty" bit to indicate that we shouldn't load the first report again.
+	const clear = createMemo(() =>
+		is_bool_param_or_default(CLEAR_PARAM, DEFAULT_PERF_CLEAR),
+	);
+
+	const lower_boundary = createMemo(() =>
+		is_bool_param_or_default(LOWER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
+	);
+	const upper_boundary = createMemo(() =>
+		is_bool_param_or_default(UPPER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
+	);
 
 	// Pagination query params
 	const per_page = createMemo(() => DEFAULT_PER_PAGE);
@@ -462,6 +478,7 @@ const PerfPanel = (props) => {
 
 	const handleMetricKind = (metric_kind: string) => {
 		setSearchParams({
+			[CLEAR_PARAM]: true,
 			[REPORT_PARAM]: null,
 			[METRIC_KIND_PARAM]: validate_string(metric_kind, is_valid_slug)
 				? metric_kind
@@ -472,6 +489,9 @@ const PerfPanel = (props) => {
 	const handleReportChecked = (index: number, metric_kind_slug: string) => {
 		let report = reports_tab?.[index]?.resource;
 		setSearchParams({
+			[CLEAR_PARAM]: true,
+			[LOWER_BOUNDARY_PARAM]: null,
+			[UPPER_BOUNDARY_PARAM]: null,
 			[REPORT_PARAM]: report?.uuid,
 			[METRIC_KIND_PARAM]: metric_kind_slug,
 			[BRANCHES_PARAM]: report?.branch?.uuid,
@@ -497,11 +517,13 @@ const PerfPanel = (props) => {
 		const uuid = item.resource.uuid;
 		if (checked) {
 			setSearchParams({
+				[CLEAR_PARAM]: true,
 				[REPORT_PARAM]: null,
 				[param]: arrayToString(removeFromArray(param_array, uuid)),
 			});
 		} else {
 			setSearchParams({
+				[CLEAR_PARAM]: true,
 				[REPORT_PARAM]: null,
 				[param]: arrayToString(addToArray(param_array, uuid)),
 			});
@@ -528,10 +550,14 @@ const PerfPanel = (props) => {
 		}
 	};
 
-	const handleKey = (key: boolean) => {
-		if (typeof key === "boolean") {
-			setSearchParams({ [KEY_PARAM]: key });
+	const handleBool = (param: string, value: boolean) => {
+		if (typeof value === "boolean") {
+			setSearchParams({ [param]: value });
 		}
+	};
+
+	const handleKey = (key: boolean) => {
+		handleBool(KEY_PARAM, key);
 	};
 
 	const handleRange = (range: Range) => {
@@ -545,6 +571,8 @@ const PerfPanel = (props) => {
 			if (clear) {
 				setSearchParams({
 					[CLEAR_PARAM]: true,
+					[LOWER_BOUNDARY_PARAM]: null,
+					[UPPER_BOUNDARY_PARAM]: null,
 					[REPORT_PARAM]: null,
 					[METRIC_KIND_PARAM]: null,
 					[BRANCHES_PARAM]: null,
@@ -557,6 +585,13 @@ const PerfPanel = (props) => {
 				setSearchParams({ [CLEAR_PARAM]: clear });
 			}
 		}
+	};
+
+	const handleLowerBoundary = (boundary: boolean) => {
+		handleBool(LOWER_BOUNDARY_PARAM, boundary);
+	};
+	const handleUpperBoundary = (boundary: boolean) => {
+		handleBool(UPPER_BOUNDARY_PARAM, boundary);
 	};
 
 	const handleReportsPage = (page: number) =>
@@ -599,6 +634,8 @@ const PerfPanel = (props) => {
 				key={key}
 				range={range}
 				clear={clear}
+				lower_boundary={lower_boundary}
+				upper_boundary={upper_boundary}
 				reports_tab={reports_tab}
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
@@ -615,6 +652,8 @@ const PerfPanel = (props) => {
 				handleKey={handleKey}
 				handleRange={handleRange}
 				handleClear={handleClear}
+				handleLowerBoundary={handleLowerBoundary}
+				handleUpperBoundary={handleUpperBoundary}
 				handleReportChecked={handleReportChecked}
 				handleBranchChecked={handleBranchChecked}
 				handleTestbedChecked={handleTestbedChecked}

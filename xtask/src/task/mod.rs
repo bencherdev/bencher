@@ -3,8 +3,10 @@ use clap::Parser;
 use crate::parser::{CliSub, CliTask};
 
 mod release_notes;
+mod swagger;
 
 use release_notes::ReleaseNotes;
+use swagger::Swagger;
 
 #[derive(Debug)]
 pub struct Task {
@@ -15,6 +17,7 @@ pub struct Task {
 pub enum Sub {
     Fmt,
     ReleaseNotes(ReleaseNotes),
+    Swagger(Swagger),
 }
 
 impl TryFrom<CliTask> for Task {
@@ -34,6 +37,7 @@ impl TryFrom<CliSub> for Sub {
         Ok(match sub {
             CliSub::Fmt => Self::Fmt,
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
+            CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
         })
     }
 }
@@ -53,6 +57,7 @@ impl Sub {
         match self {
             Self::Fmt => Ok(()),
             Self::ReleaseNotes(release_notes) => release_notes.exec().await,
+            Self::Swagger(swagger) => swagger.exec().await,
         }
     }
 }

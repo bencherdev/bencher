@@ -185,6 +185,7 @@ impl JsonPerfQuery {
     }
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
@@ -195,6 +196,7 @@ pub struct JsonPerf {
     pub results: Vec<JsonPerfMetrics>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetrics {
@@ -204,6 +206,7 @@ pub struct JsonPerfMetrics {
     pub metrics: Vec<JsonPerfMetric>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfMetric {

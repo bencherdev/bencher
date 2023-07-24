@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { Range } from "../../../config/types";
 import { addTooltips } from "./tooltip";
+import { JsonPerf } from "../../../../../types/bencher";
 
 const LinePlot = (props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
@@ -24,7 +25,7 @@ const LinePlot = (props) => {
 		}
 	});
 
-	const get_units = (json_perf) => {
+	const get_units = (json_perf: JsonPerf) => {
 		const units = json_perf?.metric_kind?.units;
 		if (units) {
 			return units;
@@ -43,7 +44,7 @@ const LinePlot = (props) => {
 	};
 
 	const plotted = () => {
-		const json_perf = props.perf_data();
+		const json_perf: JsonPerf = props.perf_data();
 		// console.log(json_perf);
 
 		if (
@@ -74,6 +75,8 @@ const LinePlot = (props) => {
 					number: perf_metric.version?.number,
 					hash: perf_metric.version?.hash,
 					iteration: perf_metric.iteration,
+					lower_limit: perf_metric.boundary?.lower_limit,
+					upper_limit: perf_metric.boundary?.upper_limit,
 				});
 				metrics_found = true;
 			});
@@ -107,6 +110,28 @@ const LinePlot = (props) => {
 						}\nIteration: ${dot.iteration}`,
 				}),
 			);
+			if (props.lower_boundary()) {
+				plot_arrays.push(
+					Plot.line(line_data, boundary_line(x_axis, "lower_limit", color)),
+				);
+				plot_arrays.push(
+					Plot.dot(
+						line_data,
+						boundary_dot(x_axis, "lower_limit", color, "Lower"),
+					),
+				);
+			}
+			if (props.upper_boundary()) {
+				plot_arrays.push(
+					Plot.line(line_data, boundary_line(x_axis, "upper_limit", color)),
+				);
+				plot_arrays.push(
+					Plot.dot(
+						line_data,
+						boundary_dot(x_axis, "upper_limit", color, "Upper"),
+					),
+				);
+			}
 		});
 
 		if (metrics_found) {
@@ -158,6 +183,45 @@ const LinePlot = (props) => {
 	};
 
 	return <>{plotted()}</>;
+};
+
+const boundary_line = (x_axis, y_axis, color) => {
+	return {
+		x: x_axis,
+		y: y_axis,
+		stroke: color,
+		strokeWidth: 4,
+		strokeOpacity: 0.666,
+		strokeDasharray: [8],
+	};
+};
+
+const boundary_dot = (x_axis, y_axis, color, position) => {
+	return {
+		x: x_axis,
+		y: y_axis,
+		stroke: color,
+		strokeWidth: 4,
+		strokeOpacity: 0.666,
+		fill: color,
+		fillOpacity: 0.666,
+		title: (dot) =>
+			`${position} Limit: ${dot[y_axis]}\n${dot.date_time?.toLocaleString(
+				undefined,
+				{
+					weekday: "short",
+					year: "numeric",
+					month: "short",
+					day: "2-digit",
+					hour: "2-digit",
+					hour12: false,
+					minute: "2-digit",
+					second: "2-digit",
+				},
+			)}\nVersion Number: ${dot.number}${
+				dot.hash ? `\nVersion Hash: ${dot.hash}` : ""
+			}\nIteration: ${dot.iteration}`,
+	};
 };
 
 export default LinePlot;

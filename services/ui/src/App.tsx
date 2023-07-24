@@ -2,7 +2,6 @@ import "./styles/styles.scss";
 
 import { createSignal, lazy, Component, createMemo, For } from "solid-js";
 import { Routes, Route, useLocation } from "solid-app-router";
-
 import { Navbar } from "./components/site/navbar/Navbar";
 import Footer from "./components/site/pages/Footer";
 import { projectSlug } from "./components/console/ConsolePage";
