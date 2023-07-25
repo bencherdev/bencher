@@ -135,6 +135,7 @@ export interface JsonPerfMetric {
 	threshold?: JsonThresholdStatistic;
 	metric: JsonMetric;
 	boundary: JsonBoundary;
+	alert?: Uuid;
 }
 
 export interface JsonPerfMetrics {

@@ -219,6 +219,7 @@ pub struct JsonPerfMetric {
     pub threshold: Option<JsonThresholdStatistic>,
     pub metric: JsonMetric,
     pub boundary: JsonBoundary,
+    pub alert: Option<Uuid>,
 }
 
 #[cfg(feature = "table")]

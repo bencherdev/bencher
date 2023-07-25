@@ -4,9 +4,11 @@ use crate::parser::{CliSub, CliTask};
 
 mod release_notes;
 mod swagger;
+mod typeshare;
 
 use release_notes::ReleaseNotes;
 use swagger::Swagger;
+use typeshare::Typeshare;
 
 #[derive(Debug)]
 pub struct Task {
@@ -18,6 +20,7 @@ pub enum Sub {
     Fmt,
     ReleaseNotes(ReleaseNotes),
     Swagger(Swagger),
+    Typeshare(Typeshare),
 }
 
 impl TryFrom<CliTask> for Task {
@@ -38,6 +41,7 @@ impl TryFrom<CliSub> for Sub {
             CliSub::Fmt => Self::Fmt,
             CliSub::ReleaseNotes(release_notes) => Self::ReleaseNotes(release_notes.try_into()?),
             CliSub::Swagger(swagger) => Self::Swagger(swagger.try_into()?),
+            CliSub::Typeshare(typeshare) => Self::Typeshare(typeshare.try_into()?),
         })
     }
 }
@@ -58,6 +62,7 @@ impl Sub {
             Self::Fmt => Ok(()),
             Self::ReleaseNotes(release_notes) => release_notes.exec().await,
             Self::Swagger(swagger) => swagger.exec().await,
+            Self::Typeshare(typeshare) => typeshare.exec().await,
         }
     }
 }

@@ -6616,6 +6616,11 @@
       "JsonPerfMetric": {
         "type": "object",
         "properties": {
+          "alert": {
+            "nullable": true,
+            "type": "string",
+            "format": "uuid"
+          },
           "boundary": {
             "$ref": "#/components/schemas/JsonBoundary"
           },

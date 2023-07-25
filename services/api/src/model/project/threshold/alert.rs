@@ -41,6 +41,18 @@ impl QueryAlert {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
+    pub fn get_uuid_from_boundary_id(
+        conn: &mut DbConnection,
+        boundary_id: i32,
+    ) -> Result<Uuid, ApiError> {
+        let uuid: String = schema::alert::table
+            .filter(schema::alert::boundary_id.eq(boundary_id))
+            .select(schema::alert::uuid)
+            .first(conn)
+            .map_err(api_error!())?;
+        Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
         let Self {
             uuid,

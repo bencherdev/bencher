@@ -1,6 +1,6 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import { Range } from "../../../config/types";
 import { addTooltips } from "./tooltip";
 import { JsonPerf } from "../../../../../types/bencher";
@@ -61,6 +61,7 @@ const LinePlot = (props) => {
 		const plot_arrays = [];
 		let metrics_found = false;
 		const colors = d3.schemeTableau10;
+		const project_slug = json_perf.project.slug;
 		json_perf.results.forEach((result, index) => {
 			const perf_metrics = result.metrics;
 			if (!(Array.isArray(perf_metrics) && props.perf_active[index])) {
@@ -70,6 +71,7 @@ const LinePlot = (props) => {
 			const line_data = [];
 			perf_metrics.forEach((perf_metric) => {
 				line_data.push({
+					report: perf_metric.report,
 					value: perf_metric.metric?.value,
 					date_time: new Date(perf_metric.start_time),
 					number: perf_metric.version?.number,
@@ -77,6 +79,7 @@ const LinePlot = (props) => {
 					iteration: perf_metric.iteration,
 					lower_limit: perf_metric.boundary?.lower_limit,
 					upper_limit: perf_metric.boundary?.upper_limit,
+					alert: perf_metric.alert,
 				});
 				metrics_found = true;
 			});
@@ -95,40 +98,38 @@ const LinePlot = (props) => {
 					y: "value",
 					stroke: color,
 					fill: color,
-					title: (dot) =>
-						`${dot.value}\n${dot.date_time?.toLocaleString(undefined, {
-							weekday: "short",
-							year: "numeric",
-							month: "short",
-							day: "2-digit",
-							hour: "2-digit",
-							hour12: false,
-							minute: "2-digit",
-							second: "2-digit",
-						})}\nVersion Number: ${dot.number}${
-							dot.hash ? `\nVersion Hash: ${dot.hash}` : ""
-						}\nIteration: ${dot.iteration}`,
+					title: (datum) => to_title(`${datum.value}`, datum),
 				}),
 			);
 			if (props.lower_boundary()) {
+				const LOWER_LIMIT = "lower_limit";
+				const LOWER = "Lower";
 				plot_arrays.push(
-					Plot.line(line_data, boundary_line(x_axis, "lower_limit", color)),
+					Plot.line(line_data, boundary_line(x_axis, LOWER_LIMIT, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(
+					Plot.dot(line_data, boundary_dot(x_axis, LOWER_LIMIT, color, LOWER)),
+				);
+				plot_arrays.push(
+					Plot.image(
 						line_data,
-						boundary_dot(x_axis, "lower_limit", color, "Lower"),
+						alert_image(x_axis, LOWER_LIMIT, LOWER, project_slug),
 					),
 				);
 			}
 			if (props.upper_boundary()) {
+				const UPPER_LIMIT = "upper_limit";
+				const UPPER = "Upper";
 				plot_arrays.push(
-					Plot.line(line_data, boundary_line(x_axis, "upper_limit", color)),
+					Plot.line(line_data, boundary_line(x_axis, UPPER_LIMIT, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(
+					Plot.dot(line_data, boundary_dot(x_axis, UPPER_LIMIT, color, UPPER)),
+				);
+				plot_arrays.push(
+					Plot.image(
 						line_data,
-						boundary_dot(x_axis, "upper_limit", color, "Upper"),
+						alert_image(x_axis, UPPER_LIMIT, UPPER, project_slug),
 					),
 				);
 			}
@@ -185,6 +186,20 @@ const LinePlot = (props) => {
 	return <>{plotted()}</>;
 };
 
+const to_title = (prefix, datum) =>
+	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
+		weekday: "short",
+		year: "numeric",
+		month: "short",
+		day: "2-digit",
+		hour: "2-digit",
+		hour12: false,
+		minute: "2-digit",
+		second: "2-digit",
+	})}\nVersion Number: ${datum.number}${
+		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
+	}\nIteration: ${datum.iteration}`;
+
 const boundary_line = (x_axis, y_axis, color) => {
 	return {
 		x: x_axis,
@@ -205,23 +220,28 @@ const boundary_dot = (x_axis, y_axis, color, position) => {
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
-		title: (dot) =>
-			`${position} Limit: ${dot[y_axis]}\n${dot.date_time?.toLocaleString(
-				undefined,
-				{
-					weekday: "short",
-					year: "numeric",
-					month: "short",
-					day: "2-digit",
-					hour: "2-digit",
-					hour12: false,
-					minute: "2-digit",
-					second: "2-digit",
-				},
-			)}\nVersion Number: ${dot.number}${
-				dot.hash ? `\nVersion Hash: ${dot.hash}` : ""
-			}\nIteration: ${dot.iteration}`,
+		title: (datum) => !datum.alert && limit_title(y_axis, position, datum),
 	};
 };
+
+const limit_title = (y_axis, position, datum) =>
+	to_title(`${position} Limit: ${datum[y_axis]}`, datum);
+
+const alert_image = (x_axis, y_axis, position, project_slug) => {
+	return {
+		x: x_axis,
+		y: y_axis,
+		src: (datum) => datum.alert && SIREN_URL,
+		width: 32,
+		title: (datum) => datum.alert && limit_title(y_axis, position, datum),
+		href: (datum) =>
+			datum.alert && `/console/projects/${project_slug}/alerts/${datum.alert}`,
+		target: "_blank",
+	};
+};
+
+// Source: https://twemoji.twitter.com
+// License: https://creativecommons.org/licenses/by/4.0
+const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
 
 export default LinePlot;

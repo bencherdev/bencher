@@ -26,7 +26,7 @@ use crate::{
         branch::QueryBranch,
         metric_kind::QueryMetricKind,
         testbed::QueryTestbed,
-        threshold::{boundary::QueryBoundary, QueryThreshold},
+        threshold::{alert::QueryAlert, boundary::QueryBoundary, QueryThreshold},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -376,8 +376,25 @@ fn perf_metric(
         upper_bound,
     ): PerfQuery,
 ) -> Option<JsonPerfMetric> {
-    // The boundary is optional, so it may not exist
+    // The boundary may not exist
     let boundary = QueryBoundary::from_metric_id(conn, metric_id).ok();
+    let (threshold, alert) = if let Some(QueryBoundary {
+        id,
+        threshold_id,
+        statistic_id,
+        ..
+    }) = boundary.as_ref()
+    {
+        // If a boundary exists, then a threshold and statistic must also exist
+        let threshold =
+            QueryThreshold::get_threshold_statistic_json(conn, *threshold_id, *statistic_id)
+                .ok()?;
+        // The alert may not exist
+        let alert = QueryAlert::get_uuid_from_boundary_id(conn, *id).ok();
+        (Some(threshold), alert)
+    } else {
+        (None, None)
+    };
     Some(JsonPerfMetric {
         report: Uuid::from_str(&report).ok()?,
         iteration: u32::try_from(iteration).ok()?,
@@ -391,24 +408,13 @@ fn perf_metric(
                 None
             },
         },
-        threshold: if let Some(QueryBoundary {
-            threshold_id,
-            statistic_id,
-            ..
-        }) = boundary.as_ref()
-        {
-            Some(
-                QueryThreshold::get_threshold_statistic_json(conn, *threshold_id, *statistic_id)
-                    .ok()?,
-            )
-        } else {
-            None
-        },
+        threshold,
         metric: JsonMetric {
             value: value.into(),
             lower_bound: lower_bound.map(Into::into),
             upper_bound: upper_bound.map(Into::into),
         },
         boundary: boundary.map(|b| b.into_json()).unwrap_or_default(),
+        alert,
     })
 }

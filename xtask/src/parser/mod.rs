@@ -14,6 +14,7 @@ pub enum CliSub {
     Fmt,
     ReleaseNotes(CliReleaseNotes),
     Swagger(CliSwagger),
+    Typeshare(CliTypeshare),
 }
 
 #[derive(Parser, Debug)]
@@ -28,8 +29,7 @@ pub struct CliReleaseNotes {
 }
 
 #[derive(Parser, Debug)]
-pub struct CliSwagger {
-    /// File output path
-    #[clap(long)]
-    pub path: Option<String>,
-}
+pub struct CliSwagger {}
+
+#[derive(Parser, Debug)]
+pub struct CliTypeshare {}
