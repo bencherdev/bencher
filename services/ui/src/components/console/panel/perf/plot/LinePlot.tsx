@@ -59,6 +59,7 @@ const LinePlot = (props) => {
 		const [x_axis, x_axis_label] = get_x_axis();
 
 		const plot_arrays = [];
+		const alert_arrays = [];
 		let metrics_found = false;
 		const colors = d3.schemeTableau10;
 		const project_slug = json_perf.project.slug;
@@ -85,6 +86,7 @@ const LinePlot = (props) => {
 			});
 
 			const color = colors[index % 10];
+			// Line
 			plot_arrays.push(
 				Plot.line(line_data, {
 					x: x_axis,
@@ -92,48 +94,55 @@ const LinePlot = (props) => {
 					stroke: color,
 				}),
 			);
+			// Dots
 			plot_arrays.push(
 				Plot.dot(line_data, {
 					x: x_axis,
 					y: "value",
 					stroke: color,
 					fill: color,
-					title: (datum) => to_title(`${datum.value}`, datum),
+					title: (datum) => to_title(`${datum.value}`, datum, ""),
 				}),
 			);
+
+			// Lower Boundary
+			const LOWER_LIMIT = "lower_limit";
+			const LOWER = "Lower";
 			if (props.lower_boundary()) {
-				const LOWER_LIMIT = "lower_limit";
-				const LOWER = "Lower";
 				plot_arrays.push(
 					Plot.line(line_data, boundary_line(x_axis, LOWER_LIMIT, color)),
 				);
 				plot_arrays.push(
 					Plot.dot(line_data, boundary_dot(x_axis, LOWER_LIMIT, color, LOWER)),
 				);
-				plot_arrays.push(
-					Plot.image(
-						line_data,
-						alert_image(x_axis, LOWER_LIMIT, LOWER, project_slug),
-					),
-				);
 			}
+			alert_arrays.push(
+				Plot.image(
+					line_data,
+					alert_image(x_axis, LOWER_LIMIT, LOWER, project_slug),
+				),
+			);
+
+			// Upper Boundary
+			const UPPER_LIMIT = "upper_limit";
+			const UPPER = "Upper";
 			if (props.upper_boundary()) {
-				const UPPER_LIMIT = "upper_limit";
-				const UPPER = "Upper";
 				plot_arrays.push(
 					Plot.line(line_data, boundary_line(x_axis, UPPER_LIMIT, color)),
 				);
 				plot_arrays.push(
 					Plot.dot(line_data, boundary_dot(x_axis, UPPER_LIMIT, color, UPPER)),
 				);
-				plot_arrays.push(
-					Plot.image(
-						line_data,
-						alert_image(x_axis, UPPER_LIMIT, UPPER, project_slug),
-					),
-				);
 			}
+			alert_arrays.push(
+				Plot.image(
+					line_data,
+					alert_image(x_axis, UPPER_LIMIT, UPPER, project_slug),
+				),
+			);
 		});
+		// This allows the alert images to appear on top of the plot lines.
+		plot_arrays.push(...alert_arrays);
 
 		if (metrics_found) {
 			return (
@@ -186,7 +195,7 @@ const LinePlot = (props) => {
 	return <>{plotted()}</>;
 };
 
-const to_title = (prefix, datum) =>
+const to_title = (prefix, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
 		weekday: "short",
 		year: "numeric",
@@ -198,7 +207,7 @@ const to_title = (prefix, datum) =>
 		second: "2-digit",
 	})}\nVersion Number: ${datum.number}${
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
-	}\nIteration: ${datum.iteration}`;
+	}\nIteration: ${datum.iteration}${suffix}`;
 
 const boundary_line = (x_axis, y_axis, color) => {
 	return {
@@ -225,7 +234,11 @@ const boundary_dot = (x_axis, y_axis, color, position) => {
 };
 
 const limit_title = (y_axis, position, datum) =>
-	to_title(`${position} Limit: ${datum[y_axis]}`, datum);
+	to_title(
+		`${position} Limit: ${datum[y_axis]}`,
+		datum,
+		"\nClick to view Alert",
+	);
 
 const alert_image = (x_axis, y_axis, position, project_slug) => {
 	return {

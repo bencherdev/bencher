@@ -100,7 +100,7 @@ const ConsoleMenu = (props) => {
 								}}
 							>
 								<span class="icon">
-									<i class="fas fa-home" aria-hidden="true" />
+									<i class="fas fa-chart-line" aria-hidden="true" />
 								</span>
 							</button>
 						</div>
