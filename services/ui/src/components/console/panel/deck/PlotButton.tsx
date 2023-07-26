@@ -1,5 +1,5 @@
 import { useNavigate } from "solid-app-router";
-import { JsonAlert } from "../../../../types/bencher";
+import { JsonAlert, JsonLimit } from "../../../../types/bencher";
 
 const PlotButton = (props) => {
 	const navigate = useNavigate();
@@ -17,7 +17,15 @@ const PlotButton = (props) => {
 					branches: json_alert.threshold?.branch?.uuid,
 					testbeds: json_alert.threshold?.testbed?.uuid,
 					benchmarks: json_alert.benchmark?.uuid,
+					lower_boundary: null,
+					upper_boundary: null,
 				};
+				switch (json_alert.limit) {
+					case JsonLimit.Lower:
+						perf_query.lower_boundary = true;
+					case JsonLimit.Upper:
+						perf_query.upper_boundary = true;
+				}
 
 				const search_params = new URLSearchParams();
 				for (const [key, value] of Object.entries(perf_query)) {

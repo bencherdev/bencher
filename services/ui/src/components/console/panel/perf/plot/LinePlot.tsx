@@ -246,7 +246,7 @@ const alert_image = (x_axis, y_axis, position, project_slug) => {
 		x: x_axis,
 		y: y_axis,
 		src: (datum) => is_active(datum.alert) && SIREN_URL,
-		width: 32,
+		width: 18,
 		title: (datum) =>
 			is_active(datum.alert) &&
 			limit_title(y_axis, position, datum, "\nClick to view Alert"),
