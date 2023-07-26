@@ -57,6 +57,7 @@ try_from_client!(
     JsonOrganization,
     JsonOrganizations,
     JsonAlerts,
+    JsonAlertStats,
     JsonAlert,
     JsonBenchmarks,
     JsonBenchmark,

@@ -58,6 +58,7 @@ const reportsConfig = {
 			key: "start_time",
 			path: parentPath,
 			path_to: "Reports",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

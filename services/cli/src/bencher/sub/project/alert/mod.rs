@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use crate::{bencher::sub::SubCmd, parser::project::alert::CliAlert, CliError};
 
 mod list;
+mod stats;
 mod update;
 mod view;
 
@@ -11,6 +12,7 @@ pub enum Alert {
     List(list::List),
     View(view::View),
     Update(update::Update),
+    Stats(stats::Stats),
 }
 
 impl TryFrom<CliAlert> for Alert {
@@ -21,6 +23,7 @@ impl TryFrom<CliAlert> for Alert {
             CliAlert::List(list) => Self::List(list.try_into()?),
             CliAlert::View(view) => Self::View(view.try_into()?),
             CliAlert::Update(update) => Self::Update(update.try_into()?),
+            CliAlert::Stats(stats) => Self::Stats(stats.try_into()?),
         })
     }
 }
@@ -32,6 +35,7 @@ impl SubCmd for Alert {
             Self::List(list) => list.exec().await,
             Self::View(view) => view.exec().await,
             Self::Update(update) => update.exec().await,
+            Self::Stats(stats) => stats.exec().await,
         }
     }
 }

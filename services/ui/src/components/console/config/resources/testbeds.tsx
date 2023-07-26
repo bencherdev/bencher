@@ -94,6 +94,7 @@ const testbedsConfig = {
 			key: "name",
 			path: parentPath,
 			path_to: "Testbeds",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

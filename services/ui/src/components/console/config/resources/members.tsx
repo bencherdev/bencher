@@ -137,6 +137,7 @@ const MembersConfig = {
 			key: "name",
 			path: parentPath,
 			path_to: "Organization Members",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

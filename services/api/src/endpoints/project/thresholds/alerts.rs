@@ -1,9 +1,9 @@
 use bencher_json::{
-    project::alert::JsonUpdateAlert, JsonAlert, JsonAlerts, JsonDirection, JsonPagination,
-    ResourceId,
+    project::alert::{JsonAlertStats, JsonUpdateAlert},
+    JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId,
 };
 use bencher_rbac::project::Permission;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -17,7 +17,7 @@ use crate::{
     },
     error::api_error,
     model::project::{
-        threshold::alert::{QueryAlert, UpdateAlert},
+        threshold::alert::{QueryAlert, Status, UpdateAlert},
         QueryProject,
     },
     model::user::auth::AuthUser,
@@ -258,4 +258,74 @@ async fn patch_inner(
         .map_err(api_error!())?;
 
     QueryAlert::get(conn, query_alert.id)?.into_json(conn)
+}
+
+#[allow(clippy::unused_async)]
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/projects/{project}/stats/alerts",
+    tags = ["projects", "alerts"]
+}]
+pub async fn proj_alert_stats_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<ProjAlertsParams>,
+    _pagination_params: Query<ProjAlertsPagination>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(get_cors::<ApiContext>())
+}
+
+#[endpoint {
+    method = GET,
+    path =  "/v0/projects/{project}/stats/alerts",
+    tags = ["projects", "alerts"]
+}]
+pub async fn proj_alert_stats_get(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjAlertsParams>,
+) -> Result<ResponseOk<JsonAlertStats>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await.ok();
+    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::GetLs);
+
+    let json = get_stats_inner(
+        rqctx.context(),
+        auth_user.as_ref(),
+        path_params.into_inner(),
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    if auth_user.is_some() {
+        response_ok!(endpoint, json)
+    } else {
+        pub_response_ok!(endpoint, json)
+    }
+}
+
+async fn get_stats_inner(
+    context: &ApiContext,
+    auth_user: Option<&AuthUser>,
+    path_params: ProjAlertsParams,
+) -> Result<JsonAlertStats, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    let query_project =
+        QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
+
+    let active = schema::alert::table
+        .filter(schema::alert::status.eq(i32::from(Status::Active)))
+        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
+        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+        .left_join(
+            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+        )
+        .filter(schema::benchmark::project_id.eq(query_project.id))
+        .left_join(schema::report::table.on(schema::perf::report_id.eq(schema::report::id)))
+        .select(count(schema::alert::id))
+        .first::<i64>(conn)
+        .map_err(api_error!())?;
+
+    Ok(JsonAlertStats {
+        active: u64::try_from(active).unwrap_or_default().into(),
+    })
 }

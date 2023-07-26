@@ -26,7 +26,7 @@ pub use organization::{
 };
 pub use pagination::{JsonDirection, JsonPagination};
 pub use project::{
-    alert::{JsonAlert, JsonAlerts},
+    alert::{JsonAlert, JsonAlertStats, JsonAlerts},
     benchmark::{JsonBenchmark, JsonBenchmarks},
     branch::{JsonBranch, JsonBranches, JsonNewBranch},
     metric::JsonMetric,

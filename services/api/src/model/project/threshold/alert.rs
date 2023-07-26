@@ -173,8 +173,8 @@ impl From<Limit> for JsonLimit {
 #[derive(Default)]
 pub enum Status {
     #[default]
-    Unread = 0,
-    Read = 1,
+    Active = 0,
+    Dismissed = 1,
 }
 
 impl TryFrom<i32> for Status {
@@ -182,8 +182,8 @@ impl TryFrom<i32> for Status {
 
     fn try_from(status: i32) -> Result<Self, Self::Error> {
         match status {
-            0 => Ok(Self::Unread),
-            1 => Ok(Self::Read),
+            0 => Ok(Self::Active),
+            1 => Ok(Self::Dismissed),
             _ => Err(ApiError::BadAlertStatus(status)),
         }
     }
@@ -192,8 +192,8 @@ impl TryFrom<i32> for Status {
 impl From<Status> for i32 {
     fn from(status: Status) -> Self {
         match status {
-            Status::Unread => 0,
-            Status::Read => 1,
+            Status::Active => 0,
+            Status::Dismissed => 1,
         }
     }
 }
@@ -201,8 +201,8 @@ impl From<Status> for i32 {
 impl From<Status> for JsonAlertStatus {
     fn from(status: Status) -> Self {
         match status {
-            Status::Unread => Self::Unread,
-            Status::Read => Self::Read,
+            Status::Active => Self::Active,
+            Status::Dismissed => Self::Dismissed,
         }
     }
 }
@@ -210,8 +210,8 @@ impl From<Status> for JsonAlertStatus {
 impl From<JsonAlertStatus> for Status {
     fn from(status: JsonAlertStatus) -> Self {
         match status {
-            JsonAlertStatus::Unread => Self::Unread,
-            JsonAlertStatus::Read => Self::Read,
+            JsonAlertStatus::Active => Self::Active,
+            JsonAlertStatus::Dismissed => Self::Dismissed,
         }
     }
 }

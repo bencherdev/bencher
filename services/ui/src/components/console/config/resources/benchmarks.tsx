@@ -89,6 +89,7 @@ const benchmarksConfig = {
 				return parentPath(pathname);
 			},
 			path_to: "Benchmarks",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) => {

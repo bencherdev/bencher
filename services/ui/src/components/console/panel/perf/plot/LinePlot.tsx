@@ -234,7 +234,7 @@ const boundary_dot = (x_axis, y_axis, color, position) => {
 		fill: color,
 		fillOpacity: 0.666,
 		title: (datum) =>
-			!alert_unread(datum.alert) && limit_title(y_axis, position, datum, ""),
+			!is_active(datum.alert) && limit_title(y_axis, position, datum, ""),
 	};
 };
 
@@ -245,20 +245,20 @@ const alert_image = (x_axis, y_axis, position, project_slug) => {
 	return {
 		x: x_axis,
 		y: y_axis,
-		src: (datum) => alert_unread(datum.alert) && SIREN_URL,
+		src: (datum) => is_active(datum.alert) && SIREN_URL,
 		width: 32,
 		title: (datum) =>
-			alert_unread(datum.alert) &&
+			is_active(datum.alert) &&
 			limit_title(y_axis, position, datum, "\nClick to view Alert"),
 		href: (datum) =>
-			alert_unread(datum.alert) &&
+			is_active(datum.alert) &&
 			`/console/projects/${project_slug}/alerts/${datum.alert.uuid}`,
 		target: "_blank",
 	};
 };
 
-const alert_unread = (alert: JsonPerfAlert) =>
-	alert?.status && alert.status == JsonAlertStatus.Unread;
+const is_active = (alert: JsonPerfAlert) =>
+	alert?.status && alert.status == JsonAlertStatus.Active;
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0

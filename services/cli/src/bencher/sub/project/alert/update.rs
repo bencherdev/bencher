@@ -21,8 +21,8 @@ pub struct Update {
 
 #[derive(Debug, Clone)]
 pub enum Status {
-    Unread,
-    Read,
+    Active,
+    Dismissed,
 }
 
 impl TryFrom<CliAlertUpdate> for Update {
@@ -47,8 +47,8 @@ impl TryFrom<CliAlertUpdate> for Update {
 impl From<CliAlertStatus> for Status {
     fn from(status: CliAlertStatus) -> Self {
         match status {
-            CliAlertStatus::Unread => Self::Unread,
-            CliAlertStatus::Read => Self::Read,
+            CliAlertStatus::Active => Self::Active,
+            CliAlertStatus::Dismissed => Self::Dismissed,
         }
     }
 }
@@ -58,8 +58,8 @@ impl From<Update> for JsonUpdateAlert {
         let Update { status, .. } = create;
         Self {
             status: status.map(|s| match s {
-                Status::Unread => JsonAlertStatus::Unread,
-                Status::Read => JsonAlertStatus::Read,
+                Status::Active => JsonAlertStatus::Active,
+                Status::Dismissed => JsonAlertStatus::Dismissed,
             }),
         }
     }

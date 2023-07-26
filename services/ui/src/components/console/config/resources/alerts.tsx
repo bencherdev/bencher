@@ -1,5 +1,5 @@
 import { BENCHER_API_URL } from "../../../site/util";
-import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
+import { Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
 const alertsConfig = {
@@ -69,6 +69,11 @@ const alertsConfig = {
 				return parentPath(pathname);
 			},
 			path_to: "Alerts",
+			buttons: [
+				{ kind: Button.STATUS },
+				{ kind: Button.PLOT },
+				{ kind: Button.REFRESH },
+			],
 		},
 		deck: {
 			url: (path_params) =>
@@ -167,10 +172,6 @@ const alertsConfig = {
 					display: Display.RAW,
 				},
 			],
-			buttons: {
-				top: { kind: ActionButton.ToggleRead },
-				bottom: null,
-			},
 		},
 	},
 };

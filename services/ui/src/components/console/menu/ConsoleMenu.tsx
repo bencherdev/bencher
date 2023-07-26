@@ -1,9 +1,22 @@
 import { Link, useNavigate } from "solid-app-router";
 import {
+	BENCHER_API_URL,
+	get_options,
 	is_allowed_organization,
 	OrganizationPermission,
+	validate_jwt,
 } from "../../site/util";
-import { Match, Show, Switch } from "solid-js";
+import {
+	Match,
+	Show,
+	Switch,
+	createEffect,
+	createMemo,
+	createResource,
+} from "solid-js";
+import { JsonAlertStats, JsonAlertStatus } from "../../../types/bencher";
+import axios from "axios";
+import { create } from "domain";
 
 enum OrganizationSection {
 	PROJECTS = "projects",
@@ -32,6 +45,23 @@ enum UserSection {
 
 const ConsoleMenu = (props) => {
 	const navigate = useNavigate();
+
+	const getOne = async (project_slug) => {
+		const EMPTY_OBJECT = {};
+		const token = props.user?.token;
+		if (!validate_jwt(token)) {
+			return EMPTY_OBJECT;
+		}
+		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/stats/alerts`;
+		return await axios(get_options(url, token))
+			.then((resp) => resp.data)
+			.catch((error) => {
+				console.error(error);
+				return EMPTY_OBJECT;
+			});
+	};
+	const [alert_stats] = createResource(props.project_slug, getOne);
+	const active = createMemo(() => alert_stats()?.active);
 
 	const organizations_path = (section: OrganizationSection) => {
 		return `/console/organizations/${props.organization_slug()}/${section}`;
@@ -137,7 +167,20 @@ const ConsoleMenu = (props) => {
 								</Link>
 							</li>
 							<li>
-								<Link href={projects_path(ProjectSection.ALERTS)}>Alerts</Link>
+								<Link href={projects_path(ProjectSection.ALERTS)}>
+									<nav class="level">
+										<div class="level-left">
+											<div class="level-item">Alerts</div>
+											<Show when={active()} fallback={<></>}>
+												<div class="level-item">
+													<button class="button is-primary is-small is-rounded">
+														{active()}
+													</button>
+												</div>
+											</Show>
+										</div>
+									</nav>
+								</Link>
 							</li>
 							<li>
 								<Link href={projects_path(ProjectSection.SETTINGS)}>

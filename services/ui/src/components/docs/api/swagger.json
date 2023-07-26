@@ -3908,6 +3908,73 @@
         }
       }
     },
+    "/v0/projects/{project}/stats/alerts": {
+      "get": {
+        "tags": [
+          "projects",
+          "alerts"
+        ],
+        "operationId": "proj_alert_stats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAlertStats"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/testbeds": {
       "get": {
         "tags": [
@@ -5500,6 +5567,11 @@
       "BenchmarkName": {
         "type": "string"
       },
+      "BigInt": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
+      },
       "Boundary": {
         "type": "number",
         "format": "double"
@@ -5669,11 +5741,22 @@
           "uuid"
         ]
       },
+      "JsonAlertStats": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "$ref": "#/components/schemas/BigInt"
+          }
+        },
+        "required": [
+          "active"
+        ]
+      },
       "JsonAlertStatus": {
         "type": "string",
         "enum": [
-          "unread",
-          "read"
+          "active",
+          "dismissed"
         ]
       },
       "JsonAlerts": {

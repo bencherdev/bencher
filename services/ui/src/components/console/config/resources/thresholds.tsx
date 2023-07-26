@@ -193,6 +193,7 @@ const thresholdsConfig = {
 			],
 			path: parentPath,
 			path_to: "Thresholds",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

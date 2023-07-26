@@ -127,6 +127,7 @@ const projectsConfig = {
 			key: "name",
 			path: parentPath,
 			path_to: "Projects",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

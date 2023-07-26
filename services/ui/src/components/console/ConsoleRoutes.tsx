@@ -15,7 +15,6 @@ import {
 	NOTIFY_KIND_PARAM,
 	NOTIFY_TEXT_PARAM,
 	validate_plan_level,
-	BENCHER_API_URL,
 	is_bencher_cloud,
 } from "../site/util";
 import { Host } from "./config/resources/billing";

@@ -1,6 +1,9 @@
 import { useLocation, useNavigate } from "solid-app-router";
-import { createEffect, createMemo } from "solid-js";
+import { For, Match, Switch, createEffect, createMemo } from "solid-js";
 import { concat_values, pageTitle } from "../../../site/util";
+import { Button } from "../../config/types";
+import StatusButton from "./StatusButton";
+import PlotButton from "./PlotButton";
 
 const DeckHeader = (props) => {
 	const navigate = useNavigate();
@@ -39,10 +42,50 @@ const DeckHeader = (props) => {
 					</h3>
 				</div>
 			</div>
+
 			<div class="column is-narrow">
+				<nav class="level">
+					<div class="level-right">
+						<For each={props.config?.buttons}>
+							{(button) => (
+								<div class="level-item">
+									<DeckHeaderButton
+										title={title}
+										user={props.user}
+										data={props.data}
+										url={props.url}
+										button={button}
+										path_params={props.path_params}
+										handleRefresh={props.handleRefresh}
+									/>
+								</div>
+							)}
+						</For>
+					</div>
+				</nav>
+			</div>
+		</div>
+	);
+};
+
+const DeckHeaderButton = (props) => {
+	return (
+		<Switch fallback={<></>}>
+			<Match when={props.button.kind === Button.STATUS}>
+				<StatusButton
+					user={props.user}
+					data={props.data}
+					url={props.url}
+					handleRefresh={props.handleRefresh}
+				/>
+			</Match>
+			<Match when={props.button.kind === Button.PLOT}>
+				<PlotButton data={props.data} path_params={props.path_params} />
+			</Match>
+			<Match when={props.button.kind === Button.REFRESH}>
 				<button
 					class="button is-outlined is-fullwidth"
-					title={`Refresh ${title()}`}
+					title={`Refresh ${props.title()}`}
 					onClick={(e) => {
 						e.preventDefault();
 						props.handleRefresh();
@@ -53,8 +96,8 @@ const DeckHeader = (props) => {
 					</span>
 					<span>Refresh</span>
 				</button>
-			</div>
-		</div>
+			</Match>
+		</Switch>
 	);
 };
 

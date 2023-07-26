@@ -1,5 +1,5 @@
 import { BENCHER_API_URL } from "../../../site/util";
-import { Card, Display, Operation } from "../types";
+import { Button, Card, Display, Operation } from "../types";
 
 const usersConfig = {
 	[Operation.VIEW]: {
@@ -7,6 +7,8 @@ const usersConfig = {
 		header: {
 			key: "name",
 			path: (_pathname) => "/console",
+			path_to: "Console Home",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) => {

@@ -47,6 +47,7 @@ const organizationsConfig = {
 			key: "name",
 			path: parentPath,
 			path_to: "Organizations",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

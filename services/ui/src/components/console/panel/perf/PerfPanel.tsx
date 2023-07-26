@@ -396,7 +396,10 @@ const PerfPanel = (props) => {
 		if (
 			!clear() &&
 			first_report &&
-			is_plot_init() &&
+			!metric_kind() &&
+			branches().length === 0 &&
+			testbeds().length === 0 &&
+			benchmarks().length === 0 &&
 			tab() === DEFAULT_PERF_TAB &&
 			reports_page() === DEFAULT_PAGE &&
 			branches_page() === DEFAULT_PAGE &&

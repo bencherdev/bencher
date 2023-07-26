@@ -92,6 +92,7 @@ const branchesConfig = {
 			key: "name",
 			path: parentPath,
 			path_to: "Branches",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>

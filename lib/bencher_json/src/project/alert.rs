@@ -14,6 +14,7 @@ pub struct JsonAlerts(pub Vec<JsonAlert>);
 
 crate::from_vec!(JsonAlerts[JsonAlert]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAlert {
@@ -32,8 +33,27 @@ pub struct JsonAlert {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum JsonAlertStatus {
-    Unread,
-    Read,
+    Active,
+    Dismissed,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAlertStats {
+    pub active: BigInt,
+}
+
+// Do not typeshare this type in order to obfuscate the u64
+// https://github.com/1Password/typeshare/issues/24
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct BigInt(pub u64);
+
+impl From<u64> for BigInt {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
 }
 
 #[typeshare::typeshare]

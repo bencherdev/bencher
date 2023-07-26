@@ -12,13 +12,14 @@ export enum Operation {
 export enum Button {
 	ADD,
 	INVITE,
+	STATUS,
+	PLOT,
 	REFRESH,
 	BACK,
 }
 
 export enum ActionButton {
-	ToggleRead,
-	Delete,
+	DELETE,
 }
 
 export enum Resource {

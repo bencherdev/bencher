@@ -15,6 +15,8 @@ pub enum CliAlert {
     // Update an alert
     #[clap(alias = "edit")]
     Update(CliAlertUpdate),
+    /// View alert stats
+    Stats(CliAlertStats),
 }
 
 #[derive(Parser, Debug)]
@@ -71,8 +73,18 @@ pub struct CliAlertUpdate {
 #[derive(ValueEnum, Debug, Clone)]
 #[clap(rename_all = "snake_case")]
 pub enum CliAlertStatus {
-    /// Unread
-    Unread,
-    /// Read
-    Read,
+    /// Active
+    Active,
+    /// Dismissed
+    Dismissed,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliAlertStats {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
 }

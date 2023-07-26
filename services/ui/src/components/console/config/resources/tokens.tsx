@@ -86,6 +86,7 @@ const tokensConfig = {
 			key: "name",
 			path: parentPath,
 			path_to: "API Tokens",
+			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
 			url: (path_params) =>
