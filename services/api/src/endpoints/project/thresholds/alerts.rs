@@ -1,6 +1,10 @@
-use bencher_json::{JsonAlert, JsonAlerts, JsonDirection, JsonPagination, ResourceId};
+use bencher_json::{
+    project::alert::JsonUpdateAlert, JsonAlert, JsonAlerts, JsonDirection, JsonPagination,
+    ResourceId,
+};
+use bencher_rbac::project::Permission;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
+use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -8,11 +12,14 @@ use uuid::Uuid;
 use crate::{
     context::ApiContext,
     endpoints::{
-        endpoint::{pub_response_ok, response_ok, ResponseOk},
+        endpoint::{pub_response_ok, response_accepted, response_ok, ResponseAccepted, ResponseOk},
         Endpoint, Method,
     },
     error::api_error,
-    model::project::{threshold::alert::QueryAlert, QueryProject},
+    model::project::{
+        threshold::alert::{QueryAlert, UpdateAlert},
+        QueryProject,
+    },
     model::user::auth::AuthUser,
     schema,
     util::{
@@ -194,24 +201,57 @@ async fn get_one_inner(
     let query_project =
         QueryProject::is_allowed_public(conn, &context.rbac, &path_params.project, auth_user)?;
 
-    schema::alert::table
-        .left_join(schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-        .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
-        .left_join(
-            schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
-        )
-        .filter(schema::benchmark::project_id.eq(query_project.id))
-        .filter(schema::alert::uuid.eq(path_params.alert.to_string()))
-        .select((
-            schema::alert::id,
-            schema::alert::uuid,
-            schema::alert::boundary_id,
-            schema::alert::boundary_limit,
-            schema::alert::status,
-            schema::alert::modified,
-        ))
-        .first::<QueryAlert>(conn)
-        .map_err(api_error!())?
-        .into_json(conn)
+    QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?.into_json(conn)
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/projects/{project}/alerts/{alert}",
+    tags = ["projects", "alerts"]
+}]
+pub async fn proj_alert_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProjAlertParams>,
+    body: TypedBody<JsonUpdateAlert>,
+) -> Result<ResponseAccepted<JsonAlert>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(ALERT_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: ProjAlertParams,
+    json_alert: JsonUpdateAlert,
+    auth_user: &AuthUser,
+) -> Result<JsonAlert, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    // Verify that the user is allowed
+    let query_project = QueryProject::is_allowed_resource_id(
+        conn,
+        &context.rbac,
+        &path_params.project,
+        auth_user,
+        Permission::Edit,
+    )?;
+
+    let query_alert = QueryAlert::from_uuid(conn, query_project.id, path_params.alert)?;
+    diesel::update(schema::alert::table.filter(schema::alert::id.eq(query_alert.id)))
+        .set(&UpdateAlert::from(json_alert))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    QueryAlert::get(conn, query_alert.id)?.into_json(conn)
 }

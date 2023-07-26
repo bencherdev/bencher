@@ -195,6 +195,7 @@ impl Api {
         }
         api.register(project::thresholds::alerts::proj_alerts_get)?;
         api.register(project::thresholds::alerts::proj_alert_get)?;
+        api.register(project::thresholds::alerts::proj_alert_patch)?;
 
         // Users
         if http_options {

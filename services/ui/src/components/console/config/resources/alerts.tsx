@@ -1,5 +1,5 @@
 import { BENCHER_API_URL } from "../../../site/util";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
 const alertsConfig = {
@@ -168,6 +168,10 @@ const alertsConfig = {
 					display: Display.RAW,
 				},
 			],
+			buttons: {
+				top: { kind: ActionButton.ToggleRead },
+				bottom: null,
+			},
 		},
 	},
 };

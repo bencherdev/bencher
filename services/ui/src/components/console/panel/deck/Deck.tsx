@@ -6,9 +6,10 @@ import DeckButton from "./DeckButton";
 const Deck = (props) => {
 	return (
 		<>
-			{props.config?.buttons && (
+			{props.config?.buttons?.top && (
 				<DeckButton
-					config={props.config?.buttons}
+					config={props.config.buttons.top}
+					data={props.data}
 					path_params={props.path_params}
 				/>
 			)}
@@ -32,9 +33,9 @@ const Deck = (props) => {
 					</div>
 				)}
 			</For>
-			{props.config?.buttons && (
+			{props.config?.buttons?.bottom && (
 				<DeckButton
-					config={props.config?.buttons}
+					config={props.config.buttons.bottom}
 					path_params={props.path_params}
 				/>
 			)}

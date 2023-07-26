@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::project::{
-    alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert},
+    alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert, JsonUpdateAlert},
     boundary::JsonLimit,
 };
 use chrono::Utc;
@@ -15,7 +15,10 @@ use crate::{
     model::project::{benchmark::QueryBenchmark, report::QueryReport},
     schema,
     schema::alert as alert_table,
-    util::{query::fn_get_id, to_date_time},
+    util::{
+        query::{fn_get, fn_get_id},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -30,6 +33,7 @@ pub struct QueryAlert {
 }
 
 impl QueryAlert {
+    fn_get!(alert);
     fn_get_id!(alert);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
@@ -63,6 +67,34 @@ impl QueryAlert {
             status: Status::try_from(status)?.into(),
             modified: to_date_time(modified)?,
         })
+    }
+
+    pub fn from_uuid(
+        conn: &mut DbConnection,
+        project_id: i32,
+        uuid: Uuid,
+    ) -> Result<Self, ApiError> {
+        schema::alert::table
+            .left_join(
+                schema::boundary::table.on(schema::alert::boundary_id.eq(schema::boundary::id)),
+            )
+            .left_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+            .left_join(schema::perf::table.on(schema::metric::perf_id.eq(schema::perf::id)))
+            .left_join(
+                schema::benchmark::table.on(schema::perf::benchmark_id.eq(schema::benchmark::id)),
+            )
+            .filter(schema::benchmark::project_id.eq(project_id))
+            .filter(schema::alert::uuid.eq(uuid.to_string()))
+            .select((
+                schema::alert::id,
+                schema::alert::uuid,
+                schema::alert::boundary_id,
+                schema::alert::boundary_limit,
+                schema::alert::status,
+                schema::alert::modified,
+            ))
+            .first::<QueryAlert>(conn)
+            .map_err(api_error!())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {
@@ -175,6 +207,15 @@ impl From<Status> for JsonAlertStatus {
     }
 }
 
+impl From<JsonAlertStatus> for Status {
+    fn from(status: JsonAlertStatus) -> Self {
+        match status {
+            JsonAlertStatus::Unread => Self::Unread,
+            JsonAlertStatus::Read => Self::Read,
+        }
+    }
+}
+
 #[derive(Insertable)]
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
@@ -205,5 +246,22 @@ impl InsertAlert {
             .map_err(api_error!())?;
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = alert_table)]
+pub struct UpdateAlert {
+    pub status: Option<i32>,
+    pub modified: i64,
+}
+
+impl From<JsonUpdateAlert> for UpdateAlert {
+    fn from(update: JsonUpdateAlert) -> Self {
+        let JsonUpdateAlert { status } = update;
+        Self {
+            status: status.map(|s| Status::from(s).into()),
+            modified: Utc::now().timestamp(),
+        }
     }
 }

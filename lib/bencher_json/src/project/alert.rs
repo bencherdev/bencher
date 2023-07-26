@@ -39,6 +39,13 @@ pub enum JsonAlertStatus {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateAlert {
+    pub status: Option<JsonAlertStatus>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfAlert {
     pub uuid: Uuid,
     pub limit: JsonLimit,

@@ -33,14 +33,18 @@ export type UserName = string;
  */
 export type Uuid = string;
 
-export enum JsonLimit {
-	Lower = "lower",
-	Upper = "upper",
-}
-
 export enum JsonAlertStatus {
 	Unread = "unread",
 	Read = "read",
+}
+
+export interface JsonUpdateAlert {
+	status?: JsonAlertStatus;
+}
+
+export enum JsonLimit {
+	Lower = "lower",
+	Upper = "upper",
 }
 
 export interface JsonPerfAlert {

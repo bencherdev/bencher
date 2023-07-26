@@ -12,6 +12,9 @@ pub enum CliAlert {
     /// View an alert
     #[clap(alias = "cat")]
     View(CliAlertView),
+    // Update an alert
+    #[clap(alias = "edit")]
+    Update(CliAlertUpdate),
 }
 
 #[derive(Parser, Debug)]
@@ -45,4 +48,31 @@ pub struct CliAlertView {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliAlertUpdate {
+    /// Project slug or UUID
+    #[clap(long)]
+    pub project: ResourceId,
+
+    /// Alert UUID
+    pub alert: Uuid,
+
+    /// Alert status
+    #[clap(long)]
+    pub status: Option<CliAlertStatus>,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+/// Supported Fold Operations
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliAlertStatus {
+    /// Unread
+    Unread,
+    /// Read
+    Read,
 }

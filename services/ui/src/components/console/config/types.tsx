@@ -16,6 +16,11 @@ export enum Button {
 	BACK,
 }
 
+export enum ActionButton {
+	ToggleRead,
+	Delete,
+}
+
 export enum Resource {
 	ORGANIZATIONS,
 	MEMBERS,
