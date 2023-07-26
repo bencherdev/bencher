@@ -125,11 +125,15 @@ async fn get_ls_inner(
     query = match pagination_params.order() {
         ProjAlertsSort::Created => match pagination_params.direction {
             Some(JsonDirection::Asc) => query.order((
+                schema::alert::status.asc(),
                 schema::report::start_time.asc(),
+                schema::benchmark::name.asc(),
                 schema::perf::iteration.asc(),
             )),
             Some(JsonDirection::Desc) | None => query.order((
+                schema::alert::status.asc(),
                 schema::report::start_time.desc(),
+                schema::benchmark::name.asc(),
                 schema::perf::iteration.asc(),
             )),
         },

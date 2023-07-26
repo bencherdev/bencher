@@ -234,16 +234,12 @@ const boundary_dot = (x_axis, y_axis, color, position) => {
 		fill: color,
 		fillOpacity: 0.666,
 		title: (datum) =>
-			!alert_unread(datum.alert) && limit_title(y_axis, position, datum),
+			!alert_unread(datum.alert) && limit_title(y_axis, position, datum, ""),
 	};
 };
 
-const limit_title = (y_axis, position, datum) =>
-	to_title(
-		`${position} Limit: ${datum[y_axis]}`,
-		datum,
-		"\nClick to view Alert",
-	);
+const limit_title = (y_axis, position, datum, suffix) =>
+	to_title(`${position} Limit: ${datum[y_axis]}`, datum, suffix);
 
 const alert_image = (x_axis, y_axis, position, project_slug) => {
 	return {
@@ -252,7 +248,8 @@ const alert_image = (x_axis, y_axis, position, project_slug) => {
 		src: (datum) => alert_unread(datum.alert) && SIREN_URL,
 		width: 32,
 		title: (datum) =>
-			alert_unread(datum.alert) && limit_title(y_axis, position, datum),
+			alert_unread(datum.alert) &&
+			limit_title(y_axis, position, datum, "\nClick to view Alert"),
 		href: (datum) =>
 			alert_unread(datum.alert) &&
 			`/console/projects/${project_slug}/alerts/${datum.alert.uuid}`,
