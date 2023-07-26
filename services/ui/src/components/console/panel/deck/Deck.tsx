@@ -8,9 +8,11 @@ const Deck = (props) => {
 		<>
 			{props.config?.buttons?.top && (
 				<DeckButton
+					user={props.user}
 					config={props.config.buttons.top}
 					data={props.data}
 					path_params={props.path_params}
+					handleRefresh={props.handleRefresh}
 				/>
 			)}
 			<For each={props.config?.cards}>

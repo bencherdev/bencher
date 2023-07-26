@@ -71,11 +71,10 @@ const alertsConfig = {
 			path_to: "Alerts",
 		},
 		deck: {
-			url: (path_params) => {
-				return `${BENCHER_API_URL()}/v0/projects/${
-					path_params?.project_slug
-				}/alerts/${path_params?.alert_uuid}`;
-			},
+			url: (path_params) =>
+				`${BENCHER_API_URL()}/v0/projects/${path_params?.project_slug}/alerts/${
+					path_params?.alert_uuid
+				}`,
 			cards: [
 				{
 					kind: Card.NESTED_FIELD,
