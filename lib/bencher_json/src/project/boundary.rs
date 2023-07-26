@@ -17,6 +17,7 @@ pub struct JsonBoundary {
     pub upper_limit: Option<OrderedFloat<f64>>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

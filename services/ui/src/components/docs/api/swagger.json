@@ -6613,13 +6613,41 @@
           "results"
         ]
       },
+      "JsonPerfAlert": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "$ref": "#/components/schemas/JsonLimit"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JsonAlertStatus"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "limit",
+          "modified",
+          "status",
+          "uuid"
+        ]
+      },
       "JsonPerfMetric": {
         "type": "object",
         "properties": {
           "alert": {
             "nullable": true,
-            "type": "string",
-            "format": "uuid"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPerfAlert"
+              }
+            ]
           },
           "boundary": {
             "$ref": "#/components/schemas/JsonBoundary"

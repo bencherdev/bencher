@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bencher_json::project::{
-    alert::{JsonAlert, JsonAlertStatus},
+    alert::{JsonAlert, JsonAlertStatus, JsonPerfAlert},
     boundary::JsonLimit,
 };
 use chrono::Utc;
@@ -41,16 +41,28 @@ impl QueryAlert {
         Uuid::from_str(&uuid).map_err(api_error!())
     }
 
-    pub fn get_uuid_from_boundary_id(
+    pub fn get_perf_json(
         conn: &mut DbConnection,
         boundary_id: i32,
-    ) -> Result<Uuid, ApiError> {
-        let uuid: String = schema::alert::table
+    ) -> Result<JsonPerfAlert, ApiError> {
+        let query_alert = schema::alert::table
             .filter(schema::alert::boundary_id.eq(boundary_id))
-            .select(schema::alert::uuid)
-            .first(conn)
+            .first::<Self>(conn)
             .map_err(api_error!())?;
-        Uuid::from_str(&uuid).map_err(api_error!())
+
+        let QueryAlert {
+            uuid,
+            boundary_limit,
+            status,
+            modified,
+            ..
+        } = query_alert;
+        Ok(JsonPerfAlert {
+            uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
+            limit: Limit::from(boundary_limit).into(),
+            status: Status::try_from(status)?.into(),
+            modified: to_date_time(modified)?,
+        })
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonAlert, ApiError> {

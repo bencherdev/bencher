@@ -33,6 +33,23 @@ export type UserName = string;
  */
 export type Uuid = string;
 
+export enum JsonLimit {
+	Lower = "lower",
+	Upper = "upper",
+}
+
+export enum JsonAlertStatus {
+	Unread = "unread",
+	Read = "read",
+}
+
+export interface JsonPerfAlert {
+	uuid: Uuid;
+	limit: JsonLimit;
+	status: JsonAlertStatus;
+	modified: string;
+}
+
 export interface JsonBenchmark {
 	uuid: Uuid;
 	project: Uuid;
@@ -135,7 +152,7 @@ export interface JsonPerfMetric {
 	threshold?: JsonThresholdStatistic;
 	metric: JsonMetric;
 	boundary: JsonBoundary;
-	alert?: Uuid;
+	alert?: JsonPerfAlert;
 }
 
 export interface JsonPerfMetrics {

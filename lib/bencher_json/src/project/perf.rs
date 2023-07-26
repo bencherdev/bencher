@@ -12,6 +12,7 @@ use crate::urlencoded::{
 };
 use crate::{JsonBenchmark, JsonBranch, JsonMetricKind, JsonProject, JsonTestbed, ResourceId};
 
+use super::alert::JsonPerfAlert;
 use super::boundary::JsonBoundary;
 use super::branch::JsonVersion;
 use super::metric::JsonMetric;
@@ -219,7 +220,7 @@ pub struct JsonPerfMetric {
     pub threshold: Option<JsonThresholdStatistic>,
     pub metric: JsonMetric,
     pub boundary: JsonBoundary,
-    pub alert: Option<Uuid>,
+    pub alert: Option<JsonPerfAlert>,
 }
 
 #[cfg(feature = "table")]

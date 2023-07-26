@@ -3,7 +3,11 @@ import * as d3 from "d3";
 import { createEffect, createSignal } from "solid-js";
 import { Range } from "../../../config/types";
 import { addTooltips } from "./tooltip";
-import { JsonPerf } from "../../../../../types/bencher";
+import {
+	JsonPerf,
+	JsonAlertStatus,
+	JsonPerfAlert,
+} from "../../../../../types/bencher";
 
 const LinePlot = (props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
@@ -229,7 +233,8 @@ const boundary_dot = (x_axis, y_axis, color, position) => {
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
-		title: (datum) => !datum.alert && limit_title(y_axis, position, datum),
+		title: (datum) =>
+			!alert_unread(datum.alert) && limit_title(y_axis, position, datum),
 	};
 };
 
@@ -244,14 +249,19 @@ const alert_image = (x_axis, y_axis, position, project_slug) => {
 	return {
 		x: x_axis,
 		y: y_axis,
-		src: (datum) => datum.alert && SIREN_URL,
+		src: (datum) => alert_unread(datum.alert) && SIREN_URL,
 		width: 32,
-		title: (datum) => datum.alert && limit_title(y_axis, position, datum),
+		title: (datum) =>
+			alert_unread(datum.alert) && limit_title(y_axis, position, datum),
 		href: (datum) =>
-			datum.alert && `/console/projects/${project_slug}/alerts/${datum.alert}`,
+			alert_unread(datum.alert) &&
+			`/console/projects/${project_slug}/alerts/${datum.alert.uuid}`,
 		target: "_blank",
 	};
 };
+
+const alert_unread = (alert: JsonPerfAlert) =>
+	alert?.status && alert.status == JsonAlertStatus.Unread;
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0

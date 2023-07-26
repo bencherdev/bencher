@@ -390,7 +390,7 @@ fn perf_metric(
             QueryThreshold::get_threshold_statistic_json(conn, *threshold_id, *statistic_id)
                 .ok()?;
         // The alert may not exist
-        let alert = QueryAlert::get_uuid_from_boundary_id(conn, *id).ok();
+        let alert = QueryAlert::get_perf_json(conn, *id).ok();
         (Some(threshold), alert)
     } else {
         (None, None)
