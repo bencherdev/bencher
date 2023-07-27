@@ -5,7 +5,7 @@ import {
 	is_allowed_project,
 } from "../../../site/util";
 import TESTBED_FIELDS from "./fields/testbed";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
 
 const testbedsConfig = {
@@ -143,6 +143,14 @@ const testbedsConfig = {
 					label: "Testbed UUID",
 					key: "uuid",
 					display: Display.RAW,
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ All Reports and Thresholds that use this Testbed must be deleted first! ⚠️",
+					path: parentPath,
 				},
 			],
 		},

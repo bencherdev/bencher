@@ -3,7 +3,7 @@ import { For, Match, Switch, createEffect, createMemo } from "solid-js";
 import { concat_values, pageTitle } from "../../../site/util";
 import { Button } from "../../config/types";
 import StatusButton from "./StatusButton";
-import PlotButton from "./PlotButton";
+import PerfButton from "./PerfButton";
 
 const DeckHeader = (props) => {
 	const navigate = useNavigate();
@@ -69,8 +69,27 @@ const DeckHeader = (props) => {
 };
 
 const DeckHeaderButton = (props) => {
+	const navigate = useNavigate();
+	const location = useLocation();
+	const pathname = createMemo(() => location.pathname);
+
 	return (
 		<Switch fallback={<></>}>
+			<Match when={props.button.kind === Button.EDIT}>
+				<button
+					class="button is-outlined is-fullwidth"
+					title={`Edit ${props.title()}`}
+					onClick={(e) => {
+						e.preventDefault();
+						navigate(props.button?.path(pathname()));
+					}}
+				>
+					<span class="icon">
+						<i class="fas fa-pen" aria-hidden="true" />
+					</span>
+					<span>Edit</span>
+				</button>
+			</Match>
 			<Match when={props.button.kind === Button.STATUS}>
 				<StatusButton
 					user={props.user}
@@ -79,8 +98,8 @@ const DeckHeaderButton = (props) => {
 					handleRefresh={props.handleRefresh}
 				/>
 			</Match>
-			<Match when={props.button.kind === Button.PLOT}>
-				<PlotButton data={props.data} path_params={props.path_params} />
+			<Match when={props.button.kind === Button.PERF}>
+				<PerfButton data={props.data} path_params={props.path_params} />
 			</Match>
 			<Match when={props.button.kind === Button.REFRESH}>
 				<button

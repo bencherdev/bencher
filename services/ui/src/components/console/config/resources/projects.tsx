@@ -4,7 +4,15 @@ import {
 	is_allowed_project,
 	ProjectPermission,
 } from "../../../site/util";
-import { Button, Card, Display, Operation, PerfTab, Row } from "../types";
+import {
+	ActionButton,
+	Button,
+	Card,
+	Display,
+	Operation,
+	PerfTab,
+	Row,
+} from "../types";
 import { parentPath, addPath } from "../util";
 import FieldKind from "../../../field/kind";
 
@@ -207,6 +215,14 @@ const projectsConfig = {
 						validate: false,
 						config: PROJECT_FIELDS.visibility,
 					},
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle: null,
+					path: (_pathname, data) =>
+						`/console/organizations/${data.organization}/projects`,
 				},
 			],
 		},

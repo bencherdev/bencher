@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 
 import DeckCard from "./DeckCard";
 import DeckButton from "./DeckButton";
@@ -6,12 +6,6 @@ import DeckButton from "./DeckButton";
 const Deck = (props) => {
 	return (
 		<>
-			{props.config?.buttons?.top && (
-				<DeckButton
-					config={props.config.buttons.top}
-					path_params={props.path_params}
-				/>
-			)}
 			<For each={props.config?.cards}>
 				{(card) => (
 					<div class="columns">
@@ -32,12 +26,18 @@ const Deck = (props) => {
 					</div>
 				)}
 			</For>
-			{props.config?.buttons?.bottom && (
-				<DeckButton
-					config={props.config.buttons.bottom}
-					path_params={props.path_params}
-				/>
-			)}
+			<Show when={props.config?.buttons} fallback={<></>}>
+				<For each={props.config?.buttons}>
+					{(button) => (
+						<DeckButton
+							user={props.user}
+							config={button}
+							url={props.url}
+							data={props.data}
+						/>
+					)}
+				</For>
+			</Show>
 		</>
 	);
 };

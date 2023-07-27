@@ -82,6 +82,7 @@ const LinePlot = (props) => {
 					number: perf_metric.version?.number,
 					hash: perf_metric.version?.hash,
 					iteration: perf_metric.iteration,
+					threshold: perf_metric.threshold?.uuid,
 					lower_limit: perf_metric.boundary?.lower_limit,
 					upper_limit: perf_metric.boundary?.upper_limit,
 					alert: perf_metric.alert,
@@ -117,7 +118,10 @@ const LinePlot = (props) => {
 					Plot.line(line_data, boundary_line(x_axis, LOWER_LIMIT, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(line_data, boundary_dot(x_axis, LOWER_LIMIT, color, LOWER)),
+					Plot.dot(
+						line_data,
+						boundary_dot(x_axis, LOWER_LIMIT, color, LOWER, project_slug),
+					),
 				);
 			}
 			alert_arrays.push(
@@ -135,7 +139,10 @@ const LinePlot = (props) => {
 					Plot.line(line_data, boundary_line(x_axis, UPPER_LIMIT, color)),
 				);
 				plot_arrays.push(
-					Plot.dot(line_data, boundary_dot(x_axis, UPPER_LIMIT, color, UPPER)),
+					Plot.dot(
+						line_data,
+						boundary_dot(x_axis, UPPER_LIMIT, color, UPPER, project_slug),
+					),
 				);
 			}
 			alert_arrays.push(
@@ -224,7 +231,7 @@ const boundary_line = (x_axis, y_axis, color) => {
 	};
 };
 
-const boundary_dot = (x_axis, y_axis, color, position) => {
+const boundary_dot = (x_axis, y_axis, color, position, project_slug) => {
 	return {
 		x: x_axis,
 		y: y_axis,
@@ -235,6 +242,13 @@ const boundary_dot = (x_axis, y_axis, color, position) => {
 		fillOpacity: 0.666,
 		title: (datum) =>
 			!is_active(datum.alert) && limit_title(y_axis, position, datum, ""),
+		// TODO enable this when there is an endpoint for getting a historical threshold statistic
+		// That is, the statistic displayed needs to be historical, not current.
+		// Just like with the Alerts.
+		// href: (datum) =>
+		// 	!is_active(datum.alert) &&
+		// 	`/console/projects/${project_slug}/thresholds/${datum.threshold}`,
+		// target: "_blank",
 	};
 };
 
@@ -252,7 +266,7 @@ const alert_image = (x_axis, y_axis, position, project_slug) => {
 			limit_title(y_axis, position, datum, "\nClick to view Alert"),
 		href: (datum) =>
 			is_active(datum.alert) &&
-			`/console/projects/${project_slug}/alerts/${datum.alert.uuid}`,
+			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
 		target: "_blank",
 	};
 };

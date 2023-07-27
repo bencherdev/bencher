@@ -1,5 +1,5 @@
 import { BENCHER_API_URL } from "../../../site/util";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, viewUuidPath } from "../util";
 
 const reportsConfig = {
@@ -89,6 +89,13 @@ const reportsConfig = {
 					label: "Results Adapter",
 					key: "adapter",
 					display: Display.RAW,
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle: null,
+					path: parentPath,
 				},
 			],
 		},

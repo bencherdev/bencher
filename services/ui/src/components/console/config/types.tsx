@@ -12,8 +12,9 @@ export enum Operation {
 export enum Button {
 	ADD,
 	INVITE,
+	EDIT,
 	STATUS,
-	PLOT,
+	PERF,
 	REFRESH,
 	BACK,
 }

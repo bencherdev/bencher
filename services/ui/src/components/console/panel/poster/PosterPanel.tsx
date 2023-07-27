@@ -8,6 +8,7 @@ const PosterPanel = (props) => {
 			<Poster
 				user={props.user}
 				config={props.config?.form}
+				operation={props.config?.operation}
 				path_params={props.path_params}
 			/>
 		</>

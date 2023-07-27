@@ -291,11 +291,7 @@ export const post_options = (url: string, token: null | string, data: {}) => {
 	return data_options(url, HttpMethod.POST, token, data);
 };
 
-export const put_options = (
-	url: string,
-	token: null | string,
-	data: { any },
-) => {
+export const put_options = (url: string, token: null | string, data: {}) => {
 	return data_options(url, HttpMethod.PUT, token, data);
 };
 
@@ -305,6 +301,14 @@ export const patch_options = (
 	data: { any },
 ) => {
 	return data_options(url, HttpMethod.PATCH, token, data);
+};
+
+export const delete_options = (url: string, token: null | string) => {
+	return {
+		url: url,
+		method: HttpMethod.DELETE,
+		headers: get_headers(token),
+	};
 };
 
 export const getToken = () =>

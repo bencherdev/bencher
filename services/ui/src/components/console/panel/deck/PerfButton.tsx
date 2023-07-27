@@ -1,7 +1,7 @@
 import { useNavigate } from "solid-app-router";
 import { JsonAlert, JsonLimit } from "../../../../types/bencher";
 
-const PlotButton = (props) => {
+const PerfButton = (props) => {
 	const navigate = useNavigate();
 
 	return (
@@ -47,4 +47,4 @@ const PlotButton = (props) => {
 		</button>
 	);
 };
-export default PlotButton;
+export default PerfButton;

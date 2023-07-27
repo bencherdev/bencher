@@ -9,11 +9,17 @@ import {
 	Switch,
 } from "solid-js";
 import Field from "../../../field/Field";
-import { NotifyKind, post_options, validate_jwt } from "../../../site/util";
+import {
+	NotifyKind,
+	post_options,
+	put_options,
+	validate_jwt,
+} from "../../../site/util";
 import { useLocation, useNavigate } from "solid-app-router";
 import FieldKind from "../../../field/kind";
 import { notification_path } from "../../../site/Notification";
 import { createStore } from "solid-js/store";
+import { Operation, PosterKind } from "../../config/types";
 
 const initForm = (fields) => {
 	let newForm = {};
@@ -50,7 +56,13 @@ const Poster = (props) => {
 			return;
 		}
 		const url = props.config?.url?.(props.path_params);
-		return await axios(post_options(url, token, data));
+		switch (props.operation) {
+			case Operation.EDIT:
+				return await axios(put_options(url, token, data));
+			case Operation.ADD:
+			default:
+				return await axios(post_options(url, token, data));
+		}
 	};
 
 	function sendForm(e) {

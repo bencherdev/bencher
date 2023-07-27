@@ -1,5 +1,5 @@
 import BRANCH_FIELDS from "./fields/branch";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
 import {
 	BENCHER_API_URL,
@@ -142,11 +142,14 @@ const branchesConfig = {
 					key: "uuid",
 					display: Display.RAW,
 				},
-				// {
-				//   kind: Card.TABLE,
-				//   label: "Versions",
-				//   key: "versions",
-				// },
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ All Reports and Thresholds that use this Branch must be deleted first! ⚠️",
+					path: parentPath,
+				},
 			],
 		},
 	},

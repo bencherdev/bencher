@@ -1,6 +1,6 @@
 import THRESHOLD_FIELDS from "./fields/threshold";
 import { BENCHER_API_URL } from "../../../site/util";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewUuidPath } from "../util";
 import FieldKind from "../../../field/kind";
 
@@ -193,7 +193,10 @@ const thresholdsConfig = {
 			],
 			path: parentPath,
 			path_to: "Thresholds",
-			buttons: [{ kind: Button.REFRESH }],
+			buttons: [
+				{ kind: Button.EDIT, path: (pathname) => `${pathname}/edit` },
+				{ kind: Button.REFRESH },
+			],
 		},
 		deck: {
 			url: (path_params) =>
@@ -262,6 +265,89 @@ const thresholdsConfig = {
 					display: Display.RAW,
 				},
 			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ All Reports that use this Threshold must be deleted first! ⚠️",
+					path: parentPath,
+				},
+			],
+		},
+	},
+	[Operation.EDIT]: {
+		operation: Operation.EDIT,
+		header: {
+			title: "Edit Threshold Statistic",
+			path: parentPath,
+			path_to: "Threshold",
+		},
+		form: {
+			url: (path_params) =>
+				`${BENCHER_API_URL()}/v0/projects/${
+					path_params?.project_slug
+				}/thresholds/${path_params?.threshold_uuid}`,
+			fields: [
+				{
+					kind: FieldKind.SELECT,
+					label: "Statistical Significance Test",
+					key: "test",
+					value: TEST_VALUE,
+					validate: false,
+					config: THRESHOLD_FIELDS.test,
+				},
+				{
+					kind: FieldKind.NUMBER,
+					label: "Lower Boundary",
+					key: "lower_boundary",
+					value: "",
+					valid: true,
+					validate: true,
+					nullable: true,
+					config: THRESHOLD_FIELDS.lower_boundary,
+				},
+				{
+					kind: FieldKind.NUMBER,
+					label: "Upper Boundary",
+					key: "upper_boundary",
+					value: "",
+					valid: true,
+					validate: true,
+					nullable: true,
+					config: THRESHOLD_FIELDS.upper_boundary,
+				},
+				{
+					kind: FieldKind.NUMBER,
+					label: "Minimum Sample Size",
+					key: "min_sample_size",
+					value: "",
+					valid: true,
+					validate: true,
+					nullable: true,
+					config: THRESHOLD_FIELDS.min_sample_size,
+				},
+				{
+					kind: FieldKind.NUMBER,
+					label: "Maximum Sample Size",
+					key: "max_sample_size",
+					value: "",
+					valid: true,
+					validate: true,
+					nullable: true,
+					config: THRESHOLD_FIELDS.max_sample_size,
+				},
+				{
+					kind: FieldKind.NUMBER,
+					label: "Window Size (seconds)",
+					key: "window",
+					value: "",
+					valid: true,
+					validate: true,
+					nullable: true,
+					config: THRESHOLD_FIELDS.window,
+				},
+			],
+			path: parentPath,
 		},
 	},
 };

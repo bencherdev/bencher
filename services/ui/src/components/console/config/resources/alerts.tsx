@@ -71,7 +71,7 @@ const alertsConfig = {
 			path_to: "Alerts",
 			buttons: [
 				{ kind: Button.STATUS },
-				{ kind: Button.PLOT },
+				{ kind: Button.PERF },
 				{ kind: Button.REFRESH },
 			],
 		},

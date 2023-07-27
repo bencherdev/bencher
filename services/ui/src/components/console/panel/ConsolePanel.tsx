@@ -35,6 +35,13 @@ const ConsolePanel = (props) => {
 					path_params={props.path_params}
 				/>
 			</Match>
+			<Match when={props.config?.operation === Operation.EDIT}>
+				<PosterPanel
+					user={props.user}
+					config={props.config}
+					path_params={props.path_params}
+				/>
+			</Match>
 			<Match when={props.config?.operation === Operation.PERF}>
 				<PerfPanel
 					user={props.user}

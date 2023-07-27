@@ -4,7 +4,7 @@ import {
 	ProjectPermission,
 	is_allowed_project,
 } from "../../../site/util";
-import { Button, Card, Display, Operation } from "../types";
+import { ActionButton, Button, Card, Display, Operation } from "../types";
 import { addPath, parentPath, viewSlugPath } from "../util";
 import BENCHMARK_FIELDS from "./fields/benchmark";
 
@@ -139,6 +139,14 @@ const benchmarksConfig = {
 					label: "Benchmark UUID",
 					key: "uuid",
 					display: Display.RAW,
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ All Reports that use this Benchmark must be deleted first! ⚠️",
+					path: parentPath,
 				},
 			],
 		},

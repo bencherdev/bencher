@@ -5,7 +5,7 @@ import {
 	is_allowed_project,
 } from "../../../site/util";
 import METRIC_KIND_FIELDS from "./fields/metric_kind";
-import { Button, Card, Display, Operation, Row } from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewSlugPath } from "../util";
 
 const metricKindsConfig = {
@@ -170,6 +170,14 @@ const metricKindsConfig = {
 						validate: true,
 						config: METRIC_KIND_FIELDS.units,
 					},
+				},
+			],
+			buttons: [
+				{
+					kind: ActionButton.DELETE,
+					subtitle:
+						"⚠️ All Reports and Thresholds that use this Metric Kind must be deleted first! ⚠️",
+					path: parentPath,
 				},
 			],
 		},
