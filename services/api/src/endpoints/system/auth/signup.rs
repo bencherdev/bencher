@@ -146,7 +146,7 @@ async fn post_inner(
         settings_url: context
             .endpoint
             .clone()
-            .join("/console/settings/email")
+            .join("/help")
             .map(Into::into)
             .unwrap_or_default(),
     }));

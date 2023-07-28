@@ -114,7 +114,7 @@ async fn post_inner(context: &ApiContext, json_login: JsonLogin) -> Result<JsonE
         settings_url: context
             .endpoint
             .clone()
-            .join("/console/settings/email")
+            .join("/help")
             .map(Into::into)
             .unwrap_or_default(),
     }));

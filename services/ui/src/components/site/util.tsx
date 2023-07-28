@@ -64,6 +64,8 @@ export const BENCHER_GITHUB_URL: string =
 
 export const BENCHER_CALENDLY_URL: string = "https://calendly.com/bencher/demo";
 
+export const BENCHER_CHAT_URL: string = "https://discord.gg/yGEsdUh7R4";
+
 export const BENCHER_LOGO_URL: string =
 	"https://s3.amazonaws.com/public.bencher.dev/bencher_navbar.png";
 

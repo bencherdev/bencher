@@ -96,6 +96,15 @@ export const Navbar = (props) => {
 					<div class="navbar-item">
 						<div class="navbar-item">BETA v{BENCHER_VERSION}</div>
 						<div class="navbar-item" />
+						<div class="navbar-item">
+							<Link class="button is-outlined" href="/help">
+								<span class="icon has-text-primary">
+									<i class="fas fa-life-ring" aria-hidden="true" />
+								</span>
+								<span>Help</span>
+							</Link>
+						</div>
+						<div class="navbar-item" />
 						<div class="buttons">
 							<Show
 								when={is_valid_jwt()}

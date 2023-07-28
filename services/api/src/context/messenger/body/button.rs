@@ -46,7 +46,7 @@ impl FmtBody for ButtonBody {
             pre_body,
             button_text,
             button_url,
-            clipboard_text,
+            clipboard_text: _,
             clipboard_target,
             post_body,
             closing,
@@ -78,71 +78,46 @@ impl FmtBody for ButtonBody {
     visibility: hidden;
     width: 0;
     \">{preheader}</span>
-        <div class=\"columns is-centered\">
-          <div class=\"column is-four-fifths\">
-            <div class=\"card\">
-              <div class=\"card-content\">
-                <header class=\"card-header\">
-                  <p class=\"card-header-title\">
-                    {title}
-                  </p>
-                </header>
-                <div class=\"content\">
-                  <br/>
-                  <p>{greeting}</p>
-                  <p>{pre_body}</p>
-                  <section class=\"section\">
-                    <div class=\"container\">
-                      <div class=\"columns is-centered\">
-                        <div class=\"column is-half\">
-                          <div class=\"content has-text-centered\">
-                            <a class=\"button is-half\" href=\"{button_url}\" target=\"_blank\" style=\"color: white;background-color:#fc7300\">{button_text}</a>
-                          </div>
-                        </div>
-                      </div>
-                      <br>
-                      <div class=\"columns is-centered\">
-                        <div class=\"column is-half\">
-                          <div class=\"content has-text-centered\">
-                            <p>
-                              <a href=\"{button_url}\" target=\"_blank\">Click Here to {button_text}</a>
-                            </p>
-                            <p>
-                              <small>
-                                <code id=\"clipboard-target\" style=\"overflow-wrap:anywhere;\">
-                                    {clipboard_target}
-                                </code>
-                              </small>
-                            </p>
-                            <button class=\"button is-small\" onclick=\"copy_to_clipboard('clipboard-target')\" alt=\"{clipboard_text}\">
-                                <span class=\"icon\">
-                                  \u{1f4c4}
-                                </span>
-                                <span>Copy</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                  <p>{post_body}</p>
-                  <br/>
-                  <p>{closing}</p>
-                  <p>{signature}</p>
-                  <br/>
-                </div>
+    <section class=\"section\">
+    <div class=\"container\">
+    <div class=\"box\">
+      <div class=\"columns is-centered\">
+        <div class=\"column\">
+          <h1 class=\"title\">{title}</h1>
+          <br/>
+          <p>{greeting}</p>
+          <p>{pre_body}</p>
+          <br/>
+          <div class=\"columns is-centered\">
+            <div class=\"column\">
+              <div class=\"content has-text-centered\">
+                <a class=\"button is-medium is-responsive\" href=\"{button_url}\" target=\"_blank\" style=\"color:white;background-color:#fc7300;\">{button_text}</a>
               </div>
-              <footer class=\"card-footer\">
-                <div class=\"card-footer-item\">
-                  <div class=\"content has-text-centered\">
-                    <p>Bencher - Continuous Benchmarking</p>
-                    <a href=\"{settings_url}\">Manage email settings</a>
-                  </div>
-                </div>
-              </footer>
             </div>
           </div>
+          <br/>
+          <div class=\"content has-text-centered\">
+            <small>
+              <code style=\"overflow-wrap:anywhere;\">
+                  {clipboard_target}
+              </code>
+            </small>
+          </div>
+          <p>{post_body}</p>
+          <br/>
+          <p>{closing}</p>
+          <p>{signature}</p>
+          <br/>
+          <hr/>
+          <div class=\"content has-text-centered\">
+            <p>Bencher - Continuous Benchmarking</p>
+            <a href=\"{settings_url}\">Manage email settings</a>
+          </div>
         </div>
+      </div>
+    </div>
+    </div>
+    </section>
   </body>
   <script>
     function copy_to_clipboard(id) {{

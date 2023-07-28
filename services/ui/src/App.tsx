@@ -6,6 +6,9 @@ import { Navbar } from "./components/site/navbar/Navbar";
 import Footer from "./components/site/pages/Footer";
 import { projectSlug } from "./components/console/ConsolePage";
 import {
+	BENCHER_CALENDLY_URL,
+	BENCHER_CHAT_URL,
+	BENCHER_GITHUB_URL,
 	BENCHER_USER_KEY,
 	default_user,
 	load_user,
@@ -16,12 +19,12 @@ import { createStore } from "solid-js/store";
 const AuthRoutes = lazy(() => import("./components/auth/AuthRoutes"));
 const LandingPage = lazy(() => import("./components/site/pages/LandingPage"));
 const PricingPage = lazy(() => import("./components/site/pages/PricingPage"));
+const HelpPage = lazy(() => import("./components/site/pages/HelpPage"));
 const ConsoleRoutes = lazy(() => import("./components/console/ConsoleRoutes"));
 const DocsRoutes = lazy(() => import("./components/docs/DocsRoutes"));
 const PerfRoutes = lazy(() => import("./components/perf/PerfRoutes"));
 const LegalRoutes = lazy(() => import("./components/legal/LegalRoutes"));
-const Repo = lazy(() => import("./components/site/pages/Repo"));
-const Demo = lazy(() => import("./components/site/pages/Demo"));
+const RedirectPage = lazy(() => import("./components/site/pages/RedirectPage"));
 
 const App: Component = () => {
 	const location = useLocation();
@@ -97,16 +100,35 @@ const App: Component = () => {
 				{/* Pricing Routes */}
 				<Route path="/pricing" element={<PricingPage user={user} />} />
 
+				{/* GitHub repo shortcut */}
+				<Route path="/help" element={<HelpPage user={user} />} />
+
 				{/* Legal Routes */}
 				<Route path="/legal">
 					<LegalRoutes />
 				</Route>
 
 				{/* GitHub repo shortcut */}
-				<Route path="/repo" element={<Repo />} />
+				<Route
+					path="/repo"
+					element={
+						<RedirectPage url={BENCHER_GITHUB_URL} title="GitHub Repository" />
+					}
+				/>
 
 				{/* Calendly demo shortcut */}
-				<Route path="/demo" element={<Demo />} />
+				<Route
+					path="/demo"
+					element={
+						<RedirectPage url={BENCHER_CALENDLY_URL} title="Calendly Demo" />
+					}
+				/>
+
+				{/* Discord chat invite shortcut */}
+				<Route
+					path="/chat"
+					element={<RedirectPage url={BENCHER_CHAT_URL} title="Discord Chat" />}
+				/>
 			</Routes>
 
 			<For each={[...Array(16).keys()]}>{(_k, _i) => <br />}</For>
