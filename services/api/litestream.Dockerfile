@@ -4,7 +4,7 @@ FROM bencher-api-builder as builder
 
 # Bundle Stage
 # https://hub.docker.com/_/debian
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 COPY --from=builder /usr/src/target/release/api /api
 RUN mkdir -p /data
 

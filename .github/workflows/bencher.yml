@@ -13,7 +13,7 @@ env:
   CARGO_TERM_COLOR: always
   GITHUB_REGISTRY: ghcr.io
   FLY_REGISTRY: registry.fly.io
-  MOLD_VERSION: 1.11.0
+  MOLD_VERSION: 2.0.0
   # API
   API_BUILDER_DOCKER_IMAGE: bencher-api-builder
   API_LOCAL_DOCKER_IMAGE: bencher-api-local

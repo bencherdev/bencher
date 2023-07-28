@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/node/
-FROM node:lts-bullseye
+FROM node:lts-bookworm
 
 # Set working directory
 WORKDIR /usr/src/ui

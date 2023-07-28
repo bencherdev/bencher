@@ -3,9 +3,9 @@
     "build": {
         "dockerfile": "Dockerfile",
         "args": {
-            "MOLD_VERSION": "1.11.0",
+            "MOLD_VERSION": "2.0.0",
             "MOLD_DEFAULT": "true",
-            "RUST_VERSION": "1.70.0"
+            "RUST_VERSION": "1.71.0"
         }
     },
     "postCreateCommand": "./scripts/setup.sh",

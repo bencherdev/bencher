@@ -5,7 +5,7 @@ services:
       context: ..
       dockerfile: ./services/api/builder.Dockerfile
       args:
-        - MOLD_VERSION=1.11.0
+        - MOLD_VERSION=2.0.0
     image: bencher-api-builder
     container_name: bencher_api_builder
 
