@@ -230,7 +230,7 @@ pub mod table {
     use bencher_valid::GitHash;
     use chrono::{DateTime, Utc};
     use ordered_float::OrderedFloat;
-    use tabled::{Table, TableIteratorExt, Tabled};
+    use tabled::{Table, Tabled};
 
     use crate::{
         JsonBenchmark, JsonBranch, JsonMetric, JsonMetricKind, JsonPerf, JsonProject, JsonTestbed,
@@ -258,7 +258,7 @@ pub mod table {
                     })
                 }
             }
-            perf_table.table()
+            Self::new(perf_table)
         }
     }
 
