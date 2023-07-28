@@ -19,11 +19,6 @@ impl FmtBody for NewUserBody {
             email,
             invited,
         } = self;
-        let invited_or_joined = if *invited {
-            "was invited to"
-        } else {
-            "has joined"
-        };
         format!(
             r#"Ahoy {admin},
         A new user {invited_or_joined} your Bencher instance ({endpoint})!
@@ -32,7 +27,8 @@ impl FmtBody for NewUserBody {
         Email: {email}
 
         🐰 Bencher
-        "#
+        "#,
+            invited_or_joined = invited_or_joined(*invited)
         )
     }
 
@@ -44,11 +40,6 @@ impl FmtBody for NewUserBody {
             email,
             invited,
         } = self;
-        let invited_or_joined = if *invited {
-            "was invited to"
-        } else {
-            "has joined"
-        };
         format!(
             "<!doctype html>
 <html>
@@ -59,7 +50,7 @@ impl FmtBody for NewUserBody {
         <title>New user {invited_or_joined} Bencher</title>
     </head>
     <body>
-        <p>Ahoy {admin}</p>,
+        <p>Ahoy {admin},</p>
         <p>A new user {invited_or_joined} your Bencher instance ({endpoint})!</p>
         <br />
         <p>Name: {name}</p>
@@ -67,7 +58,16 @@ impl FmtBody for NewUserBody {
         <br/>
         <p>🐰 Bencher</p>
     </body>
-</html>"
+</html>",
+            invited_or_joined = invited_or_joined(*invited)
         )
+    }
+}
+
+fn invited_or_joined(invited: bool) -> &'static str {
+    if invited {
+        "was invited to"
+    } else {
+        "has joined"
     }
 }
