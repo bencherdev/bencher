@@ -8,15 +8,26 @@
   Bencher
 </h1>
 
-[Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) tools designed to catch performance regressions in CI. That is, Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
+[Bencher](https://bencher.dev) is a suite of [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) tools.
+Have you ever had a performance regression impact your users?
+Bencher could have prevented that from happening.
+Bencher allows you to detect and prevent performance regressions _before_ they make it to production.
 
-For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should also be run in CI to prevent performance regressions. Performance bugs are bugs!
+- **Run**: Run your benchmarks locally or in CI using your favorite benchmarking tools. The `bencher` CLI simply wraps your existing benchmark harness and stores its results.
+- **Track**: Track the results of your benchmarks over time. Monitor, query, and graph the results using the Bencher web console based on the source branch, testbed, and metric kind.
+- **Catch**: Catch performance regressions in CI. Bencher uses state of the art, customizable analytics to detect performance regressions before they make it to production.
+
+For the same reasons that unit tests are run in CI to prevent feature regressions, benchmarks should also be run in CI with Bencher to prevent performance regressions. Performance bugs are bugs!
+
+<br />
 
 Bencher consists of:
 
 - `bencher` CLI
 - Bencher API Server
 - Bencher Web UI
+
+<br />
 
 The best place to start is the [Bencher Quick Start](https://bencher.dev/docs/tutorial/quick-start) tutorial.
 
@@ -137,8 +148,8 @@ Otherwise, it will default to using the latest CLI version.
     version: 0.3.0
 ```
 
-Specify an exact version if using Bencher *Self-Hosted*.
-Do __not__ specify an exact version if using Bencher *Cloud* as there are still occasional breaking changes.
+Specify an exact version if using Bencher _Self-Hosted_.
+Do **not** specify an exact version if using Bencher _Cloud_ as there are still occasional breaking changes.
 
 ## Contributing
 

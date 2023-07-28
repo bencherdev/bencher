@@ -178,7 +178,7 @@ impl Run {
         // TODO disable when quiet
         self.display_results(&json_report).await?;
 
-        if self.err {
+        if self.err && !json_report.alerts.is_empty() {
             Err(RunError::Alerts(json_report.alerts.len()))
         } else {
             Ok(())
