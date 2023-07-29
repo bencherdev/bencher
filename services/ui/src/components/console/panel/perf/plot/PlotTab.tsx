@@ -112,7 +112,7 @@ const PlotTab = (props) => {
 								size={PaginationSize.SMALL}
 								data_len={getTab()?.length}
 								per_page={props.per_page()}
-								page={getPage()()}
+								page={getPage()?.()}
 								handlePage={getHandlePage()}
 							/>
 							<br />
@@ -129,7 +129,7 @@ const Tab = (props: {
 	is_console: boolean;
 	tab: () => PerfTab;
 	getTab: () => any[];
-	getPage: () => number;
+	getPage: () => () => number;
 	getHandlePage: () => (page: number) => void;
 	handleChecked: (index: number, slug: void | string) => void;
 }) => {
@@ -145,7 +145,7 @@ const Tab = (props: {
 				when={
 					props.is_console &&
 					props.getTab().length === 0 &&
-					props.getPage() === DEFAULT_PAGE
+					props.getPage()?.() === DEFAULT_PAGE
 				}
 			>
 				<div class="box">
@@ -153,7 +153,9 @@ const Tab = (props: {
 				</div>
 			</Match>
 			<Match
-				when={props.getTab().length === 0 && props.getPage() !== DEFAULT_PAGE}
+				when={
+					props.getTab().length === 0 && props.getPage()?.() !== DEFAULT_PAGE
+				}
 			>
 				<div class="box">
 					<BackButton
