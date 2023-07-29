@@ -40,7 +40,7 @@
     "babel-loader": "8.2.3",
     "bulma": "^0.9.4",
     "jsdom": "^21.0.0",
-    "node-sass": "^7.0.3",
+    "node-sass": "^9.0.0",
     "remark-gfm": "^3.0.1",
     "rome": "11.0.0",
     "sass": "^1.49.9",
