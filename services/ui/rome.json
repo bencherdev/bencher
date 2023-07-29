@@ -2,7 +2,9 @@
 	"$schema": "./node_modules/rome/configuration_schema.json",
 	"files": {
 		"ignore": [
-			"./src/components/docs/api/swagger.json", "./src/types/bencher.ts"
+			"./dist/",
+			"./src/components/docs/api/swagger.json",
+			"./src/types/bencher.ts"
 		]
 	},
 	"linter": {

@@ -12,6 +12,7 @@
       "node",
       "solid-jsx/types",
     ],
+    "strict": true,
     "noEmit": true,
     "isolatedModules": true,
     "resolveJsonModule": true
