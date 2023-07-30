@@ -10,6 +10,15 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^2.9.6"
+    "@astrojs/mdx": "^0.19.7",
+    "@astrojs/sitemap": "^2.0.1",
+    "@astrojs/solid-js": "^2.2.0",
+    "astro": "^2.9.6",
+    "solid-js": "^1.7.8"
+  },
+  "devDependencies": {
+    "bulma": "^0.9.4",
+    "sass": "^1.64.1",
+    "vite-plugin-wasm-pack": "^0.1.12"
   }
 }
