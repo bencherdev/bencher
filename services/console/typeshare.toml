@@ -1,0 +1,4 @@
+[typescript.type_mappings]
+"DateTime" = "string"
+"OrderedFloat" = "number"
+"BigInt" = "number"
