@@ -7,6 +7,9 @@ interface Props {
 }
 
 const { title } = Astro.props;
+
+const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
+const pageTitle = title ? `${title} | ${BENCHER_TITLE}` : BENCHER_TITLE;
 ---
 
 <!DOCTYPE html>
@@ -21,7 +24,7 @@ const { title } = Astro.props;
     <meta name="description" content="Catch Performance Regressions in CI" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
+    <title>{pageTitle}</title>
     <!-- https://devicon.dev/ -->
     <link
       rel="stylesheet"

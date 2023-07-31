@@ -1,10 +1,10 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 import Card from "../components/Card.astro";
 import WasmButton from "../components/WasmButton";
 ---
 
-<Layout title="Welcome to Astro.">
+<BaseLayout title="">
   <main>
     <svg
       class="astro-a"
@@ -64,7 +64,7 @@ import WasmButton from "../components/WasmButton";
       />
     </ul>
   </main>
-</Layout>
+</BaseLayout>
 
 <style>
   main {

@@ -1,0 +1,19 @@
+---
+import { getCollection } from "astro:content";
+import HeaderLayout from "../../layouts/HeaderLayout.astro";
+
+const pages = await getCollection("legal");
+pages.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+---
+
+<HeaderLayout title="Legal" heading="Bencher Legal">
+  <ul>
+    {
+      pages.map((page) => (
+        <li>
+          <a href={`/legal/${page.slug}`}>{page.data.heading}</a>
+        </li>
+      ))
+    }
+  </ul>
+</HeaderLayout>
