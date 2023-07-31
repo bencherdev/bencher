@@ -6,6 +6,7 @@ import wasmPack from "vite-plugin-wasm-pack";
 
 // https://astro.build/config
 export default defineConfig({
+  output: "hybrid",
   integrations: [sitemap(), mdx(), solidJs()],
   vite: {
     plugins: [wasmPack("../../lib/bencher_valid")],

@@ -1,6 +1,7 @@
 ---
 import "../styles/styles.scss";
 import Footer from "../components/site/Footer";
+import Navbar from "../components/site/navbar/Navbar";
 
 interface Props {
   title: string;
@@ -35,7 +36,10 @@ const pageTitle = title ? `${title} | ${BENCHER_TITLE}` : BENCHER_TITLE;
     ></script>
   </head>
   <body>
-    <slot />
+    <Navbar />
+    <main>
+      <slot />
+    </main>
     <Footer />
   </body>
 </html>

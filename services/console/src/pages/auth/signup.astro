@@ -1,0 +1,27 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+import AuthForm from "../../components/auth/AuthForm";
+---
+
+<BaseLayout title="Sign up">
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-two-fifths">
+          <h2 class="title">Sign up</h2>
+
+          <AuthForm client:only new_user={true} />
+
+          <hr />
+
+          <p class="has-text-centered">
+            <small>
+              switch to <a href="/auth/login">log in</a>
+            </small>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
