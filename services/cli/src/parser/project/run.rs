@@ -52,6 +52,10 @@ pub struct CliRun {
     #[clap(long)]
     pub err: bool,
 
+    /// CI integrations
+    #[clap(flatten)]
+    pub ci: CliRunCi,
+
     #[clap(flatten)]
     pub command: CliRunCommand,
 
@@ -184,4 +188,11 @@ pub enum CliRunFold {
     Mean,
     /// Median of values
     Median,
+}
+
+#[derive(Args, Debug)]
+pub struct CliRunCi {
+    /// GitHub Actions `GITHUB_TOKEN` to comment on PRs (ie `--github-token ${{ secrets.GITHUB_TOKEN }}`)
+    #[clap(long)]
+    pub github_token: Option<String>,
 }

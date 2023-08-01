@@ -10,7 +10,11 @@ use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{backend::Backend, map_timestamp, sub::project::run::urls::BenchmarkUrls},
+    bencher::{
+        backend::Backend,
+        map_timestamp,
+        sub::project::run::urls::{AlertUrls, BenchmarkUrls},
+    },
     cli_eprintln, cli_println,
     parser::project::run::{CliRun, CliRunAdapter},
     CliError,
@@ -19,6 +23,7 @@ use crate::{
 mod adapter;
 mod average;
 mod branch;
+mod ci;
 mod error;
 mod fold;
 pub mod runner;
@@ -27,6 +32,7 @@ mod urls;
 use adapter::RunAdapter;
 use average::Average;
 use branch::Branch;
+use ci::Ci;
 pub use error::RunError;
 use fold::Fold;
 use runner::Runner;
@@ -54,6 +60,7 @@ pub struct Run {
     backdate: Option<DateTime<Utc>>,
     allow_failure: bool,
     err: bool,
+    ci: Option<Ci>,
     dry_run: bool,
 }
 
@@ -75,6 +82,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
+            ci,
             dry_run,
         } = run;
         Ok(Self {
@@ -91,6 +99,7 @@ impl TryFrom<CliRun> for Run {
             backdate: map_timestamp(backdate)?,
             allow_failure,
             err,
+            ci: ci.try_into()?,
             dry_run,
         })
     }
@@ -243,6 +252,11 @@ impl Run {
             .map_err(RunError::GetEndpoint)?;
         let endpoint_url: Url = json_endpoint.endpoint.into();
         let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), json_report);
+        let alert_urls = AlertUrls::new(endpoint_url.clone(), json_report);
+
+        if let Some(ci) = &self.ci {
+            ci.run(json_report, &benchmark_urls, &alert_urls).await?;
+        }
 
         cli_println!("\nView results:");
         for (name, url) in &benchmark_urls.0 {
@@ -254,13 +268,8 @@ impl Run {
         }
 
         cli_println!("\nView alerts:");
-        for alert in &json_report.alerts {
-            let mut url = endpoint_url.clone();
-            url.set_path(&format!(
-                "/console/projects/{}/alerts/{}",
-                json_report.project.slug, alert.uuid
-            ));
-            cli_println!("- {}: {url}", alert.benchmark.name);
+        for (name, url) in &alert_urls.0 {
+            cli_println!("- {name}: {url}");
         }
         cli_println!("\n");
 

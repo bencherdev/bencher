@@ -105,3 +105,27 @@ impl BoundaryParam {
         query_string
     }
 }
+
+pub struct AlertUrls(pub Vec<(String, Url)>);
+
+impl AlertUrls {
+    pub fn new(endpoint_url: Url, json_report: &JsonReport) -> Self {
+        let mut urls = Vec::new();
+
+        for alert in &json_report.alerts {
+            let alert_url =
+                Self::to_url(endpoint_url.clone(), &json_report.project.slug, alert.uuid);
+            urls.push((alert.benchmark.name.to_string(), alert_url));
+        }
+
+        Self(urls)
+    }
+
+    fn to_url(mut endpoint: Url, project_slug: &Slug, alert: Uuid) -> Url {
+        endpoint.set_path(&format!(
+            "/console/projects/{}/alerts/{}",
+            project_slug, alert
+        ));
+        endpoint
+    }
+}

@@ -48,4 +48,17 @@ pub enum RunError {
     GetEndpoint(crate::bencher::BackendError),
     #[error("Alerts detected ({0})")]
     Alerts(usize),
+
+    #[error("GitHub Action repository is not valid: {0}")]
+    GitHubActionRepository(String),
+    #[error("GitHub Action repository not found for pull request")]
+    NoGithubRepository,
+    #[error("GitHub Action ref is not for a pull request: {0}")]
+    GitHubActionRef(String),
+    #[error("GitHub Action ref not found for pull request")]
+    NoGitHubActionRef,
+    #[error("Failed to authenticate as GitHub Action: {0}")]
+    GitHubActionAuth(octocrab::Error),
+    #[error("Failed to post GitHub Action comment: {0}")]
+    GitHubActionComment(octocrab::Error),
 }

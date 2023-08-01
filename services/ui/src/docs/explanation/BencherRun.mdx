@@ -134,6 +134,17 @@ Optional: Error when an alert is generated. See [thresholds and alerts](/docs/ex
 
 <br />
 
+### `--github-token`
+
+<br />
+
+Optional: Set the GitHub Actions `GITHUB_TOKEN` (ie `--github-token ${{ secrets.GITHUB_TOKEN }}`).
+When this option is set and `bencher run` is used in GitHub Actions as a part of a pull request,
+then the results will be added to the pull request as a comment.
+See [`GITHUB_TOKEN` docs](https://docs.github.com/en/actions/security-guides/automatic-token-authentication) for a full overview.
+
+<br />
+
 ### `--shell <SHELL>`
 
 <br />
