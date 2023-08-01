@@ -97,6 +97,7 @@ const PlotTab = (props) => {
 			<Tab
 				project_slug={props.project_slug}
 				is_console={props.is_console}
+				metric_kind={props.metric_kind}
 				tab={props.tab}
 				getTab={getTab}
 				getPage={getPage}
@@ -127,6 +128,7 @@ const PlotTab = (props) => {
 const Tab = (props: {
 	project_slug: string;
 	is_console: boolean;
+	metric_kind: () => string;
 	tab: () => PerfTab;
 	getTab: () => any[];
 	getPage: () => () => number;
@@ -184,7 +186,13 @@ const Tab = (props: {
 								>
 									<div class="columns is-vcentered is-mobile">
 										<div class="column is-narrow">
-											<input type="radio" checked={report.checked} />
+											<input
+												type="radio"
+												checked={
+													report.checked &&
+													result.metric_kind?.slug === props.metric_kind()
+												}
+											/>
 										</div>
 										<div class="column">
 											<small style="overflow-wrap:anywhere;">
