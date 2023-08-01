@@ -18,6 +18,8 @@ export type NonEmpty = string;
 
 export type ResourceId = string;
 
+export type SampleSize = number;
+
 export type Secret = string;
 
 export type Slug = string;
@@ -25,13 +27,6 @@ export type Slug = string;
 export type Url = string;
 
 export type UserName = string;
-
-/**
- * This type exists solely for generating type information
- * And it functions on the basis of having a name collision with `uuid::Uuid`
- * For all other use cases, use `uuid::Uuid` instead
- */
-export type Uuid = string;
 
 export enum JsonLimit {
 	Lower = "lower",
@@ -44,8 +39,8 @@ export enum JsonAlertStatus {
 }
 
 export interface JsonAlert {
-	uuid: Uuid;
-	report: Uuid;
+	uuid: string;
+	report: string;
 	iteration: number;
 	threshold: JsonThreshold;
 	benchmark: JsonBenchmarkMetric;
@@ -63,15 +58,15 @@ export interface JsonUpdateAlert {
 }
 
 export interface JsonPerfAlert {
-	uuid: Uuid;
+	uuid: string;
 	limit: JsonLimit;
 	status: JsonAlertStatus;
 	modified: string;
 }
 
 export interface JsonBenchmark {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	name: BenchmarkName;
 	slug: Slug;
 	created: string;
@@ -84,8 +79,8 @@ export interface JsonBoundary {
 }
 
 export interface JsonBranch {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	name: BranchName;
 	slug: Slug;
 	created: string;
@@ -104,8 +99,8 @@ export interface JsonMetric {
 }
 
 export interface JsonMetricKind {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	name: NonEmpty;
 	slug: Slug;
 	units: NonEmpty;
@@ -119,8 +114,8 @@ export enum JsonVisibility {
 }
 
 export interface JsonProject {
-	uuid: Uuid;
-	organization: Uuid;
+	uuid: string;
+	organization: string;
 	name: NonEmpty;
 	slug: Slug;
 	url?: Url;
@@ -130,8 +125,8 @@ export interface JsonProject {
 }
 
 export interface JsonTestbed {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	name: NonEmpty;
 	slug: Slug;
 	created: string;
@@ -144,11 +139,11 @@ export enum JsonStatisticKind {
 }
 
 export interface JsonStatistic {
-	uuid: Uuid;
-	threshold: Uuid;
+	uuid: string;
+	threshold: string;
 	test: JsonStatisticKind;
-	min_sample_size?: number;
-	max_sample_size?: number;
+	min_sample_size?: SampleSize;
+	max_sample_size?: SampleSize;
 	window?: number;
 	lower_boundary?: Boundary;
 	upper_boundary?: Boundary;
@@ -156,14 +151,14 @@ export interface JsonStatistic {
 }
 
 export interface JsonThresholdStatistic {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	statistic: JsonStatistic;
 	created: string;
 }
 
 export interface JsonPerfMetric {
-	report: Uuid;
+	report: string;
 	iteration: number;
 	start_time: string;
 	end_time: string;
@@ -214,7 +209,7 @@ export interface JsonAuthToken {
 }
 
 export interface JsonUser {
-	uuid: Uuid;
+	uuid: string;
 	name: UserName;
 	slug: Slug;
 	email: Email;

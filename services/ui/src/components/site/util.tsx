@@ -7,6 +7,7 @@ import {
 	is_valid_expiration_year,
 	is_valid_card_cvc,
 	is_valid_boundary,
+	is_valid_sample_size,
 } from "bencher_valid";
 import { Analytics } from "analytics";
 import googleAnalytics from "@analytics/google-analytics";
@@ -242,6 +243,13 @@ export const validate_u32 = (input: string) => {
 	}
 	const num = Number(input);
 	return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
+};
+
+export const validate_sample_size = (sample_size: string) => {
+	return (
+		validate_u32(sample_size) &&
+		validate_number(sample_size, is_valid_sample_size)
+	);
 };
 
 enum HttpMethod {

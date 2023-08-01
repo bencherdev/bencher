@@ -23,8 +23,8 @@ impl TryFrom<f64> for Boundary {
 
     fn try_from(boundary: f64) -> Result<Self, Self::Error> {
         is_valid_boundary(boundary)
-            .then(|| Boundary(boundary.into()))
-            .ok_or(ValidError::InvalidBoundary(boundary))
+            .then(|| Self(boundary.into()))
+            .ok_or(ValidError::Boundary(boundary))
     }
 }
 

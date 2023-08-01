@@ -1,4 +1,4 @@
-use bencher_valid::Boundary;
+use bencher_valid::{Boundary, SampleSize};
 use chrono::{DateTime, Utc};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -21,8 +21,8 @@ pub struct JsonNewThreshold {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewStatistic {
     pub test: JsonStatisticKind,
-    pub min_sample_size: Option<u32>,
-    pub max_sample_size: Option<u32>,
+    pub min_sample_size: Option<SampleSize>,
+    pub max_sample_size: Option<SampleSize>,
     pub window: Option<u32>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,
@@ -33,7 +33,7 @@ impl JsonNewStatistic {
         Self {
             test: JsonStatisticKind::T,
             min_sample_size: None,
-            max_sample_size: Some(32),
+            max_sample_size: Some(SampleSize::THIRTY),
             window: None,
             lower_boundary: Some(Boundary::NINETY_FIVE),
             upper_boundary: None,
@@ -44,7 +44,7 @@ impl JsonNewStatistic {
         Self {
             test: JsonStatisticKind::T,
             min_sample_size: None,
-            max_sample_size: Some(32),
+            max_sample_size: Some(SampleSize::THIRTY),
             window: None,
             lower_boundary: None,
             upper_boundary: Some(Boundary::NINETY_FIVE),
@@ -78,8 +78,8 @@ pub struct JsonStatistic {
     pub uuid: Uuid,
     pub threshold: Uuid,
     pub test: JsonStatisticKind,
-    pub min_sample_size: Option<u32>,
-    pub max_sample_size: Option<u32>,
+    pub min_sample_size: Option<SampleSize>,
+    pub max_sample_size: Option<SampleSize>,
     pub window: Option<u32>,
     pub lower_boundary: Option<Boundary>,
     pub upper_boundary: Option<Boundary>,

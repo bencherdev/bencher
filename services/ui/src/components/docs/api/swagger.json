@@ -6648,18 +6648,22 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "metric_kind": {
             "$ref": "#/components/schemas/ResourceId"
           },
           "min_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -7404,15 +7408,19 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "min_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -7848,15 +7856,19 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "min_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -7983,6 +7995,11 @@
       },
       "ResourceId": {
         "type": "string"
+      },
+      "SampleSize": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
       },
       "Secret": {
         "type": "string"

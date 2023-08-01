@@ -26,6 +26,7 @@ from_client!(
     Jwt,
     NonEmpty,
     ResourceId,
+    SampleSize,
     Slug,
     Url,
     UserName

@@ -16,16 +16,15 @@ mod plan_level;
 #[cfg(feature = "plus")]
 mod plan_status;
 mod resource_id;
+mod sample_size;
 mod secret;
 mod slug;
 mod url;
 mod user_name;
-mod uuid;
 
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
 pub use crate::url::Url;
-pub use crate::uuid::Uuid;
 pub use benchmark_name::BenchmarkName;
 pub use boundary::Boundary;
 pub use branch_name::BranchName;
@@ -41,6 +40,7 @@ pub use plan_level::PlanLevel;
 #[cfg(feature = "plus")]
 pub use plan_status::PlanStatus;
 pub use resource_id::ResourceId;
+pub use sample_size::SampleSize;
 pub use secret::Secret;
 pub use user_name::UserName;
 

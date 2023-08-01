@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bencher_json::{
     project::threshold::{JsonNewStatistic, JsonStatistic, JsonStatisticKind},
-    Boundary,
+    Boundary, SampleSize,
 };
 use chrono::Utc;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
@@ -68,14 +68,22 @@ impl QueryStatistic {
             uuid: Uuid::from_str(&uuid).map_err(api_error!())?,
             threshold: QueryThreshold::get_uuid(conn, threshold_id)?,
             test: StatisticKind::try_from(test)?.into(),
-            min_sample_size: map_u32(min_sample_size)?,
-            max_sample_size: map_u32(max_sample_size)?,
+            min_sample_size: map_sample_size(min_sample_size)?,
+            max_sample_size: map_sample_size(max_sample_size)?,
             window: map_u32(window)?,
             lower_boundary: map_boundary(lower_boundary)?,
             upper_boundary: map_boundary(upper_boundary)?,
             created: to_date_time(created).map_err(api_error!())?,
         })
     }
+}
+
+pub fn map_sample_size(sample_size: Option<i64>) -> Result<Option<SampleSize>, ApiError> {
+    Ok(if let Some(sample_size) = sample_size {
+        Some(u32::try_from(sample_size)?.try_into()?)
+    } else {
+        None
+    })
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -180,8 +188,8 @@ impl InsertStatistic {
             uuid: Uuid::new_v4().to_string(),
             threshold_id,
             test: StatisticKind::from(test) as i32,
-            min_sample_size: min_sample_size.map(Into::into),
-            max_sample_size: max_sample_size.map(Into::into),
+            min_sample_size: min_sample_size.map(|ss| u32::from(ss).into()),
+            max_sample_size: max_sample_size.map(|ss| u32::from(ss).into()),
             window: window.map(Into::into),
             lower_boundary: lower_boundary.map(Into::into),
             upper_boundary: upper_boundary.map(Into::into),

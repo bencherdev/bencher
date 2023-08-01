@@ -1,6 +1,7 @@
 import {
 	BENCHER_API_URL,
 	validate_boundary,
+	validate_sample_size,
 	validate_u32,
 } from "../../../../site/util";
 
@@ -65,15 +66,15 @@ const THRESHOLD_FIELDS = {
 		type: "number",
 		placeholder: "30",
 		icon: "fas fa-cube",
-		help: "Must be an integer greater than zero",
-		validate: validate_u32,
+		help: "Must be an integer greater than or equal to 2",
+		validate: validate_sample_size,
 	},
 	max_sample_size: {
 		type: "number",
 		placeholder: "100",
 		icon: "fas fa-cubes",
-		help: "Must be an integer greater than zero",
-		validate: validate_u32,
+		help: "Must be an integer greater than or equal to 2",
+		validate: validate_sample_size,
 	},
 	window: {
 		type: "number",

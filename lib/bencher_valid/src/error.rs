@@ -49,5 +49,7 @@ pub enum ValidError {
     #[error("Failed to validate payment card CVC: {0}")]
     CardCvc(String),
     #[error("Invalid statistical boundary: {0}")]
-    InvalidBoundary(f64),
+    Boundary(f64),
+    #[error("Invalid statistical sample size: {0}")]
+    SampleSize(u32),
 }
