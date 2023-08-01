@@ -182,6 +182,7 @@ async fn post_inner(
     )?;
 
     // This check is required because not all system metric kinds are created at project init
+    // And default metric kinds may be deleted
     if insert_metric_kind.is_system() {
         return Err(ApiError::SystemMetricKind);
     }
@@ -361,9 +362,7 @@ async fn delete_inner(
 
     let query_metric_kind =
         QueryMetricKind::from_resource_id(conn, query_project.id, &path_params.metric_kind)?;
-    if query_metric_kind.is_system() {
-        return Err(ApiError::SystemMetricKind);
-    }
+
     diesel::delete(
         schema::metric_kind::table.filter(schema::metric_kind::id.eq(query_metric_kind.id)),
     )

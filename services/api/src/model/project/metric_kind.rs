@@ -102,7 +102,12 @@ impl QueryMetricKind {
         };
 
         // Dynamically create adapter specific metric kinds
+        // Or recreate default metric kinds if they were previously deleted
         let insert_metric_kind = match metric_kind.as_ref() {
+            // Recreate
+            LATENCY_SLUG_STR => InsertMetricKind::latency(conn, project_id),
+            THROUGHPUT_SLUG_STR => InsertMetricKind::throughput(conn, project_id),
+            // Adapter specific
             INSTRUCTIONS_SLUG_STR => InsertMetricKind::instructions(conn, project_id),
             L1_ACCESSES_SLUG_STR => InsertMetricKind::l1_accesses(conn, project_id),
             L2_ACCESSES_SLUG_STR => InsertMetricKind::l2_accesses(conn, project_id),
