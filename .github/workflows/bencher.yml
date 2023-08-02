@@ -149,7 +149,11 @@ jobs:
       - name: Install `bencher` CLI
         run: cargo install --path services/cli --locked
       - name: Dogfooding Benchmarks with Bencher
-        run: bencher run --if-branch $GITHUB_REF_NAME --err "cargo bench"
+        run: bencher run \
+          --if-branch $GITHUB_REF_NAME \
+          --err \
+          --github-actions ${{ secrets.GITHUB_TOKEN }} \
+          "cargo bench"
 
   # Cargo Audit
   cargo_audit:

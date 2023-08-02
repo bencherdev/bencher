@@ -58,6 +58,7 @@
     "Microbenchmark",
     "milli",
     "nanos",
+    "octocrab",
     "openapi",
     "Perfs",
     "pipenv",

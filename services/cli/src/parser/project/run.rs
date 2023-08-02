@@ -192,7 +192,7 @@ pub enum CliRunFold {
 
 #[derive(Args, Debug)]
 pub struct CliRunCi {
-    /// GitHub Actions `GITHUB_TOKEN` to comment on PRs (ie `--github-token ${{ secrets.GITHUB_TOKEN }}`)
+    /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
     #[clap(long)]
-    pub github_token: Option<String>,
+    pub github_actions: Option<String>,
 }

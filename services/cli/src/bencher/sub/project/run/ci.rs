@@ -17,8 +17,8 @@ impl TryFrom<CliRunCi> for Option<Ci> {
     type Error = RunError;
 
     fn try_from(ci: CliRunCi) -> Result<Self, Self::Error> {
-        let CliRunCi { github_token } = ci;
-        Ok(github_token.map(|github_token| Ci::GitHubActions(github_token.into())))
+        let CliRunCi { github_actions } = ci;
+        Ok(github_actions.map(|github_actions| Ci::GitHubActions(github_actions.into())))
     }
 }
 
@@ -41,12 +41,12 @@ impl Ci {
 
 #[derive(Debug)]
 pub struct GitHubActions {
-    github_token: String,
+    token: String,
 }
 
 impl From<String> for GitHubActions {
-    fn from(github_token: String) -> Self {
-        Self { github_token }
+    fn from(token: String) -> Self {
+        Self { token }
     }
 }
 
@@ -118,7 +118,7 @@ impl GitHubActions {
         };
 
         let _comment = octocrab::Octocrab::builder()
-            .user_access_token(self.github_token.clone())
+            .user_access_token(self.token.clone())
             .build()
             .map_err(RunError::GitHubActionAuth)?
             .issues(owner, repo)
