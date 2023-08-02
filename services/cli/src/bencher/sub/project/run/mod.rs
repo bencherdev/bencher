@@ -250,6 +250,7 @@ impl Run {
         let endpoint_url: Url = json_endpoint.endpoint.into();
         let report_urls = ReportUrls::new(endpoint_url.clone(), json_report);
 
+        // TODO disable when quiet
         cli_println!("{report_urls}");
 
         if let Some(ci) = &self.ci {
