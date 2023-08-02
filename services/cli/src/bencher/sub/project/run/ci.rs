@@ -1,11 +1,6 @@
-use bencher_json::JsonReport;
-
 use crate::parser::project::run::CliRunCi;
 
-use super::{
-    urls::{AlertUrls, BenchmarkUrls},
-    RunError,
-};
+use super::{urls::ReportUrls, RunError};
 use crate::{cli_eprintln, cli_println};
 
 #[derive(Debug)]
@@ -23,18 +18,9 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 }
 
 impl Ci {
-    pub async fn run(
-        &self,
-        json_report: &JsonReport,
-        benchmark_urls: &BenchmarkUrls,
-        alert_urls: &AlertUrls,
-    ) -> Result<(), RunError> {
+    pub async fn run(&self, report_urls: ReportUrls) -> Result<(), RunError> {
         match self {
-            Self::GitHubActions(github_actions) => {
-                github_actions
-                    .run(json_report, benchmark_urls, alert_urls)
-                    .await
-            },
+            Self::GitHubActions(github_actions) => github_actions.run(report_urls).await,
         }
     }
 }
@@ -51,12 +37,7 @@ impl From<String> for GitHubActions {
 }
 
 impl GitHubActions {
-    pub async fn run(
-        &self,
-        _json_report: &JsonReport,
-        _benchmark_urls: &BenchmarkUrls,
-        _alert_urls: &AlertUrls,
-    ) -> Result<(), RunError> {
+    pub async fn run(&self, _report_urls: ReportUrls) -> Result<(), RunError> {
         // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
 
         // Always set to `true` when GitHub Actions is running the workflow. You can use this variable to differentiate when tests are being run locally or by GitHub Actions.

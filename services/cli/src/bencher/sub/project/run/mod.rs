@@ -10,11 +10,7 @@ use clap::ValueEnum;
 use url::Url;
 
 use crate::{
-    bencher::{
-        backend::Backend,
-        map_timestamp,
-        sub::project::run::urls::{AlertUrls, BenchmarkUrls},
-    },
+    bencher::{backend::Backend, map_timestamp, sub::project::run::urls::ReportUrls},
     cli_eprintln, cli_println,
     parser::project::run::{CliRun, CliRunAdapter},
     CliError,
@@ -168,7 +164,7 @@ impl Run {
             return Ok(());
         }
 
-        let json_report = self
+        let json_report: JsonReport = self
             .backend
             .send_with(
                 |client| async move {
@@ -184,11 +180,12 @@ impl Run {
             .await
             .map_err(RunError::SendReport)?;
 
+        let alerts_count = json_report.alerts.len();
         // TODO disable when quiet
-        self.display_results(&json_report).await?;
+        self.display_results(json_report).await?;
 
-        if self.err && !json_report.alerts.is_empty() {
-            Err(RunError::Alerts(json_report.alerts.len()))
+        if self.err && alerts_count > 0 {
+            Err(RunError::Alerts(alerts_count))
         } else {
             Ok(())
         }
@@ -241,7 +238,7 @@ impl Run {
         }))
     }
 
-    async fn display_results(&self, json_report: &JsonReport) -> Result<(), RunError> {
+    async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
         let json_endpoint: JsonEndpoint = self
             .backend
             .send_with(
@@ -251,27 +248,13 @@ impl Run {
             .await
             .map_err(RunError::GetEndpoint)?;
         let endpoint_url: Url = json_endpoint.endpoint.into();
-        let benchmark_urls = BenchmarkUrls::new(endpoint_url.clone(), json_report);
-        let alert_urls = AlertUrls::new(endpoint_url.clone(), json_report);
+        let report_urls = ReportUrls::new(endpoint_url.clone(), json_report);
+
+        cli_println!("{report_urls}");
 
         if let Some(ci) = &self.ci {
-            ci.run(json_report, &benchmark_urls, &alert_urls).await?;
+            ci.run(report_urls).await?;
         }
-
-        cli_println!("\nView results:");
-        for (name, url) in &benchmark_urls.0 {
-            cli_println!("- {name}: {url}");
-        }
-
-        if json_report.alerts.is_empty() {
-            return Ok(());
-        }
-
-        cli_println!("\nView alerts:");
-        for (name, url) in &alert_urls.0 {
-            cli_println!("- {name}: {url}");
-        }
-        cli_println!("\n");
 
         Ok(())
     }

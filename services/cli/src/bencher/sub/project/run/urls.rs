@@ -22,20 +22,20 @@ impl ReportUrls {
 
 impl std::fmt::Display for ReportUrls {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "\nView results:");
+        writeln!(f, "\nView results:")?;
         for (name, url) in &self.benchmark_urls.0 {
-            writeln!(f, "- {name}: {url}");
+            writeln!(f, "- {name}: {url}")?;
         }
 
         if self.json_report.alerts.is_empty() {
             return Ok(());
         }
 
-        writeln!(f, "\nView alerts:");
+        writeln!(f, "\nView alerts:")?;
         for (name, url) in &self.alert_urls.0 {
-            writeln!(f, "- {name}: {url}");
+            writeln!(f, "- {name}: {url}")?;
         }
-        writeln!(f, "\n");
+        writeln!(f, "\n")?;
 
         Ok(())
     }
