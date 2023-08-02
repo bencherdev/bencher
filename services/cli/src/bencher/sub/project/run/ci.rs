@@ -57,7 +57,6 @@ impl GitHubActions {
         _benchmark_urls: &BenchmarkUrls,
         _alert_urls: &AlertUrls,
     ) -> Result<(), RunError> {
-        cli_println!("Running as a GitHub Action. Integrating with CI.");
         // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
 
         // Always set to `true` when GitHub Actions is running the workflow. You can use this variable to differentiate when tests are being run locally or by GitHub Actions.
