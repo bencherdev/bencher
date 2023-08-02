@@ -151,7 +151,8 @@ jobs:
       - name: Dogfooding Benchmarks with Bencher
         run: |
           bencher run \
-          --if-branch $GITHUB_REF_NAME \
+          --if-branch "$GITHUB_REF_NAME" \
+          --else-if-branch "$GITHUB_BASE_REF" \
           --err \
           --github-actions ${{ secrets.GITHUB_TOKEN }} \
           "cargo bench"

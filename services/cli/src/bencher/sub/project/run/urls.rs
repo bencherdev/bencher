@@ -4,7 +4,44 @@ use bencher_json::{project::threshold::JsonThresholdStatistic, JsonPerfQuery, Js
 use url::Url;
 use uuid::Uuid;
 
-pub struct BenchmarkUrls(pub BTreeMap<String, Url>);
+pub struct ReportUrls {
+    json_report: JsonReport,
+    benchmark_urls: BenchmarkUrls,
+    alert_urls: AlertUrls,
+}
+
+impl ReportUrls {
+    pub fn new(endpoint_url: Url, json_report: JsonReport) -> Self {
+        Self {
+            benchmark_urls: BenchmarkUrls::new(endpoint_url.clone(), &json_report),
+            alert_urls: AlertUrls::new(endpoint_url, &json_report),
+            json_report,
+        }
+    }
+}
+
+impl std::fmt::Display for ReportUrls {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "\nView results:");
+        for (name, url) in &self.benchmark_urls.0 {
+            writeln!(f, "- {name}: {url}");
+        }
+
+        if self.json_report.alerts.is_empty() {
+            return Ok(());
+        }
+
+        writeln!(f, "\nView alerts:");
+        for (name, url) in &self.alert_urls.0 {
+            writeln!(f, "- {name}: {url}");
+        }
+        writeln!(f, "\n");
+
+        Ok(())
+    }
+}
+
+pub struct BenchmarkUrls(BTreeMap<String, Url>);
 
 impl BenchmarkUrls {
     pub fn new(endpoint_url: Url, json_report: &JsonReport) -> Self {
@@ -106,7 +143,7 @@ impl BoundaryParam {
     }
 }
 
-pub struct AlertUrls(pub Vec<(String, Url)>);
+pub struct AlertUrls(Vec<(String, Url)>);
 
 impl AlertUrls {
     pub fn new(endpoint_url: Url, json_report: &JsonReport) -> Self {
