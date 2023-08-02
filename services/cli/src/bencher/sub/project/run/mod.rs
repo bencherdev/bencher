@@ -56,6 +56,7 @@ pub struct Run {
     backdate: Option<DateTime<Utc>>,
     allow_failure: bool,
     err: bool,
+    html: bool,
     ci: Option<Ci>,
     dry_run: bool,
 }
@@ -78,6 +79,7 @@ impl TryFrom<CliRun> for Run {
             backdate,
             allow_failure,
             err,
+            html,
             ci,
             dry_run,
         } = run;
@@ -95,6 +97,7 @@ impl TryFrom<CliRun> for Run {
             backdate: map_timestamp(backdate)?,
             allow_failure,
             err,
+            html,
             ci: ci.try_into()?,
             dry_run,
         })
@@ -251,10 +254,14 @@ impl Run {
         let report_urls = ReportUrls::new(endpoint_url.clone(), json_report);
 
         // TODO disable when quiet
-        cli_println!("{report_urls}");
+        if self.html {
+            cli_println!("{}", report_urls.html());
+        } else {
+            cli_println!("{report_urls}");
+        }
 
         if let Some(ci) = &self.ci {
-            ci.run(report_urls).await?;
+            ci.run(&report_urls).await?;
         }
 
         Ok(())

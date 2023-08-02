@@ -52,6 +52,10 @@ pub struct CliRun {
     #[clap(long)]
     pub err: bool,
 
+    /// Output results as HTML
+    #[clap(long)]
+    pub html: bool,
+
     /// CI integrations
     #[clap(flatten)]
     pub ci: CliRunCi,

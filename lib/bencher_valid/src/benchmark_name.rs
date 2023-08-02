@@ -19,7 +19,7 @@ const BENCHER_IGNORE_PASCAL_CASE: &str = "BencherIgnore";
 const BENCHER_IGNORE_KEBAB_CASE: &str = "-bencher-ignore";
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct BenchmarkName(String);
 

@@ -18,7 +18,7 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 }
 
 impl Ci {
-    pub async fn run(&self, report_urls: ReportUrls) -> Result<(), RunError> {
+    pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), RunError> {
         match self {
             Self::GitHubActions(github_actions) => github_actions.run(report_urls).await,
         }
@@ -37,7 +37,7 @@ impl From<String> for GitHubActions {
 }
 
 impl GitHubActions {
-    pub async fn run(&self, _report_urls: ReportUrls) -> Result<(), RunError> {
+    pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), RunError> {
         // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
 
         // Always set to `true` when GitHub Actions is running the workflow. You can use this variable to differentiate when tests are being run locally or by GitHub Actions.
@@ -102,7 +102,7 @@ impl GitHubActions {
             .build()
             .map_err(RunError::GitHubActionAuth)?
             .issues(owner, repo)
-            .create_comment(number, "Beep Boop")
+            .create_comment(number, report_urls.html())
             .await
             .map_err(RunError::GitHubActionComment)?;
 

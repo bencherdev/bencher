@@ -13,7 +13,7 @@ use serde::{
 use crate::{is_valid_len, ValidError};
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
+#[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Slug(String);
 
