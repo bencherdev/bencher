@@ -5,20 +5,8 @@ pub enum RunError {
     #[error("Failed to parse UUID or slug for the project: {0}")]
     ParseProject(bencher_json::ValidError),
 
-    #[error("Failed to parse UUID or slug for the branch: {0}")]
-    ParseBranch(bencher_json::ValidError),
-    #[error(
-        "{count} branches were found with name \"{branch_name}\" in project \"{project}\"! Exactly one was expected."
-    )]
-    BranchName {
-        project: String,
-        branch_name: String,
-        count: usize,
-    },
-    #[error("Failed to get branches: {0}")]
-    GetBranches(crate::bencher::BackendError),
-    #[error("Failed to create new branch: {0}")]
-    CreateBranch(crate::bencher::BackendError),
+    #[error("{0}")]
+    Branch(#[from] super::branch::BranchError),
 
     #[error("Failed to parse UUID or slug for the testbed: {0}")]
     ParseTestbed(bencher_json::ValidError),
@@ -49,16 +37,6 @@ pub enum RunError {
     #[error("Alerts detected ({0})")]
     Alerts(usize),
 
-    #[error("GitHub Action repository is not valid: {0}")]
-    GitHubActionRepository(String),
-    #[error("GitHub Action repository not found for pull request")]
-    NoGithubRepository,
-    #[error("GitHub Action ref is not for a pull request: {0}")]
-    GitHubActionRef(String),
-    #[error("GitHub Action ref not found for pull request")]
-    NoGitHubActionRef,
-    #[error("Failed to authenticate as GitHub Action: {0}")]
-    GitHubActionAuth(octocrab::Error),
-    #[error("Failed to post GitHub Action comment: {0}")]
-    GitHubActionComment(octocrab::Error),
+    #[error("{0}")]
+    Ci(#[from] super::ci::CiError),
 }

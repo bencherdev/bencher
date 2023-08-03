@@ -25,7 +25,7 @@ impl ReportUrls {
     }
 
     pub fn html(&self) -> String {
-        let mut html = String::new();
+        let mut html = self.bencher_div();
 
         // 🐰 Bencher Header
         html.push_str(&format!(
@@ -106,9 +106,20 @@ impl ReportUrls {
             }
             html.push_str("</table>");
         }
+        // Footer
         html.push_str(r#"<br/><small><a href="https://bencher.dev">Bencher - Continuous Benchmarking</a></small><br/><small><a href="https://bencher.dev/docs">Docs</a> | <a href="https://bencher.dev/repo">Repo</a> | <a href="https://bencher.dev/chat">Chat</a> | <a href="https://bencher.dev/help">Help</a></small>"#);
+        // Close bencher div
+        html.push_str("</div>");
 
         html
+    }
+
+    pub fn bencher_div(&self) -> String {
+        format!(
+            r#"<div id="bencher.dev/projects/{project}/testbeds/{testbed}">"#,
+            project = self.json_report.project.uuid,
+            testbed = self.json_report.testbed.uuid
+        )
     }
 }
 

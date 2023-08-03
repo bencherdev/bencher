@@ -87,7 +87,7 @@ impl TryFrom<CliRun> for Run {
             project: unwrap_project(project)?,
             backend: backend.try_into()?,
             runner: command.try_into()?,
-            branch: run_branch.try_into()?,
+            branch: run_branch.try_into().map_err(RunError::Branch)?,
             hash,
             testbed: unwrap_testbed(testbed)?,
             adapter: map_adapter(adapter),
@@ -98,7 +98,7 @@ impl TryFrom<CliRun> for Run {
             allow_failure,
             err,
             html,
-            ci: ci.try_into()?,
+            ci: ci.try_into().map_err(RunError::Ci)?,
             dry_run,
         })
     }

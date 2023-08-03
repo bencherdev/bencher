@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{bencher::backend::Backend, cli_println, parser::project::run::CliRunBranch};
 
-use super::{RunError, BENCHER_BRANCH};
+use super::BENCHER_BRANCH;
 
 #[derive(Debug, Clone)]
 pub enum Branch {
@@ -22,8 +22,26 @@ pub enum Branch {
     None,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum BranchError {
+    #[error("Failed to parse UUID or slug for the branch: {0}")]
+    ParseBranch(bencher_json::ValidError),
+    #[error(
+        "{count} branches were found with name \"{branch_name}\" in project \"{project}\"! Exactly one was expected."
+    )]
+    BranchName {
+        project: String,
+        branch_name: String,
+        count: usize,
+    },
+    #[error("Failed to get branches: {0}")]
+    GetBranches(crate::bencher::BackendError),
+    #[error("Failed to create new branch: {0}")]
+    CreateBranch(crate::bencher::BackendError),
+}
+
 impl TryFrom<CliRunBranch> for Branch {
-    type Error = RunError;
+    type Error = BranchError;
 
     fn try_from(run_branch: CliRunBranch) -> Result<Self, Self::Error> {
         let CliRunBranch {
@@ -40,7 +58,7 @@ impl TryFrom<CliRunBranch> for Branch {
                 .as_str()
                 .parse()
                 .map(Self::ResourceId)
-                .map_err(RunError::ParseBranch)?
+                .map_err(BranchError::ParseBranch)?
         } else if let Some(branch_name) = if_branch {
             if let Some(name) = branch_name {
                 Self::Name {
@@ -55,7 +73,7 @@ impl TryFrom<CliRunBranch> for Branch {
             BRANCH_MAIN_STR
                 .parse()
                 .map(Self::ResourceId)
-                .map_err(RunError::ParseBranch)?
+                .map_err(BranchError::ParseBranch)?
         })
     }
 }
@@ -66,7 +84,7 @@ impl Branch {
         project: &ResourceId,
         dry_run: bool,
         backend: &Backend,
-    ) -> Result<Option<ResourceId>, RunError> {
+    ) -> Result<Option<ResourceId>, BranchError> {
         Ok(match self {
             Self::ResourceId(resource_id) => Some(resource_id.clone()),
             Self::Name {
@@ -100,7 +118,7 @@ async fn if_branch(
     create: bool,
     dry_run: bool,
     backend: &Backend,
-) -> Result<Option<Uuid>, RunError> {
+) -> Result<Option<Uuid>, BranchError> {
     let branch = get_branch(project, branch_name, backend).await?;
 
     if branch.is_some() {
@@ -150,7 +168,7 @@ async fn get_branch(
     project: &ResourceId,
     branch_name: &BranchName,
     backend: &Backend,
-) -> Result<Option<Uuid>, RunError> {
+) -> Result<Option<Uuid>, BranchError> {
     let json_branches: JsonBranches = backend
         .send_with(
             |client| async move {
@@ -164,7 +182,7 @@ async fn get_branch(
             false,
         )
         .await
-        .map_err(RunError::GetBranches)?;
+        .map_err(BranchError::GetBranches)?;
 
     let mut json_branches = json_branches.into_inner();
     let branch_count = json_branches.len();
@@ -172,7 +190,7 @@ async fn get_branch(
         if branch_count == 1 {
             Ok(Some(branch.uuid))
         } else {
-            Err(RunError::BranchName {
+            Err(BranchError::BranchName {
                 project: project.to_string(),
                 branch_name: branch_name.as_ref().into(),
                 count: branch_count,
@@ -188,7 +206,7 @@ async fn create_branch(
     branch_name: &BranchName,
     start_point: Option<ResourceId>,
     backend: &Backend,
-) -> Result<Uuid, RunError> {
+) -> Result<Uuid, BranchError> {
     // Default to cloning the thresholds from the start point branch
     let start_point = start_point.map(|branch| JsonStartPoint {
         branch: branch.into(),
@@ -214,7 +232,7 @@ async fn create_branch(
             false,
         )
         .await
-        .map_err(RunError::CreateBranch)?;
+        .map_err(BranchError::CreateBranch)?;
 
     Ok(json_branch.uuid)
 }
