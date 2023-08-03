@@ -71,7 +71,7 @@ impl ReportUrls {
         ] {
             let url = self.endpoint_url.clone().join(&path).unwrap();
             html.push_str(&format!(
-                r#"<tr><td>{row}</td><td><a href="{url}" target="_blank">{name}</a></td></tr>"#
+                r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#
             ));
         }
         html.push_str("</table>");
@@ -83,7 +83,7 @@ impl ReportUrls {
                 self.json_report.project.slug, metric_kind.slug
             );
             html.push_str(&format!(
-                r#"<br/><h3><a href="{url}" target="_blank">{name}</a></h3>"#,
+                r#"<br/><h3><a href="{url}">{name}</a></h3>"#,
                 name = metric_kind.name,
                 url = self.endpoint_url.clone().join(&metric_kind_path).unwrap()
             ));
@@ -96,10 +96,10 @@ impl ReportUrls {
 
                 let row = if let Some(alert_url) = alert_url {
                     format!(
-                        r#"🚨 (<a href="{url}" target="_blank">view plot</a> | <a href="{alert_url}" target="_blank">view alert</a>)"#,
+                        r#"🚨 (<a href="{url}">view plot</a> | <a href="{alert_url}">view alert</a>)"#,
                     )
                 } else {
-                    format!(r#"✅ (<a href="{url}" target="_blank">view plot</a>)"#)
+                    format!(r#"✅ (<a href="{url}">view plot</a>)"#)
                 };
 
                 html.push_str(&format!(r#"<tr><td>{benchmark}</td><td>{row}</td></tr>"#,));

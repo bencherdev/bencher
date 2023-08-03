@@ -155,7 +155,7 @@ jobs:
           --else-if-branch "$GITHUB_BASE_REF" \
           --err \
           --github-actions ${{ secrets.GITHUB_TOKEN }} \
-          "cargo bench"
+          "cargo bench --package bencher_adapter"
 
   # Cargo Audit
   cargo_audit:
