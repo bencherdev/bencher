@@ -138,7 +138,7 @@ impl GitHubActions {
             &owner,
             &repo,
             issue_number,
-            &report_urls.bencher_div(),
+            &report_urls.bencher_tag(),
         )
         .await?;
 
@@ -170,7 +170,7 @@ pub async fn get_comment(
     owner: &str,
     repo: &str,
     issue_number: u64,
-    bencher_div: &str,
+    bencher_tag: &str,
 ) -> Result<Option<CommentId>, CiError> {
     const PER_PAGE: u8 = 100;
 
@@ -191,9 +191,8 @@ pub async fn get_comment(
         }
 
         for comment in comments.items {
-            cli_println!("Found comment: {:#?}", comment);
-            if let Some(body_html) = comment.body_html {
-                if body_html.starts_with(bencher_div) {
+            if let Some(body) = comment.body {
+                if body.ends_with(bencher_tag) {
                     return Ok(Some(comment.id));
                 }
             }

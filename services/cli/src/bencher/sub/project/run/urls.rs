@@ -25,7 +25,7 @@ impl ReportUrls {
     }
 
     pub fn html(&self) -> String {
-        let mut html = self.bencher_div();
+        let mut html = String::new();
 
         // 🐰 Bencher Header
         html.push_str(&format!(
@@ -106,17 +106,19 @@ impl ReportUrls {
             }
             html.push_str("</table>");
         }
+
         // Footer
         html.push_str(r#"<br/><small><a href="https://bencher.dev">Bencher - Continuous Benchmarking</a></small><br/><small><a href="https://bencher.dev/docs">Docs</a> | <a href="https://bencher.dev/repo">Repo</a> | <a href="https://bencher.dev/chat">Chat</a> | <a href="https://bencher.dev/help">Help</a></small>"#);
-        // Close bencher div
-        html.push_str("</div>");
 
+        // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
+        html.push_str(&self.bencher_tag());
         html
     }
 
-    pub fn bencher_div(&self) -> String {
+    // The Bencher tag allows us to easily check whether a comment is a Bencher report when updating
+    pub fn bencher_tag(&self) -> String {
         format!(
-            r#"<div id="bencher.dev/projects/{project}/testbeds/{testbed}">"#,
+            r#"<div id="bencher.dev/projects/{project}/testbeds/{testbed}"></div>"#,
             project = self.json_report.project.uuid,
             testbed = self.json_report.testbed.uuid
         )
