@@ -121,6 +121,10 @@ impl ReportUrls {
             testbed = self.json_report.testbed.uuid
         )
     }
+
+    pub fn has_alerts(&self) -> bool {
+        !self.json_report.alerts.is_empty()
+    }
 }
 
 impl std::fmt::Display for ReportUrls {

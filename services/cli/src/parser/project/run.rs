@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bencher_json::{BranchName, GitHash, ResourceId};
-use clap::{Args, Parser, ValueEnum};
+use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
 
@@ -195,7 +195,15 @@ pub enum CliRunFold {
 }
 
 #[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("ci_cd")
+        .multiple(false)
+        .args(&["github_actions"]),
+))]
 pub struct CliRunCi {
+    /// Only start posting results to CI if an Alert is generated (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_only_on_alert: bool,
     /// GitHub API authentication token for GitHub Actions to comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
     #[clap(long)]
     pub github_actions: Option<String>,

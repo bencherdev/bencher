@@ -34,8 +34,12 @@ impl TryFrom<CliRunCi> for Option<Ci> {
     type Error = CiError;
 
     fn try_from(ci: CliRunCi) -> Result<Self, Self::Error> {
-        let CliRunCi { github_actions } = ci;
-        Ok(github_actions.map(|github_actions| Ci::GitHubActions(github_actions.into())))
+        let CliRunCi {
+            ci_only_on_alert,
+            github_actions,
+        } = ci;
+        Ok(github_actions
+            .map(|github_actions| Ci::GitHubActions((ci_only_on_alert, github_actions).into())))
     }
 }
 
@@ -49,12 +53,16 @@ impl Ci {
 
 #[derive(Debug)]
 pub struct GitHubActions {
+    ci_only_on_alert: bool,
     token: String,
 }
 
-impl From<String> for GitHubActions {
-    fn from(token: String) -> Self {
-        Self { token }
+impl From<(bool, String)> for GitHubActions {
+    fn from((ci_only_on_alert, token): (bool, String)) -> Self {
+        Self {
+            ci_only_on_alert,
+            token,
+        }
     }
 }
 
@@ -143,6 +151,10 @@ impl GitHubActions {
                 .await
                 .map_err(CiError::GitHubUpdateComment)?
         } else {
+            if self.ci_only_on_alert && !report_urls.has_alerts() {
+                cli_println!("No alerts found. Skipping CI integration.");
+                return Ok(());
+            }
             issue_handler
                 .create_comment(issue_number, body)
                 .await
