@@ -113,12 +113,12 @@ All public projects have their own [perf page](https://bencher.dev/perf). These 
 
 ## GitHub Actions
 
-Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli).
-Use it to [track your benchmarks](https://bencher.dev/docs/how-to/track-benchmarks).
+Install the Bencher CLI using the [GitHub Action](https://github.com/marketplace/actions/bencher-cli),
+and use it for [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking) in your project.
 See [how to use GitHub Actions](https://bencher.dev/docs/how-to/github-actions) for more details.
 
 ```yaml
-name: Track benchmarks with Bencher
+name: Continuous Benchmarking with Bencher
 on: [push]
 jobs:
   benchmark_with_bencher:
@@ -136,6 +136,29 @@ jobs:
 
 Add `BENCHER_API_TOKEN` to you **Repository** secrets (ex: `https://github.com/my-user-slug/my-repo/settings/secrets/actions`). You can find your API tokens by running `bencher token ls --user my-user-slug` or by going to the Bencher Console (ex: `https://bencher.dev/console/users/my-user-slug/tokens`).
 
+### Error on Alert
+
+You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to error
+if [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) with the `--err` flag.
+
+```yaml
+bencher run --project my-project-slug --err "bencher mock"
+```
+
+### Comment on PRs
+
+You can set the [`bencher run` CLI subcommand](https://bencher.dev/docs/explanation/bencher-run) to comment on a PR
+with the `--github-actions` argument.
+
+```yaml
+bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} "bencher mock"
+```
+
+Or if you only want it to start commenting once there is [an Alert is generated](https://bencher.dev/docs/explanation/thresholds) use the `--ci-only-on-alert` flag.
+
+```yaml
+bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} --ci-only-on-alert "bencher mock"
+```
 
 ### Specify CLI Version
 
