@@ -85,7 +85,10 @@ fn mean(data: &[f64]) -> Option<f64> {
 }
 
 fn std_deviation(mean: f64, data: &[f64]) -> Option<f64> {
-    variance(mean, data).map(f64::sqrt)
+    variance(mean, data)
+    // If the variance is zero then the standard deviation is not going to work with `statrs`
+        .and_then(|std_dev| if std_dev == 0.0 { None } else { Some(std_dev) })
+        .map(f64::sqrt)
 }
 
 #[allow(clippy::cast_precision_loss, clippy::float_arithmetic)]
@@ -113,6 +116,7 @@ mod test {
     const DATA_TWO: [f64; 2] = [1.0, 2.0];
     const DATA_THREE: [f64; 3] = [1.0, 2.0, 3.0];
     const DATA_FIVE: [f64; 5] = [1.0, 2.0, 3.0, 4.0, 5.0];
+    const DATA_CONST: [f64; 5] = [1.0, 1.0, 1.0, 1.0, 1.0];
 
     const MEAN_ZERO: f64 = 0.0;
     const MEAN_ONE: f64 = 1.0;
@@ -148,6 +152,12 @@ mod test {
     fn test_mean_five() {
         let m = mean(&DATA_FIVE).unwrap();
         assert_eq!(m, MEAN_FIVE);
+    }
+
+    #[test]
+    fn test_mean_const() {
+        let m = mean(&DATA_CONST).unwrap();
+        assert_eq!(m, MEAN_ONE);
     }
 
     #[test]
@@ -241,6 +251,24 @@ mod test {
     }
 
     #[test]
+    fn test_variance_const() {
+        let v = variance(MEAN_ZERO, &DATA_CONST).unwrap();
+        assert_eq!(v, 1.0);
+
+        let v = variance(MEAN_ONE, &DATA_CONST).unwrap();
+        assert_eq!(v, 0.0);
+
+        let v = variance(MEAN_TWO, &DATA_CONST).unwrap();
+        assert_eq!(v, 0.25);
+
+        let v = variance(MEAN_THREE, &DATA_CONST).unwrap();
+        assert_eq!(v, 1.0);
+
+        let v = variance(MEAN_FIVE, &DATA_CONST).unwrap();
+        assert_eq!(v, 4.0);
+    }
+
+    #[test]
     fn test_std_dev_zero() {
         let std_dev = std_deviation(MEAN_ZERO, &DATA_ZERO);
         assert_eq!(std_dev, None);
@@ -255,6 +283,9 @@ mod test {
         assert_eq!(std_dev, None);
 
         let std_dev = std_deviation(MEAN_FIVE, &DATA_ZERO);
+        assert_eq!(std_dev, None);
+
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_ZERO);
         assert_eq!(std_dev, None);
     }
 
@@ -330,5 +361,23 @@ mod test {
 
         let std_dev = std_deviation(MEAN_FIVE, &DATA_FIVE).unwrap();
         assert_eq!(std_dev, 1.4142135623730951);
+    }
+
+    #[test]
+    fn test_std_dev_const() {
+        let std_dev = std_deviation(MEAN_ZERO, &DATA_CONST).unwrap();
+        assert_eq!(std_dev, 1.0);
+
+        let std_dev = std_deviation(MEAN_ONE, &DATA_CONST);
+        assert_eq!(std_dev, None);
+
+        let std_dev = std_deviation(MEAN_TWO, &DATA_CONST).unwrap();
+        assert_eq!(std_dev, 0.5);
+
+        let std_dev = std_deviation(MEAN_THREE, &DATA_CONST).unwrap();
+        assert_eq!(std_dev, 1.0);
+
+        let std_dev = std_deviation(MEAN_FIVE, &DATA_CONST).unwrap();
+        assert_eq!(std_dev, 2.0);
     }
 }

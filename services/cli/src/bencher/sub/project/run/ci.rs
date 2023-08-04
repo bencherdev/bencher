@@ -35,11 +35,17 @@ impl TryFrom<CliRunCi> for Option<Ci> {
 
     fn try_from(ci: CliRunCi) -> Result<Self, Self::Error> {
         let CliRunCi {
+            ci_only_thresholds,
             ci_only_on_alert,
             github_actions,
         } = ci;
-        Ok(github_actions
-            .map(|github_actions| Ci::GitHubActions((ci_only_on_alert, github_actions).into())))
+        Ok(github_actions.map(|github_actions| {
+            Ci::GitHubActions(GitHubActions::new(
+                ci_only_thresholds,
+                ci_only_on_alert,
+                github_actions,
+            ))
+        }))
     }
 }
 
@@ -53,23 +59,27 @@ impl Ci {
 
 #[derive(Debug)]
 pub struct GitHubActions {
+    ci_only_thresholds: bool,
     ci_only_on_alert: bool,
     token: String,
 }
 
-impl From<(bool, String)> for GitHubActions {
-    fn from((ci_only_on_alert, token): (bool, String)) -> Self {
+impl GitHubActions {
+    fn new(ci_only_thresholds: bool, ci_only_on_alert: bool, token: String) -> Self {
         Self {
+            ci_only_thresholds,
             ci_only_on_alert,
             token,
         }
     }
-}
-
-impl GitHubActions {
     pub async fn run(&self, report_urls: &ReportUrls) -> Result<(), CiError> {
-        // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        // Only post to CI if there are thresholds set
+        if self.ci_only_thresholds && !report_urls.has_threshold() {
+            cli_println!("No thresholds set. Skipping CI integration.");
+            return Ok(());
+        }
 
+        // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
         // Always set to `true` when GitHub Actions is running the workflow. You can use this variable to differentiate when tests are being run locally or by GitHub Actions.
         match std::env::var("GITHUB_ACTIONS").ok() {
             Some(github_actions) if github_actions == "true" => {},
@@ -144,14 +154,14 @@ impl GitHubActions {
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_urls.html();
+        let body = report_urls.html(self.ci_only_thresholds);
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler
                 .update_comment(comment_id, body)
                 .await
                 .map_err(CiError::GitHubUpdateComment)?
         } else {
-            if self.ci_only_on_alert && !report_urls.has_alerts() {
+            if self.ci_only_on_alert && !report_urls.has_alert() {
                 cli_println!("No alerts found. Skipping CI integration.");
                 return Ok(());
             }

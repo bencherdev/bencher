@@ -34,6 +34,7 @@ impl MetricsLimits {
         Ok(match test_kind {
             // Create a normal distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::Z => {
+                tracing::debug!("Normal distribution: mean={mean}, std_dev={std_dev}");
                 let normal = Normal::new(mean, std_dev).map_err(api_error!())?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = normal.inverse_cdf(limit.into());
@@ -47,6 +48,9 @@ impl MetricsLimits {
             },
             // Create a Student's t distribution and calculate the boundary limits for the threshold based on the boundary percentiles.
             TestKind::T { freedom } => {
+                tracing::debug!(
+                    "Students T distribution: mean={mean}, std_dev={std_dev}, freedom={freedom}"
+                );
                 let students_t = StudentsT::new(mean, std_dev, freedom).map_err(api_error!())?;
                 let lower = lower_boundary.map(|limit| {
                     let abs_limit = students_t.inverse_cdf(limit.into());

@@ -201,6 +201,9 @@ pub enum CliRunFold {
         .args(&["github_actions"]),
 ))]
 pub struct CliRunCi {
+    /// Only post results to CI if a Threshold exists for the Metric Kind, Branch, and Testbed (requires: `--github-actions`)
+    #[clap(long, requires = "ci_cd")]
+    pub ci_only_thresholds: bool,
     /// Only start posting results to CI if an Alert is generated (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_on_alert: bool,

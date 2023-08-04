@@ -142,11 +142,21 @@ Optional: Output results in HTML format.
 
 <br />
 
+### `--ci-only-thresholds`
+
+<br />
+
+Optional: Only post results to CI if [a Threshold](/docs/explanation/thresholds) exists for the Metric Kind, Branch, and Testbed.
+If no Thresholds exist, then nothing will be posted.
+Requires: `--github-actions`
+
+<br />
+
 ### `--ci-only-on-alert`
 
 <br />
 
-Optional: Only start posting results to CI if an Alert is generated.
+Optional: Only start posting results to CI if [an Alert](/docs/explanation/thresholds) is generated.
 If an Alert is generated, then follow up results, even if they don't contain any Alerts, will also be posted.
 Requires: `--github-actions`
 
