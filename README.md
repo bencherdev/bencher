@@ -171,6 +171,69 @@ You can also use all three together!
 bencher run --project my-project-slug --github-actions ${{ secrets.GITHUB_TOKEN }} --ci-only-thresholds --ci-only-on-alert "bencher mock"
 ```
 
+### Example PR Comment
+
+<br />
+<h1><a href="https://bencher.dev/"><img src="https://s3.amazonaws.com/public.bencher.dev/bencher_rabbit.svg" width="32" height="32" alt="🐰" /></a>Bencher</h1>
+<table>
+    <tr>
+        <td>Report</td>
+        <td><a href="https://bencher.dev/console/projects/bencher/reports/738fbe06-8b2c-4c94-b8f3-1f0b88472fca">Wed, August 2, 2023 at 16:07:31 UTC</a></td>
+    </tr>
+    <tr>
+        <td>Project</td>
+        <td><a href="https://bencher.dev/console/projects/bencher">Bencher</a></td>
+    </tr>
+    <tr>
+        <td>Branch</td>
+        <td><a href="https://bencher.dev/console/projects/bencher/branches/162-merge">162/merge</a></td>
+    </tr>
+    <tr>
+        <td>Testbed</td>
+        <td><a href="https://bencher.dev/console/projects/bencher/testbeds/ubuntu-latest">ubuntu-latest</a></td>
+    </tr>
+</table>
+<table>
+    <tr>
+        <th>Benchmark</th>
+        <th><a href="https://bencher.dev/console/projects/bencher/metric-kinds/latency">Latency</a></th>
+    </tr>
+    <tr>
+        <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/e93b3d71-8499-4fae-bb7c-4e540b775714">JsonAdapter::Json</a></td>
+        <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=e93b3d71-8499-4fae-bb7c-4e540b775714&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/90f565dd-202c-4a82-b852-aaa8f3e98da4">view alert</a>)</td>
+    </tr>
+    <tr>
+        <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/3bfd5887-83ec-4e62-8690-02855a38fbc9">JsonAdapter::Magic (JSON)</a></td>
+        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3bfd5887-83ec-4e62-8690-02855a38fbc9&upper_boundary=true">view plot</a>)</td>
+    </tr>
+    <tr>
+        <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/3525f177-fc8f-4a92-bd2f-dda7c4e15699">JsonAdapter::Magic (Rust)</a></td>
+        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699&upper_boundary=true">view plot</a>)</td>
+    </tr>
+    <tr>
+        <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/5655ed2a-3e45-4622-bdbd-39cdd9837af8">JsonAdapter::Rust</a></td>
+        <td>✅ (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=5655ed2a-3e45-4622-bdbd-39cdd9837af8&upper_boundary=true">view plot</a>)</td>
+    </tr>
+    <tr>
+        <td><a href="https://bencher.dev/console/projects/bencher/benchmarks/1db23e93-f909-40aa-bf42-838cc7ae05f5">JsonAdapter::RustBench</a></td>
+        <td>🚨 (<a href="https://bencher.dev/console/projects/bencher/perf?metric_kind=latency&branches=a90d5b4f-047e-4dbe-8bce-1516a30df049&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=1db23e93-f909-40aa-bf42-838cc7ae05f5&upper_boundary=true">view plot</a> | <a href="https://bencher.dev/console/projects/bencher/alerts/f84550f3-972d-4f84-b204-3a9c292d46a2">view alert</a>)</td>
+    </tr>
+</table>
+<br />
+<small>
+  <a href="https://bencher.dev">Bencher - Continuous Benchmarking</a>
+</small>
+<br />
+<small>
+  <a href="https://bencher.dev/perf/bencher">View Public Perf Page</a>
+</small>
+<br />
+<small>
+  <a href="https://bencher.dev/docs">Docs</a> | <a href="https://bencher.dev/repo">Repo</a> | <a href="https://bencher.dev/chat">Chat</a> | <a href="https://bencher.dev/help">Help</a>
+</small>
+<div id="bencher.dev/projects/6bd4b7f2-d850-4028-8d1b-edd18a9cae1d/testbeds/0d991aac-b241-493a-8b0f-8d41419455d2"></div>
+<br />
+
 ### Specify CLI Version
 
 There is also an optional `version` argument to specify an exact version of the Bencher CLI to use.

@@ -26,6 +26,11 @@ const BENCHMARKS_PARAM = "benchmarks";
 const START_TIME_PARAM = "start_time";
 const END_TIME_PARAM = "end_time";
 
+const REPORTS_PER_PAGE_PARAM = "reports_per_page";
+const BRANCHES_PER_PAGE_PARAM = "branches_per_page";
+const TESTBEDS_PER_PAGE_PARAM = "testbeds_per_page";
+const BENCHMARKS_PER_PAGE_PARAM = "benchmarks_per_page";
+
 const REPORTS_PAGE_PARAM = "reports_page";
 const BRANCHES_PAGE_PARAM = "branches_page";
 const TESTBEDS_PAGE_PARAM = "testbeds_page";
@@ -45,6 +50,7 @@ const DEFAULT_PERF_CLEAR = false;
 const DEFAULT_PERF_BOUNDARY = false;
 
 const DEFAULT_PER_PAGE = 8;
+const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
 
 const addToArray = (array: any[], add: any) => {
@@ -165,6 +171,19 @@ const PerfPanel = (props) => {
 	}
 
 	// Sanitize all pagination query params
+	if (!validate_u32(searchParams[REPORTS_PER_PAGE_PARAM])) {
+		setSearchParams({ [REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE });
+	}
+	if (!validate_u32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
+		setSearchParams({ [BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+	}
+	if (!validate_u32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
+		setSearchParams({ [TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+	}
+	if (!validate_u32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
+		setSearchParams({ [BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+	}
+
 	if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
 		setSearchParams({ [REPORTS_PAGE_PARAM]: DEFAULT_PAGE });
 	}
@@ -245,7 +264,19 @@ const PerfPanel = (props) => {
 	);
 
 	// Pagination query params
-	const per_page = createMemo(() => DEFAULT_PER_PAGE);
+	const reports_per_page = createMemo(() =>
+		Number(searchParams[REPORTS_PER_PAGE_PARAM]),
+	);
+	const branches_per_page = createMemo(() =>
+		Number(searchParams[BRANCHES_PER_PAGE_PARAM]),
+	);
+	const testbeds_per_page = createMemo(() =>
+		Number(searchParams[TESTBEDS_PER_PAGE_PARAM]),
+	);
+	const benchmarks_per_page = createMemo(() =>
+		Number(searchParams[BENCHMARKS_PER_PAGE_PARAM]),
+	);
+
 	const reports_page = createMemo(() =>
 		Number(searchParams[REPORTS_PAGE_PARAM]),
 	);
@@ -374,7 +405,7 @@ const PerfPanel = (props) => {
 	const reports_fetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),
-			per_page: per_page(),
+			per_page: reports_per_page(),
 			page: reports_page(),
 			refresh: refresh(),
 			token: props.user?.token,
@@ -384,8 +415,14 @@ const PerfPanel = (props) => {
 		getPerfTab(PerfTab.REPORTS, fetcher),
 	);
 	createEffect(() => {
-		if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
-			setSearchParams({ [REPORTS_PAGE_PARAM]: DEFAULT_PAGE });
+		if (
+			!validate_u32(searchParams[REPORTS_PER_PAGE_PARAM]) ||
+			!validate_u32(searchParams[REPORTS_PAGE_PARAM])
+		) {
+			setSearchParams({
+				[REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE,
+				[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
+			});
 		}
 		const data = reports_data();
 		if (data) {
@@ -400,11 +437,7 @@ const PerfPanel = (props) => {
 			branches().length === 0 &&
 			testbeds().length === 0 &&
 			benchmarks().length === 0 &&
-			tab() === DEFAULT_PERF_TAB &&
-			reports_page() === DEFAULT_PAGE &&
-			branches_page() === DEFAULT_PAGE &&
-			testbeds_page() === DEFAULT_PAGE &&
-			benchmarks_page() === DEFAULT_PAGE
+			tab() === DEFAULT_PERF_TAB
 		) {
 			const first_metric_kind =
 				first_report?.results?.[first]?.[first].metric_kind?.slug;
@@ -415,7 +448,7 @@ const PerfPanel = (props) => {
 	const branches_fetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),
-			per_page: per_page(),
+			per_page: branches_per_page(),
 			page: branches_page(),
 			refresh: refresh(),
 			token: props.user?.token,
@@ -425,8 +458,14 @@ const PerfPanel = (props) => {
 		getPerfTab(PerfTab.BRANCHES, fetcher),
 	);
 	createEffect(() => {
-		if (!validate_u32(searchParams[BRANCHES_PAGE_PARAM])) {
-			setSearchParams({ [BRANCHES_PAGE_PARAM]: DEFAULT_PAGE });
+		if (
+			!validate_u32(searchParams[BRANCHES_PER_PAGE_PARAM]) ||
+			!validate_u32(searchParams[BRANCHES_PAGE_PARAM])
+		) {
+			setSearchParams({
+				[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+				[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
+			});
 		}
 		const data = branches_data();
 		if (data) {
@@ -437,7 +476,7 @@ const PerfPanel = (props) => {
 	const testbeds_fetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),
-			per_page: per_page(),
+			per_page: testbeds_per_page(),
 			page: testbeds_page(),
 			refresh: refresh(),
 			token: props.user?.token,
@@ -447,8 +486,14 @@ const PerfPanel = (props) => {
 		getPerfTab(PerfTab.TESTBEDS, fetcher),
 	);
 	createEffect(() => {
-		if (!validate_u32(searchParams[TESTBEDS_PAGE_PARAM])) {
-			setSearchParams({ [TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE });
+		if (
+			!validate_u32(searchParams[TESTBEDS_PER_PAGE_PARAM]) ||
+			!validate_u32(searchParams[TESTBEDS_PAGE_PARAM])
+		) {
+			setSearchParams({
+				[TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+				[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
+			});
 		}
 		const data = testbeds_data();
 		if (data) {
@@ -459,7 +504,7 @@ const PerfPanel = (props) => {
 	const benchmarks_fetcher = createMemo(() => {
 		return {
 			project_slug: project_slug(),
-			per_page: per_page(),
+			per_page: benchmarks_per_page(),
 			page: benchmarks_page(),
 			refresh: refresh(),
 			token: props.user?.token,
@@ -470,8 +515,14 @@ const PerfPanel = (props) => {
 		async (fetcher) => getPerfTab(PerfTab.BENCHMARKS, fetcher),
 	);
 	createEffect(() => {
-		if (!validate_u32(searchParams[BENCHMARKS_PAGE_PARAM])) {
-			setSearchParams({ [BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE });
+		if (
+			!validate_u32(searchParams[BENCHMARKS_PER_PAGE_PARAM]) ||
+			!validate_u32(searchParams[BENCHMARKS_PAGE_PARAM])
+		) {
+			setSearchParams({
+				[BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
+				[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
+			});
 		}
 		const data = benchmarks_data();
 		if (data) {
@@ -643,7 +694,10 @@ const PerfPanel = (props) => {
 				branches_tab={branches_tab}
 				testbeds_tab={testbeds_tab}
 				benchmarks_tab={benchmarks_tab}
-				per_page={per_page}
+				reports_per_page={reports_per_page}
+				branches_per_page={branches_per_page}
+				testbeds_per_page={testbeds_per_page}
+				benchmarks_per_page={benchmarks_per_page}
 				reports_page={reports_page}
 				branches_page={branches_page}
 				testbeds_page={testbeds_page}

@@ -144,6 +144,12 @@ const LinePlot = (props) => {
 						boundary_dot(x_axis, UPPER_LIMIT, color, UPPER, project_slug),
 					),
 				);
+				alert_arrays.push(
+					Plot.image(
+						line_data,
+						warning_image(x_axis, UPPER_LIMIT, UPPER, project_slug),
+					),
+				);
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -252,6 +258,22 @@ const boundary_dot = (x_axis, y_axis, color, position, project_slug) => {
 	};
 };
 
+const warning_image = (x_axis, y_axis, position, project_slug) => {
+	return {
+		x: x_axis,
+		y: y_axis,
+		src: (datum) => is_active(datum.alert) && SIREN_URL,
+		width: 18,
+		title: (datum) =>
+			is_active(datum.alert) &&
+			limit_title(y_axis, position, datum, "\nClick to view Alert"),
+		href: (datum) =>
+			is_active(datum.alert) &&
+			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
+		target: "_blank",
+	};
+};
+
 const limit_title = (y_axis, position, datum, suffix) =>
 	to_title(`${position} Limit: ${datum[y_axis]}`, datum, suffix);
 
@@ -276,6 +298,7 @@ const is_active = (alert: JsonPerfAlert) =>
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
+const WARNING_URL = "https://s3.amazonaws.com/public.bencher.dev/warning.png";
 const SIREN_URL = "https://s3.amazonaws.com/public.bencher.dev/siren.png";
 
 export default LinePlot;

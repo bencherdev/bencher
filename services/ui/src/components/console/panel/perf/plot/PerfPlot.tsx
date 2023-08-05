@@ -69,7 +69,10 @@ const PerfPlot = (props) => {
 						branches_tab={props.branches_tab}
 						testbeds_tab={props.testbeds_tab}
 						benchmarks_tab={props.benchmarks_tab}
-						per_page={props.per_page}
+						reports_per_page={props.reports_per_page}
+						branches_per_page={props.branches_per_page}
+						testbeds_per_page={props.testbeds_per_page}
+						benchmarks_per_page={props.benchmarks_per_page}
 						reports_page={props.reports_page}
 						branches_page={props.branches_page}
 						testbeds_page={props.testbeds_page}

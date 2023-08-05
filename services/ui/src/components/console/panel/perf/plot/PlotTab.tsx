@@ -28,6 +28,21 @@ const PlotTab = (props) => {
 		}
 	};
 
+	const getPerPage = () => {
+		switch (props.tab()) {
+			case PerfTab.REPORTS:
+				return props.reports_per_page;
+			case PerfTab.BRANCHES:
+				return props.branches_per_page;
+			case PerfTab.TESTBEDS:
+				return props.testbeds_per_page;
+			case PerfTab.BENCHMARKS:
+				return props.benchmarks_per_page;
+			default:
+				return 8;
+		}
+	};
+
 	const getPage = () => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
@@ -112,7 +127,7 @@ const PlotTab = (props) => {
 							<Pagination
 								size={PaginationSize.SMALL}
 								data_len={getTab()?.length}
-								per_page={props.per_page()}
+								per_page={getPerPage()?.()}
 								page={getPage()?.()}
 								handlePage={getHandlePage()}
 							/>
