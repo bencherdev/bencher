@@ -57,7 +57,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonConfirm"
+                  "$ref": "#/components/schemas/JsonAuthUser"
                 }
               }
             }
@@ -5798,6 +5798,21 @@
           "token"
         ]
       },
+      "JsonAuthUser": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/Jwt"
+          },
+          "user": {
+            "$ref": "#/components/schemas/JsonUser"
+          }
+        },
+        "required": [
+          "token",
+          "user"
+        ]
+      },
       "JsonAverage": {
         "type": "string",
         "enum": [
@@ -6131,21 +6146,6 @@
           "database",
           "logging",
           "server"
-        ]
-      },
-      "JsonConfirm": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "$ref": "#/components/schemas/Jwt"
-          },
-          "user": {
-            "$ref": "#/components/schemas/JsonUser"
-          }
-        },
-        "required": [
-          "token",
-          "user"
         ]
       },
       "JsonConsole": {

@@ -38,7 +38,7 @@ pub use project::{
     JsonNewProject, JsonProject, JsonProjects,
 };
 pub use system::{
-    auth::{JsonAuthToken, JsonConfirm, JsonLogin, JsonSignup},
+    auth::{JsonAuthToken, JsonAuthUser, JsonLogin, JsonSignup},
     backup::JsonBackup,
     config::JsonConfig,
     endpoint::JsonEndpoint,

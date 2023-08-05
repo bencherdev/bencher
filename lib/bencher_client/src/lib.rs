@@ -76,7 +76,7 @@ try_from_client!(
     JsonTestbed,
     JsonThresholds,
     JsonThreshold,
-    JsonConfirm,
+    JsonAuthUser,
     JsonLogin,
     JsonSignup,
     JsonConfig,

@@ -1,4 +1,4 @@
-use bencher_json::{system::auth::JsonConfirm, JsonAuthToken};
+use bencher_json::{system::auth::JsonAuthUser, JsonAuthToken};
 use diesel::{QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, RequestContext, TypedBody};
 
@@ -40,7 +40,7 @@ pub async fn auth_confirm_options(
 pub async fn auth_confirm_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonAuthToken>,
-) -> Result<ResponseAccepted<JsonConfirm>, HttpError> {
+) -> Result<ResponseAccepted<JsonAuthUser>, HttpError> {
     let endpoint = Endpoint::new(CONFIRM_RESOURCE, Method::Post);
 
     let json = post_inner(rqctx.context(), body.into_inner())
@@ -53,7 +53,7 @@ pub async fn auth_confirm_post(
 async fn post_inner(
     context: &ApiContext,
     json_token: JsonAuthToken,
-) -> Result<JsonConfirm, ApiError> {
+) -> Result<JsonAuthUser, ApiError> {
     let conn = &mut *context.conn().await;
 
     let token_data = context
@@ -72,5 +72,5 @@ async fn post_inner(
         .new_client(token_data.claims.email().parse()?, CLIENT_TOKEN_TTL)
         .map_err(api_error!())?;
 
-    Ok(JsonConfirm { user, token })
+    Ok(JsonAuthUser { user, token })
 }

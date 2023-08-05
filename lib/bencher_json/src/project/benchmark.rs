@@ -35,6 +35,7 @@ impl fmt::Display for JsonBenchmark {
     }
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBenchmarkMetric {

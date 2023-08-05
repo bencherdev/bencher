@@ -58,6 +58,7 @@ pub struct JsonThresholds(pub Vec<JsonThreshold>);
 
 crate::from_vec!(JsonThresholds[JsonThreshold]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThreshold {

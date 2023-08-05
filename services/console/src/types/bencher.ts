@@ -18,6 +18,8 @@ export type NonEmpty = string;
 
 export type ResourceId = string;
 
+export type SampleSize = number;
+
 export type Secret = string;
 
 export type Slug = string;
@@ -26,12 +28,83 @@ export type Url = string;
 
 export type UserName = string;
 
-/**
- * This type exists solely for generating type information
- * And it functions on the basis of having a name collision with `uuid::Uuid`
- * For all other use cases, use `uuid::Uuid` instead
- */
-export type Uuid = string;
+export interface JsonMetricKind {
+	uuid: string;
+	project: string;
+	name: NonEmpty;
+	slug: Slug;
+	units: NonEmpty;
+	created: string;
+	modified: string;
+}
+
+export interface JsonBranch {
+	uuid: string;
+	project: string;
+	name: BranchName;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
+export interface JsonTestbed {
+	uuid: string;
+	project: string;
+	name: NonEmpty;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
+export enum JsonStatisticKind {
+	Z = "z",
+	T = "t",
+}
+
+export interface JsonStatistic {
+	uuid: string;
+	threshold: string;
+	test: JsonStatisticKind;
+	min_sample_size?: SampleSize;
+	max_sample_size?: SampleSize;
+	window?: number;
+	lower_boundary?: Boundary;
+	upper_boundary?: Boundary;
+	created: string;
+}
+
+export interface JsonThreshold {
+	uuid: string;
+	project: string;
+	metric_kind: JsonMetricKind;
+	branch: JsonBranch;
+	testbed: JsonTestbed;
+	statistic: JsonStatistic;
+	created: string;
+	modified: string;
+}
+
+export interface JsonMetric {
+	value: number;
+	lower_bound?: number;
+	upper_bound?: number;
+}
+
+export interface JsonBoundary {
+	lower_limit?: number;
+	upper_limit?: number;
+}
+
+export interface JsonBenchmarkMetric {
+	uuid: string;
+	project: string;
+	name: BenchmarkName;
+	slug: Slug;
+	metric: JsonMetric;
+	boundary: JsonBoundary;
+	created: string;
+	modified: string;
+}
 
 export enum JsonLimit {
 	Lower = "lower",
@@ -44,8 +117,8 @@ export enum JsonAlertStatus {
 }
 
 export interface JsonAlert {
-	uuid: Uuid;
-	report: Uuid;
+	uuid: string;
+	report: string;
 	iteration: number;
 	threshold: JsonThreshold;
 	benchmark: JsonBenchmarkMetric;
@@ -63,30 +136,16 @@ export interface JsonUpdateAlert {
 }
 
 export interface JsonPerfAlert {
-	uuid: Uuid;
+	uuid: string;
 	limit: JsonLimit;
 	status: JsonAlertStatus;
 	modified: string;
 }
 
 export interface JsonBenchmark {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	name: BenchmarkName;
-	slug: Slug;
-	created: string;
-	modified: string;
-}
-
-export interface JsonBoundary {
-	lower_limit?: number;
-	upper_limit?: number;
-}
-
-export interface JsonBranch {
-	uuid: Uuid;
-	project: Uuid;
-	name: BranchName;
 	slug: Slug;
 	created: string;
 	modified: string;
@@ -97,30 +156,14 @@ export interface JsonVersion {
 	hash?: GitHash;
 }
 
-export interface JsonMetric {
-	value: number;
-	lower_bound?: number;
-	upper_bound?: number;
-}
-
-export interface JsonMetricKind {
-	uuid: Uuid;
-	project: Uuid;
-	name: NonEmpty;
-	slug: Slug;
-	units: NonEmpty;
-	created: string;
-	modified: string;
-}
-
 export enum JsonVisibility {
 	Public = "public",
 	Private = "private",
 }
 
 export interface JsonProject {
-	uuid: Uuid;
-	organization: Uuid;
+	uuid: string;
+	organization: string;
 	name: NonEmpty;
 	slug: Slug;
 	url?: Url;
@@ -129,41 +172,15 @@ export interface JsonProject {
 	modified: string;
 }
 
-export interface JsonTestbed {
-	uuid: Uuid;
-	project: Uuid;
-	name: NonEmpty;
-	slug: Slug;
-	created: string;
-	modified: string;
-}
-
-export enum JsonStatisticKind {
-	Z = "z",
-	T = "t",
-}
-
-export interface JsonStatistic {
-	uuid: Uuid;
-	threshold: Uuid;
-	test: JsonStatisticKind;
-	min_sample_size?: number;
-	max_sample_size?: number;
-	window?: number;
-	lower_boundary?: Boundary;
-	upper_boundary?: Boundary;
-	created: string;
-}
-
 export interface JsonThresholdStatistic {
-	uuid: Uuid;
-	project: Uuid;
+	uuid: string;
+	project: string;
 	statistic: JsonStatistic;
 	created: string;
 }
 
 export interface JsonPerfMetric {
-	report: Uuid;
+	report: string;
 	iteration: number;
 	start_time: string;
 	end_time: string;
@@ -214,7 +231,7 @@ export interface JsonAuthToken {
 }
 
 export interface JsonUser {
-	uuid: Uuid;
+	uuid: string;
 	name: UserName;
 	slug: Slug;
 	email: Email;
@@ -222,7 +239,7 @@ export interface JsonUser {
 	locked: boolean;
 }
 
-export interface JsonConfirm {
+export interface JsonAuthUser {
 	user: JsonUser;
 	token: Jwt;
 }
