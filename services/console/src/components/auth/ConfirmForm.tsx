@@ -60,7 +60,14 @@ const ConfirmForm = (_props: Props) => {
     // const title = "Confirm Token";
 
     // const [submitted, setSubmitted] = createSignal();
-    const [form, setForm] = createSignal(initForm());
+    const [form, setForm] = createSignal<{
+        token: {
+            value: string,
+            valid: null | boolean,
+        },
+        valid: boolean,
+        submitting: boolean,
+    }>(initForm());
 
     // const [cool_down, setCoolDown] = createSignal(true);
     // setTimeout(() => setCoolDown(false), 10000);
@@ -193,10 +200,10 @@ const ConfirmForm = (_props: Props) => {
             setSearchParams({ [TOKEN_PARAM]: value });
         }
 
-        // const valid = form()?.token?.valid;
-        // if (valid !== form()?.valid) {
-        //     setForm({ ...form(), valid: valid });
-        // }
+        const valid = form()?.token?.valid;
+        if (typeof valid === "boolean" && valid !== form()?.valid) {
+            setForm({ ...form(), valid: valid });
+        }
 
         // const jwt = token();
         // if (validate_jwt(jwt) && jwt !== submitted()) {
