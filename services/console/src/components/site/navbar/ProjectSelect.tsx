@@ -8,11 +8,10 @@ import {
 } from "solid-js";
 import {
 	BENCHER_API_URL,
-	getToken,
-	get_options,
-	validate_jwt,
+	validJwt,
 } from "../../site/util";
 import { useNavigate } from "solid-app-router";
+import { httpGet } from "../../../util/http";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
@@ -30,10 +29,10 @@ const ProjectSelect = (props) => {
 			slug: BENCHER_ALL_PROJECTS,
 		};
 		const token = props.user?.token;
-		if (!validate_jwt(token)) {
+		if (!validJwt(token)) {
 			return [ALL_PROJECTS];
 		}
-		return await axios(get_options(url(), token))
+		return await httpGet(url(), token)
 			.then((resp) => {
 				let data = resp?.data;
 				data.push(ALL_PROJECTS);

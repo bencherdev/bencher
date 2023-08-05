@@ -1,15 +1,14 @@
 import { createSignal, createEffect, createResource } from "solid-js";
-// import axios from "axios";
-import bencher_valid_init, {
-    is_valid_user_name,
-    is_valid_email
-} from "bencher_valid";
+import bencher_valid_init from "bencher_valid";
 
 import { Email, JsonLogin, JsonSignup, AuthLogin, PlanLevel } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { useSearchParams } from "../../util/url";
-import { validate_string } from "../../util/valid";
+import { validEmail, validJwt, validUserName } from "../../util/valid";
+import { BENCHER_API_URL } from "../../util/ext";
+import axios from "axios";
+import { httpPost } from "../../util/http";
 
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
@@ -17,7 +16,6 @@ export const TOKEN_PARAM = "token";
 
 export interface Props {
     newUser: boolean;
-    invite: Function;
 }
 
 type JsonAuthForm = JsonSignup | JsonLogin;
@@ -75,11 +73,9 @@ const AuthForm = (props: Props) => {
     };
 
     const post = async (data: JsonAuthForm) => {
-        // const url = `${BENCHER_API_URL()}/v0/auth/${props.newUser ? "signup" : "login"
-        //     }`;
-        // const no_token = null;
-        // return await axios(post_options(url, no_token, data));
-        return
+        const url = `${BENCHER_API_URL()}/v0/auth/${props.newUser ? "signup" : "login"}`;
+        const no_token = null;
+        return await httpPost(url, no_token, data);
     };
 
     const handleSubmit = () => {
@@ -231,7 +227,7 @@ const AUTH_FIELDS = {
         placeholder: "Full Name",
         icon: "fas fa-user",
         help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
-        validate: (input: string) => validate_string(input, is_valid_user_name),
+        validate: validUserName,
     },
     email: {
         label: "Email",
@@ -239,7 +235,7 @@ const AUTH_FIELDS = {
         placeholder: "email@example.com",
         icon: "fas fa-envelope",
         help: "Must be a valid email address",
-        validate: (input: string) => validate_string(input, is_valid_email),
+        validate: validEmail,
     },
     consent: {
         label: "I Agree",
@@ -275,7 +271,7 @@ const AUTH_FIELDS = {
         placeholder: "jwt_header.jwt_payload.jwt_verify_signature",
         icon: "fas fa-key",
         help: "Must be a valid JWT (JSON Web Token)",
-        // validate: validate_jwt,
+        validate: validJwt,
     },
 };
 
