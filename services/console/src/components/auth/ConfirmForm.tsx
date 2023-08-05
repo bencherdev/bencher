@@ -10,7 +10,7 @@ import { validJwt } from "../../util/valid";
 import { createStore } from "solid-js/store";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
-import { BENCHER_USER_KEY } from "../../util/auth";
+import { BENCHER_USER_KEY, setUser } from "../../util/auth";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -98,7 +98,7 @@ const ConfirmForm = (_props: Props) => {
         post()
             .then((resp) => {
                 handleFormSubmitting(false);
-                window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(resp.data));
+                setUser(resp.data);
                 window.location.assign("/console");
                 // if (!props.handleUser(resp?.data)) {
                 //     navigate(

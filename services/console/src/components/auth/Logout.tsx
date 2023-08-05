@@ -1,7 +1,8 @@
+import { removeUser } from "../../util/auth";
 import { hiddenRedirect } from "../../util/url";
 
 const Logout = () => {
-    window.localStorage.clear();
+    removeUser();
     hiddenRedirect("/auth/login");
 
     return <></>
