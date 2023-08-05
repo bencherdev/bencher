@@ -1,15 +1,16 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-
 import AuthForm from "../../components/auth/AuthForm";
+
+const title = "Sign up";
 ---
 
-<BaseLayout title="Sign up">
+<BaseLayout title={title}>
   <section class="section">
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-two-fifths">
-          <h2 class="title">Sign up</h2>
+          <h2 class="title">{title}</h2>
 
           <AuthForm client:only newUser={true} />
 
