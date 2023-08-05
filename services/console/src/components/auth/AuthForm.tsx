@@ -17,19 +17,21 @@ import { createSignal, createEffect, createMemo } from "solid-js";
 import { Email, JsonLogin, JsonSignup, PlanLevel } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
+import { useSearchParams } from "../../util/url";
 
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";
 
 export interface Props {
-    new_user: boolean;
+    newUser: boolean;
     invite: Function;
 }
 
 type JsonAuthForm = JsonSignup | JsonLogin;
 
 const AuthForm = (props: Props) => {
+    const [searchParams, setSearchParams] = useSearchParams();
     // const navigate = useNavigate();
     // const location = useLocation();
     // const pathname = createMemo(() => location.pathname);
@@ -57,10 +59,10 @@ const AuthForm = (props: Props) => {
 
     // const validateForm = () => {
     //     if (form()?.email?.valid) {
-    //         if (props.new_user && form()?.username?.valid && form()?.consent?.value) {
+    //         if (props.newUser && form()?.username?.valid && form()?.consent?.value) {
     //             return true;
     //         }
-    //         if (!props.new_user) {
+    //         if (!props.newUser) {
     //             return true;
     //         }
     //     }
@@ -79,7 +81,7 @@ const AuthForm = (props: Props) => {
     // };
 
     // const post = async (data: JsonAuthForm) => {
-    //     const url = `${BENCHER_API_URL()}/v0/auth/${props.new_user ? "signup" : "login"
+    //     const url = `${BENCHER_API_URL()}/v0/auth/${props.newUser ? "signup" : "login"
     //         }`;
     //     const no_token = null;
     //     return await axios(post_options(url, no_token, data));
@@ -98,7 +100,7 @@ const AuthForm = (props: Props) => {
 
         //     let data: JsonAuthForm;
         //     let form_email: Email;
-        //     if (props.new_user) {
+        //     if (props.newUser) {
         //         const signup_form = form();
         //         form_email = signup_form.email.value?.trim();
         //         data = {
@@ -131,7 +133,7 @@ const AuthForm = (props: Props) => {
         //                     [PLAN_PARAM],
         //                     [[EMAIL_PARAM, form_email]],
         //                     NotifyKind.OK,
-        //                     `Successful ${props.new_user ? "signup" : "login"
+        //                     `Successful ${props.newUser ? "signup" : "login"
         //                     }! Please confirm token.`,
         //                 ),
         //             );
@@ -145,7 +147,7 @@ const AuthForm = (props: Props) => {
         //                     [PLAN_PARAM, INVITE_PARAM],
         //                     [],
         //                     NotifyKind.ERROR,
-        //                     `Failed to ${props.new_user ? "signup" : "login"
+        //                     `Failed to ${props.newUser ? "signup" : "login"
         //                     }. Please, try again.`,
         //                 ),
         //             );
@@ -158,7 +160,7 @@ const AuthForm = (props: Props) => {
 
     return (
         <form class="box">
-            {props.new_user && (
+            {props.newUser && (
                 <Field
                     kind={FieldKind.INPUT}
                     fieldKey="username"
@@ -182,7 +184,7 @@ const AuthForm = (props: Props) => {
 
             <br />
 
-            {props.new_user && form()?.username?.valid && form()?.email?.valid && (
+            {props.newUser && form()?.username?.valid && form()?.email?.valid && (
                 <Field
                     kind={FieldKind.CHECKBOX}
                     fieldKey="consent"
@@ -200,7 +202,7 @@ const AuthForm = (props: Props) => {
                         disabled={!form()?.valid || form()?.submitting}
                         onClick={handleAuthFormSubmit}
                     >
-                        {props.new_user ? "Sign up" : "Log in"}
+                        {props.newUser ? "Sign up" : "Log in"}
                     </button>
                 </p>
             </div>
