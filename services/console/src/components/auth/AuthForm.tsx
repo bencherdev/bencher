@@ -1,5 +1,9 @@
-import { createSignal, createEffect, createMemo } from "solid-js";
+import { createSignal, createEffect, createMemo, lazy, createResource } from "solid-js";
 // import axios from "axios";
+import bencher_valid_init, {
+    is_valid_user_name,
+    is_valid_email
+} from "bencher_valid";
 
 // import Field, { FieldHandler } from "../field/Field";
 // import AUTH_FIELDS from "./config/fields";
@@ -18,6 +22,7 @@ import { Email, JsonLogin, JsonSignup, PlanLevel } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { useSearchParams } from "../../util/url";
+import { validate_string } from "../../util/valid";
 
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
@@ -30,7 +35,11 @@ export interface Props {
 
 type JsonAuthForm = JsonSignup | JsonLogin;
 
+
+
 const AuthForm = (props: Props) => {
+    const [_bencher_valid] = createResource(async () => await bencher_valid_init());
+
     const [searchParams, setSearchParams] = useSearchParams();
     // const navigate = useNavigate();
     // const location = useLocation();
@@ -244,7 +253,7 @@ const AUTH_FIELDS = {
         placeholder: "email@example.com",
         icon: "fas fa-envelope",
         help: "Must be a valid email address",
-        // validate: (input) => validate_string(input, is_valid_email),
+        validate: (input: string) => validate_string(input, is_valid_email),
     },
     consent: {
         label: "I Agree",
