@@ -19,6 +19,9 @@ export const validEmail = (email: string): boolean => {
 	return validString(email, is_valid_email);
 };
 
-export const validJwt = (token: string): boolean => {
+export const validJwt = (token: undefined | null | string): boolean => {
+	if (!token) {
+		return false;
+	}
 	return validString(token, is_valid_jwt);
 };

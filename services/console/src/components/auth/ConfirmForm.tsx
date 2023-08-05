@@ -1,11 +1,12 @@
 import bencher_valid_init from "bencher_valid";
-import { createEffect, createResource, createSignal } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal } from "solid-js";
 
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, TOKEN_PARAM } from "./auth";
 import { useSearchParams } from "../../util/url";
+import { validJwt } from "../../util/valid";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -39,12 +40,10 @@ const ConfirmForm = (_props: Props) => {
     // const pathname = createMemo(() => location.pathname);
     // const [searchParams, setSearchParams] = useSearchParams();
 
-    // if (searchParams[TOKEN_PARAM] && !validate_jwt(searchParams[TOKEN_PARAM])) {
-    //     setSearchParams({ [TOKEN_PARAM]: null });
-    // }
-    // const token = createMemo(() =>
-    //     searchParams[TOKEN_PARAM] ? searchParams[TOKEN_PARAM].trim() : null,
-    // );
+    if (!validJwt(searchParams.get(TOKEN_PARAM))) {
+        setSearchParams({ [TOKEN_PARAM]: null });
+    }
+    const token = createMemo(() => searchParams.get(TOKEN_PARAM)?.trim());
 
     // if (!validate_plan_level(searchParams[PLAN_PARAM])) {
     //     setSearchParams({ [PLAN_PARAM]: null });
@@ -59,7 +58,7 @@ const ConfirmForm = (_props: Props) => {
 
     // const title = "Confirm Token";
 
-    // const [submitted, setSubmitted] = createSignal();
+    const [submitted, setSubmitted] = createSignal();
     const [form, setForm] = createSignal<{
         token: {
             value: string,
@@ -91,42 +90,42 @@ const ConfirmForm = (_props: Props) => {
     //     return await axios(post_options(url, no_token, data));
     // };
 
-    // const handleFormSubmit = () => {
-    //     handleFormSubmitting(true);
+    const handleSubmit = () => {
+        handleFormSubmitting(true);
 
-    //     post()
-    //         .then((resp) => {
-    //             handleFormSubmitting(false);
-    //             if (!props.handleUser(resp?.data)) {
-    //                 navigate(
-    //                     notification_path(
-    //                         pathname(),
-    //                         CONFIRM_FORWARD,
-    //                         [],
-    //                         NotifyKind.ERROR,
-    //                         "Invalid user. Please, try again.",
-    //                     ),
-    //                 );
-    //             }
-    //         })
-    //         .catch((error) => {
-    //             handleFormSubmitting(false);
-    //             console.error(error);
-    //             navigate(
-    //                 notification_path(
-    //                     pathname(),
-    //                     CONFIRM_FORWARD,
-    //                     [],
-    //                     NotifyKind.ERROR,
-    //                     "Failed to confirm token. Please, try again.",
-    //                 ),
-    //             );
-    //         });
-    // };
+        //     post()
+        //         .then((resp) => {
+        //             handleFormSubmitting(false);
+        //             if (!props.handleUser(resp?.data)) {
+        //                 navigate(
+        //                     notification_path(
+        //                         pathname(),
+        //                         CONFIRM_FORWARD,
+        //                         [],
+        //                         NotifyKind.ERROR,
+        //                         "Invalid user. Please, try again.",
+        //                     ),
+        //                 );
+        //             }
+        //         })
+        //         .catch((error) => {
+        //             handleFormSubmitting(false);
+        //             console.error(error);
+        //             navigate(
+        //                 notification_path(
+        //                     pathname(),
+        //                     CONFIRM_FORWARD,
+        //                     [],
+        //                     NotifyKind.ERROR,
+        //                     "Failed to confirm token. Please, try again.",
+        //                 ),
+        //             );
+        //         });
+    };
 
-    // const handleFormSubmitting = (submitting) => {
-    //     setForm({ ...form(), submitting: submitting });
-    // };
+    const handleFormSubmitting = (submitting: boolean) => {
+        setForm({ ...form(), submitting: submitting });
+    };
 
     // const post_resend = async (data: {
     //     email: string;
@@ -195,7 +194,7 @@ const ConfirmForm = (_props: Props) => {
         //     );
         // }
 
-        const value = form()?.token?.value.trim();
+        const value = form()?.token?.value;
         if (value.length > 0) {
             setSearchParams({ [TOKEN_PARAM]: value });
         }
@@ -205,11 +204,11 @@ const ConfirmForm = (_props: Props) => {
             setForm({ ...form(), valid: valid });
         }
 
-        // const jwt = token();
-        // if (validate_jwt(jwt) && jwt !== submitted()) {
-        //     setSubmitted(jwt);
-        //     handleFormSubmit();
-        // }
+        const jwt = token();
+        if (validJwt(jwt) && jwt !== submitted()) {
+            setSubmitted(jwt);
+            handleSubmit();
+        }
     });
 
     return (
@@ -232,7 +231,7 @@ const ConfirmForm = (_props: Props) => {
                             disabled={!form()?.valid || form()?.submitting}
                             onClick={(e) => {
                                 e.preventDefault();
-                                // handleFormSubmit();
+                                handleSubmit();
                             }}
                         >
                             Submit
