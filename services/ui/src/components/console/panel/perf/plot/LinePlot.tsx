@@ -7,7 +7,31 @@ import {
 	JsonPerf,
 	JsonAlertStatus,
 	JsonPerfAlert,
+	Boundary,
 } from "../../../../../types/bencher";
+
+enum Position {
+	Lower,
+	Upper,
+}
+
+const position_key = (position: Position) => {
+	switch (position) {
+		case Position.Lower:
+			return "lower_limit";
+		case Position.Upper:
+			return "upper_limit";
+	}
+};
+
+const position_label = (position: Position) => {
+	switch (position) {
+		case Position.Lower:
+			return "Lower";
+		case Position.Upper:
+			return "Upper";
+	}
+};
 
 const LinePlot = (props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
@@ -84,7 +108,15 @@ const LinePlot = (props) => {
 					iteration: perf_metric.iteration,
 					threshold: perf_metric.threshold?.uuid,
 					lower_limit: perf_metric.boundary?.lower_limit,
+					lower_boundary_skipped: boundary_skipped(
+						perf_metric.threshold?.statistic?.lower_boundary,
+						perf_metric.boundary?.lower_limit,
+					),
 					upper_limit: perf_metric.boundary?.upper_limit,
+					upper_boundary_skipped: boundary_skipped(
+						perf_metric.threshold?.statistic?.upper_boundary,
+						perf_metric.boundary?.upper_limit,
+					),
 					alert: perf_metric.alert,
 				});
 				metrics_found = true;
@@ -115,19 +147,19 @@ const LinePlot = (props) => {
 			const LOWER = "Lower";
 			if (props.lower_boundary()) {
 				plot_arrays.push(
-					Plot.line(line_data, boundary_line(x_axis, LOWER_LIMIT, color)),
+					Plot.line(line_data, boundary_line(x_axis, Position.Lower, color)),
 				);
 				plot_arrays.push(
 					Plot.dot(
 						line_data,
-						boundary_dot(x_axis, LOWER_LIMIT, color, LOWER, project_slug),
+						boundary_dot(x_axis, Position.Lower, color, project_slug),
 					),
 				);
 			}
 			alert_arrays.push(
 				Plot.image(
 					line_data,
-					alert_image(x_axis, LOWER_LIMIT, LOWER, project_slug),
+					alert_image(x_axis, Position.Lower, project_slug),
 				),
 			);
 
@@ -136,25 +168,25 @@ const LinePlot = (props) => {
 			const UPPER = "Upper";
 			if (props.upper_boundary()) {
 				plot_arrays.push(
-					Plot.line(line_data, boundary_line(x_axis, UPPER_LIMIT, color)),
+					Plot.line(line_data, boundary_line(x_axis, Position.Upper, color)),
 				);
 				plot_arrays.push(
 					Plot.dot(
 						line_data,
-						boundary_dot(x_axis, UPPER_LIMIT, color, UPPER, project_slug),
+						boundary_dot(x_axis, Position.Upper, color, project_slug),
 					),
 				);
-				alert_arrays.push(
-					Plot.image(
-						line_data,
-						warning_image(x_axis, UPPER_LIMIT, UPPER, project_slug),
-					),
-				);
+				// alert_arrays.push(
+				// 	Plot.image(
+				// 		line_data,
+				// 		warning_image(x_axis, Position.Upper, project_slug),
+				// 	),
+				// );
 			}
 			alert_arrays.push(
 				Plot.image(
 					line_data,
-					alert_image(x_axis, UPPER_LIMIT, UPPER, project_slug),
+					alert_image(x_axis, Position.Upper, project_slug),
 				),
 			);
 		});
@@ -212,6 +244,13 @@ const LinePlot = (props) => {
 	return <>{plotted()}</>;
 };
 
+// A boundary is skipped if it is defined but its limit undefined
+// This indicates that the the boundary limit could not be calculated for the metric
+const boundary_skipped = (
+	boundary: undefined | Boundary,
+	limit: undefined | number,
+) => boundary !== undefined && limit === undefined;
+
 const to_title = (prefix, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
 		weekday: "short",
@@ -226,10 +265,10 @@ const to_title = (prefix, datum, suffix) =>
 		datum.hash ? `\nVersion Hash: ${datum.hash}` : ""
 	}\nIteration: ${datum.iteration}${suffix}`;
 
-const boundary_line = (x_axis, y_axis, color) => {
+const boundary_line = (x_axis, position: Position, color) => {
 	return {
 		x: x_axis,
-		y: y_axis,
+		y: position_key(position),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
@@ -237,17 +276,17 @@ const boundary_line = (x_axis, y_axis, color) => {
 	};
 };
 
-const boundary_dot = (x_axis, y_axis, color, position, project_slug) => {
+const boundary_dot = (x_axis, position: Position, color, project_slug) => {
 	return {
 		x: x_axis,
-		y: y_axis,
+		y: position_key(position),
 		stroke: color,
 		strokeWidth: 4,
 		strokeOpacity: 0.666,
 		fill: color,
 		fillOpacity: 0.666,
 		title: (datum) =>
-			!is_active(datum.alert) && limit_title(y_axis, position, datum, ""),
+			!is_active(datum.alert) && limit_title(position, datum, ""),
 		// TODO enable this when there is an endpoint for getting a historical threshold statistic
 		// That is, the statistic displayed needs to be historical, not current.
 		// Just like with the Alerts.
@@ -258,34 +297,15 @@ const boundary_dot = (x_axis, y_axis, color, position, project_slug) => {
 	};
 };
 
-const warning_image = (x_axis, y_axis, position, project_slug) => {
+const alert_image = (x_axis, position: Position, project_slug) => {
 	return {
 		x: x_axis,
-		y: y_axis,
+		y: position_key(position),
 		src: (datum) => is_active(datum.alert) && SIREN_URL,
 		width: 18,
 		title: (datum) =>
 			is_active(datum.alert) &&
-			limit_title(y_axis, position, datum, "\nClick to view Alert"),
-		href: (datum) =>
-			is_active(datum.alert) &&
-			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
-		target: "_blank",
-	};
-};
-
-const limit_title = (y_axis, position, datum, suffix) =>
-	to_title(`${position} Limit: ${datum[y_axis]}`, datum, suffix);
-
-const alert_image = (x_axis, y_axis, position, project_slug) => {
-	return {
-		x: x_axis,
-		y: y_axis,
-		src: (datum) => is_active(datum.alert) && SIREN_URL,
-		width: 18,
-		title: (datum) =>
-			is_active(datum.alert) &&
-			limit_title(y_axis, position, datum, "\nClick to view Alert"),
+			limit_title(position, datum, "\nClick to view Alert"),
 		href: (datum) =>
 			is_active(datum.alert) &&
 			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
@@ -295,6 +315,13 @@ const alert_image = (x_axis, y_axis, position, project_slug) => {
 
 const is_active = (alert: JsonPerfAlert) =>
 	alert?.status && alert.status == JsonAlertStatus.Active;
+
+const limit_title = (position: Position, datum, suffix) =>
+	to_title(
+		`${position_label(position)} Limit: ${datum[position_key(position)]}`,
+		datum,
+		suffix,
+	);
 
 // Source: https://twemoji.twitter.com
 // License: https://creativecommons.org/licenses/by/4.0
