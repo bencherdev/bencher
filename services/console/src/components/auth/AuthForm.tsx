@@ -1,23 +1,10 @@
-import { createSignal, createEffect, createMemo, lazy, createResource } from "solid-js";
+import { createSignal, createEffect, createResource } from "solid-js";
 // import axios from "axios";
 import bencher_valid_init, {
     is_valid_user_name,
     is_valid_email
 } from "bencher_valid";
 
-// import Field, { FieldHandler } from "../field/Field";
-// import AUTH_FIELDS from "./config/fields";
-// import {
-//     BENCHER_API_URL,
-//     NotifyKind,
-//     PLAN_PARAM,
-//     post_options,
-//     validate_jwt,
-//     validate_plan_level,
-// } from "../site/util";
-// import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
-// import FieldKind from "../field/kind";
-// import { notification_path } from "../site/Notification";
 import { Email, JsonLogin, JsonSignup, AuthLogin, PlanLevel } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
@@ -87,12 +74,13 @@ const AuthForm = (props: Props) => {
         setForm({ ...form(), submitting: submitting });
     };
 
-    // const post = async (data: JsonAuthForm) => {
-    //     const url = `${BENCHER_API_URL()}/v0/auth/${props.newUser ? "signup" : "login"
-    //         }`;
-    //     const no_token = null;
-    //     return await axios(post_options(url, no_token, data));
-    // };
+    const post = async (data: JsonAuthForm) => {
+        // const url = `${BENCHER_API_URL()}/v0/auth/${props.newUser ? "signup" : "login"
+        //     }`;
+        // const no_token = null;
+        // return await axios(post_options(url, no_token, data));
+        return
+    };
 
     const handleSubmit = () => {
         handleFormSubmitting(true);
@@ -131,34 +119,34 @@ const AuthForm = (props: Props) => {
             auth_form.invite = invite;
         }
 
-        //     post(data)
-        //         .then((_resp) => {
-        //             handleFormSubmitting(false);
-        //             navigate(
-        //                 notification_path(
-        //                     "/auth/confirm",
-        //                     [PLAN_PARAM],
-        //                     [[EMAIL_PARAM, form_email]],
-        //                     NotifyKind.OK,
-        //                     `Successful ${props.newUser ? "signup" : "login"
-        //                     }! Please confirm token.`,
-        //                 ),
-        //             );
-        //         })
-        //         .catch((error) => {
-        //             handleFormSubmitting(false);
-        //             console.error(error);
-        //             navigate(
-        //                 notification_path(
-        //                     pathname(),
-        //                     [PLAN_PARAM, INVITE_PARAM],
-        //                     [],
-        //                     NotifyKind.ERROR,
-        //                     `Failed to ${props.newUser ? "signup" : "login"
-        //                     }. Please, try again.`,
-        //                 ),
-        //             );
-        //         });
+        post(auth_form)
+            .then((_resp) => {
+                handleFormSubmitting(false);
+                // navigate(
+                //     notification_path(
+                //         "/auth/confirm",
+                //         [PLAN_PARAM],
+                //         [[EMAIL_PARAM, form_email]],
+                //         NotifyKind.OK,
+                //         `Successful ${props.newUser ? "signup" : "login"
+                //         }! Please confirm token.`,
+                //     ),
+                // );
+            })
+            .catch((error) => {
+                handleFormSubmitting(false);
+                console.error(error);
+                // navigate(
+                //     notification_path(
+                //         pathname(),
+                //         [PLAN_PARAM, INVITE_PARAM],
+                //         [],
+                //         NotifyKind.ERROR,
+                //         `Failed to ${props.newUser ? "signup" : "login"
+                //         }. Please, try again.`,
+                //     ),
+                // );
+            });
     };
 
     createEffect(() => {
