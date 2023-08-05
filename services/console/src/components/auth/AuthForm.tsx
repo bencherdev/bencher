@@ -18,7 +18,7 @@ import bencher_valid_init, {
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
 // import FieldKind from "../field/kind";
 // import { notification_path } from "../site/Notification";
-import { Email, JsonLogin, JsonSignup, PlanLevel } from "../../types/bencher";
+import { Email, JsonLogin, JsonSignup, AuthLogin, PlanLevel } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { useSearchParams } from "../../util/url";
@@ -34,8 +34,6 @@ export interface Props {
 }
 
 type JsonAuthForm = JsonSignup | JsonLogin;
-
-
 
 const AuthForm = (props: Props) => {
     const [_bencher_valid] = createResource(async () => await bencher_valid_init());
@@ -66,28 +64,28 @@ const AuthForm = (props: Props) => {
         });
     };
 
-    // const validateForm = () => {
-    //     if (form()?.email?.valid) {
-    //         if (props.newUser && form()?.username?.valid && form()?.consent?.value) {
-    //             return true;
-    //         }
-    //         if (!props.newUser) {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // };
+    const validateForm = () => {
+        if (form()?.email?.valid) {
+            if (props.newUser && form()?.username?.valid && form()?.consent?.value) {
+                return true;
+            }
+            if (!props.newUser) {
+                return true;
+            }
+        }
+        return false;
+    };
 
-    // const handleFormValid = () => {
-    //     const valid = validateForm();
-    //     if (valid !== form()?.valid) {
-    //         setForm({ ...form(), valid: valid });
-    //     }
-    // };
+    const handleFormValid = () => {
+        const valid = validateForm();
+        if (valid !== form()?.valid) {
+            setForm({ ...form(), valid: valid });
+        }
+    };
 
-    // const handleFormSubmitting = (submitting) => {
-    //     setForm({ ...form(), submitting: submitting });
-    // };
+    const handleFormSubmitting = (submitting: boolean) => {
+        setForm({ ...form(), submitting: submitting });
+    };
 
     // const post = async (data: JsonAuthForm) => {
     //     const url = `${BENCHER_API_URL()}/v0/auth/${props.newUser ? "signup" : "login"
@@ -96,42 +94,42 @@ const AuthForm = (props: Props) => {
     //     return await axios(post_options(url, no_token, data));
     // };
 
-    const handleAuthFormSubmit = (event) => {
-        //     event.preventDefault();
-        //     handleFormSubmitting(true);
-        //     const invite_token = props.invite();
+    const handleSubmit = () => {
+        handleFormSubmitting(true);
+        // const invite_token = props.invite();
         //     let invite: string | null;
         //     if (validate_jwt(invite_token)) {
         //         invite = invite_token;
         //     } else {
         //         invite = null;
         //     }
+        let plan = undefined;
+        let invite = undefined;
 
-        //     let data: JsonAuthForm;
-        //     let form_email: Email;
-        //     if (props.newUser) {
-        //         const signup_form = form();
-        //         form_email = signup_form.email.value?.trim();
-        //         data = {
-        //             name: signup_form.username.value?.trim(),
-        //             slug: null,
-        //             email: form_email,
-        //             plan: plan(),
-        //             invite: invite,
-        //         };
-
-        //         if (!plan()) {
-        //             setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
-        //         }
-        //     } else {
-        //         const login_form = form();
-        //         form_email = login_form.email.value?.trim();
-        //         data = {
-        //             email: form_email,
-        //             plan: plan(),
-        //             invite: invite,
-        //         };
-        //     }
+        let auth_form: JsonAuthForm;
+        if (props.newUser) {
+            const signup_form = form();
+            const signup: JsonSignup = {
+                name: signup_form.username.value?.trim(),
+                email: signup_form.email.value?.trim(),
+            };
+            auth_form = signup;
+            if (!plan) {
+                // setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
+            }
+        } else {
+            const login_form = form();
+            const login: AuthLogin = {
+                email: login_form.email.value?.trim(),
+            };
+            auth_form = login;
+        }
+        if (plan) {
+            auth_form.plan = plan;
+        }
+        if (invite) {
+            auth_form.invite = invite;
+        }
 
         //     post(data)
         //         .then((_resp) => {
@@ -163,9 +161,9 @@ const AuthForm = (props: Props) => {
         //         });
     };
 
-    // createEffect(() => {
-    //     handleFormValid();
-    // });
+    createEffect(() => {
+        handleFormValid();
+    });
 
     return (
         <form class="box">
@@ -209,7 +207,7 @@ const AuthForm = (props: Props) => {
                     <button
                         class="button is-primary is-fullwidth"
                         disabled={!form()?.valid || form()?.submitting}
-                        onClick={handleAuthFormSubmit}
+                        onClick={(e) => { e.preventDefault(); handleSubmit(); }}
                     >
                         {props.newUser ? "Sign up" : "Log in"}
                     </button>
