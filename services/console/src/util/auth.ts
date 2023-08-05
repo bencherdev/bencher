@@ -1,0 +1,1 @@
+export const BENCHER_USER_KEY: string = "BENCHER_USER";

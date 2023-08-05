@@ -8,6 +8,9 @@ import { AUTH_FIELDS, TOKEN_PARAM } from "./auth";
 import { useSearchParams } from "../../util/url";
 import { validJwt } from "../../util/valid";
 import { createStore } from "solid-js/store";
+import { BENCHER_API_URL } from "../../util/ext";
+import { httpPost } from "../../util/http";
+import { BENCHER_USER_KEY } from "../../util/auth";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -80,46 +83,49 @@ const ConfirmForm = (_props: Props) => {
         });
     };
 
-    // const post = async () => {
-    //     const url = `${BENCHER_API_URL()}/v0/auth/confirm`;
-    //     const no_token = null;
-    //     const data = {
-    //         token: token(),
-    //     };
-    //     return await axios(post_options(url, no_token, data));
-    // };
+    const post = async () => {
+        const url = `${BENCHER_API_URL()}/v0/auth/confirm`;
+        const no_token = null;
+        const data = {
+            token: token(),
+        };
+        return await httpPost(url, no_token, data);
+    };
 
     const handleSubmit = () => {
         handleFormSubmitting(true);
 
-        //     post()
-        //         .then((resp) => {
-        //             handleFormSubmitting(false);
-        //             if (!props.handleUser(resp?.data)) {
-        //                 navigate(
-        //                     notification_path(
-        //                         pathname(),
-        //                         CONFIRM_FORWARD,
-        //                         [],
-        //                         NotifyKind.ERROR,
-        //                         "Invalid user. Please, try again.",
-        //                     ),
-        //                 );
-        //             }
-        //         })
-        //         .catch((error) => {
-        //             handleFormSubmitting(false);
-        //             console.error(error);
-        //             navigate(
-        //                 notification_path(
-        //                     pathname(),
-        //                     CONFIRM_FORWARD,
-        //                     [],
-        //                     NotifyKind.ERROR,
-        //                     "Failed to confirm token. Please, try again.",
-        //                 ),
-        //             );
-        //         });
+        post()
+            .then((resp) => {
+                handleFormSubmitting(false);
+                console.log(resp.data);
+                window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(resp.data));
+                window.location.assign("/console");
+                // if (!props.handleUser(resp?.data)) {
+                //     navigate(
+                //         notification_path(
+                //             pathname(),
+                //             CONFIRM_FORWARD,
+                //             [],
+                //             NotifyKind.ERROR,
+                //             "Invalid user. Please, try again.",
+                //         ),
+                //     );
+                // }
+            })
+            .catch((error) => {
+                handleFormSubmitting(false);
+                console.error(error);
+                // navigate(
+                //     notification_path(
+                //         pathname(),
+                //         CONFIRM_FORWARD,
+                //         [],
+                //         NotifyKind.ERROR,
+                //         "Failed to confirm token. Please, try again.",
+                //     ),
+                // );
+            });
     };
 
     const handleFormSubmitting = (submitting: boolean) => {
