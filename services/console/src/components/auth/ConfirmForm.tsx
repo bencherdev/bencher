@@ -1,5 +1,5 @@
 import bencher_valid_init from "bencher_valid";
-import { createEffect, createMemo, createResource, createSignal } from "solid-js";
+import { createEffect, createResource, createSignal } from "solid-js";
 
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
@@ -45,7 +45,7 @@ const ConfirmForm = (_props: Props) => {
     // const [searchParams, setSearchParams] = useSearchParams();
 
 
-    const token = createMemo(() => searchParams.params.get(TOKEN_PARAM)?.trim());
+    const token = () => searchParams().get(TOKEN_PARAM)?.trim();
 
     // if (!validate_plan_level(searchParams[PLAN_PARAM])) {
     //     setSearchParams({ [PLAN_PARAM]: null });
@@ -98,7 +98,6 @@ const ConfirmForm = (_props: Props) => {
         post()
             .then((resp) => {
                 handleFormSubmitting(false);
-                console.log(resp.data);
                 window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(resp.data));
                 window.location.assign("/console");
                 // if (!props.handleUser(resp?.data)) {
@@ -202,7 +201,7 @@ const ConfirmForm = (_props: Props) => {
         //     );
         // }
 
-        if (!validJwt(searchParams.params.get(TOKEN_PARAM))) {
+        if (!validJwt(searchParams().get(TOKEN_PARAM))) {
             setSearchParams({ [TOKEN_PARAM]: null });
         }
 
