@@ -7,6 +7,7 @@ import FieldKind from "../field/kind";
 import { AUTH_FIELDS, TOKEN_PARAM } from "./auth";
 import { useSearchParams } from "../../util/url";
 import { validJwt } from "../../util/valid";
+import { createStore } from "solid-js/store";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -32,7 +33,7 @@ import { validJwt } from "../../util/valid";
 export interface Props { }
 
 const ConfirmForm = (_props: Props) => {
-    const [_bencher_valid] = createResource(async () => await bencher_valid_init());
+    const [bencher_valid] = createResource(async () => await bencher_valid_init());
 
     const [searchParams, setSearchParams] = useSearchParams();
     // const navigate = useNavigate();
@@ -40,10 +41,8 @@ const ConfirmForm = (_props: Props) => {
     // const pathname = createMemo(() => location.pathname);
     // const [searchParams, setSearchParams] = useSearchParams();
 
-    if (!validJwt(searchParams.get(TOKEN_PARAM))) {
-        setSearchParams({ [TOKEN_PARAM]: null });
-    }
-    const token = createMemo(() => searchParams.get(TOKEN_PARAM)?.trim());
+
+    const token = createMemo(() => searchParams.params.get(TOKEN_PARAM)?.trim());
 
     // if (!validate_plan_level(searchParams[PLAN_PARAM])) {
     //     setSearchParams({ [PLAN_PARAM]: null });
@@ -59,7 +58,7 @@ const ConfirmForm = (_props: Props) => {
     // const title = "Confirm Token";
 
     const [submitted, setSubmitted] = createSignal();
-    const [form, setForm] = createSignal<{
+    const [form, setForm] = createStore<{
         token: {
             value: string,
             valid: null | boolean,
@@ -73,7 +72,7 @@ const ConfirmForm = (_props: Props) => {
 
     const handleField: FieldHandler = (key, value, valid) => {
         setForm({
-            ...form(),
+            ...form,
             [key]: {
                 value: value,
                 valid: valid,
@@ -124,7 +123,7 @@ const ConfirmForm = (_props: Props) => {
     };
 
     const handleFormSubmitting = (submitting: boolean) => {
-        setForm({ ...form(), submitting: submitting });
+        setForm({ ...form, submitting: submitting });
     };
 
     // const post_resend = async (data: {
@@ -177,6 +176,9 @@ const ConfirmForm = (_props: Props) => {
     // };
 
     createEffect(() => {
+        if (!bencher_valid()) {
+            return;
+        }
 
         // if (validate_jwt(props.user?.token)) {
         //     navigate(
@@ -194,14 +196,18 @@ const ConfirmForm = (_props: Props) => {
         //     );
         // }
 
-        const value = form()?.token?.value;
+        if (!validJwt(searchParams.params.get(TOKEN_PARAM))) {
+            setSearchParams({ [TOKEN_PARAM]: null });
+        }
+
+        const value = form.token?.value;
         if (value.length > 0) {
             setSearchParams({ [TOKEN_PARAM]: value });
         }
 
-        const valid = form()?.token?.valid;
-        if (typeof valid === "boolean" && valid !== form()?.valid) {
-            setForm({ ...form(), valid: valid });
+        const valid = form.token?.valid;
+        if (typeof valid === "boolean" && valid !== form.valid) {
+            setForm({ ...form, valid: valid });
         }
 
         const jwt = token();
@@ -218,8 +224,8 @@ const ConfirmForm = (_props: Props) => {
                 <Field
                     kind={FieldKind.INPUT}
                     fieldKey="token"
-                    value={form()?.token?.value}
-                    valid={form()?.token?.valid}
+                    value={form?.token?.value}
+                    valid={form?.token?.valid}
                     config={AUTH_FIELDS.token}
                     handleField={handleField}
                 />
@@ -228,7 +234,7 @@ const ConfirmForm = (_props: Props) => {
                     <p class="control">
                         <button
                             class="button is-primary is-fullwidth"
-                            disabled={!form()?.valid || form()?.submitting}
+                            disabled={!form?.valid || form?.submitting}
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleSubmit();

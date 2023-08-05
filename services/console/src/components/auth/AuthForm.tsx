@@ -8,6 +8,7 @@ import { useSearchParams } from "../../util/url";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { AUTH_FIELDS } from "./auth";
+import { createStore } from "solid-js/store";
 
 export interface Props {
     newUser: boolean;
@@ -32,11 +33,11 @@ const AuthForm = (props: Props) => {
     //         ? (searchParams[PLAN_PARAM].trim() as PlanLevel)
     //         : null,
     // );
-    const [form, setForm] = createSignal(initForm());
+    const [form, setForm] = createStore(initForm());
 
     const handleField: FieldHandler = (key, value, valid) => {
         setForm({
-            ...form(),
+            ...form,
             [key]: {
                 value: value,
                 valid: valid,
@@ -45,8 +46,8 @@ const AuthForm = (props: Props) => {
     };
 
     const validateForm = () => {
-        if (form()?.email?.valid) {
-            if (props.newUser && form()?.username?.valid && form()?.consent?.value) {
+        if (form?.email?.valid) {
+            if (props.newUser && form?.username?.valid && form?.consent?.value) {
                 return true;
             }
             if (!props.newUser) {
@@ -58,13 +59,13 @@ const AuthForm = (props: Props) => {
 
     const handleFormValid = () => {
         const valid = validateForm();
-        if (valid !== form()?.valid) {
-            setForm({ ...form(), valid: valid });
+        if (valid !== form?.valid) {
+            setForm({ ...form, valid: valid });
         }
     };
 
     const handleFormSubmitting = (submitting: boolean) => {
-        setForm({ ...form(), submitting: submitting });
+        setForm({ ...form, submitting: submitting });
     };
 
     const post = async (data: JsonAuthForm) => {
@@ -87,7 +88,7 @@ const AuthForm = (props: Props) => {
 
         let auth_form: JsonAuthForm;
         if (props.newUser) {
-            const signup_form = form();
+            const signup_form = form;
             const signup: JsonSignup = {
                 name: signup_form.username.value?.trim(),
                 email: signup_form.email.value?.trim(),
@@ -97,7 +98,7 @@ const AuthForm = (props: Props) => {
                 // setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
             }
         } else {
-            const login_form = form();
+            const login_form = form;
             const login: AuthLogin = {
                 email: login_form.email.value?.trim(),
             };
@@ -152,8 +153,8 @@ const AuthForm = (props: Props) => {
                     kind={FieldKind.INPUT}
                     fieldKey="username"
                     label="Name"
-                    value={form()?.username?.value}
-                    valid={form()?.username?.valid}
+                    value={form?.username?.value}
+                    valid={form?.username?.valid}
                     config={AUTH_FIELDS.username}
                     handleField={handleField}
                 />
@@ -163,20 +164,20 @@ const AuthForm = (props: Props) => {
                 kind={FieldKind.INPUT}
                 fieldKey="email"
                 label="Email"
-                value={form()?.email?.value}
-                valid={form()?.email?.valid}
+                value={form?.email?.value}
+                valid={form?.email?.valid}
                 config={AUTH_FIELDS.email}
                 handleField={handleField}
             />
 
             <br />
 
-            {props.newUser && form()?.username?.valid && form()?.email?.valid && (
+            {props.newUser && form?.username?.valid && form?.email?.valid && (
                 <Field
                     kind={FieldKind.CHECKBOX}
                     fieldKey="consent"
-                    value={form()?.consent?.value}
-                    valid={form()?.consent?.valid}
+                    value={form?.consent?.value}
+                    valid={form?.consent?.valid}
                     config={AUTH_FIELDS.consent}
                     handleField={handleField}
                 />
@@ -186,7 +187,7 @@ const AuthForm = (props: Props) => {
                 <p class="control">
                     <button
                         class="button is-primary is-fullwidth"
-                        disabled={!form()?.valid || form()?.submitting}
+                        disabled={!form?.valid || form?.submitting}
                         onClick={(e) => { e.preventDefault(); handleSubmit(); }}
                     >
                         {props.newUser ? "Sign up" : "Log in"}
