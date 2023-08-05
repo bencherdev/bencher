@@ -1,10 +1,11 @@
 import bencher_valid_init from "bencher_valid";
-import { createResource, createSignal } from "solid-js";
+import { createEffect, createResource, createSignal } from "solid-js";
 
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
-import { AUTH_FIELDS } from "./auth";
+import { AUTH_FIELDS, TOKEN_PARAM } from "./auth";
+import { useSearchParams } from "../../util/url";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -32,6 +33,7 @@ export interface Props { }
 const ConfirmForm = (_props: Props) => {
     const [_bencher_valid] = createResource(async () => await bencher_valid_init());
 
+    const [searchParams, setSearchParams] = useSearchParams();
     // const navigate = useNavigate();
     // const location = useLocation();
     // const pathname = createMemo(() => location.pathname);
@@ -168,41 +170,40 @@ const ConfirmForm = (_props: Props) => {
     //     setTimeout(() => setCoolDown(false), 30000);
     // };
 
-    // createEffect(() => {
-    //     pageTitle(title);
+    createEffect(() => {
 
-    //     if (validate_jwt(props.user?.token)) {
-    //         navigate(
-    //             notification_path(
-    //                 {
-    //                     free: "/console",
-    //                     team: "/console/billing",
-    //                     enterprise: "/console/billing",
-    //                 }[plan() ? plan() : "free"],
-    //                 [PLAN_PARAM],
-    //                 [],
-    //                 NotifyKind.OK,
-    //                 "Ahoy!",
-    //             ),
-    //         );
-    //     }
+        // if (validate_jwt(props.user?.token)) {
+        //     navigate(
+        //         notification_path(
+        //             {
+        //                 free: "/console",
+        //                 team: "/console/billing",
+        //                 enterprise: "/console/billing",
+        //             }[plan() ? plan() : "free"],
+        //             [PLAN_PARAM],
+        //             [],
+        //             NotifyKind.OK,
+        //             "Ahoy!",
+        //         ),
+        //     );
+        // }
 
-    //     const value = form()?.token?.value;
-    //     if (value.length > 0) {
-    //         setSearchParams({ [TOKEN_PARAM]: value });
-    //     }
+        const value = form()?.token?.value.trim();
+        if (value.length > 0) {
+            setSearchParams({ [TOKEN_PARAM]: value });
+        }
 
-    //     const valid = form()?.token?.valid;
-    //     if (valid !== form()?.valid) {
-    //         setForm({ ...form(), valid: valid });
-    //     }
+        // const valid = form()?.token?.valid;
+        // if (valid !== form()?.valid) {
+        //     setForm({ ...form(), valid: valid });
+        // }
 
-    //     const jwt = token();
-    //     if (validate_jwt(jwt) && jwt !== submitted()) {
-    //         setSubmitted(jwt);
-    //         handleFormSubmit();
-    //     }
-    // });
+        // const jwt = token();
+        // if (validate_jwt(jwt) && jwt !== submitted()) {
+        //     setSubmitted(jwt);
+        //     handleFormSubmit();
+        // }
+    });
 
     return (
         <>
