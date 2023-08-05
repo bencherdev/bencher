@@ -24,6 +24,15 @@ const position_key = (position: Position) => {
 	}
 };
 
+const position_skipped_key = (position: Position) => {
+	switch (position) {
+		case Position.Lower:
+			return "lower_boundary_skipped";
+		case Position.Upper:
+			return "upper_boundary_skipped";
+	}
+};
+
 const position_label = (position: Position) => {
 	switch (position) {
 		case Position.Lower:
@@ -111,12 +120,16 @@ const LinePlot = (props) => {
 					lower_boundary_skipped: boundary_skipped(
 						perf_metric.threshold?.statistic?.lower_boundary,
 						perf_metric.boundary?.lower_limit,
-					),
+					)
+						? perf_metric.metric?.value * 0.9
+						: null,
 					upper_limit: perf_metric.boundary?.upper_limit,
 					upper_boundary_skipped: boundary_skipped(
 						perf_metric.threshold?.statistic?.upper_boundary,
 						perf_metric.boundary?.upper_limit,
-					),
+					)
+						? perf_metric.metric?.value * 1.1
+						: null,
 					alert: perf_metric.alert,
 				});
 				metrics_found = true;
@@ -143,8 +156,6 @@ const LinePlot = (props) => {
 			);
 
 			// Lower Boundary
-			const LOWER_LIMIT = "lower_limit";
-			const LOWER = "Lower";
 			if (props.lower_boundary()) {
 				plot_arrays.push(
 					Plot.line(line_data, boundary_line(x_axis, Position.Lower, color)),
@@ -155,6 +166,9 @@ const LinePlot = (props) => {
 						boundary_dot(x_axis, Position.Lower, color, project_slug),
 					),
 				);
+				plot_arrays.push(
+					Plot.image(line_data, warning_image(x_axis, Position.Lower)),
+				);
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -164,8 +178,6 @@ const LinePlot = (props) => {
 			);
 
 			// Upper Boundary
-			const UPPER_LIMIT = "upper_limit";
-			const UPPER = "Upper";
 			if (props.upper_boundary()) {
 				plot_arrays.push(
 					Plot.line(line_data, boundary_line(x_axis, Position.Upper, color)),
@@ -176,12 +188,9 @@ const LinePlot = (props) => {
 						boundary_dot(x_axis, Position.Upper, color, project_slug),
 					),
 				);
-				// alert_arrays.push(
-				// 	Plot.image(
-				// 		line_data,
-				// 		warning_image(x_axis, Position.Upper, project_slug),
-				// 	),
-				// );
+				plot_arrays.push(
+					Plot.image(line_data, warning_image(x_axis, Position.Upper)),
+				);
 			}
 			alert_arrays.push(
 				Plot.image(
@@ -249,7 +258,7 @@ const LinePlot = (props) => {
 const boundary_skipped = (
 	boundary: undefined | Boundary,
 	limit: undefined | number,
-) => boundary !== undefined && limit === undefined;
+) => boundary && !limit;
 
 const to_title = (prefix, datum, suffix) =>
 	`${prefix}\n${datum.date_time?.toLocaleString(undefined, {
@@ -296,6 +305,33 @@ const boundary_dot = (x_axis, position: Position, color, project_slug) => {
 		// target: "_blank",
 	};
 };
+
+const warning_image = (x_axis, position: Position) => {
+	return {
+		x: x_axis,
+		y: position_skipped_key(position),
+		src: (datum) => WARNING_URL,
+		width: 18,
+		title: (datum) =>
+			is_skipped(position, datum) &&
+			"Boundary Limit was not calculated.\nThis can happen for a couple of reasons:\n- There is not enough data yet (n < 2) (Most Common)\n- All the metric values are the same (variance == 0)",
+	};
+};
+
+const skipped_offset = (position: Position, datum) => {
+	if (!is_skipped(position, datum)) {
+		return;
+	}
+	switch (position) {
+		case Position.Lower:
+			return datum.value * 0.9;
+		case Position.Upper:
+			return datum.value * 1.1;
+	}
+};
+const is_skipped = (position: Position, datum) =>
+	(position === Position.Lower && datum.lower_boundary_skipped) ||
+	(position === Position.Upper && datum.upper_boundary_skipped);
 
 const alert_image = (x_axis, position: Position, project_slug) => {
 	return {
