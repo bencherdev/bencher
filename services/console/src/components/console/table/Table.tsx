@@ -1,20 +1,9 @@
-// import { Link, useLocation, useNavigate } from "solid-app-router";
-import {
-	For,
-	Switch,
-	Match,
-	createMemo,
-	Show,
-	JSX,
-	Resource,
-	Accessor,
-	Component,
-} from "solid-js";
-import { pathname } from "../../../util/url";
-import { fmtNestedValue } from "../../../util/resource";
-// import { Row } from "../../config/types";
-// import { concat_values, nested_value } from "../../../site/util";
-// import { date_time_fmt } from "../../config/util";
+import { For, Switch, Match, Resource, Accessor } from "solid-js";
+import { pathname, useNavigate } from "../../../util/url";
+import { fmtNestedValue, fmtValues } from "../../../util/resource";
+import { Row } from "../../../config/types";
+import type { Slug } from "../../../types/bencher";
+import { fmtDateTime } from "../../../config/util";
 
 export enum TableState {
 	LOADING = 0,
@@ -26,7 +15,9 @@ export enum TableState {
 
 export interface TableConfig {
 	title: string;
+	name: string;
 	add?: AddButtonConfig;
+	row: RowConfig;
 }
 
 const Table = (props: {
@@ -44,42 +35,51 @@ const Table = (props: {
 
 			<Match when={props.state() === TableState.EMPTY}>
 				<div class="box">
-					<AddButton config={props.config?.add} />
+					{props.config?.add ? (
+						<AddButton config={props.config?.add} />
+					) : (
+						<p>🤷</p>
+					)}
 				</div>
 			</Match>
 
-			{/* <Match when={props.state() === TableState.OK}>
+			<Match when={props.state() === TableState.OK}>
 				{" "}
 				<div class="pricing-table is-horizontal">
-					<For each={props.table_data()}>
+					<For each={props.tableData()}>
 						{(datum, _i) => (
 							<div class="pricing-plan is-primary">
 								<div class="plan-header">
-									<RowHeader datum={datum} row={props.config?.row} />
+									<RowHeader config={props.config?.row} datum={datum} />
 								</div>
 								<div class="plan-items">
 									<For each={props.config?.row?.items}>
-										{(item, i) => (
+										{(item: ItemConfig, _i) => (
 											<div class="plan-item">
 												<p style="overflow-wrap:anywhere;">
 													<Switch fallback="-">
 														<Match when={item.kind === Row.TEXT}>
-															{datum[item.key]}
+															{item.key && datum[item.key]}
 														</Match>
 														<Match when={item.kind === Row.BOOL}>
-															{item.text}: {datum[item.key] ? "true" : "false"}
+															{item.text}:{" "}
+															{item.key && datum[item.key] ? "true" : "false"}
 														</Match>
 														<Match when={item.kind === Row.SELECT}>
-															{item.value?.options.reduce((field, option) => {
-																if (datum[item.key] === option.value) {
-																	return option.option;
-																} else {
-																	return field;
-																}
-															}, datum[item.key])}
+															{item.key &&
+																item.value?.options.reduce((field, option) => {
+																	if (
+																		item.key &&
+																		datum[item.key] === option.value
+																	) {
+																		return option.option;
+																	} else {
+																		return field;
+																	}
+																}, datum[item.key])}
 														</Match>
 														<Match when={item.kind === Row.NESTED_TEXT}>
-															{fmtNestedValue(datum, item.keys)}
+															{item.keys && fmtNestedValue(datum, item.keys)}
 														</Match>
 													</Switch>
 												</p>
@@ -88,18 +88,14 @@ const Table = (props: {
 									</For>
 								</div>
 								<div class="plan-footer">
-									<RowButton
-										config={props.config?.row?.button}
-										pathname={pathname}
-										datum={datum}
-									/>
+									<RowButton config={props.config?.row?.button} datum={datum} />
 								</div>
 							</div>
 						)}
 					</For>
 				</div>
-			</Match> */}
-			{/* 
+			</Match>
+
 			<Match when={props.state() === TableState.END}>
 				<div class="box">
 					<BackButton
@@ -108,11 +104,11 @@ const Table = (props: {
 						handlePage={props.handlePage}
 					/>
 				</div>
-			</Match> */}
+			</Match>
 
-			{/* <Match when={props.state() === TableState.ERR}>
+			<Match when={props.state() === TableState.ERR}>
 				<LogoutButton />
-			</Match> */}
+			</Match>
 		</Switch>
 	);
 };
@@ -139,58 +135,89 @@ const AddButton = (props: {
 	);
 };
 
-// const LogoutButton = (_props) => {
-// 	return (
-// 		<>
-// 			<div class="content has-text-centered">Expired session token</div>
-// 			<Link class="button is-primary is-fullwidth" href="/auth/logout">
-// 				Log out
-// 			</Link>
-// 		</>
-// 	);
-// };
+export interface RowConfig {
+	kind?: Row;
+	key: string;
+	keys?: string[][];
+	items: ItemConfig[];
+	button: RowsButtonConfig;
+}
 
-// const RowHeader = (props: { datum: any; row: any }) => {
-// 	if (props.row?.kind === Row.DATE_TIME) {
-// 		return date_time_fmt(props.datum[props.row?.key]);
-// 	}
-// 	const header = concat_values(
-// 		props.datum,
-// 		props.row?.key,
-// 		props.row?.keys,
-// 		" | ",
-// 	);
-// 	return <p style="overflow-wrap:anywhere;">{header}</p>;
-// };
+export interface ItemConfig {
+	kind: Row;
+	key?: string;
+	keys?: string[];
+	text?: string;
+	value?: { options: { option: string; value: string }[] };
+}
 
-// const RowButton = (props) => {
-// 	const navigate = useNavigate();
+export interface RowsButtonConfig {
+	text: string;
+	path: (pathname: string, datum: { [slug: string]: Slug }) => string;
+}
 
-// 	return (
-// 		<button
-// 			class="button is-fullwidth"
-// 			onClick={(e) => {
-// 				e.preventDefault();
-// 				navigate(props.config?.path?.(props.pathname?.(), props.datum));
-// 			}}
-// 		>
-// 			{props.config?.text}
-// 		</button>
-// 	);
-// };
+const RowHeader = (props: {
+	config: RowConfig;
+	datum: Record<string, any>;
+}) => {
+	if (props.config?.kind === Row.DATE_TIME && props.config?.key) {
+		return fmtDateTime(props.datum[props.config?.key]);
+	}
+	const header = fmtValues(
+		props.datum,
+		props.config?.key,
+		props.config?.keys,
+		" | ",
+	);
+	return <p style="overflow-wrap:anywhere;">{header}</p>;
+};
 
-// const BackButton = (props) => {
-// 	return (
-// 		<button
-// 			class="button is-primary is-fullwidth"
-// 			onClick={(e) => {
-// 				e.preventDefault();
-// 				props.handlePage(props.page() - 1);
-// 			}}
-// 		>
-// 			That's all the {props.name}. Go back.
-// 		</button>
-// 	);
-// };
+const RowButton = (props: {
+	config: RowsButtonConfig;
+	datum: Record<string, any>;
+}) => {
+	const navigate = useNavigate();
+
+	return (
+		<button
+			class="button is-fullwidth"
+			onClick={(e) => {
+				e.preventDefault();
+				navigate(props.config?.path?.(pathname(), props.datum));
+			}}
+		>
+			{props.config?.text}
+		</button>
+	);
+};
+
+const BackButton = (props: {
+	name: string;
+	page: Accessor<number>;
+	handlePage: (page: number) => void;
+}) => {
+	return (
+		<button
+			class="button is-primary is-fullwidth"
+			onClick={(e) => {
+				e.preventDefault();
+				props.handlePage(props.page() - 1);
+			}}
+		>
+			That's all the {props.name}. Go back.
+		</button>
+	);
+};
+
+const LogoutButton = () => {
+	return (
+		<>
+			<div class="content has-text-centered">Expired session token</div>
+			<a class="button is-primary is-fullwidth" href="/auth/logout">
+				Log out
+			</a>
+		</>
+	);
+};
 
 export default Table;

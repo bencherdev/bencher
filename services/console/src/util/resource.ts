@@ -1,7 +1,7 @@
 export const fmtValues = (
 	data: Record<string, any>,
-	key: string,
-	keys: string[][],
+	key: undefined | string,
+	keys: undefined | string[][],
 	separator: string,
 ): undefined | number | string => {
 	if (!data) {

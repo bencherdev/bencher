@@ -29,7 +29,7 @@ export const viewUuidPath = (
 export const toCapitalized = (text: string) =>
 	text.charAt(0).toUpperCase() + text.slice(1);
 
-export const date_time_fmt = (date_time: string) =>
+export const fmtDateTime = (date_time: string) =>
 	new Date(date_time).toLocaleString(undefined, {
 		weekday: "short",
 		day: "numeric",
