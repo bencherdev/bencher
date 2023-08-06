@@ -1,5 +1,6 @@
 import { validEmail, validJwt, validUserName } from "../../util/valid";
 
+export const PLAN_PARAM = "plan";
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";

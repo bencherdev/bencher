@@ -13,8 +13,9 @@ import FieldKind from "../field/kind";
 import { useNavigate, useSearchParams } from "../../util/url";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
-import { AUTH_FIELDS } from "./auth";
+import { AUTH_FIELDS, PLAN_PARAM } from "./auth";
 import { createStore } from "solid-js/store";
+import { validPlanLevel } from "../../util/valid";
 
 export interface Props {
 	newUser: boolean;
@@ -34,9 +35,9 @@ const AuthForm = (props: Props) => {
 	// const pathname = createMemo(() => location.pathname);
 	// const [searchParams, setSearchParams] = useSearchParams();
 
-	// if (!validate_plan_level(searchParams[PLAN_PARAM])) {
-	//     setSearchParams({ [PLAN_PARAM]: null });
-	// }
+	if (!validPlanLevel(searchParams[PLAN_PARAM])) {
+		setSearchParams({ [PLAN_PARAM]: null });
+	}
 	// const plan = createMemo(() =>
 	//     searchParams[PLAN_PARAM]
 	//         ? (searchParams[PLAN_PARAM].trim() as PlanLevel)
