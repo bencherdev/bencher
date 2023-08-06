@@ -5,6 +5,9 @@ import {
 	createMemo,
 	createEffect,
 } from "solid-js";
+import Pagination, { PaginationSize } from "../../site/Pagination";
+import { useSearchParams } from "../../../util/url";
+import { useConsole } from "../Console";
 // import Table, { TableState } from "./Table";
 
 // import TableHeader from "./TableHeader";
@@ -30,7 +33,8 @@ const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
 
 const TablePanel = (props) => {
-	// const [searchParams, setSearchParams] = useSearchParams();
+	const bencherConsole = useConsole();
+	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 
 	// if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
@@ -40,62 +44,63 @@ const TablePanel = (props) => {
 	// 	setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
 	// }
 
-	// const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
-	// const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
+	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
+	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
 
-	// const pagination_query = createMemo(() => {
-	// 	return {
-	// 		per_page: per_page(),
-	// 		page: page(),
-	// 	};
-	// });
+	const pagination_query = createMemo(() => {
+		return {
+			per_page: per_page(),
+			page: page(),
+		};
+	});
 
-	// const [refresh, setRefresh] = createSignal(0);
+	const [refresh, setRefresh] = createSignal(0);
 	// const handleRefresh = () => {
 	// 	setRefresh(refresh() + 1);
 	// };
-	// const fetcher = createMemo(() => {
-	// 	return {
-	// 		refresh: refresh(),
-	// 		pagination_query: pagination_query(),
-	// 		token: props.user?.token,
-	// 	};
-	// });
+	const fetcher = createMemo(() => {
+		return {
+			refresh: refresh(),
+			pagination_query: pagination_query(),
+			token: props.user?.token,
+		};
+	});
 
 	// const [state, setState] = createSignal(TableState.LOADING);
-	// const getLs = async (fetcher) => {
-	// 	const EMPTY_ARRAY = [];
-	// 	if (!validate_jwt(fetcher.token)) {
-	// 		return EMPTY_ARRAY;
-	// 	}
-	// 	const search_params = new URLSearchParams();
-	// 	for (const [key, value] of Object.entries(fetcher.pagination_query)) {
-	// 		if (value) {
-	// 			search_params.set(key, value);
-	// 		}
-	// 	}
-	// 	const url = `${props.config?.table?.url(
-	// 		props.path_params,
-	// 	)}?${search_params.toString()}`;
-	// 	return await axios(get_options(url, fetcher.token))
-	// 		.then((resp) => {
-	// 			const data = resp?.data;
-	// 			setState(
-	// 				data.length === 0
-	// 					? page() === 1
-	// 						? TableState.EMPTY
-	// 						: TableState.END
-	// 					: TableState.OK,
-	// 			);
-	// 			return data;
-	// 		})
-	// 		.catch((error) => {
-	// 			setState(TableState.ERR);
-	// 			console.error(error);
-	// 			return EMPTY_ARRAY;
-	// 		});
-	// };
-	// const [table_data] = createResource(fetcher, getLs);
+	const getLs = async (fetcher) => {
+		const EMPTY_ARRAY = [];
+		// if (!validate_jwt(fetcher.token)) {
+		// 	return EMPTY_ARRAY;
+		// }
+		// const search_params = new URLSearchParams();
+		// for (const [key, value] of Object.entries(fetcher.pagination_query)) {
+		// 	if (value) {
+		// 		search_params.set(key, value);
+		// 	}
+		// }
+		// const url = `${props.config?.table?.url(
+		// 	props.path_params,
+		// )}?${search_params.toString()}`;
+		// return await axios(get_options(url, fetcher.token))
+		// 	.then((resp) => {
+		// 		const data = resp?.data;
+		// 		setState(
+		// 			data.length === 0
+		// 				? page() === 1
+		// 					? TableState.EMPTY
+		// 					: TableState.END
+		// 				: TableState.OK,
+		// 		);
+		// 		return data;
+		// 	})
+		// 	.catch((error) => {
+		// 		setState(TableState.ERR);
+		// 		console.error(error);
+		// 		return EMPTY_ARRAY;
+		// 	});
+		return EMPTY_ARRAY;
+	};
+	const [tableData] = createResource(fetcher, getLs);
 
 	// createEffect(() => {
 	// 	if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
@@ -108,13 +113,13 @@ const TablePanel = (props) => {
 	// 	}
 	// });
 
-	// const handlePage = (page: number) => {
-	// 	if (validate_u32(page.toString())) {
-	// 		setSearchParams({ [PAGE_PARAM]: page });
-	// 	}
-	// };
+	const handlePage = (page: number) => {
+		// if (validate_u32(page.toString())) {
+		// 	setSearchParams({ [PAGE_PARAM]: page });
+		// }
+	};
 
-	// const redirect = createMemo(() => props.config.redirect?.(table_data()));
+	// const redirect = createMemo(() => props.config.redirect?.(tableData()));
 
 	// createEffect(() => {
 	// 	if (redirect()) {
@@ -138,20 +143,20 @@ const TablePanel = (props) => {
 			/>
 			<Table
 				config={props.config?.table}
-				table_data={table_data}
+				tableData={tableData}
 				state={state}
 				page={page}
 				handlePage={handlePage}
 			/> */}
 			<section class="section">
 				<div class="container">
-					{/* <Pagination
+					<Pagination
 						size={PaginationSize.REGULAR}
-						data_len={table_data()?.length}
+						data_len={tableData()?.length}
 						per_page={per_page()}
 						page={page()}
 						handlePage={handlePage}
-					/> */}
+					/>
 				</div>
 			</section>
 		</>

@@ -1,11 +1,10 @@
 ---
 import ConsoleLayout from "../../../layouts/ConsoleLayout.astro";
+import TablePanel from "../../../components/console/table/TablePanel";
 
 const title = "Organizations";
 ---
 
 <ConsoleLayout title={title}>
-  <div class="container">
-    <h1>{title}</h1>
-  </div>
+  <TablePanel client:only />
 </ConsoleLayout>
