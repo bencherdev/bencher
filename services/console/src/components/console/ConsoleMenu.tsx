@@ -1,6 +1,6 @@
 import { Match, Show, Switch, createMemo, createResource } from "solid-js";
 import { organizationSlug, projectSlug, useNavigate } from "../../util/url";
-import { getUserRaw } from "../../util/auth";
+import { authUser } from "../../util/auth";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpGet } from "../../util/http";
 import type { JsonAlertStats } from "../../types/bencher";
@@ -32,7 +32,6 @@ enum UserSection {
 
 const ConsoleMenu = () => {
 	const navigate = useNavigate();
-	const user = getUserRaw();
 
 	const getAlerts = async (
 		project_slug: null | string,
@@ -44,7 +43,7 @@ const ConsoleMenu = () => {
 			return DEFAULT_ALERT_STATS;
 		}
 		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/stats/alerts`;
-		return await httpGet(url, user?.token)
+		return await httpGet(url, authUser()?.token)
 			.then((resp) => resp.data)
 			.catch((error) => {
 				console.error(error);
@@ -59,7 +58,7 @@ const ConsoleMenu = () => {
 	const projectsPath = (section: ProjectSection) =>
 		`/console/projects/${projectSlug()}/${section}`;
 	const usersPath = (section: UserSection) =>
-		`/console/users/${user?.user?.slug}/${section}`;
+		`/console/users/${authUser()?.user?.slug}/${section}`;
 
 	return (
 		<aside class="menu">

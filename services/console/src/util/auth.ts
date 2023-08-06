@@ -1,3 +1,4 @@
+import { createMemo, createSignal } from "solid-js";
 import type { JsonAuthUser } from "../types/bencher";
 import { validUser } from "./valid";
 
@@ -44,3 +45,14 @@ export const getUserRaw = (): JsonAuthUser => {
 export const removeUser = () => {
 	window.localStorage.removeItem(BENCHER_USER_KEY);
 };
+
+const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
+setInterval(() => {
+	const usr = authUsr();
+	const userRaw = getUserRaw();
+	if (usr !== userRaw) {
+		setAuthUsr(userRaw);
+	}
+}, 100);
+
+export const authUser = authUsr;

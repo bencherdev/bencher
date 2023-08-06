@@ -9,9 +9,9 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
-export const httpGet = async (url: string, token: null | string) =>
+export const httpGet = async (url: string, token: undefined | null | string) =>
 	axios(getOptions(url, token));
-export const getOptions = (url: string, token: null | string) => {
+export const getOptions = (url: string, token: undefined | null | string) => {
 	return {
 		url: url,
 		method: HttpMethod.GET,
@@ -19,31 +19,53 @@ export const getOptions = (url: string, token: null | string) => {
 	};
 };
 
-export const httpPost = async (url: string, token: null | string, data: {}) =>
-	axios(postOptions(url, token, data));
-export const postOptions = (url: string, token: null | string, data: {}) => {
+export const httpPost = async (
+	url: string,
+	token: undefined | null | string,
+	data: {},
+) => axios(postOptions(url, token, data));
+export const postOptions = (
+	url: string,
+	token: undefined | null | string,
+	data: {},
+) => {
 	return dataOptions(url, HttpMethod.POST, token, data);
 };
 
-export const httpPut = async (url: string, token: null | string, data: {}) =>
-	axios(putOptions(url, token, data));
-export const putOptions = (url: string, token: null | string, data: {}) => {
+export const httpPut = async (
+	url: string,
+	token: undefined | null | string,
+	data: {},
+) => axios(putOptions(url, token, data));
+export const putOptions = (
+	url: string,
+	token: undefined | null | string,
+	data: {},
+) => {
 	return dataOptions(url, HttpMethod.PUT, token, data);
 };
 
-export const httpPatch = async (url: string, token: null | string, data: {}) =>
-	axios(pathOptions(url, token, data));
+export const httpPatch = async (
+	url: string,
+	token: undefined | null | string,
+	data: {},
+) => axios(pathOptions(url, token, data));
 export const pathOptions = (
 	url: string,
-	token: null | string,
+	token: undefined | null | string,
 	data: Record<string, any>,
 ) => {
 	return dataOptions(url, HttpMethod.PATCH, token, data);
 };
 
-export const httpDelete = async (url: string, token: null | string) =>
-	axios(deleteOptions(url, token));
-export const deleteOptions = (url: string, token: null | string) => {
+export const httpDelete = async (
+	url: string,
+	token: undefined | null | string,
+) => axios(deleteOptions(url, token));
+export const deleteOptions = (
+	url: string,
+	token: undefined | null | string,
+) => {
 	return {
 		url: url,
 		method: HttpMethod.DELETE,
@@ -55,7 +77,7 @@ const HEADERS_CONTENT_TYPE = {
 	"Content-Type": "application/json",
 };
 
-const headers = (token: null | string) => {
+const headers = (token: undefined | null | string) => {
 	if (token && validJwt(token)) {
 		return {
 			...HEADERS_CONTENT_TYPE,
@@ -69,7 +91,7 @@ const headers = (token: null | string) => {
 export const dataOptions = (
 	url: string,
 	method: HttpMethod,
-	token: null | string,
+	token: undefined | null | string,
 	data: {},
 ) => {
 	return {
