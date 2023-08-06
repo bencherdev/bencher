@@ -1,0 +1,26 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import ConsoleMenu from "../components/console/ConsoleMenu";
+
+interface Props {
+  title: string;
+  menu: any;
+}
+
+const { title } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <section class="section">
+    <div class="container">
+      <div class="columns is-reverse-mobile">
+        <div class="column is-narrow">
+          <ConsoleMenu client:only />
+        </div>
+        <div class="column is-10">
+          <slot />
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
