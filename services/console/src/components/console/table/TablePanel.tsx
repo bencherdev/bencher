@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
 	createSignal,
 	createResource,
@@ -7,7 +6,6 @@ import {
 } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import { useSearchParams } from "../../../util/url";
-import { useConsole } from "../Console";
 import { validJwt, validU32 } from "../../../util/valid";
 import consoleConfig from "../../../config/console";
 import { Operation, type Resource } from "../../../config/types";

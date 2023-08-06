@@ -8,6 +8,7 @@ import {
 	JSX,
 	Resource,
 	Accessor,
+	Component,
 } from "solid-js";
 import { pathname } from "../../../util/url";
 import { fmtNestedValue } from "../../../util/resource";
@@ -25,6 +26,7 @@ export enum TableState {
 
 export interface TableConfig {
 	title: string;
+	add?: AddButtonConfig;
 }
 
 const Table = (props: {
@@ -40,11 +42,11 @@ const Table = (props: {
 				<></>
 			</Match>
 
-			{/* <Match when={props.state() === TableState.EMPTY}>
+			<Match when={props.state() === TableState.EMPTY}>
 				<div class="box">
-					<AddButton pathname={pathname()} add={props.config?.add} />
+					<AddButton config={props.config?.add} />
 				</div>
-			</Match> */}
+			</Match>
 
 			{/* <Match when={props.state() === TableState.OK}>
 				{" "}
@@ -115,19 +117,27 @@ const Table = (props: {
 	);
 };
 
-// const AddButton = (props) => {
-// 	return (
-// 		<>
-// 			<div class="content has-text-centered">{props.add?.prefix}</div>
-// 			<Link
-// 				class="button is-primary is-fullwidth"
-// 				href={props.add?.path?.(props.pathname?.())}
-// 			>
-// 				{props.add?.text}
-// 			</Link>
-// 		</>
-// 	);
-// };
+export interface AddButtonConfig {
+	prefix: Element;
+	path: (pathname: string) => string;
+	text: string;
+}
+
+const AddButton = (props: {
+	config: AddButtonConfig;
+}) => {
+	return (
+		<>
+			<div class="content has-text-centered">{props.config?.prefix}</div>
+			<a
+				class="button is-primary is-fullwidth"
+				href={props.config?.path?.(pathname())}
+			>
+				{props.config?.text}
+			</a>
+		</>
+	);
+};
 
 // const LogoutButton = (_props) => {
 // 	return (
