@@ -50,7 +50,7 @@ const [authUsr, setAuthUsr] = createSignal<JsonAuthUser>(getUserRaw());
 setInterval(() => {
 	const usr = authUsr();
 	const userRaw = getUserRaw();
-	if (usr !== userRaw) {
+	if (usr.toString() !== userRaw.toString()) {
 		setAuthUsr(userRaw);
 	}
 }, 100);

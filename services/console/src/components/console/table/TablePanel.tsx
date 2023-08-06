@@ -9,8 +9,11 @@ import Pagination, { PaginationSize } from "../../site/Pagination";
 import { useSearchParams } from "../../../util/url";
 import { useConsole } from "../Console";
 import { validJwt } from "../../../util/valid";
-import type { Resource } from "../../../config/console";
-import consoleConfig, { Operation } from "../../../config/console";
+import consoleConfig from "../../../config/console";
+import { Operation, type Resource } from "../../../config/types";
+import { httpGet } from "../../../util/http";
+import { authUser } from "../../../util/auth";
+import bencher_valid_init from "bencher_valid";
 // import Table, { TableState } from "./Table";
 
 // import TableHeader from "./TableHeader";
@@ -41,7 +44,9 @@ interface Props {
 }
 
 const TablePanel = (props: Props) => {
-	const bencherConsole = useConsole();
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 
@@ -72,15 +77,22 @@ const TablePanel = (props: Props) => {
 	// };
 	const fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			refresh: refresh(),
 			pagination_query: pagination_query(),
-			token: bencherConsole?.()?.user()?.token,
+			token: authUser()?.token,
 		};
 	});
 
 	// const [state, setState] = createSignal(TableState.LOADING);
 	const getLs = async (fetcher) => {
 		const EMPTY_ARRAY = [];
+		console.log("start");
+		if (!bencher_valid()) {
+			return EMPTY_ARRAY;
+		}
+		console.log("here");
+
 		if (!validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
@@ -93,24 +105,25 @@ const TablePanel = (props: Props) => {
 		const url = `${config()?.table?.url(
 			props.pathParams,
 		)}?${urlSearchParams.toString()}`;
-		// return await axios(get_options(url, fetcher.token))
-		// 	.then((resp) => {
-		// 		const data = resp?.data;
-		// 		setState(
-		// 			data.length === 0
-		// 				? page() === 1
-		// 					? TableState.EMPTY
-		// 					: TableState.END
-		// 				: TableState.OK,
-		// 		);
-		// 		return data;
-		// 	})
-		// 	.catch((error) => {
-		// 		setState(TableState.ERR);
-		// 		console.error(error);
-		// 		return EMPTY_ARRAY;
-		// 	});
-		return EMPTY_ARRAY;
+		// return EMPTY_ARRAY;
+		return await httpGet(url, fetcher.token)
+			.then((resp) => {
+				const data = resp?.data;
+				console.log(data);
+				// setState(
+				// 	data.length === 0
+				// 		? page() === 1
+				// 			? TableState.EMPTY
+				// 			: TableState.END
+				// 		: TableState.OK,
+				// );
+				return data;
+			})
+			.catch((error) => {
+				// setState(TableState.ERR);
+				console.error(error);
+				return EMPTY_ARRAY;
+			});
 	};
 	const [tableData] = createResource(fetcher, getLs);
 

@@ -1,18 +1,8 @@
-// import FieldKind from "../../../field/kind";
-// import {
-// 	BENCHER_API_URL,
-// 	OrganizationPermission,
-// 	is_allowed_organization,
-// } from "../../../site/util";
-// import { Button, Card, Display, Operation, Row } from "../types";
-// import { parentPath, viewSlugPath } from "../util";
-// import ORGANIZATION_FIELDS from "./fields/organization";
-
 import type { Slug } from "../../types/bencher";
 import { BENCHER_API_URL } from "../../util/ext";
-import { Operation } from "../console";
 import { Button, Row } from "../types";
 import { viewSlugPath } from "../util";
+import { Operation } from "../types";
 
 const organizationsConfig = {
 	[Operation.LIST]: {
