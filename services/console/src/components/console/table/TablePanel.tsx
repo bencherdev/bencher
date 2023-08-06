@@ -14,6 +14,7 @@ import { Operation, type Resource } from "../../../config/types";
 import { httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
 import bencher_valid_init from "bencher_valid";
+import TableHeader, { TableHeaderConfig } from "./TableHeader";
 // import Table, { TableState } from "./Table";
 
 // import TableHeader from "./TableHeader";
@@ -43,6 +44,10 @@ interface Props {
 	resource: Resource;
 }
 
+interface TableConfig {
+	header: TableHeaderConfig;
+}
+
 const TablePanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
@@ -50,7 +55,7 @@ const TablePanel = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 
-	const config = createMemo(
+	const config = createMemo<TableConfig>(
 		() => consoleConfig[props.resource]?.[Operation.LIST],
 	);
 
@@ -71,21 +76,20 @@ const TablePanel = (props: Props) => {
 		};
 	});
 
-	const [refresh, setRefresh] = createSignal(0);
+	// const [refresh, setRefresh] = createSignal(0);
 	// const handleRefresh = () => {
 	// 	setRefresh(refresh() + 1);
 	// };
 	const fetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			refresh: refresh(),
 			pagination_query: pagination_query(),
 			token: authUser()?.token,
 		};
 	});
 
 	// const [state, setState] = createSignal(TableState.LOADING);
-	const getLs = async (fetcher) => {
+	const getData = async (fetcher) => {
 		const EMPTY_ARRAY = [];
 		console.log("start");
 		if (!bencher_valid()) {
@@ -125,7 +129,7 @@ const TablePanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [tableData] = createResource(fetcher, getLs);
+	const [tableData, { refetch }] = createResource(fetcher, getData);
 
 	// createEffect(() => {
 	// 	if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
@@ -160,13 +164,12 @@ const TablePanel = (props: Props) => {
 
 	return (
 		<>
-			{/* <TableHeader
-				config={props.config?.header}
-				path_params={props.path_params}
-				refresh={refresh}
-				handleRefresh={handleRefresh}
+			<TableHeader
+				pathParams={props.pathParams}
+				config={config()?.header}
+				handleRefresh={refetch}
 			/>
-			<Table
+			{/* <Table
 				config={props.config?.table}
 				tableData={tableData}
 				state={state}
