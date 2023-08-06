@@ -1,4 +1,9 @@
 import { Match, Show, Switch, createMemo, createResource } from "solid-js";
+import { organizationSlug, projectSlug, useNavigate } from "../../util/url";
+import { getUserRaw } from "../../util/auth";
+import { BENCHER_API_URL } from "../../util/ext";
+import { httpGet } from "../../util/http";
+import type { JsonAlertStats } from "../../types/bencher";
 
 enum OrganizationSection {
 	PROJECTS = "projects",
@@ -25,49 +30,44 @@ enum UserSection {
 	HELP = "help",
 }
 
-const ConsoleMenu = (props) => {
-	// const navigate = useNavigate();
+const ConsoleMenu = () => {
+	const navigate = useNavigate();
+	const user = getUserRaw();
 
-	// const getOne = async (project_slug) => {
-	// 	const EMPTY_OBJECT = {};
-	// 	const token = props.user?.token;
-	// 	if (!validate_jwt(token)) {
-	// 		return EMPTY_OBJECT;
-	// 	}
-	// 	const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/stats/alerts`;
-	// 	return await axios(get_options(url, token))
-	// 		.then((resp) => resp.data)
-	// 		.catch((error) => {
-	// 			console.error(error);
-	// 			return EMPTY_OBJECT;
-	// 		});
-	// };
-	// const [alert_stats] = createResource(props.project_slug, getOne);
-	// const active = createMemo(() => alert_stats()?.active);
-
-	const organizationsPath = (section: OrganizationSection) => {
-		// return `/console/organizations/${props.organization_slug()}/${section}`;
-		return "";
+	const getAlerts = async (
+		project_slug: null | string,
+	): Promise<JsonAlertStats> => {
+		const DEFAULT_ALERT_STATS = {
+			active: 0,
+		};
+		if (!project_slug) {
+			return DEFAULT_ALERT_STATS;
+		}
+		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/stats/alerts`;
+		return await httpGet(url, user?.token)
+			.then((resp) => resp.data)
+			.catch((error) => {
+				console.error(error);
+				return DEFAULT_ALERT_STATS;
+			});
 	};
+	const [alert_stats] = createResource(projectSlug, getAlerts);
+	const active_alerts = createMemo(() => alert_stats()?.active);
 
-	const projectsPath = (section: ProjectSection) => {
-		// return `/console/projects/${props.project_slug()}/${section}`;
-		return "";
-	};
-
-	const usersPath = (section: UserSection) => {
-		// return `/console/users/${props.user?.user?.slug}/${section}`;
-		return "";
-	};
+	const organizationsPath = (section: OrganizationSection) =>
+		`/console/organizations/${organizationSlug()}/${section}`;
+	const projectsPath = (section: ProjectSection) =>
+		`/console/projects/${projectSlug()}/${section}`;
+	const usersPath = (section: UserSection) =>
+		`/console/users/${user?.user?.slug}/${section}`;
 
 	return (
 		<aside class="menu">
 			<Switch fallback={<></>}>
 				<Match
 					when={
-						// typeof props.organization_slug() === "string" &&
-						// typeof props.project_slug() !== "string"
-						false
+						typeof organizationSlug() === "string" &&
+						typeof projectSlug() !== "string"
 					}
 				>
 					<>
@@ -104,12 +104,7 @@ const ConsoleMenu = (props) => {
 						</ul>
 					</>
 				</Match>
-				<Match
-					when={
-						// typeof props.project_slug() === "string"
-						false
-					}
-				>
+				<Match when={typeof projectSlug() === "string"}>
 					<>
 						<div class="menu-label">
 							<button
@@ -117,7 +112,7 @@ const ConsoleMenu = (props) => {
 								title="View Project Perf"
 								onClick={(e) => {
 									e.preventDefault();
-									// navigate(projectsPath(ProjectSection.PERF));
+									navigate(projectsPath(ProjectSection.PERF));
 								}}
 							>
 								<span class="icon">
@@ -152,13 +147,13 @@ const ConsoleMenu = (props) => {
 									<nav class="level">
 										<div class="level-left">
 											<div class="level-item">Alerts</div>
-											{/* <Show when={active()} fallback={<></>}>
+											<Show when={active_alerts()} fallback={<></>}>
 												<div class="level-item">
 													<button class="button is-primary is-small is-rounded">
-														{active()}
+														{active_alerts()}
 													</button>
 												</div>
-											</Show> */}
+											</Show>
 										</div>
 									</nav>
 								</a>

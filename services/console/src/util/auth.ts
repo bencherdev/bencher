@@ -24,17 +24,21 @@ export const setUser = (user: JsonAuthUser) => {
 };
 
 export const getUser = (): JsonAuthUser => {
-	const user_str = window.localStorage.getItem(BENCHER_USER_KEY);
-	if (!user_str) {
-		return defaultUser;
-	}
-	const user = JSON.parse(user_str);
+	const user = getUserRaw();
 	if (validUser(user)) {
 		return user;
 	} else {
 		console.error("Invalid user", user);
 		return defaultUser;
 	}
+};
+
+export const getUserRaw = (): JsonAuthUser => {
+	const user_str = window.localStorage.getItem(BENCHER_USER_KEY);
+	if (!user_str) {
+		return defaultUser;
+	}
+	return JSON.parse(user_str);
 };
 
 export const removeUser = () => {
