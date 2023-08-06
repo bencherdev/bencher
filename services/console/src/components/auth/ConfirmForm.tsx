@@ -4,9 +4,9 @@ import { createEffect, createResource, createSignal } from "solid-js";
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
-import { AUTH_FIELDS, TOKEN_PARAM } from "./auth";
+import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
 import { useNavigate, useSearchParams } from "../../util/url";
-import { validJwt } from "../../util/valid";
+import { validEmail, validJwt, validPlanLevel } from "../../util/valid";
 import { createStore } from "solid-js/store";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
@@ -208,15 +208,21 @@ const ConfirmForm = (_props: Props) => {
 		if (!validJwt(searchParams[TOKEN_PARAM])) {
 			setSearchParams({ [TOKEN_PARAM]: null });
 		}
-
-		const value = form.token?.value;
-		if (value.length > 0) {
-			setSearchParams({ [TOKEN_PARAM]: value });
+		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
+			setSearchParams({ [PLAN_PARAM]: null });
+		}
+		if (!validEmail(searchParams[EMAIL_PARAM])) {
+			setSearchParams({ [EMAIL_PARAM]: null });
 		}
 
-		const valid = form.token?.valid;
-		if (typeof valid === "boolean" && valid !== form.valid) {
-			setForm({ ...form, valid: valid });
+		const token_value = form.token?.value;
+		if (validJwt(token_value)) {
+			setSearchParams({ [TOKEN_PARAM]: token_value });
+		}
+
+		const token_valid = form.token?.valid;
+		if (typeof token_valid === "boolean" && token_valid !== form.valid) {
+			setForm({ ...form, valid: token_valid });
 		}
 
 		const jwt = token();

@@ -37,8 +37,8 @@ export const validUserName = (user_name: string): boolean =>
 export const validSlug = (slug: string): boolean =>
 	validString(slug, is_valid_slug);
 
-export const validEmail = (email: string): boolean =>
-	validString(email, is_valid_email);
+export const validEmail = (email: undefined | null | string): boolean =>
+	validOptionString(email, is_valid_email);
 
 export const validJwt = (token: undefined | null | string): boolean =>
 	validOptionString(token, is_valid_jwt);
