@@ -1,10 +1,11 @@
 ---
 import ConsoleLayout from "../../../layouts/ConsoleLayout.astro";
 import TablePanel from "../../../components/console/table/TablePanel";
+import { Resource } from "../../../config/console";
 
 const title = "Organizations";
 ---
 
 <ConsoleLayout title={title}>
-  <TablePanel client:only />
+  <TablePanel client:only pathParams={{}} resource={Resource.ORGANIZATIONS} />
 </ConsoleLayout>

@@ -8,6 +8,9 @@ import {
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import { useSearchParams } from "../../../util/url";
 import { useConsole } from "../Console";
+import { validJwt } from "../../../util/valid";
+import type { Resource } from "../../../config/console";
+import consoleConfig, { Operation } from "../../../config/console";
 // import Table, { TableState } from "./Table";
 
 // import TableHeader from "./TableHeader";
@@ -32,10 +35,19 @@ const PAGE_PARAM = "page";
 const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
 
-const TablePanel = (props) => {
+interface Props {
+	pathParams: Record<string, string>;
+	resource: Resource;
+}
+
+const TablePanel = (props: Props) => {
 	const bencherConsole = useConsole();
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
+
+	const config = createMemo(
+		() => consoleConfig[props.resource]?.[Operation.LIST],
+	);
 
 	// if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
 	// 	setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
@@ -62,25 +74,25 @@ const TablePanel = (props) => {
 		return {
 			refresh: refresh(),
 			pagination_query: pagination_query(),
-			token: props.user?.token,
+			token: bencherConsole?.()?.user()?.token,
 		};
 	});
 
 	// const [state, setState] = createSignal(TableState.LOADING);
 	const getLs = async (fetcher) => {
 		const EMPTY_ARRAY = [];
-		// if (!validate_jwt(fetcher.token)) {
-		// 	return EMPTY_ARRAY;
-		// }
-		// const search_params = new URLSearchParams();
-		// for (const [key, value] of Object.entries(fetcher.pagination_query)) {
-		// 	if (value) {
-		// 		search_params.set(key, value);
-		// 	}
-		// }
-		// const url = `${props.config?.table?.url(
-		// 	props.path_params,
-		// )}?${search_params.toString()}`;
+		if (!validJwt(fetcher.token)) {
+			return EMPTY_ARRAY;
+		}
+		const urlSearchParams = new URLSearchParams();
+		for (const [key, value] of Object.entries(fetcher.pagination_query)) {
+			if (value) {
+				urlSearchParams.set(key, value.toString());
+			}
+		}
+		const url = `${config()?.table?.url(
+			props.pathParams,
+		)}?${urlSearchParams.toString()}`;
 		// return await axios(get_options(url, fetcher.token))
 		// 	.then((resp) => {
 		// 		const data = resp?.data;
