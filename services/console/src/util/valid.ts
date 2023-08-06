@@ -52,3 +52,14 @@ export const validUser = (user: JsonAuthUser): boolean =>
 
 export const validPlanLevel = (planLevel: undefined | null | string): boolean =>
 	validOptionString(planLevel, is_valid_plan_level);
+
+export const validU32 = (input: undefined | number | string) => {
+	if (!input) {
+		return false;
+	}
+	if (typeof input === "string" && input.length === 0) {
+		return false;
+	}
+	const num = Number(input);
+	return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
+};

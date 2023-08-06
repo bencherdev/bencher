@@ -8,13 +8,14 @@ import {
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import { useSearchParams } from "../../../util/url";
 import { useConsole } from "../Console";
-import { validJwt } from "../../../util/valid";
+import { validJwt, validU32 } from "../../../util/valid";
 import consoleConfig from "../../../config/console";
 import { Operation, type Resource } from "../../../config/types";
 import { httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
 import bencher_valid_init from "bencher_valid";
 import TableHeader, { TableHeaderConfig } from "./TableHeader";
+import Table, { TableConfig, TableState } from "./Table";
 // import Table, { TableState } from "./Table";
 
 // import TableHeader from "./TableHeader";
@@ -44,8 +45,9 @@ interface Props {
 	resource: Resource;
 }
 
-interface TableConfig {
+interface TablePanelConfig {
 	header: TableHeaderConfig;
+	table: TableConfig;
 }
 
 const TablePanel = (props: Props) => {
@@ -55,16 +57,16 @@ const TablePanel = (props: Props) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 
-	const config = createMemo<TableConfig>(
+	const config = createMemo<TablePanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.LIST],
 	);
 
-	// if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
-	// 	setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
-	// }
-	// if (!validate_u32(searchParams[PAGE_PARAM])) {
-	// 	setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
-	// }
+	if (!validU32(searchParams[PER_PAGE_PARAM])) {
+		setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+	}
+	if (!validU32(searchParams[PAGE_PARAM])) {
+		setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
+	}
 
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
 	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
@@ -88,14 +90,12 @@ const TablePanel = (props: Props) => {
 		};
 	});
 
-	// const [state, setState] = createSignal(TableState.LOADING);
+	const [state, setState] = createSignal(TableState.LOADING);
 	const getData = async (fetcher) => {
 		const EMPTY_ARRAY = [];
-		console.log("start");
 		if (!bencher_valid()) {
 			return EMPTY_ARRAY;
 		}
-		console.log("here");
 
 		if (!validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
@@ -109,43 +109,38 @@ const TablePanel = (props: Props) => {
 		const url = `${config()?.table?.url(
 			props.pathParams,
 		)}?${urlSearchParams.toString()}`;
-		// return EMPTY_ARRAY;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
-				const data = resp?.data;
-				console.log(data);
-				// setState(
-				// 	data.length === 0
-				// 		? page() === 1
-				// 			? TableState.EMPTY
-				// 			: TableState.END
-				// 		: TableState.OK,
-				// );
-				return data;
+				setState(
+					resp?.data.length === 0
+						? page() === 1
+							? TableState.EMPTY
+							: TableState.END
+						: TableState.OK,
+				);
+				return resp?.data;
 			})
 			.catch((error) => {
-				// setState(TableState.ERR);
+				setState(TableState.ERR);
 				console.error(error);
 				return EMPTY_ARRAY;
 			});
 	};
 	const [tableData, { refetch }] = createResource(fetcher, getData);
 
-	// createEffect(() => {
-	// 	if (!validate_u32(searchParams[PER_PAGE_PARAM])) {
-	// 		setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
-	// 	}
-	// });
-	// createEffect(() => {
-	// 	if (!validate_u32(searchParams[PAGE_PARAM])) {
-	// 		setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
-	// 	}
-	// });
+	createEffect(() => {
+		if (!validU32(searchParams[PER_PAGE_PARAM])) {
+			setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+		}
+		if (!validU32(searchParams[PAGE_PARAM])) {
+			setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
+		}
+	});
 
 	const handlePage = (page: number) => {
-		// if (validate_u32(page.toString())) {
-		// 	setSearchParams({ [PAGE_PARAM]: page });
-		// }
+		if (validU32(page)) {
+			setSearchParams({ [PAGE_PARAM]: page });
+		}
 	};
 
 	// const redirect = createMemo(() => props.config.redirect?.(tableData()));
@@ -169,13 +164,13 @@ const TablePanel = (props: Props) => {
 				config={config()?.header}
 				handleRefresh={refetch}
 			/>
-			{/* <Table
-				config={props.config?.table}
-				tableData={tableData}
+			<Table
+				config={config()?.table}
 				state={state}
+				tableData={tableData}
 				page={page}
 				handlePage={handlePage}
-			/> */}
+			/>
 			<section class="section">
 				<div class="container">
 					<Pagination
