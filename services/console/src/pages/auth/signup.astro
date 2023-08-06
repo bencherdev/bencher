@@ -1,28 +1,20 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import AuthLayout from "../../layouts/AuthLayout.astro";
 import AuthForm from "../../components/auth/AuthForm";
 
 const title = "Sign up";
 ---
 
-<BaseLayout title={title}>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-two-fifths">
-          <h2 class="title">{title}</h2>
+<AuthLayout title={title}>
+  <h2 class="title">{title}</h2>
 
-          <AuthForm client:only newUser={true} />
+  <AuthForm client:only newUser={true} />
 
-          <hr />
+  <hr />
 
-          <p class="has-text-centered">
-            <small>
-              switch to <a href="/auth/login">log in</a>
-            </small>
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-</BaseLayout>
+  <p class="has-text-centered">
+    <small>
+      switch to <a href="/auth/login">log in</a>
+    </small>
+  </p>
+</AuthLayout>
