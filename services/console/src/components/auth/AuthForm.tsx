@@ -10,7 +10,7 @@ import {
 } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
-import { useSearchParams } from "../../util/url";
+import { useNavigate, useSearchParams } from "../../util/url";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { AUTH_FIELDS } from "./auth";
@@ -27,6 +27,7 @@ const AuthForm = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 	// const location = useLocation();
@@ -124,7 +125,7 @@ const AuthForm = (props: Props) => {
 		post(auth_form)
 			.then((_resp) => {
 				handleFormSubmitting(false);
-				window.location.assign("/auth/confirm");
+				navigate("/auth/confirm");
 				// navigate(
 				//     notification_path(
 				//         "/auth/confirm",

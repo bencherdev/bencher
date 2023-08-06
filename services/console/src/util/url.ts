@@ -1,3 +1,7 @@
+/// Nearly all of this code is ripped from solid-js-router
+/// https://github.com/solidjs/solid-router
+/// However, since the underlying router is not being used
+/// A kludge to simply poll for the current window location and state is used
 import {
 	createMemo,
 	type Accessor,
@@ -5,6 +9,7 @@ import {
 	runWithOwner,
 	on,
 	untrack,
+	createSignal,
 } from "solid-js";
 
 export type Params = Record<string, string>;
@@ -32,12 +37,29 @@ export interface NavigateOptions<S = unknown> {
 	state: S;
 }
 
-export const windowLocation = createMemo(() => window.location.toString());
-export const windowState = createMemo(() => window.history.state);
+const [windowLocation, setWindowLocation] = createSignal<string>(
+	window.location.toString(),
+);
+setInterval(() => {
+	const location_str = window.location.toString();
+	if (location_str !== windowLocation()) {
+		setWindowLocation(window.location.toString());
+	}
+}, 100);
+
+const [windowState, setWindowState] = createSignal<any>(window.history.state);
+setInterval(() => {
+	const state = window.history.state;
+	if (state !== windowState()) {
+		setWindowState(window.history.state);
+	}
+}, 100);
+
 export const useLocation = <S = unknown>() =>
 	createLocation(windowLocation, windowState) as Location<S>;
 
-export const useNavigate = () => {
+// No page refresh
+export const useNavigateSoft = () => {
 	return (to: string | number, _options?: Partial<NavigateOptions>) => {
 		// https://developer.mozilla.org/en-US/docs/Web/API/History/pushState
 		const to_str = to.toString();
@@ -46,28 +68,19 @@ export const useNavigate = () => {
 	};
 };
 
-// export const useSearchParams = (): [ () => URLSearchParams, (params: SetParams) => void] => {
-//     const searchParams = () => new URL(document.location.toString()).searchParams;
-//     const setSearchParams = (params: SetParams) => {
-//         const url = new URL(document.location.toString());
-//         for (const [key, value] of Object.entries(params)) {
-// 			if (value) {
-// 				url.searchParams.set(key, value.toString());
-// 			}
-// 		}
-//         // https://developer.mozilla.org/en-US/docs/Web/API/History/pushState
-//         const state = {path: url.toString()};
-//         window.history.pushState(state, '', url);
-//     };
-//     return [searchParams, setSearchParams];
-// };
+// Page refresh
+export const useNavigate = () => {
+	return (to: string | number, _options?: Partial<NavigateOptions>) => {
+		window.location.assign(to.toString());
+	};
+};
 
 export const useSearchParams = <T extends Params>(): [
 	T,
 	(params: SetParams, options?: Partial<NavigateOptions>) => void,
 ] => {
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useNavigateSoft();
 	const setSearchParams = (
 		params: SetParams,
 		options?: Partial<NavigateOptions>,

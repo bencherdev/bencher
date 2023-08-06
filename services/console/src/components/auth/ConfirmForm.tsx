@@ -5,12 +5,12 @@ import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, TOKEN_PARAM } from "./auth";
-import { useSearchParams } from "../../util/url";
+import { useNavigate, useSearchParams } from "../../util/url";
 import { validJwt } from "../../util/valid";
 import { createStore } from "solid-js/store";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
-import { BENCHER_USER_KEY, setUser } from "../../util/auth";
+import { setUser } from "../../util/auth";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -40,6 +40,7 @@ const ConfirmForm = (_props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 	// const location = useLocation();
@@ -100,7 +101,8 @@ const ConfirmForm = (_props: Props) => {
 			.then((resp) => {
 				handleFormSubmitting(false);
 				setUser(resp.data);
-				window.location.assign("/console");
+				navigate("/console");
+				// window.location.assign("/console");
 				// if (!props.handleUser(resp?.data)) {
 				//     navigate(
 				//         notification_path(
