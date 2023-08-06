@@ -6,10 +6,7 @@ import {
 	For,
 	createMemo,
 } from "solid-js";
-import {
-	BENCHER_API_URL,
-	validJwt,
-} from "../../site/util";
+import { BENCHER_API_URL, validJwt } from "../../site/util";
 import { useNavigate } from "solid-app-router";
 import { httpGet } from "../../../util/http";
 

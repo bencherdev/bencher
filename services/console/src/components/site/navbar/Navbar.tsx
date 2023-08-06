@@ -1,5 +1,9 @@
 import { createMemo, createSignal, Show } from "solid-js";
-import { BENCHER_GITHUB_URL, BENCHER_LOGO_URL, BENCHER_VERSION } from "../../../util/ext";
+import {
+	BENCHER_GITHUB_URL,
+	BENCHER_LOGO_URL,
+	BENCHER_VERSION,
+} from "../../../util/ext";
 // import {
 // 	BENCHER_GITHUB_URL,
 // 	BENCHER_LOGO_URL,

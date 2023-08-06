@@ -1,4 +1,9 @@
-import { is_valid_jwt, is_valid_user_name, is_valid_slug, is_valid_email } from "bencher_valid";
+import {
+	is_valid_jwt,
+	is_valid_user_name,
+	is_valid_slug,
+	is_valid_email,
+} from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
 export const validString = (
@@ -35,4 +40,9 @@ export const validJwt = (token: undefined | null | string): boolean => {
 	return validString(token, is_valid_jwt);
 };
 
-export const validUser = (user: JsonAuthUser): boolean => validUuid(user.user.uuid) && validUserName(user.user.name) && validSlug(user.user.slug) && validEmail(user.user.email) && validJwt(user.token);
+export const validUser = (user: JsonAuthUser): boolean =>
+	validUuid(user.user.uuid) &&
+	validUserName(user.user.name) &&
+	validSlug(user.user.slug) &&
+	validEmail(user.user.email) &&
+	validJwt(user.token);

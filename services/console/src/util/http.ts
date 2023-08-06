@@ -9,7 +9,8 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
-export const httpGet = async (url: string, token: null | string) => axios(getOptions(url, token));
+export const httpGet = async (url: string, token: null | string) =>
+	axios(getOptions(url, token));
 export const getOptions = (url: string, token: null | string) => {
 	return {
 		url: url,
@@ -18,17 +19,20 @@ export const getOptions = (url: string, token: null | string) => {
 	};
 };
 
-export const httpPost = async (url: string, token: null | string, data: {}) => axios(postOptions(url, token, data));
+export const httpPost = async (url: string, token: null | string, data: {}) =>
+	axios(postOptions(url, token, data));
 export const postOptions = (url: string, token: null | string, data: {}) => {
 	return dataOptions(url, HttpMethod.POST, token, data);
 };
 
-export const httpPut = async (url: string, token: null | string, data: {}) => axios(putOptions(url, token, data));
+export const httpPut = async (url: string, token: null | string, data: {}) =>
+	axios(putOptions(url, token, data));
 export const putOptions = (url: string, token: null | string, data: {}) => {
 	return dataOptions(url, HttpMethod.PUT, token, data);
 };
 
-export const httpPatch = async (url: string, token: null | string, data: {}) => axios(pathOptions(url, token, data));
+export const httpPatch = async (url: string, token: null | string, data: {}) =>
+	axios(pathOptions(url, token, data));
 export const pathOptions = (
 	url: string,
 	token: null | string,
@@ -37,7 +41,8 @@ export const pathOptions = (
 	return dataOptions(url, HttpMethod.PATCH, token, data);
 };
 
-export const httpDelete = async (url: string, token: null | string) => axios(deleteOptions(url, token));
+export const httpDelete = async (url: string, token: null | string) =>
+	axios(deleteOptions(url, token));
 export const deleteOptions = (url: string, token: null | string) => {
 	return {
 		url: url,

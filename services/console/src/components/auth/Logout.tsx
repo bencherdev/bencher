@@ -2,10 +2,10 @@ import { removeUser } from "../../util/auth";
 import { hiddenRedirect } from "../../util/url";
 
 const Logout = () => {
-    removeUser();
-    hiddenRedirect("/auth/login");
+	removeUser();
+	hiddenRedirect("/auth/login");
 
-    return <></>
+	return <></>;
 };
 
 export default Logout;
