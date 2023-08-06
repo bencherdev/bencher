@@ -11,6 +11,7 @@ import { createStore } from "solid-js/store";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { setUser } from "../../util/auth";
+import type { Jwt } from "../../types/bencher";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -47,7 +48,7 @@ const ConfirmForm = (_props: Props) => {
 	// const pathname = createMemo(() => location.pathname);
 	// const [searchParams, setSearchParams] = useSearchParams();
 
-	const token = () => searchParams[TOKEN_PARAM]?.trim();
+	const token = () => searchParams[TOKEN_PARAM]?.trim() as Jwt;
 
 	// if (!validate_plan_level(searchParams[PLAN_PARAM])) {
 	//     setSearchParams({ [PLAN_PARAM]: null });

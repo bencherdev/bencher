@@ -5,7 +5,7 @@ import {
 	is_valid_email,
 	is_valid_plan_level,
 } from "bencher_valid";
-import type { JsonAuthUser, PlanLevel } from "../types/bencher";
+import type { JsonAuthUser } from "../types/bencher";
 
 export const validOptionString = (
 	input: undefined | null | string,
@@ -50,6 +50,5 @@ export const validUser = (user: JsonAuthUser): boolean =>
 	validEmail(user.user.email) &&
 	validJwt(user.token);
 
-export const validPlanLevel = (
-	planLevel: undefined | null | PlanLevel,
-): boolean => validOptionString(planLevel, is_valid_plan_level);
+export const validPlanLevel = (planLevel: undefined | null | string): boolean =>
+	validOptionString(planLevel, is_valid_plan_level);

@@ -43,7 +43,7 @@ const [windowLocation, setWindowLocation] = createSignal<string>(
 setInterval(() => {
 	const location_str = window.location.toString();
 	if (location_str !== windowLocation()) {
-		setWindowLocation(window.location.toString());
+		setWindowLocation(location_str);
 	}
 }, 100);
 
@@ -51,7 +51,7 @@ const [windowState, setWindowState] = createSignal<any>(window.history.state);
 setInterval(() => {
 	const state = window.history.state;
 	if (state !== windowState()) {
-		setWindowState(window.history.state);
+		setWindowState(state);
 	}
 }, 100);
 

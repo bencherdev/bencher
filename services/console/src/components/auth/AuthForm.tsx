@@ -1,21 +1,15 @@
-import { createSignal, createEffect, createResource } from "solid-js";
+import { createEffect, createResource } from "solid-js";
 import bencher_valid_init from "bencher_valid";
 
-import {
-	Email,
-	JsonLogin,
-	JsonSignup,
-	AuthLogin,
-	PlanLevel,
-} from "../../types/bencher";
+import { JsonLogin, JsonSignup, PlanLevel, Jwt } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
 import { useNavigate, useSearchParams } from "../../util/url";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
-import { AUTH_FIELDS, PLAN_PARAM } from "./auth";
+import { AUTH_FIELDS, INVITE_PARAM, PLAN_PARAM } from "./auth";
 import { createStore } from "solid-js/store";
-import { validPlanLevel } from "../../util/valid";
+import { validJwt, validPlanLevel } from "../../util/valid";
 
 export interface Props {
 	newUser: boolean;
@@ -24,7 +18,7 @@ export interface Props {
 type JsonAuthForm = JsonSignup | JsonLogin;
 
 const AuthForm = (props: Props) => {
-	const [_bencher_valid] = createResource(
+	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
 
@@ -35,14 +29,8 @@ const AuthForm = (props: Props) => {
 	// const pathname = createMemo(() => location.pathname);
 	// const [searchParams, setSearchParams] = useSearchParams();
 
-	if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-		setSearchParams({ [PLAN_PARAM]: null });
-	}
-	// const plan = createMemo(() =>
-	//     searchParams[PLAN_PARAM]
-	//         ? (searchParams[PLAN_PARAM].trim() as PlanLevel)
-	//         : null,
-	// );
+	const plan = () => searchParams[PLAN_PARAM]?.trim() as PlanLevel;
+	const invite = () => searchParams[INVITE_PARAM]?.trim() as Jwt;
 	const [form, setForm] = createStore(initForm());
 
 	const handleField: FieldHandler = (key, value, valid) => {
@@ -82,21 +70,13 @@ const AuthForm = (props: Props) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/${
 			props.newUser ? "signup" : "login"
 		}`;
-		const no_token = null;
-		return await httpPost(url, no_token, data);
+		return await httpPost(url, null, data);
 	};
 
 	const handleSubmit = () => {
 		handleFormSubmitting(true);
-		// const invite_token = props.invite();
-		//     let invite: string | null;
-		//     if (validate_jwt(invite_token)) {
-		//         invite = invite_token;
-		//     } else {
-		//         invite = null;
-		//     }
-		let plan = undefined;
-		let invite = undefined;
+		const plan_level = plan();
+		const invite_token = invite();
 
 		let auth_form: JsonAuthForm;
 		if (props.newUser) {
@@ -106,21 +86,21 @@ const AuthForm = (props: Props) => {
 				email: signup_form.email.value?.trim(),
 			};
 			auth_form = signup;
-			if (!plan) {
-				// setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
+			if (!plan_level) {
+				setSearchParams({ [PLAN_PARAM]: PlanLevel.Free });
 			}
 		} else {
 			const login_form = form;
-			const login: AuthLogin = {
+			const login: JsonLogin = {
 				email: login_form.email.value?.trim(),
 			};
 			auth_form = login;
 		}
-		if (plan) {
-			auth_form.plan = plan;
+		if (plan_level) {
+			auth_form.plan = plan_level;
 		}
-		if (invite) {
-			auth_form.invite = invite;
+		if (invite_token) {
+			auth_form.invite = invite_token;
 		}
 
 		post(auth_form)
@@ -155,6 +135,17 @@ const AuthForm = (props: Props) => {
 	};
 
 	createEffect(() => {
+		if (!bencher_valid()) {
+			return;
+		}
+
+		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
+			setSearchParams({ [PLAN_PARAM]: null });
+		}
+		if (!validJwt(searchParams[INVITE_PARAM])) {
+			setSearchParams({ [INVITE_PARAM]: null });
+		}
+
 		handleFormValid();
 	});
 
