@@ -1,0 +1,10 @@
+---
+import ConsoleLayout from "../../../layouts/ConsoleLayout.astro";
+import UsersRoot from "../../../components/user/UsersRoot";
+
+const title = "Users";
+---
+
+<ConsoleLayout title={title}>
+  <UsersRoot client:only />
+</ConsoleLayout>

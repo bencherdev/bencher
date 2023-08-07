@@ -3,6 +3,7 @@ import { BENCHER_API_URL } from "../../util/ext";
 import { Button, Row } from "../types";
 import { viewSlugPath } from "../util";
 import { Operation } from "../types";
+import type { Params } from "../../util/url";
 
 const organizationsConfig = {
 	[Operation.LIST]: {
@@ -16,7 +17,7 @@ const organizationsConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		table: {
-			url: (_pathParams: object) => `${BENCHER_API_URL()}/v0/organizations`,
+			url: (_pathParams: Params) => `${BENCHER_API_URL()}/v0/organizations`,
 			row: {
 				key: "name",
 				items: [

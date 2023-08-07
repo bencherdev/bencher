@@ -5,7 +5,7 @@ import {
 	createEffect,
 } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
-import { useSearchParams } from "../../../util/url";
+import { useParams, useSearchParams } from "../../../util/url";
 import { validJwt, validU32 } from "../../../util/valid";
 import consoleConfig from "../../../config/console";
 import { Operation, type Resource } from "../../../config/types";
@@ -39,7 +39,7 @@ const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
 
 interface Props {
-	pathParams: Record<string, string>;
+	path: string;
 	resource: Resource;
 }
 
@@ -52,6 +52,7 @@ const TablePanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
+	const pathParams = useParams(props.path);
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 
@@ -69,7 +70,7 @@ const TablePanel = (props: Props) => {
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
 	const page = createMemo(() => Number(searchParams[PAGE_PARAM]));
 
-	const pagination_query = createMemo(() => {
+	const paginationQuery = createMemo(() => {
 		return {
 			per_page: per_page(),
 			page: page(),
@@ -83,7 +84,7 @@ const TablePanel = (props: Props) => {
 	const fetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			pagination_query: pagination_query(),
+			paginationQuery: paginationQuery(),
 			token: authUser()?.token,
 		};
 	});
@@ -99,13 +100,13 @@ const TablePanel = (props: Props) => {
 			return EMPTY_ARRAY;
 		}
 		const urlSearchParams = new URLSearchParams();
-		for (const [key, value] of Object.entries(fetcher.pagination_query)) {
+		for (const [key, value] of Object.entries(fetcher.paginationQuery)) {
 			if (value) {
 				urlSearchParams.set(key, value.toString());
 			}
 		}
 		const url = `${config()?.table?.url(
-			props.pathParams,
+			pathParams,
 		)}?${urlSearchParams.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {

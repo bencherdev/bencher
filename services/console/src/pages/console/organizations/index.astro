@@ -7,5 +7,9 @@ const title = "Organizations";
 ---
 
 <ConsoleLayout title={title}>
-  <TablePanel client:only pathParams={{}} resource={Resource.ORGANIZATIONS} />
+  <TablePanel
+    client:only
+    path="/console/organizations"
+    resource={Resource.ORGANIZATIONS}
+  />
 </ConsoleLayout>

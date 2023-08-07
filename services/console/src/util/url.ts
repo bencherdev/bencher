@@ -37,6 +37,11 @@ export interface NavigateOptions<S = unknown> {
 	state: S;
 }
 
+export interface PathMatch {
+	params: Params;
+	path: string;
+}
+
 const [windowLocation, setWindowLocation] = createSignal<string>(
 	window.location.toString(),
 );
@@ -193,6 +198,57 @@ export function createMemoObject<T extends Record<string | symbol, unknown>>(
 			return Reflect.ownKeys(fn());
 		},
 	});
+}
+
+export const useParams = (path: string, partial?: boolean) =>
+	createMatcher(path, partial)?.(pathname())?.params ?? {};
+
+export function createMatcher(
+	path: string,
+	partial?: boolean,
+): (location: string) => PathMatch | null {
+	const [pattern, splat] = path.split("/*", 2);
+	const segments = pattern?.split("/").filter(Boolean);
+	const len = segments?.length;
+	return (location: string) => {
+		// Added for type safety
+		if (segments === undefined || len === undefined) {
+			return null;
+		}
+		const locSegments = location.split("/").filter(Boolean);
+		const lenDiff = locSegments.length - len;
+		if (lenDiff < 0 || (lenDiff > 0 && splat === undefined && !partial)) {
+			return null;
+		}
+		const match: PathMatch = {
+			path: len ? "" : "/",
+			params: {},
+		};
+		for (let i = 0; i < len; i++) {
+			const segment = segments[i];
+			const locSegment = locSegments[i];
+			// Added for type safety
+			if (segment === undefined || locSegment === undefined) {
+				continue;
+			}
+			if (segment[0] === ":") {
+				match.params[segment.slice(1)] = locSegment;
+			} else if (
+				segment.localeCompare(locSegment, undefined, {
+					sensitivity: "base",
+				}) !== 0
+			) {
+				return null;
+			}
+			match.path += `/${locSegment}`;
+		}
+		if (splat) {
+			match.params[splat] = lenDiff
+				? locSegments.slice(-lenDiff).join("/")
+				: "";
+		}
+		return match;
+	};
 }
 
 /// Bencher specific helpers

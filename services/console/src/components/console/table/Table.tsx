@@ -1,5 +1,5 @@
 import { For, Switch, Match, Resource, Accessor } from "solid-js";
-import { pathname, useNavigate } from "../../../util/url";
+import { Params, pathname, useNavigate } from "../../../util/url";
 import { fmtNestedValue, fmtValues } from "../../../util/resource";
 import { Row } from "../../../config/types";
 import type { Slug } from "../../../types/bencher";
@@ -14,7 +14,7 @@ export enum TableState {
 }
 
 export interface TableConfig {
-	title: string;
+	url: (pathParams: Params) => string;
 	name: string;
 	add?: AddButtonConfig;
 	row: RowConfig;
