@@ -2,9 +2,11 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Toolbox from "../components/landing/Toolbox";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
+import Navbar from "../components/site/navbar/Navbar";
 ---
 
 <BaseLayout title="">
+  <Navbar slot="navbar" />
   <section class="section is-medium">
     <div class="container">
       <div class="columns is-centered is-vcentered">

@@ -1,3 +1,22 @@
+export interface SelectValue {
+	selected: string;
+	options: SelectOption[];
+}
+
+export interface SelectOption {
+	value: string;
+	option: string;
+}
+
+export interface SelectConfig {
+	icon: string;
+	type: string;
+	placeholder?: string;
+	value: SelectValue;
+	disabled?: boolean;
+	validate: (value: SelectValue) => boolean;
+}
+
 const Select = (props) => {
 	function getStatus() {
 		const selected = props.value.options.find((option) => {

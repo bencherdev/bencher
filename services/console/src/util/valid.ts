@@ -4,6 +4,7 @@ import {
 	is_valid_slug,
 	is_valid_email,
 	is_valid_plan_level,
+	is_valid_non_empty,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
@@ -33,6 +34,9 @@ export const validUuid = (uuid: string): boolean =>
 
 export const validUserName = (user_name: string): boolean =>
 	validString(user_name, is_valid_user_name);
+
+export const validNonEmpty = (non_empty: string): boolean =>
+	validString(non_empty, is_valid_non_empty);
 
 export const validSlug = (slug: string): boolean =>
 	validString(slug, is_valid_slug);

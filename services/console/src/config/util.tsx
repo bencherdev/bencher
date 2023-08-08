@@ -1,7 +1,7 @@
 import type { Slug } from "../types/bencher";
 
 export const parentPath = (pathname: string) => {
-	return `${pathname.substr(0, pathname.lastIndexOf("/"))}`;
+	return `${pathname.substring(0, pathname.lastIndexOf("/"))}`;
 };
 
 export const addPath = (pathname: string) => {

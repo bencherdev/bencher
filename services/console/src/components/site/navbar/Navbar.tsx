@@ -13,6 +13,7 @@ import {
 // import ProjectSelect from "./ProjectSelect";
 
 export interface Props {
+	slot: string;
 	user: Function;
 	organization_slug: Function;
 }

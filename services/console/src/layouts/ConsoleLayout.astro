@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
 import ConsoleMenu from "../components/console/ConsoleMenu";
+import Navbar from "../components/site/navbar/Navbar";
 
 interface Props {
   title: string;
@@ -11,6 +12,7 @@ const { title } = Astro.props;
 ---
 
 <BaseLayout title={title}>
+  <Navbar slot="navbar" />
   <section class="section">
     <div class="container">
       <div class="columns is-reverse-mobile">

@@ -1,7 +1,26 @@
+import FieldKind from "../../components/field/kind";
 import { BENCHER_API_URL } from "../../util/ext";
 import type { Params } from "../../util/url";
+import { validNonEmpty, validU32 } from "../../util/valid";
 import { Button, Operation } from "../types";
-import { addPath, viewUuidPath } from "../util";
+import { addPath, parentPath, viewUuidPath } from "../util";
+
+const TOKEN_FIELDS = {
+	name: {
+		type: "text",
+		placeholder: "Token Name",
+		icon: "fas fa-stroopwafel",
+		help: "Must be a non-empty string",
+		validate: validNonEmpty,
+	},
+	ttl: {
+		type: "number",
+		placeholder: "525600",
+		icon: "fas fa-stopwatch",
+		help: "Must be an integer greater than zero",
+		validate: validU32,
+	},
+};
 
 const tokensConfig = {
 	[Operation.LIST]: {
@@ -46,40 +65,40 @@ const tokensConfig = {
 			name: "tokens",
 		},
 	},
-	// [Operation.ADD]: {
-	// 	operation: Operation.ADD,
-	// 	header: {
-	// 		title: "Add API Token",
-	// 		path: parentPath,
-	// 		path_to: "API Tokens",
-	// 	},
-	// 	form: {
-	// 		url: (path_params) =>
-	// 			`${BENCHER_API_URL()}/v0/users/${path_params?.user_slug}/tokens`,
-	// 		fields: [
-	// 			{
-	// 				kind: FieldKind.INPUT,
-	// 				label: "Name",
-	// 				key: "name",
-	// 				value: "",
-	// 				valid: null,
-	// 				validate: true,
-	// 				config: TOKEN_FIELDS.name,
-	// 			},
-	// 			{
-	// 				kind: FieldKind.NUMBER,
-	// 				label: "Time to Live (TTL) (seconds)",
-	// 				key: "ttl",
-	// 				value: "",
-	// 				valid: true,
-	// 				validate: true,
-	// 				nullable: true,
-	// 				config: TOKEN_FIELDS.ttl,
-	// 			},
-	// 		],
-	// 		path: parentPath,
-	// 	},
-	// },
+	[Operation.ADD]: {
+		operation: Operation.ADD,
+		header: {
+			title: "Add API Token",
+			path: parentPath,
+			path_to: "API Tokens",
+		},
+		form: {
+			url: (pathParams: Params) =>
+				`${BENCHER_API_URL()}/v0/users/${pathParams?.user_slug}/tokens`,
+			fields: [
+				{
+					kind: FieldKind.INPUT,
+					label: "Name",
+					key: "name",
+					value: "",
+					valid: null,
+					validate: true,
+					config: TOKEN_FIELDS.name,
+				},
+				{
+					kind: FieldKind.NUMBER,
+					label: "Time to Live (TTL) (seconds)",
+					key: "ttl",
+					value: "",
+					valid: true,
+					validate: true,
+					nullable: true,
+					config: TOKEN_FIELDS.ttl,
+				},
+			],
+			path: parentPath,
+		},
+	},
 	// [Operation.VIEW]: {
 	// 	operation: Operation.VIEW,
 	// 	header: {

@@ -1,13 +1,15 @@
 import Input, { InputConfig, InputValue } from "./kinds/Input";
 import Checkbox, { CheckboxConfig, CheckboxValue } from "./kinds/Checkbox";
 import Switch from "./kinds/Switch";
-import Select from "./kinds/Select";
+import Select, { SelectConfig, SelectValue } from "./kinds/Select";
 import FieldKind from "./kind";
 import Radio from "./kinds/Radio";
+import type { JsonAuthUser } from "../../types/bencher";
+import type { Params } from "astro";
 
-type FieldValue = CheckboxValue | InputValue;
+export type FieldValue = CheckboxValue | InputValue | SelectValue;
 
-type FieldConfig = CheckboxConfig | InputConfig;
+export type FieldConfig = CheckboxConfig | InputConfig | SelectConfig;
 
 export type FieldHandler = (
 	key: string,
@@ -17,15 +19,19 @@ export type FieldHandler = (
 
 export type FieldValueHandler = (value: FieldValue) => void;
 
-const Field = (props: {
+export interface Props {
+	user: JsonAuthUser;
+	pathParams: Params;
 	kind: FieldKind;
 	fieldKey: string;
-	label?: string;
+	label?: undefined | string;
 	value: FieldValue;
-	valid: null | boolean;
+	valid: undefined | null | boolean;
 	config: FieldConfig;
 	handleField: FieldHandler;
-}) => {
+}
+
+const Field = (props: Props) => {
 	function handleField(value) {
 		switch (props.kind) {
 			case FieldKind.CHECKBOX:
