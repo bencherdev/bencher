@@ -11,7 +11,7 @@ import consoleConfig from "../../../config/console";
 import { Operation, type Resource } from "../../../config/types";
 import { httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
-import bencher_valid_init from "bencher_valid";
+import bencher_valid_init, { InitOutput } from "bencher_valid";
 import TableHeader, { TableHeaderConfig } from "./TableHeader";
 import Table, { TableConfig, TableState } from "./Table";
 // import Table, { TableState } from "./Table";
@@ -90,7 +90,14 @@ const TablePanel = (props: Props) => {
 	});
 
 	const [state, setState] = createSignal(TableState.LOADING);
-	const getData = async (fetcher) => {
+	const getData = async (fetcher: {
+		bencher_valid: InitOutput;
+		paginationQuery: {
+			per_page: number;
+			page: number;
+		};
+		token: string;
+	}) => {
 		const EMPTY_ARRAY = [];
 		if (!bencher_valid()) {
 			return EMPTY_ARRAY;

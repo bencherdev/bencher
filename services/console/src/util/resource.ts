@@ -49,3 +49,16 @@ export const fmtNestedValue = (
 		)
 		.toString();
 };
+
+const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
+export const fmtPageTitle = (title: undefined | string) =>
+	title ? `${title} | ${BENCHER_TITLE}` : BENCHER_TITLE;
+
+export const setPageTitle = (title: undefined | string) => {
+	const page_title = fmtPageTitle(title);
+	if (document.title === page_title) {
+		return;
+	} else {
+		document.title = page_title;
+	}
+};

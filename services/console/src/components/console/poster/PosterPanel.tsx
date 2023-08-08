@@ -1,9 +1,8 @@
-import { createMemo, createResource } from "solid-js";
+import { createMemo } from "solid-js";
 import { Operation, type Resource } from "../../../config/types";
 import Poster, { PosterConfig } from "./Poster";
 import PosterHeader, { PosterHeaderConfig } from "./PosterHeader";
 import consoleConfig from "../../../config/console";
-import bencher_valid_init from "bencher_valid";
 
 interface Props {
 	path: string;
@@ -17,10 +16,6 @@ interface PosterPanelConfig {
 }
 
 const PosterPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
-
 	const config = createMemo<PosterPanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.ADD],
 	);
@@ -32,7 +27,6 @@ const PosterPanel = (props: Props) => {
 				path={props.path}
 				operation={config()?.operation}
 				config={config()?.form}
-				bencher_valid={bencher_valid}
 			/>
 		</>
 	);

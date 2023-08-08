@@ -2,7 +2,7 @@ import FieldKind from "../../components/field/kind";
 import { BENCHER_API_URL } from "../../util/ext";
 import type { Params } from "../../util/url";
 import { validNonEmpty, validU32 } from "../../util/valid";
-import { Button, Operation } from "../types";
+import { Button, Card, Display, Operation } from "../types";
 import { addPath, parentPath, viewUuidPath } from "../util";
 
 const TOKEN_FIELDS = {
@@ -99,53 +99,53 @@ const tokensConfig = {
 			path: parentPath,
 		},
 	},
-	// [Operation.VIEW]: {
-	// 	operation: Operation.VIEW,
-	// 	header: {
-	// 		key: "name",
-	// 		path: parentPath,
-	// 		path_to: "API Tokens",
-	// 		buttons: [{ kind: Button.REFRESH }],
-	// 	},
-	// 	deck: {
-	// 		url: (path_params) =>
-	// 			`${BENCHER_API_URL()}/v0/users/${path_params?.user_slug}/tokens/${
-	// 				path_params?.token_uuid
-	// 			}`,
-	// 		cards: [
-	// 			{
-	// 				kind: Card.FIELD,
-	// 				label: "API Token Name",
-	// 				key: "name",
-	// 				display: Display.RAW,
-	// 			},
-	// 			{
-	// 				kind: Card.FIELD,
-	// 				label: "API Token UUID",
-	// 				key: "uuid",
-	// 				display: Display.RAW,
-	// 			},
-	// 			{
-	// 				kind: Card.FIELD,
-	// 				label: "API Token",
-	// 				key: "token",
-	// 				display: Display.RAW,
-	// 			},
-	// 			{
-	// 				kind: Card.FIELD,
-	// 				label: "API Token Creation",
-	// 				key: "creation",
-	// 				display: Display.RAW,
-	// 			},
-	// 			{
-	// 				kind: Card.FIELD,
-	// 				label: "API Token Expiration",
-	// 				key: "expiration",
-	// 				display: Display.RAW,
-	// 			},
-	// 		],
-	// 	},
-	// },
+	[Operation.VIEW]: {
+		operation: Operation.VIEW,
+		header: {
+			key: "name",
+			path: parentPath,
+			path_to: "API Tokens",
+			buttons: [{ kind: Button.REFRESH }],
+		},
+		deck: {
+			url: (pathParams: Params) =>
+				`${BENCHER_API_URL()}/v0/users/${pathParams?.user_slug}/tokens/${
+					pathParams?.token_uuid
+				}`,
+			cards: [
+				{
+					kind: Card.FIELD,
+					label: "API Token Name",
+					key: "name",
+					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
+					label: "API Token UUID",
+					key: "uuid",
+					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
+					label: "API Token",
+					key: "token",
+					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
+					label: "API Token Creation",
+					key: "creation",
+					display: Display.RAW,
+				},
+				{
+					kind: Card.FIELD,
+					label: "API Token Expiration",
+					key: "expiration",
+					display: Display.RAW,
+				},
+			],
+		},
+	},
 };
 
 export default tokensConfig;

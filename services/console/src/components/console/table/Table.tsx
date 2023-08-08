@@ -13,6 +13,14 @@ export enum TableState {
 	ERR = 4,
 }
 
+export interface Props {
+	config: TableConfig;
+	state: Accessor<TableState>;
+	tableData: Resource<any[]>;
+	page: Accessor<number>;
+	handlePage: (page: number) => void;
+}
+
 export interface TableConfig {
 	url: (pathParams: Params) => string;
 	name: string;
@@ -20,13 +28,7 @@ export interface TableConfig {
 	row: RowConfig;
 }
 
-const Table = (props: {
-	config: TableConfig;
-	state: Accessor<TableState>;
-	tableData: Resource<any[]>;
-	page: Accessor<number>;
-	handlePage: (page: number) => void;
-}) => {
+const Table = (props: Props) => {
 	return (
 		<Switch fallback={<>ERROR: Unknown table state</>}>
 			<Match when={props.state() === TableState.LOADING}>

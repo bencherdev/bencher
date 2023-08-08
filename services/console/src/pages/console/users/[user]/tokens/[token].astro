@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+
+import ConsoleLayout from "../../../../../layouts/ConsoleLayout.astro";
+import DeckPanel from "../../../../../components/console/deck/DeckPanel";
+import { Resource } from "../../../../../config/types";
+
+// TODO share state
+// https://docs.astro.build/en/core-concepts/sharing-state/#why-nano-stores
+const title = "View Token";
+---
+
+<ConsoleLayout title={title}>
+  <DeckPanel
+    client:only
+    path="/console/users/:user_slug/tokens/:token_uuid"
+    resource={Resource.TOKENS}
+  />
+</ConsoleLayout>

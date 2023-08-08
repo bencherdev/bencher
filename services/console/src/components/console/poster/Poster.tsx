@@ -1,5 +1,5 @@
-import { InitOutput } from "bencher_valid";
-import { For, Resource, Show, createSignal } from "solid-js";
+import bencher_valid_init from "bencher_valid";
+import { For, Resource, Show, createResource, createSignal } from "solid-js";
 import Field, { FieldConfig, FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
@@ -13,7 +13,6 @@ export interface Props {
 	path: string;
 	operation: Operation;
 	config: PosterConfig;
-	bencher_valid: Resource<InitOutput>;
 }
 
 export interface PosterConfig {
@@ -63,10 +62,12 @@ const initForm = (fields: PosterFieldConfig[]) => {
 };
 
 const Poster = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
 	const navigate = useNavigate();
-
-	const user = authUser();
 	const pathParams = useParams(props.path);
+	const user = authUser();
 	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
@@ -89,8 +90,8 @@ const Poster = (props: Props) => {
 		}
 	};
 
-	function sendForm() {
-		if (!props.bencher_valid()) {
+	const sendForm = () => {
+		if (!bencher_valid()) {
 			return;
 		}
 		const token = user?.token;
@@ -158,7 +159,7 @@ const Poster = (props: Props) => {
 				// 	),
 				// );
 			});
-	}
+	};
 
 	const handleField = (key: string, value: FieldValue, valid: boolean) => {
 		if (key && form?.[key]) {
@@ -179,7 +180,7 @@ const Poster = (props: Props) => {
 		}
 	};
 
-	function isValid() {
+	const isValid = () => {
 		const form_values = Object.values(form);
 		for (let i = 0; i < form_values.length; i++) {
 			if (form_values[i]?.validate && !form_values[i]?.valid) {
@@ -187,7 +188,7 @@ const Poster = (props: Props) => {
 			}
 		}
 		return true;
-	}
+	};
 
 	return (
 		<div class="columns">

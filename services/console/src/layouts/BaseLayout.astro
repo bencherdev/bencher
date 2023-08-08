@@ -1,6 +1,7 @@
 ---
 import "../styles/styles.scss";
 import Footer from "../components/site/Footer";
+import { fmtPageTitle } from "../util/resource";
 
 interface Props {
   title: string;
@@ -8,8 +9,7 @@ interface Props {
 
 const { title } = Astro.props;
 
-const BENCHER_TITLE = "Bencher - Continuous Benchmarking";
-const pageTitle = title ? `${title} | ${BENCHER_TITLE}` : BENCHER_TITLE;
+const pageTitle = fmtPageTitle(title);
 ---
 
 <!DOCTYPE html>

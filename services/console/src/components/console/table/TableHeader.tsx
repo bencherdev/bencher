@@ -2,16 +2,18 @@ import { createResource, For, Match, Switch } from "solid-js";
 import { pathname, useNavigate } from "../../../util/url";
 import { Button } from "../../../config/types";
 
+export interface Props {
+	pathParams: Record<string, string>;
+	config: TableHeaderConfig;
+	handleRefresh: () => void;
+}
+
 export interface TableHeaderConfig {
 	title: string;
 	buttons: TableButton[];
 }
 
-const TableHeader = (props: {
-	pathParams: Record<string, string>;
-	config: TableHeaderConfig;
-	handleRefresh: () => void;
-}) => {
+const TableHeader = (props: Props) => {
 	const title = props.config?.title;
 
 	return (
