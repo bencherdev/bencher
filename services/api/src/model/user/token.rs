@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
-use bencher_json::{JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId};
+use bencher_json::{
+    user::token::JsonUpdateToken, JsonNewToken, JsonToken, Jwt, NonEmpty, ResourceId,
+};
 use diesel::{ExpressionMethods, Insertable, QueryDsl, Queryable, RunQueryDsl};
 use uuid::Uuid;
 
@@ -9,7 +11,10 @@ use crate::{
     error::api_error,
     schema,
     schema::token as token_table,
-    util::{query::fn_get_id, to_date_time},
+    util::{
+        query::{fn_get, fn_get_id},
+        to_date_time,
+    },
     ApiError,
 };
 
@@ -37,6 +42,7 @@ pub struct QueryToken {
 }
 
 impl QueryToken {
+    fn_get!(token);
     fn_get_id!(token);
 
     pub fn get_uuid(conn: &mut DbConnection, id: i32) -> Result<Uuid, ApiError> {
@@ -46,6 +52,18 @@ impl QueryToken {
             .first(conn)
             .map_err(api_error!())?;
         Uuid::from_str(&uuid).map_err(api_error!())
+    }
+
+    pub fn get_user_token(
+        conn: &mut DbConnection,
+        user_id: i32,
+        uuid: &str,
+    ) -> Result<Self, ApiError> {
+        schema::token::table
+            .filter(schema::token::user_id.eq(user_id))
+            .filter(schema::token::uuid.eq(uuid))
+            .first::<QueryToken>(conn)
+            .map_err(api_error!())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, ApiError> {
@@ -122,5 +140,20 @@ impl InsertToken {
             creation: token_data.claims.iat as i64,
             expiration: token_data.claims.exp as i64,
         })
+    }
+}
+
+#[derive(Debug, Clone, AsChangeset)]
+#[diesel(table_name = token_table)]
+pub struct UpdateToken {
+    pub name: Option<String>,
+}
+
+impl From<JsonUpdateToken> for UpdateToken {
+    fn from(update: JsonUpdateToken) -> Self {
+        let JsonUpdateToken { name } = update;
+        Self {
+            name: name.map(Into::into),
+        }
     }
 }

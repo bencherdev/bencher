@@ -44,10 +44,10 @@ impl TryFrom<CliMetricKindUpdate> for Update {
 }
 
 impl From<Update> for JsonUpdateMetricKind {
-    fn from(create: Update) -> Self {
+    fn from(update: Update) -> Self {
         let Update {
             name, slug, units, ..
-        } = create;
+        } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),

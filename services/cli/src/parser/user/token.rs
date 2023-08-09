@@ -15,6 +15,9 @@ pub enum CliToken {
     /// View a token
     #[clap(alias = "cat")]
     View(CliTokenView),
+    // Update a token
+    #[clap(alias = "edit")]
+    Update(CliTokenUpdate),
 }
 
 #[derive(Parser, Debug)]
@@ -48,6 +51,7 @@ pub struct CliTokenCreate {
     pub user: ResourceId,
 
     /// Token name
+    #[clap(long)]
     pub name: NonEmpty,
 
     /// Time to live (seconds)
@@ -63,6 +67,23 @@ pub struct CliTokenView {
     /// User slug or UUID
     #[clap(long)]
     pub user: ResourceId,
+
+    /// Token UUID
+    pub token: Uuid,
+
+    #[clap(flatten)]
+    pub backend: CliBackend,
+}
+
+#[derive(Parser, Debug)]
+pub struct CliTokenUpdate {
+    /// User slug or UUID
+    #[clap(long)]
+    pub user: ResourceId,
+
+    /// Token name
+    #[clap(long)]
+    pub name: Option<NonEmpty>,
 
     /// Token UUID
     pub token: Uuid,

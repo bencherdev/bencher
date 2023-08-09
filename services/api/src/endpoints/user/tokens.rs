@@ -1,7 +1,8 @@
 use bencher_json::{
-    JsonDirection, JsonNewToken, JsonPagination, JsonToken, JsonTokens, NonEmpty, ResourceId,
+    user::token::JsonUpdateToken, JsonDirection, JsonNewToken, JsonPagination, JsonToken,
+    JsonTokens, NonEmpty, ResourceId,
 };
-use diesel::{expression_methods::BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext, TypedBody};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -18,7 +19,7 @@ use crate::{
         user::QueryUser,
         user::{
             auth::AuthUser,
-            token::{same_user, InsertToken, QueryToken},
+            token::{same_user, InsertToken, QueryToken, UpdateToken},
         },
     },
     schema,
@@ -240,14 +241,55 @@ async fn get_one_inner(
     let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.id);
 
-    schema::token::table
-        .filter(
-            schema::token::user_id
-                .eq(query_user.id)
-                .and(schema::token::uuid.eq(&path_params.token.to_string())),
-        )
-        .first::<QueryToken>(conn)
-        .map_err(api_error!())?
+    QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?
         .into_json(conn)
         .map_err(api_error!())
+}
+
+#[endpoint {
+    method = PATCH,
+    path =  "/v0/users/{user}/tokens/{token}",
+    tags = ["users", "tokens"]
+}]
+pub async fn user_token_patch(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<UserTokenParams>,
+    body: TypedBody<JsonUpdateToken>,
+) -> Result<ResponseAccepted<JsonToken>, HttpError> {
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let endpoint = Endpoint::new(TOKEN_RESOURCE, Method::Patch);
+
+    let context = rqctx.context();
+    let json = patch_inner(
+        context,
+        path_params.into_inner(),
+        body.into_inner(),
+        &auth_user,
+    )
+    .await
+    .map_err(|e| endpoint.err(e))?;
+
+    response_accepted!(endpoint, json)
+}
+
+async fn patch_inner(
+    context: &ApiContext,
+    path_params: UserTokenParams,
+    json_token: JsonUpdateToken,
+    auth_user: &AuthUser,
+) -> Result<JsonToken, ApiError> {
+    let conn = &mut *context.conn().await;
+
+    let query_user = QueryUser::from_resource_id(conn, &path_params.user)?;
+    same_user!(auth_user, context.rbac, query_user.id);
+
+    let query_token =
+        QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?;
+
+    diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
+        .set(&UpdateToken::from(json_token))
+        .execute(conn)
+        .map_err(api_error!())?;
+
+    QueryToken::get(conn, query_token.id)?.into_json(conn)
 }

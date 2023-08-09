@@ -213,6 +213,7 @@ impl Api {
         api.register(user::tokens::user_tokens_get)?;
         api.register(user::tokens::user_token_post)?;
         api.register(user::tokens::user_token_get)?;
+        api.register(user::tokens::user_token_patch)?;
 
         // Server
         if http_options {

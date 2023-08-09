@@ -25,7 +25,7 @@ const DeckHeader = (props: Props) => {
 	const navigate = useNavigate();
 
 	const title = createMemo(() =>
-		fmtValues(props.data, props.config?.key, props.config?.keys, " | "),
+		fmtValues(props.data(), props.config?.key, props.config?.keys, " | "),
 	);
 
 	createEffect(() => {

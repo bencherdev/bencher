@@ -54,8 +54,8 @@ impl From<CliAlertStatus> for Status {
 }
 
 impl From<Update> for JsonUpdateAlert {
-    fn from(create: Update) -> Self {
-        let Update { status, .. } = create;
+    fn from(update: Update) -> Self {
+        let Update { status, .. } = update;
         Self {
             status: status.map(|s| match s {
                 Status::Active => JsonAlertStatus::Active,

@@ -41,8 +41,8 @@ impl TryFrom<CliBranchUpdate> for Update {
 }
 
 impl From<Update> for JsonUpdateBranch {
-    fn from(create: Update) -> Self {
-        let Update { name, slug, .. } = create;
+    fn from(update: Update) -> Self {
+        let Update { name, slug, .. } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),

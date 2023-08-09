@@ -28,3 +28,9 @@ pub struct JsonToken {
     pub creation: DateTime<Utc>,
     pub expiration: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateToken {
+    pub name: Option<NonEmpty>,
+}

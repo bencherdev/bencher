@@ -47,14 +47,14 @@ impl TryFrom<CliProjectUpdate> for Update {
 }
 
 impl From<Update> for JsonUpdateProject {
-    fn from(create: Update) -> Self {
+    fn from(update: Update) -> Self {
         let Update {
             name,
             slug,
             url,
             visibility,
             ..
-        } = create;
+        } = update;
         match url {
             Some(Some(url)) => Self {
                 subtype_0: Some(JsonProjectPatch {

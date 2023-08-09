@@ -133,12 +133,14 @@ const UpdateCard = (props: Props) => {
 	};
 
 	const updatePath = (data: Record<string, any>) => {
+		// TODO once the above navigation moves over to a soft redirect
+		// Then these refreshes can be reenabled as opposed to a hard page reload
 		if (props.card?.path) {
 			const path = props.card?.path(props.pathParams, data);
-			props.handleLoopback(path);
+			// props.handleLoopback(path);
 			return path;
 		} else {
-			props.handleRefresh();
+			// props.handleRefresh();
 			return pathname();
 		}
 	};

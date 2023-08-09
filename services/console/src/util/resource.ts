@@ -1,5 +1,5 @@
 export const fmtValues = (
-	data: Record<string, any>,
+	data: undefined | Record<string, any>,
 	key: undefined | string,
 	keys: undefined | string[][],
 	separator: string,

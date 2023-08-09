@@ -41,8 +41,8 @@ impl TryFrom<CliTestbedUpdate> for Update {
 }
 
 impl From<Update> for JsonUpdateTestbed {
-    fn from(create: Update) -> Self {
-        let Update { name, slug, .. } = create;
+    fn from(update: Update) -> Self {
+        let Update { name, slug, .. } = update;
         Self {
             name: name.map(Into::into),
             slug: slug.map(Into::into),
