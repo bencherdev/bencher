@@ -61,7 +61,7 @@ const ConsoleMenu = () => {
 		`/console/users/${authUser()?.user?.slug}/${section}`;
 
 	return (
-		<aside class="menu">
+		<aside class="menu is-sticky">
 			<Switch fallback={<></>}>
 				<Match
 					when={

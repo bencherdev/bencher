@@ -14,7 +14,23 @@ const { path, title } = Astro.props;
 
 <BaseLayout title={title}>
   <ConsoleNavbar client:only slot="navbar" path={path} />
-  <section class="section">
+  <div class="is-widescreen">
+    <div class="columns is-reverse-mobile">
+      <div class="columns">
+        <div class="column is-narrow">
+          <ConsoleMenu client:only />
+        </div>
+      </div>
+      <div class="column">
+        <section class="section">
+          <div class="continer">
+            <slot />
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <!-- <section class="section">
     <div class="container">
       <div class="columns is-reverse-mobile">
         <div class="column is-narrow">
@@ -25,5 +41,5 @@ const { path, title } = Astro.props;
         </div>
       </div>
     </div>
-  </section>
+  </section> -->
 </BaseLayout>

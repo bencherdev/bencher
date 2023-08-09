@@ -1,9 +1,9 @@
 import { createResource, For, Match, Switch } from "solid-js";
-import { pathname, useNavigate } from "../../../util/url";
+import { Params, pathname, useNavigate } from "../../../util/url";
 import { Button } from "../../../config/types";
 
 export interface Props {
-	pathParams: Record<string, string>;
+	pathParams: Params;
 	config: TableHeaderConfig;
 	handleRefresh: () => void;
 }
@@ -43,12 +43,12 @@ const TableHeader = (props: Props) => {
 interface TableButton {
 	title: string;
 	kind: Button;
-	is_allowed?: (pathParams: Record<string, string>) => boolean;
+	is_allowed?: (pathParams: Params) => boolean;
 	path: (pathname: string) => string;
 }
 
 const TableHeaderButton = (props: {
-	pathParams: Record<string, string>;
+	pathParams: Params;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;

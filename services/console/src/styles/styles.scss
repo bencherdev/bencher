@@ -34,6 +34,23 @@ $badoge-z-index: 5 !default;
   }
 }
 
+// https://stackoverflow.com/questions/63262296/how-to-get-a-fixed-sidebar-in-bulma
+.menu.is-sticky {
+  position: sticky;
+  display: inline-block;
+  vertical-align: top;
+  max-height: 100vh;
+  overflow-y: auto;
+  width: 200px;
+  top: 0;
+  bottom: 0;
+  padding: 30px;
+}
+
+.content.is-sticky {
+  display: inline-block;
+}
+
 // source: https://codepen.io/anon/pen/xagpgd
 .has-equal-height {
   display: flex;
