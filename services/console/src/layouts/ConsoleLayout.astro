@@ -1,18 +1,19 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
 import ConsoleMenu from "../components/console/ConsoleMenu";
-import Navbar from "../components/site/navbar/Navbar";
+import ConsoleNavbar from "../components/site/navbar/ConsoleNavbar";
 
 interface Props {
+  path: string;
   title: string;
   menu: any;
 }
 
-const { title } = Astro.props;
+const { path, title } = Astro.props;
 ---
 
 <BaseLayout title={title}>
-  <Navbar slot="navbar" />
+  <ConsoleNavbar client:only slot="navbar" path={path} />
   <section class="section">
     <div class="container">
       <div class="columns is-reverse-mobile">

@@ -4,12 +4,9 @@ import TablePanel from "../../../components/console/table/TablePanel";
 import { Resource } from "../../../config/types";
 
 const title = "Organizations";
+const path = "/console/organizations";
 ---
 
-<ConsoleLayout title={title}>
-  <TablePanel
-    client:only
-    path="/console/organizations"
-    resource={Resource.ORGANIZATIONS}
-  />
+<ConsoleLayout path={path} title={title}>
+  <TablePanel client:only path={path} resource={Resource.ORGANIZATIONS} />
 </ConsoleLayout>

@@ -1,5 +1,6 @@
 ---
 import "../styles/styles.scss";
+import Navbar from "../components/site/navbar/Navbar";
 import Footer from "../components/site/Footer";
 import { fmtPageTitle } from "../util/resource";
 
@@ -35,7 +36,9 @@ const pageTitle = fmtPageTitle(title);
     ></script>
   </head>
   <body>
-    <slot name="navbar" />
+    <slot name="navbar">
+      <Navbar />
+    </slot>
     <main>
       <slot />
     </main>

@@ -2,9 +2,10 @@
 import ConsoleLayout from "../../../layouts/ConsoleLayout.astro";
 import UsersRoot from "../../../components/user/UsersRoot";
 
+const path = "/console/users";
 const title = "Users";
 ---
 
-<ConsoleLayout title={title}>
+<ConsoleLayout path={path} title={title}>
   <UsersRoot client:only />
 </ConsoleLayout>

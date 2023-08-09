@@ -1,21 +1,20 @@
-import { createSignal } from "solid-js";
-import {
-	BENCHER_GITHUB_URL,
-	BENCHER_LOGO_URL,
-	BENCHER_VERSION,
-} from "../../../util/ext";
+import { Show, createSignal } from "solid-js";
+import { BENCHER_LOGO_URL, BENCHER_VERSION } from "../../../util/ext";
+import { useParams } from "../../../util/url";
+import ProjectSelect from "./ProjectSelect";
 
-const Navbar = () => {
+export interface Props {
+	path: string;
+}
+
+const ConsoleNavbar = (props: Props) => {
+	const pathParams = useParams(props.path);
 	const [burger, setBurger] = createSignal(false);
 
 	return (
 		<nav class="navbar" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
-				<a
-					class="navbar-item"
-					title="Bencher - Continuous Benchmarking"
-					href="/"
-				>
+				<a class="navbar-item" title="Console Home" href="/console">
 					<img
 						src={BENCHER_LOGO_URL}
 						width="152"
@@ -41,21 +40,14 @@ const Navbar = () => {
 					<a class="navbar-item" href="/docs">
 						Docs
 					</a>
-
 					<a class="navbar-item" href="/perf">
-						Projects
+						Public Projects
 					</a>
-					<a class="navbar-item" href="/pricing">
-						Pricing
-					</a>
-					<a
-						class="navbar-item"
-						href={BENCHER_GITHUB_URL}
-						target="_blank"
-						rel="noreferrer"
-					>
-						GitHub
-					</a>
+					<Show when={pathParams.organization_slug} fallback={<></>}>
+						<div class="navbar-item">
+							<ProjectSelect pathParams={pathParams} />
+						</div>
+					</Show>
 				</div>
 
 				<div class="navbar-end">
@@ -72,11 +64,8 @@ const Navbar = () => {
 						</div>
 						<div class="navbar-item" />
 						<div class="buttons">
-							<a class="button is-light" href="/auth/login">
-								Log in
-							</a>
-							<a class="button is-primary" href="/auth/signup">
-								<strong>Sign up</strong>
+							<a class="button is-light" href="/auth/logout">
+								Log out
 							</a>
 						</div>
 					</div>
@@ -86,4 +75,4 @@ const Navbar = () => {
 	);
 };
 
-export default Navbar;
+export default ConsoleNavbar;
