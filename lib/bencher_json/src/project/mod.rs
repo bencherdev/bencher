@@ -212,6 +212,7 @@ impl JsonVisibility {
     }
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

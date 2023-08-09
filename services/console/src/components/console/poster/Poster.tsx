@@ -1,5 +1,5 @@
 import bencher_valid_init from "bencher_valid";
-import { For, Resource, Show, createResource, createSignal } from "solid-js";
+import { For, Show, createResource, createSignal } from "solid-js";
 import Field, { FieldConfig, FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
@@ -33,9 +33,9 @@ export interface PosterFieldConfig {
 	nullable?: null | boolean;
 }
 
-type PosterForm = Record<string, PosterField>;
+export type PosterForm = Record<string, PosterField>;
 
-interface PosterField {
+export interface PosterField {
 	kind: FieldKind;
 	label: string;
 	value: FieldValue;
@@ -176,6 +176,7 @@ const Poster = (props: Props) => {
 					valid: valid,
 				},
 			});
+
 			setValid(isValid());
 		}
 	};

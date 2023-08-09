@@ -1,6 +1,13 @@
-import { createMemo, createSignal } from "solid-js";
-import type { JsonAuthUser } from "../types/bencher";
+import { createSignal } from "solid-js";
+import type {
+	JsonAuthUser,
+	JsonOrganizationPermission,
+	JsonProjectPermission,
+} from "../types/bencher";
 import { validUser } from "./valid";
+import type { Params } from "./url";
+import { BENCHER_API_URL } from "./ext";
+import { httpGet } from "./http";
 
 const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -56,3 +63,38 @@ setInterval(() => {
 }, 100);
 
 export const authUser = authUsr;
+
+export const isAllowedOrganization = async (
+	pathParams: Params,
+	permission: JsonOrganizationPermission,
+) => {
+	return is_allowed(
+		`${BENCHER_API_URL()}/v0/organizations/${
+			pathParams?.organization_slug
+		}/allowed/${permission}`,
+	);
+};
+
+export const isAllowedProject = async (
+	pathParams: Params,
+	permission: JsonProjectPermission,
+) => {
+	return is_allowed(
+		`${BENCHER_API_URL()}/v0/projects/${
+			pathParams?.project_slug
+		}/allowed/${permission}`,
+	);
+};
+
+export const is_allowed = async (url: string) => {
+	const token = authUsr().token;
+	// if (!validJwt(token)) {
+	// 	return false;
+	// }
+	return await httpGet(url, token)
+		.then((resp) => resp?.data?.allowed)
+		.catch((error) => {
+			console.error(error);
+			return false;
+		});
+};

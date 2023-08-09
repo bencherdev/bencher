@@ -25,6 +25,7 @@ pub struct JsonOrganizations(pub Vec<JsonOrganization>);
 
 crate::from_vec!(JsonOrganizations[JsonOrganization]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOrganization {
@@ -42,6 +43,7 @@ pub struct JsonUpdateOrganization {
     pub slug: Option<Slug>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Display)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

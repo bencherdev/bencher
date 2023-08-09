@@ -20,8 +20,8 @@ export type FieldHandler = (
 export type FieldValueHandler = (value: FieldValue) => void;
 
 export interface Props {
-	user: JsonAuthUser;
 	pathParams: Params;
+	user: JsonAuthUser;
 	kind: FieldKind;
 	fieldKey: string;
 	label?: undefined | string;

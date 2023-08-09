@@ -28,6 +28,14 @@ export type Url = string;
 
 export type UserName = string;
 
+export interface JsonOrganization {
+	uuid: string;
+	name: NonEmpty;
+	slug: Slug;
+	created: string;
+	modified: string;
+}
+
 export interface JsonMetricKind {
 	uuid: string;
 	project: string;
@@ -242,6 +250,30 @@ export interface JsonUser {
 export interface JsonAuthUser {
 	user: JsonUser;
 	token: Jwt;
+}
+
+export enum JsonOrganizationPermission {
+	View = "view",
+	Create = "create",
+	Edit = "edit",
+	Delete = "delete",
+	Manage = "manage",
+	ViewRole = "view_role",
+	CreateRole = "create_role",
+	EditRole = "edit_role",
+	DeleteRole = "delete_role",
+}
+
+export enum JsonProjectPermission {
+	View = "view",
+	Create = "create",
+	Edit = "edit",
+	Delete = "delete",
+	Manage = "manage",
+	ViewRole = "view_role",
+	CreateRole = "create_role",
+	EditRole = "edit_role",
+	DeleteRole = "delete_role",
 }
 
 export enum PlanStatus {

@@ -13,7 +13,7 @@ export const fmtValues = (
 			(accumulator: string, current: string[], index: number) => {
 				const value = fmtNestedValue(data, current);
 				if (index === 0) {
-					return value ? value : "";
+					return value;
 				} else {
 					return accumulator + separator + value;
 				}
@@ -26,11 +26,11 @@ export const fmtValues = (
 };
 
 export const fmtNestedValue = (
-	datum: Record<string, any>,
-	keys: string[],
-): undefined | string => {
-	if (!datum) {
-		return;
+	datum: undefined | Record<string, any>,
+	keys: undefined | string[],
+): string => {
+	if (!datum || !keys) {
+		return "";
 	}
 	return keys
 		.reduce(

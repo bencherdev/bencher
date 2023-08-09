@@ -20,7 +20,7 @@ import { validJwt } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
 import { pathname, useParams } from "../../../util/url";
 import DeckHeader, { DeckHeaderConfig } from "./header/DeckHeader";
-import Deck from "./hand/Deck";
+import Deck, { DeckConfig } from "./hand/Deck";
 
 // import DeckHeader from "./DeckHeader";
 // import Deck from "./Deck";
@@ -35,7 +35,7 @@ interface Props {
 interface DeckPanelConfig {
 	operation: Operation;
 	header: DeckHeaderConfig;
-	// form: PosterConfig;
+	deck: DeckConfig;
 }
 
 const DeckPanel = (props: Props) => {
@@ -109,7 +109,7 @@ const DeckPanel = (props: Props) => {
 			<Deck
 				pathParams={pathParams}
 				user={user}
-				config={props.config?.deck}
+				config={config()?.deck}
 				url={url}
 				data={deckData}
 				// refresh={refresh}

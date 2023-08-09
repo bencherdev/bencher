@@ -118,6 +118,16 @@ const tokensConfig = {
 					label: "API Token Name",
 					key: "name",
 					display: Display.RAW,
+					is_allowed: (_pathParams: Params) => true,
+					field: {
+						kind: FieldKind.INPUT,
+						label: "Name",
+						key: "name",
+						value: "",
+						valid: null,
+						validate: true,
+						config: TOKEN_FIELDS.name,
+					},
 				},
 				{
 					kind: Card.FIELD,
