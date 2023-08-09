@@ -1,9 +1,10 @@
 import { createResource, For, Match, Switch } from "solid-js";
-import { Params, pathname, useNavigate } from "../../../util/url";
+import { pathname, useNavigate } from "../../../util/url";
 import { Button } from "../../../config/types";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	config: TableHeaderConfig;
 	handleRefresh: () => void;
 }
@@ -28,7 +29,7 @@ const TableHeader = (props: Props) => {
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<TableHeaderButton
-							pathParams={props.pathParams}
+							params={props.params}
 							title={title}
 							button={button}
 							handleRefresh={props.handleRefresh}
@@ -43,20 +44,20 @@ const TableHeader = (props: Props) => {
 interface TableButton {
 	title: string;
 	kind: Button;
-	is_allowed?: (pathParams: Params) => boolean;
+	is_allowed?: (params: Params) => boolean;
 	path: (pathname: string) => string;
 }
 
 const TableHeaderButton = (props: {
-	pathParams: Params;
+	params: Params;
 	title: string;
 	button: TableButton;
 	handleRefresh: () => void;
 }) => {
 	const navigate = useNavigate();
 
-	const [isAllowed] = createResource(props.pathParams, (pathParams) =>
-		props.button.is_allowed?.(pathParams),
+	const [isAllowed] = createResource(props.params, (params) =>
+		props.button.is_allowed?.(params),
 	);
 
 	return (

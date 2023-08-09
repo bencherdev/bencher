@@ -1,17 +1,18 @@
 ---
 import BaseLayout from "../BaseLayout.astro";
 import ConsoleNavbar from "../../components/site/navbar/ConsoleNavbar";
+import type { Params } from "astro";
 
 interface Props {
-  path: string;
+  params: Params;
   title: string;
 }
 
-const { path, title } = Astro.props;
+const { params, title } = Astro.props;
 ---
 
 <BaseLayout title={title}>
-  <ConsoleNavbar client:only slot="navbar" path={path} />
+  <ConsoleNavbar client:only slot="navbar" params={params} />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">

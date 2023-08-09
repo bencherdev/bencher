@@ -1,5 +1,5 @@
+import type { Params } from "astro";
 import type { Card, Display } from "../../../../../config/types";
-import type { Params } from "../../../../../util/url";
 import type { PosterFieldConfig } from "../../../poster/Poster";
 
 export interface CardConfig {
@@ -9,8 +9,8 @@ export interface CardConfig {
 	keys?: string[];
 	display: Display;
 	field: PosterFieldConfig;
-	is_allowed: (pathParams: Params) => boolean;
-	path: (pathParams: Params, data: Record<string, any>) => string;
+	is_allowed: (params: Params) => boolean;
+	path: (params: Params, data: Record<string, any>) => string;
 }
 
 export default CardConfig;

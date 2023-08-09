@@ -12,8 +12,8 @@ const usersConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (pathParams: Params) => {
-				return `${BENCHER_API_URL()}/v0/users/${pathParams?.user_slug}`;
+			url: (params: Params) => {
+				return `${BENCHER_API_URL()}/v0/users/${params?.user}`;
 			},
 			cards: [
 				{

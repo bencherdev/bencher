@@ -2,10 +2,10 @@
 import UserLayout from "../../../layouts/console/UserLayout.astro";
 import UsersRoot from "../../../components/user/UsersRoot";
 
-const path = "/console/users";
+const params = Astro.params;
 const title = "Users";
 ---
 
-<UserLayout path={path} title={title}>
+<UserLayout params={params} title={title}>
   <UsersRoot client:only />
 </UserLayout>

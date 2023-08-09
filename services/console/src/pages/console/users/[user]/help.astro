@@ -4,10 +4,10 @@ export const prerender = false;
 import UserLayout from "../../../../layouts/console/UserLayout.astro";
 import HelpPanel from "../../../../components/console/help/HelpPanel";
 
-const path = "/console/users/:user_slug/settings";
+const params = Astro.params;
 const title = "View Token";
 ---
 
-<UserLayout path={path} title={title}>
+<UserLayout params={params} title={title}>
   <HelpPanel client:only />
 </UserLayout>

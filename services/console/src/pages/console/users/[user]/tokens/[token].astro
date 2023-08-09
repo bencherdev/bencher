@@ -7,10 +7,10 @@ import { Resource } from "../../../../../config/types";
 
 // TODO share state
 // https://docs.astro.build/en/core-concepts/sharing-state/#why-nano-stores
-const path = "/console/users/:user_slug/tokens/:token_uuid";
+const params = Astro.params;
 const title = "View Token";
 ---
 
-<UserLayout path={path} title={title}>
-  <DeckPanel client:only path={path} resource={Resource.TOKENS} />
+<UserLayout params={params} title={title}>
+  <DeckPanel client:only params={params} resource={Resource.TOKENS} />
 </UserLayout>

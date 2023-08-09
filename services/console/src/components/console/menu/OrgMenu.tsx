@@ -1,11 +1,11 @@
 import { Show, createResource } from "solid-js";
 import { authUser, isAllowedOrganization } from "../../../util/auth";
-import { useParams } from "../../../util/url";
 import { JsonOrganizationPermission } from "../../../types/bencher";
 import bencher_valid_init from "bencher_valid";
+import type { Params } from "astro";
 
 interface Props {
-	path: string;
+	params: Params;
 }
 
 enum Section {
@@ -20,7 +20,6 @@ const OrgMenu = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 
-	const pathParams = useParams(props.path);
 	const user = authUser();
 
 	const [billing] = createResource(bencher_valid, async (bv) => {
@@ -28,7 +27,7 @@ const OrgMenu = (props: Props) => {
 			return false;
 		}
 		return await isAllowedOrganization(
-			pathParams,
+			params,
 			JsonOrganizationPermission.Manage,
 		);
 	});

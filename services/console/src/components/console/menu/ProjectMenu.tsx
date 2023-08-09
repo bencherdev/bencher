@@ -1,12 +1,13 @@
 import { Show, createMemo, createResource } from "solid-js";
-import { Params, useNavigate, useParams } from "../../../util/url";
+import { useNavigate } from "../../../util/url";
 import { authUser } from "../../../util/auth";
 import { BENCHER_API_URL } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
 import type { JsonAlertStats } from "../../../types/bencher";
+import type { Params } from "astro";
 
 interface Props {
-	path: string;
+	params: Params;
 }
 
 enum Section {
@@ -23,18 +24,17 @@ enum Section {
 
 const ConsoleMenu = (props: Props) => {
 	const navigate = useNavigate();
-	const pathParams = useParams(props.path);
 	const user = authUser();
 
-	const getAlerts = async (pathParams: Params): Promise<JsonAlertStats> => {
+	const getAlerts = async (params: Params): Promise<JsonAlertStats> => {
 		const DEFAULT_ALERT_STATS = {
 			active: 0,
 		};
-		if (!pathParams.project_slug) {
+		if (!params.project) {
 			return DEFAULT_ALERT_STATS;
 		}
 		const url = `${BENCHER_API_URL()}/v0/projects/${
-			pathParams.project_slug
+			params.project
 		}/stats/alerts`;
 		return await httpGet(url, authUser()?.token)
 			.then((resp) => resp.data)
@@ -43,7 +43,7 @@ const ConsoleMenu = (props: Props) => {
 				return DEFAULT_ALERT_STATS;
 			});
 	};
-	const [alert_stats] = createResource(pathParams, getAlerts);
+	const [alert_stats] = createResource(props.params, getAlerts);
 	const active_alerts = createMemo(() => alert_stats()?.active);
 
 	const path = (section: Section) =>

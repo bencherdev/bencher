@@ -1,18 +1,18 @@
-import { Switch, Match, createMemo, createResource } from "solid-js";
-import type { Params } from "../../../../../util/url";
+import { Switch, Match, createResource } from "solid-js";
 import { Display } from "../../../../../config/types";
 import type CardConfig from "./CardConfig";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	card: CardConfig;
 	value: boolean | string;
 	toggleUpdate: () => void;
 }
 
 const ViewCard = (props: Props) => {
-	const [is_allowed] = createResource(props.pathParams, (pathParams) =>
-		props.card?.is_allowed?.(pathParams),
+	const [is_allowed] = createResource(props.params, (params) =>
+		props.card?.is_allowed?.(params),
 	);
 
 	return (

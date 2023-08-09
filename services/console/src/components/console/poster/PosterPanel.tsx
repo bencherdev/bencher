@@ -3,9 +3,10 @@ import { Operation, type Resource } from "../../../config/types";
 import Poster, { PosterConfig } from "./Poster";
 import PosterHeader, { PosterHeaderConfig } from "./PosterHeader";
 import consoleConfig from "../../../config/console";
+import type { Params } from "astro";
 
 interface Props {
-	path: string;
+	params: Params;
 	resource: Resource;
 }
 
@@ -24,7 +25,7 @@ const PosterPanel = (props: Props) => {
 		<>
 			<PosterHeader config={config()?.header} />
 			<Poster
-				path={props.path}
+				params={props.params}
 				operation={config()?.operation}
 				config={config()?.form}
 			/>

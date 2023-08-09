@@ -1,15 +1,14 @@
 import { Show, createSignal } from "solid-js";
 import { BENCHER_LOGO_URL, BENCHER_VERSION } from "../../../util/ext";
-import { useParams } from "../../../util/url";
 import ProjectSelect from "./ProjectSelect";
 import { authUser } from "../../../util/auth";
+import type { Params } from "astro";
 
 export interface Props {
-	path: string;
+	params: Params;
 }
 
 const ConsoleNavbar = (props: Props) => {
-	const pathParams = useParams(props.path);
 	const user = authUser();
 
 	const [burger, setBurger] = createSignal(false);
@@ -47,9 +46,9 @@ const ConsoleNavbar = (props: Props) => {
 					<a class="navbar-item" href="/perf">
 						Public Projects
 					</a>
-					<Show when={pathParams.organization_slug} fallback={<></>}>
+					<Show when={props.params.organization} fallback={<></>}>
 						<div class="navbar-item">
-							<ProjectSelect pathParams={pathParams} user={user} />
+							<ProjectSelect params={props.params} user={user} />
 						</div>
 					</Show>
 				</div>

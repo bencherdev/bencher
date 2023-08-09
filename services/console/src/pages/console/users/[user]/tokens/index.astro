@@ -5,10 +5,10 @@ import UserLayout from "../../../../../layouts/console/UserLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { Resource } from "../../../../../config/types";
 
-const path = "/console/users/:user_slug/tokens";
+const params = Astro.params;
 const title = "Tokens";
 ---
 
-<UserLayout path={path} title={title}>
-  <TablePanel client:only path={path} resource={Resource.TOKENS} />
+<UserLayout params={params} title={title}>
+  <TablePanel client:only params={params} resource={Resource.TOKENS} />
 </UserLayout>

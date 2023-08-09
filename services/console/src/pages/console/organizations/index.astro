@@ -3,10 +3,10 @@ import UserLayout from "../../../layouts/console/UserLayout.astro";
 import TablePanel from "../../../components/console/table/TablePanel";
 import { Resource } from "../../../config/types";
 
+const params = Astro.params;
 const title = "Organizations";
-const path = "/console/organizations";
 ---
 
-<UserLayout path={path} title={title}>
-  <TablePanel client:only path={path} resource={Resource.ORGANIZATIONS} />
+<UserLayout params={params} title={title}>
+  <TablePanel client:only params={params} resource={Resource.ORGANIZATIONS} />
 </UserLayout>

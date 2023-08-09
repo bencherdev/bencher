@@ -1,13 +1,13 @@
 import { createSignal } from "solid-js";
-import type {
-	JsonAuthUser,
-	JsonOrganizationPermission,
+import {
 	JsonProjectPermission,
+	type JsonAuthUser,
+	JsonOrganizationPermission,
 } from "../types/bencher";
 import { validUser } from "./valid";
-import type { Params } from "./url";
 import { BENCHER_API_URL } from "./ext";
 import { httpGet } from "./http";
+import type { Params } from "astro";
 
 const BENCHER_USER_KEY: string = "BENCHER_USER";
 
@@ -65,24 +65,22 @@ setInterval(() => {
 export const authUser = authUsr;
 
 export const isAllowedOrganization = async (
-	pathParams: Params,
+	params: Params,
 	permission: JsonOrganizationPermission,
 ): Promise<boolean> => {
 	return is_allowed(
 		`${BENCHER_API_URL()}/v0/organizations/${
-			pathParams?.organization_slug
+			params?.organization
 		}/allowed/${permission}`,
 	);
 };
 
 export const isAllowedProject = async (
-	pathParams: Params,
+	params: Params,
 	permission: JsonProjectPermission,
 ): Promise<boolean> => {
 	return is_allowed(
-		`${BENCHER_API_URL()}/v0/projects/${
-			pathParams?.project_slug
-		}/allowed/${permission}`,
+		`${BENCHER_API_URL()}/v0/projects/${params?.project}/allowed/${permission}`,
 	);
 };
 
@@ -98,3 +96,9 @@ export const is_allowed = async (url: string): Promise<boolean> => {
 			return false;
 		});
 };
+
+export const isAllowedOrganizationEdit = (params: Params) =>
+	isAllowedOrganization(params, JsonOrganizationPermission.Edit);
+
+export const isAllowedProjectEdit = (params: Params) =>
+	isAllowedProject(params, JsonProjectPermission.Edit);

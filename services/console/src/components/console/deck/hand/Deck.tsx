@@ -1,12 +1,12 @@
 import { Accessor, For, Resource, Show } from "solid-js";
-import type { Params } from "../../../../util/url";
 import type { JsonAuthUser } from "../../../../types/bencher";
 import DeckButton, { DeckButtonConfig } from "./DeckButton";
 import DeckCard from "./card/DeckCard";
 import type CardConfig from "./card/CardConfig";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 	config: DeckConfig;
 	url: Accessor<string>;
@@ -16,6 +16,7 @@ export interface Props {
 }
 
 export interface DeckConfig {
+	url: (params: Params) => string;
 	cards: CardConfig[];
 	buttons: DeckButtonConfig[];
 }
@@ -29,7 +30,7 @@ const Deck = (props: Props) => {
 						<div class="column">
 							<div class="card">
 								<DeckCard
-									pathParams={props.pathParams}
+									params={props.params}
 									user={props.user}
 									url={props.url}
 									card={card}

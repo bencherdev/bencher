@@ -1,16 +1,17 @@
 ---
 import ConsoleLayout from "./ConsoleLayout.astro";
 import OrgMenu from "../../components/console/menu/OrgMenu";
+import type { Params } from "astro";
 
 interface Props {
-  path: string;
+  params: Params;
   title: string;
 }
 
-const { path, title } = Astro.props;
+const { params, title } = Astro.props;
 ---
 
-<ConsoleLayout path={path} title={title}>
-  <OrgMenu client:only slot="menu" path={path} />
+<ConsoleLayout params={params} title={title}>
+  <OrgMenu client:only slot="menu" params={params} />
   <slot />
 </ConsoleLayout>

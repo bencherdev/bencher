@@ -1,5 +1,4 @@
 import bencher_valid_init from "bencher_valid";
-import { authUser } from "../../../util/auth";
 import { validJwt } from "../../../util/valid";
 import {
 	For,
@@ -8,7 +7,7 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { Params, useNavigate } from "../../../util/url";
+import { useNavigate } from "../../../util/url";
 import { BENCHER_API_URL } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
 import {
@@ -16,11 +15,12 @@ import {
 	type JsonProject,
 	JsonAuthUser,
 } from "../../../types/bencher";
+import type { Params } from "astro";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 }
 
@@ -37,7 +37,7 @@ const ProjectSelect = (props: Props) => {
 	const url = createMemo(
 		() =>
 			`${BENCHER_API_URL()}/v0/organizations/${
-				props.pathParams.organization_slug
+				props.params.organization
 			}/projects`,
 	);
 
@@ -68,7 +68,7 @@ const ProjectSelect = (props: Props) => {
 	};
 
 	const getSelected = () => {
-		const slug = props.pathParams.project_slug;
+		const slug = props.params.project;
 		if (slug === null) {
 			return BENCHER_ALL_PROJECTS;
 		} else {
@@ -86,7 +86,7 @@ const ProjectSelect = (props: Props) => {
 	const handleSelectedRedirect = () => {
 		let path: string;
 		if (selected() === BENCHER_ALL_PROJECTS) {
-			path = `/console/organizations/${props.pathParams.organization_slug}/projects`;
+			path = `/console/organizations/${props.params.organization}/projects`;
 		} else {
 			path = `/console/projects/${selected()}/perf`;
 		}
@@ -96,9 +96,7 @@ const ProjectSelect = (props: Props) => {
 	const handleInput = (target: string) => {
 		if (target === BENCHER_ALL_PROJECTS) {
 			setSelected(target);
-			navigate(
-				`/console/organizations/${props.pathParams.organization_slug}/projects`,
-			);
+			navigate(`/console/organizations/${props.params.organization}/projects`);
 			return;
 		}
 

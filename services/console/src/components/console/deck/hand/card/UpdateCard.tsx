@@ -1,6 +1,6 @@
 import { createSignal, type Accessor, createMemo } from "solid-js";
 import type { JsonAuthUser } from "../../../../../types/bencher";
-import { useNavigate, type Params } from "../../../../../util/url";
+import { useNavigate } from "../../../../../util/url";
 import type CardConfig from "./CardConfig";
 import type { PosterFieldConfig } from "../../../poster/Poster";
 import FieldKind from "../../../../field/kind";
@@ -9,9 +9,10 @@ import Field from "../../../../field/Field";
 import { createStore } from "solid-js/store";
 import { validJwt } from "../../../../../util/valid";
 import { httpPatch } from "../../../../../util/http";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 	url: Accessor<string>;
 	card: CardConfig;
@@ -136,7 +137,7 @@ const UpdateCard = (props: Props) => {
 		// TODO once the above navigation moves over to a soft redirect
 		// Then these refreshes can be reenabled as opposed to a hard page reload
 		if (props.card?.path) {
-			const path = props.card?.path(props.pathParams, data);
+			const path = props.card?.path(props.params, data);
 			// props.handleLoopback(path);
 			return path;
 		} else {
@@ -183,7 +184,7 @@ const UpdateCard = (props: Props) => {
 			<div class="card-content">
 				<div class="content">
 					<Field
-						pathParams={props.pathParams}
+						params={props.params}
 						user={props.user}
 						kind={props.card?.field?.kind}
 						fieldKey={props.card?.field?.key}

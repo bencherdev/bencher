@@ -1,11 +1,12 @@
 import { Accessor, For, Resource, createEffect, createMemo } from "solid-js";
 import type { JsonAuthUser } from "../../../../types/bencher";
-import { Params, pathname, useNavigate } from "../../../../util/url";
+import { pathname, useNavigate } from "../../../../util/url";
 import { fmtValues, setPageTitle } from "../../../../util/resource";
 import DeckHeaderButton, { DeckHeaderButtonConfig } from "./DeckHeaderButton";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 	config: DeckHeaderConfig;
 	url: Accessor<string>;
@@ -64,7 +65,7 @@ const DeckHeader = (props: Props) => {
 							{(button) => (
 								<div class="level-item">
 									<DeckHeaderButton
-										pathParams={props.pathParams}
+										params={props.params}
 										user={props.user}
 										button={button}
 										url={props.url}

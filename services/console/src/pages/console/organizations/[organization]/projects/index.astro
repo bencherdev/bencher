@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
+import TablePanel from "../../../../../components/console/table/TablePanel";
+import { Resource } from "../../../../../config/types";
+
+const params = Astro.params;
+const title = "Projects";
+---
+
+<OrgLayout params={params} title={title}>
+  <TablePanel client:only params={params} resource={Resource.PROJECTS} />
+</OrgLayout>

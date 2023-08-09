@@ -1,12 +1,12 @@
 import { createSignal, type Accessor, Show } from "solid-js";
 import type { JsonAuthUser } from "../../../../../types/bencher";
-import type { Params } from "../../../../../util/url";
 import ViewCard from "./ViewCard";
 import UpdateCard from "./UpdateCard";
 import type CardConfig from "./CardConfig";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 	url: Accessor<string>;
 	card: CardConfig;
@@ -27,7 +27,7 @@ const FieldCard = (props: Props) => {
 			when={update()}
 			fallback={
 				<ViewCard
-					pathParams={props.pathParams}
+					params={props.params}
 					card={props.card}
 					value={props.value}
 					// refresh={props.refresh}
@@ -36,7 +36,7 @@ const FieldCard = (props: Props) => {
 			}
 		>
 			<UpdateCard
-				pathParams={props.pathParams}
+				params={props.params}
 				user={props.user}
 				url={props.url}
 				card={props.card}

@@ -4,19 +4,20 @@ import Field, { FieldConfig, FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
 import { authUser } from "../../../util/auth";
-import { Params, pathname, useNavigate, useParams } from "../../../util/url";
+import { pathname, useNavigate } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
 import { Operation } from "../../../config/types";
 import { httpPost, httpPut } from "../../../util/http";
+import type { Params } from "astro";
 
 export interface Props {
-	path: string;
+	params: Params;
 	operation: Operation;
 	config: PosterConfig;
 }
 
 export interface PosterConfig {
-	url: (pathParams: Params) => string;
+	url: (params: Params) => string;
 	fields: PosterFieldConfig[];
 	path: (pathname: string) => string;
 	button: string;
@@ -66,7 +67,6 @@ const Poster = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const navigate = useNavigate();
-	const pathParams = useParams(props.path);
 	const user = authUser();
 	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [submitting, setSubmitting] = createSignal(false);
@@ -131,7 +131,7 @@ const Poster = (props: Props) => {
 			}
 		}
 
-		const url = props.config?.url?.(pathParams);
+		const url = props.config?.url?.(props.params);
 		httpOperation(url, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
@@ -205,7 +205,7 @@ const Poster = (props: Props) => {
 								value={form?.[field?.key]?.value}
 								valid={form?.[field?.key]?.valid}
 								config={field?.config}
-								pathParams={pathParams}
+								params={props.params}
 								handleField={handleField}
 							/>
 						)}

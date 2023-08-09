@@ -1,9 +1,10 @@
 import { For, Switch, Match, Resource, Accessor } from "solid-js";
-import { Params, pathname, useNavigate } from "../../../util/url";
+import { pathname, useNavigate } from "../../../util/url";
 import { fmtNestedValue, fmtValues } from "../../../util/resource";
 import { Row } from "../../../config/types";
 import type { Slug } from "../../../types/bencher";
 import { fmtDateTime } from "../../../config/util";
+import type { Params } from "astro";
 
 export enum TableState {
 	LOADING = 0,
@@ -22,7 +23,7 @@ export interface Props {
 }
 
 export interface TableConfig {
-	url: (pathParams: Params) => string;
+	url: (params: Params) => string;
 	name: string;
 	add?: AddButtonConfig;
 	row: RowConfig;

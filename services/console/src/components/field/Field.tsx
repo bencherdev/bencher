@@ -20,7 +20,7 @@ export type FieldHandler = (
 export type FieldValueHandler = (value: FieldValue) => void;
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 	kind: FieldKind;
 	fieldKey: string;
@@ -92,7 +92,7 @@ const Field = (props: Props) => {
 						value={props.value}
 						config={props.config}
 						user={props.user}
-						path_params={props.path_params}
+						params={props.params}
 						handleField={handleField}
 					/>
 				);

@@ -1,9 +1,10 @@
 import type { Resource } from "solid-js";
-import { useNavigate, type Params } from "../../../../util/url";
+import { useNavigate } from "../../../../util/url";
 import { JsonLimit, type JsonAlert } from "../../../../types/bencher";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	data: Resource<Record<string, any>>;
 }
 
@@ -34,7 +35,7 @@ const PerfButton = (props: Props) => {
 					}
 				}
 				const url = `/console/projects/${
-					props.pathParams.project_slug
+					props.params.project
 				}/perf?${searchParams.toString()}`;
 				navigate(url);
 			}}

@@ -18,9 +18,10 @@ import { Operation, Resource } from "../../../config/types";
 import { authUser } from "../../../util/auth";
 import { validJwt } from "../../../util/valid";
 import { httpGet } from "../../../util/http";
-import { pathname, useParams } from "../../../util/url";
+import { pathname } from "../../../util/url";
 import DeckHeader, { DeckHeaderConfig } from "./header/DeckHeader";
 import Deck, { DeckConfig } from "./hand/Deck";
+import type { Params } from "astro";
 
 // import DeckHeader from "./DeckHeader";
 // import Deck from "./Deck";
@@ -28,7 +29,7 @@ import Deck, { DeckConfig } from "./hand/Deck";
 // import { useLocation } from "solid-app-router";
 
 interface Props {
-	path: string;
+	params: Params;
 	resource: Resource;
 }
 
@@ -42,7 +43,6 @@ const DeckPanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-	const pathParams = useParams(props.path);
 	const user = authUser();
 	const config = createMemo<DeckPanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.VIEW],
@@ -51,7 +51,7 @@ const DeckPanel = (props: Props) => {
 	// const location = useLocation();
 	// const pathname = createMemo(() => location.pathname);
 
-	const url = createMemo(() => config()?.deck?.url(pathParams));
+	const url = createMemo(() => config()?.deck?.url(props.params));
 
 	// const [refresh, setRefresh] = createSignal(0);
 	// const handleRefresh = () => {
@@ -99,7 +99,7 @@ const DeckPanel = (props: Props) => {
 	return (
 		<>
 			<DeckHeader
-				pathParams={pathParams}
+				params={props.params}
 				user={user}
 				config={config()?.header}
 				url={url}
@@ -107,7 +107,7 @@ const DeckPanel = (props: Props) => {
 				handleRefresh={refetch}
 			/>
 			<Deck
-				pathParams={pathParams}
+				params={props.params}
 				user={user}
 				config={config()?.deck}
 				url={url}

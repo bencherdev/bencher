@@ -5,7 +5,7 @@ import {
 	createEffect,
 } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
-import { useParams, useSearchParams } from "../../../util/url";
+import { useSearchParams } from "../../../util/url";
 import { validJwt, validU32 } from "../../../util/valid";
 import consoleConfig from "../../../config/console";
 import { Operation, type Resource } from "../../../config/types";
@@ -14,24 +14,8 @@ import { authUser } from "../../../util/auth";
 import bencher_valid_init, { InitOutput } from "bencher_valid";
 import TableHeader, { TableHeaderConfig } from "./TableHeader";
 import Table, { TableConfig, TableState } from "./Table";
-// import Table, { TableState } from "./Table";
+import type { Params } from "astro";
 
-// import TableHeader from "./TableHeader";
-// import {
-// 	get_options,
-// 	NOTIFY_KIND_PARAM,
-// 	NOTIFY_TEXT_PARAM,
-// 	validate_jwt,
-// 	PLAN_PARAM,
-// 	validate_u32,
-// } from "../../../site/util";
-// import { useNavigate, useSearchParams } from "solid-app-router";
-// import { forward_path } from "../../../site/Forward";
-// import TableFooter from "./TableFooter";
-// import Pagination, { PaginationSize } from "../../../site/Pagination";
-
-// const SORT_PARAM = "sort";
-// const DIRECTION_PARAM = "direction";
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
 
@@ -39,7 +23,7 @@ const DEFAULT_PER_PAGE = 8;
 const DEFAULT_PAGE = 1;
 
 interface Props {
-	path: string;
+	params: Params;
 	resource: Resource;
 }
 
@@ -52,7 +36,6 @@ const TablePanel = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-	const pathParams = useParams(props.path);
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 
@@ -113,7 +96,7 @@ const TablePanel = (props: Props) => {
 			}
 		}
 		const url = `${config()?.table?.url(
-			pathParams,
+			props.params,
 		)}?${urlSearchParams.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
@@ -166,7 +149,7 @@ const TablePanel = (props: Props) => {
 	return (
 		<>
 			<TableHeader
-				pathParams={props.pathParams}
+				params={props.params}
 				config={config()?.header}
 				handleRefresh={refetch}
 			/>

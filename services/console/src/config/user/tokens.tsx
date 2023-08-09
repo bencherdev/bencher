@@ -37,8 +37,8 @@ const tokensConfig = {
 			],
 		},
 		table: {
-			url: (pathParams: Params) =>
-				`${BENCHER_API_URL()}/v0/users/${pathParams?.user_slug}/tokens`,
+			url: (params: Params) =>
+				`${BENCHER_API_URL()}/v0/users/${params?.user}/tokens`,
 			add: {
 				prefix: (
 					<div>
@@ -73,8 +73,8 @@ const tokensConfig = {
 			path_to: "API Tokens",
 		},
 		form: {
-			url: (pathParams: Params) =>
-				`${BENCHER_API_URL()}/v0/users/${pathParams?.user_slug}/tokens`,
+			url: (params: Params) =>
+				`${BENCHER_API_URL()}/v0/users/${params?.user}/tokens`,
 			fields: [
 				{
 					kind: FieldKind.INPUT,
@@ -108,17 +108,15 @@ const tokensConfig = {
 			buttons: [{ kind: Button.REFRESH }],
 		},
 		deck: {
-			url: (pathParams: Params) =>
-				`${BENCHER_API_URL()}/v0/users/${pathParams?.user_slug}/tokens/${
-					pathParams?.token_uuid
-				}`,
+			url: (params: Params) =>
+				`${BENCHER_API_URL()}/v0/users/${params?.user}/tokens/${params?.token}`,
 			cards: [
 				{
 					kind: Card.FIELD,
 					label: "API Token Name",
 					key: "name",
 					display: Display.RAW,
-					is_allowed: (_pathParams: Params) => true,
+					is_allowed: (_params: Params) => true,
 					field: {
 						kind: FieldKind.INPUT,
 						label: "Name",

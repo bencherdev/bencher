@@ -5,10 +5,10 @@ import UserLayout from "../../../../../layouts/console/UserLayout.astro";
 import PosterPanel from "../../../../../components/console/poster/PosterPanel";
 import { Resource } from "../../../../../config/types";
 
-const path = "/console/users/:user_slug/tokens/add";
+const params = Astro.params;
 const title = "Add Token";
 ---
 
-<UserLayout path={path} title={title}>
-  <PosterPanel client:only path={path} resource={Resource.TOKENS} />
+<UserLayout params={params} title={title}>
+  <PosterPanel client:only params={params} resource={Resource.TOKENS} />
 </UserLayout>

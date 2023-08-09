@@ -1,13 +1,13 @@
 import { Accessor, Match, Resource, Switch } from "solid-js";
 import FieldCard from "./FieldCard";
-import type { Params } from "../../../../../util/url";
 import type { JsonAuthUser } from "../../../../../types/bencher";
 import { Card } from "../../../../../config/types";
 import { fmtNestedValue } from "../../../../../util/resource";
 import type CardConfig from "./CardConfig";
+import type { Params } from "astro";
 
 export interface Props {
-	pathParams: Params;
+	params: Params;
 	user: JsonAuthUser;
 	url: Accessor<string>;
 	card: CardConfig;
@@ -21,7 +21,7 @@ const DeckCard = (props: Props) => {
 		<Switch fallback={<></>}>
 			<Match when={props.card?.kind === Card.FIELD}>
 				<FieldCard
-					pathParams={props.pathParams}
+					params={props.params}
 					user={props.user}
 					url={props.url}
 					card={props.card}
@@ -36,7 +36,7 @@ const DeckCard = (props: Props) => {
 			</Match>
 			<Match when={props.card?.kind === Card.NESTED_FIELD}>
 				<FieldCard
-					pathParams={props.pathParams}
+					params={props.params}
 					user={props.user}
 					url={props.url}
 					card={props.card}
