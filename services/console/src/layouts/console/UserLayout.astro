@@ -1,0 +1,16 @@
+---
+import ConsoleLayout from "./ConsoleLayout.astro";
+import UserMenu from "../../components/console/menu/UserMenu";
+
+interface Props {
+  path: string;
+  title: string;
+}
+
+const { path, title } = Astro.props;
+---
+
+<ConsoleLayout path={path} title={title}>
+  <UserMenu client:only slot="menu" />
+  <slot />
+</ConsoleLayout>

@@ -1,5 +1,5 @@
 ---
-import ConsoleLayout from "../../../layouts/ConsoleLayout.astro";
+import UserLayout from "../../../layouts/console/UserLayout.astro";
 import TablePanel from "../../../components/console/table/TablePanel";
 import { Resource } from "../../../config/types";
 
@@ -7,6 +7,6 @@ const title = "Organizations";
 const path = "/console/organizations";
 ---
 
-<ConsoleLayout path={path} title={title}>
+<UserLayout path={path} title={title}>
   <TablePanel client:only path={path} resource={Resource.ORGANIZATIONS} />
-</ConsoleLayout>
+</UserLayout>

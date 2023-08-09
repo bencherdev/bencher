@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import UserLayout from "../../../../layouts/console/UserLayout.astro";
+import HelpPanel from "../../../../components/console/help/HelpPanel";
+
+const path = "/console/users/:user_slug/settings";
+const title = "View Token";
+---
+
+<UserLayout path={path} title={title}>
+  <HelpPanel client:only />
+</UserLayout>

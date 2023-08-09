@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 
-import ConsoleLayout from "../../../../../layouts/ConsoleLayout.astro";
+import UserLayout from "../../../../../layouts/console/UserLayout.astro";
 import PosterPanel from "../../../../../components/console/poster/PosterPanel";
 import { Resource } from "../../../../../config/types";
 
@@ -9,6 +9,6 @@ const path = "/console/users/:user_slug/tokens/add";
 const title = "Add Token";
 ---
 
-<ConsoleLayout path={path} title={title}>
+<UserLayout path={path} title={title}>
   <PosterPanel client:only path={path} resource={Resource.TOKENS} />
-</ConsoleLayout>
+</UserLayout>

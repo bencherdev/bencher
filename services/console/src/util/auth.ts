@@ -67,7 +67,7 @@ export const authUser = authUsr;
 export const isAllowedOrganization = async (
 	pathParams: Params,
 	permission: JsonOrganizationPermission,
-) => {
+): Promise<boolean> => {
 	return is_allowed(
 		`${BENCHER_API_URL()}/v0/organizations/${
 			pathParams?.organization_slug
@@ -78,7 +78,7 @@ export const isAllowedOrganization = async (
 export const isAllowedProject = async (
 	pathParams: Params,
 	permission: JsonProjectPermission,
-) => {
+): Promise<boolean> => {
 	return is_allowed(
 		`${BENCHER_API_URL()}/v0/projects/${
 			pathParams?.project_slug
@@ -86,7 +86,7 @@ export const isAllowedProject = async (
 	);
 };
 
-export const is_allowed = async (url: string) => {
+export const is_allowed = async (url: string): Promise<boolean> => {
 	const token = authUsr().token;
 	// if (!validJwt(token)) {
 	// 	return false;

@@ -1,11 +1,11 @@
 ---
-import ConsoleLayout from "../../../layouts/ConsoleLayout.astro";
+import UserLayout from "../../../layouts/console/UserLayout.astro";
 import UsersRoot from "../../../components/user/UsersRoot";
 
 const path = "/console/users";
 const title = "Users";
 ---
 
-<ConsoleLayout path={path} title={title}>
+<UserLayout path={path} title={title}>
   <UsersRoot client:only />
-</ConsoleLayout>
+</UserLayout>

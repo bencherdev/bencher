@@ -1,12 +1,10 @@
 ---
-import BaseLayout from "./BaseLayout.astro";
-import ConsoleMenu from "../components/console/ConsoleMenu";
-import ConsoleNavbar from "../components/site/navbar/ConsoleNavbar";
+import BaseLayout from "../BaseLayout.astro";
+import ConsoleNavbar from "../../components/site/navbar/ConsoleNavbar";
 
 interface Props {
   path: string;
   title: string;
-  menu: any;
 }
 
 const { path, title } = Astro.props;
@@ -18,7 +16,7 @@ const { path, title } = Astro.props;
     <div class="columns is-reverse-mobile">
       <div class="columns">
         <div class="column is-narrow">
-          <ConsoleMenu client:only />
+          <slot name="menu" />
         </div>
       </div>
       <div class="column">
@@ -30,16 +28,4 @@ const { path, title } = Astro.props;
       </div>
     </div>
   </div>
-  <!-- <section class="section">
-    <div class="container">
-      <div class="columns is-reverse-mobile">
-        <div class="column is-narrow">
-          <ConsoleMenu client:only />
-        </div>
-        <div class="column is-10">
-          <slot />
-        </div>
-      </div>
-    </div>
-  </section> -->
 </BaseLayout>

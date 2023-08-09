@@ -258,38 +258,3 @@ export const hiddenRedirect = (url: string): void => {
 };
 
 export const pathname = createMemo(() => useLocation().pathname);
-
-export const organizationSlug = createMemo(() => {
-	const path = pathname()?.split("/");
-	if (!path) {
-		return null;
-	}
-	if (
-		path.length < 5 ||
-		path[0] ||
-		path[1] !== "console" ||
-		path[2] !== "organizations" ||
-		!path[3] ||
-		!path[4]
-	) {
-		return null;
-	}
-	return path[3];
-});
-
-export const projectSlug = createMemo(() => {
-	const path = pathname()?.split("/");
-	if (!path) {
-		return null;
-	}
-	if (
-		path.length < 5 ||
-		path[0] ||
-		path[1] !== "console" ||
-		path[2] !== "projects" ||
-		!path[3]
-	) {
-		return null;
-	}
-	return path[3];
-});

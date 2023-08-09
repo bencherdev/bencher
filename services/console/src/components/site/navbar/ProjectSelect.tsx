@@ -11,12 +11,17 @@ import {
 import { Params, useNavigate } from "../../../util/url";
 import { BENCHER_API_URL } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
-import { JsonVisibility, type JsonProject } from "../../../types/bencher";
+import {
+	JsonVisibility,
+	type JsonProject,
+	JsonAuthUser,
+} from "../../../types/bencher";
 
 const BENCHER_ALL_PROJECTS = "--bencher--all---projects--";
 
 interface Props {
 	pathParams: Params;
+	user: JsonAuthUser;
 }
 
 const ProjectSelect = (props: Props) => {
@@ -25,9 +30,8 @@ const ProjectSelect = (props: Props) => {
 	);
 
 	const navigate = useNavigate();
-	const user = authUser();
 	const isValidJwt = createMemo(() =>
-		bencher_valid() ? validJwt(user.token) : false,
+		bencher_valid() ? validJwt(props.user.token) : false,
 	);
 
 	const url = createMemo(
@@ -47,7 +51,7 @@ const ProjectSelect = (props: Props) => {
 			created: "",
 			modified: "",
 		};
-		const token = user.token;
+		const token = props.user.token;
 		if (!isValidJwt()) {
 			return [ALL_PROJECTS];
 		}
