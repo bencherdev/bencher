@@ -10,6 +10,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::BigInt;
+
 pub const DEFAULT_PRICE_NAME: &str = "default";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +30,7 @@ pub struct JsonCard {
     pub cvc: CardCvc,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPlan {
@@ -35,12 +38,13 @@ pub struct JsonPlan {
     pub customer: JsonCustomer,
     pub card: JsonCardDetails,
     pub level: PlanLevel,
-    pub unit_amount: u64,
+    pub unit_amount: BigInt,
     pub current_period_start: DateTime<Utc>,
     pub current_period_end: DateTime<Utc>,
     pub status: PlanStatus,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCustomer {
@@ -49,6 +53,7 @@ pub struct JsonCustomer {
     pub email: Email,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonCardDetails {

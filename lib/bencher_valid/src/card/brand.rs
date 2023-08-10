@@ -21,6 +21,7 @@ const UNIONPAY: &str = "unionpay";
 const VISA: &str = "visa";
 const UNKNOWN: &str = "unknown";
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]

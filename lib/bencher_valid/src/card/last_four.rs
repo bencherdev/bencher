@@ -18,6 +18,7 @@ use crate::{error::REGEX_ERROR, ValidError};
 static LAST_FOUR_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[[:digit:]]{4}$").expect(REGEX_ERROR));
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct LastFour(String);

@@ -27,3 +27,32 @@ export const BENCHER_API_URL: () => string = () => {
 		return `${location.protocol}//${location.hostname}:61016`;
 	}
 };
+
+export const BENCHER_BILLING_API_URL: () => string = () => {
+	const mode = import.meta.env.MODE;
+	switch (mode) {
+		case "development":
+			return BENCHER_API_URL();
+		case "production":
+			return BENCHER_CLOUD_API_URL;
+		default:
+			console.error("Invalid mode: ", mode);
+			return "http://localhost:61016";
+	}
+};
+
+// Change this value to test billing in development mode
+const TEST_BENCHER_BILLING: boolean = true;
+
+export const isBencherCloud = () => {
+	const mode = import.meta.env.MODE;
+	switch (mode) {
+		case "development":
+			return TEST_BENCHER_BILLING;
+		case "production":
+			return BENCHER_BILLING_API_URL() === BENCHER_CLOUD_API_URL;
+		default:
+			console.error("Invalid mode: ", mode);
+			return false;
+	}
+};

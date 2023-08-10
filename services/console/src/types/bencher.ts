@@ -8,6 +8,16 @@ export type Boundary = number;
 
 export type BranchName = string;
 
+export type CardCvc = string;
+
+export type LastFour = string;
+
+export type ExpirationMonth = number;
+
+export type CardNumber = string;
+
+export type ExpirationYear = number;
+
 export type Email = string;
 
 export type GitHash = string;
@@ -28,12 +38,68 @@ export type Url = string;
 
 export type UserName = string;
 
+export interface JsonCustomer {
+	uuid: string;
+	name: UserName;
+	email: Email;
+}
+
+export enum CardBrand {
+	Amex = "amex",
+	Diners = "diners",
+	Discover = "discover",
+	Jcb = "jcb",
+	Mastercard = "mastercard",
+	Unionpay = "unionpay",
+	Visa = "visa",
+	Unknown = "unknown",
+}
+
+export interface JsonCardDetails {
+	brand: CardBrand;
+	last_four: LastFour;
+	exp_month: ExpirationMonth;
+	exp_year: ExpirationYear;
+}
+
+export enum PlanLevel {
+	Free = "free",
+	Team = "team",
+	Enterprise = "enterprise",
+}
+
+export enum PlanStatus {
+	Active = "active",
+	Canceled = "canceled",
+	Incomplete = "incomplete",
+	IncompleteExpired = "incomplete_expired",
+	PastDue = "past_due",
+	Paused = "paused",
+	Trialing = "trialing",
+	Unpaid = "unpaid",
+}
+
+export interface JsonPlan {
+	organization: string;
+	customer: JsonCustomer;
+	card: JsonCardDetails;
+	level: PlanLevel;
+	unit_amount: number;
+	current_period_start: string;
+	current_period_end: string;
+	status: PlanStatus;
+}
+
 export interface JsonOrganization {
 	uuid: string;
 	name: NonEmpty;
 	slug: Slug;
 	created: string;
 	modified: string;
+}
+
+export interface JsonUsage {
+	metrics_used: number;
 }
 
 export interface JsonMetricKind {
@@ -214,12 +280,6 @@ export interface JsonPerf {
 	results: JsonPerfMetrics[];
 }
 
-export enum PlanLevel {
-	Free = "free",
-	Team = "team",
-	Enterprise = "enterprise",
-}
-
 export interface JsonSignup {
 	name: UserName;
 	slug?: Slug;
@@ -283,16 +343,5 @@ export enum JsonProjectPermission {
 	CreateRole = "create_role",
 	EditRole = "edit_role",
 	DeleteRole = "delete_role",
-}
-
-export enum PlanStatus {
-	Active = "active",
-	Canceled = "canceled",
-	Incomplete = "incomplete",
-	IncompleteExpired = "incomplete_expired",
-	PastDue = "past_due",
-	Paused = "paused",
-	Trialing = "trialing",
-	Unpaid = "unpaid",
 }
 

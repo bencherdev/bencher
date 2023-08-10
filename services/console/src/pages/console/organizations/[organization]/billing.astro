@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
+import BillingPanel from "../../../../components/console/billing/BillingPanel";
+import { Resource } from "../../../../config/types";
+
+const params = Astro.params;
+const title = "Billing";
+---
+
+<OrgLayout params={params} title={title}>
+  <BillingPanel client:only params={params} />
+</OrgLayout>

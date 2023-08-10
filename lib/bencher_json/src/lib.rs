@@ -10,6 +10,7 @@ pub use bencher_valid::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub mod big_int;
 pub mod organization;
 pub mod pagination;
 pub mod project;
@@ -18,8 +19,9 @@ pub mod urlencoded;
 pub mod user;
 
 #[cfg(feature = "plus")]
-pub use organization::{entitlements::JsonEntitlements, metered::JsonPlan};
+pub use organization::{metered::JsonPlan, usage::JsonUsage};
 
+pub use big_int::BigInt;
 pub use organization::{
     member::{JsonMember, JsonMembers},
     JsonNewOrganization, JsonOrganization, JsonOrganizations,

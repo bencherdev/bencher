@@ -3,7 +3,7 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::organization::entitlements::JsonEntitlements;
+use bencher_json::organization::usage::JsonUsage;
 use bencher_json::ResourceId;
 use chrono::{DateTime, Utc};
 
@@ -45,7 +45,7 @@ impl TryFrom<CliOrganizationUsage> for Usage {
 #[async_trait]
 impl SubCmd for Usage {
     async fn exec(&self) -> Result<(), CliError> {
-        let _: JsonEntitlements = self
+        let _: JsonUsage = self
             .backend
             .send_with(
                 |client| async move {

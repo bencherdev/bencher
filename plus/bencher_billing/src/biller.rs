@@ -375,7 +375,7 @@ impl Biller {
             customer,
             card,
             level,
-            unit_amount,
+            unit_amount: unit_amount.into(),
             current_period_start,
             current_period_end,
             status,

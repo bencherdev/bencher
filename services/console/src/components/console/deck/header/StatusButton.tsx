@@ -31,7 +31,6 @@ const StatusButton = (props: Props) => {
 	};
 
 	const sendStatus = () => {
-		setSubmitting(true);
 		// Check the status first, the guarantees that the wasm has been initialized
 		const data = getStatus();
 		if (!data) {
@@ -41,6 +40,8 @@ const StatusButton = (props: Props) => {
 		if (!validJwt(token)) {
 			return;
 		}
+
+		setSubmitting(true);
 		httpPatch(props.url(), token, data)
 			.then((_resp) => {
 				setSubmitting(false);

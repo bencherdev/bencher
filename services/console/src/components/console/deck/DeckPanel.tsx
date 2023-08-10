@@ -1,11 +1,3 @@
-// import axios from "axios";
-// import {
-// 	createSignal,
-// 	createResource,
-// 	createMemo,
-// 	createEffect,
-// } from "solid-js";
-
 import bencher_valid_init, { InitOutput } from "bencher_valid";
 import {
 	createEffect,
@@ -22,11 +14,6 @@ import { pathname } from "../../../util/url";
 import DeckHeader, { DeckHeaderConfig } from "./header/DeckHeader";
 import Deck, { DeckConfig } from "./hand/Deck";
 import type { Params } from "astro";
-
-// import DeckHeader from "./DeckHeader";
-// import Deck from "./Deck";
-// import { get_options, validate_jwt } from "../../../site/util";
-// import { useLocation } from "solid-app-router";
 
 interface Props {
 	params: Params;

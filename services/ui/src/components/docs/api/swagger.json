@@ -1391,7 +1391,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEntitlements"
+                  "$ref": "#/components/schemas/JsonUsage"
                 }
               }
             }
@@ -6302,19 +6302,6 @@
           "endpoint"
         ]
       },
-      "JsonEntitlements": {
-        "type": "object",
-        "properties": {
-          "metrics_used": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "metrics_used"
-        ]
-      },
       "JsonFold": {
         "type": "string",
         "enum": [
@@ -7009,9 +6996,7 @@
             "$ref": "#/components/schemas/PlanStatus"
           },
           "unit_amount": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
+            "$ref": "#/components/schemas/BigInt"
           }
         },
         "required": [
@@ -7988,6 +7973,17 @@
             ]
           }
         }
+      },
+      "JsonUsage": {
+        "type": "object",
+        "properties": {
+          "metrics_used": {
+            "$ref": "#/components/schemas/BigInt"
+          }
+        },
+        "required": [
+          "metrics_used"
+        ]
       },
       "JsonUser": {
         "type": "object",

@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 
 use async_trait::async_trait;
-use bencher_json::{user::token::JsonUpdateToken, JsonToken, NonEmpty, ResourceId};
+use bencher_client::types::JsonUpdateToken;
+use bencher_json::{JsonToken, NonEmpty, ResourceId};
 use uuid::Uuid;
 
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
     CliError,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Update {
     pub user: ResourceId,
     pub token: Uuid,

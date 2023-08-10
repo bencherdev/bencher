@@ -89,4 +89,4 @@ try_from_client!(
 );
 
 #[cfg(feature = "plus")]
-try_from_client!(JsonPlan, JsonEntitlements);
+try_from_client!(JsonPlan, JsonUsage);

@@ -18,6 +18,7 @@ use crate::{error::REGEX_ERROR, ValidError};
 static NUMBER_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^[[:digit:]]{12,19}$").expect(REGEX_ERROR));
 
+#[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct CardNumber(String);

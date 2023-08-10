@@ -1,6 +1,6 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{organization::entitlements::JsonEntitlements, ResourceId};
+use bencher_json::{organization::usage::JsonUsage, ResourceId};
 use bencher_rbac::organization::Permission;
 use diesel::{dsl::count, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use dropshot::{endpoint, HttpError, Path, Query, RequestContext};
@@ -60,7 +60,7 @@ pub async fn org_usage_get(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<OrgUsageParams>,
     query_params: Query<OrgUsageQuery>,
-) -> Result<ResponseOk<JsonEntitlements>, HttpError> {
+) -> Result<ResponseOk<JsonUsage>, HttpError> {
     let auth_user = AuthUser::new(&rqctx).await?;
     let endpoint = Endpoint::new(USAGE_RESOURCE, Method::GetOne);
 
@@ -81,7 +81,7 @@ async fn get_inner(
     path_params: OrgUsageParams,
     query_params: OrgUsageQuery,
     auth_user: &AuthUser,
-) -> Result<JsonEntitlements, ApiError> {
+) -> Result<JsonUsage, ApiError> {
     let conn = &mut *context.conn().await;
 
     // Get the organization
@@ -109,7 +109,7 @@ async fn get_inner(
         .first::<i64>(conn)
         .map_err(api_error!())?;
 
-    Ok(JsonEntitlements {
-        metrics_used: u64::try_from(metrics_used)?,
+    Ok(JsonUsage {
+        metrics_used: u64::try_from(metrics_used)?.into(),
     })
 }
