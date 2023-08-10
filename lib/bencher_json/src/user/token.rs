@@ -18,6 +18,7 @@ pub struct JsonTokens(pub Vec<JsonToken>);
 
 crate::from_vec!(JsonTokens[JsonToken]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonToken {

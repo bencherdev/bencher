@@ -12,17 +12,11 @@ export const invitePath = (pathname: string) => {
 	return `${pathname}/invite`;
 };
 
-export const viewSlugPath = (
-	pathname: string,
-	datum: { [slug: string]: Slug },
-) => {
+export const viewSlugPath = (pathname: string, datum: { slug: Slug }) => {
 	return `${pathname}/${datum?.slug}`;
 };
 
-export const viewUuidPath = (
-	pathname: string,
-	datum: { [uuid: string]: string },
-) => {
+export const viewUuidPath = (pathname: string, datum: { uuid: string }) => {
 	return `${pathname}/${datum?.uuid}`;
 };
 

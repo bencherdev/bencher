@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
+import PosterPanel from "../../../../../components/console/poster/PosterPanel";
+import { Resource } from "../../../../../config/types";
+
+const params = Astro.params;
+const title = "Invite Member";
+---
+
+<OrgLayout params={params} title={title}>
+  <PosterPanel client:only params={params} resource={Resource.MEMBERS} />
+</OrgLayout>

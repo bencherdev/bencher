@@ -1,4 +1,4 @@
-import type { JsonOrganization, Slug } from "../../types/bencher";
+import type { JsonOrganization } from "../../types/bencher";
 import { BENCHER_API_URL } from "../../util/ext";
 import { Button, Card, Display, Row } from "../types";
 import { parentPath, viewSlugPath } from "../util";
@@ -53,7 +53,7 @@ const organizationsConfig = {
 				],
 				button: {
 					text: "Select",
-					path: (pathname: string, datum: { [slug: string]: Slug }) =>
+					path: (pathname: string, datum: JsonOrganization) =>
 						viewSlugPath(pathname, datum) + "/projects",
 				},
 			},

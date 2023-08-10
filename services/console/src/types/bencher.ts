@@ -252,6 +252,15 @@ export interface JsonAuthUser {
 	token: Jwt;
 }
 
+export interface JsonToken {
+	uuid: string;
+	user: string;
+	name: NonEmpty;
+	token: Jwt;
+	creation: string;
+	expiration: string;
+}
+
 export enum JsonOrganizationPermission {
 	View = "view",
 	Create = "create",

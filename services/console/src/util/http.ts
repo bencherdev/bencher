@@ -1,5 +1,4 @@
 import axios from "axios";
-import { validJwt } from "./valid";
 
 enum HttpMethod {
 	GET = "GET",
@@ -78,7 +77,7 @@ const HEADERS_CONTENT_TYPE = {
 };
 
 const headers = (token: undefined | null | string) => {
-	if (token && validJwt(token)) {
+	if (token) {
 		return {
 			...HEADERS_CONTENT_TYPE,
 			Authorization: `Bearer ${token}`,

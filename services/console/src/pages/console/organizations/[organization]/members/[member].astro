@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
+import DeckPanel from "../../../../../components/console/deck/DeckPanel";
+import { Resource } from "../../../../../config/types";
+
+const params = Astro.params;
+const title = "View Member";
+---
+
+<OrgLayout params={params} title={title}>
+  <DeckPanel client:only params={params} resource={Resource.MEMBERS} />
+</OrgLayout>
