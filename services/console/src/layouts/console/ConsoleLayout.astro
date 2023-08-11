@@ -12,7 +12,12 @@ const { params, title } = Astro.props;
 ---
 
 <BaseLayout title={title}>
-  <ConsoleNavbar client:only slot="navbar" params={params} />
+  <ConsoleNavbar
+    client:only
+    transition:persist="console_navbar"
+    slot="navbar"
+    params={params}
+  />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">

@@ -3,6 +3,7 @@ import "../styles/styles.scss";
 import Navbar from "../components/site/navbar/Navbar";
 import Footer from "../components/site/Footer";
 import { fmtPageTitle } from "../util/resource";
+import { ViewTransitions } from "astro:transitions";
 
 interface Props {
   title: string;
@@ -34,6 +35,7 @@ const pageTitle = fmtPageTitle(title);
     <!-- font awesome -->
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"
     ></script>
+    <ViewTransitions />
   </head>
   <body>
     <slot name="navbar">

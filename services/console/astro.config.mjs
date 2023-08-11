@@ -13,4 +13,7 @@ export default defineConfig({
 	vite: {
 		plugins: [wasmPack("../../lib/bencher_valid")],
 	},
+	experimental: {
+		viewTransitions: true,
+	},
 });

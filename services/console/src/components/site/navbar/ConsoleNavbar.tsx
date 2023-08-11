@@ -17,7 +17,11 @@ const ConsoleNavbar = (props: Props) => {
 	return (
 		<nav class="navbar" role="navigation" aria-label="main navigation">
 			<div class="navbar-brand">
-				<a class="navbar-item" title="Console Home" href="/console">
+				<a
+					class="navbar-item"
+					title="Console Home"
+					href="/console/organizations"
+				>
 					<img
 						src={BENCHER_LOGO_URL}
 						width="152"

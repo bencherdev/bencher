@@ -16,7 +16,7 @@
     "@observablehq/plot": "^0.4.3",
     "@solid-primitives/debounce": "^1.3.0",
     "@solid-primitives/resize-observer": "^2.0.6",
-    "astro": "^2.9.6",
+    "astro": "^2.10.5",
     "axios": "^1.4.0",
     "d3": "^7.6.1",
     "solid-js": "^1.7.8"
