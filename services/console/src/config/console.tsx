@@ -5,12 +5,19 @@ import projectsConfig from "./project/projects";
 import tokensConfig from "./user/tokens";
 import usersConfig from "./user/users";
 import billingConfig from "./organization/billing";
+import reportsConfig from "./project/reports";
+import metricKindsConfig from "./project/metric_kinds";
 
 const consoleConfig = {
+	// Organization
 	[Resource.ORGANIZATIONS]: organizationsConfig,
 	[Resource.MEMBERS]: membersConfig,
 	[Resource.BILLING]: billingConfig,
+	// Project
 	[Resource.PROJECTS]: projectsConfig,
+	[Resource.REPORTS]: reportsConfig,
+	[Resource.METRIC_KINDS]: metricKindsConfig,
+	// User
 	[Resource.USERS]: usersConfig,
 	[Resource.TOKENS]: tokensConfig,
 };

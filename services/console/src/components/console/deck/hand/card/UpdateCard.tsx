@@ -106,7 +106,7 @@ const UpdateCard = (props: Props) => {
 		httpPatch(url, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
-				props.toggleUpdate();
+				// props.toggleUpdate();
 				navigate(updatePath(data));
 				// navigate(
 				// 	notification_path(

@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
+import DeckPanel from "../../../../../components/console/deck/DeckPanel";
+import { Resource } from "../../../../../config/types";
+
+const params = Astro.params;
+const title = "View Report";
+---
+
+<ProjectLayout params={params} title={title}>
+  <DeckPanel client:only params={params} resource={Resource.REPORTS} />
+</ProjectLayout>

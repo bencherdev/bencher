@@ -65,30 +65,36 @@ setInterval(() => {
 export const authUser = authUsr;
 
 export const isAllowedOrganization = async (
-	params: Params,
+	params: undefined | Params,
 	permission: JsonOrganizationPermission,
 ): Promise<boolean> => {
-	return is_allowed(
+	if (!params?.organization) {
+		return false;
+	}
+	return isAllowed(
 		`${BENCHER_API_URL()}/v0/organizations/${
-			params?.organization
+			params.organization
 		}/allowed/${permission}`,
 	);
 };
 
 export const isAllowedProject = async (
-	params: Params,
+	params: undefined | Params,
 	permission: JsonProjectPermission,
 ): Promise<boolean> => {
-	return is_allowed(
-		`${BENCHER_API_URL()}/v0/projects/${params?.project}/allowed/${permission}`,
+	if (!params?.project) {
+		return false;
+	}
+	return isAllowed(
+		`${BENCHER_API_URL()}/v0/projects/${params.project}/allowed/${permission}`,
 	);
 };
 
-export const is_allowed = async (url: string): Promise<boolean> => {
+export const isAllowed = async (url: string): Promise<boolean> => {
 	const token = authUsr().token;
-	// if (!validJwt(token)) {
-	// 	return false;
-	// }
+	if (!token) {
+		return false;
+	}
 	return await httpGet(url, token)
 		.then((resp) => resp?.data?.allowed)
 		.catch((error) => {
@@ -102,3 +108,6 @@ export const isAllowedOrganizationEdit = (params: Params) =>
 
 export const isAllowedProjectEdit = (params: Params) =>
 	isAllowedProject(params, JsonProjectPermission.Edit);
+
+export const isAllowedProjectDelete = (params: Params) =>
+	isAllowedProject(params, JsonProjectPermission.Delete);

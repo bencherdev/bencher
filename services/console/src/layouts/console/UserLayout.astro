@@ -12,6 +12,6 @@ const { params, title } = Astro.props;
 ---
 
 <ConsoleLayout params={params} title={title}>
-  <UserMenu client:only transition:persist="user_menu" slot="menu" />
+  <UserMenu client:only  slot="menu" />
   <slot />
 </ConsoleLayout>

@@ -14,6 +14,7 @@ export default defineConfig({
 		plugins: [wasmPack("../../lib/bencher_valid")],
 	},
 	experimental: {
-		viewTransitions: true,
+		// https://docs.astro.build/en/guides/view-transitions
+		viewTransitions: false,
 	},
 });

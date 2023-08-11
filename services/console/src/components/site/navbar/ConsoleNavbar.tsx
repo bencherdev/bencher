@@ -50,7 +50,10 @@ const ConsoleNavbar = (props: Props) => {
 					<a class="navbar-item" href="/perf">
 						Public Projects
 					</a>
-					<Show when={props.params.organization} fallback={<></>}>
+					<Show
+						when={props.params.organization || props.params.project}
+						fallback={<></>}
+					>
 						<div class="navbar-item">
 							<ProjectSelect params={props.params} user={user} />
 						</div>

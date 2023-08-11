@@ -1,3 +1,4 @@
+import bencher_valid_init, { type InitOutput } from "bencher_valid";
 import { Show, createMemo, createResource } from "solid-js";
 import { useNavigate } from "../../../util/url";
 import { authUser } from "../../../util/auth";
@@ -5,6 +6,7 @@ import { BENCHER_API_URL } from "../../../util/ext";
 import { httpGet } from "../../../util/http";
 import type { JsonAlertStats } from "../../../types/bencher";
 import type { Params } from "astro";
+import { validJwt } from "../../../util/valid";
 
 interface Props {
 	params: Params;
@@ -23,18 +25,39 @@ enum Section {
 }
 
 const ConsoleMenu = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+	const params = createMemo(() => props.params);
 	const navigate = useNavigate();
 	const user = authUser();
 
-	const getAlerts = async (params: Params): Promise<JsonAlertStats> => {
+	const fetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			project_slug: params()?.project,
+			token: user?.token,
+		};
+	});
+	const getAlerts = async (fetcher: {
+		bencher_valid: InitOutput;
+		project_slug: string;
+		token: string;
+	}): Promise<JsonAlertStats> => {
 		const DEFAULT_ALERT_STATS = {
 			active: 0,
 		};
-		if (!params.project) {
+		if (!bencher_valid()) {
+			return DEFAULT_ALERT_STATS;
+		}
+		if (!validJwt(fetcher.token)) {
+			return DEFAULT_ALERT_STATS;
+		}
+		if (!fetcher.project_slug) {
 			return DEFAULT_ALERT_STATS;
 		}
 		const url = `${BENCHER_API_URL()}/v0/projects/${
-			params.project
+			fetcher.project_slug
 		}/stats/alerts`;
 		return await httpGet(url, authUser()?.token)
 			.then((resp) => resp.data)
@@ -43,11 +66,11 @@ const ConsoleMenu = (props: Props) => {
 				return DEFAULT_ALERT_STATS;
 			});
 	};
-	const [alert_stats] = createResource(props.params, getAlerts);
+	const [alert_stats] = createResource(fetcher, getAlerts);
 	const active_alerts = createMemo(() => alert_stats()?.active);
 
 	const path = (section: Section) =>
-		`/console/users/${user?.user?.slug}/${section}`;
+		`/console/projects/${params()?.project}/${section}`;
 
 	return (
 		<aside class="menu is-sticky">

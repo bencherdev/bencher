@@ -1,5 +1,5 @@
-import { Show, createResource } from "solid-js";
-import { authUser, isAllowedOrganization } from "../../../util/auth";
+import { Show, createMemo, createResource } from "solid-js";
+import { isAllowedOrganization } from "../../../util/auth";
 import { JsonOrganizationPermission } from "../../../types/bencher";
 import bencher_valid_init from "bencher_valid";
 import type { Params } from "astro";
@@ -19,21 +19,19 @@ const OrgMenu = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-
-	const user = authUser();
-
+	const params = createMemo(() => props.params);
 	const [billing] = createResource(bencher_valid, async (bv) => {
 		if (!bv) {
 			return false;
 		}
 		return await isAllowedOrganization(
-			params,
+			params(),
 			JsonOrganizationPermission.Manage,
 		);
 	});
 
 	const path = (section: Section) =>
-		`/console/organizations/${user?.user?.slug}/${section}`;
+		`/console/organizations/${params()?.organization}/${section}`;
 
 	return (
 		<aside class="menu is-sticky">

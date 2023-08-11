@@ -48,6 +48,7 @@ const Deck = (props: Props) => {
 				<For each={props.config?.buttons}>
 					{(button) => (
 						<DeckButton
+							params={props.params}
 							user={props.user}
 							config={button}
 							url={props.url}

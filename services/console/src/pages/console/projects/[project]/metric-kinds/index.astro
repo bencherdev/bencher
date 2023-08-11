@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import ProjectLayout from "../../../../../layouts/console/ProjectLayout.astro";
+import TablePanel from "../../../../../components/console/table/TablePanel";
+import { Resource } from "../../../../../config/types";
+
+const params = Astro.params;
+const title = "Metric Kinds";
+---
+
+<ProjectLayout params={params} title={title}>
+  <TablePanel client:only params={params} resource={Resource.METRIC_KINDS} />
+</ProjectLayout>
