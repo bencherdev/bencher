@@ -1,0 +1,207 @@
+---
+title: "Benchmark Adapters"
+heading: "Benchmark Harness Adapters"
+sortOrder: 3
+---
+
+Adapters convert benchmark harness output into standardized JSON, Bencher Metric Format (BMF).
+The adapters run on the API server when a new report is received.
+See the [benchmarking overview](/docs/explanation/benchmarking) for a more in-depth explanation.
+They can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--adapter` flag.
+If no adapter is specified, the `magic` adapter is used by default.
+
+It is best to use the most specific adapter for your use case.
+This will provide both the most accurate and performant parsing.
+For example if you are parsing Rust
+[libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)
+output, you should use the `rust_bench` adapter, and not the `magic` or `rust` adapter.
+See our
+[Bencher perf page](https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C5655ed2a-3e45-4622-bdbd-39cdd9837af8%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674777600000)
+for a good comparison.
+
+<div class="content has-text-centered">
+<a href="https://bencher.dev/perf/bencher?key=true&metric_kind=latency&tab=benchmarks&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&start_time=1674950400000"><img style="border: 0.2em solid #ed6704;" src="https://api.bencher.dev/v0/projects/bencher/perf/img?branches=619d15ed-0fbd-4ccb-86cb-fddf3124da29&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&benchmarks=3525f177-fc8f-4a92-bd2f-dda7c4e15699%2C1db23e93-f909-40aa-bf42-838cc7ae05f5&metric_kind=latency&start_time=1674950400000&title=Benchmark+Adapter+Comparison" title="Benchmark Adapter Comparison" alt="Benchmark Adapter Comparison for Bencher - Bencher" /></a>
+</div>
+
+## 🪄 Magic <small>(default)</small>
+
+The Magic Adapter (`magic`) is a superset of all other adapters.
+For that reason, it is the default adapter for `bencher run`,
+but it is best used for exploration only.
+In CI, you should use the most specific adapter for your use case.
+
+## \{...\} JSON
+
+The JSON Adapter (`json`) expects BMF JSON.
+It is perfect for integrating custom benchmark harnesses with Bencher.
+
+Example of BMF:
+
+```
+{
+    "benchmark_name": {
+        "latency": {
+            value: 88.0,
+            lower_bound: 87.42,
+            upper_bound: 88.88
+        }
+    }
+}
+```
+
+In this example, the key `benchmark_name` would be the name of a benchmark.
+Benchmark names can be any non-empty string up to 1024 characters.
+The `benchmark_name` object contains Metric Kind slugs or UUIDs as keys.
+In this example, `latency` is the slug for the Latency Metric Kind.
+Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) Metric Kind,
+which are measured in `nanosecond (ns)` and `operations / second (ops/s)` respectively.
+The Metric Kind object contains a Metric with up to three measures: `value`, `lower_bound`, and `upper_bound`.
+The `lower_bound` and `upper_bound` measures are optional,
+and their calculation is benchmark harness specific.
+
+In this example, the `latency` Metric Kind object contains the following measures:
+
+- A `value` of `88.0`
+- A `lower_bound` of `87.42`
+- An `upper_bound` of `88.88`
+
+If the BMF JSON is stored in a file,
+then you can use the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--file` argument to specify that file path
+(ie `bencher run --file results.json`).
+
+<br/>
+
+> 🐰 Note: The `bencher mock` CLI subcommand generates mock BMF Metrics.
+
+## #️⃣ C#
+
+The C# Adapter (`c_sharp`) is a superset of `c_sharp_dot_net`.
+
+## #️⃣ C# DotNet
+
+The C# DotNet Adapter (`c_sharp_dot_net`) expects [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) output in [JSON format (ie `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+
+There are two options for the Metric:
+- `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
+
+This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` flag.
+
+## ➕ C++
+
+The C++ Adapter (`cpp`) is a superset of `cpp_catch2` and `cpp_google`.
+
+## ➕ C++ Catch2
+
+The C++ Catch2 Adapter (`cpp_catch2`) expects [Catch2](https://github.com/catchorg/Catch2) output.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
+
+## ➕ C++ Google
+
+The C++ Google Adapter (`cpp_google`) expects [Google Benchmark](https://github.com/google/benchmark) output in [JSON format (ie `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+Only the mean (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
+
+## 🕳 Go
+
+The Go Adapter (`go`) is a superset of `go_bench`.
+
+## 🕳 Go Bench
+
+The Go Bench Adapter (`go_bench`) expects [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) output.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+Only the mean (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
+
+## ☕️ Java
+
+The Java Adapter (`java`) is a superset of `java_jmh`.
+
+## ☕️ Java JMH
+
+The Java JMH Adapter (`java_jmh`) expects [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) output in [JSON format (ie `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Both `latency` and `throughput` Metric Kinds (ie `nanoseconds (ns)` and `operations / second (ops/sec)`) may be gathered.
+The `lower_bound` and `upper_bound` are the lower and upper confidence intervals for the mean (ie `value`) respectively.
+
+## 🕸 JavaScript
+
+The JavaScript Adapter (`js`) is a superset of `js_benchmark` and `js_time`.
+
+## 🕸 JavaScript Benchmark
+
+The JavaScript Benchmark Adapter (`js_benchmark`) expects [Benchmark.js](https://github.com/bestiejs/benchmark.js) output.
+The `throughput` Metric Kind (ie `operations / second (ops/sec)`) is gathered.
+The `lower_bound` and `upper_bound` are the relative margin of error below and above the median (ie `value`) respectively.
+
+## 🕸 JavaScript Time
+
+The JavaScript Time Adapter (`js_time`) expects [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) output.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+Only the operation time (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
+
+## 🐍 Python
+
+The Python Adapter (`python`) is a superset of `python_asv` and `python_pytest`.
+
+## 🐍 Python ASV
+
+The Python ASV Adapter (`python_asv`) expects [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) output.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+The `lower_bound` and `upper_bound` are the interquartile range below and above the median (ie `value`) respectively.
+
+## 🐍 Python Pytest
+
+The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` argument to specify that file path (ie `bencher run --file results.json "pipenv run pytest --benchmark-json results.json benchmarks.py"`).
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+
+There are two options for the Metric:
+- `mean` (default):  The `lower_bound` and `upper_bound` are one standard deviation below and above the mean (ie `value`) respectively.
+- `median`: The `lower_bound` and `upper_bound` are one interquartile range below and above the median (ie `value`) respectively.
+
+This can be specified in the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand with the optional `--average` argument.
+
+## ♦️ Ruby
+
+The Ruby Adapter (`ruby`) is a superset of `ruby_benchmark`.
+
+## ♦️ Ruby Benchmark
+
+The Ruby Benchmark Adapter (`ruby_benchmark`) expects [Benchmark module](https://github.com/ruby/benchmark) output for the `#bm`, `#bmbm`, and `#benchmark` methods.
+A label is required for each benchmark.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+Only the reported value (ie `value`) is available. There are no `lower_bound` and `upper_bound`.
+
+## 🦀 Rust
+
+The Rust Adapter (`rust`) is a superset of `rust_bench` and `rust_criterion`.
+
+## 🦀 Rust Bench
+
+The Rust Bench Adapter (`rust_bench`) expects [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) output.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+The `lower_bound` and `upper_bound` are the deviation below and above the median (ie `value`) respectively.
+
+## 🦀 Rust Criterion
+
+The Rust Criterion Adapter (`rust_criterion`) expects [Criterion](https://github.com/bheisler/criterion.rs) output.
+The `latency` Metric Kind (ie `nanoseconds (ns)`) is gathered.
+The `lower_bound` and `upper_bound` are the lower and upper bounds of either the slope (if available) or the mean (if not) (ie `value`) respectively.
+
+## 🦀 Rust Iai
+
+The Rust Iai Adapter (`rust_iai`) expects [Iai](https://github.com/bheisler/iai) output.
+The `instructions`, `l1_access`, `l2_access`, `ram_access`, and `estimated_cycles` Metric Kinds are gathered.
+Only these measures (ie `value`) are available. There are no `lower_bound` and `upper_bound` measures.
+The Metric Kinds for this adapter are not created by default for all projects.
+However, when you use this adapter, these Metric Kinds will be automatically created for your Project.
+
+<br />
+<br />
+
+> 🐰 Congrats! You have learned all about benchmark harness adapters! 🎉
+
+<br/>
+
+<h2><a href="/docs/explanation/thresholds">Keep Going: Thresholds & Alerts ➡</a></h2>

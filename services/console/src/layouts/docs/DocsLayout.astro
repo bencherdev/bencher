@@ -1,0 +1,38 @@
+---
+import BaseLayout from "../BaseLayout.astro";
+import ConsoleNavbar from "../../components/site/navbar/ConsoleNavbar";
+import type { Params } from "astro";
+
+interface Props {
+  params: Params;
+  title: string;
+}
+
+const { params, title } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <div class="is-widescreen">
+    <div class="columns is-reverse-mobile">
+      <div class="columns">
+        <div class="column is-narrow">
+          <aside class="menu is-sticky">
+            <!-- <p class="menu-label">User</p>
+            <ul class="menu-list">
+              <li>
+                <a href={path(Section.TOKENS)}>API Tokens</a>
+              </li>
+            </ul> -->
+          </aside>
+        </div>
+      </div>
+      <div class="column">
+        <section class="section">
+          <div class="continer">
+            <slot />
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
