@@ -139,11 +139,15 @@ const AuthForm = (props: Props) => {
 			return;
 		}
 
+		const newParams: Record<string, null> = {};
 		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-			setSearchParams({ [PLAN_PARAM]: null });
+			newParams[PLAN_PARAM] = null;
 		}
 		if (!validJwt(searchParams[INVITE_PARAM])) {
-			setSearchParams({ [INVITE_PARAM]: null });
+			newParams[INVITE_PARAM] = null;
+		}
+		if (Object.keys(newParams).length !== 0) {
+			setSearchParams(newParams);
 		}
 
 		handleFormValid();

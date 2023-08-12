@@ -205,19 +205,22 @@ const ConfirmForm = (_props: Props) => {
 		//     );
 		// }
 
+		const newParams: Record<string, null | string> = {};
 		if (!validJwt(searchParams[TOKEN_PARAM])) {
-			setSearchParams({ [TOKEN_PARAM]: null });
+			newParams[TOKEN_PARAM] = null;
 		}
 		if (!validPlanLevel(searchParams[PLAN_PARAM])) {
-			setSearchParams({ [PLAN_PARAM]: null });
+			newParams[PLAN_PARAM] = null;
 		}
 		if (!validEmail(searchParams[EMAIL_PARAM])) {
-			setSearchParams({ [EMAIL_PARAM]: null });
+			newParams[EMAIL_PARAM] = null;
 		}
-
 		const token_value = form.token?.value;
 		if (validJwt(token_value)) {
-			setSearchParams({ [TOKEN_PARAM]: token_value });
+			newParams[TOKEN_PARAM] = token_value;
+		}
+		if (Object.keys(newParams).length !== 0) {
+			setSearchParams(newParams);
 		}
 
 		const token_valid = form.token?.valid;

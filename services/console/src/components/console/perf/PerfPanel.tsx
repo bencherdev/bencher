@@ -154,70 +154,74 @@ const PerfPanel = (props: Props) => {
 	const user = authUser();
 
 	// Sanitize all query params at init
+	const initParams: Record<string, null | number | boolean> = {};
 	if (typeof searchParams[METRIC_KIND_PARAM] !== "string") {
-		setSearchParams({ [METRIC_KIND_PARAM]: null });
+		initParams[METRIC_KIND_PARAM] = null;
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
-		setSearchParams({ [BRANCHES_PARAM]: null });
+		initParams[BRANCHES_PARAM] = null;
 	}
 	if (!Array.isArray(arrayFromString(searchParams[TESTBEDS_PARAM]))) {
-		setSearchParams({ [TESTBEDS_PARAM]: null });
+		initParams[TESTBEDS_PARAM] = null;
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
-		setSearchParams({ [BENCHMARKS_PARAM]: null });
+		initParams[BENCHMARKS_PARAM] = null;
 	}
 	if (!timeToDate(searchParams[START_TIME_PARAM])) {
-		setSearchParams({ [START_TIME_PARAM]: null });
+		initParams[START_TIME_PARAM] = null;
 	}
 	if (!timeToDate(searchParams[END_TIME_PARAM])) {
-		setSearchParams({ [END_TIME_PARAM]: null });
+		initParams[END_TIME_PARAM] = null;
 	}
 
 	// Sanitize all UI state query params
 	if (!isPerfTab(searchParams[TAB_PARAM])) {
-		setSearchParams({ [TAB_PARAM]: null });
+		initParams[TAB_PARAM] = null;
 	}
 	if (!isBoolParam(searchParams[KEY_PARAM])) {
-		setSearchParams({ [KEY_PARAM]: DEFAULT_PERF_KEY });
+		initParams[KEY_PARAM] = DEFAULT_PERF_KEY;
 	}
 	if (!isPerfRange(searchParams[RANGE_PARAM])) {
-		setSearchParams({ [RANGE_PARAM]: null });
+		initParams[RANGE_PARAM] = null;
 	}
 	if (!isBoolParam(searchParams[CLEAR_PARAM])) {
-		setSearchParams({ [CLEAR_PARAM]: null });
+		initParams[CLEAR_PARAM] = null;
 	}
 	if (!isBoolParam(searchParams[LOWER_BOUNDARY_PARAM])) {
-		setSearchParams({ [LOWER_BOUNDARY_PARAM]: null });
+		initParams[LOWER_BOUNDARY_PARAM] = null;
 	}
 	if (!isBoolParam(searchParams[UPPER_BOUNDARY_PARAM])) {
-		setSearchParams({ [UPPER_BOUNDARY_PARAM]: null });
+		initParams[UPPER_BOUNDARY_PARAM] = null;
 	}
 
 	// Sanitize all pagination query params
 	if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
-		setSearchParams({ [REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE });
+		initParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
 	}
 	if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
-		setSearchParams({ [BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+		initParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
 	}
 	if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
-		setSearchParams({ [TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+		initParams[TESTBEDS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
 	}
 	if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
-		setSearchParams({ [BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+		initParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
 	}
 
 	if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
-		setSearchParams({ [REPORTS_PAGE_PARAM]: DEFAULT_PAGE });
+		initParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
 	}
 	if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
-		setSearchParams({ [BRANCHES_PAGE_PARAM]: DEFAULT_PAGE });
+		initParams[BRANCHES_PAGE_PARAM] = DEFAULT_PAGE;
 	}
 	if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
-		setSearchParams({ [TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE });
+		initParams[TESTBEDS_PAGE_PARAM] = DEFAULT_PAGE;
 	}
 	if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
-		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE });
+		initParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
+	}
+	if (Object.keys(initParams).length !== 0) {
+		setSearchParams(initParams);
 	}
 
 	// Create marshalized memos of all query params
@@ -402,7 +406,7 @@ const PerfPanel = (props: Props) => {
 		TabList<JsonBenchmark>
 	>([]);
 
-	// Resource tabs data: Branches, Testbeds, Benchmarks
+	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
 		fetcher: {
@@ -440,6 +444,36 @@ const PerfPanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	}
+	createEffect(() => {
+		const newParams: Record<string, number> = {};
+		if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
+			newParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
+		}
+		if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
+			newParams[REPORTS_PAGE_PARAM] = REPORTS_PER_PAGE;
+		}
+		if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
+			newParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
+			newParams[BRANCHES_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
+			newParams[TESTBEDS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
+			newParams[TESTBEDS_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
+			newParams[BENCHMARKS_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
+		}
+		if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
+			newParams[BENCHMARKS_PAGE_PARAM] = DEFAULT_PAGE;
+		}
+		if (Object.keys(newParams).length !== 0) {
+			setSearchParams(newParams);
+		}
+	});
 
 	const reports_fetcher = createMemo(() => {
 		return {
@@ -454,15 +488,6 @@ const PerfPanel = (props: Props) => {
 		getPerfTab<JsonReport>(PerfTab.REPORTS, fetcher),
 	);
 	createEffect(() => {
-		if (
-			!validU32(searchParams[REPORTS_PER_PAGE_PARAM]) ||
-			!validU32(searchParams[REPORTS_PAGE_PARAM])
-		) {
-			setSearchParams({
-				[REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE,
-				[REPORTS_PAGE_PARAM]: DEFAULT_PAGE,
-			});
-		}
 		const data = reports_data();
 		if (data) {
 			setReportsTab(resourcesToCheckable(data, [report()]));
@@ -497,15 +522,6 @@ const PerfPanel = (props: Props) => {
 		getPerfTab<JsonBranch>(PerfTab.BRANCHES, fetcher),
 	);
 	createEffect(() => {
-		if (
-			!validU32(searchParams[BRANCHES_PER_PAGE_PARAM]) ||
-			!validU32(searchParams[BRANCHES_PAGE_PARAM])
-		) {
-			setSearchParams({
-				[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
-				[BRANCHES_PAGE_PARAM]: DEFAULT_PAGE,
-			});
-		}
 		const data = branches_data();
 		if (data) {
 			setBranchesTab(resourcesToCheckable(data, branches()));
@@ -525,15 +541,6 @@ const PerfPanel = (props: Props) => {
 		getPerfTab<JsonTestbed>(PerfTab.TESTBEDS, fetcher),
 	);
 	createEffect(() => {
-		if (
-			!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM]) ||
-			!validU32(searchParams[TESTBEDS_PAGE_PARAM])
-		) {
-			setSearchParams({
-				[TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
-				[TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE,
-			});
-		}
 		const data = testbeds_data();
 		if (data) {
 			setTestbedsTab(resourcesToCheckable(data, testbeds()));
@@ -554,15 +561,6 @@ const PerfPanel = (props: Props) => {
 		async (fetcher) => getPerfTab<JsonBenchmark>(PerfTab.BENCHMARKS, fetcher),
 	);
 	createEffect(() => {
-		if (
-			!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM]) ||
-			!validU32(searchParams[BENCHMARKS_PAGE_PARAM])
-		) {
-			setSearchParams({
-				[BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
-				[BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE,
-			});
-		}
 		const data = benchmarks_data();
 		if (data) {
 			setBenchmarksTab(resourcesToCheckable(data, benchmarks()));

@@ -14,7 +14,7 @@ const PerfButton = (props: Props) => {
 	return (
 		<button
 			class="button is-outlined is-fullwidth"
-			title="Dismiss alert"
+			title="View Alert"
 			onClick={(e) => {
 				e.preventDefault();
 
