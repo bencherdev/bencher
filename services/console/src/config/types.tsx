@@ -67,16 +67,16 @@ export enum PerfTab {
 	BENCHMARKS = "benchmarks",
 }
 
-export const is_perf_tab = (tab: string) =>
+export const isPerfTab = (tab: undefined | string) =>
 	tab === PerfTab.REPORTS ||
 	tab === PerfTab.BRANCHES ||
 	tab === PerfTab.TESTBEDS ||
 	tab === PerfTab.BENCHMARKS;
 
-export enum Range {
+export enum PerfRange {
 	DATE_TIME = "date_time",
 	VERSION = "version",
 }
 
-export const isRange = (range: string) =>
-	range === Range.DATE_TIME || range === Range.VERSION;
+export const isPerfRange = (range: undefined | string) =>
+	range === PerfRange.DATE_TIME || range === PerfRange.VERSION;

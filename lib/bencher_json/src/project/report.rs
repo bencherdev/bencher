@@ -31,6 +31,7 @@ pub struct JsonReportSettings {
     pub fold: Option<JsonFold>,
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -86,6 +87,7 @@ pub struct JsonReports(pub Vec<JsonReport>);
 
 crate::from_vec!(JsonReports[JsonReport]);
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReport {
@@ -102,8 +104,13 @@ pub struct JsonReport {
     pub created: DateTime<Utc>,
 }
 
+#[typeshare::typeshare]
 pub type JsonReportResults = Vec<JsonReportIteration>;
+
+#[typeshare::typeshare]
 pub type JsonReportIteration = Vec<JsonReportResult>;
+
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
@@ -113,4 +120,5 @@ pub struct JsonReportResult {
     pub benchmarks: Vec<JsonBenchmarkMetric>,
 }
 
+#[typeshare::typeshare]
 pub type JsonReportAlerts = Vec<JsonAlert>;

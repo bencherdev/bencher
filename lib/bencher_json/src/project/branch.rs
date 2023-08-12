@@ -75,6 +75,7 @@ impl fmt::Display for JsonBranch {
     }
 }
 
+#[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonBranchVersion {

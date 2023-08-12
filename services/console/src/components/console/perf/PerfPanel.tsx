@@ -1,22 +1,34 @@
-import axios from "axios";
-import { useSearchParams } from "solid-app-router";
+import bencher_valid_init, { InitOutput } from "bencher_valid";
 import {
 	createEffect,
 	createMemo,
 	createResource,
 	createSignal,
 } from "solid-js";
-import { is_perf_tab, is_range, PerfTab, Range } from "../../config/types";
 import { is_valid_slug } from "bencher_valid";
-import {
-	get_options,
-	validate_jwt,
-	validate_string,
-	validate_u32,
-} from "../../../site/util";
 import PerfHeader from "./PerfHeader";
 import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
+import {
+	Operation,
+	PerfRange,
+	PerfTab,
+	Resource,
+	isPerfRange,
+	isPerfTab,
+} from "../../../config/types";
+import { useSearchParams } from "../../../util/url";
+import { validJwt, validSlug, validU32 } from "../../../util/valid";
+import type { Params } from "astro";
+import { authUser } from "../../../util/auth";
+import consoleConfig from "../../../config/console";
+import { httpGet } from "../../../util/http";
+import type {
+	JsonBenchmark,
+	JsonBranch,
+	JsonReport,
+	JsonTestbed,
+} from "../../../types/bencher";
 
 const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
@@ -45,7 +57,7 @@ const UPPER_BOUNDARY_PARAM = "upper_boundary";
 
 const DEFAULT_PERF_TAB = PerfTab.REPORTS;
 const DEFAULT_PERF_KEY = true;
-const DEFAULT_PERF_RANGE = Range.DATE_TIME;
+const DEFAULT_PERF_RANGE = PerfRange.DATE_TIME;
 const DEFAULT_PERF_CLEAR = false;
 const DEFAULT_PERF_BOUNDARY = false;
 
@@ -53,13 +65,13 @@ const DEFAULT_PER_PAGE = 8;
 const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
 
-const addToArray = (array: any[], add: any) => {
+const addToArray = (array: any[], add: any): string[] => {
 	if (!array.includes(add)) {
 		array.push(add);
 	}
 	return array;
 };
-const removeFromArray = (array: any[], remove: any) => {
+const removeFromArray = (array: any[], remove: any): string[] => {
 	const index = array.indexOf(remove);
 	if (index > -1) {
 		array.splice(index, 1);
@@ -67,7 +79,7 @@ const removeFromArray = (array: any[], remove: any) => {
 	return array;
 };
 
-const arrayFromString = (array_str: undefined | string) => {
+const arrayFromString = (array_str: undefined | string): string[] => {
 	if (typeof array_str === "string") {
 		const array = array_str.split(",");
 		return removeFromArray(array, "");
@@ -76,7 +88,7 @@ const arrayFromString = (array_str: undefined | string) => {
 };
 const arrayToString = (array: any[]) => array.join();
 
-const time_to_date = (time_str: undefined | string): null | Date => {
+const timeToDate = (time_str: undefined | string): null | Date => {
 	if (typeof time_str === "string") {
 		const time = parseInt(time_str);
 		if (Number.isInteger(time)) {
@@ -89,23 +101,23 @@ const time_to_date = (time_str: undefined | string): null | Date => {
 	return null;
 };
 
-const time_to_date_iso = (time_str: undefined | string): null | string => {
-	const date = time_to_date(time_str);
+const timeToDateIso = (time_str: undefined | string): null | string => {
+	const date = timeToDate(time_str);
 	if (date) {
 		return date.toISOString();
 	}
 	return null;
 };
 
-const time_to_date_only_iso = (time_str: undefined | string): null | string => {
-	const iso_date = time_to_date_iso(time_str);
+const timeToDateOnlyIso = (time_str: undefined | string): null | string => {
+	const iso_date = timeToDateIso(time_str);
 	if (iso_date) {
-		return iso_date.split("T")?.[0];
+		return iso_date.split("T")?.[0] ?? null;
 	}
 	return null;
 };
 
-const date_to_time = (date_str: undefined | string): null | string => {
+const dateToTime = (date_str: undefined | string): null | string => {
 	if (typeof date_str === "string") {
 		const time = Date.parse(date_str);
 		if (time) {
@@ -123,15 +135,45 @@ const resourcesToCheckable = (resources, params) =>
 		};
 	});
 
-const is_bool_param = (param: string): boolean => {
+const isBoolParam = (param: undefined | string): boolean => {
 	return param === "false" || param === "true";
 };
 
-const PerfPanel = (props) => {
+export interface Props {
+	params: Params;
+	is_console: boolean;
+}
+
+export interface PerfPanelConfig {
+	header: PerfHeaderConfig;
+	plot: PerfPlotConfig;
+}
+
+export interface PerfHeaderConfig {
+	url: (project_slug: string) => string;
+}
+
+export interface PerfPlotConfig {
+	project_url: (project_slug: string) => string;
+	perf_url: (project_slug: string) => string;
+	tab_url: (project_slug: string, tab: PerfTab) => string;
+	metric_kinds_url: (project_slug: string) => string;
+}
+
+const PerfPanel = (props: Props) => {
+	const [bencher_valid] = createResource(
+		async () => await bencher_valid_init(),
+	);
+	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
+	const user = authUser();
+
+	const config = createMemo<PerfPanelConfig>(
+		() => consoleConfig[Resource.PROJECTS]?.[Operation.PERF],
+	);
 
 	// Sanitize all query params at init
-	if (!validate_string(searchParams[METRIC_KIND_PARAM], is_valid_slug)) {
+	if (typeof searchParams[METRIC_KIND_PARAM] !== "string") {
 		setSearchParams({ [METRIC_KIND_PARAM]: null });
 	}
 	if (!Array.isArray(arrayFromString(searchParams[BRANCHES_PARAM]))) {
@@ -143,57 +185,57 @@ const PerfPanel = (props) => {
 	if (!Array.isArray(arrayFromString(searchParams[BENCHMARKS_PARAM]))) {
 		setSearchParams({ [BENCHMARKS_PARAM]: null });
 	}
-	if (!time_to_date(searchParams[START_TIME_PARAM])) {
+	if (!timeToDate(searchParams[START_TIME_PARAM])) {
 		setSearchParams({ [START_TIME_PARAM]: null });
 	}
-	if (!time_to_date(searchParams[END_TIME_PARAM])) {
+	if (!timeToDate(searchParams[END_TIME_PARAM])) {
 		setSearchParams({ [END_TIME_PARAM]: null });
 	}
 
 	// Sanitize all UI state query params
-	if (!is_perf_tab(searchParams[TAB_PARAM])) {
+	if (!isPerfTab(searchParams[TAB_PARAM])) {
 		setSearchParams({ [TAB_PARAM]: null });
 	}
-	if (!is_bool_param(searchParams[KEY_PARAM])) {
+	if (!isBoolParam(searchParams[KEY_PARAM])) {
 		setSearchParams({ [KEY_PARAM]: DEFAULT_PERF_KEY });
 	}
-	if (!is_range(searchParams[RANGE_PARAM])) {
+	if (!isPerfRange(searchParams[RANGE_PARAM])) {
 		setSearchParams({ [RANGE_PARAM]: null });
 	}
-	if (!is_bool_param(searchParams[CLEAR_PARAM])) {
+	if (!isBoolParam(searchParams[CLEAR_PARAM])) {
 		setSearchParams({ [CLEAR_PARAM]: null });
 	}
-	if (!is_bool_param(searchParams[LOWER_BOUNDARY_PARAM])) {
+	if (!isBoolParam(searchParams[LOWER_BOUNDARY_PARAM])) {
 		setSearchParams({ [LOWER_BOUNDARY_PARAM]: null });
 	}
-	if (!is_bool_param(searchParams[UPPER_BOUNDARY_PARAM])) {
+	if (!isBoolParam(searchParams[UPPER_BOUNDARY_PARAM])) {
 		setSearchParams({ [UPPER_BOUNDARY_PARAM]: null });
 	}
 
 	// Sanitize all pagination query params
-	if (!validate_u32(searchParams[REPORTS_PER_PAGE_PARAM])) {
+	if (!validU32(searchParams[REPORTS_PER_PAGE_PARAM])) {
 		setSearchParams({ [REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE });
 	}
-	if (!validate_u32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
+	if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
 		setSearchParams({ [BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
 	}
-	if (!validate_u32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
+	if (!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM])) {
 		setSearchParams({ [TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
 	}
-	if (!validate_u32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
+	if (!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM])) {
 		setSearchParams({ [BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
 	}
 
-	if (!validate_u32(searchParams[REPORTS_PAGE_PARAM])) {
+	if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
 		setSearchParams({ [REPORTS_PAGE_PARAM]: DEFAULT_PAGE });
 	}
-	if (!validate_u32(searchParams[BRANCHES_PAGE_PARAM])) {
+	if (!validU32(searchParams[BRANCHES_PAGE_PARAM])) {
 		setSearchParams({ [BRANCHES_PAGE_PARAM]: DEFAULT_PAGE });
 	}
-	if (!validate_u32(searchParams[TESTBEDS_PAGE_PARAM])) {
+	if (!validU32(searchParams[TESTBEDS_PAGE_PARAM])) {
 		setSearchParams({ [TESTBEDS_PAGE_PARAM]: DEFAULT_PAGE });
 	}
-	if (!validate_u32(searchParams[BENCHMARKS_PAGE_PARAM])) {
+	if (!validU32(searchParams[BENCHMARKS_PAGE_PARAM])) {
 		setSearchParams({ [BENCHMARKS_PAGE_PARAM]: DEFAULT_PAGE });
 	}
 
@@ -213,13 +255,13 @@ const PerfPanel = (props) => {
 	const start_time = createMemo(() => searchParams[START_TIME_PARAM]);
 	const end_time = createMemo(() => searchParams[END_TIME_PARAM]);
 	// start/end_date is used for the GUI selector
-	const start_date = createMemo(() => time_to_date_only_iso(start_time()));
-	const end_date = createMemo(() => time_to_date_only_iso(end_time()));
+	const start_date = createMemo(() => timeToDateOnlyIso(start_time()));
+	const end_date = createMemo(() => timeToDateOnlyIso(end_time()));
 
 	const tab = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (is_perf_tab(searchParams[TAB_PARAM])) {
+		if (isPerfTab(searchParams[TAB_PARAM])) {
 			return searchParams[TAB_PARAM];
 		} else {
 			return DEFAULT_PERF_TAB;
@@ -228,8 +270,8 @@ const PerfPanel = (props) => {
 
 	// This check is required for the initial load
 	// before the query params have been sanitized
-	const is_bool_param_or_default = (param: string, default_value: boolean) => {
-		if (is_bool_param(searchParams[param])) {
+	const isBoolParamOrDefault = (param: string, default_value: boolean) => {
+		if (isBoolParam(searchParams[param])) {
 			return searchParams[param] === "true";
 		} else {
 			return default_value;
@@ -237,13 +279,13 @@ const PerfPanel = (props) => {
 	};
 
 	const key = createMemo(() =>
-		is_bool_param_or_default(KEY_PARAM, DEFAULT_PERF_KEY),
+		isBoolParamOrDefault(KEY_PARAM, DEFAULT_PERF_KEY),
 	);
 
 	const range = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (is_range(searchParams[RANGE_PARAM])) {
+		if (isPerfRange(searchParams[RANGE_PARAM])) {
 			return searchParams[RANGE_PARAM];
 		} else {
 			return DEFAULT_PERF_RANGE;
@@ -253,14 +295,14 @@ const PerfPanel = (props) => {
 	// Ironically, a better name for the `clear` param would actually be `dirty`.
 	// It works as a "dirty" bit to indicate that we shouldn't load the first report again.
 	const clear = createMemo(() =>
-		is_bool_param_or_default(CLEAR_PARAM, DEFAULT_PERF_CLEAR),
+		isBoolParamOrDefault(CLEAR_PARAM, DEFAULT_PERF_CLEAR),
 	);
 
 	const lower_boundary = createMemo(() =>
-		is_bool_param_or_default(LOWER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
+		isBoolParamOrDefault(LOWER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
 	);
 	const upper_boundary = createMemo(() =>
-		is_bool_param_or_default(UPPER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
+		isBoolParamOrDefault(UPPER_BOUNDARY_PARAM, DEFAULT_PERF_BOUNDARY),
 	);
 
 	// Pagination query params
@@ -316,25 +358,42 @@ const PerfPanel = (props) => {
 		setRefresh(refresh() + 1);
 	};
 
-	const project_slug = createMemo(() => props.path_params?.project_slug);
-	const perf_query_fetcher = createMemo(() => {
+	const project_slug = createMemo(() => params().project);
+	const perfFetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			perf_query: perf_query(),
 			refresh: refresh(),
-			token: props.user?.token,
+			token: user?.token,
 		};
 	});
-
-	const get_perf = async (fetcher) => {
+	const getPerf = async (fetcher: {
+		bencher_valid: InitOutput;
+		project_slug: string;
+		perf_query: {
+			metric_kind: string;
+			branches: string[];
+			testbeds: string[];
+			benchmarks: string[];
+			start_time: string;
+			end_time: string;
+		};
+		refresh: number;
+		token: string;
+	}) => {
 		const EMPTY_OBJECT = {};
-		if (props.is_console && !validate_jwt(fetcher.token)) {
+		if (props.is_console && !fetcher.bencher_valid) {
 			return EMPTY_OBJECT;
 		}
+		if (props.is_console && !validJwt(fetcher.token)) {
+			return EMPTY_OBJECT;
+		}
+
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (is_plot_init()) {
-			const url = `${props.config?.plot?.project_url(fetcher.project_slug)}`;
-			return await axios(get_options(url, fetcher.token))
+			const url = `${config()?.plot?.project_url(fetcher.project_slug)}`;
+			return await httpGet(url, fetcher.token)
 				.then((resp) => {
 					return {
 						project: resp?.data,
@@ -348,13 +407,13 @@ const PerfPanel = (props) => {
 		const search_params = new URLSearchParams();
 		for (const [key, value] of Object.entries(fetcher.perf_query)) {
 			if (value) {
-				search_params.set(key, value);
+				search_params.set(key, value.toString());
 			}
 		}
-		const url = `${props.config?.plot?.perf_url(
-			project_slug(),
+		const url = `${config()?.plot?.perf_url(
+			fetcher.project_slug,
 		)}?${search_params.toString()}`;
-		return await axios(get_options(url, fetcher.token))
+		return await httpGet(url, fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
@@ -362,7 +421,7 @@ const PerfPanel = (props) => {
 			});
 	};
 
-	const [perf_data] = createResource(perf_query_fetcher, get_perf);
+	const [perf_data] = createResource(perfFetcher, getPerf);
 
 	// Initialize as empty, wait for resources to load
 	const [reports_tab, setReportsTab] = createStore([]);
@@ -371,28 +430,40 @@ const PerfPanel = (props) => {
 	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
-	const getPerfTab = async (
+	async function getPerfTab<T>(
 		perf_tab: PerfTab,
-		fetcher: { per_page: number; page: number; token: string },
-	) => {
-		const EMPTY_ARRAY = [];
-		if (props.is_console && !validate_jwt(fetcher.token)) {
+		fetcher: {
+			bencher_valid: undefined | InitOutput;
+			project_slug: undefined | string;
+			per_page: number;
+			page: number;
+			token: string;
+		},
+	) {
+		const EMPTY_ARRAY: T[] = [];
+		if (!fetcher.project_slug) {
 			return EMPTY_ARRAY;
 		}
-		if (!validate_u32(fetcher.per_page.toString())) {
+		if (props.is_console && !fetcher.bencher_valid) {
 			return EMPTY_ARRAY;
 		}
-		if (!validate_u32(fetcher.page.toString())) {
+		if (props.is_console && !validJwt(fetcher.token)) {
+			return EMPTY_ARRAY;
+		}
+		if (!validU32(fetcher.per_page.toString())) {
+			return EMPTY_ARRAY;
+		}
+		if (!validU32(fetcher.page.toString())) {
 			return EMPTY_ARRAY;
 		}
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", fetcher.per_page.toString());
 		search_params.set("page", fetcher.page.toString());
-		const url = `${props.config?.plot?.tab_url(
-			project_slug(),
+		const url = `${config()?.plot?.tab_url(
+			fetcher.project_slug,
 			perf_tab,
 		)}?${search_params.toString()}`;
-		return await axios(get_options(url, fetcher.token))
+		return await httpGet(url, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -400,24 +471,25 @@ const PerfPanel = (props) => {
 				console.error(error);
 				return EMPTY_ARRAY;
 			});
-	};
+	}
 
 	const reports_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: reports_per_page(),
 			page: reports_page(),
 			refresh: refresh(),
-			token: props.user?.token,
+			token: user?.token,
 		};
 	});
 	const [reports_data] = createResource(reports_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.REPORTS, fetcher),
+		getPerfTab<JsonReport>(PerfTab.REPORTS, fetcher),
 	);
 	createEffect(() => {
 		if (
-			!validate_u32(searchParams[REPORTS_PER_PAGE_PARAM]) ||
-			!validate_u32(searchParams[REPORTS_PAGE_PARAM])
+			!validU32(searchParams[REPORTS_PER_PAGE_PARAM]) ||
+			!validU32(searchParams[REPORTS_PAGE_PARAM])
 		) {
 			setSearchParams({
 				[REPORTS_PER_PAGE_PARAM]: REPORTS_PER_PAGE,
@@ -447,20 +519,21 @@ const PerfPanel = (props) => {
 
 	const branches_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: branches_per_page(),
 			page: branches_page(),
 			refresh: refresh(),
-			token: props.user?.token,
+			token: user?.token,
 		};
 	});
 	const [branches_data] = createResource(branches_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.BRANCHES, fetcher),
+		getPerfTab<JsonBranch>(PerfTab.BRANCHES, fetcher),
 	);
 	createEffect(() => {
 		if (
-			!validate_u32(searchParams[BRANCHES_PER_PAGE_PARAM]) ||
-			!validate_u32(searchParams[BRANCHES_PAGE_PARAM])
+			!validU32(searchParams[BRANCHES_PER_PAGE_PARAM]) ||
+			!validU32(searchParams[BRANCHES_PAGE_PARAM])
 		) {
 			setSearchParams({
 				[BRANCHES_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
@@ -475,20 +548,21 @@ const PerfPanel = (props) => {
 
 	const testbeds_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: testbeds_per_page(),
 			page: testbeds_page(),
 			refresh: refresh(),
-			token: props.user?.token,
+			token: user?.token,
 		};
 	});
 	const [testbeds_data] = createResource(testbeds_fetcher, async (fetcher) =>
-		getPerfTab(PerfTab.TESTBEDS, fetcher),
+		getPerfTab<JsonTestbed>(PerfTab.TESTBEDS, fetcher),
 	);
 	createEffect(() => {
 		if (
-			!validate_u32(searchParams[TESTBEDS_PER_PAGE_PARAM]) ||
-			!validate_u32(searchParams[TESTBEDS_PAGE_PARAM])
+			!validU32(searchParams[TESTBEDS_PER_PAGE_PARAM]) ||
+			!validU32(searchParams[TESTBEDS_PAGE_PARAM])
 		) {
 			setSearchParams({
 				[TESTBEDS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
@@ -503,21 +577,22 @@ const PerfPanel = (props) => {
 
 	const benchmarks_fetcher = createMemo(() => {
 		return {
+			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: benchmarks_per_page(),
 			page: benchmarks_page(),
 			refresh: refresh(),
-			token: props.user?.token,
+			token: user?.token,
 		};
 	});
 	const [benchmarks_data] = createResource(
 		benchmarks_fetcher,
-		async (fetcher) => getPerfTab(PerfTab.BENCHMARKS, fetcher),
+		async (fetcher) => getPerfTab<JsonBenchmark>(PerfTab.BENCHMARKS, fetcher),
 	);
 	createEffect(() => {
 		if (
-			!validate_u32(searchParams[BENCHMARKS_PER_PAGE_PARAM]) ||
-			!validate_u32(searchParams[BENCHMARKS_PAGE_PARAM])
+			!validU32(searchParams[BENCHMARKS_PER_PAGE_PARAM]) ||
+			!validU32(searchParams[BENCHMARKS_PAGE_PARAM])
 		) {
 			setSearchParams({
 				[BENCHMARKS_PER_PAGE_PARAM]: DEFAULT_PER_PAGE,
@@ -534,9 +609,7 @@ const PerfPanel = (props) => {
 		setSearchParams({
 			[CLEAR_PARAM]: true,
 			[REPORT_PARAM]: null,
-			[METRIC_KIND_PARAM]: validate_string(metric_kind, is_valid_slug)
-				? metric_kind
-				: null,
+			[METRIC_KIND_PARAM]: validSlug(metric_kind) ? metric_kind : null,
 		});
 	};
 
@@ -594,12 +667,12 @@ const PerfPanel = (props) => {
 	};
 
 	const handleStartTime = (date: string) =>
-		setSearchParams({ [START_TIME_PARAM]: date_to_time(date) });
+		setSearchParams({ [START_TIME_PARAM]: dateToTime(date) });
 	const handleEndTime = (date: string) =>
-		setSearchParams({ [END_TIME_PARAM]: date_to_time(date) });
+		setSearchParams({ [END_TIME_PARAM]: dateToTime(date) });
 
 	const handleTab = (tab: PerfTab) => {
-		if (is_perf_tab(tab)) {
+		if (isPerfTab(tab)) {
 			setSearchParams({ [TAB_PARAM]: tab });
 		}
 	};
@@ -614,8 +687,8 @@ const PerfPanel = (props) => {
 		handleBool(KEY_PARAM, key);
 	};
 
-	const handleRange = (range: Range) => {
-		if (is_range(range)) {
+	const handleRange = (range: PerfRange) => {
+		if (isPerfRange(range)) {
 			setSearchParams({ [RANGE_PARAM]: range });
 		}
 	};
@@ -660,19 +733,19 @@ const PerfPanel = (props) => {
 	return (
 		<>
 			<PerfHeader
-				user={props.user}
-				config={props.config?.header}
-				path_params={props.path_params}
+				user={user}
+				config={config()?.header}
+				path_params={props.params}
 				perf_data={perf_data}
 				is_plot_init={is_plot_init}
 				perf_query={perf_query}
 				handleRefresh={handleRefresh}
 			/>
 			<PerfPlot
-				user={props.user}
+				user={user}
 				project_slug={project_slug()}
-				config={props.config?.plot}
-				path_params={props.path_params}
+				config={config()?.plot}
+				path_params={props.params}
 				is_console={props.is_console}
 				is_plot_init={is_plot_init}
 				metric_kind={metric_kind}
