@@ -1,16 +1,50 @@
 import createDebounce from "@solid-primitives/debounce";
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
-import Field from "../../../field/Field";
-import FieldKind from "../../../field/kind";
-import { pageTitle } from "../../../site/util";
+import {
+	Accessor,
+	createEffect,
+	createMemo,
+	createSignal,
+	Resource,
+	Show,
+} from "solid-js";
+import type {
+	JsonAuthUser,
+	JsonPerf,
+	JsonProject,
+} from "../../../types/bencher";
+import { setPageTitle } from "../../../util/resource";
+import FieldKind from "../../field/kind";
+import Field from "../../field/Field";
 
-const PerfHeader = (props) => {
-	const [share, set_share] = createSignal(false);
+export interface Props {
+	user: JsonAuthUser;
+	config: PerfHeaderConfig;
+	perf_data: Resource<JsonPerf>;
+	is_plot_init: Accessor<boolean>;
+	perf_query: Accessor<PerfQuery>;
+	handleRefresh: () => void;
+}
+
+export interface PerfHeaderConfig {
+	url: (project_slug: string) => string;
+}
+
+export interface PerfQuery {
+	metric_kind: undefined | string;
+	branches: string[];
+	testbeds: string[];
+	benchmarks: string[];
+	start_time: undefined | string;
+	end_time: undefined | string;
+}
+
+const PerfHeader = (props: Props) => {
+	const [share, setShare] = createSignal(false);
 
 	const project = createMemo(() => props.perf_data()?.project);
 
 	createEffect(() => {
-		pageTitle(project()?.name);
+		setPageTitle(project()?.name);
 	});
 
 	return (
@@ -27,7 +61,7 @@ const PerfHeader = (props) => {
 				is_plot_init={props.is_plot_init}
 				project={project}
 				share={share}
-				set_share={set_share}
+				setShare={setShare}
 			/>
 			<div class="column is-narrow">
 				<nav class="level">
@@ -37,7 +71,7 @@ const PerfHeader = (props) => {
 								<a
 									class="button is-outlined is-fullwidth"
 									title={`View ${project()?.name} website`}
-									href={project()?.url}
+									href={project()?.url ?? ""}
 									rel="noreferrer nofollow"
 									target="_blank"
 								>
@@ -60,7 +94,7 @@ const PerfHeader = (props) => {
 											title={`Share ${project()?.name}`}
 											onClick={(e) => {
 												e.preventDefault();
-												set_share(true);
+												setShare(true);
 											}}
 										>
 											<span class="icon">
@@ -97,13 +131,23 @@ const PerfHeader = (props) => {
 
 export default PerfHeader;
 
-const ShareModal = (props) => {
+export interface ShareProps {
+	user: JsonAuthUser;
+	config: PerfHeaderConfig;
+	perf_query: Accessor<PerfQuery>;
+	is_plot_init: Accessor<boolean>;
+	project: Accessor<undefined | JsonProject>;
+	share: Accessor<boolean>;
+	setShare: (share: boolean) => void;
+}
+
+const ShareModal = (props: ShareProps) => {
 	const location = window.location;
 
-	const [title, set_title] = createSignal(null);
+	const [title, setTitle] = createSignal(null);
 
 	const handle_title = createDebounce(
-		(_key, value, _valid) => set_title(value),
+		(_key, value, _valid) => setTitle(value),
 		250,
 	);
 
@@ -115,9 +159,10 @@ const ShareModal = (props) => {
 	);
 
 	const perf_img_url = createMemo(() => {
+		const project_slug = props.project()?.slug;
 		if (
 			props.is_plot_init() ||
-			!(props.share() && props.project()?.slug && props.perf_query())
+			!(props.share() && project_slug && props.perf_query())
 		) {
 			return null;
 		}
@@ -128,12 +173,11 @@ const ShareModal = (props) => {
 				search_params.set(key, value);
 			}
 		}
-		if (title()) {
-			search_params.set("title", title());
+		const img_title = title();
+		if (img_title) {
+			search_params.set("title", img_title);
 		}
-		return `${props.config?.url(
-			props.project()?.slug,
-		)}?${search_params.toString()}`;
+		return `${props.config?.url(project_slug)}?${search_params.toString()}`;
 	});
 
 	const img_tag = createMemo(
@@ -156,7 +200,7 @@ const ShareModal = (props) => {
 						aria-label="close"
 						onClick={(e) => {
 							e.preventDefault();
-							props.set_share(false);
+							props.setShare(false);
 						}}
 					/>
 				</header>
@@ -171,14 +215,13 @@ const ShareModal = (props) => {
 							type: "text",
 							placeholder: props.project()?.name,
 							icon: "fas fa-chart-line",
-							help: null,
-							validate: (_input) => true,
+							validate: (_input: string) => true,
 						}}
 						handleField={handle_title}
 					/>
 					<br />
 					<Show when={perf_img_url()} fallback={<div>Loading...</div>}>
-						<img src={perf_img_url()} alt={props.project()?.name} />
+						<img src={perf_img_url() ?? ""} alt={props.project()?.name ?? ""} />
 					</Show>
 					<br />
 					<br />
@@ -218,7 +261,7 @@ const ShareModal = (props) => {
 						class="button is-primary is-outlined is-fullwidth"
 						onClick={(e) => {
 							e.preventDefault();
-							props.set_share(false);
+							props.setShare(false);
 						}}
 					>
 						Close

@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import ProjectLayout from "../../../../layouts/console/ProjectLayout.astro";
-import TablePanel from "../../../../components/console/table/TablePanel";
+import PerfPanel from "../../../../components/console/perf/PerfPanel";
 import { Resource } from "../../../../config/types";
 
 const params = Astro.params;
@@ -10,5 +10,5 @@ const title = "Project Perf";
 ---
 
 <ProjectLayout params={params} title={title}>
-  <p>TODO Perf</p>
+  <PerfPanel client:only params={params} />
 </ProjectLayout>

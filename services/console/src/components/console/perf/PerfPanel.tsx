@@ -5,9 +5,8 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import { is_valid_slug } from "bencher_valid";
-import PerfHeader from "./PerfHeader";
-import PerfPlot from "./plot/PerfPlot";
+import PerfHeader, { PerfHeaderConfig, PerfQuery } from "./PerfHeader";
+// import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 import {
 	Operation,
@@ -26,6 +25,7 @@ import { httpGet } from "../../../util/http";
 import type {
 	JsonBenchmark,
 	JsonBranch,
+	JsonPerf,
 	JsonReport,
 	JsonTestbed,
 } from "../../../types/bencher";
@@ -147,10 +147,6 @@ export interface Props {
 export interface PerfPanelConfig {
 	header: PerfHeaderConfig;
 	plot: PerfPlotConfig;
-}
-
-export interface PerfHeaderConfig {
-	url: (project_slug: string) => string;
 }
 
 export interface PerfPlotConfig {
@@ -371,14 +367,7 @@ const PerfPanel = (props: Props) => {
 	const getPerf = async (fetcher: {
 		bencher_valid: InitOutput;
 		project_slug: string;
-		perf_query: {
-			metric_kind: string;
-			branches: string[];
-			testbeds: string[];
-			benchmarks: string[];
-			start_time: string;
-			end_time: string;
-		};
+		perf_query: PerfQuery;
 		refresh: number;
 		token: string;
 	}) => {
@@ -397,7 +386,7 @@ const PerfPanel = (props: Props) => {
 				.then((resp) => {
 					return {
 						project: resp?.data,
-					};
+					} as JsonPerf;
 				})
 				.catch((error) => {
 					console.error(error);
@@ -414,7 +403,7 @@ const PerfPanel = (props: Props) => {
 			fetcher.project_slug,
 		)}?${search_params.toString()}`;
 		return await httpGet(url, fetcher.token)
-			.then((resp) => resp?.data)
+			.then((resp) => resp?.data as JsonPerf)
 			.catch((error) => {
 				console.error(error);
 				return EMPTY_OBJECT;
@@ -735,13 +724,12 @@ const PerfPanel = (props: Props) => {
 			<PerfHeader
 				user={user}
 				config={config()?.header}
-				path_params={props.params}
 				perf_data={perf_data}
 				is_plot_init={is_plot_init}
 				perf_query={perf_query}
 				handleRefresh={handleRefresh}
 			/>
-			<PerfPlot
+			{/* <PerfPlot
 				user={user}
 				project_slug={project_slug()}
 				config={config()?.plot}
@@ -792,7 +780,7 @@ const PerfPanel = (props: Props) => {
 				handleBranchesPage={handleBranchesPage}
 				handleTestbedsPage={handleTestbedsPage}
 				handleBenchmarksPage={handleBenchmarksPage}
-			/>
+			/> */}
 		</>
 	);
 };
