@@ -78,8 +78,7 @@ const metricKindsConfig = {
 				],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonMetricKind) =>
-						viewSlugPath(pathname, datum),
+					path: viewSlugPath,
 				},
 			},
 			name: "metric kinds",

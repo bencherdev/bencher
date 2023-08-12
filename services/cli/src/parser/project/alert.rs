@@ -37,6 +37,8 @@ pub struct CliAlertList {
 pub enum CliAlertsSort {
     /// Creation date time of the alert
     Created,
+    // Modification date time of the alert
+    Modified,
 }
 
 #[derive(Parser, Debug)]

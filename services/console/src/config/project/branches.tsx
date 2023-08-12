@@ -68,8 +68,7 @@ const branchesConfig = {
 				],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonBranch) =>
-						viewSlugPath(pathname, datum),
+					path: viewSlugPath,
 				},
 			},
 			name: "branches",

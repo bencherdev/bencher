@@ -1,5 +1,4 @@
 import FieldKind from "../../components/field/kind";
-import type { JsonToken } from "../../types/bencher";
 import { BENCHER_API_URL } from "../../util/ext";
 import type { Params } from "../../util/url";
 import { validNonEmpty, validU32 } from "../../util/valid";
@@ -59,8 +58,7 @@ const tokensConfig = {
 				items: [{}, {}, {}, {}],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonToken) =>
-						viewUuidPath(pathname, datum),
+					path: viewUuidPath,
 				},
 			},
 			name: "tokens",

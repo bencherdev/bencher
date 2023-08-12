@@ -43,8 +43,9 @@ pub type ProjAlertsPagination = JsonPagination<ProjAlertsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjAlertsSort {
-    #[default]
     Created,
+    #[default]
+    Modified,
 }
 
 #[allow(clippy::unused_async)]
@@ -124,15 +125,29 @@ async fn get_ls_inner(
 
     query = match pagination_params.order() {
         ProjAlertsSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) => query.order((
+            Some(JsonDirection::Asc) | None => query.order((
                 schema::alert::status.asc(),
                 schema::report::start_time.asc(),
                 schema::benchmark::name.asc(),
                 schema::perf::iteration.asc(),
             )),
-            Some(JsonDirection::Desc) | None => query.order((
+            Some(JsonDirection::Desc) => query.order((
                 schema::alert::status.asc(),
                 schema::report::start_time.desc(),
+                schema::benchmark::name.asc(),
+                schema::perf::iteration.asc(),
+            )),
+        },
+        ProjAlertsSort::Modified => match pagination_params.direction {
+            Some(JsonDirection::Asc) => query.order((
+                schema::alert::status.asc(),
+                schema::alert::modified.asc(),
+                schema::benchmark::name.asc(),
+                schema::perf::iteration.asc(),
+            )),
+            Some(JsonDirection::Desc) | None => query.order((
+                schema::alert::status.asc(),
+                schema::alert::modified.desc(),
                 schema::benchmark::name.asc(),
                 schema::perf::iteration.asc(),
             )),

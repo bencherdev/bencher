@@ -105,8 +105,7 @@ const MembersConfig = {
 				],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonUser) =>
-						viewSlugPath(pathname, datum),
+					path: viewSlugPath,
 				},
 			},
 			name: "members",

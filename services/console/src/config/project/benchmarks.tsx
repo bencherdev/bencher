@@ -63,8 +63,7 @@ const benchmarksConfig = {
 				items: [{}, {}, {}, {}],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonBenchmark) =>
-						viewSlugPath(pathname, datum),
+					path: viewSlugPath,
 				},
 			},
 			name: "benchmarks",

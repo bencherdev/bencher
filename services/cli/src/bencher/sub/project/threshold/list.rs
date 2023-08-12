@@ -56,6 +56,7 @@ impl From<CliPagination<CliThresholdsSort>> for Pagination {
         Self {
             sort: sort.map(|sort| match sort {
                 CliThresholdsSort::Created => ProjThresholdsSort::Created,
+                CliThresholdsSort::Modified => ProjThresholdsSort::Modified,
             }),
             direction: direction.map(Into::into),
             page,

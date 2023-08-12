@@ -3,7 +3,6 @@ import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { parentPath, addPath, viewUuidPath } from "../util";
 import { BENCHER_API_URL } from "../../util/ext";
 import { validBoundary, validSampleSize, validU32 } from "../../util/valid";
-import type { JsonThreshold } from "../../types/bencher";
 import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete } from "../../util/auth";
 
@@ -156,8 +155,7 @@ const thresholdsConfig = {
 				],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonThreshold) =>
-						viewUuidPath(pathname, datum),
+					path: viewUuidPath,
 				},
 			},
 			name: "thresholds",

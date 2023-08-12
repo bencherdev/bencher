@@ -70,8 +70,7 @@ const testbedsConfig = {
 				],
 				button: {
 					text: "View",
-					path: (pathname: string, datum: JsonTestbed) =>
-						viewSlugPath(pathname, datum),
+					path: viewSlugPath,
 				},
 			},
 			name: "testbeds",

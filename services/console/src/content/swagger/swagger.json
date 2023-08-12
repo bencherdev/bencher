@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Bencher API",
-    "version": "0.3.5"
+    "version": "0.3.6"
   },
   "paths": {
     "/v0/auth/confirm": {
@@ -57,7 +57,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonConfirm"
+                  "$ref": "#/components/schemas/JsonAuthUser"
                 }
               }
             }
@@ -1391,7 +1391,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonEntitlements"
+                  "$ref": "#/components/schemas/JsonUsage"
                 }
               }
             }
@@ -5547,6 +5547,90 @@
             "$ref": "#/components/responses/Error"
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "users",
+          "tokens"
+        ],
+        "operationId": "user_token_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "Access-Control-Allow-Credentials": {
+                "style": "simple",
+                "schema": {
+                  "nullable": true,
+                  "type": "boolean"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonToken"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
       }
     }
   },
@@ -5796,6 +5880,21 @@
         },
         "required": [
           "token"
+        ]
+      },
+      "JsonAuthUser": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/Jwt"
+          },
+          "user": {
+            "$ref": "#/components/schemas/JsonUser"
+          }
+        },
+        "required": [
+          "token",
+          "user"
         ]
       },
       "JsonAverage": {
@@ -6133,21 +6232,6 @@
           "server"
         ]
       },
-      "JsonConfirm": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "$ref": "#/components/schemas/Jwt"
-          },
-          "user": {
-            "$ref": "#/components/schemas/JsonUser"
-          }
-        },
-        "required": [
-          "token",
-          "user"
-        ]
-      },
       "JsonConsole": {
         "type": "object",
         "properties": {
@@ -6216,19 +6300,6 @@
         },
         "required": [
           "endpoint"
-        ]
-      },
-      "JsonEntitlements": {
-        "type": "object",
-        "properties": {
-          "metrics_used": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "metrics_used"
         ]
       },
       "JsonFold": {
@@ -6648,18 +6719,22 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "metric_kind": {
             "$ref": "#/components/schemas/ResourceId"
           },
           "min_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -6921,9 +6996,7 @@
             "$ref": "#/components/schemas/PlanStatus"
           },
           "unit_amount": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
+            "$ref": "#/components/schemas/BigInt"
           }
         },
         "required": [
@@ -7404,15 +7477,19 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "min_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -7848,15 +7925,19 @@
           },
           "max_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "min_sample_size": {
             "nullable": true,
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
           },
           "test": {
             "$ref": "#/components/schemas/JsonStatisticKind"
@@ -7878,6 +7959,30 @@
         },
         "required": [
           "test"
+        ]
+      },
+      "JsonUpdateToken": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          }
+        }
+      },
+      "JsonUsage": {
+        "type": "object",
+        "properties": {
+          "metrics_used": {
+            "$ref": "#/components/schemas/BigInt"
+          }
+        },
+        "required": [
+          "metrics_used"
         ]
       },
       "JsonUser": {
@@ -7983,6 +8088,11 @@
       },
       "ResourceId": {
         "type": "string"
+      },
+      "SampleSize": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0
       },
       "Secret": {
         "type": "string"
@@ -8146,7 +8256,8 @@
       "ProjThresholdsSort": {
         "type": "string",
         "enum": [
-          "created"
+          "created",
+          "modified"
         ]
       },
       "UserTokensSort": {

@@ -56,6 +56,7 @@ impl From<CliPagination<CliAlertsSort>> for Pagination {
         Self {
             sort: sort.map(|sort| match sort {
                 CliAlertsSort::Created => ProjAlertsSort::Created,
+                CliAlertsSort::Modified => ProjAlertsSort::Modified,
             }),
             direction: direction.map(Into::into),
             page,

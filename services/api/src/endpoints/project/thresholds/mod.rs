@@ -49,8 +49,9 @@ pub type ProjThresholdsPagination = JsonPagination<ProjThresholdsSort>;
 #[derive(Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjThresholdsSort {
-    #[default]
     Created,
+    #[default]
+    Modified,
 }
 
 #[allow(clippy::unused_async)]
@@ -115,8 +116,12 @@ async fn get_ls_inner(
 
     query = match pagination_params.order() {
         ProjThresholdsSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) => query.order(schema::threshold::created.asc()),
-            Some(JsonDirection::Desc) | None => query.order(schema::threshold::created.desc()),
+            Some(JsonDirection::Asc) | None => query.order(schema::threshold::created.asc()),
+            Some(JsonDirection::Desc) => query.order(schema::threshold::created.desc()),
+        },
+        ProjThresholdsSort::Modified => match pagination_params.direction {
+            Some(JsonDirection::Asc) => query.order(schema::threshold::modified.asc()),
+            Some(JsonDirection::Desc) | None => query.order(schema::threshold::modified.desc()),
         },
     };
 

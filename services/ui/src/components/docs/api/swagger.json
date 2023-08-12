@@ -8206,7 +8206,8 @@
       "ProjAlertsSort": {
         "type": "string",
         "enum": [
-          "created"
+          "created",
+          "modified"
         ]
       },
       "JsonProjectPermission": {
@@ -8256,7 +8257,8 @@
       "ProjThresholdsSort": {
         "type": "string",
         "enum": [
-          "created"
+          "created",
+          "modified"
         ]
       },
       "UserTokensSort": {

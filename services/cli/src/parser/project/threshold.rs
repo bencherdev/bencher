@@ -41,6 +41,8 @@ pub struct CliThresholdList {
 pub enum CliThresholdsSort {
     /// Creation date time of the threshold
     Created,
+    /// Modification date time of the threshold
+    Modified,
 }
 
 #[derive(Parser, Debug)]

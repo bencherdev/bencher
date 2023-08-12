@@ -54,7 +54,7 @@ const organizationsConfig = {
 				button: {
 					text: "Select",
 					path: (pathname: string, datum: JsonOrganization) =>
-						viewSlugPath(pathname, datum) + "/projects",
+						`${viewSlugPath(pathname, datum)}/projects`,
 				},
 			},
 			name: "organizations",
