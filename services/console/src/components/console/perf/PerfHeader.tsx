@@ -19,9 +19,9 @@ import Field from "../../field/Field";
 export interface Props {
 	user: JsonAuthUser;
 	config: PerfHeaderConfig;
-	perf_data: Resource<JsonPerf>;
-	is_plot_init: Accessor<boolean>;
-	perf_query: Accessor<PerfQuery>;
+	perfData: Resource<JsonPerf>;
+	isPlotInit: Accessor<boolean>;
+	perfQuery: Accessor<PerfQuery>;
 	handleRefresh: () => void;
 }
 
@@ -41,7 +41,7 @@ export interface PerfQuery {
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 
-	const project = createMemo(() => props.perf_data()?.project);
+	const project = createMemo(() => props.perfData()?.project);
 
 	createEffect(() => {
 		setPageTitle(project()?.name);
@@ -57,8 +57,8 @@ const PerfHeader = (props: Props) => {
 			<ShareModal
 				user={props.user}
 				config={props.config}
-				perf_query={props.perf_query}
-				is_plot_init={props.is_plot_init}
+				perfQuery={props.perfQuery}
+				isPlotInit={props.isPlotInit}
 				project={project}
 				share={share}
 				setShare={setShare}
@@ -82,7 +82,7 @@ const PerfHeader = (props: Props) => {
 								</a>
 							</div>
 						</Show>
-						<Show when={!props.is_plot_init()} fallback={<></>}>
+						<Show when={!props.isPlotInit()} fallback={<></>}>
 							<nav class="level is-mobile">
 								<Show
 									when={project()?.visibility === "public"}
@@ -134,8 +134,8 @@ export default PerfHeader;
 export interface ShareProps {
 	user: JsonAuthUser;
 	config: PerfHeaderConfig;
-	perf_query: Accessor<PerfQuery>;
-	is_plot_init: Accessor<boolean>;
+	perfQuery: Accessor<PerfQuery>;
+	isPlotInit: Accessor<boolean>;
 	project: Accessor<undefined | JsonProject>;
 	share: Accessor<boolean>;
 	setShare: (share: boolean) => void;
@@ -161,14 +161,14 @@ const ShareModal = (props: ShareProps) => {
 	const perf_img_url = createMemo(() => {
 		const project_slug = props.project()?.slug;
 		if (
-			props.is_plot_init() ||
-			!(props.share() && project_slug && props.perf_query())
+			props.isPlotInit() ||
+			!(props.share() && project_slug && props.perfQuery())
 		) {
 			return null;
 		}
 
 		const search_params = new URLSearchParams();
-		for (const [key, value] of Object.entries(props.perf_query())) {
+		for (const [key, value] of Object.entries(props.perfQuery())) {
 			if (value) {
 				search_params.set(key, value);
 			}

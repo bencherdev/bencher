@@ -1,13 +1,22 @@
-import { PerfTab } from "../../../config/types";
+import type { Accessor } from "solid-js";
+import { PerfTab } from "../../../../config/types";
 
-const PlotInit = (props) => {
+export interface Props {
+	metric_kind: Accessor<undefined | string>;
+	branches: Accessor<string[]>;
+	testbeds: Accessor<string[]>;
+	benchmarks: Accessor<string[]>;
+	handleTab: (tab: PerfTab) => void;
+}
+
+const PlotInit = (props: Props) => {
 	return (
 		<div class="content">
 			<ul>
 				<li class="checkbox">
 					<input
 						type="checkbox"
-						checked={props.metric_kind()}
+						checked={props.metric_kind() ? true : false}
 						disabled={true}
 					/>
 					Select a Metric Kind

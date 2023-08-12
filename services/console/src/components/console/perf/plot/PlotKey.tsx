@@ -1,13 +1,22 @@
-import { For, Show } from "solid-js";
+import { Accessor, For, Show } from "solid-js";
 import * as d3 from "d3";
+import type { JsonPerf } from "../../../../types/bencher";
 
-const PlotKey = (props) => {
+export interface Props {
+	key: Accessor<boolean>;
+	handleKey: (key: boolean) => void;
+	perfData: Accessor<JsonPerf>;
+	perf_active: boolean[];
+	handlePerfActive: (index: number) => void;
+}
+
+const PlotKey = (props: Props) => {
 	return (
 		<Show
 			when={props.key()}
 			fallback={
 				<MinimizedKey
-					perf_data={props.perf_data}
+					perfData={props.perfData}
 					perf_active={props.perf_active}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
@@ -15,7 +24,7 @@ const PlotKey = (props) => {
 			}
 		>
 			<ExpandedKey
-				perf_data={props.perf_data}
+				perfData={props.perfData}
 				perf_active={props.perf_active}
 				handleKey={props.handleKey}
 				handlePerfActive={props.handlePerfActive}
@@ -24,13 +33,18 @@ const PlotKey = (props) => {
 	);
 };
 
-const ExpandedKey = (props) => {
+const ExpandedKey = (props: {
+	perfData: Accessor<JsonPerf>;
+	handleKey: (key: boolean) => void;
+	perf_active: boolean[];
+	handlePerfActive: (index: number) => void;
+}) => {
 	return (
 		<div class="columns is-centered is-gapless is-multiline">
 			<div class="column is-narrow">
 				<MinimizeKeyButton handleKey={props.handleKey} />
 			</div>
-			<For each={props.perf_data()?.results}>
+			<For each={props.perfData()?.results}>
 				{(
 					result: {
 						branch: { name: string };
@@ -58,13 +72,18 @@ const ExpandedKey = (props) => {
 	);
 };
 
-const MinimizedKey = (props) => {
+const MinimizedKey = (props: {
+	perfData: Accessor<JsonPerf>;
+	handleKey: (key: boolean) => void;
+	perf_active: boolean[];
+	handlePerfActive: (index: number) => void;
+}) => {
 	return (
 		<div class="columns is-centered is-vcentered is-gapless is-multiline is-mobile">
 			<div class="column is-narrow">
 				<MaximizeKeyButton handleKey={props.handleKey} />
 			</div>
-			<For each={props.perf_data()?.results}>
+			<For each={props.perfData()?.results}>
 				{(_result, index) => (
 					<div class="column is-narrow">
 						<KeyButton
@@ -79,7 +98,7 @@ const MinimizedKey = (props) => {
 	);
 };
 
-const MinimizeKeyButton = (props) => {
+const MinimizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 	return (
 		<button
 			title="Minimize Key"
@@ -93,7 +112,7 @@ const MinimizeKeyButton = (props) => {
 	);
 };
 
-const MaximizeKeyButton = (props) => {
+const MaximizeKeyButton = (props: { handleKey: (key: boolean) => void }) => {
 	return (
 		<button
 			title="Expand Key"
@@ -107,7 +126,7 @@ const MaximizeKeyButton = (props) => {
 	);
 };
 
-const KeyResource = (props) => {
+const KeyResource = (props: { icon: string; name: string }) => {
 	return (
 		<div>
 			<span class="icon">
@@ -122,7 +141,11 @@ const KeyResource = (props) => {
 	);
 };
 
-const KeyButton = (props) => {
+const KeyButton = (props: {
+	index: Accessor<number>;
+	perf_active: boolean[];
+	handlePerfActive: (index: number) => void;
+}) => {
 	const color = d3.schemeTableau10[props.index() % 10];
 	const number = props.index() + 1;
 	return (

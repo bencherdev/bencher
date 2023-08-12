@@ -1,5 +1,5 @@
-import axios from "axios";
 import {
+	Accessor,
 	createEffect,
 	createMemo,
 	createResource,
@@ -7,26 +7,57 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { get_options, validate_jwt } from "../../../../site/util";
-import { Range } from "../../../config/types";
+import type { JsonAuthUser, JsonMetricKind } from "../../../../types/bencher";
+import type { PerfPlotConfig } from "./PerfPlot";
+import { PerfRange } from "../../../../config/types";
+import { httpGet } from "../../../../util/http";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 
-const PlotHeader = (props) => {
+export interface Props {
+	user: JsonAuthUser;
+	config: PerfPlotConfig;
+	project_slug: Accessor<undefined | string>;
+	isConsole: boolean;
+	isPlotInit: Accessor<boolean>;
+	metric_kind: Accessor<undefined | string>;
+	start_date: Accessor<undefined | string>;
+	end_date: Accessor<undefined | string>;
+	refresh: () => void;
+	range: Accessor<PerfRange>;
+	clear: Accessor<boolean>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
+	handleMetricKind: (metric_kind: null | string) => void;
+	handleStartTime: (start_time: string) => void;
+	handleEndTime: (end_time: string) => void;
+	handleRange: (range: PerfRange) => void;
+	handleClear: (clear: boolean) => void;
+	handleLowerBoundary: (lower_boundary: boolean) => void;
+	handleUpperBoundary: (upper_boundary: boolean) => void;
+}
+
+const PlotHeader = (props: Props) => {
 	const metric_kinds_fetcher = createMemo(() => {
 		return {
-			project: props.path_params?.project_slug,
+			project: props.project_slug(),
 			refresh: props.refresh(),
 			token: props.user?.token,
 		};
 	});
-
-	const getMetricKinds = async (fetcher) => {
+	const getMetricKinds = async (fetcher: {
+		project: undefined | string;
+		refresh: () => void;
+		token: undefined | string;
+	}) => {
 		const SELECT_METRIC_KIND = {
 			name: "Metric Kind",
 			slug: BENCHER_METRIC_KIND,
 		};
-		if (props.is_console && !validate_jwt(fetcher.token)) {
+		if (!fetcher.project) {
+			return [SELECT_METRIC_KIND];
+		}
+		if (props.isConsole && typeof fetcher.token !== "string") {
 			return [SELECT_METRIC_KIND];
 		}
 		// Always use the first page and the max number of results per page
@@ -36,7 +67,7 @@ const PlotHeader = (props) => {
 		const url = `${props.config?.metric_kinds_url(
 			fetcher.project,
 		)}?${search_params.toString()}`;
-		return await axios(get_options(url, fetcher.token))
+		return await httpGet(url, fetcher.token)
 			.then((resp) => {
 				let data = resp?.data;
 				data.push(SELECT_METRIC_KIND);
@@ -47,8 +78,10 @@ const PlotHeader = (props) => {
 				return [SELECT_METRIC_KIND];
 			});
 	};
-
-	const [metric_kinds] = createResource(metric_kinds_fetcher, getMetricKinds);
+	const [metric_kinds] = createResource<JsonMetricKind[]>(
+		metric_kinds_fetcher,
+		getMetricKinds,
+	);
 
 	const getSelected = () => {
 		const slug = props.metric_kind();
@@ -58,7 +91,6 @@ const PlotHeader = (props) => {
 			return BENCHER_METRIC_KIND;
 		}
 	};
-
 	const [selected, setSelected] = createSignal(getSelected());
 
 	createEffect(() => {
@@ -70,21 +102,19 @@ const PlotHeader = (props) => {
 		}
 	});
 
-	const handleInput = (e) => {
-		const target_slug = e.currentTarget.value;
-		if (target_slug === BENCHER_METRIC_KIND) {
+	const handleInput = (slug: string) => {
+		if (slug === BENCHER_METRIC_KIND) {
 			props.handleMetricKind(null);
-			return;
+		} else {
+			props.handleMetricKind(slug);
 		}
-
-		props.handleMetricKind(target_slug);
 	};
 
 	const range_icon = createMemo(() => {
 		switch (props.range()) {
-			case Range.DATE_TIME:
+			case PerfRange.DATE_TIME:
 				return <i class="far fa-calendar" aria-hidden="true" />;
-			case Range.VERSION:
+			case PerfRange.VERSION:
 				return <i class="fas fa-code-branch" aria-hidden="true" />;
 		}
 	});
@@ -95,9 +125,9 @@ const PlotHeader = (props) => {
 				<select
 					class="card-header-title level-item"
 					title="Select Metric Kind"
-					onInput={(e) => handleInput(e)}
+					onInput={(e) => handleInput(e.currentTarget.value)}
 				>
-					<For each={metric_kinds()}>
+					<For each={metric_kinds() ?? []}>
 						{(metric_kind: { name: string; slug: string }) => (
 							<option
 								value={metric_kind.slug}
@@ -110,7 +140,7 @@ const PlotHeader = (props) => {
 				</select>
 			</div>
 			<div class="level-right">
-				<Show when={!props.is_plot_init()} fallback={<></>}>
+				<Show when={!props.isPlotInit()} fallback={<></>}>
 					<>
 						<div class="level-item">
 							<BoundaryButton
@@ -130,18 +160,18 @@ const PlotHeader = (props) => {
 							<button
 								class="button is-outlined is-fullwidth"
 								title={
-									props.range() === Range.DATE_TIME
+									props.range() === PerfRange.DATE_TIME
 										? "Switch to Version Range"
 										: "Switch to Date Range"
 								}
 								onClick={(e) => {
 									e.preventDefault();
 									switch (props.range()) {
-										case Range.DATE_TIME:
-											props.handleRange(Range.VERSION);
+										case PerfRange.DATE_TIME:
+											props.handleRange(PerfRange.VERSION);
 											break;
-										case Range.VERSION:
-											props.handleRange(Range.DATE_TIME);
+										case PerfRange.VERSION:
+											props.handleRange(PerfRange.DATE_TIME);
 											break;
 									}
 								}}
@@ -157,7 +187,7 @@ const PlotHeader = (props) => {
 							<input
 								title="Start Date"
 								type="date"
-								value={props.start_date()}
+								value={props.start_date() ?? ""}
 								onInput={(e) => props.handleStartTime(e.currentTarget?.value)}
 							/>
 						</div>
@@ -168,13 +198,13 @@ const PlotHeader = (props) => {
 							<input
 								title="End Date"
 								type="date"
-								value={props.end_date()}
+								value={props.end_date() ?? ""}
 								onInput={(e) => props.handleEndTime(e.currentTarget?.value)}
 							/>
 						</div>
 					</nav>
 				</div>
-				<Show when={!props.is_plot_init()} fallback={<></>}>
+				<Show when={!props.isPlotInit()} fallback={<></>}>
 					<div class="level-item">
 						<button
 							class="button is-outlined is-fullwidth"
@@ -195,7 +225,12 @@ const PlotHeader = (props) => {
 	);
 };
 
-const BoundaryButton = (props) => {
+const BoundaryButton = (props: {
+	boundary: Accessor<boolean>;
+	handleBoundary: (boundary: boolean) => void;
+	position: string;
+	arrow: string;
+}) => {
 	return (
 		<button
 			class={`button ${

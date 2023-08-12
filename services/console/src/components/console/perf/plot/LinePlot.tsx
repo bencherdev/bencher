@@ -1,14 +1,27 @@
 import * as Plot from "@observablehq/plot";
 import * as d3 from "d3";
-import { createEffect, createSignal } from "solid-js";
-import { Range } from "../../../config/types";
+import { Accessor, createEffect, createSignal } from "solid-js";
 import { addTooltips } from "./tooltip";
 import {
-	JsonPerf,
 	JsonAlertStatus,
-	JsonPerfAlert,
-	Boundary,
-} from "../../../../../types/bencher";
+	type Boundary,
+	type JsonAuthUser,
+	type JsonPerf,
+	type JsonPerfAlert,
+} from "../../../../types/bencher";
+import type { PerfPlotConfig } from "./PerfPlot";
+import { PerfRange } from "../../../../config/types";
+
+export interface Props {
+	user: JsonAuthUser;
+	config: PerfPlotConfig;
+	perfData: Accessor<JsonPerf>;
+	range: Accessor<PerfRange>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
+	perf_active: boolean[];
+	width: Accessor<number>;
+}
 
 enum Position {
 	Lower,
@@ -42,7 +55,7 @@ const position_label = (position: Position) => {
 	}
 };
 
-const LinePlot = (props) => {
+const LinePlot = (props: Props) => {
 	const [is_plotted, set_is_plotted] = createSignal(false);
 	const [y_label_area_size, set_y_label_area_size] = createSignal(512);
 
@@ -73,15 +86,15 @@ const LinePlot = (props) => {
 
 	const get_x_axis = () => {
 		switch (props.range()) {
-			case Range.DATE_TIME:
+			case PerfRange.DATE_TIME:
 				return ["date_time", "Report Date and Time"];
-			case Range.VERSION:
+			case PerfRange.VERSION:
 				return ["number", "Branch Version Number"];
 		}
 	};
 
 	const plotted = () => {
-		const json_perf: JsonPerf = props.perf_data();
+		const json_perf: JsonPerf = props.perfData();
 		// console.log(json_perf);
 
 		if (

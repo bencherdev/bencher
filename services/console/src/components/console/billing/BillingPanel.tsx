@@ -78,13 +78,16 @@ const BillingPanel = (props: Props) => {
 		}/plan`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
-				return resp?.data as JsonPlan;
+				return resp?.data;
 			})
 			.catch((_error) => {
 				return null;
 			});
 	};
-	const [plan, { refetch }] = createResource(fetcher, fetchPlan);
+	const [plan, { refetch }] = createResource<null | JsonPlan>(
+		fetcher,
+		fetchPlan,
+	);
 
 	return (
 		<>

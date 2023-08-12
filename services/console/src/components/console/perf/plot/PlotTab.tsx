@@ -1,9 +1,21 @@
-import { Link } from "solid-app-router";
-import { For, Match, Switch } from "solid-js";
-import { PerfTab } from "../../../config/types";
-import { date_time_fmt, toCapitalized } from "../../../config/util";
+import { For, type Accessor, Switch, Match } from "solid-js";
+import { PerfTab } from "../../../../config/types";
+import type {
+	JsonBenchmark,
+	JsonBranch,
+	JsonReport,
+	JsonTestbed,
+} from "../../../../types/bencher";
+import { fmtDateTime, toCapitalized } from "../../../../config/util";
 import { DEFAULT_PAGE } from "../PerfPanel";
-import Pagination, { PaginationSize } from "../../../../site/Pagination";
+import Pagination, { PaginationSize } from "../../../site/Pagination";
+
+export type TabList<T> = TabElement<T>[];
+
+export interface TabElement<T> {
+	resource: T;
+	checked: boolean;
+}
 
 const perf_tabs = [
 	PerfTab.REPORTS,
@@ -12,7 +24,43 @@ const perf_tabs = [
 	PerfTab.BENCHMARKS,
 ];
 
-const PlotTab = (props) => {
+export interface Props {
+	project_slug: Accessor<undefined | string>;
+	isConsole: boolean;
+	metric_kind: Accessor<undefined | string>;
+	tab: Accessor<PerfTab>;
+	handleTab: (tab: PerfTab) => void;
+	// Tabs
+	reports_tab: TabList<JsonReport>;
+	branches_tab: TabList<JsonBranch>;
+	testbeds_tab: TabList<JsonTestbed>;
+	benchmarks_tab: TabList<JsonBenchmark>;
+	// Per page
+	reports_per_page: Accessor<number>;
+	branches_per_page: Accessor<number>;
+	testbeds_per_page: Accessor<number>;
+	benchmarks_per_page: Accessor<number>;
+	// Page
+	reports_page: Accessor<number>;
+	branches_page: Accessor<number>;
+	testbeds_page: Accessor<number>;
+	benchmarks_page: Accessor<number>;
+	// Handle checked
+	handleReportChecked: (
+		index: number,
+		metric_kind_slug: undefined | string,
+	) => void;
+	handleBranchChecked: (index: number) => void;
+	handleTestbedChecked: (index: number) => void;
+	handleBenchmarkChecked: (index: number) => void;
+	// Handle page
+	handleReportsPage: (reports_page: number) => void;
+	handleBranchesPage: (branches_page: number) => void;
+	handleTestbedsPage: (testbeds_page: number) => void;
+	handleBenchmarksPage: (benchmarks_page: number) => void;
+}
+
+const PlotTab = (props: Props) => {
 	const getTab = () => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
@@ -39,7 +87,7 @@ const PlotTab = (props) => {
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_per_page;
 			default:
-				return 8;
+				return () => 8;
 		}
 	};
 
@@ -54,7 +102,7 @@ const PlotTab = (props) => {
 			case PerfTab.BENCHMARKS:
 				return props.benchmarks_page;
 			default:
-				return 1;
+				return () => 1;
 		}
 	};
 
@@ -74,7 +122,7 @@ const PlotTab = (props) => {
 		}
 	};
 
-	const handleChecked = (index: number, slug: void | string) => {
+	const handleChecked = (index: number, slug?: string) => {
 		switch (props.tab()) {
 			case PerfTab.REPORTS:
 				return props.handleReportChecked(index, slug);
@@ -111,7 +159,7 @@ const PlotTab = (props) => {
 			</div>
 			<Tab
 				project_slug={props.project_slug}
-				is_console={props.is_console}
+				isConsole={props.isConsole}
 				metric_kind={props.metric_kind}
 				tab={props.tab}
 				getTab={getTab}
@@ -141,14 +189,14 @@ const PlotTab = (props) => {
 };
 
 const Tab = (props: {
-	project_slug: string;
-	is_console: boolean;
-	metric_kind: () => string;
-	tab: () => PerfTab;
-	getTab: () => any[];
-	getPage: () => () => number;
+	project_slug: Accessor<undefined | string>;
+	isConsole: boolean;
+	metric_kind: Accessor<undefined | string>;
+	tab: Accessor<PerfTab>;
+	getTab: () => TabList<JsonReport | JsonBranch | JsonTestbed | JsonBenchmark>;
+	getPage: () => Accessor<number>;
 	getHandlePage: () => (page: number) => void;
-	handleChecked: (index: number, slug: void | string) => void;
+	handleChecked: (index: number, slug?: string) => void;
 }) => {
 	return (
 		<Switch
@@ -160,7 +208,7 @@ const Tab = (props: {
 		>
 			<Match
 				when={
-					props.is_console &&
+					props.isConsole &&
 					props.getTab().length === 0 &&
 					props.getPage()?.() === DEFAULT_PAGE
 				}
@@ -187,12 +235,12 @@ const Tab = (props: {
 			>
 				<For each={props.getTab()}>
 					{(report, index) => (
-						<For each={report.resource?.results?.[0]}>
+						<For each={(report.resource as JsonReport)?.results?.[0]}>
 							{(result, _index) => (
 								<a
 									class="panel-block"
-									title={`View Report from ${date_time_fmt(
-										report.resource?.start_time,
+									title={`View Report from ${fmtDateTime(
+										(report.resource as JsonReport)?.start_time,
 									)}`}
 									onClick={(_e) =>
 										// Send the Metric Kind slug instead of the Report UUID
@@ -211,7 +259,9 @@ const Tab = (props: {
 										</div>
 										<div class="column">
 											<small style="overflow-wrap:anywhere;">
-												{date_time_fmt(report.resource?.start_time)}
+												{fmtDateTime(
+													(report.resource as JsonReport)?.start_time,
+												)}
 											</small>
 											<ReportDimension
 												icon="fas fa-shapes"
@@ -219,11 +269,11 @@ const Tab = (props: {
 											/>
 											<ReportDimension
 												icon="fas fa-code-branch"
-												name={report.resource?.branch?.name}
+												name={(report.resource as JsonReport)?.branch?.name}
 											/>
 											<ReportDimension
 												icon="fas fa-server"
-												name={report.resource?.testbed?.name}
+												name={(report.resource as JsonReport)?.testbed?.name}
 											/>
 										</div>
 									</div>
@@ -241,7 +291,8 @@ const Tab = (props: {
 						<a
 							class="panel-block"
 							title={`${dimension.checked ? "Remove" : "Add"} ${
-								dimension.resource?.name
+								(dimension.resource as JsonBranch | JsonTestbed | JsonBenchmark)
+									?.name
 							}`}
 							onClick={(_e) => props.handleChecked(index())}
 						>
@@ -251,7 +302,14 @@ const Tab = (props: {
 								</div>
 								<div class="column">
 									<small style="overflow-wrap:anywhere;">
-										{dimension.resource?.name}
+										{
+											(
+												dimension.resource as
+													| JsonBranch
+													| JsonTestbed
+													| JsonBenchmark
+											)?.name
+										}
 									</small>
 								</div>
 							</div>
@@ -263,12 +321,15 @@ const Tab = (props: {
 	);
 };
 
-const AddButton = (props) => {
+const AddButton = (props: {
+	project_slug: Accessor<undefined | string>;
+	tab: Accessor<PerfTab>;
+}) => {
 	const getHref = () => {
 		switch (props.tab()) {
 			case PerfTab.BRANCHES:
 			case PerfTab.TESTBEDS:
-				return `/console/projects/${props.project_slug}/${props.tab()}/add`;
+				return `/console/projects/${props.project_slug()}/${props.tab()}/add`;
 			case PerfTab.REPORTS:
 			case PerfTab.BENCHMARKS:
 				return "/docs/how-to/track-benchmarks";
@@ -292,17 +353,21 @@ const AddButton = (props) => {
 	};
 
 	return (
-		<Link
+		<a
 			class="button is-primary is-fullwidth"
 			title={getText()}
 			href={getHref()}
 		>
 			{getText()}
-		</Link>
+		</a>
 	);
 };
 
-const BackButton = (props) => {
+const BackButton = (props: {
+	tab: Accessor<PerfTab>;
+	page: Accessor<number>;
+	handlePage: (page: number) => void;
+}) => {
 	return (
 		<button
 			class="button is-primary is-fullwidth"

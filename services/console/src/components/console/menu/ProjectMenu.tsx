@@ -66,7 +66,7 @@ const ConsoleMenu = (props: Props) => {
 				return DEFAULT_ALERT_STATS;
 			});
 	};
-	const [alert_stats] = createResource(fetcher, getAlerts);
+	const [alert_stats] = createResource<JsonAlertStats>(fetcher, getAlerts);
 	const active_alerts = createMemo(() => alert_stats()?.active);
 
 	const path = (section: Section) =>

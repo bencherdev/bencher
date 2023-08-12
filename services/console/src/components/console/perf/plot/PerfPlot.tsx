@@ -1,10 +1,83 @@
-import { Show } from "solid-js";
+import { Accessor, Show } from "solid-js";
 import Plot from "./Plot";
 import PlotHeader from "./PlotHeader";
 import PlotInit from "./PlotInit";
-import PlotTab from "./PlotTab";
+import PlotTab, { TabList } from "./PlotTab";
+import type { PerfRange, PerfTab } from "../../../../config/types";
+import type {
+	JsonAuthUser,
+	JsonBenchmark,
+	JsonBranch,
+	JsonPerf,
+	JsonReport,
+	JsonTestbed,
+} from "../../../../types/bencher";
+import type { Params } from "astro";
 
-const PerfPlot = (props) => {
+export interface Props {
+	user: JsonAuthUser;
+	project_slug: Accessor<undefined | string>;
+	config: PerfPlotConfig;
+	params: Accessor<Params>;
+	isConsole: boolean;
+	isPlotInit: Accessor<boolean>;
+	metric_kind: Accessor<undefined | string>;
+	report: Accessor<undefined | string>;
+	branches: Accessor<string[]>;
+	testbeds: Accessor<string[]>;
+	benchmarks: Accessor<string[]>;
+	start_date: Accessor<undefined | string>;
+	end_date: Accessor<undefined | string>;
+	refresh: () => void;
+	perfData: Accessor<JsonPerf>;
+	tab: Accessor<PerfTab>;
+	key: Accessor<boolean>;
+	range: Accessor<PerfRange>;
+	clear: Accessor<boolean>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
+	reports_tab: TabList<JsonReport>;
+	branches_tab: TabList<JsonBranch>;
+	testbeds_tab: TabList<JsonTestbed>;
+	benchmarks_tab: TabList<JsonBenchmark>;
+	reports_per_page: Accessor<number>;
+	branches_per_page: Accessor<number>;
+	testbeds_per_page: Accessor<number>;
+	benchmarks_per_page: Accessor<number>;
+	reports_page: Accessor<number>;
+	branches_page: Accessor<number>;
+	testbeds_page: Accessor<number>;
+	benchmarks_page: Accessor<number>;
+	handleMetricKind: (metric_kind: null | string) => void;
+	handleStartTime: (start_time: string) => void;
+	handleEndTime: (end_time: string) => void;
+	handleTab: (tab: PerfTab) => void;
+	handleKey: (key: boolean) => void;
+	handleRange: (range: PerfRange) => void;
+	handleClear: (clear: boolean) => void;
+	handleLowerBoundary: (lower_boundary: boolean) => void;
+	handleUpperBoundary: (upper_boundary: boolean) => void;
+	handleReportChecked: (
+		index: number,
+		metric_kind_slug: undefined | string,
+	) => void;
+	handleBranchChecked: (index: number) => void;
+	handleTestbedChecked: (index: number) => void;
+	handleBenchmarkChecked: (index: number) => void;
+	handleReportsPage: (reports_page: number) => void;
+	handleBranchesPage: (branches_page: number) => void;
+	handleTestbedsPage: (testbeds_page: number) => void;
+	handleBenchmarksPage: (benchmarks_page: number) => void;
+}
+
+export interface PerfPlotConfig {
+	project_url: (project_slug: string) => string;
+	perf_url: (project_slug: string) => string;
+	tab_url: (project_slug: string, tab: PerfTab) => string;
+	metric_kinds_url: (project_slug: string) => string;
+}
+
+const PerfPlot = (props: Props) => {
 	return (
 		<div class="columns">
 			<div class="column">
@@ -12,9 +85,9 @@ const PerfPlot = (props) => {
 					<PlotHeader
 						user={props.user}
 						config={props.config}
-						path_params={props.path_params}
-						is_console={props.is_console}
-						is_plot_init={props.is_plot_init}
+						project_slug={props.project_slug}
+						isConsole={props.isConsole}
+						isPlotInit={props.isPlotInit}
 						metric_kind={props.metric_kind}
 						start_date={props.start_date}
 						end_date={props.end_date}
@@ -33,19 +106,15 @@ const PerfPlot = (props) => {
 					/>
 					<div class="panel-block">
 						<Show
-							when={props.is_plot_init()}
+							when={props.isPlotInit()}
 							fallback={
 								<Plot
 									user={props.user}
 									config={props.config}
-									path_params={props.path_params}
-									branches={props.branches}
-									testbeds={props.testbeds}
-									benchmarks={props.benchmarks}
 									range={props.range}
 									lower_boundary={props.lower_boundary}
 									upper_boundary={props.upper_boundary}
-									perf_data={props.perf_data}
+									perfData={props.perfData}
 									key={props.key}
 									handleKey={props.handleKey}
 								/>
@@ -62,7 +131,7 @@ const PerfPlot = (props) => {
 					</div>
 					<PlotTab
 						project_slug={props.project_slug}
-						is_console={props.is_console}
+						isConsole={props.isConsole}
 						metric_kind={props.metric_kind}
 						tab={props.tab}
 						reports_tab={props.reports_tab}

@@ -1,14 +1,28 @@
 import { createElementSize } from "@solid-primitives/resize-observer";
-import { createMemo, createResource, createSignal } from "solid-js";
+import { Accessor, createMemo, createResource } from "solid-js";
 import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
+import type { JsonAuthUser, JsonPerf } from "../../../../types/bencher";
+import type { PerfPlotConfig } from "./PerfPlot";
+import type { PerfRange } from "../../../../config/types";
 
-const Plot = (props) => {
-	const [perf_active, setPerfActive] = createStore([]);
+export interface Props {
+	user: JsonAuthUser;
+	config: PerfPlotConfig;
+	range: Accessor<PerfRange>;
+	lower_boundary: Accessor<boolean>;
+	upper_boundary: Accessor<boolean>;
+	perfData: Accessor<JsonPerf>;
+	key: Accessor<boolean>;
+	handleKey: (key: boolean) => void;
+}
 
-	const [_perf_active] = createResource(props.perf_data, (json_perf) => {
-		const active = [];
+const Plot = (props: Props) => {
+	const [perf_active, setPerfActive] = createStore<boolean[]>([]);
+
+	const [_perf_active] = createResource(props.perfData, (json_perf) => {
+		const active: boolean[] = [];
 		json_perf?.results?.forEach(() => {
 			active.push(true);
 		});
@@ -24,7 +38,7 @@ const Plot = (props) => {
 
 	let plot_ref: HTMLDivElement | undefined;
 	const plot_size = createElementSize(() => plot_ref);
-	const width = createMemo(() => plot_size.width);
+	const width = createMemo(() => plot_size.width ?? 100);
 
 	return (
 		<div class="container">
@@ -32,8 +46,7 @@ const Plot = (props) => {
 				<LinePlot
 					user={props.user}
 					config={props.config}
-					path_params={props.path_params}
-					perf_data={props.perf_data}
+					perfData={props.perfData}
 					range={props.range}
 					lower_boundary={props.lower_boundary}
 					upper_boundary={props.upper_boundary}
@@ -43,13 +56,7 @@ const Plot = (props) => {
 			</div>
 			<br />
 			<PlotKey
-				user={props.user}
-				config={props.config}
-				path_params={props.path_params}
-				branches={props.branches}
-				testbeds={props.testbeds}
-				benchmarks={props.benchmarks}
-				perf_data={props.perf_data}
+				perfData={props.perfData}
 				key={props.key}
 				perf_active={perf_active}
 				handleKey={props.handleKey}

@@ -94,13 +94,13 @@ const Plan = (props: Props) => {
 			fetcher.organization_slug
 		}/usage?start=${start}&end=${end}`;
 		return await httpGet(url, fetcher.token)
-			.then((resp) => resp?.data as JsonUsage)
+			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
 				return null;
 			});
 	};
-	const [usage] = createResource(fetcher, fetchUsage);
+	const [usage] = createResource<null | JsonUsage>(fetcher, fetchUsage);
 
 	const perMetricRate = createMemo(() => {
 		const unitAmount = props.plan()?.unit_amount;

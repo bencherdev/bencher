@@ -1,4 +1,3 @@
-import bencher_valid_init, { InitOutput } from "bencher_valid";
 import {
 	createEffect,
 	createMemo,
@@ -6,7 +5,7 @@ import {
 	createSignal,
 } from "solid-js";
 import PerfHeader, { PerfHeaderConfig, PerfQuery } from "./PerfHeader";
-// import PerfPlot from "./plot/PerfPlot";
+import PerfPlot, { PerfPlotConfig } from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 import {
 	Operation,
@@ -17,7 +16,7 @@ import {
 	isPerfTab,
 } from "../../../config/types";
 import { useSearchParams } from "../../../util/url";
-import { validJwt, validSlug, validU32 } from "../../../util/valid";
+import { validSlug, validU32 } from "../../../util/valid";
 import type { Params } from "astro";
 import { authUser } from "../../../util/auth";
 import consoleConfig from "../../../config/console";
@@ -29,6 +28,7 @@ import type {
 	JsonReport,
 	JsonTestbed,
 } from "../../../types/bencher";
+import type { TabList } from "./plot/PlotTab";
 
 const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
@@ -109,12 +109,14 @@ const timeToDateIso = (time_str: undefined | string): null | string => {
 	return null;
 };
 
-const timeToDateOnlyIso = (time_str: undefined | string): null | string => {
+const timeToDateOnlyIso = (
+	time_str: undefined | string,
+): undefined | string => {
 	const iso_date = timeToDateIso(time_str);
 	if (iso_date) {
-		return iso_date.split("T")?.[0] ?? null;
+		return iso_date.split("T")?.[0];
 	}
-	return null;
+	return;
 };
 
 const dateToTime = (date_str: undefined | string): null | string => {
@@ -127,13 +129,17 @@ const dateToTime = (date_str: undefined | string): null | string => {
 	return null;
 };
 
-const resourcesToCheckable = (resources, params) =>
-	resources.map((resource) => {
+function resourcesToCheckable<T>(
+	resources: { uuid: string }[],
+	params: (undefined | string)[],
+): TabList<T> {
+	return resources.map((resource) => {
 		return {
-			resource: resource,
+			resource: resource as T,
 			checked: params.includes(resource?.uuid),
 		};
 	});
+}
 
 const isBoolParam = (param: undefined | string): boolean => {
 	return param === "false" || param === "true";
@@ -141,7 +147,7 @@ const isBoolParam = (param: undefined | string): boolean => {
 
 export interface Props {
 	params: Params;
-	is_console: boolean;
+	isConsole?: boolean;
 }
 
 export interface PerfPanelConfig {
@@ -149,17 +155,7 @@ export interface PerfPanelConfig {
 	plot: PerfPlotConfig;
 }
 
-export interface PerfPlotConfig {
-	project_url: (project_slug: string) => string;
-	perf_url: (project_slug: string) => string;
-	tab_url: (project_slug: string, tab: PerfTab) => string;
-	metric_kinds_url: (project_slug: string) => string;
-}
-
 const PerfPanel = (props: Props) => {
-	const [bencher_valid] = createResource(
-		async () => await bencher_valid_init(),
-	);
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
@@ -257,8 +253,9 @@ const PerfPanel = (props: Props) => {
 	const tab = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (isPerfTab(searchParams[TAB_PARAM])) {
-			return searchParams[TAB_PARAM];
+		const perfTab = searchParams[TAB_PARAM];
+		if (perfTab && isPerfTab(perfTab)) {
+			return perfTab as PerfTab;
 		} else {
 			return DEFAULT_PERF_TAB;
 		}
@@ -281,8 +278,9 @@ const PerfPanel = (props: Props) => {
 	const range = createMemo(() => {
 		// This check is required for the initial load
 		// before the query params have been sanitized
-		if (isPerfRange(searchParams[RANGE_PARAM])) {
-			return searchParams[RANGE_PARAM];
+		const perfRange = searchParams[RANGE_PARAM];
+		if (perfRange && isPerfRange(perfRange)) {
+			return perfRange as PerfRange;
 		} else {
 			return DEFAULT_PERF_RANGE;
 		}
@@ -329,7 +327,7 @@ const PerfPanel = (props: Props) => {
 	);
 
 	// The perf query sent to the server
-	const perf_query = createMemo(() => {
+	const perfQuery = createMemo(() => {
 		return {
 			metric_kind: metric_kind(),
 			branches: branches(),
@@ -340,7 +338,7 @@ const PerfPanel = (props: Props) => {
 		};
 	});
 
-	const is_plot_init = createMemo(
+	const isPlotInit = createMemo(
 		() =>
 			!metric_kind() ||
 			branches().length === 0 ||
@@ -357,30 +355,25 @@ const PerfPanel = (props: Props) => {
 	const project_slug = createMemo(() => params().project);
 	const perfFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
-			perf_query: perf_query(),
+			perfQuery: perfQuery(),
 			refresh: refresh(),
 			token: user?.token,
 		};
 	});
 	const getPerf = async (fetcher: {
-		bencher_valid: InitOutput;
 		project_slug: string;
-		perf_query: PerfQuery;
+		perfQuery: PerfQuery;
 		refresh: number;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (props.is_console && !fetcher.bencher_valid) {
-			return EMPTY_OBJECT;
-		}
-		if (props.is_console && !validJwt(fetcher.token)) {
+		if (props.isConsole && typeof fetcher.token !== "string") {
 			return EMPTY_OBJECT;
 		}
 
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
-		if (is_plot_init()) {
+		if (isPlotInit()) {
 			const url = `${config()?.plot?.project_url(fetcher.project_slug)}`;
 			return await httpGet(url, fetcher.token)
 				.then((resp) => {
@@ -394,7 +387,7 @@ const PerfPanel = (props: Props) => {
 				});
 		}
 		const search_params = new URLSearchParams();
-		for (const [key, value] of Object.entries(fetcher.perf_query)) {
+		for (const [key, value] of Object.entries(fetcher.perfQuery)) {
 			if (value) {
 				search_params.set(key, value.toString());
 			}
@@ -403,26 +396,27 @@ const PerfPanel = (props: Props) => {
 			fetcher.project_slug,
 		)}?${search_params.toString()}`;
 		return await httpGet(url, fetcher.token)
-			.then((resp) => resp?.data as JsonPerf)
+			.then((resp) => resp?.data)
 			.catch((error) => {
 				console.error(error);
 				return EMPTY_OBJECT;
 			});
 	};
 
-	const [perf_data] = createResource(perfFetcher, getPerf);
+	const [perfData] = createResource<JsonPerf>(perfFetcher, getPerf);
 
 	// Initialize as empty, wait for resources to load
-	const [reports_tab, setReportsTab] = createStore([]);
-	const [branches_tab, setBranchesTab] = createStore([]);
-	const [testbeds_tab, setTestbedsTab] = createStore([]);
-	const [benchmarks_tab, setBenchmarksTab] = createStore([]);
+	const [reports_tab, setReportsTab] = createStore<TabList<JsonReport>>([]);
+	const [branches_tab, setBranchesTab] = createStore<TabList<JsonBranch>>([]);
+	const [testbeds_tab, setTestbedsTab] = createStore<TabList<JsonTestbed>>([]);
+	const [benchmarks_tab, setBenchmarksTab] = createStore<
+		TabList<JsonBenchmark>
+	>([]);
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
 	async function getPerfTab<T>(
 		perf_tab: PerfTab,
 		fetcher: {
-			bencher_valid: undefined | InitOutput;
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;
@@ -433,10 +427,7 @@ const PerfPanel = (props: Props) => {
 		if (!fetcher.project_slug) {
 			return EMPTY_ARRAY;
 		}
-		if (props.is_console && !fetcher.bencher_valid) {
-			return EMPTY_ARRAY;
-		}
-		if (props.is_console && !validJwt(fetcher.token)) {
+		if (props.isConsole && typeof fetcher.token !== "string") {
 			return EMPTY_ARRAY;
 		}
 		if (!validU32(fetcher.per_page.toString())) {
@@ -464,7 +455,6 @@ const PerfPanel = (props: Props) => {
 
 	const reports_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: reports_per_page(),
 			page: reports_page(),
@@ -508,7 +498,6 @@ const PerfPanel = (props: Props) => {
 
 	const branches_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: branches_per_page(),
 			page: branches_page(),
@@ -537,7 +526,6 @@ const PerfPanel = (props: Props) => {
 
 	const testbeds_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: testbeds_per_page(),
 			page: testbeds_page(),
@@ -566,7 +554,6 @@ const PerfPanel = (props: Props) => {
 
 	const benchmarks_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: benchmarks_per_page(),
 			page: benchmarks_page(),
@@ -594,7 +581,7 @@ const PerfPanel = (props: Props) => {
 		}
 	});
 
-	const handleMetricKind = (metric_kind: string) => {
+	const handleMetricKind = (metric_kind: null | string) => {
 		setSearchParams({
 			[CLEAR_PARAM]: true,
 			[REPORT_PARAM]: null,
@@ -602,8 +589,17 @@ const PerfPanel = (props: Props) => {
 		});
 	};
 
-	const handleReportChecked = (index: number, metric_kind_slug: string) => {
-		let report = reports_tab?.[index]?.resource;
+	const handleReportChecked = (
+		index: number,
+		metric_kind_slug: undefined | string,
+	) => {
+		if (!metric_kind_slug) {
+			return;
+		}
+		const report = reports_tab?.[index]?.resource;
+		const benchmarks = report?.results?.[0]
+			?.find((result) => result.metric_kind?.slug === metric_kind_slug)
+			?.benchmarks?.map((benchmark) => benchmark.uuid);
 		setSearchParams({
 			[CLEAR_PARAM]: true,
 			[LOWER_BOUNDARY_PARAM]: null,
@@ -612,11 +608,7 @@ const PerfPanel = (props: Props) => {
 			[METRIC_KIND_PARAM]: metric_kind_slug,
 			[BRANCHES_PARAM]: report?.branch?.uuid,
 			[TESTBEDS_PARAM]: report?.testbed?.uuid,
-			[BENCHMARKS_PARAM]: arrayToString(
-				report?.results?.[0]
-					?.find((result) => result.metric_kind?.slug === metric_kind_slug)
-					?.benchmarks?.map((benchmark) => benchmark.uuid),
-			),
+			[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
 		});
 	};
 	const handleChecked = (
@@ -724,18 +716,18 @@ const PerfPanel = (props: Props) => {
 			<PerfHeader
 				user={user}
 				config={config()?.header}
-				perf_data={perf_data}
-				is_plot_init={is_plot_init}
-				perf_query={perf_query}
+				perfData={perfData}
+				isPlotInit={isPlotInit}
+				perfQuery={perfQuery}
 				handleRefresh={handleRefresh}
 			/>
-			{/* <PerfPlot
+			<PerfPlot
 				user={user}
-				project_slug={project_slug()}
+				project_slug={project_slug}
 				config={config()?.plot}
-				path_params={props.params}
-				is_console={props.is_console}
-				is_plot_init={is_plot_init}
+				params={props.params}
+				isConsole={props.isConsole ?? false}
+				isPlotInit={isPlotInit}
 				metric_kind={metric_kind}
 				report={report}
 				branches={branches}
@@ -744,7 +736,7 @@ const PerfPanel = (props: Props) => {
 				start_date={start_date}
 				end_date={end_date}
 				refresh={refresh}
-				perf_data={perf_data}
+				perfData={perfData}
 				tab={tab}
 				key={key}
 				range={range}
@@ -780,7 +772,7 @@ const PerfPanel = (props: Props) => {
 				handleBranchesPage={handleBranchesPage}
 				handleTestbedsPage={handleTestbedsPage}
 				handleBenchmarksPage={handleBenchmarksPage}
-			/> */}
+			/>
 		</>
 	);
 };

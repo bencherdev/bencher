@@ -47,8 +47,8 @@ export const validBranchName = (branch_name: string): boolean =>
 export const validBenchmarkName = (benchmark_name: string): boolean =>
 	validString(benchmark_name, is_valid_benchmark_name);
 
-export const validSlug = (slug: string): boolean =>
-	validString(slug, is_valid_slug);
+export const validSlug = (slug: undefined | null | string): boolean =>
+	validOptionString(slug, is_valid_slug);
 
 export const validEmail = (email: undefined | null | string): boolean =>
 	validOptionString(email, is_valid_email);

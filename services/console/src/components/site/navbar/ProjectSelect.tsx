@@ -68,7 +68,7 @@ const ProjectSelect = (props: Props) => {
 				return;
 			});
 	};
-	const [organization] = createResource(orgFetcher, fetchOrg);
+	const [organization] = createResource<string>(orgFetcher, fetchOrg);
 
 	const getSelected = () => {
 		const slug = params()?.project;
@@ -126,7 +126,7 @@ const ProjectSelect = (props: Props) => {
 				return [ALL_PROJECTS];
 			});
 	};
-	const [projects] = createResource(fetcher, fetchProjects);
+	const [projects] = createResource<JsonProject[]>(fetcher, fetchProjects);
 
 	createEffect(() => {
 		setSelected(getSelected());
