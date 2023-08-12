@@ -346,14 +346,16 @@ const alert_image = (x_axis, position: Position, project_slug) => {
 	return {
 		x: x_axis,
 		y: position_key(position),
-		src: (datum) => is_active(datum.alert) && SIREN_URL,
+		src: (datum) => (is_active(datum.alert) ? SIREN_URL : ""),
 		width: 18,
 		title: (datum) =>
-			is_active(datum.alert) &&
-			limit_title(position, datum, "\nClick to view Alert"),
+			is_active(datum.alert)
+				? limit_title(position, datum, "\nClick to view Alert")
+				: "",
 		href: (datum) =>
-			is_active(datum.alert) &&
-			`/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`,
+			is_active(datum.alert)
+				? `/console/projects/${project_slug}/alerts/${datum.alert?.uuid}`
+				: "",
 		target: "_blank",
 	};
 };
