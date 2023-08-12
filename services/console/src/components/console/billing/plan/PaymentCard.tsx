@@ -112,7 +112,6 @@ const PaymentCard = (props: Props) => {
 		<form class="box">
 			<Field
 				params={props.params}
-				user={props.user}
 				kind={FieldKind.INPUT}
 				fieldKey="number"
 				label={CARD_FIELDS.number?.label}
@@ -123,7 +122,6 @@ const PaymentCard = (props: Props) => {
 			/>
 			<Field
 				params={props.params}
-				user={props.user}
 				kind={FieldKind.INPUT}
 				fieldKey="expiration"
 				label={CARD_FIELDS.expiration?.label}
@@ -134,7 +132,6 @@ const PaymentCard = (props: Props) => {
 			/>
 			<Field
 				params={props.params}
-				user={props.user}
 				kind={FieldKind.INPUT}
 				fieldKey="cvc"
 				label={CARD_FIELDS.cvc?.label}

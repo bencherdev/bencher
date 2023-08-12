@@ -1,17 +1,16 @@
 import type { Params } from "astro";
-import type { JsonAuthUser } from "../../../types/bencher";
 import type { FieldValue, FieldValueHandler } from "../Field";
 import { For, createMemo, createResource, createSignal } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
 import { httpGet } from "../../../util/http";
+import { authUser } from "../../../util/auth";
 
 export type RadioValue = string;
 
 export interface Props {
 	value: FieldValue;
 	config: RadioConfig;
-	user: JsonAuthUser;
-	params: Params;
+	params: undefined | Params;
 	handleField: FieldValueHandler;
 }
 
@@ -20,7 +19,7 @@ export interface RadioConfig {
 	icon: string;
 	option_key: string;
 	value_key: string;
-	url: (params: Params, per_page: number, page: number) => string;
+	url: (params: undefined | Params, per_page: number, page: number) => string;
 	help?: string;
 	validate: (value: string) => boolean;
 }
@@ -33,7 +32,7 @@ const Radio = (props: Props) => {
 	const fetcher = createMemo(() => {
 		return {
 			url: props.config?.url(params(), per_page, page()),
-			token: props.user?.token,
+			token: authUser()?.token,
 		};
 	});
 	const getRadio = async (fetcher: {

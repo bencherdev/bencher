@@ -185,7 +185,6 @@ const UpdateCard = (props: Props) => {
 				<div class="content">
 					<Field
 						params={props.params}
-						user={props.user}
 						kind={props.card?.field?.kind}
 						fieldKey={props.card?.field?.key}
 						value={form?.[props.card?.field?.key]?.value}

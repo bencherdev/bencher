@@ -67,7 +67,6 @@ const Poster = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const navigate = useNavigate();
-	const user = authUser();
 	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
@@ -94,7 +93,7 @@ const Poster = (props: Props) => {
 		if (!bencher_valid()) {
 			return;
 		}
-		const token = user?.token;
+		const token = authUser()?.token;
 		if (!validJwt(token)) {
 			return;
 		}
@@ -198,7 +197,6 @@ const Poster = (props: Props) => {
 					<For each={props.config?.fields}>
 						{(field, _i) => (
 							<Field
-								user={user}
 								kind={field?.kind}
 								label={form?.[field?.key]?.label}
 								fieldKey={field?.key}

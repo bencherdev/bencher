@@ -7,7 +7,7 @@ import FieldKind from "../../components/field/kind";
 import { isAllowedProjectDelete } from "../../util/auth";
 
 const paginationUrl = (
-	params: Params,
+	params: undefined | Params,
 	dimension: string,
 	per_page: number,
 	page: number,
@@ -27,7 +27,7 @@ const THRESHOLD_FIELDS = {
 		icon: "fas fa-shapes",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: Params, per_page: number, page: number) =>
+		url: (params: undefined | Params, per_page: number, page: number) =>
 			paginationUrl(params, "metric-kinds", per_page, page),
 	},
 	branch: {
@@ -35,7 +35,7 @@ const THRESHOLD_FIELDS = {
 		icon: "fas fa-code-branch",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: Params, per_page: number, page: number) =>
+		url: (params: undefined | Params, per_page: number, page: number) =>
 			paginationUrl(params, "branches", per_page, page),
 	},
 	testbed: {
@@ -43,7 +43,7 @@ const THRESHOLD_FIELDS = {
 		icon: "fas fa-server",
 		option_key: "name",
 		value_key: "uuid",
-		url: (params: Params, per_page: number, page: number) =>
+		url: (params: undefined | Params, per_page: number, page: number) =>
 			paginationUrl(params, "testbeds", per_page, page),
 	},
 	test: {

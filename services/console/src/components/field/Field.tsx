@@ -4,7 +4,6 @@ import Switch, { SwitchConfig, SwitchValue } from "./kinds/Switch";
 import Select, { SelectConfig, SelectValue } from "./kinds/Select";
 import FieldKind from "./kind";
 import Radio, { RadioConfig, RadioValue } from "./kinds/Radio";
-import type { JsonAuthUser } from "../../types/bencher";
 import type { Params } from "astro";
 
 export type FieldValue =
@@ -30,8 +29,7 @@ export type FieldHandler = (
 export type FieldValueHandler = (value: FieldValue) => void;
 
 export interface Props {
-	params: Params;
-	user: JsonAuthUser;
+	params?: Params;
 	kind: FieldKind;
 	fieldKey: string;
 	label?: undefined | string;
@@ -101,7 +99,6 @@ const Field = (props: Props) => {
 					<Radio
 						value={props.value as RadioValue}
 						config={props.config as RadioConfig}
-						user={props.user}
 						params={props.params}
 						handleField={handleField}
 					/>
