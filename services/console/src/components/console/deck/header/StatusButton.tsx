@@ -46,7 +46,7 @@ const StatusButton = (props: Props) => {
 			.then((_resp) => {
 				setSubmitting(false);
 				const status = props.data()?.status;
-				props.handleRefresh();
+				// props.handleRefresh();
 				navigate(pathname());
 				// navigate(
 				// 	notification_path(

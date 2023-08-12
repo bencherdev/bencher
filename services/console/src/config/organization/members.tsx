@@ -2,7 +2,7 @@ import type { Params } from "astro";
 import { validEmail, validSlug, validUserName } from "../../util/valid";
 import { Button, Card, Display, Operation, Row } from "../types";
 import { invitePath, parentPath, viewSlugPath } from "../util";
-import { JsonOrganizationPermission, JsonUser } from "../../types/bencher";
+import { JsonOrganizationPermission } from "../../types/bencher";
 import { isAllowedOrganization } from "../../util/auth";
 import { BENCHER_API_URL } from "../../util/ext";
 import FieldKind from "../../components/field/kind";
