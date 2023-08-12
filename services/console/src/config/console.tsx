@@ -7,6 +7,7 @@ import usersConfig from "./user/users";
 import billingConfig from "./organization/billing";
 import reportsConfig from "./project/reports";
 import metricKindsConfig from "./project/metric_kinds";
+import branchesConfig from "./project/branches";
 
 const consoleConfig = {
 	// Organization
@@ -17,6 +18,7 @@ const consoleConfig = {
 	[Resource.PROJECTS]: projectsConfig,
 	[Resource.REPORTS]: reportsConfig,
 	[Resource.METRIC_KINDS]: metricKindsConfig,
+	[Resource.BRANCHES]: branchesConfig,
 	// User
 	[Resource.USERS]: usersConfig,
 	[Resource.TOKENS]: tokensConfig,

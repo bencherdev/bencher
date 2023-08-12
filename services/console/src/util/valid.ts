@@ -10,6 +10,8 @@ import {
 	is_valid_expiration_month,
 	is_valid_expiration_year,
 	is_valid_card_cvc,
+	is_valid_branch_name,
+	is_valid_benchmark_name,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
 
@@ -36,6 +38,12 @@ export const validUserName = (user_name: string): boolean =>
 
 export const validNonEmpty = (non_empty: string): boolean =>
 	validString(non_empty, is_valid_non_empty);
+
+export const validBranchName = (branch_name: string): boolean =>
+	validString(branch_name, is_valid_branch_name);
+
+export const validBenchmarkName = (benchmark_name: string): boolean =>
+	validString(benchmark_name, is_valid_benchmark_name);
 
 export const validSlug = (slug: string): boolean =>
 	validString(slug, is_valid_slug);
