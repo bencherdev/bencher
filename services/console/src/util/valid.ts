@@ -12,8 +12,15 @@ import {
 	is_valid_card_cvc,
 	is_valid_branch_name,
 	is_valid_benchmark_name,
+	is_valid_boundary,
+	is_valid_sample_size,
 } from "bencher_valid";
 import type { JsonAuthUser } from "../types/bencher";
+
+export const validString = (
+	input: string,
+	validator: (input: string) => boolean,
+): boolean => validator(input.trim());
 
 export const validOptionString = (
 	input: undefined | null | string,
@@ -24,11 +31,6 @@ export const validOptionString = (
 	}
 	return validString(input, validator);
 };
-
-export const validString = (
-	input: string,
-	validator: (input: string) => boolean,
-): boolean => validator(input.trim());
 
 export const validUuid = (uuid: string): boolean =>
 	validString(uuid, (_uuid) => true);
@@ -64,6 +66,20 @@ export const validUser = (user: JsonAuthUser): boolean =>
 	validEmail(user.user.email) &&
 	validJwt(user.token);
 
+export const validateNumber = (
+	input: string,
+	validator: (input: number) => boolean,
+): boolean => {
+	if (input.length === 0) {
+		return false;
+	} else if (typeof input === "string") {
+		const num = Number(input.trim());
+		return validator(num);
+	} else {
+		return false;
+	}
+};
+
 export const validU32 = (input: undefined | number | string) => {
 	if (!input) {
 		return false;
@@ -75,6 +91,17 @@ export const validU32 = (input: undefined | number | string) => {
 	return Number.isInteger(num) && num >= 0 && num <= 4_294_967_295;
 };
 
+export const validBoundary = (boundary: string): boolean => {
+	return validateNumber(boundary, is_valid_boundary);
+};
+
+export const validSampleSize = (sample_size: string) => {
+	return (
+		validU32(sample_size) && validateNumber(sample_size, is_valid_sample_size)
+	);
+};
+
+// Billing
 export const validPlanLevel = (planLevel: undefined | null | string): boolean =>
 	validOptionString(planLevel, is_valid_plan_level);
 

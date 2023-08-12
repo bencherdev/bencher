@@ -1,15 +1,25 @@
 import Input, { InputConfig, InputValue } from "./kinds/Input";
 import Checkbox, { CheckboxConfig, CheckboxValue } from "./kinds/Checkbox";
-import Switch from "./kinds/Switch";
+import Switch, { SwitchConfig, SwitchValue } from "./kinds/Switch";
 import Select, { SelectConfig, SelectValue } from "./kinds/Select";
 import FieldKind from "./kind";
-import Radio from "./kinds/Radio";
+import Radio, { RadioConfig, RadioValue } from "./kinds/Radio";
 import type { JsonAuthUser } from "../../types/bencher";
 import type { Params } from "astro";
 
-export type FieldValue = CheckboxValue | InputValue | SelectValue;
+export type FieldValue =
+	| SwitchValue
+	| CheckboxValue
+	| InputValue
+	| SelectValue
+	| RadioValue;
 
-export type FieldConfig = CheckboxConfig | InputConfig | SelectConfig;
+export type FieldConfig =
+	| SwitchConfig
+	| CheckboxConfig
+	| InputConfig
+	| SelectConfig
+	| RadioConfig;
 
 export type FieldHandler = (
 	key: string,
@@ -32,10 +42,10 @@ export interface Props {
 }
 
 const Field = (props: Props) => {
-	function handleField(value) {
+	function handleField(value: FieldValue) {
 		switch (props.kind) {
 			case FieldKind.CHECKBOX:
-				props.handleField(props.fieldKey, value, value);
+				props.handleField(props.fieldKey, value, value as CheckboxValue);
 				break;
 			case FieldKind.SWITCH:
 			case FieldKind.RADIO:
@@ -44,7 +54,7 @@ const Field = (props: Props) => {
 			case FieldKind.SELECT:
 				props.handleField(
 					props.fieldKey,
-					{ ...props.value, selected: value },
+					{ ...(props.value as SelectValue), selected: value as string },
 					true,
 				);
 				break;
@@ -54,7 +64,7 @@ const Field = (props: Props) => {
 				props.handleField(
 					props.fieldKey,
 					value,
-					config.validate ? config.validate(value) : true,
+					config.validate ? config.validate(value as string) : true,
 				);
 				break;
 		}
@@ -73,24 +83,24 @@ const Field = (props: Props) => {
 			case FieldKind.SWITCH:
 				return (
 					<Switch
-						value={props.value}
-						config={props.config}
+						value={props.value as SwitchValue}
+						config={props.config as SwitchConfig}
 						handleField={handleField}
 					/>
 				);
 			case FieldKind.SELECT:
 				return (
 					<Select
-						value={props.value}
-						config={props.config}
+						value={props.value as SelectValue}
+						config={props.config as SelectConfig}
 						handleField={handleField}
 					/>
 				);
 			case FieldKind.RADIO:
 				return (
 					<Radio
-						value={props.value}
-						config={props.config}
+						value={props.value as RadioValue}
+						config={props.config as RadioConfig}
 						user={props.user}
 						params={props.params}
 						handleField={handleField}

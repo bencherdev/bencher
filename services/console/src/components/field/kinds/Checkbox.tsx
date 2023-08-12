@@ -1,18 +1,21 @@
-import { JSX } from "solid-js";
-import { FieldValueHandler } from "../Field";
+import type { JSX } from "solid-js";
+import type { FieldValueHandler } from "../Field";
 
 export type CheckboxValue = boolean;
+
+export interface Props {
+	value: CheckboxValue;
+	config: CheckboxConfig;
+	handleField: FieldValueHandler;
+}
 
 export interface CheckboxConfig {
 	label: string;
 	placeholder: JSX.Element;
+	help?: string;
 }
 
-const Checkbox = (props: {
-	value: CheckboxValue;
-	config: CheckboxConfig;
-	handleField: FieldValueHandler;
-}) => {
+const Checkbox = (props: Props) => {
 	return (
 		<div class="field" id={props.config.label}>
 			<input

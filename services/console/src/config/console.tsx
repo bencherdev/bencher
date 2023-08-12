@@ -10,6 +10,7 @@ import metricKindsConfig from "./project/metric_kinds";
 import branchesConfig from "./project/branches";
 import testbedsConfig from "./project/testbeds";
 import benchmarksConfig from "./project/benchmarks";
+import thresholdsConfig from "./project/thresholds";
 
 const consoleConfig = {
 	// Organization
@@ -23,6 +24,7 @@ const consoleConfig = {
 	[Resource.BRANCHES]: branchesConfig,
 	[Resource.TESTBEDS]: testbedsConfig,
 	[Resource.BENCHMARKS]: benchmarksConfig,
+	[Resource.THRESHOLDS]: thresholdsConfig,
 	// User
 	[Resource.USERS]: usersConfig,
 	[Resource.TOKENS]: tokensConfig,

@@ -1,6 +1,13 @@
-import { FieldValueHandler } from "../Field";
+import type { FieldValueHandler } from "../Field";
 
 export type InputValue = string | number | null | undefined;
+
+export interface Props {
+	value: InputValue;
+	valid: undefined | null | boolean;
+	config: InputConfig;
+	handleField: FieldValueHandler;
+}
 
 export interface InputConfig {
 	icon: string;
@@ -8,15 +15,11 @@ export interface InputConfig {
 	placeholder?: string;
 	value: InputValue;
 	disabled?: boolean;
+	help?: string;
 	validate: (value: InputValue) => boolean;
 }
 
-const Input = (props: {
-	value: InputValue;
-	valid: boolean;
-	config: InputConfig;
-	handleField: FieldValueHandler;
-}) => {
+const Input = (props: Props) => {
 	return (
 		<div class="control has-icons-left has-icons-right">
 			<span class="icon is-small is-left">
@@ -25,9 +28,9 @@ const Input = (props: {
 			<input
 				class="input"
 				type={props.config.type}
-				placeholder={props.config.placeholder}
-				value={props.value}
-				disabled={props.config.disabled}
+				placeholder={props.config.placeholder as string}
+				value={props.value as string}
+				disabled={props.config.disabled as boolean}
 				onInput={(event) => props.handleField(event.target?.value)}
 			/>
 			{props.valid && (

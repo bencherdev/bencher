@@ -1,33 +1,57 @@
-// import axios from "axios";
-// import { createMemo, createResource, createSignal, For } from "solid-js";
-// import { get_options } from "../../site/util";
-// import Pagination, { PaginationSize } from "../../site/Pagination";
+import type { Params } from "astro";
+import type { JsonAuthUser } from "../../../types/bencher";
+import type { FieldValue, FieldValueHandler } from "../Field";
+import { For, createMemo, createResource, createSignal } from "solid-js";
+import Pagination, { PaginationSize } from "../../site/Pagination";
+import { httpGet } from "../../../util/http";
 
-const Radio = (props) => {
-	// const per_page = 8;
-	// const [page, setPage] = createSignal(1);
+export type RadioValue = string;
 
-	// const radioFetcher = createMemo(() => {
-	// 	return {
-	// 		url: props.config?.url(props.params, per_page, page()),
-	// 		token: props.user?.token,
-	// 	};
-	// });
+export interface Props {
+	value: FieldValue;
+	config: RadioConfig;
+	user: JsonAuthUser;
+	params: Params;
+	handleField: FieldValueHandler;
+}
 
-	// const getRadio = async (fetcher) => {
-	// 	return await axios(get_options(fetcher.url, fetcher.token))
-	// 		.then((resp) => resp?.data)
-	// 		.catch((error) => {
-	// 			console.error(error);
-	// 			return [];
-	// 		});
-	// };
+export interface RadioConfig {
+	name: string;
+	icon: string;
+	option_key: string;
+	value_key: string;
+	url: (params: Params, per_page: number, page: number) => string;
+	help?: string;
+	validate: (value: string) => boolean;
+}
 
-	// const [data] = createResource(radioFetcher, getRadio);
+const Radio = (props: Props) => {
+	const params = createMemo(() => props.params);
+	const per_page = 8;
+	const [page, setPage] = createSignal(1);
+
+	const fetcher = createMemo(() => {
+		return {
+			url: props.config?.url(params(), per_page, page()),
+			token: props.user?.token,
+		};
+	});
+	const getRadio = async (fetcher: {
+		url: string;
+		token: undefined | string;
+	}) => {
+		return await httpGet(fetcher.url, fetcher.token)
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				return [];
+			});
+	};
+	const [data] = createResource(fetcher, getRadio);
 
 	return (
 		<>
-			{/* <nav class="level is-mobile">
+			<nav class="level is-mobile">
 				<div class="level-left">
 					<div class="level-item">
 						<div class="icon is-small is-left">
@@ -87,23 +111,27 @@ const Radio = (props) => {
 						handlePage={setPage}
 					/>
 				</div>
-			</div> */}
+			</div>
 		</>
 	);
 };
 
-// const BackButton = (props) => {
-// 	return (
-// 		<button
-// 			class="button is-primary is-small is-fullwidth"
-// 			onClick={(e) => {
-// 				e.preventDefault();
-// 				props.handlePage(props.page - 1);
-// 			}}
-// 		>
-// 			That's all the {props.name}. Go back.
-// 		</button>
-// 	);
-// };
+const BackButton = (props: {
+	name: string;
+	page: number;
+	handlePage: (page: number) => void;
+}) => {
+	return (
+		<button
+			class="button is-primary is-small is-fullwidth"
+			onClick={(e) => {
+				e.preventDefault();
+				props.handlePage(props.page - 1);
+			}}
+		>
+			That's all the {props.name}. Go back.
+		</button>
+	);
+};
 
 export default Radio;

@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import ProjectLayout from "../../../../../../layouts/console/ProjectLayout.astro";
+import PosterPanel from "../../../../../../components/console/poster/PosterPanel";
+import { Operation, Resource } from "../../../../../../config/types";
+
+const params = Astro.params;
+const title = "Edit Threshold";
+---
+
+<ProjectLayout params={params} title={title}>
+  <PosterPanel client:only params={params} resource={Resource.THRESHOLDS} operation={Operation.EDIT} />
+</ProjectLayout>

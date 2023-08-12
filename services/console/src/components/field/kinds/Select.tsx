@@ -1,3 +1,21 @@
+import type { FieldValueHandler } from "../Field";
+
+export interface Props {
+	value: SelectValue;
+	config: SelectConfig;
+	handleField: FieldValueHandler;
+}
+
+export interface SelectConfig {
+	icon: string;
+	type: string;
+	placeholder?: string;
+	value: SelectValue;
+	disabled?: boolean;
+	help?: string;
+	validate: (value: SelectValue) => boolean;
+}
+
 export interface SelectValue {
 	selected: string;
 	options: SelectOption[];
@@ -8,29 +26,7 @@ export interface SelectOption {
 	option: string;
 }
 
-export interface SelectConfig {
-	icon: string;
-	type: string;
-	placeholder?: string;
-	value: SelectValue;
-	disabled?: boolean;
-	validate: (value: SelectValue) => boolean;
-}
-
-const Select = (props) => {
-	function getStatus() {
-		const selected = props.value.options.find((option) => {
-			return props.value.selected === option.value;
-		});
-		if (selected?.status) {
-			return (
-				<div class="level-right">
-					<div class="level-item">{selected.status}</div>
-				</div>
-			);
-		}
-	}
-
+const Select = (props: Props) => {
 	return (
 		<nav class="level is-mobile">
 			<div class="level-left">
@@ -58,7 +54,6 @@ const Select = (props) => {
 					</div>
 				</div>
 			</div>
-			{getStatus()}
 		</nav>
 	);
 };

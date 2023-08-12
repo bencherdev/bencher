@@ -9,17 +9,14 @@ export const fmtValues = (
 	} else if (key) {
 		return data[key];
 	} else if (keys) {
-		return keys.reduce(
-			(accumulator: string, current: string[], index: number) => {
-				const value = fmtNestedValue(data, current);
-				if (index === 0) {
-					return value;
-				} else {
-					return accumulator + separator + value;
-				}
-			},
-			"",
-		);
+		return keys.reduce((accumulator, current, index) => {
+			const value = fmtNestedValue(data, current);
+			if (index === 0) {
+				return value;
+			} else {
+				return accumulator + separator + value;
+			}
+		}, "");
 	} else {
 		return "Unknown Item";
 	}
@@ -29,25 +26,18 @@ export const fmtNestedValue = (
 	datum: undefined | Record<string, any>,
 	keys: undefined | string[],
 ): string => {
-	if (!datum || !keys) {
+	if (!datum) {
 		return "";
 	}
-	return keys
-		.reduce(
-			(
-				accumulator: Record<string, any>,
-				current: number | string,
-				index: number,
-			) => {
-				if (index === 0) {
-					return datum[current];
-				} else {
-					return accumulator?.[current];
-				}
-			},
-			{},
-		)
-		.toString();
+	return (
+		keys?.reduce((accumulator, current, index) => {
+			if (index === 0) {
+				return datum[current];
+			} else {
+				return accumulator?.[current];
+			}
+		}, "") ?? ""
+	);
 };
 
 const BENCHER_TITLE = "Bencher - Continuous Benchmarking";

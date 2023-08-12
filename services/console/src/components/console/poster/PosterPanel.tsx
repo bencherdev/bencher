@@ -8,6 +8,7 @@ import type { Params } from "astro";
 interface Props {
 	params: Params;
 	resource: Resource;
+	operation?: Operation;
 }
 
 interface PosterPanelConfig {
@@ -17,8 +18,12 @@ interface PosterPanelConfig {
 }
 
 const PosterPanel = (props: Props) => {
+	const operation = createMemo(
+		() => props.operation || Operation.ADD,
+		Operation.ADD,
+	);
 	const config = createMemo<PosterPanelConfig>(
-		() => consoleConfig[props.resource]?.[Operation.ADD],
+		() => consoleConfig[props.resource]?.[operation()],
 	);
 
 	return (
