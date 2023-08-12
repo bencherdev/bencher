@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import ProjectLayout from "../../../../layouts/console/ProjectLayout.astro";
+import Redirect from "../../../../components/site/Redirect";
+
+const params = Astro.params;
+const title = "Users";
+const path = `/console/projects/${params.project}/perf`;
+---
+
+<ProjectLayout params={params} title={title}>
+  <Redirect client:only path={path}/>
+</ProjectLayout>
