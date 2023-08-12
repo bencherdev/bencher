@@ -3,13 +3,10 @@ import { Accessor, createMemo, createResource } from "solid-js";
 import { createStore } from "solid-js/store";
 import LinePlot from "./LinePlot";
 import PlotKey from "./PlotKey";
-import type { JsonAuthUser, JsonPerf } from "../../../../types/bencher";
-import type { PerfPlotConfig } from "./PerfPlot";
+import type { JsonPerf } from "../../../../types/bencher";
 import type { PerfRange } from "../../../../config/types";
 
 export interface Props {
-	user: JsonAuthUser;
-	config: PerfPlotConfig;
 	range: Accessor<PerfRange>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
@@ -19,9 +16,9 @@ export interface Props {
 }
 
 const Plot = (props: Props) => {
-	const [perf_active, setPerfActive] = createStore<boolean[]>([]);
+	const [perfActive, setPerfActive] = createStore<boolean[]>([]);
 
-	const [_perf_active] = createResource(props.perfData, (json_perf) => {
+	const [_active] = createResource(props.perfData, (json_perf) => {
 		const active: boolean[] = [];
 		json_perf?.results?.forEach(() => {
 			active.push(true);
@@ -31,7 +28,7 @@ const Plot = (props: Props) => {
 	});
 
 	const handlePerfActive = (index: number) => {
-		const active = [...perf_active];
+		const active = [...perfActive];
 		active[index] = !active[index];
 		setPerfActive(active);
 	};
@@ -44,13 +41,11 @@ const Plot = (props: Props) => {
 		<div class="container">
 			<div ref={(e) => (plot_ref = e)}>
 				<LinePlot
-					user={props.user}
-					config={props.config}
 					perfData={props.perfData}
 					range={props.range}
 					lower_boundary={props.lower_boundary}
 					upper_boundary={props.upper_boundary}
-					perf_active={perf_active}
+					perfActive={perfActive}
 					width={width}
 				/>
 			</div>
@@ -58,8 +53,8 @@ const Plot = (props: Props) => {
 			<PlotKey
 				perfData={props.perfData}
 				key={props.key}
-				perf_active={perf_active}
 				handleKey={props.handleKey}
+				perfActive={perfActive}
 				handlePerfActive={handlePerfActive}
 			/>
 		</div>

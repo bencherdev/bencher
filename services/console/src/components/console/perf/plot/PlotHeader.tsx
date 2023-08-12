@@ -8,15 +8,14 @@ import {
 	Show,
 } from "solid-js";
 import type { JsonAuthUser, JsonMetricKind } from "../../../../types/bencher";
-import type { PerfPlotConfig } from "./PerfPlot";
 import { PerfRange } from "../../../../config/types";
 import { httpGet } from "../../../../util/http";
+import { BENCHER_API_URL } from "../../../../util/ext";
 
 const BENCHER_METRIC_KIND = "--bencher--metric--kind--";
 
 export interface Props {
 	user: JsonAuthUser;
-	config: PerfPlotConfig;
 	project_slug: Accessor<undefined | string>;
 	isConsole: boolean;
 	isPlotInit: Accessor<boolean>;
@@ -64,9 +63,9 @@ const PlotHeader = (props: Props) => {
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", "255");
 		search_params.set("page", "1");
-		const url = `${props.config?.metric_kinds_url(
-			fetcher.project,
-		)}?${search_params.toString()}`;
+		const url = `${BENCHER_API_URL()}/v0/projects/${
+			fetcher.project
+		}/metric-kinds?${search_params.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
 				let data = resp?.data;

@@ -1,4 +1,3 @@
-import { Operation } from "../types";
 import { parentPath } from "../util";
 
 export enum Host {
@@ -8,7 +7,6 @@ export enum Host {
 
 const billingConfig = {
 	[Host.SELF_HOSTED]: {
-		operation: Operation.BILLING,
 		header: {
 			title: "License Billing",
 			path: (pathname: string) => `${parentPath(pathname)}/projects`,
@@ -16,7 +14,6 @@ const billingConfig = {
 		host: Host.SELF_HOSTED,
 	},
 	[Host.BENCHER_CLOUD]: {
-		operation: Operation.BILLING,
 		header: {
 			title: "Billing",
 			path: (pathname: string) => `${parentPath(pathname)}/projects`,

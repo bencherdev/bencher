@@ -12,13 +12,10 @@ import type {
 	JsonReport,
 	JsonTestbed,
 } from "../../../../types/bencher";
-import type { Params } from "astro";
 
 export interface Props {
 	user: JsonAuthUser;
 	project_slug: Accessor<undefined | string>;
-	config: PerfPlotConfig;
-	params: Accessor<Params>;
 	isConsole: boolean;
 	isPlotInit: Accessor<boolean>;
 	metric_kind: Accessor<undefined | string>;
@@ -70,13 +67,6 @@ export interface Props {
 	handleBenchmarksPage: (benchmarks_page: number) => void;
 }
 
-export interface PerfPlotConfig {
-	project_url: (project_slug: string) => string;
-	perf_url: (project_slug: string) => string;
-	tab_url: (project_slug: string, tab: PerfTab) => string;
-	metric_kinds_url: (project_slug: string) => string;
-}
-
 const PerfPlot = (props: Props) => {
 	return (
 		<div class="columns">
@@ -84,7 +74,6 @@ const PerfPlot = (props: Props) => {
 				<nav class="panel">
 					<PlotHeader
 						user={props.user}
-						config={props.config}
 						project_slug={props.project_slug}
 						isConsole={props.isConsole}
 						isPlotInit={props.isPlotInit}
@@ -109,8 +98,6 @@ const PerfPlot = (props: Props) => {
 							when={props.isPlotInit()}
 							fallback={
 								<Plot
-									user={props.user}
-									config={props.config}
 									range={props.range}
 									lower_boundary={props.lower_boundary}
 									upper_boundary={props.upper_boundary}

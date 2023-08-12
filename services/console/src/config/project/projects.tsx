@@ -3,15 +3,7 @@ import FieldKind from "../../components/field/kind";
 import { isAllowedProjectEdit } from "../../util/auth";
 import { BENCHER_API_URL } from "../../util/ext";
 import { validNonEmpty, validSlug, validOptionUrl } from "../../util/valid";
-import {
-	ActionButton,
-	Button,
-	Card,
-	Display,
-	Operation,
-	PerfTab,
-	Row,
-} from "../types";
+import { ActionButton, Button, Card, Display, Operation, Row } from "../types";
 import { addPath, parentPath } from "../util";
 import type { JsonProject } from "../../types/bencher";
 
@@ -246,23 +238,6 @@ const projectsConfig = {
 						`/console/organizations/${data.organization}/projects`,
 				},
 			],
-		},
-	},
-	[Operation.PERF]: {
-		operation: Operation.PERF,
-		header: {
-			url: (project_slug: string) =>
-				`${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img`,
-		},
-		plot: {
-			project_url: (project_slug: string) =>
-				`${BENCHER_API_URL()}/v0/projects/${project_slug}`,
-			perf_url: (project_slug: string) =>
-				`${BENCHER_API_URL()}/v0/projects/${project_slug}/perf`,
-			tab_url: (project_slug: string, tab: PerfTab) =>
-				`${BENCHER_API_URL()}/v0/projects/${project_slug}/${tab}`,
-			metric_kinds_url: (project_slug: string) =>
-				`${BENCHER_API_URL()}/v0/projects/${project_slug}/metric-kinds`,
 		},
 	},
 };

@@ -15,18 +15,14 @@ import type {
 import { setPageTitle } from "../../../util/resource";
 import FieldKind from "../../field/kind";
 import Field from "../../field/Field";
+import { BENCHER_API_URL } from "../../../util/ext";
 
 export interface Props {
 	user: JsonAuthUser;
-	config: PerfHeaderConfig;
 	perfData: Resource<JsonPerf>;
 	isPlotInit: Accessor<boolean>;
 	perfQuery: Accessor<PerfQuery>;
 	handleRefresh: () => void;
-}
-
-export interface PerfHeaderConfig {
-	url: (project_slug: string) => string;
 }
 
 export interface PerfQuery {
@@ -56,7 +52,6 @@ const PerfHeader = (props: Props) => {
 			</div>
 			<ShareModal
 				user={props.user}
-				config={props.config}
 				perfQuery={props.perfQuery}
 				isPlotInit={props.isPlotInit}
 				project={project}
@@ -133,7 +128,6 @@ export default PerfHeader;
 
 export interface ShareProps {
 	user: JsonAuthUser;
-	config: PerfHeaderConfig;
 	perfQuery: Accessor<PerfQuery>;
 	isPlotInit: Accessor<boolean>;
 	project: Accessor<undefined | JsonProject>;
@@ -177,7 +171,8 @@ const ShareModal = (props: ShareProps) => {
 		if (img_title) {
 			search_params.set("title", img_title);
 		}
-		return `${props.config?.url(project_slug)}?${search_params.toString()}`;
+		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img?${search_params.toString()}`;
+		return url;
 	});
 
 	const img_tag = createMemo(

@@ -6,7 +6,7 @@ export interface Props {
 	key: Accessor<boolean>;
 	handleKey: (key: boolean) => void;
 	perfData: Accessor<JsonPerf>;
-	perf_active: boolean[];
+	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
 }
 
@@ -17,7 +17,7 @@ const PlotKey = (props: Props) => {
 			fallback={
 				<MinimizedKey
 					perfData={props.perfData}
-					perf_active={props.perf_active}
+					perfActive={props.perfActive}
 					handleKey={props.handleKey}
 					handlePerfActive={props.handlePerfActive}
 				/>
@@ -25,7 +25,7 @@ const PlotKey = (props: Props) => {
 		>
 			<ExpandedKey
 				perfData={props.perfData}
-				perf_active={props.perf_active}
+				perfActive={props.perfActive}
 				handleKey={props.handleKey}
 				handlePerfActive={props.handlePerfActive}
 			/>
@@ -36,7 +36,7 @@ const PlotKey = (props: Props) => {
 const ExpandedKey = (props: {
 	perfData: Accessor<JsonPerf>;
 	handleKey: (key: boolean) => void;
-	perf_active: boolean[];
+	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
 }) => {
 	return (
@@ -56,7 +56,7 @@ const ExpandedKey = (props: {
 					<div class="column is-2">
 						<KeyButton
 							index={index}
-							perf_active={props.perf_active}
+							perfActive={props.perfActive}
 							handlePerfActive={props.handlePerfActive}
 						/>
 						<KeyResource icon="fas fa-code-branch" name={result.branch?.name} />
@@ -75,7 +75,7 @@ const ExpandedKey = (props: {
 const MinimizedKey = (props: {
 	perfData: Accessor<JsonPerf>;
 	handleKey: (key: boolean) => void;
-	perf_active: boolean[];
+	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
 }) => {
 	return (
@@ -88,7 +88,7 @@ const MinimizedKey = (props: {
 					<div class="column is-narrow">
 						<KeyButton
 							index={index}
-							perf_active={props.perf_active}
+							perfActive={props.perfActive}
 							handlePerfActive={props.handlePerfActive}
 						/>
 					</div>
@@ -143,7 +143,7 @@ const KeyResource = (props: { icon: string; name: string }) => {
 
 const KeyButton = (props: {
 	index: Accessor<number>;
-	perf_active: boolean[];
+	perfActive: boolean[];
 	handlePerfActive: (index: number) => void;
 }) => {
 	const color = d3.schemeTableau10[props.index() % 10];
@@ -154,12 +154,12 @@ const KeyButton = (props: {
 			// move button over to being is-outlined
 			class="button is-small is-fullwidth"
 			title={
-				props.perf_active[props.index()]
+				props.perfActive[props.index()]
 					? `Hide Plot ${number}`
 					: `Show Plot ${number}`
 			}
 			style={
-				props.perf_active[props.index()]
+				props.perfActive[props.index()]
 					? `background-color:${color};`
 					: `border-color:${color};color:${color};`
 			}

@@ -4,14 +4,12 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import PerfHeader, { PerfHeaderConfig, PerfQuery } from "./PerfHeader";
-import PerfPlot, { PerfPlotConfig } from "./plot/PerfPlot";
+import PerfHeader, { PerfQuery } from "./PerfHeader";
+import PerfPlot from "./plot/PerfPlot";
 import { createStore } from "solid-js/store";
 import {
-	Operation,
 	PerfRange,
 	PerfTab,
-	Resource,
 	isPerfRange,
 	isPerfTab,
 } from "../../../config/types";
@@ -19,7 +17,6 @@ import { useSearchParams } from "../../../util/url";
 import { validSlug, validU32 } from "../../../util/valid";
 import type { Params } from "astro";
 import { authUser } from "../../../util/auth";
-import consoleConfig from "../../../config/console";
 import { httpGet } from "../../../util/http";
 import type {
 	JsonBenchmark,
@@ -29,6 +26,7 @@ import type {
 	JsonTestbed,
 } from "../../../types/bencher";
 import type { TabList } from "./plot/PlotTab";
+import { BENCHER_API_URL } from "../../../util/ext";
 
 const REPORT_PARAM = "report";
 const METRIC_KIND_PARAM = "metric_kind";
@@ -150,19 +148,10 @@ export interface Props {
 	isConsole?: boolean;
 }
 
-export interface PerfPanelConfig {
-	header: PerfHeaderConfig;
-	plot: PerfPlotConfig;
-}
-
 const PerfPanel = (props: Props) => {
 	const params = createMemo(() => props.params);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const user = authUser();
-
-	const config = createMemo<PerfPanelConfig>(
-		() => consoleConfig[Resource.PROJECTS]?.[Operation.PERF],
-	);
 
 	// Sanitize all query params at init
 	if (typeof searchParams[METRIC_KIND_PARAM] !== "string") {
@@ -374,7 +363,7 @@ const PerfPanel = (props: Props) => {
 
 		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
 		if (isPlotInit()) {
-			const url = `${config()?.plot?.project_url(fetcher.project_slug)}`;
+			const url = `${BENCHER_API_URL()}/v0/projects/${fetcher.project_slug}`;
 			return await httpGet(url, fetcher.token)
 				.then((resp) => {
 					return {
@@ -392,9 +381,9 @@ const PerfPanel = (props: Props) => {
 				search_params.set(key, value.toString());
 			}
 		}
-		const url = `${config()?.plot?.perf_url(
-			fetcher.project_slug,
-		)}?${search_params.toString()}`;
+		const url = `${BENCHER_API_URL()}/v0/projects/${
+			fetcher.project_slug
+		}/perf?${search_params.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
@@ -415,7 +404,7 @@ const PerfPanel = (props: Props) => {
 
 	// Resource tabs data: Branches, Testbeds, Benchmarks
 	async function getPerfTab<T>(
-		perf_tab: PerfTab,
+		perfTab: PerfTab,
 		fetcher: {
 			project_slug: undefined | string;
 			per_page: number;
@@ -439,10 +428,9 @@ const PerfPanel = (props: Props) => {
 		const search_params = new URLSearchParams();
 		search_params.set("per_page", fetcher.per_page.toString());
 		search_params.set("page", fetcher.page.toString());
-		const url = `${config()?.plot?.tab_url(
-			fetcher.project_slug,
-			perf_tab,
-		)}?${search_params.toString()}`;
+		const url = `${BENCHER_API_URL()}/v0/projects/${
+			fetcher.project_slug
+		}/${perfTab}?${search_params.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
@@ -715,7 +703,6 @@ const PerfPanel = (props: Props) => {
 		<>
 			<PerfHeader
 				user={user}
-				config={config()?.header}
 				perfData={perfData}
 				isPlotInit={isPlotInit}
 				perfQuery={perfQuery}
@@ -724,8 +711,6 @@ const PerfPanel = (props: Props) => {
 			<PerfPlot
 				user={user}
 				project_slug={project_slug}
-				config={config()?.plot}
-				params={props.params}
 				isConsole={props.isConsole ?? false}
 				isPlotInit={isPlotInit}
 				metric_kind={metric_kind}

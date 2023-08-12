@@ -5,21 +5,17 @@ import { addTooltips } from "./tooltip";
 import {
 	JsonAlertStatus,
 	type Boundary,
-	type JsonAuthUser,
 	type JsonPerf,
 	type JsonPerfAlert,
 } from "../../../../types/bencher";
-import type { PerfPlotConfig } from "./PerfPlot";
 import { PerfRange } from "../../../../config/types";
 
 export interface Props {
-	user: JsonAuthUser;
-	config: PerfPlotConfig;
 	perfData: Accessor<JsonPerf>;
 	range: Accessor<PerfRange>;
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
-	perf_active: boolean[];
+	perfActive: boolean[];
 	width: Accessor<number>;
 }
 
@@ -115,7 +111,7 @@ const LinePlot = (props: Props) => {
 		const project_slug = json_perf.project.slug;
 		json_perf.results.forEach((result, index) => {
 			const perf_metrics = result.metrics;
-			if (!(Array.isArray(perf_metrics) && props.perf_active[index])) {
+			if (!(Array.isArray(perf_metrics) && props.perfActive[index])) {
 				return;
 			}
 

@@ -21,9 +21,6 @@ export enum Operation {
 	VIEW,
 	EDIT,
 	DELETE,
-	PERF,
-	BILLING,
-	HELP,
 }
 
 export enum Button {
