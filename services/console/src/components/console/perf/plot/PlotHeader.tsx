@@ -60,12 +60,12 @@ const PlotHeader = (props: Props) => {
 			return [SELECT_METRIC_KIND];
 		}
 		// Always use the first page and the max number of results per page
-		const search_params = new URLSearchParams();
-		search_params.set("per_page", "255");
-		search_params.set("page", "1");
+		const searchParams = new URLSearchParams();
+		searchParams.set("per_page", "255");
+		searchParams.set("page", "1");
 		const url = `${BENCHER_API_URL()}/v0/projects/${
 			fetcher.project
-		}/metric-kinds?${search_params.toString()}`;
+		}/metric-kinds?${searchParams.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
 				let data = resp?.data;

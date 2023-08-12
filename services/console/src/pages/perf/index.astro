@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PublicProjects from "../../components/perf/PublicProjects"
+
+const title = "Bencher Projects";
+---
+
+<BaseLayout title={title}>
+  <PublicProjects client:only />
+</BaseLayout>

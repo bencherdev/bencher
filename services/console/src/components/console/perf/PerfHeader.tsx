@@ -161,17 +161,17 @@ const ShareModal = (props: ShareProps) => {
 			return null;
 		}
 
-		const search_params = new URLSearchParams();
+		const searchParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(props.perfQuery())) {
 			if (value) {
-				search_params.set(key, value);
+				searchParams.set(key, value);
 			}
 		}
 		const img_title = title();
 		if (img_title) {
-			search_params.set("title", img_title);
+			searchParams.set("title", img_title);
 		}
-		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img?${search_params.toString()}`;
+		const url = `${BENCHER_API_URL()}/v0/projects/${project_slug}/perf/img?${searchParams.toString()}`;
 		return url;
 	});
 

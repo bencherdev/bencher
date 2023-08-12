@@ -1,0 +1,21 @@
+---
+import BaseLayout from "../BaseLayout.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-two-fifths">
+          <slot />
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

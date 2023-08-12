@@ -89,15 +89,15 @@ const TablePanel = (props: Props) => {
 		if (!validJwt(fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
-		const urlSearchParams = new URLSearchParams();
+		const searchParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(fetcher.paginationQuery)) {
 			if (value) {
-				urlSearchParams.set(key, value.toString());
+				searchParams.set(key, value.toString());
 			}
 		}
 		const url = `${config()?.table?.url(
 			props.params,
-		)}?${urlSearchParams.toString()}`;
+		)}?${searchParams.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => {
 				setState(

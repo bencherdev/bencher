@@ -12,12 +12,12 @@ const paginationUrl = (
 	per_page: number,
 	page: number,
 ) => {
-	const search_params = new URLSearchParams();
-	search_params.set("per_page", per_page?.toString());
-	search_params.set("page", page?.toString());
+	const searchParams = new URLSearchParams();
+	searchParams.set("per_page", per_page?.toString());
+	searchParams.set("page", page?.toString());
 	const url = `${BENCHER_API_URL()}/v0/projects/${
 		params?.project
-	}/${dimension}?${search_params.toString()}`;
+	}/${dimension}?${searchParams.toString()}`;
 	return url;
 };
 

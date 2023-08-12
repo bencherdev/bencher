@@ -19,7 +19,7 @@ const PerfButton = (props: Props) => {
 				e.preventDefault();
 
 				const json_alert = props.data() as JsonAlert;
-				const perf_query = {
+				const perfQuery = {
 					metric_kind: json_alert.threshold?.metric_kind?.slug,
 					branches: json_alert.threshold?.branch?.uuid,
 					testbeds: json_alert.threshold?.testbed?.uuid,
@@ -29,7 +29,7 @@ const PerfButton = (props: Props) => {
 				};
 
 				const searchParams = new URLSearchParams();
-				for (const [key, value] of Object.entries(perf_query)) {
+				for (const [key, value] of Object.entries(perfQuery)) {
 					if (value) {
 						searchParams.set(key, value.toString());
 					}

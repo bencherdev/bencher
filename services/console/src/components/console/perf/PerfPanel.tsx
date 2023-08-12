@@ -379,15 +379,15 @@ const PerfPanel = (props: Props) => {
 					return EMPTY_OBJECT;
 				});
 		}
-		const search_params = new URLSearchParams();
+		const searchParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(fetcher.perfQuery)) {
 			if (value) {
-				search_params.set(key, value.toString());
+				searchParams.set(key, value.toString());
 			}
 		}
 		const url = `${BENCHER_API_URL()}/v0/projects/${
 			fetcher.project_slug
-		}/perf?${search_params.toString()}`;
+		}/perf?${searchParams.toString()}`;
 		return await httpGet(url, fetcher.token)
 			.then((resp) => resp?.data)
 			.catch((error) => {
