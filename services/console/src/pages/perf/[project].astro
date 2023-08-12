@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PublicProject from "../../components/perf/PublicProject"
+
+const params = Astro.params;
+const title = "Bencher Project";
+---
+
+<BaseLayout title={title}>
+  <PublicProject client:only params={params}/>
+</BaseLayout>

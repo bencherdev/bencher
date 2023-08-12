@@ -450,7 +450,7 @@ const PerfPanel = (props: Props) => {
 			newParams[REPORTS_PER_PAGE_PARAM] = REPORTS_PER_PAGE;
 		}
 		if (!validU32(searchParams[REPORTS_PAGE_PARAM])) {
-			newParams[REPORTS_PAGE_PARAM] = REPORTS_PER_PAGE;
+			newParams[REPORTS_PAGE_PARAM] = DEFAULT_PAGE;
 		}
 		if (!validU32(searchParams[BRANCHES_PER_PAGE_PARAM])) {
 			newParams[BRANCHES_PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
