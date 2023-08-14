@@ -3,6 +3,7 @@ import solidJs from "@astrojs/solid-js";
 import sitemap from "@astrojs/sitemap";
 import mdx from "@astrojs/mdx";
 import wasmPack from "vite-plugin-wasm-pack";
+import remarkGfm from "remark-gfm";
 
 // https://astro.build/config
 export default defineConfig({
@@ -12,6 +13,9 @@ export default defineConfig({
 	integrations: [sitemap(), mdx(), solidJs()],
 	vite: {
 		plugins: [wasmPack("../../lib/bencher_valid")],
+	},
+	markdown: {
+		remarkPlugins: [remarkGfm],
 	},
 	experimental: {
 		// https://docs.astro.build/en/guides/view-transitions

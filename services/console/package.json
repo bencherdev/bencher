@@ -28,6 +28,7 @@
     "bulma-divider": "^0.2.0",
     "bulma-pricingtable": "^0.2.0",
     "bulma-switch": "^2.0.4",
+    "remark-gfm": "^3.0.1",
     "rome": "^11.0.0",
     "sass": "^1.64.1",
     "vite-plugin-wasm-pack": "^0.1.12"

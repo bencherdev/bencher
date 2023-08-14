@@ -1,0 +1,19 @@
+---
+import { getCollection } from "astro:content";
+import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
+// 1. Generate a new path for every collection entry
+export async function getStaticPaths() {
+  const pages = await getCollection("how_to");
+  return pages.map((page) => ({
+    params: { slug: page.slug },
+    props: { page },
+  }));
+}
+// 2. When it's time to render, you can get the entry directly from the prop
+const { page } = Astro.props;
+const { Content } = await page.render();
+---
+
+<DocsLayout title={page.data.title} heading={page.data.heading}>
+  <Content />
+</DocsLayout>

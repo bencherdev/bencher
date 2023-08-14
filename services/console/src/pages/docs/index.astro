@@ -1,19 +1,63 @@
 ---
 import { getCollection } from "astro:content";
-import HeaderLayout from "../../layouts/HeaderLayout.astro";
+import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 
 const tutorial = await getCollection("tutorial");
 tutorial.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+const how_to = await getCollection("how-to");
+how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+const explanation = await getCollection("explanation");
+explanation.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+const reference = await getCollection("reference");
+reference.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
+
+const title = "Bencher Docs";
 ---
 
-<HeaderLayout title="Docs" heading="Bencher Docs">
-  <ul>
-    {
-      tutorial.map((page) => (
-        <li>
-          <a href={`/docs/tutorial/${page.slug}`}>{page.data.heading}</a>
-        </li>
-      ))
-    }
-  </ul>
+<DocsLayout title={title} heading={title}>
+    <div class="menu">
+        <p class="menu-label">Tutorial</p>
+        <ul class="menu-list">
+            {
+                tutorial.map((page) => (
+                  <li>
+                    <a href={`/docs/tutorial/${page.slug}`}>{page.data.heading}</a>
+                  </li>
+                ))
+              }
+        </ul>
+        <p class="menu-label">How To</p>
+        <ul class="menu-list">
+            {
+                how_to.map((page) => (
+                  <li>
+                    <a href={`/docs/how-to/${page.slug}`}>{page.data.heading}</a>
+                  </li>
+                ))
+              }
+        </ul>
+        <p class="menu-label">Explanation</p>
+        <ul class="menu-list">
+            {
+                explanation.map((page) => (
+                  <li>
+                    <a href={`/docs/explanation/${page.slug}`}>{page.data.heading}</a>
+                  </li>
+                ))
+              }
+        </ul>
+        <p class="menu-label">Reference</p>
+        <ul class="menu-list">
+            {
+                reference.map((page) => (
+                  <li>
+                    <a href={`/docs/reference/${page.slug}`}>{page.data.heading}</a>
+                  </li>
+                ))
+              }
+        </ul>
+    </div>
 </HeaderLayout>

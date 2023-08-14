@@ -1,14 +1,15 @@
 ---
 import BaseLayout from "../BaseLayout.astro";
-import ConsoleNavbar from "../../components/site/navbar/ConsoleNavbar";
+import DocsMenu from "../../components/docs/DocsMenu.astro";
 import type { Params } from "astro";
 
 interface Props {
   params: Params;
   title: string;
+  heading: string;
 }
 
-const { params, title } = Astro.props;
+const { params, title, heading } = Astro.props;
 ---
 
 <BaseLayout title={title}>
@@ -16,20 +17,17 @@ const { params, title } = Astro.props;
     <div class="columns is-reverse-mobile">
       <div class="columns">
         <div class="column is-narrow">
-          <aside class="menu is-sticky">
-            <!-- <p class="menu-label">User</p>
-            <ul class="menu-list">
-              <li>
-                <a href={path(Section.TOKENS)}>API Tokens</a>
-              </li>
-            </ul> -->
-          </aside>
+          <DocsMenu />
         </div>
       </div>
       <div class="column">
         <section class="section">
           <div class="continer">
-            <slot />
+            <div class="content">
+              <h1 class="title">{heading}</h1>
+              <hr />
+              <slot />
+            </div>
           </div>
         </section>
       </div>

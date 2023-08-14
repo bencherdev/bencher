@@ -39,7 +39,7 @@ const pageTitle = fmtPageTitle(title);
   </head>
   <body>
     <slot name="navbar">
-      <Navbar />
+      <Navbar client:load />
     </slot>
     <main>
       <slot />

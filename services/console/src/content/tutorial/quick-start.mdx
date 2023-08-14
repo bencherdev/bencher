@@ -5,6 +5,7 @@ sortOrder: 1
 ---
 
 import { BENCHER_VERSION } from "../../util/ext";
+import CreateToken from "../../components/docs/CreateToken";
 
 ## What is Bencher?
 
@@ -109,7 +110,7 @@ If you refresh this page, you should now see a `Log out` button in the top right
 In order to use the Bencher API, you will need to create an API token.
 Navigate to `User` > `API Tokens` and click `➕ Add` button.
 
-### <a href={USER_SLUG() ? `/console/users/${USER_SLUG()}/tokens/add` : "/auth/signup"} target="_blank">Add an API Token</a>
+### <CreateToken />
 <br />
 
 Once you have created your new API token, you will need to copy it to your clipboard.
