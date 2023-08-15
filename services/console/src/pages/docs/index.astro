@@ -5,7 +5,7 @@ import DocsLayout from "../../layouts/docs/DocsLayout.astro";
 const tutorial = await getCollection("tutorial");
 tutorial.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
-const how_to = await getCollection("how-to");
+const how_to = await getCollection("how_to");
 how_to.sort((a, b) => a.data.sortOrder - b.data.sortOrder);
 
 const explanation = await getCollection("explanation");
