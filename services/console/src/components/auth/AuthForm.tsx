@@ -1,15 +1,16 @@
-import { createEffect, createResource } from "solid-js";
+import { createEffect, createResource, createSignal } from "solid-js";
 import bencher_valid_init from "bencher_valid";
 
 import { JsonLogin, JsonSignup, PlanLevel, Jwt } from "../../types/bencher";
 import Field, { FieldHandler } from "../field/Field";
 import FieldKind from "../field/kind";
-import { useNavigate, useSearchParams } from "../../util/url";
+import { useSearchParams } from "../../util/url";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
-import { AUTH_FIELDS, INVITE_PARAM, PLAN_PARAM } from "./auth";
+import { AUTH_FIELDS, EMAIL_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
 import { createStore } from "solid-js/store";
 import { validJwt, validPlanLevel } from "../../util/valid";
+import { NotifyKind, navigateNotify } from "../../util/notify";
 
 export interface Props {
 	newUser: boolean;
@@ -21,17 +22,17 @@ const AuthForm = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-
-	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
-	// const navigate = useNavigate();
-	// const location = useLocation();
-	// const pathname = createMemo(() => location.pathname);
-	// const [searchParams, setSearchParams] = useSearchParams();
 
 	const plan = () => searchParams[PLAN_PARAM]?.trim() as PlanLevel;
 	const invite = () => searchParams[INVITE_PARAM]?.trim() as Jwt;
 	const [form, setForm] = createStore(initForm());
+	const [submitting, setSubmitting] = createSignal(false);
+	const [valid, setValid] = createSignal(false);
+
+	const isSendable = (): boolean => {
+		return !submitting() && valid();
+	};
 
 	const handleField: FieldHandler = (key, value, valid) => {
 		setForm({
@@ -41,6 +42,8 @@ const AuthForm = (props: Props) => {
 				valid: valid,
 			},
 		});
+
+		setValid(validateForm());
 	};
 
 	const validateForm = () => {
@@ -55,17 +58,6 @@ const AuthForm = (props: Props) => {
 		return false;
 	};
 
-	const handleFormValid = () => {
-		const valid = validateForm();
-		if (valid !== form?.valid) {
-			setForm({ ...form, valid: valid });
-		}
-	};
-
-	const handleFormSubmitting = (submitting: boolean) => {
-		setForm({ ...form, submitting: submitting });
-	};
-
 	const post = async (data: JsonAuthForm) => {
 		const url = `${BENCHER_API_URL()}/v0/auth/${
 			props.newUser ? "signup" : "login"
@@ -74,7 +66,7 @@ const AuthForm = (props: Props) => {
 	};
 
 	const handleSubmit = () => {
-		handleFormSubmitting(true);
+		setSubmitting(true);
 		const plan_level = plan();
 		const invite_token = invite();
 
@@ -105,32 +97,27 @@ const AuthForm = (props: Props) => {
 
 		post(auth_form)
 			.then((_resp) => {
-				handleFormSubmitting(false);
-				navigate("/auth/confirm");
-				// navigate(
-				//     notification_path(
-				//         "/auth/confirm",
-				//         [PLAN_PARAM],
-				//         [[EMAIL_PARAM, form_email]],
-				//         NotifyKind.OK,
-				//         `Successful ${props.newUser ? "signup" : "login"
-				//         }! Please confirm token.`,
-				//     ),
-				// );
+				setSubmitting(false);
+				navigateNotify(
+					NotifyKind.OK,
+					`Successful ${
+						props.newUser ? "signup" : "login"
+					}! Please confirm token.`,
+					"/auth/confirm",
+					[PLAN_PARAM],
+					[[EMAIL_PARAM, auth_form.email]],
+				);
 			})
 			.catch((error) => {
-				handleFormSubmitting(false);
+				setSubmitting(false);
 				console.error(error);
-				// navigate(
-				//     notification_path(
-				//         pathname(),
-				//         [PLAN_PARAM, INVITE_PARAM],
-				//         [],
-				//         NotifyKind.ERROR,
-				//         `Failed to ${props.newUser ? "signup" : "login"
-				//         }. Please, try again.`,
-				//     ),
-				// );
+				navigateNotify(
+					NotifyKind.ERROR,
+					`Failed to ${props.newUser ? "signup" : "login"}. Please, try again.`,
+					null,
+					[PLAN_PARAM, INVITE_PARAM],
+					null,
+				);
 			});
 	};
 
@@ -149,8 +136,6 @@ const AuthForm = (props: Props) => {
 		if (Object.keys(newParams).length !== 0) {
 			setSearchParams(newParams);
 		}
-
-		handleFormValid();
 	});
 
 	return (
@@ -194,7 +179,7 @@ const AuthForm = (props: Props) => {
 				<p class="control">
 					<button
 						class="button is-primary is-fullwidth"
-						disabled={!form?.valid || form?.submitting}
+						disabled={!isSendable()}
 						onClick={(e) => {
 							e.preventDefault();
 							handleSubmit();
@@ -222,8 +207,6 @@ const initForm = () => {
 			value: false,
 			valid: null,
 		},
-		valid: false,
-		submitting: false,
 	};
 };
 

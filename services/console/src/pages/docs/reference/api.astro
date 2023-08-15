@@ -1,0 +1,10 @@
+---
+import DocsLayout from "../../../layouts/docs/DocsLayout.astro";
+import SwaggerPanel from "../../../components/docs/SwaggerPanel";
+
+const title = "REST API";
+---
+
+<DocsLayout title={title}>
+    <SwaggerPanel client:load/>
+</DocsLayout>

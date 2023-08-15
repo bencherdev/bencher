@@ -23,11 +23,13 @@ export const defaultUser: JsonAuthUser = {
 	token: "",
 };
 
-export const setUser = (user: JsonAuthUser) => {
+export const setUser = (user: JsonAuthUser): boolean => {
 	if (validUser(user)) {
 		window.localStorage.setItem(BENCHER_USER_KEY, JSON.stringify(user));
+		return true;
 	} else {
 		console.error("Invalid user", user);
+		return false;
 	}
 };
 

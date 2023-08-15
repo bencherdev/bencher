@@ -20,6 +20,7 @@
     "axios": "^1.4.0",
     "d3": "^7.6.1",
     "solid-js": "^1.7.8",
+    "swagger-ui-dist": "^4.15.5",
     "htl": "^0.3.1"
   },
   "devDependencies": {

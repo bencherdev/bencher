@@ -2,10 +2,11 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Toolbox from "../components/landing/Toolbox";
 import { BENCHER_CALENDLY_URL } from "../util/ext";
-import Navbar from "../components/site/navbar/Navbar";
+
+const title = "";
 ---
 
-<BaseLayout title="">
+<BaseLayout title={title}>
   <section class="section is-medium">
     <div class="container">
       <div class="columns is-centered is-vcentered">
@@ -179,7 +180,7 @@ import Navbar from "../components/site/navbar/Navbar";
                   </p>
                   <br />
                 </div>
-                <a class="button is-fullwidth" href="/docs/how-to/quick-start">
+                <a class="button is-fullwidth" href="/docs/tutorial/docker">
                   Learn More
                 </a>
               </div>

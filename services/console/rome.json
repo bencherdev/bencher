@@ -3,7 +3,7 @@
 	"files": {
 		"ignore": [
 			"./dist/",
-			"./src/components/docs/api/swagger.json",
+			"./src/content/api/swagger.json",
 			"./src/types/bencher.ts"
 		]
 	},

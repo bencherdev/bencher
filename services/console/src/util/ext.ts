@@ -1,4 +1,4 @@
-import swagger from "../content/swagger/swagger.json";
+import swagger from "../content/api/swagger.json";
 
 export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";
 
@@ -13,6 +13,8 @@ export const BENCHER_LOGO_URL: string =
 	"https://s3.amazonaws.com/public.bencher.dev/bencher_navbar.png";
 
 export const BENCHER_VERSION = `${swagger?.info?.version}`;
+
+export const SWAGGER = swagger;
 
 // Either supply `PUBLIC_BENCHER_API_URL` at build time,
 // or default to the current protocol and hostname at port `61016`.

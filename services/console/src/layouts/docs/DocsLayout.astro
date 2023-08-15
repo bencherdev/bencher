@@ -6,7 +6,7 @@ import type { Params } from "astro";
 interface Props {
   params: Params;
   title: string;
-  heading: string;
+  heading?: string;
 }
 
 const { params, title, heading } = Astro.props;
@@ -23,11 +23,15 @@ const { params, title, heading } = Astro.props;
       <div class="column is-two-thirds">
         <section class="section">
           <div class="continer">
-            <div class="content">
-              <h1 class="title">{heading}</h1>
-              <hr />
+            {heading ?
+              <div class="content">
+                <h1 class="title">{heading}</h1>
+                <hr />
+                <slot />
+              </div>
+              :
               <slot />
-            </div>
+            }
           </div>
         </section>
       </div>

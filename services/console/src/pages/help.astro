@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Help from "../components/console/help/Help";
+
+const params = Astro.params;
+const title = "Help";
+---
+
+<BaseLayout title={title}>
+  <Help client:only />
+</BaseLayout>

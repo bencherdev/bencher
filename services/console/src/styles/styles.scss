@@ -20,7 +20,7 @@ $badoge-z-index: 5 !default;
 @import "../node_modules/bulma-pricingtable/src/sass/index.sass";
 @import "../node_modules/bulma-switch/src/sass/index.sass";
 
-// @import "./swagger-ui.css";
+@import "./swagger-ui.css";
 
 .rows {
   display: flex;

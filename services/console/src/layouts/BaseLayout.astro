@@ -1,6 +1,7 @@
 ---
 import "../styles/styles.scss";
 import Navbar from "../components/site/navbar/Navbar";
+import Notification from "../components/site/Notification";
 import Footer from "../components/site/Footer";
 import { fmtPageTitle } from "../util/resource";
 import { ViewTransitions } from "astro:transitions";
@@ -42,6 +43,7 @@ const pageTitle = fmtPageTitle(title);
       <Navbar client:load />
     </slot>
     <main>
+      <Notification client:only />
       <slot />
     </main>
     <Footer />
