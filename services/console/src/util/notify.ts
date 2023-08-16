@@ -23,26 +23,7 @@ export const isNotifyKind = (kind: undefined | string) => {
 export const isNotifyText = (text: undefined | string) =>
 	typeof text === "string" && text.length > 0;
 
-export const notifyParams = (
-	pathname: string,
-	notifyKind: NotifyKind,
-	notifyText: string,
-	params?: [string, string][],
-) => {
-	let searchParams = new URLSearchParams(window.location.search);
-	searchParams.set(NOTIFY_KIND_PARAM, notifyKind.toString());
-	searchParams.set(NOTIFY_TEXT_PARAM, notifyText);
-	if (params) {
-		params.forEach((param) => {
-			searchParams.set(param[0], param[1]);
-		});
-	}
-	let params_str = searchParams.toString();
-	// console.log(`${pathname}?${params_str}`);
-	return `${pathname}?${params_str}`;
-};
-
-const forwardParams = (
+export const forwardParams = (
 	pathname: string,
 	keepParams: null | string[],
 	setParams: null | [string, string][],

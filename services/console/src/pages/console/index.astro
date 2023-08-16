@@ -1,3 +1,11 @@
 ---
-return Astro.redirect("/console/organizations");
+import ConsoleLayout from "../../layouts/console/ConsoleLayout.astro";
+import Redirect from "../../components/site/Redirect";
+
+const params = Astro.params;
+const title = "Bencher Console";
 ---
+
+<ConsoleLayout params={params} title={title}>
+  <Redirect client:only path="/console/organizations" />
+</ConsoleLayout>

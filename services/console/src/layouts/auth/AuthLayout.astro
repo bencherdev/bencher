@@ -1,5 +1,6 @@
 ---
-import BaseLayout from "./BaseLayout.astro";
+import BaseLayout from "../BaseLayout.astro";
+import Notification from "../../components/site/Notification";
 
 interface Props {
   title: string;
@@ -9,6 +10,7 @@ const { title } = Astro.props;
 ---
 
 <BaseLayout title={title}>
+  <Notification client:only />
   <section class="section">
     <div class="container">
       <div class="columns is-centered">
