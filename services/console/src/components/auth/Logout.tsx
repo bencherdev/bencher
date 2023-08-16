@@ -1,9 +1,9 @@
 import { removeUser } from "../../util/auth";
-import { hiddenRedirect } from "../../util/url";
+import { NotifyKind, navigateNotify } from "../../util/notify";
 
 const Logout = () => {
 	removeUser();
-	hiddenRedirect("/auth/login");
+	navigateNotify(NotifyKind.OK, "Goodbye!", "/auth/login", null, null, true);
 
 	return <></>;
 };

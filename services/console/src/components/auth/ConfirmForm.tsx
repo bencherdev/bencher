@@ -12,6 +12,7 @@ import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { setUser } from "../../util/auth";
 import type { Jwt } from "../../types/bencher";
+import { NotifyKind, navigateNotify } from "../../util/notify";
 
 // import axios from "axios";
 // import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
@@ -41,12 +42,17 @@ const ConfirmForm = (_props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 
-	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	// const navigate = useNavigate();
 	// const location = useLocation();
 	// const pathname = createMemo(() => location.pathname);
 	// const [searchParams, setSearchParams] = useSearchParams();
+	const [submitting, setSubmitting] = createSignal(false);
+	const [valid, setValid] = createSignal(false);
+
+	const isSendable = (): boolean => {
+		return !submitting() && valid();
+	};
 
 	const token = () => searchParams[TOKEN_PARAM]?.trim() as Jwt;
 
@@ -69,8 +75,6 @@ const ConfirmForm = (_props: Props) => {
 			value: string;
 			valid: null | boolean;
 		};
-		valid: boolean;
-		submitting: boolean;
 	}>(initForm());
 
 	// const [cool_down, setCoolDown] = createSignal(true);
@@ -96,43 +100,41 @@ const ConfirmForm = (_props: Props) => {
 	};
 
 	const handleSubmit = () => {
-		handleFormSubmitting(true);
+		setSubmitting(true);
 
 		post()
 			.then((resp) => {
-				handleFormSubmitting(false);
-				setUser(resp.data);
-				navigate("/console");
-				// window.location.assign("/console");
-				// if (!props.handleUser(resp?.data)) {
-				//     navigate(
-				//         notification_path(
-				//             pathname(),
-				//             CONFIRM_FORWARD,
-				//             [],
-				//             NotifyKind.ERROR,
-				//             "Invalid user. Please, try again.",
-				//         ),
-				//     );
-				// }
+				setSubmitting(false);
+				const user = resp.data;
+				if (setUser(user)) {
+					navigateNotify(
+						NotifyKind.OK,
+						`Ahoy, ${user.user.name}!`,
+						"/console",
+						[PLAN_PARAM],
+						null,
+					);
+				} else {
+					navigateNotify(
+						NotifyKind.ERROR,
+						"Invalid user. Please, try again.",
+						null,
+						[EMAIL_PARAM, PLAN_PARAM],
+						null,
+					);
+				}
 			})
 			.catch((error) => {
-				handleFormSubmitting(false);
+				setSubmitting(false);
 				console.error(error);
-				// navigate(
-				//     notification_path(
-				//         pathname(),
-				//         CONFIRM_FORWARD,
-				//         [],
-				//         NotifyKind.ERROR,
-				//         "Failed to confirm token. Please, try again.",
-				//     ),
-				// );
+				navigateNotify(
+					NotifyKind.ERROR,
+					"Failed to confirm token. Please, try again.",
+					null,
+					[EMAIL_PARAM, PLAN_PARAM],
+					null,
+				);
 			});
-	};
-
-	const handleFormSubmitting = (submitting: boolean) => {
-		setForm({ ...form, submitting: submitting });
 	};
 
 	// const post_resend = async (data: {
@@ -224,8 +226,8 @@ const ConfirmForm = (_props: Props) => {
 		}
 
 		const token_valid = form.token?.valid;
-		if (typeof token_valid === "boolean" && token_valid !== form.valid) {
-			setForm({ ...form, valid: token_valid });
+		if (typeof token_valid === "boolean" && token_valid !== valid()) {
+			setValid(token_valid);
 		}
 
 		const jwt = token();
@@ -251,7 +253,7 @@ const ConfirmForm = (_props: Props) => {
 					<p class="control">
 						<button
 							class="button is-primary is-fullwidth"
-							disabled={!form?.valid || form?.submitting}
+							disabled={!isSendable()}
 							onClick={(e) => {
 								e.preventDefault();
 								handleSubmit();
@@ -288,8 +290,6 @@ const initForm = () => {
 			value: "",
 			valid: null,
 		},
-		valid: false,
-		submitting: false,
 	};
 };
 

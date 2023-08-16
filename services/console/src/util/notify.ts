@@ -1,4 +1,4 @@
-import { pathname, useNavigate } from "./url";
+import { hiddenRedirect, pathname, useNavigate } from "./url";
 
 export const NOTIFY_KIND_PARAM = "notify_kind";
 export const NOTIFY_TEXT_PARAM = "notify_text";
@@ -108,11 +108,16 @@ export const navigateNotify = (
 	to: null | string,
 	keepParams: null | string[],
 	setParams: null | [string, string][],
+	hidden?: boolean,
 ) => {
-	const navigate = useNavigate();
 	if (to === null) {
 		to = pathname();
 	}
 	const path = notifyPath(notifyKind, notifyText, to, keepParams, setParams);
-	navigate(path);
+	if (hidden) {
+		hiddenRedirect(path);
+	} else {
+		const navigate = useNavigate();
+		navigate(path);
+	}
 };

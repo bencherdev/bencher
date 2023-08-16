@@ -10,7 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::{is_valid_len, ValidError};
+use crate::{benchmark_name::MAX_BENCHMARK_NAME_LEN, ValidError};
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
@@ -69,11 +69,7 @@ impl<'de> Visitor<'de> for SlugVisitor {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_slug(slug: &str) -> bool {
-    if !is_valid_len(slug) {
-        return false;
-    }
-
-    slug == slug::slugify(slug)
+    !slug.is_empty() && slug.len() <= MAX_BENCHMARK_NAME_LEN && slug == slug::slugify(slug)
 }
 
 #[cfg(test)]
@@ -86,6 +82,7 @@ mod test {
     fn test_slug() {
         assert_eq!(true, is_valid_slug("a-valid-slug"));
         assert_eq!(true, is_valid_slug("2nd-valid-slug"));
+        assert_eq!(true, is_valid_slug("client-submit-serialize-deserialize-handle-client-submit-serialize-deserialize-handle-1996529012"));
 
         assert_eq!(false, is_valid_slug(""));
         assert_eq!(false, is_valid_slug(" a-valid-slug"));

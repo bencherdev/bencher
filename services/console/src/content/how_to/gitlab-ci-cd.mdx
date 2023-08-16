@@ -36,7 +36,7 @@ import { BENCHER_VERSION } from "../../util/ext";
 1. Add `BENCHER_API_TOKEN` to your project's CI/CD secrets, under `Settings -> CI / CD -> Variables -> Add Variable`
 1. The API token must already exist. Set the `--token` flag or the `BENCHER_API_TOKEN` environment variable to the API token. (ex: `BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}`)
 1. Optional: Set the `--adapter` flag or the `BENCHER_ADAPTER` environment variable to the desired adapter name. If this is not set, then the `magic` Adapter will be used. See [benchmark harness adapters](/docs/explanation/adapters) for a full overview. (ex: `BENCHER_ADAPTER: json`)
-1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: bullseye`)
+1. Optional: Set the `--testbed` flag or the `BENCHER_TESTBED` environment variable to the Testbed slug or UUID. The Testbed **must** already exist. If this is not set, then the `localhost` Testbed will be used. (ex: `BENCHER_TESTBED: bullseye`)
 1. Optional: Create an environment variable to make it easy to keep track the CLI version being used. (ex: <code>{`BENCHER_VERSION: ${BENCHER_VERSION}`}</code>)
 1. Download and install the Bencher CLI from a `.deb`.
 1. [Track your benchmarks](/docs/how-to/track-benchmarks) with the <code><a href="/docs/explanation/bencher-run">bencher run</a></code> CLI subcommand:

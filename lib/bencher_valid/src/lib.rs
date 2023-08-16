@@ -25,7 +25,7 @@ mod user_name;
 pub use crate::git_hash::GitHash;
 pub use crate::slug::Slug;
 pub use crate::url::Url;
-pub use benchmark_name::BenchmarkName;
+pub use benchmark_name::{BenchmarkName, MAX_BENCHMARK_NAME_LEN};
 pub use boundary::Boundary;
 pub use branch_name::BranchName;
 #[cfg(feature = "plus")]
@@ -44,7 +44,7 @@ pub use sample_size::SampleSize;
 pub use secret::Secret;
 pub use user_name::UserName;
 
-pub const MAX_LEN: usize = 50;
+const MAX_LEN: usize = 50;
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen(start)]
