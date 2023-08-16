@@ -7,14 +7,14 @@ import type { Params } from "astro";
 interface Props {
   params: Params;
   title: string;
+  suppressNotification?: boolean;
 }
 
-const { params, title } = Astro.props;
+const { params, title, suppressNotification } = Astro.props;
 ---
 
 <BaseLayout title={title}>
   <ConsoleNavbar client:only slot="navbar" params={params} />
-  <Notification client:only />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">
@@ -23,6 +23,7 @@ const { params, title } = Astro.props;
         </div>
       </div>
       <div class="column is-10">
+        <Notification client:only suppress={suppressNotification} />
         <section class="section">
           <div class="continer">
             <slot />

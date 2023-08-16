@@ -30,7 +30,7 @@ const ORGANIZATION_FIELDS = {
 const organizationsConfig = {
 	[Operation.LIST]: {
 		operation: Operation.LIST,
-		redirect: (tableData: any[]) =>
+		redirect: (tableData: JsonOrganization[]) =>
 			tableData?.length === 1
 				? `/console/organizations/${tableData[0]?.slug}`
 				: null,

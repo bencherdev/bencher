@@ -1,5 +1,10 @@
 ---
+import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import Logout from "../../components/auth/Logout";
+
+const title = "Logout";
 ---
 
-<Logout client:only />
+<AuthLayout title={title}>
+  <Logout client:only />
+</AuthLayout>

@@ -1,39 +1,23 @@
 import bencher_valid_init from "bencher_valid";
-import { createEffect, createResource, createSignal } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+} from "solid-js";
 
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
-import { useNavigate, useSearchParams } from "../../util/url";
+import { useSearchParams } from "../../util/url";
 import { validEmail, validJwt, validPlanLevel } from "../../util/valid";
 import { createStore } from "solid-js/store";
 import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { setUser } from "../../util/auth";
-import type { Jwt } from "../../types/bencher";
+import type { Email, Jwt, PlanLevel } from "../../types/bencher";
 import { NotifyKind, navigateNotify } from "../../util/notify";
-
-// import axios from "axios";
-// import { useLocation, useNavigate, useSearchParams } from "solid-app-router";
-// import { createEffect, createMemo, createSignal } from "solid-js";
-// import AUTH_FIELDS from "./config/fields";
-// import Field, { FieldHandler } from "../field/Field";
-// import {
-//     BENCHER_API_URL,
-//     NotifyKind,
-//     pageTitle,
-//     PLAN_PARAM,
-//     post_options,
-//     validate_jwt,
-//     validate_plan_level,
-// } from "../site/util";
-// import Notification, { notification_path } from "../site/Notification";
-// import FieldKind from "../field/kind";
-// import { EMAIL_PARAM, TOKEN_PARAM } from "./AuthForm";
-// import { JsonConfirm } from "../../types/bencher";
-
-// const CONFIRM_FORWARD = [EMAIL_PARAM, TOKEN_PARAM, PLAN_PARAM];
 
 export interface Props {}
 
@@ -43,10 +27,6 @@ const ConfirmForm = (_props: Props) => {
 	);
 
 	const [searchParams, setSearchParams] = useSearchParams();
-	// const navigate = useNavigate();
-	// const location = useLocation();
-	// const pathname = createMemo(() => location.pathname);
-	// const [searchParams, setSearchParams] = useSearchParams();
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
 
@@ -54,20 +34,9 @@ const ConfirmForm = (_props: Props) => {
 		return !submitting() && valid();
 	};
 
-	const token = () => searchParams[TOKEN_PARAM]?.trim() as Jwt;
-
-	// if (!validate_plan_level(searchParams[PLAN_PARAM])) {
-	//     setSearchParams({ [PLAN_PARAM]: null });
-	// }
-	// const plan = createMemo(() =>
-	//     searchParams[PLAN_PARAM] ? searchParams[PLAN_PARAM].trim() : null,
-	// );
-
-	// const email = createMemo(() =>
-	//     searchParams[EMAIL_PARAM] ? searchParams[EMAIL_PARAM].trim() : null,
-	// );
-
-	// const title = "Confirm Token";
+	const token = createMemo(() => searchParams[TOKEN_PARAM]?.trim() as Jwt);
+	const plan = createMemo(() => searchParams[PLAN_PARAM]?.trim() as PlanLevel);
+	const email = createMemo(() => searchParams[EMAIL_PARAM]?.trim() as Email);
 
 	const [submitted, setSubmitted] = createSignal();
 	const [form, setForm] = createStore<{
@@ -77,8 +46,8 @@ const ConfirmForm = (_props: Props) => {
 		};
 	}>(initForm());
 
-	// const [cool_down, setCoolDown] = createSignal(true);
-	// setTimeout(() => setCoolDown(false), 10000);
+	const [coolDown, setCoolDown] = createSignal(true);
+	setTimeout(() => setCoolDown(false), 10000);
 
 	const handleField: FieldHandler = (key, value, valid) => {
 		setForm({
@@ -119,7 +88,7 @@ const ConfirmForm = (_props: Props) => {
 						NotifyKind.ERROR,
 						"Invalid user. Please, try again.",
 						null,
-						[EMAIL_PARAM, PLAN_PARAM],
+						[PLAN_PARAM, EMAIL_PARAM],
 						null,
 					);
 				}
@@ -131,81 +100,52 @@ const ConfirmForm = (_props: Props) => {
 					NotifyKind.ERROR,
 					"Failed to confirm token. Please, try again.",
 					null,
-					[EMAIL_PARAM, PLAN_PARAM],
+					[PLAN_PARAM, EMAIL_PARAM],
 					null,
 				);
 			});
 	};
 
-	// const post_resend = async (data: {
-	//     email: string;
-	//     plan: null | string;
-	// }) => {
-	//     const url = `${BENCHER_API_URL()}/v0/auth/login`;
-	//     const no_token = null;
-	//     return await axios(post_options(url, no_token, data));
-	// };
+	const handleResendEmail = () => {
+		setSubmitting(true);
 
-	// const handleResendEmail = (event) => {
-	//     event.preventDefault();
-	//     handleFormSubmitting(true);
+		const data = {
+			email: email().trim(),
+			plan: plan()?.trim(),
+		};
 
-	//     const data = {
-	//         email: email().trim(),
-	//         plan: plan()?.trim(),
-	//     };
+		const url = `${BENCHER_API_URL()}/v0/auth/login`;
+		httpPost(url, null, data)
+			.then((_resp) => {
+				setSubmitting(false);
+				navigateNotify(
+					NotifyKind.OK,
+					`Successful resent email to ${email()}. Please confirm token.`,
+					null,
+					[PLAN_PARAM, EMAIL_PARAM],
+					null,
+				);
+			})
+			.catch((error) => {
+				setSubmitting(false);
+				console.error(error);
+				navigateNotify(
+					NotifyKind.ERROR,
+					`Failed to resend email to ${email()}. Please, try again.`,
+					null,
+					[PLAN_PARAM, EMAIL_PARAM],
+					null,
+				);
+			});
 
-	//     post_resend(data)
-	//         .then((_resp) => {
-	//             handleFormSubmitting(false);
-	//             navigate(
-	//                 notification_path(
-	//                     pathname(),
-	//                     CONFIRM_FORWARD,
-	//                     [],
-	//                     NotifyKind.OK,
-	//                     `Successful resent email to ${email()} please confirm token.`,
-	//                 ),
-	//             );
-	//         })
-	//         .catch((error) => {
-	//             handleFormSubmitting(false);
-	//             console.error(error);
-	//             navigate(
-	//                 notification_path(
-	//                     pathname(),
-	//                     CONFIRM_FORWARD,
-	//                     [],
-	//                     NotifyKind.ERROR,
-	//                     `Failed to resend email to ${email()}. Please, try again.`,
-	//                 ),
-	//             );
-	//         });
-
-	//     setCoolDown(true);
-	//     setTimeout(() => setCoolDown(false), 30000);
-	// };
+		setCoolDown(true);
+		setTimeout(() => setCoolDown(false), 30000);
+	};
 
 	createEffect(() => {
 		if (!bencher_valid()) {
 			return;
 		}
-
-		// if (validate_jwt(props.user?.token)) {
-		//     navigate(
-		//         notification_path(
-		//             {
-		//                 free: "/console",
-		//                 team: "/console/billing",
-		//                 enterprise: "/console/billing",
-		//             }[plan() ? plan() : "free"],
-		//             [PLAN_PARAM],
-		//             [],
-		//             NotifyKind.OK,
-		//             "Ahoy!",
-		//         ),
-		//     );
-		// }
 
 		const newParams: Record<string, null | string> = {};
 		if (!validJwt(searchParams[TOKEN_PARAM])) {
@@ -265,21 +205,24 @@ const ConfirmForm = (_props: Props) => {
 				</div>
 			</form>
 
-			{/* {email() && (
-                <>
-                    <hr />
+			{email() && (
+				<>
+					<hr />
 
-                    <div class="content has-text-centered">
-                        <button
-                            class="button is-small is-black is-inverted"
-                            disabled={form()?.submitting || cool_down()}
-                            onClick={handleResendEmail}
-                        >
-                            <div>Click to resend email to: {email()}</div>
-                        </button>
-                    </div>
-                </>
-            )} */}
+					<div class="content has-text-centered">
+						<button
+							class="button is-small is-black is-inverted"
+							disabled={submitting() || coolDown()}
+							onClick={(e) => {
+								e.preventDefault();
+								handleResendEmail();
+							}}
+						>
+							<div>Click to resend email to: {email()}</div>
+						</button>
+					</div>
+				</>
+			)}
 		</>
 	);
 };

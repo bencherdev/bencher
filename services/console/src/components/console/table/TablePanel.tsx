@@ -28,6 +28,7 @@ interface Props {
 }
 
 interface TablePanelConfig {
+	redirect: (tableData: Record<string, any>[]) => string | null;
 	header: TableHeaderConfig;
 	table: TableConfig;
 }
@@ -43,11 +44,15 @@ const TablePanel = (props: Props) => {
 		() => consoleConfig[props.resource]?.[Operation.LIST],
 	);
 
+	const initParams: Record<string, null | number | boolean> = {};
 	if (!validU32(searchParams[PER_PAGE_PARAM])) {
-		setSearchParams({ [PER_PAGE_PARAM]: DEFAULT_PER_PAGE });
+		initParams[PER_PAGE_PARAM] = DEFAULT_PER_PAGE;
 	}
 	if (!validU32(searchParams[PAGE_PARAM])) {
-		setSearchParams({ [PAGE_PARAM]: DEFAULT_PAGE });
+		initParams[PAGE_PARAM] = DEFAULT_PAGE;
+	}
+	if (Object.keys(initParams).length !== 0) {
+		setSearchParams(initParams);
 	}
 
 	const per_page = createMemo(() => Number(searchParams[PER_PAGE_PARAM]));
@@ -115,7 +120,10 @@ const TablePanel = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [tableData, { refetch }] = createResource(fetcher, getData);
+	const [tableData, { refetch }] = createResource<Record<string, any>[]>(
+		fetcher,
+		getData,
+	);
 
 	createEffect(() => {
 		if (!validU32(searchParams[PER_PAGE_PARAM])) {
@@ -132,7 +140,7 @@ const TablePanel = (props: Props) => {
 		}
 	};
 
-	// const redirect = createMemo(() => props.config.redirect?.(tableData()));
+	const redirect = createMemo(() => config()?.redirect?.(tableData()));
 
 	// createEffect(() => {
 	// 	if (redirect()) {

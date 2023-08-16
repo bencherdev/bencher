@@ -8,7 +8,7 @@ import {
 } from "../../util/notify";
 import { Show, createMemo } from "solid-js";
 
-const Notification = () => {
+const Notification = (props: { suppress?: undefined | boolean }) => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const initParams: Record<string, null> = {};
@@ -25,6 +25,9 @@ const Notification = () => {
 
 	const notifyKind = createMemo(() => searchParams[NOTIFY_KIND_PARAM]);
 	const notifyText = createMemo(() => searchParams[NOTIFY_TEXT_PARAM]);
+	const suppress = createMemo(() =>
+		typeof props.suppress === "boolean" ? props.suppress : false,
+	);
 
 	const removeNotification = () => {
 		// Check to see if the pathname is still the same
@@ -72,7 +75,11 @@ const Notification = () => {
 	return (
 		<div>
 			<Show
-				when={isNotifyKind(notifyKind()) && isNotifyText(notifyText())}
+				when={
+					!suppress() &&
+					isNotifyKind(notifyKind()) &&
+					isNotifyText(notifyText())
+				}
 				fallback={<></>}
 			>
 				<section class="section">

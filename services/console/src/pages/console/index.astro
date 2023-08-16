@@ -6,6 +6,6 @@ const params = Astro.params;
 const title = "Bencher Console";
 ---
 
-<ConsoleLayout params={params} title={title}>
+<ConsoleLayout params={params} title={title} suppressNotification={true}>
   <Redirect client:only path="/console/organizations" />
 </ConsoleLayout>
