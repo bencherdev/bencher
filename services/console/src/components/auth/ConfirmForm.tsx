@@ -17,7 +17,12 @@ import { BENCHER_API_URL } from "../../util/ext";
 import { httpPost } from "../../util/http";
 import { setUser } from "../../util/auth";
 import type { Email, Jwt, PlanLevel } from "../../types/bencher";
-import { NotifyKind, navigateNotify } from "../../util/notify";
+import {
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	NotifyKind,
+	navigateNotify,
+} from "../../util/notify";
 
 export interface Props {}
 
@@ -78,8 +83,10 @@ const ConfirmForm = (_props: Props) => {
 				if (setUser(user)) {
 					navigateNotify(
 						NotifyKind.OK,
-						`Ahoy, ${user.user.name}!`,
-						"/console",
+						`Hoppy to ${plan() ? "meet you" : "see you again"}, ${
+							user.user.name
+						}!`,
+						"/console/organizations",
 						[PLAN_PARAM],
 						null,
 					);
@@ -129,13 +136,10 @@ const ConfirmForm = (_props: Props) => {
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				navigateNotify(
-					NotifyKind.ERROR,
-					`Failed to resend email to ${email()}. Please, try again.`,
-					null,
-					[PLAN_PARAM, EMAIL_PARAM],
-					null,
-				);
+				setSearchParams({
+					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+					[NOTIFY_TEXT_PARAM]: `Failed to resend email to ${email()}. Please, try again.`,
+				});
 			});
 
 		setCoolDown(true);

@@ -4,14 +4,21 @@ import Field, { FieldConfig, FieldValue } from "../../field/Field";
 import FieldKind from "../../field/kind";
 import { createStore } from "solid-js/store";
 import { authUser } from "../../../util/auth";
-import { pathname, useNavigate } from "../../../util/url";
+import { pathname, useNavigate, useSearchParams } from "../../../util/url";
 import { validJwt } from "../../../util/valid";
-import { Operation } from "../../../config/types";
+import { Operation, Resource, resourceSingular } from "../../../config/types";
 import { httpPost, httpPut } from "../../../util/http";
 import type { Params } from "astro";
+import {
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	NotifyKind,
+	navigateNotify,
+} from "../../../util/notify";
 
 export interface Props {
 	params: Params;
+	resource: Resource;
 	operation: Operation;
 	config: PosterConfig;
 }
@@ -66,7 +73,7 @@ const Poster = (props: Props) => {
 	const [bencher_valid] = createResource(
 		async () => await bencher_valid_init(),
 	);
-	const navigate = useNavigate();
+	const [_searchParams, setSearchParams] = useSearchParams();
 	const [form, setForm] = createStore(initForm(props.config?.fields));
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
@@ -134,29 +141,25 @@ const Poster = (props: Props) => {
 		httpOperation(url, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
-				navigate(props.config?.path?.(pathname()));
-				// navigate(
-				// 	notification_path(
-				// 		props.config?.path?.(pathname()),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.OK,
-				// 		"Creation successful!",
-				// 	),
-				// );
+				navigateNotify(
+					NotifyKind.OK,
+					`Hare's to your success! You've posted ${resourceSingular(
+						props.resource,
+					)}.`,
+					props.config?.path?.(pathname()),
+					null,
+					null,
+				);
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.ERROR,
-				// 		"Failed to create. Please, try again.",
-				// 	),
-				// );
+				setSearchParams({
+					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to post ${resourceSingular(
+						props.resource,
+					)}. Please, try again.`,
+				});
 			});
 	};
 

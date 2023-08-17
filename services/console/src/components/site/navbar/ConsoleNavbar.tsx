@@ -74,7 +74,10 @@ const ConsoleNavbar = (props: Props) => {
 							class={`navbar-item has-dropdown ${dropdown() && "is-active"}`}
 						>
 							<a class="navbar-link" onClick={(_e) => setDropdown(!dropdown())}>
-								{user?.user?.name ? user?.user?.name : "Account"}
+								{(user?.user?.name ? user?.user?.name : "Account").padStart(
+									12,
+									"\xa0",
+								)}
 							</a>
 							<div class="navbar-dropdown">
 								<a

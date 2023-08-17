@@ -214,7 +214,11 @@ const Tab = (props: {
 				}
 			>
 				<div class="box">
-					<AddButton project_slug={props.project_slug} tab={props.tab} />
+					<div class="columns is-centered">
+						<div class="column is-5">
+							<AddButton project_slug={props.project_slug} tab={props.tab} />
+						</div>
+					</div>
 				</div>
 			</Match>
 			<Match
@@ -223,11 +227,15 @@ const Tab = (props: {
 				}
 			>
 				<div class="box">
-					<BackButton
-						tab={props.tab}
-						page={props.getPage()}
-						handlePage={props.getHandlePage()}
-					/>
+					<div class="columns is-centered">
+						<div class="column is-5">
+							<BackButton
+								tab={props.tab}
+								page={props.getPage()}
+								handlePage={props.getHandlePage()}
+							/>
+						</div>
+					</div>
 				</div>
 			</Match>
 			<Match

@@ -215,10 +215,14 @@ const BackButton = (props: {
 const LogoutButton = () => {
 	return (
 		<>
-			<div class="content has-text-centered">Expired session token</div>
-			<a class="button is-primary is-fullwidth" href="/auth/logout">
-				Log out
-			</a>
+			<div class="content has-text-centered">Failed to fetch data...</div>
+			<div class="columns is-centered">
+				<div class="column is-one-third">
+					<a class="button is-primary is-fullwidth" href="/auth/logout">
+						Log out
+					</a>
+				</div>
+			</div>
 		</>
 	);
 };

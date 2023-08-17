@@ -7,7 +7,7 @@ import type { Params } from "astro";
 interface Props {
   params: Params;
   title: string;
-  suppressNotification?: boolean;
+  suppressNotification?: undefined | boolean;
 }
 
 const { params, title, suppressNotification } = Astro.props;

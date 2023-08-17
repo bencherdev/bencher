@@ -31,6 +31,7 @@ const PosterPanel = (props: Props) => {
 			<PosterHeader config={config()?.header} />
 			<Poster
 				params={props.params}
+				resource={props.resource}
 				operation={config()?.operation}
 				config={config()?.form}
 			/>

@@ -5,16 +5,27 @@ import {
 	createEffect,
 } from "solid-js";
 import Pagination, { PaginationSize } from "../../site/Pagination";
-import { useSearchParams } from "../../../util/url";
+import { useNavigate, useSearchParams } from "../../../util/url";
 import { validJwt, validU32 } from "../../../util/valid";
 import consoleConfig from "../../../config/console";
-import { Operation, type Resource } from "../../../config/types";
+import {
+	Operation,
+	resourcePlural,
+	type Resource,
+} from "../../../config/types";
 import { httpGet } from "../../../util/http";
 import { authUser } from "../../../util/auth";
 import bencher_valid_init, { InitOutput } from "bencher_valid";
 import TableHeader, { TableHeaderConfig } from "./TableHeader";
 import Table, { TableConfig, TableState } from "./Table";
 import type { Params } from "astro";
+import {
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	NotifyKind,
+	forwardParams,
+} from "../../../util/notify";
+import { PLAN_PARAM } from "../../auth/auth";
 
 const PER_PAGE_PARAM = "per_page";
 const PAGE_PARAM = "page";
@@ -28,7 +39,7 @@ interface Props {
 }
 
 interface TablePanelConfig {
-	redirect: (tableData: Record<string, any>[]) => string | null;
+	redirect: (tableData: Record<string, any>[]) => null | string;
 	header: TableHeaderConfig;
 	table: TableConfig;
 }
@@ -38,7 +49,7 @@ const TablePanel = (props: Props) => {
 		async () => await bencher_valid_init(),
 	);
 	const [searchParams, setSearchParams] = useSearchParams();
-	// const navigate = useNavigate();
+	const navigate = useNavigate();
 
 	const config = createMemo<TablePanelConfig>(
 		() => consoleConfig[props.resource]?.[Operation.LIST],
@@ -65,10 +76,6 @@ const TablePanel = (props: Props) => {
 		};
 	});
 
-	// const [refresh, setRefresh] = createSignal(0);
-	// const handleRefresh = () => {
-	// 	setRefresh(refresh() + 1);
-	// };
 	const fetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
@@ -86,7 +93,7 @@ const TablePanel = (props: Props) => {
 		};
 		token: string;
 	}) => {
-		const EMPTY_ARRAY = [];
+		const EMPTY_ARRAY: Record<string, any>[] = [];
 		if (!bencher_valid()) {
 			return EMPTY_ARRAY;
 		}
@@ -117,6 +124,12 @@ const TablePanel = (props: Props) => {
 			.catch((error) => {
 				setState(TableState.ERR);
 				console.error(error);
+				setSearchParams({
+					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to fetch ${resourcePlural(
+						props.resource,
+					)}. Please, try again.`,
+				});
 				return EMPTY_ARRAY;
 			});
 	};
@@ -141,18 +154,18 @@ const TablePanel = (props: Props) => {
 	};
 
 	const redirect = createMemo(() => config()?.redirect?.(tableData()));
-
-	// createEffect(() => {
-	// 	if (redirect()) {
-	// 		navigate(
-	// 			forward_path(
-	// 				redirect(),
-	// 				[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
-	// 				[],
-	// 			),
-	// 		);
-	// 	}
-	// });
+	createEffect(() => {
+		const path = redirect();
+		if (path) {
+			navigate(
+				forwardParams(
+					path,
+					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM, PLAN_PARAM],
+					null,
+				),
+			);
+		}
+	});
 
 	return (
 		<>

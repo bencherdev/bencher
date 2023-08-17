@@ -1,5 +1,16 @@
 ---
 export const prerender = false;
 
-return Astro.redirect("/console/organizations");
+import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
+import Redirect from "../../../../components/site/Redirect";
+
+const params = Astro.params;
+const title = "Organizations";
 ---
+
+<OrgLayout params={params} title={title} suppressNotification={true}>
+  <Redirect
+    client:only
+    path={`/console/organizations/${params.organization}/projects`}
+  />
+</OrgLayout>

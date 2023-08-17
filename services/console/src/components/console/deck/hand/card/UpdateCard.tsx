@@ -1,6 +1,6 @@
 import { createSignal, type Accessor, createMemo } from "solid-js";
 import type { JsonAuthUser } from "../../../../../types/bencher";
-import { useNavigate } from "../../../../../util/url";
+import { useNavigate, useSearchParams } from "../../../../../util/url";
 import type CardConfig from "./CardConfig";
 import type { PosterFieldConfig } from "../../../poster/Poster";
 import FieldKind from "../../../../field/kind";
@@ -10,6 +10,12 @@ import { createStore } from "solid-js/store";
 import { validJwt } from "../../../../../util/valid";
 import { httpPatch } from "../../../../../util/http";
 import type { Params } from "astro";
+import {
+	NOTIFY_KIND_PARAM,
+	NOTIFY_TEXT_PARAM,
+	NotifyKind,
+	navigateNotify,
+} from "../../../../../util/notify";
 
 export interface Props {
 	params: Params;
@@ -44,6 +50,7 @@ const initForm = (field: PosterFieldConfig, value: FieldValue) => {
 };
 
 const UpdateCard = (props: Props) => {
+	const [_searchParams, setSearchParams] = useSearchParams();
 	const navigate = useNavigate();
 	const pathname = createMemo(() => location.pathname);
 
@@ -106,30 +113,26 @@ const UpdateCard = (props: Props) => {
 		httpPatch(url, token, data)
 			.then((_resp) => {
 				setSubmitting(false);
-				// props.toggleUpdate();
-				navigate(updatePath(data));
-				// navigate(
-				// 	notification_path(
-				// 		update_path(data),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.OK,
-				// 		"Update successful!",
-				// 	),
-				// );
+				const path = updatePath(data);
+				const text = `Hare's to your success! You've updated ${props.card?.field?.label?.toLowerCase()}.`;
+				if (path) {
+					navigateNotify(NotifyKind.OK, text, path, null, null);
+				} else {
+					props.toggleUpdate();
+					props.handleRefresh();
+					setSearchParams({
+						[NOTIFY_KIND_PARAM]: NotifyKind.OK,
+						[NOTIFY_TEXT_PARAM]: text,
+					});
+				}
 			})
 			.catch((error) => {
 				setSubmitting(false);
 				console.error(error);
-				// navigate(
-				// 	notification_path(
-				// 		pathname(),
-				// 		[],
-				// 		[],
-				// 		NotifyKind.ERROR,
-				// 		"Failed to update. Please, try again.",
-				// 	),
-				// );
+				setSearchParams({
+					[NOTIFY_KIND_PARAM]: NotifyKind.ERROR,
+					[NOTIFY_TEXT_PARAM]: `Lettuce romaine calm! Failed to update ${props.card?.field?.label?.toLowerCase()}. Please, try again.`,
+				});
 			});
 	};
 
@@ -142,7 +145,7 @@ const UpdateCard = (props: Props) => {
 			return path;
 		} else {
 			// props.handleRefresh();
-			return pathname();
+			return;
 		}
 	};
 
