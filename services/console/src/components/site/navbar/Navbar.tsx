@@ -9,7 +9,12 @@ const Navbar = () => {
 	const [burger, setBurger] = createSignal(false);
 
 	return (
-		<nav class="navbar" role="navigation" aria-label="main navigation">
+		<nav
+			id="bencher_navbar"
+			class="navbar"
+			role="navigation"
+			aria-label="main navigation"
+		>
 			<div class="navbar-brand">
 				<a
 					class="navbar-item"

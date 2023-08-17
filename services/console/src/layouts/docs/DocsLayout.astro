@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../BaseLayout.astro";
+import DocsNavbar from "../../components/site/navbar/DocsNavbar";
 import DocsMenu from "../../components/docs/DocsMenu.astro";
 import type { Params } from "astro";
 
@@ -13,6 +14,7 @@ const { params, title, heading } = Astro.props;
 ---
 
 <BaseLayout title={title}>
+  <DocsNavbar client:only params={params} />
   <div class="is-widescreen">
     <div class="columns is-reverse-mobile">
       <div class="columns">
@@ -23,14 +25,16 @@ const { params, title, heading } = Astro.props;
       <div class="column is-two-thirds">
         <section class="section">
           <div class="continer">
-            {heading ?
-              <div class="content">
-                <h1 class="title">{heading}</h1>
-                <hr />
+            {
+              heading ? (
+                <div class="content">
+                  <h1 class="title">{heading}</h1>
+                  <hr />
+                  <slot />
+                </div>
+              ) : (
                 <slot />
-              </div>
-              :
-              <slot />
+              )
             }
           </div>
         </section>

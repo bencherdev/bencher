@@ -15,7 +15,12 @@ const ConsoleNavbar = (props: Props) => {
 	const [dropdown, setDropdown] = createSignal(false);
 
 	return (
-		<nav class="navbar" role="navigation" aria-label="main navigation">
+		<nav
+			id="bencher_navbar"
+			class="navbar"
+			role="navigation"
+			aria-label="main navigation"
+		>
 			<div class="navbar-brand">
 				<a
 					class="navbar-item"
@@ -48,7 +53,7 @@ const ConsoleNavbar = (props: Props) => {
 						Docs
 					</a>
 					<Show
-						when={props.params.organization || props.params.project}
+						when={props.params?.organization || props.params?.project}
 						fallback={<></>}
 					>
 						<div class="navbar-item">
