@@ -1,3 +1,4 @@
+use bencher_json::NonEmpty;
 use octocrab::{models::CommentId, Octocrab};
 
 use crate::parser::project::run::CliRunCi;
@@ -37,12 +38,14 @@ impl TryFrom<CliRunCi> for Option<Ci> {
         let CliRunCi {
             ci_only_thresholds,
             ci_only_on_alert,
+            ci_id,
             github_actions,
         } = ci;
         Ok(github_actions.map(|github_actions| {
             Ci::GitHubActions(GitHubActions::new(
                 ci_only_thresholds,
                 ci_only_on_alert,
+                ci_id,
                 github_actions,
             ))
         }))
@@ -61,14 +64,21 @@ impl Ci {
 pub struct GitHubActions {
     ci_only_thresholds: bool,
     ci_only_on_alert: bool,
+    ci_id: Option<NonEmpty>,
     token: String,
 }
 
 impl GitHubActions {
-    fn new(ci_only_thresholds: bool, ci_only_on_alert: bool, token: String) -> Self {
+    fn new(
+        ci_only_thresholds: bool,
+        ci_only_on_alert: bool,
+        ci_id: Option<NonEmpty>,
+        token: String,
+    ) -> Self {
         Self {
             ci_only_thresholds,
             ci_only_on_alert,
+            ci_id,
             token,
         }
     }
@@ -148,13 +158,13 @@ impl GitHubActions {
             &owner,
             &repo,
             issue_number,
-            &report_urls.bencher_tag(),
+            &report_urls.bencher_tag(self.ci_id.clone()),
         )
         .await?;
 
         // Update or create the comment
         let issue_handler = github_client.issues(owner, repo);
-        let body = report_urls.html(self.ci_only_thresholds);
+        let body = report_urls.html(self.ci_only_thresholds, self.ci_id.clone());
         let _comment = if let Some(comment_id) = comment_id {
             issue_handler
                 .update_comment(comment_id, body)

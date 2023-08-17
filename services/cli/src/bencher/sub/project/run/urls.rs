@@ -26,7 +26,7 @@ impl ReportUrls {
         }
     }
 
-    pub fn html(&self, require_threshold: bool) -> String {
+    pub fn html(&self, require_threshold: bool, id: Option<NonEmpty>) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
@@ -34,7 +34,7 @@ impl ReportUrls {
         self.html_benchmarks_table(html_mut, require_threshold);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
-        self.html_bencher_tag(html_mut);
+        self.html_bencher_tag(html_mut, id);
         html
     }
 
@@ -163,16 +163,23 @@ impl ReportUrls {
         ));
     }
 
-    fn html_bencher_tag(&self, html: &mut String) {
-        html.push_str(&self.bencher_tag());
+    fn html_bencher_tag(&self, html: &mut String, id: Option<NonEmpty>) {
+        html.push_str(&self.bencher_tag(id));
     }
 
     // The Bencher tag allows us to easily check whether a comment is a Bencher report when updating
-    pub fn bencher_tag(&self) -> String {
+    pub fn bencher_tag(&self, id: Option<NonEmpty>) -> String {
+        let id = id.as_ref().map(ToString::to_string).unwrap_or_else(|| {
+            format!(
+                "{branch}/{testbed}/{adapter:?}",
+                branch = self.json_report.branch.uuid,
+                testbed = self.json_report.testbed.uuid,
+                adapter = self.json_report.adapter
+            )
+        });
         format!(
-            r#"<div id="bencher.dev/projects/{project}/testbeds/{testbed}"></div>"#,
+            r#"<div id="bencher.dev/projects/{project}/id/{id}"></div>"#,
             project = self.json_report.project.uuid,
-            testbed = self.json_report.testbed.uuid
         )
     }
 
